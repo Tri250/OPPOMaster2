@@ -389,6 +389,10 @@
         "images/ldsk_02.webp"
       ],
       "author": "@OPPO影像",
+      "isHncs": true,
+      "brand": "oppo",
+      "rating": 4.5,
+      "downloadCount": 8800,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -1035,6 +1039,11 @@
         "images/hsny_03.webp"
       ],
       "author": "@Aurora",
+      "isHncs": true,
+      "isPinned": true,
+      "brand": "hasselblad",
+      "rating": 4.8,
+      "downloadCount": 12800,
       "sections": [
         {
           "title": "@string/section_color_grading",

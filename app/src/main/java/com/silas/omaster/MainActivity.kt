@@ -104,6 +104,30 @@ sealed class Screen {
     data object ParamAdjustment : Screen()
 
     @Serializable
+    data object HSLAdjustment : Screen()
+
+    @Serializable
+    data object BatchProcessing : Screen()
+
+    @Serializable
+    data object RAWProcessing : Screen()
+
+    @Serializable
+    data object ToneCurve : Screen()
+
+    @Serializable
+    data object Histogram : Screen()
+
+    @Serializable
+    data object Favorites : Screen()
+
+    @Serializable
+    data object Trend2026 : Screen()
+
+    @Serializable
+    data object SceneDetail : Screen()
+
+    @Serializable
     data object PrivacyPolicy : Screen()
 }
 
@@ -363,6 +387,14 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
+                    onNavigateToHSLAdjustment = { navController.navigate(Screen.HSLAdjustment) },
+                    onNavigateToBatchProcessing = { navController.navigate(Screen.BatchProcessing) },
+                    onNavigateToRAWProcessing = { navController.navigate(Screen.RAWProcessing) },
+                    onNavigateToToneCurve = { navController.navigate(Screen.ToneCurve) },
+                    onNavigateToHistogram = { navController.navigate(Screen.Histogram) },
+                    onNavigateToFavorites = { navController.navigate(Screen.Favorites) },
+                    onNavigateToTrend2026 = { navController.navigate(Screen.Trend2026) },
+                    onNavigateToSceneDetail = { navController.navigate(Screen.SceneDetail) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     },
@@ -546,6 +578,62 @@ fun MainApp(navController: NavHostController) {
             // 参数调节页面（复用AIFineTuneScreen）
             composable<Screen.ParamAdjustment> {
                 AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P0: HSL 调节
+            composable<Screen.HSLAdjustment> {
+                com.silas.omaster.ui.features.HSLAdjustmentScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P0: 批量处理
+            composable<Screen.BatchProcessing> {
+                com.silas.omaster.ui.features.BatchProcessingScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P0: RAW 处理
+            composable<Screen.RAWProcessing> {
+                com.silas.omaster.ui.features.RAWProcessingScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P1: 色调曲线
+            composable<Screen.ToneCurve> {
+                com.silas.omaster.ui.features.ToneCurveScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P1: 直方图
+            composable<Screen.Histogram> {
+                com.silas.omaster.ui.features.HistogramScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P2: 收藏夹
+            composable<Screen.Favorites> {
+                com.silas.omaster.ui.features.FavoritesScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P2: 2026 趋势
+            composable<Screen.Trend2026> {
+                com.silas.omaster.ui.features.Trend2026Screen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // P2: 场景细分
+            composable<Screen.SceneDetail> {
+                com.silas.omaster.ui.features.SceneDetailScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

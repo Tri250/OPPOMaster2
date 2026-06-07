@@ -49,6 +49,14 @@ class HomeViewModel(
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
 
+    // 哈苏预设列表（云同步 HNCS 标签）
+    private val _hncsPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
+    val hncsPresets: StateFlow<List<MasterPreset>> = _hncsPresets.asStateFlow()
+
+    // 新上预设列表
+    private val _newPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
+    val newPresets: StateFlow<List<MasterPreset>> = _newPresets.asStateFlow()
+
     // 用于管理收集任务的 Job
     private var allPresetsJob: Job? = null
     private var favoritesJob: Job? = null
@@ -72,6 +80,9 @@ class HomeViewModel(
         allPresetsJob = viewModelScope.launch {
             repository.getAllPresets().collect { presets ->
                 _allPresets.value = presets
+                // 派生 HNCS / New 预设列表
+                _hncsPresets.value = presets.filter { it.isHncs }
+                _newPresets.value = presets.filter { it.isNew }
             }
         }
 

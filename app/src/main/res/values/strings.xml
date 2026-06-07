@@ -84,6 +84,26 @@
     <string name="tab_all">全部</string>
     <string name="tab_favorites">收藏</string>
     <string name="tab_my">我的</string>
+    <string name="tab_hncs">哈苏</string>
+    <string name="tab_new">上新</string>
+
+    <!-- 主页搜索/筛选 -->
+    <string name="search_hint">搜索预设 / 作者 / 标签</string>
+    <string name="filter_all_brand">全部品牌</string>
+    <string name="sort_newest">最新</string>
+    <string name="sort_popular">最热</string>
+    <string name="sort_rating">评分</string>
+    <string name="brand_oppo">OPPO</string>
+    <string name="brand_oneplus">一加</string>
+    <string name="brand_realme">真我</string>
+    <string name="brand_vivo">vivo</string>
+    <string name="brand_hasselblad_chip">哈苏</string>
+    <string name="sync_indicator">同步中…</string>
+    <string name="sync_synced">已同步</string>
+    <string name="sync_cloud">云端</string>
+    <string name="loading_cloud_presets">加载云端样张中…</string>
+    <string name="empty_no_match">未找到匹配的预设</string>
+    <string name="empty_hint_filter">下拉刷新或切换筛选条件</string>
 
     <!-- 主页操作 -->
     <string name="create_preset">新建预设</string>
@@ -310,6 +330,130 @@
     <string name="developer">开发者</string>
     <string name="developer_name">Silas</string>
     <string name="material_provider">素材提供</string>
+
+    <!-- P0: HSL 调节页 -->
+    <string name="hsl_title">HSL 调节</string>
+    <string name="hsl_subtitle">8 色独立调节 · Lightroom 标配</string>
+    <string name="hsl_hue">色相</string>
+    <string name="hsl_saturation">饱和度</string>
+    <string name="hsl_lightness">明度</string>
+    <string name="hsl_channel_red">红色</string>
+    <string name="hsl_channel_orange">橙色</string>
+    <string name="hsl_channel_yellow">黄色</string>
+    <string name="hsl_channel_green">绿色</string>
+    <string name="hsl_channel_cyan">青色</string>
+    <string name="hsl_channel_blue">蓝色</string>
+    <string name="hsl_channel_purple">紫色</string>
+    <string name="hsl_channel_magenta">洋红</string>
+    <string name="hsl_reset">重置当前</string>
+    <string name="hsl_reset_all">重置全部</string>
+    <string name="hsl_apply">应用调节</string>
+    <string name="hsl_preview">实时预览</string>
+    <string name="hsl_color_wheel">色相环</string>
+    <string name="hsl_adjust_hint">拖动滑块调整各色相/饱和度/明度</string>
+
+    <!-- P0: 批量处理页 -->
+    <string name="batch_title">批量处理</string>
+    <string name="batch_subtitle">多图同款 · 旅行用户必备</string>
+    <string name="batch_select_images">选择图片</string>
+    <string name="batch_select_preset">选择预设</string>
+    <string name="batch_output_settings">输出设置</string>
+    <string name="batch_start">开始处理</string>
+    <string name="batch_pause">暂停</string>
+    <string name="batch_resume">继续</string>
+    <string name="batch_cancel">取消</string>
+    <string name="batch_clear">清空</string>
+    <string name="batch_progress">处理进度</string>
+    <string name="batch_completed">已完成</string>
+    <string name="batch_quality">输出质量</string>
+    <string name="batch_format">输出格式</string>
+    <string name="batch_select_count">已选择 %1$d 张</string>
+    <string name="batch_processing_item">处理中: %1$s</string>
+    <string name="batch_max_hint">最多选择 %1$d 张</string>
+    <string name="batch_complete_msg">处理完成：成功 %1$d 张，失败 %2$d 张</string>
+    <string name="batch_output_path">输出路径: %1$s</string>
+
+    <!-- P0: RAW 处理页 -->
+    <string name="raw_title">RAW 处理</string>
+    <string name="raw_subtitle">专业摄影师刚需 · 16-bit 色深</string>
+    <string name="raw_select_file">选择 RAW 文件</string>
+    <string name="raw_format">格式: %1$s</string>
+    <string name="raw_bit_depth">色深: %1$d-bit</string>
+    <string name="raw_dimensions">尺寸: %1$d × %2$d</string>
+    <string name="raw_exposure">曝光</string>
+    <string name="raw_white_balance">白平衡</string>
+    <string name="raw_temperature">色温 (K)</string>
+    <string name="raw_tint">色调</string>
+    <string name="raw_highlights">高光</string>
+    <string name="raw_shadows">阴影</string>
+    <string name="raw_blacks">黑色</string>
+    <string name="raw_whites">白色</string>
+    <string name="raw_clarity">清晰度</string>
+    <string name="raw_vibrance">鲜艳度</string>
+    <string name="raw_saturation_raw">饱和度</string>
+    <string name="raw_sharpness_raw">锐度</string>
+    <string name="raw_noise_reduction">降噪</string>
+    <string name="raw_process">处理 RAW</string>
+    <string name="raw_export">导出 DNG</string>
+    <string name="raw_supported_formats">支持格式: DNG, CR2, NEF, ARW, RAF, ORF, RW2</string>
+
+    <!-- P1: 色调曲线页 -->
+    <string name="curve_title">色调曲线</string>
+    <string name="curve_subtitle">专业调色 · RGB/R/G/B 通道</string>
+    <string name="curve_add_point">添加控制点</string>
+    <string name="curve_reset">重置曲线</string>
+    <string name="curve_presets">曲线预设</string>
+    <string name="curve_preset_linear">线性</string>
+    <string name="curve_preset_contrast">对比度</string>
+    <string name="curve_preset_fade">褪色</string>
+    <string name="curve_preset_shadow_highlight">阴影高光</string>
+    <string name="curve_drag_hint">点击曲线添加控制点，拖动调整</string>
+
+    <!-- P1: 直方图页 -->
+    <string name="histogram_title">直方图分析</string>
+    <string name="histogram_subtitle">参数调节参考</string>
+    <string name="histogram_load_image">加载图片分析</string>
+    <string name="histogram_mean">平均值: %1$.1f</string>
+    <string name="histogram_median">中位数: %1$d</string>
+    <string name="histogram_std_dev">标准差: %1$.1f</string>
+    <string name="histogram_dynamic_range">动态范围: %1$.1f</string>
+    <string name="histogram_exposure">曝光评估: %1$s</string>
+    <string name="histogram_contrast">对比度: %1$s</string>
+    <string name="histogram_overexposed">过曝</string>
+    <string name="histogram_underexposed">欠曝</string>
+    <string name="histogram_balanced">正常</string>
+    <string name="histogram_low">低</string>
+    <string name="histogram_high">高</string>
+
+    <!-- P2: 收藏夹页 -->
+    <string name="favorites_title">收藏夹</string>
+    <string name="favorites_subtitle">%1$d 个预设</string>
+    <string name="favorites_new_folder">新建文件夹</string>
+    <string name="favorites_folder_name">文件夹名称</string>
+    <string name="favorites_rename">重命名</string>
+    <string name="favorites_delete_folder">删除文件夹</string>
+    <string name="favorites_default">默认收藏</string>
+    <string name="favorites_empty_folder">文件夹为空</string>
+    <string name="favorites_add_preset">添加预设到文件夹</string>
+    <string name="favorites_move_to">移动到</string>
+
+    <!-- P2: 2026 趋势专题页 -->
+    <string name="trend_title">2026 趋势</string>
+    <string name="trend_subtitle">年度热门风格与流行色</string>
+    <string name="trend_year_badge">2026</string>
+    <string name="trend_color_palette">流行色卡</string>
+    <string name="trend_trending_styles">趋势风格</string>
+    <string name="trend_newsletter">订阅趋势推送</string>
+    <string name="trend_subscribe">立即订阅</string>
+    <string name="trend_subscribed">已订阅</string>
+
+    <!-- P2: 场景细分页 -->
+    <string name="scene_title">场景细分</string>
+    <string name="scene_subtitle">智能识别 · 18 种场景</string>
+    <string name="scene_all">全部场景</string>
+    <string name="scene_recommendation">推荐</string>
+    <string name="scene_tips">拍摄建议</string>
+    <string name="scene_examples">示例样张</string>
 
     <!-- 页脚 -->
     <string name="footer_local"></string>

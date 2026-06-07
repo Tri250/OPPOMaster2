@@ -592,7 +592,9 @@ private fun getTabName(tabIndex: Int): String {
     return when (tabIndex) {
         0 -> "全部"
         1 -> "收藏"
-        2 -> "我的"
+        2 -> "哈苏"
+        3 -> "上新"
+        4 -> "我的"
         else -> "全部"
     }
 }

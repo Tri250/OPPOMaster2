@@ -156,6 +156,8 @@ data class MasterPreset(
     val isFavorite: Boolean = false,
     val isCustom: Boolean = false,
     val isNew: Boolean = false,
+    val isHncs: Boolean = false,           // 是否为哈苏自然色彩预设
+    val isPinned: Boolean = false,         // 是否置顶
     val description: PresetDescription? = null,
     val shootingTips: String? = null,
     val sections: List<PresetSection>? = null,
@@ -166,7 +168,10 @@ data class MasterPreset(
     val build: Int = 1,                    // 构建号，用于增量更新
     val params: Map<String, String>? = null,           // 专业参数 (ISO/快门等)
     val colorGradingParams: Map<String, String>? = null, // 色彩参数 (饱和度/对比度等)
-    val createdAt: Long = 0               // 创建时间戳
+    val createdAt: Long = 0,              // 创建时间戳
+    val updatedAt: Long = 0,              // 更新时间戳
+    val downloadCount: Int = 0,           // 下载次数
+    val rating: Float = 0f                // 评分 0-5
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString(),
@@ -193,6 +198,8 @@ data class MasterPreset(
         isFavorite = parcel.readByte() != 0.toByte(),
         isCustom = parcel.readByte() != 0.toByte(),
         isNew = parcel.readByte() != 0.toByte(),
+        isHncs = parcel.readByte() != 0.toByte(),
+        isPinned = parcel.readByte() != 0.toByte(),
         description = parcel.readParcelable(PresetDescription::class.java.classLoader),
         shootingTips = parcel.readString(),
         sections = parcel.createTypedArrayList(PresetSection.CREATOR),
@@ -202,7 +209,10 @@ data class MasterPreset(
         build = parcel.readInt(),
         params = null, // Map需要特殊处理
         colorGradingParams = null,
-        createdAt = parcel.readLong()
+        createdAt = parcel.readLong(),
+        updatedAt = parcel.readLong(),
+        downloadCount = parcel.readInt(),
+        rating = parcel.readFloat()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -230,6 +240,8 @@ data class MasterPreset(
         parcel.writeByte(if (isFavorite) 1 else 0)
         parcel.writeByte(if (isCustom) 1 else 0)
         parcel.writeByte(if (isNew) 1 else 0)
+        parcel.writeByte(if (isHncs) 1 else 0)
+        parcel.writeByte(if (isPinned) 1 else 0)
         parcel.writeParcelable(description, flags)
         parcel.writeString(shootingTips)
         parcel.writeTypedList(sections)
@@ -239,6 +251,9 @@ data class MasterPreset(
         parcel.writeValue(version)
         parcel.writeInt(build)
         parcel.writeLong(createdAt)
+        parcel.writeLong(updatedAt)
+        parcel.writeInt(downloadCount)
+        parcel.writeFloat(rating)
     }
 
     fun getDisplaySections(context: Context): List<PresetSection> {

@@ -5,12 +5,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -162,28 +166,67 @@ fun PresetCard(
                     }
                 }
 
-                if (preset.isNew) {
-                    Box(
+                if (preset.isNew || preset.isHncs || preset.isPinned) {
+                    Row(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.tertiary
-                                    )
-                                ),
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
-                            text = stringResource(R.string.preset_new),
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (preset.isHncs) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.tertiary
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "HNCS",
+                                    fontSize = 9.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        if (preset.isNew && !preset.isHncs) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = Color(0xFF4CAF50),
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "NEW",
+                                    fontSize = 9.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        if (preset.isPinned) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = Color(0xCCFFC107),
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "📌",
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -191,15 +234,69 @@ fun PresetCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = PresetI18n.getLocalizedPresetName(preset.name),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (preset.author.isNotEmpty()) {
+                    Text(
+                        text = preset.author,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (preset.rating > 0f || preset.downloadCount > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (preset.rating > 0f) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "★",
+                                    color = Color(0xFFFFC107),
+                                    fontSize = 10.sp
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = String.format("%.1f", preset.rating),
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                        if (preset.downloadCount > 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "⬇",
+                                    color = Color.White.copy(alpha = 0.4f),
+                                    fontSize = 10.sp
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = if (preset.downloadCount > 10000) {
+                                        String.format("%.1fw", preset.downloadCount / 10000f)
+                                    } else {
+                                        preset.downloadCount.toString()
+                                    },
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

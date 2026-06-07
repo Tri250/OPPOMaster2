@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
@@ -90,6 +91,20 @@ fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit,
+    onNavigateToSceneRecognition: () -> Unit = {},
+    onNavigateToAIFineTune: () -> Unit = {},
+    onNavigateToWatermarkEditor: () -> Unit = {},
+    onNavigateToSmartOptimize: () -> Unit = {},
+    onNavigateToPresetManager: () -> Unit = {},
+    onNavigateToParamAdjustment: () -> Unit = {},
+    onNavigateToHSLAdjustment: () -> Unit = {},
+    onNavigateToBatchProcessing: () -> Unit = {},
+    onNavigateToRAWProcessing: () -> Unit = {},
+    onNavigateToToneCurve: () -> Unit = {},
+    onNavigateToHistogram: () -> Unit = {},
+    onNavigateToFavorites: () -> Unit = {},
+    onNavigateToTrend2026: () -> Unit = {},
+    onNavigateToSceneDetail: () -> Unit = {},
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0
 ) {
@@ -104,6 +119,8 @@ fun HomeScreen(
     val allPresets by viewModel.allPresets.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val customPresets by viewModel.customPresets.collectAsState()
+    val hncsPresets by viewModel.hncsPresets.collectAsState()
+    val newPresets by viewModel.newPresets.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     
     // 当 refreshTrigger 变化时刷新数据
@@ -117,7 +134,7 @@ fun HomeScreen(
     val settingsManager = remember { SettingsManager.getInstance(context) }
     val defaultStartTab = remember { settingsManager.defaultStartTab }
     
-    val pagerState = rememberPagerState(initialPage = defaultStartTab, pageCount = { 3 })
+    val pagerState = rememberPagerState(initialPage = defaultStartTab.coerceIn(0, 4), pageCount = { 5 })
     
     // 初始化时同步默认 Tab
     LaunchedEffect(Unit) {
@@ -130,11 +147,13 @@ fun HomeScreen(
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
 
     // 当预设列表或选中的 Tab 变化时，更新到全局控制器
-    LaunchedEffect(allPresets, favorites, customPresets, selectedTab) {
+    LaunchedEffect(allPresets, favorites, customPresets, hncsPresets, newPresets, selectedTab) {
         val currentList = when (selectedTab) {
             0 -> allPresets
             1 -> favorites
-            2 -> customPresets
+            2 -> hncsPresets
+            3 -> newPresets
+            4 -> customPresets
             else -> allPresets
         }
         floatingWindowController.setPresetList(currentList)
@@ -199,6 +218,8 @@ fun HomeScreen(
                 val tabs = listOf(
                     stringResource(R.string.tab_all) to allPresets.size,
                     stringResource(R.string.tab_favorites) to favorites.size,
+                    stringResource(R.string.tab_hncs) to hncsPresets.size,
+                    stringResource(R.string.tab_new) to newPresets.size,
                     stringResource(R.string.tab_my) to customPresets.size
                 )
                 
@@ -239,6 +260,18 @@ fun HomeScreen(
                 }
             }
 
+            // 快捷功能入口（仿 Web 设计：核心工具入口）
+            QuickAccessBar(
+                onNavigateToHSL = onNavigateToHSLAdjustment,
+                onNavigateToBatch = onNavigateToBatchProcessing,
+                onNavigateToRAW = onNavigateToRAWProcessing,
+                onNavigateToCurve = onNavigateToToneCurve,
+                onNavigateToHistogram = onNavigateToHistogram,
+                onNavigateToFavorites = onNavigateToFavorites,
+                onNavigateToTrend = onNavigateToTrend2026,
+                onNavigateToScene = onNavigateToSceneDetail
+            )
+
             // 可滑动的页面内容
             HorizontalPager(
                 state = pagerState,
@@ -273,8 +306,34 @@ fun HomeScreen(
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) }
                         )
                         2 -> PresetGrid(
-                            presets = customPresets,
+                            presets = hncsPresets,
                             tabIndex = 2,
+                            onNavigateToDetail = onNavigateToDetail,
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onDeletePreset = {
+                                presetToDelete = it
+                                showDeleteConfirm = true
+                            },
+                            onScrollStateChanged = onScrollStateChanged,
+                            showLoadingTip = false,
+                            onRefresh = { onComplete -> viewModel.refresh(onComplete) }
+                        )
+                        3 -> PresetGrid(
+                            presets = newPresets,
+                            tabIndex = 3,
+                            onNavigateToDetail = onNavigateToDetail,
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onDeletePreset = {
+                                presetToDelete = it
+                                showDeleteConfirm = true
+                            },
+                            onScrollStateChanged = onScrollStateChanged,
+                            showLoadingTip = false,
+                            onRefresh = { onComplete -> viewModel.refresh(onComplete) }
+                        )
+                        4 -> PresetGrid(
+                            presets = customPresets,
+                            tabIndex = 4,
                             onNavigateToDetail = onNavigateToDetail,
                             onToggleFavorite = { viewModel.toggleFavorite(it) },
                             onDeletePreset = {
@@ -292,7 +351,7 @@ fun HomeScreen(
         }
 
         // 悬浮添加按钮（只在"我的"Tab显示）
-        if (selectedTab == 2) {
+        if (selectedTab == 4) {
             FloatingActionButton(
                 onClick = {
                     haptic.perform(HapticFeedbackType.Confirm)
@@ -687,6 +746,98 @@ private fun LoadingMoreTip() {
                             )
                         )
                     )
+            )
+        }
+    }
+}
+
+/**
+ * 快捷功能入口栏
+ * 仿 Web 设计：横向滚动核心工具入口
+ */
+@Composable
+private fun QuickAccessBar(
+    onNavigateToHSL: () -> Unit,
+    onNavigateToBatch: () -> Unit,
+    onNavigateToRAW: () -> Unit,
+    onNavigateToCurve: () -> Unit,
+    onNavigateToHistogram: () -> Unit,
+    onNavigateToFavorites: () -> Unit,
+    onNavigateToTrend: () -> Unit,
+    onNavigateToScene: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val items = listOf(
+        QuickAccessItem("🎨", "HSL", HasselbladOrange, onNavigateToHSL),
+        QuickAccessItem("📦", "批量", Color(0xFF4CAF50), onNavigateToBatch),
+        QuickAccessItem("📷", "RAW", Color(0xFF2196F3), onNavigateToRAW),
+        QuickAccessItem("📈", "曲线", Color(0xFF9C27B0), onNavigateToCurve),
+        QuickAccessItem("📊", "直方图", Color(0xFFFF9800), onNavigateToHistogram),
+        QuickAccessItem("⭐", "收藏夹", Color(0xFFFFC107), onNavigateToFavorites),
+        QuickAccessItem("🔥", "2026", Color(0xFFE91E63), onNavigateToTrend),
+        QuickAccessItem("🌄", "场景", Color(0xFF00BCD4), onNavigateToScene)
+    )
+    androidx.compose.foundation.lazy.LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        items(
+            count = items.size,
+            key = { idx -> items[idx].title }
+        ) { idx ->
+            val item = items[idx]
+            QuickAccessChip(
+                icon = item.icon,
+                title = item.title,
+                color = item.color,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.Confirm)
+                    item.onClick()
+                }
+            )
+        }
+    }
+}
+
+private data class QuickAccessItem(
+    val icon: String,
+    val title: String,
+    val color: Color,
+    val onClick: () -> Unit
+)
+
+@Composable
+private fun QuickAccessChip(
+    icon: String,
+    title: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(72.dp)
+            .height(80.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1A1A1A))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = icon, fontSize = 22.sp)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = title,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
             )
         }
     }

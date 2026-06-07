@@ -83,7 +83,7 @@ class SettingsManager private constructor(context: Context) {
     var defaultStartTab: Int
         get() = prefs.getInt(KEY_DEFAULT_START_TAB, 0)
         set(value) {
-            prefs.edit().putInt(KEY_DEFAULT_START_TAB, value.coerceIn(0, 2)).apply()
+            prefs.edit().putInt(KEY_DEFAULT_START_TAB, value.coerceIn(0, 4)).apply()
         }
 
     // 更新渠道（默认 Gitee）
