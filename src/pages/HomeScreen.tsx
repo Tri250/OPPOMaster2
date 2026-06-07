@@ -1,13 +1,14 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 import { useCloudPresets } from '../hooks/useCloudPresets';
 import { CloudPreset } from '../types/cloudPreset';
 import { fetchCloudPresets, CloudPreset as CloudPresetType } from '../services/presetCloudService';
 import PresetDetailModal from '../components/PresetDetailModal';
+import { fetchMergedPresets, RemotePreset } from '../services/remotePresetService';
 import { 
   Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp,
-  Camera, Aperture, Gauge, Sun, Moon, Droplets, Zap, Award, Crown,
-  MessageCircle, Share2, Bookmark, Flame, Eye, Users, MapPin, Leaf, Sunrise, Sunset
+  Camera, Sun, Moon, Award, Crown,
+  Flame, Eye, Users, MapPin, Leaf, Sunset
 } from 'lucide-react';
 
 // Tab 配置 - 2026年小红书风格
@@ -49,7 +50,7 @@ const brands = [
 ];
 
 const HomeScreen: React.FC = () => {
-  const { setAiParam } = useAppStore();
+  useAppStore(); // Keep store connected
   const { presets, state, loading, refresh, toggleFavorite } = useCloudPresets();
   
   // 当前选中的 Tab 索引（参考 OMaster selectedTab）
@@ -61,7 +62,11 @@ const HomeScreen: React.FC = () => {
   
   // 样张详情弹窗状态
   const [selectedPreset, setSelectedPreset] = useState<CloudPresetType | null>(null);
+  const [selectedRemotePreset, setSelectedRemotePreset] = useState<(RemotePreset & { brand?: string; brandName?: string }) | null>(null);
   const [cloudPresetsData, setCloudPresetsData] = useState<CloudPresetType[]>([]);
+  
+  // 远程预设数据状态
+  const [remotePresets, setRemotePresets] = useState<Array<RemotePreset & { brand?: string; brandName?: string }>>([]);
   
   // 参考 OMaster：当前页面与 Pager 双向同步
   const [currentPage, setCurrentPage] = useState(0);
@@ -73,12 +78,25 @@ const HomeScreen: React.FC = () => {
     fetchCloudPresets().then(setCloudPresetsData);
   }, []);
 
+  // 加载远程预设数据
+  useEffect(() => {
+    const loadRemotePresets = async () => {
+      try {
+        const data = await fetchMergedPresets();
+        setRemotePresets(data);
+      } catch (error) {
+        console.error('Failed to load remote presets:', error);
+      }
+    };
+    loadRemotePresets();
+  }, []);
+
   // Pager -> Tab 同步（参考 OMaster LaunchedEffect(pagerState.currentPage)）
   useEffect(() => {
     if (currentPage !== selectedTab) {
       setSelectedTab(currentPage);
     }
-  }, [currentPage]);
+  }, [currentPage, selectedTab]);
 
   // Tab -> Pager 同步（参考 OMaster LaunchedEffect(selectedTab)）
   useEffect(() => {
@@ -92,12 +110,12 @@ const HomeScreen: React.FC = () => {
         });
       }
     }
-  }, [selectedTab]);
+  }, [selectedTab, currentPage]);
 
   // 下拉刷新
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refresh(true);
+    await refresh();
     setTimeout(() => setRefreshing(false), 500);
   }, [refresh]);
 
@@ -137,6 +155,11 @@ const HomeScreen: React.FC = () => {
     }
   }, [cloudPresetsData]);
 
+  // 处理远程预设点击
+  const handleRemotePresetClick = useCallback((preset: RemotePreset & { brand?: string; brandName?: string }) => {
+    setSelectedRemotePreset(preset);
+  }, []);
+
   // Pager 滚动处理
   const handlePagerScroll = useCallback(() => {
     if (!pagerRef.current) return;
@@ -149,13 +172,13 @@ const HomeScreen: React.FC = () => {
   // 计算每个 Tab 的计数（参考 OMaster Tab + 计数徽章）
   const getTabCount = useCallback((tabKey: string) => {
     switch (tabKey) {
-      case 'all': return presets.length;
+      case 'all': return presets.length + remotePresets.length;
       case 'favorites': return presets.filter(p => p.isFavorite).length;
       case 'hncs': return presets.filter(p => p.isHncs).length;
-      case 'new': return presets.filter(p => p.isNew).length;
+      case 'new': return presets.filter(p => p.isNew).length + remotePresets.filter(p => p.isNew).length;
       default: return 0;
     }
-  }, [presets]);
+  }, [presets, remotePresets]);
 
   // 过滤和排序（按 Tab 过滤）
   const getFilteredPresets = useCallback((tabKey: string) => {
@@ -205,6 +228,32 @@ const HomeScreen: React.FC = () => {
       ...result.filter(p => !p.isPinned),
     ];
   }, [presets, activeBrand, searchQuery, sortBy]);
+
+  // 获取远程预设（过滤后）
+  const getFilteredRemotePresets = useCallback(() => {
+    let result = [...remotePresets];
+    
+    // 品牌过滤
+    if (activeBrand !== 'all') {
+      const brandLower = activeBrand.toLowerCase();
+      result = result.filter(p => 
+        p.brand?.toLowerCase() === brandLower || 
+        p.brandName?.toLowerCase() === brandLower
+      );
+    }
+
+    // 搜索过滤
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.author.toLowerCase().includes(q) ||
+        p.tags?.some(t => t.toLowerCase().includes(q))
+      );
+    }
+
+    return result;
+  }, [remotePresets, activeBrand, searchQuery]);
 
   // 计算瀑布流高度 - 参考 OMaster 的 staggered grid
   const getImageHeight = (index: number) => {
@@ -330,11 +379,69 @@ const HomeScreen: React.FC = () => {
     );
   };
 
-  // 渲染瀑布流内容（复用组件）
+  // 渲染远程预设卡片
+  const renderRemotePresetCard = (preset: RemotePreset & { brand?: string; brandName?: string }, index: number) => {
+    const heightClass = getImageHeight(index);
+    return (
+      <div
+        key={`remote-${preset.name}-${index}`}
+        onClick={() => handleRemotePresetClick(preset)}
+        className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${heightClass}`}
+      >
+        {/* Glass Border Effect */}
+        <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
+        
+        {/* Image */}
+        <img
+          src={preset.coverPath}
+          alt={preset.name}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
+        />
+
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+        {/* Brand Badge */}
+        {preset.brandName && (
+          <div className="absolute top-2 left-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 backdrop-blur-sm rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1">
+            <Crown size={10} />
+            <span>{preset.brandName}</span>
+          </div>
+        )}
+
+        {/* NEW Badge */}
+        {preset.isNew && (
+          <div className="absolute top-2 right-2 px-2 py-1 bg-[#4CAF50] backdrop-blur-sm rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1">
+            <Sparkles size={10} />
+            <span>NEW</span>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <h3 className="text-white font-semibold text-sm mb-0.5 truncate">{preset.name}</h3>
+          <p className="text-white/60 text-xs truncate">{preset.author}</p>
+          
+          {/* Tags */}
+          {preset.tags && preset.tags.length > 0 && (
+            <div className="flex items-center gap-2 mt-1.5 overflow-hidden">
+              {preset.tags.slice(0, 2).map((tag, idx) => (
+                <span key={idx} className="text-white/40 text-[10px]">#{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // 渲染瀑布流内容（合并本地和远程预设）
   const renderPresetGrid = (tabKey: string) => {
     const filteredPresets = getFilteredPresets(tabKey);
+    const filteredRemotePresets = getFilteredRemotePresets();
     
-    if (loading && presets.length === 0) {
+    if (loading && presets.length === 0 && remotePresets.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-20">
           <RefreshCw size={32} className="text-[#FF6B35] animate-spin mb-3" />
@@ -343,7 +450,7 @@ const HomeScreen: React.FC = () => {
       );
     }
 
-    if (filteredPresets.length === 0) {
+    if (filteredPresets.length === 0 && filteredRemotePresets.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-20">
           <Cloud size={32} className="text-white/20 mb-3" />
@@ -353,9 +460,21 @@ const HomeScreen: React.FC = () => {
       );
     }
 
+    // 合并预设列表（远程预设放在前面作为云端新增内容）
+    const allPresets = [...filteredRemotePresets, ...filteredPresets];
+
     return (
       <div className="grid grid-cols-2 gap-4">
-        {filteredPresets.map((preset, index) => renderPresetCard(preset, index))}
+        {allPresets.map((preset, index) => {
+          // 判断是远程预设还是本地预设
+          if ('sections' in preset && 'coverPath' in preset) {
+            // 远程预设
+            return renderRemotePresetCard(preset as RemotePreset & { brand?: string; brandName?: string }, index);
+          } else {
+            // 本地预设
+            return renderPresetCard(preset as CloudPreset, index);
+          }
+        })}
       </div>
     );
   };
@@ -546,7 +665,7 @@ const HomeScreen: React.FC = () => {
         style={{ scrollBehavior: 'smooth' }}
       >
         <div className="flex h-full" style={{ width: `${tabs.length * 100}%` }}>
-          {tabs.map((tab, index) => (
+          {tabs.map((tab) => (
             <div
               key={tab.key}
               className="snap-start snap-always h-full overflow-y-auto px-4 pb-4 scrollbar-hide"
@@ -590,8 +709,16 @@ const HomeScreen: React.FC = () => {
       {/* 样张详情弹窗 */}
       {selectedPreset && (
         <PresetDetailModal 
-          preset={selectedPreset} 
+          preset={selectedPreset as unknown as Parameters<typeof PresetDetailModal>[0]['preset']} 
           onClose={() => setSelectedPreset(null)} 
+        />
+      )}
+      
+      {/* 远程样张详情弹窗 */}
+      {selectedRemotePreset && (
+        <PresetDetailModal 
+          preset={selectedRemotePreset} 
+          onClose={() => setSelectedRemotePreset(null)} 
         />
       )}
     </div>
