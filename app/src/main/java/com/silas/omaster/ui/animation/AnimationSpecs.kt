@@ -6,116 +6,132 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntOffset
 
 /**
- * 全局动画配置
- * 统一管理应用内所有动画规格，确保一致性和性能
+ * 全局动画配置 - Web风格
+ * 融合Web展示页面的流畅动画效果
  */
 object AnimationSpecs {
 
-    /**
-     * 快速动画 - 用于微交互（按钮点击、图标变化等）
-     * 时长：150ms
-     */
+    // ========== Web风格动画时长 ==========
+    // 快速响应 - 按钮点击、图标变化
     val FastTween = tween<Float>(
-        durationMillis = 150,
+        durationMillis = 100,
         easing = FastOutSlowInEasing
     )
 
-    /**
-     * 标准动画 - 用于一般过渡（页面切换、内容显示等）
-     * 时长：250ms
-     */
+    // 标准过渡 - 页面切换、内容显示
     val NormalTween = tween<Float>(
-        durationMillis = 250,
+        durationMillis = 300,
         easing = FastOutSlowInEasing
     )
 
-    /**
-     * 慢速动画 - 用于强调动画（卡片入场、重要提示等）
-     * 时长：400ms
-     */
+    // 慢速强调 - 卡片入场、重要提示
     val SlowTween = tween<Float>(
         durationMillis = 400,
         easing = FastOutSlowInEasing
     )
 
-    /**
-     * 列表项入场动画 - 轻量级，适合大量列表项
-     * 使用较硬的 spring 减少计算量
-     */
+    // Web风格淡入 - 页面内容入场
+    val WebFadeIn = tween<Float>(
+        durationMillis = 400,
+        easing = LinearOutSlowInEasing
+    )
+
+    // Web风格滑入 - 从下方滑入
+    val WebSlideIn = tween<Float>(
+        durationMillis = 400,
+        easing = FastOutSlowInEasing
+    )
+
+    // Web风格缩放 - 悬停效果
+    val WebScaleHover = tween<Float>(
+        durationMillis = 200,
+        easing = FastOutSlowInEasing
+    )
+
+    // Web风格按压 - 点击反馈
+    val WebPressScale = tween<Float>(
+        durationMillis = 100,
+        easing = LinearEasing
+    )
+
+    // ========== 弹性动画 ==========
+    // 列表项入场 - 轻量级
     val ListItemSpring = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMedium,
         visibilityThreshold = 0.01f
     )
 
-    /**
-     * 卡片弹性动画 - 用于卡片等需要弹性的元素
-     * 优化：提高刚度，减少拖沓感
-     */
+    // 卡片弹性 - 微弹性
     val CardSpring = spring<Float>(
+        dampingRatio = Spring.DampingRatioLowBouncy,
+        stiffness = Spring.StiffnessMedium,
+        visibilityThreshold = 0.001f
+    )
+
+    // 按钮弹性 - 明显弹性
+    val ButtonSpring = spring<Float>(
         dampingRatio = Spring.DampingRatioMediumBouncy,
         stiffness = Spring.StiffnessMediumLow,
         visibilityThreshold = 0.001f
     )
 
-    /**
-     * 淡入动画规格
-     */
+    // ========== 淡入淡出 ==========
     val FadeInSpec = tween<Float>(
         durationMillis = 200,
         easing = LinearOutSlowInEasing
     )
 
-    /**
-     * 淡出动画规格
-     */
     val FadeOutSpec = tween<Float>(
         durationMillis = 150,
         easing = FastOutLinearInEasing
     )
 
-    /**
-     * 滑动动画规格
-     */
+    // ========== 滑动动画 ==========
     val SlideSpec = tween<Int>(
         durationMillis = 300,
         easing = FastOutSlowInEasing
     )
 
-    /**
-     * 缩放动画规格
-     */
+    // ========== 缩放动画 ==========
     val ScaleSpec = tween<Float>(
         durationMillis = 200,
         easing = FastOutSlowInEasing
     )
 
-    /**
-     * 列表项错开延迟基准值
-     * 优化：从 50ms 减少到 20ms，提升加载流畅度
-     */
-    const val StaggerDelayMillis = 20
+    // ========== 错开延迟 ==========
+    // Web风格：更流畅的错开效果
+    const val StaggerDelayMillis = 30
+    const val MaxStaggerDelayMillis = 200
 
-    /**
-     * 列表项最大延迟
-     * 优化：从 300ms 减少到 150ms，提升加载流畅度
-     */
-    const val MaxStaggerDelayMillis = 150
-
-    /**
-     * 自动播放间隔
-     */
+    // 自动播放间隔
     const val AutoPlayIntervalMillis = 3000L
 
-    /**
-     * 页面切换动画时长
-     */
-    const val PageTransitionMillis = 250
+    // 页面切换时长
+    const val PageTransitionMillis = 300
+
+    // ========== Web风格动画曲线 ==========
+    // 模拟framer-motion的easeOut曲线
+    val WebEaseOut = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f)
+
+    // 模拟framer-motion的easeInOut曲线
+    val WebEaseInOut = CubicBezierEasing(0.42f, 0.0f, 0.58f, 1.0f)
+
+    // ========== Web风格入场动画组合 ==========
+    // 卡片入场：淡入 + 缩放 + 上移
+    fun webCardEnterAnimation(
+        alpha: Animatable<Float>,
+        scale: Animatable<Float>,
+        translationY: Animatable<Float>
+    ) {
+        alpha.animateTo(1f, WebFadeIn)
+        scale.animateTo(1f, tween(400, easing = WebEaseOut))
+        translationY.animateTo(0f, tween(400, easing = WebEaseOut))
+    }
 }
 
 /**
  * 记住动画状态的便捷函数
- * 避免在重组时重复创建 Animatable
  */
 @Composable
 fun rememberAnimatable(initialValue: Float = 0f): Animatable<Float, AnimationVector1D> {
@@ -123,10 +139,7 @@ fun rememberAnimatable(initialValue: Float = 0f): Animatable<Float, AnimationVec
 }
 
 /**
- * 计算列表项错开延迟
- * @param index 列表项索引
- * @param visibleStartIndex 可见区域起始索引
- * @return 延迟毫秒数
+ * 计算列表项错开延迟 - Web风格
  */
 fun calculateStaggerDelay(index: Int, visibleStartIndex: Int): Int {
     val relativeIndex = (index - visibleStartIndex).coerceAtLeast(0)
@@ -136,7 +149,6 @@ fun calculateStaggerDelay(index: Int, visibleStartIndex: Int): Int {
 
 /**
  * 列表项动画放置规格
- * 用于 LazyColumn/LazyRow 的 animateItemPlacement
  */
 val ListItemPlacementSpec: SpringSpec<IntOffset> = spring(
     dampingRatio = Spring.DampingRatioNoBouncy,
@@ -145,11 +157,41 @@ val ListItemPlacementSpec: SpringSpec<IntOffset> = spring(
 )
 
 /**
- * 列表项淡入规格
- * 用于 LazyColumn/LazyRow 的 animateItemFadeIn
+ * 列表项淡入规格 - Web风格
  */
 val ListItemFadeInSpec = spring<Float>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMedium,
     visibilityThreshold = 0.01f
 )
+
+/**
+ * Web风格悬停动画状态
+ */
+@Composable
+fun rememberHoverState(): HoverAnimationState {
+    return remember { HoverAnimationState() }
+}
+
+class HoverAnimationState {
+    var isHovered by mutableStateOf(false)
+    val scale: Float by mutableStateOf(if (isHovered) 1.05f else 1f)
+}
+
+/**
+ * Web风格按压动画状态
+ */
+@Composable
+fun rememberPressState(): PressAnimationState {
+    return remember { PressAnimationState() }
+}
+
+class PressAnimationState {
+    var isPressed by mutableStateOf(false)
+    val scale: Float by mutableStateOf(if (isPressed) 0.95f else 1f)
+}
+
+// ========== 导入mutableStateOf ==========
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
