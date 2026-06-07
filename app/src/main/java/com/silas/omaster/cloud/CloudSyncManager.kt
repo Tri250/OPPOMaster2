@@ -1,15 +1,15 @@
 package com.silas.omaster.cloud
 
 import android.content.Context
+import android.content.SharedPreferences
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,17 +18,51 @@ import java.util.UUID
 
 /**
  * 云同步管理器
- * 负责从 CDN 同步预设数据
+ * 负责从 CDN 同步预设数据到本地 SharedPreferences
  */
 class CloudSyncManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
-    private val presetDao = com.silas.omaster.data.local.PresetDatabase.getInstance(context).presetDao()
+    private val appContext = context.applicationContext
+
+    // 使用SharedPreferences存储云端预设
+    private val prefs: SharedPreferences = appContext.getSharedPreferences(
+        PREFS_NAME,
+        Context.MODE_PRIVATE
+    )
+    private val gson = Gson()
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
     private val _lastSyncTime = MutableStateFlow(settingsManager.lastSyncTime)
     val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
+
+    // 内存缓存
+    private val _cloudPresets = MutableStateFlow<List<MasterPreset>>(loadFromCache())
+    val cloudPresets: StateFlow<List<MasterPreset>> = _cloudPresets.asStateFlow()
+
+    /**
+     * 从缓存加载预设
+     */
+    private fun loadFromCache(): List<MasterPreset> {
+        val json = prefs.getString(KEY_CLOUD_PRESETS, null) ?: return emptyList()
+        return try {
+            val type = object : TypeToken<List<MasterPreset>>() {}.type
+            gson.fromJson<List<MasterPreset>>(json, type) ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("CloudSyncManager", "加载云端预设失败", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * 保存预设到缓存
+     */
+    private fun saveToCache(presets: List<MasterPreset>) {
+        val json = gson.toJson(presets)
+        prefs.edit().putString(KEY_CLOUD_PRESETS, json).apply()
+        _cloudPresets.value = presets
+    }
 
     /**
      * 检查是否需要同步
@@ -56,6 +90,7 @@ class CloudSyncManager private constructor(context: Context) {
         try {
             var totalNewPresets = 0
             var totalUpdatedPresets = 0
+            val allPresets = mutableListOf<MasterPreset>()
 
             // 同步每个品牌的预设
             settingsManager.cloudPresetUrls.forEach { (brand, url) ->
@@ -63,11 +98,16 @@ class CloudSyncManager private constructor(context: Context) {
                     val result = syncBrandPresets(brand, url)
                     totalNewPresets += result.newCount
                     totalUpdatedPresets += result.updatedCount
+                    // 收集所有预设
+                    allPresets.addAll(result.presets)
                 } catch (e: Exception) {
                     // 单个品牌同步失败不影响其他品牌
-                    e.printStackTrace()
+                    android.util.Log.e("CloudSyncManager", "同步品牌 $brand 失败", e)
                 }
             }
+
+            // 保存到缓存
+            saveToCache(allPresets)
 
             // 更新同步状态
             val currentTime = System.currentTimeMillis()
@@ -76,8 +116,11 @@ class CloudSyncManager private constructor(context: Context) {
             settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.SYNCED
             _syncState.value = SyncState.Success(totalNewPresets, totalUpdatedPresets)
 
+            android.util.Log.d("CloudSyncManager", "同步完成: 新增$totalNewPresets, 更新$totalUpdatedPresets")
+
             SyncResult.Success(totalNewPresets, totalUpdatedPresets)
         } catch (e: Exception) {
+            android.util.Log.e("CloudSyncManager", "同步失败", e)
             settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.ERROR
             _syncState.value = SyncState.Error(e.message ?: "Unknown error")
             SyncResult.Error(e.message ?: "Unknown error")
@@ -103,24 +146,28 @@ class CloudSyncManager private constructor(context: Context) {
 
         var newCount = 0
         var updatedCount = 0
+        val brandPresets = mutableListOf<MasterPreset>()
+
+        // 获取现有预设用于比较
+        val existingPresets = _cloudPresets.value.filter { it.brand == brand }
+        val existingMap = existingPresets.associateBy { it.name }
 
         for (i in 0 until presetsArray.length()) {
             val presetJson = presetsArray.getJSONObject(i)
             val preset = parsePresetJson(presetJson, brand, version, build)
 
+            brandPresets.add(preset)
+
             // 检查是否已存在
-            val existingPreset = presetDao.getPresetById(preset.id)
-            if (existingPreset == null) {
-                presetDao.insertPreset(preset)
+            val existing = existingMap[preset.name]
+            if (existing == null) {
                 newCount++
-            } else if (existingPreset.build < preset.build) {
-                // 更新已有预设
-                presetDao.updatePreset(preset)
+            } else if (existing.build < preset.build) {
                 updatedCount++
             }
         }
 
-        BrandSyncResult(newCount, updatedCount)
+        BrandSyncResult(newCount, updatedCount, brandPresets)
     }
 
     /**
@@ -156,7 +203,6 @@ class CloudSyncManager private constructor(context: Context) {
                         val label = item.optString("label", "")
                         val value = item.optString("value", "")
 
-                        // 根据标题分类存储参数
                         when {
                             sectionTitle.contains("专业") || sectionTitle.contains("Pro") -> {
                                 params[label] = value
@@ -196,10 +242,24 @@ class CloudSyncManager private constructor(context: Context) {
     }
 
     /**
+     * 获取云端预设列表
+     */
+    fun getCloudPresets(): List<MasterPreset> {
+        return _cloudPresets.value
+    }
+
+    /**
+     * 按品牌获取预设
+     */
+    fun getPresetsByBrand(brand: String): List<MasterPreset> {
+        return _cloudPresets.value.filter { it.brand == brand }
+    }
+
+    /**
      * 获取云端预设数量
      */
-    suspend fun getCloudPresetCount(): Int = withContext(Dispatchers.IO) {
-        settingsManager.cloudPresetUrls.size
+    fun getCloudPresetCount(): Int {
+        return _cloudPresets.value.size
     }
 
     /**
@@ -219,7 +279,18 @@ class CloudSyncManager private constructor(context: Context) {
         }
     }
 
+    /**
+     * 清除云端缓存
+     */
+    fun clearCache() {
+        prefs.edit().remove(KEY_CLOUD_PRESETS).apply()
+        _cloudPresets.value = emptyList()
+    }
+
     companion object {
+        private const val PREFS_NAME = "omaster_cloud_sync"
+        private const val KEY_CLOUD_PRESETS = "cloud_presets"
+
         @Volatile
         private var instance: CloudSyncManager? = null
 
@@ -255,5 +326,6 @@ sealed class SyncResult {
  */
 private data class BrandSyncResult(
     val newCount: Int,
-    val updatedCount: Int
+    val updatedCount: Int,
+    val presets: List<MasterPreset>
 )

@@ -159,7 +159,14 @@ data class MasterPreset(
     val description: PresetDescription? = null,
     val shootingTips: String? = null,
     val sections: List<PresetSection>? = null,
-    val tags: List<String>? = emptyList()
+    val tags: List<String>? = emptyList(),
+    // 云同步相关字段
+    val brand: String? = null,           // 品牌: oppo/realme/vivo/honor
+    val version: Int? = null,              // 版本号
+    val build: Int = 1,                    // 构建号，用于增量更新
+    val params: Map<String, String>? = null,           // 专业参数 (ISO/快门等)
+    val colorGradingParams: Map<String, String>? = null, // 色彩参数 (饱和度/对比度等)
+    val createdAt: Long = 0               // 创建时间戳
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString(),
@@ -189,7 +196,13 @@ data class MasterPreset(
         description = parcel.readParcelable(PresetDescription::class.java.classLoader),
         shootingTips = parcel.readString(),
         sections = parcel.createTypedArrayList(PresetSection.CREATOR),
-        tags = parcel.createStringArrayList() ?: emptyList()
+        tags = parcel.createStringArrayList() ?: emptyList(),
+        brand = parcel.readString(),
+        version = parcel.readValue(Int::class.java.classLoader) as? Int,
+        build = parcel.readInt(),
+        params = null, // Map需要特殊处理
+        colorGradingParams = null,
+        createdAt = parcel.readLong()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -221,6 +234,11 @@ data class MasterPreset(
         parcel.writeString(shootingTips)
         parcel.writeTypedList(sections)
         parcel.writeStringList(tags)
+        // 云同步相关字段
+        parcel.writeString(brand)
+        parcel.writeValue(version)
+        parcel.writeInt(build)
+        parcel.writeLong(createdAt)
     }
 
     fun getDisplaySections(context: Context): List<PresetSection> {
