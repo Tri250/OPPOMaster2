@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 import { useCloudPresets } from '../hooks/useCloudPresets';
 import { CloudPreset } from '../types/cloudPreset';
@@ -6,6 +6,8 @@ import {
   Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp
 } from 'lucide-react';
 
+// Tab 配置 - 参考 iCurrer/OMaster 主页结构
+// 保留我们原有的 4 个 Tab（全部/收藏/哈苏/上新）但加上计数徽章
 const tabs = [
   { key: 'all', label: '全部' },
   { key: 'favorites', label: '收藏' },
@@ -23,13 +25,41 @@ const brands = [
 ];
 
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab, setAiParam } = useAppStore();
+  const { setAiParam } = useAppStore();
   const { presets, state, loading, refresh, toggleFavorite } = useCloudPresets();
+  
+  // 当前选中的 Tab 索引（参考 OMaster selectedTab）
+  const [selectedTab, setSelectedTab] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // 参考 OMaster：当前页面与 Pager 双向同步
+  const [currentPage, setCurrentPage] = useState(0);
+  const pagerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Pager -> Tab 同步（参考 OMaster LaunchedEffect(pagerState.currentPage)）
+  useEffect(() => {
+    if (currentPage !== selectedTab) {
+      setSelectedTab(currentPage);
+    }
+  }, [currentPage]);
+
+  // Tab -> Pager 同步（参考 OMaster LaunchedEffect(selectedTab)）
+  useEffect(() => {
+    if (currentPage !== selectedTab) {
+      setCurrentPage(selectedTab);
+      // 滚动到对应页面
+      if (pagerRef.current) {
+        pagerRef.current.scrollTo({
+          left: pagerRef.current.offsetWidth * selectedTab,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [selectedTab]);
 
   // 下拉刷新
   const handleRefresh = useCallback(async () => {
@@ -46,12 +76,32 @@ const HomeScreen: React.FC = () => {
     setAiParam('warmth', preset.params.warmth);
   }, [setAiParam]);
 
-  // 过滤和排序
-  const filteredPresets = useMemo(() => {
+  // Pager 滚动处理
+  const handlePagerScroll = useCallback(() => {
+    if (!pagerRef.current) return;
+    const page = Math.round(pagerRef.current.scrollLeft / pagerRef.current.offsetWidth);
+    if (page !== currentPage) {
+      setCurrentPage(page);
+    }
+  }, [currentPage]);
+
+  // 计算每个 Tab 的计数（参考 OMaster Tab + 计数徽章）
+  const getTabCount = useCallback((tabKey: string) => {
+    switch (tabKey) {
+      case 'all': return presets.length;
+      case 'favorites': return presets.filter(p => p.isFavorite).length;
+      case 'hncs': return presets.filter(p => p.isHncs).length;
+      case 'new': return presets.filter(p => p.isNew).length;
+      default: return 0;
+    }
+  }, [presets]);
+
+  // 过滤和排序（按 Tab 过滤）
+  const getFilteredPresets = useCallback((tabKey: string) => {
     let result = [...presets];
     
-    // Tab过滤
-    switch (tabs[selectedTab]?.key) {
+    // Tab 过滤
+    switch (tabKey) {
       case 'favorites':
         result = result.filter(p => p.isFavorite);
         break;
@@ -93,9 +143,9 @@ const HomeScreen: React.FC = () => {
       ...result.filter(p => p.isPinned),
       ...result.filter(p => !p.isPinned),
     ];
-  }, [presets, selectedTab, activeBrand, searchQuery, sortBy]);
+  }, [presets, activeBrand, searchQuery, sortBy]);
 
-  // 计算瀑布流高度 - 参考 iCurrer/OMaster 的 staggered grid
+  // 计算瀑布流高度 - 参考 OMaster 的 staggered grid
   const getImageHeight = (index: number) => {
     switch (index % 3) {
       case 0: return 'h-[220px]';
@@ -125,9 +175,124 @@ const HomeScreen: React.FC = () => {
     return null;
   };
 
+  // 渲染预设卡片（瀑布流中的单个项目）
+  const renderPresetCard = (preset: CloudPreset, index: number) => {
+    const heightClass = getImageHeight(index);
+    return (
+      <div
+        key={preset.id}
+        onClick={() => handleApplyPreset(preset)}
+        className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${heightClass}`}
+      >
+        {/* Glass Border Effect */}
+        <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
+        
+        {/* Image */}
+        <img
+          src={preset.coverPath}
+          alt={preset.name}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
+          style={{
+            filter: `saturate(${100 + preset.params.saturation}%) contrast(${100 + preset.params.contrast}%) brightness(${100 + preset.params.brightness}%)`,
+          }}
+        />
+
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+        {/* HNCS Badge */}
+        {preset.isHncs && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-gradient-to-r from-[#FF6B35] to-[#FF9800] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20 flex items-center gap-0.5">
+            <Sparkles size={8} />
+            <span>HNCS</span>
+          </div>
+        )}
+
+        {/* NEW Badge */}
+        {preset.isNew && !preset.isHncs && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#4CAF50] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
+            NEW
+          </div>
+        )}
+
+        {/* Pinned Badge */}
+        {preset.isPinned && (
+          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-yellow-500/80 backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
+            📌
+          </div>
+        )}
+
+        {/* Favorite Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(preset.id);
+          }}
+          className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20"
+        >
+          <Heart
+            size={14}
+            className={preset.isFavorite ? 'text-red-500 fill-red-500' : 'text-white/70'}
+          />
+        </button>
+
+        {/* Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 pr-10">
+          <h3 className="text-white font-semibold text-sm mb-0.5 truncate">{preset.name}</h3>
+          <p className="text-white/60 text-xs truncate">{preset.author}</p>
+          
+          {/* Stats */}
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-0.5">
+              <Star size={9} className="text-yellow-400 fill-yellow-400" />
+              <span className="text-white/50 text-[10px]">{preset.rating.toFixed(1)}</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Download size={9} className="text-white/40" />
+              <span className="text-white/50 text-[10px]">
+                {preset.downloadCount > 10000 ? `${(preset.downloadCount / 10000).toFixed(1)}w` : preset.downloadCount}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 渲染瀑布流内容（复用组件）
+  const renderPresetGrid = (tabKey: string) => {
+    const filteredPresets = getFilteredPresets(tabKey);
+    
+    if (loading && presets.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <RefreshCw size={32} className="text-[#FF6B35] animate-spin mb-3" />
+          <p className="text-white/50 text-sm">加载云端样张中...</p>
+        </div>
+      );
+    }
+
+    if (filteredPresets.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Cloud size={32} className="text-white/20 mb-3" />
+          <p className="text-white/50 text-sm mb-2">未找到匹配的预设</p>
+          <p className="text-white/30 text-xs">下拉刷新或切换筛选条件</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {filteredPresets.map((preset, index) => renderPresetCard(preset, index))}
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
-      {/* Header - 参考 iCurrer/OMaster 紧凑标题栏 */}
+      {/* Header - 参考 OMaster 紧凑标题栏 */}
       <div className="px-4 pt-2 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -163,29 +328,43 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Tab Bar - 参考 iCurrer/OMaster ScrollableTabRow */}
+      {/* Tab Bar - 参考 OMaster ScrollableTabRow + 计数徽章 */}
       <div className="px-4 pb-2">
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide border-b border-white/5">
           {tabs.map((tab, index) => {
-            const count = tab.key === 'all' ? presets.length :
-                          tab.key === 'favorites' ? presets.filter(p => p.isFavorite).length :
-                          tab.key === 'hncs' ? presets.filter(p => p.isHncs).length :
-                          presets.filter(p => p.isNew).length;
+            const count = getTabCount(tab.key);
+            const isSelected = selectedTab === index;
             return (
               <button
                 key={tab.key}
+                ref={(el) => (tabRefs.current[index] = el)}
                 onClick={() => setSelectedTab(index)}
-                className={`flex-shrink-0 relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedTab === index 
-                    ? 'bg-[#FF6B35] text-white' 
-                    : 'text-white/50 hover:text-white/70 hover:bg-white/5'
+                className={`flex-shrink-0 relative px-4 py-2.5 text-sm font-medium transition-all ${
+                  isSelected ? 'text-white' : 'text-white/50'
                 }`}
               >
-                <span>{tab.label}</span>
-                {count > 0 && (
-                  <span className={`ml-1 text-[10px] ${selectedTab === index ? 'text-white/80' : 'text-white/30'}`}>
-                    {count}
-                  </span>
+                <span className="flex items-center gap-1.5">
+                  <span>{tab.label}</span>
+                  {count > 0 && (
+                    <span 
+                      className={`text-[10px] px-1.5 rounded-full ${
+                        isSelected 
+                          ? 'bg-[#FF6B35]/20 text-[#FF6B35]' 
+                          : 'bg-white/5 text-white/40'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </span>
+                {/* 自定义指示器 - 参考 OMaster TabRowDefaults.SecondaryIndicator */}
+                {isSelected && (
+                  <div 
+                    className="absolute bottom-0 left-2 right-2 h-[3px] bg-[#FF6B35] rounded-t-full"
+                    style={{
+                      animation: 'tabIndicator 200ms ease-out',
+                    }}
+                  />
                 )}
               </button>
             );
@@ -193,7 +372,7 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Brand Filter */}
+      {/* Brand Filter & Sort */}
       <div className="px-4 pb-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
         {brands.map((brand) => (
           <button
@@ -224,128 +403,54 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Pull to Refresh Indicator - 参考 iCurrer/OMaster */}
+      {/* Pull to Refresh Indicator */}
       {refreshing && (
         <div className="flex items-center justify-center py-2">
           <RefreshCw size={20} className="text-[#FF6B35] animate-spin" />
         </div>
       )}
 
-      {/* Preset Grid - 瀑布流布局 */}
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide"
+      {/* HorizontalPager - 参考 OMaster HorizontalPager 模式 */}
+      <div
+        ref={pagerRef}
+        onScroll={handlePagerScroll}
+        className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide"
+        style={{ scrollBehavior: 'smooth' }}
       >
-        {loading && presets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <RefreshCw size={32} className="text-[#FF6B35] animate-spin mb-3" />
-            <p className="text-white/50 text-sm">加载云端样张中...</p>
-          </div>
-        ) : filteredPresets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Cloud size={32} className="text-white/20 mb-3" />
-            <p className="text-white/50 text-sm mb-2">未找到匹配的预设</p>
-            <p className="text-white/30 text-xs">下拉刷新或切换筛选条件</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {filteredPresets.map((preset, index) => {
-              const heightClass = getImageHeight(index);
+        <div className="flex h-full" style={{ width: `${tabs.length * 100}%` }}>
+          {tabs.map((tab, index) => (
+            <div
+              key={tab.key}
+              className="snap-start snap-always h-full overflow-y-auto px-4 pb-4 scrollbar-hide"
+              style={{ width: `${100 / tabs.length}%` }}
+            >
+              {renderPresetGrid(tab.key)}
               
-              return (
-                <div
-                  key={preset.id}
-                  onClick={() => handleApplyPreset(preset)}
-                  className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${heightClass}`}
-                >
-                  {/* Glass Border Effect */}
-                  <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
-                  
-                  {/* Image */}
-                  <img
-                    src={preset.coverPath}
-                    alt={preset.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    loading="lazy"
-                    style={{
-                      filter: `saturate(${100 + preset.params.saturation}%) contrast(${100 + preset.params.contrast}%) brightness(${100 + preset.params.brightness}%)`,
-                    }}
-                  />
-
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  {/* HNCS Badge */}
-                  {preset.isHncs && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-gradient-to-r from-[#FF6B35] to-[#FF9800] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20 flex items-center gap-0.5">
-                      <Sparkles size={8} />
-                      <span>HNCS</span>
-                    </div>
-                  )}
-
-                  {/* NEW Badge */}
-                  {preset.isNew && !preset.isHncs && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#4CAF50] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
-                      NEW
-                    </div>
-                  )}
-
-                  {/* Pinned Badge */}
-                  {preset.isPinned && (
-                    <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-yellow-500/80 backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
-                      📌
-                    </div>
-                  )}
-
-                  {/* Favorite Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(preset.id);
-                    }}
-                    className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20"
-                  >
-                    <Heart
-                      size={14}
-                      className={preset.isFavorite ? 'text-red-500 fill-red-500' : 'text-white/70'}
-                    />
-                  </button>
-
-                  {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 pr-10">
-                    <h3 className="text-white font-semibold text-sm mb-0.5 truncate">{preset.name}</h3>
-                    <p className="text-white/60 text-xs truncate">{preset.author}</p>
-                    
-                    {/* Stats */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-0.5">
-                        <Star size={9} className="text-yellow-400 fill-yellow-400" />
-                        <span className="text-white/50 text-[10px]">{preset.rating.toFixed(1)}</span>
-                      </div>
-                      <div className="flex items-center gap-0.5">
-                        <Download size={9} className="text-white/40" />
-                        <span className="text-white/50 text-[10px]">
-                          {preset.downloadCount > 10000 ? `${(preset.downloadCount / 10000).toFixed(1)}w` : preset.downloadCount}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              {/* Loading Hint - 参考 OMaster LoadingMoreTip */}
+              {getFilteredPresets(tab.key).length > 0 && (
+                <div className="py-8 text-center">
+                  <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mb-3" />
+                  <p className="text-[#FF6B35]/80 text-xs font-medium tracking-wider flex items-center justify-center gap-1.5">
+                    <TrendingUp size={12} />
+                    <span>持续更新 敬请期待</span>
+                  </p>
+                  <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mt-3" />
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Loading Hint - 参考 iCurrer/OMaster LoadingMoreTip */}
-        <div className="py-8 text-center">
-          <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mb-3" />
-          <p className="text-[#FF6B35]/80 text-xs font-medium tracking-wider flex items-center justify-center gap-1.5">
-            <TrendingUp size={12} />
-            <span>持续更新 敬请期待</span>
-          </p>
-          <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mt-3" />
+              )}
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Inject animation keyframes */}
+      <style>{`
+        @keyframes tabIndicator {
+          from { transform: scaleX(0); opacity: 0; }
+          to { transform: scaleX(1); opacity: 1; }
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };
