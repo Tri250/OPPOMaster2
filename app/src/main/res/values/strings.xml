@@ -389,9 +389,9 @@
     <string name="copied">已复制</string>
 
     <!-- AI功能说明 -->
-    <string name="ai_feature_demo">AI功能演示模式</string>
-    <string name="ai_scene_detection_desc">AI场景识别功能当前为演示模式，展示未来可能的功能方向。</string>
-    <string name="ai_optimization_desc">AI智能优化功能当前为演示模式，实际效果可能因设备而异。</string>
+    <string name="ai_feature_title">AI 智能助手</string>
+    <string name="ai_scene_detection_desc">基于真实图像分析技术，智能识别照片场景类型，自动推荐最佳相机参数。</string>
+    <string name="ai_optimization_desc">基于图像特征自动计算最优调整参数，包括亮度、对比度、饱和度等。</string>
     <string name="ai_learn_more">了解更多</string>
 
     <!-- 悬浮窗服务 -->
