@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -88,6 +89,9 @@ fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit,
+    onNavigateToAi: () -> Unit = {},
+    onNavigateToWatermark: () -> Unit = {},
+    onNavigateToHasselbladColor: () -> Unit = {},
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0
 ) {
@@ -161,19 +165,44 @@ fun HomeScreen(
             .background(PureBlack)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 紧凑的标题栏
+            // 紧凑的标题栏 - 包含功能入口
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // 功能入口按钮
+                    FeatureEntryButton(
+                        icon = androidx.compose.material.icons.Icons.Filled.AutoAwesome,
+                        contentDescription = "AI 功能",
+                        onClick = onNavigateToAi
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FeatureEntryButton(
+                        icon = androidx.compose.material.icons.Icons.Filled.Brush,
+                        contentDescription = "水印编辑器",
+                        onClick = onNavigateToWatermark
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FeatureEntryButton(
+                        icon = androidx.compose.material.icons.Icons.Filled.Palette,
+                        contentDescription = "哈苏色彩",
+                        onClick = onNavigateToHasselbladColor
+                    )
+                }
             }
 
             // Tab 切换栏 - 带动画指示器
@@ -311,10 +340,10 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.create_preset),
-                modifier = Modifier.size(32.dp)
-            )
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
-    }
 
     // 删除确认对话框
     if (showDeleteConfirm) {
@@ -685,6 +714,32 @@ private fun LoadingMoreTip() {
                             )
                         )
                     )
+            )
+        }
+    }
+}
+
+/**
+ * 功能入口按钮 - 顶部导航栏使用
+ */
+@Composable
+private fun FeatureEntryButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.CircleShape,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+        modifier = Modifier.size(36.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
             )
         }
     }

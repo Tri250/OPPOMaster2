@@ -2,14 +2,37 @@ package com.silas.omaster.watermark
 
 import android.graphics.*
 import com.silas.omaster.model.WatermarkConfig
+import com.silas.omaster.model.WatermarkTemplate
 import java.text.SimpleDateFormat
 import java.util.*
+
+/**
+ * 水印模板元信息（用于UI展示）
+ */
+data class WatermarkTemplateInfo(
+    val template: WatermarkTemplate,
+    val name: String,
+    val category: String
+)
 
 /**
  * 开源水印模板库 - 免费商用
  * 参考: Easy Watermark (MIT), Photix Mark (开源), darktable水印模板
  */
 object OpenSourceWatermarkTemplates {
+
+    /**
+     * 获取所有可用模板的信息（供UI选择使用）
+     */
+    fun getAllTemplates(): List<WatermarkTemplateInfo> {
+        return WatermarkTemplate.entries.map { template ->
+            WatermarkTemplateInfo(
+                template = template,
+                name = template.displayName,
+                category = template.category
+            )
+        }
+    }
 
     /**
      * 平铺水印模板 - 防盗用

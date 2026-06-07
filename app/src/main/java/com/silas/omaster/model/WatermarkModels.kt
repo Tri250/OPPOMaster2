@@ -3,35 +3,39 @@ package com.silas.omaster.model
 /**
  * 水印模板枚举
  */
-enum class WatermarkTemplate {
-    OPPO,
-    ONEPLUS,
-    REALME,
-    MINIMAL_PARAMS,
-    TIMESTAMP,
-    LOCATION,
-    CUSTOM,
-    HASSELBLAD,
-    BRAND_SIMPLE,
-    FILM_STYLE,
+enum class WatermarkTemplate(
+    val displayName: String,
+    val category: String,
+    val defaultText: String
+) {
+    OPPO("OPPO", "品牌", "OPPO"),
+    ONEPLUS("OnePlus", "品牌", "OnePlus"),
+    REALME("realme", "品牌", "realme"),
+    MINIMAL_PARAMS("极简参数", "极简", ""),
+    TIMESTAMP("时间戳", "实用", "2026.01.01"),
+    LOCATION("地理位置", "实用", "Unknown Location"),
+    CUSTOM("自定义", "自定义", ""),
+    HASSELBLAD("HASSELBLAD", "品牌", "HASSELBLAD"),
+    BRAND_SIMPLE("OMaster", "极简", "OMaster"),
+    FILM_STYLE("胶片参数", "胶片", ""),
     // 免费水印模板 - 参考2026年国内手机水印趋势
-    TILE_PATTERN,        // 平铺水印 - 防盗用
-    DIAGONAL_TEXT,       // 对角线文字 - 版权保护
-    CAMERA_INFO,         // 相机参数水印 - Leica风格
-    DATE_STAMP,          // 日期印章 - 证件照专用
-    COPYRIGHT_SIGN,      // 版权符号 - ©️风格
-    QR_CODE,             // 二维码水印
-    SIGNATURE,           // 签名水印
-    COLLAGE_GRID,        // 拼图九宫格
-    SOCIAL_MEDIA,        // 社交媒体水印
-    MINIMAL_CORNER,      // 极简角标
+    TILE_PATTERN("平铺水印", "防盗用", "SAMPLE"),
+    DIAGONAL_TEXT("对角线文字", "防盗用", "COPYRIGHT"),
+    CAMERA_INFO("相机参数", "参数", ""),
+    DATE_STAMP("日期印章", "证件", "身份核验"),
+    COPYRIGHT_SIGN("版权符号", "版权", "Author"),
+    QR_CODE("二维码", "实用", "QR"),
+    SIGNATURE("签名", "艺术", "Signature"),
+    COLLAGE_GRID("拼图九宫格", "实用", ""),
+    SOCIAL_MEDIA("社交媒体", "实用", "username"),
+    MINIMAL_CORNER("极简角标", "极简", "© 2026"),
     // 新增2026年国内手机水印趋势
-    STAMP,               // 邮票邮戳 - vivo风格
-    CHINESE_STYLE,       // 国风印章 - 水墨风格
-    FILM_FRAME,          // 胶片相框 - 小米风格
-    NEW_YEAR,            // 新春舞狮 - 小米非遗
-    LEICA_CLASSIC,       // 徕卡经典 - 小米联名
-    ZEISS_OPTICS         // 蔡司光学 - vivo联名
+    STAMP("邮票邮戳", "国风", "北京"),
+    CHINESE_STYLE("国风印章", "国风", "摄影"),
+    FILM_FRAME("胶片相框", "胶片", ""),
+    NEW_YEAR("新春舞狮", "节日", "新春快乐"),
+    LEICA_CLASSIC("徕卡经典", "品牌", "LEICA"),
+    ZEISS_OPTICS("蔡司光学", "品牌", "ZEISS T*")
 }
 
 /**

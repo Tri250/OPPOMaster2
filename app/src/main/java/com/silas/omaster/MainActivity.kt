@@ -85,6 +85,15 @@ sealed class Screen {
 
     @Serializable
     data object PrivacyPolicy : Screen()
+
+    @Serializable
+    data object Ai : Screen()
+
+    @Serializable
+    data object WatermarkEditor : Screen()
+
+    @Serializable
+    data object HasselbladColor : Screen()
 }
 
 class MainActivity : ComponentActivity() {
@@ -335,6 +344,15 @@ fun MainApp(navController: NavHostController) {
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     },
+                    onNavigateToAi = {
+                        navController.navigate(Screen.Ai)
+                    },
+                    onNavigateToWatermark = {
+                        navController.navigate(Screen.WatermarkEditor)
+                    },
+                    onNavigateToHasselbladColor = {
+                        navController.navigate(Screen.HasselbladColor)
+                    },
                     refreshTrigger = refreshTrigger
                 )
             }
@@ -451,6 +469,24 @@ fun MainApp(navController: NavHostController) {
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     }
+                )
+            }
+
+            composable<Screen.Ai> {
+                com.silas.omaster.ui.ai.AiScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<Screen.WatermarkEditor> {
+                com.silas.omaster.ui.watermark.WatermarkEditorScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<Screen.HasselbladColor> {
+                com.silas.omaster.ui.color.HasselbladColorScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
