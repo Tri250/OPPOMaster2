@@ -157,7 +157,7 @@ const FeaturesScreen: React.FC = () => {
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-2 pb-3">
-        <h1 className="text-xl font-bold text-white">核心功能</h1>
+        <h1 className="text-xl font-bold text-white">摄影工具</h1>
         <p className="text-white/50 text-xs">点击进入功能操作界面</p>
       </div>
 

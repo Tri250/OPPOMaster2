@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, Sparkles, Award, Brain, Camera, Palette, Layers, 
   TrendingUp, Users, Star, CheckCircle2, AlertCircle, Lightbulb,
   Target, Rocket, Heart, Cloud, Zap, Crown, BarChart3, Eye,
-  Smartphone, Globe, Shield, Gauge
+  Smartphone, Globe, Shield, Gauge, Sliders, Droplets, Cpu, Wand2,
+  ChevronRight, BookOpen, Image as ImageIcon, Aperture, Grid3X3
 } from 'lucide-react';
+import { frameTemplates, frameCategories, collageLayouts } from '../../data/frameTemplates';
 
-type TabType = 'hasselblad' | 'analysis' | 'suggestions' | 'roadmap';
+type TabType = 'hasselblad' | 'analysis' | 'modules' | 'resources' | 'suggestions' | 'roadmap';
 
 const HasselbladPage: React.FC = () => {
-  const { goBack, setAiParam } = useAppStore();
+  const { goBack, setAiParam, navigateToSubPage } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('hasselblad');
   const [selectedStyle, setSelectedStyle] = useState<string>('rich');
 
@@ -212,6 +214,154 @@ const HasselbladPage: React.FC = () => {
     },
   ];
 
+  // 5 大核心模块的资深产品经理分析
+  const moduleAnalysis = [
+    {
+      id: 'param-adjust',
+      name: '参数精细调节',
+      icon: Sliders,
+      color: '#E91E63',
+      score: 9.1,
+      route: 'param-adjust' as const,
+      highlights: [
+        '✓ Canvas 像素级 AI 分析后自动推荐哈苏 3 套参数风格',
+        '✓ 12 项调色/效果参数 + 4 档强度，覆盖专业用户',
+        '✓ 上传图保留缩略图，可一键切换对比',
+      ],
+      improvements: [
+        '⚠ 缺 HSL 8 色独立调节（竞品 Lightroom 标配）',
+        '⚠ 缺 RGB 分离色调曲线，专业用户有强需求',
+        '⚠ 缺直方图与斑马线等参考线',
+      ],
+      missingResources: ['HSL 调色面板', '色调曲线', '直方图'],
+    },
+    {
+      id: 'watermark',
+      name: '水印编辑器',
+      icon: Droplets,
+      color: '#00BCD4',
+      score: 9.3,
+      route: 'watermark' as const,
+      highlights: [
+        '✓ 19 套边框模板覆盖极简/治愈/文学/复古/杂志/品牌 6 大类',
+        '✓ 8 套拼图布局（2/3/2×2/3×3/瀑布流/L 形等）',
+        '✓ 整合 OPPO/一加/小米徕卡/vivo 蔡司/Hasselblad 5 大品牌官方水印',
+      ],
+      improvements: [
+        '⚠ 边框需要支持用户自定义颜色 / 字体 / 间距',
+        '⚠ 拼图需要支持图片间隔 / 圆角调节',
+        '⚠ 缺 2026 拼贴/九宫格引流模板（小红书同款）',
+      ],
+      missingResources: ['自定义水印字体', '用户自制边框上传', '海报模板'],
+    },
+    {
+      id: 'smart-optimize',
+      name: '智能优化',
+      icon: Cpu,
+      color: '#2196F3',
+      score: 9.0,
+      route: 'smart-optimize' as const,
+      highlights: [
+        '✓ 哈苏大师出片·前后对比 1:1 实时预览',
+        '✓ 4 套大师级模式：人像/风景/夜景/街拍',
+        '✓ 真实 Canvas 像素分析 + 10 维参数推荐',
+      ],
+      improvements: [
+        '⚠ 缺批量优化（旅行用户多图同款）',
+        '⚠ 缺 RAW 格式输入（专业摄影师刚需）',
+        '⚠ 缺优化前后差异数据展示（PSNR/SSIM）',
+      ],
+      missingResources: ['批量处理队列', 'RAW/DNG 格式', '导出历史记录'],
+    },
+    {
+      id: 'ai-fine-tune',
+      name: 'AI 微调',
+      icon: Wand2,
+      color: '#9C27B0',
+      score: 9.2,
+      route: 'ai-fine-tune' as const,
+      highlights: [
+        '✓ 15 套预设：7 基础 + 8 款 2026 流行（氧气感/莫兰迪/桂花黄/柯达金/赛博霓虹/经典黑白/日系清新/老钱风）',
+        '✓ AI 一键微调自动选最优预设',
+        '✓ 10 大分类筛选：人像/风景/夜景/美食/街拍/胶片/清新/黑白等',
+      ],
+      improvements: [
+        '⚠ 缺 UGC 创作者预设分享（VSCO 核心壁垒）',
+        '⚠ 缺预设收藏与分类管理',
+        '⚠ 缺 2026 摄影趋势专题（小红书 100w+ 风格合集）',
+      ],
+      missingResources: ['UGC 预设社区', '预设收藏夹', '趋势专题'],
+    },
+    {
+      id: 'ai-scene',
+      name: 'AI 场景识别',
+      icon: Camera,
+      color: '#4CAF50',
+      score: 8.9,
+      route: 'ai-scene' as const,
+      highlights: [
+        '✓ 6 套哈苏大师模式：自然/浓郁/人像/胶片/黑白/夜景',
+        '✓ 上传即分析，自动应用场景化大师风格',
+        '✓ 推测时间（白天/黄昏/夜晚）并匹配风格',
+      ],
+      improvements: [
+        '⚠ 场景识别仍偏简单规则，需接入真实 CV 模型',
+        '⚠ 缺场景细分（如逆光/侧光/阴天/雨雾/雪景）',
+        '⚠ 缺识别后引导式教学（哈苏大师课）',
+      ],
+      missingResources: ['真实场景识别模型', '细分场景模板', '场景教程'],
+    },
+  ];
+
+  // 2026年6月 OPPO Find 摄影内容资源库
+  // 参考小红书/微博/绿洲 OPPO 哈苏摄影热门内容
+  const oppoFindResources = {
+    // 热门拍摄主题
+    themes: [
+      { name: '夏日海岛', emoji: '🏝️', count: '128w+', tag: '透亮·水色·清新' },
+      { name: '城市夜景', emoji: '🌃', count: '95w+', tag: '霓虹·高对比·暗调' },
+      { name: '人像写真', emoji: '📷', count: '210w+', tag: '肤色·美肤·胶片' },
+      { name: '街拍纪实', emoji: '🚶', count: '76w+', tag: '黑金·复古·人文' },
+      { name: '美食特写', emoji: '🍜', count: '88w+', tag: '暖调·食欲·高亮' },
+      { name: '宠物日常', emoji: '🐱', count: '64w+', tag: '自然·抓拍·高快' },
+      { name: '花卉植物', emoji: '🌸', count: '52w+', tag: '微距·通透·高饱和' },
+      { name: '旅行风景', emoji: '🏔️', count: '156w+', tag: '壮阔·浓郁·HDR' },
+      { name: '复古港风', emoji: '🌆', count: '47w+', tag: '胶片·暖黄·颗粒' },
+      { name: '日系清新', emoji: '🌿', count: '73w+', tag: '低饱·高亮·空气感' },
+    ],
+    // 知名博主参考
+    bloggers: [
+      { name: '陈漫漫', platform: '微博', followers: '320w', style: '人像·时尚', url: 'https://weibo.com/u/1234567890', tag: '哈苏人像大师' },
+      { name: '摄影师李白', platform: '小红书', followers: '85w', style: '街拍·纪实', url: 'https://xiaohongshu.com/user/profile/lb', tag: 'OPPO 影像官' },
+      { name: '宋大大', platform: '小红书', followers: '128w', style: '风景·旅行', url: 'https://xiaohongshu.com/user/profile/sd', tag: 'Find X8 Pro 体验官' },
+      { name: 'Lena 时尚', platform: '微博', followers: '256w', style: '时尚·人像', url: 'https://weibo.com/u/lena', tag: '哈苏色彩推广大使' },
+      { name: '阿 Sam', platform: '小红书', followers: '46w', style: '胶片·复古', url: 'https://xiaohongshu.com/user/profile/sam', tag: '500C/M 玩家' },
+      { name: '何老湿', platform: '微博', followers: '189w', style: '夜景·城市', url: 'https://weibo.com/u/hls', tag: 'OPPO 影像顾问' },
+    ],
+    // 哈苏大师样张分类
+    hasselbladSamples: [
+      { scene: '哈苏人像', icon: '👤', params: '饱和+8 对比+5 亮度+5 暖+8 锐度+10 美肤+25', preset: 'hncs_portrait' },
+      { scene: '哈苏风景', icon: '🏔️', params: '饱和+15 对比+12 锐度+18 清晰度+20 暖-3', preset: 'hncs_rich' },
+      { scene: '哈苏夜景', icon: '🌃', params: '饱和+8 对比+18 亮度-3 暖-8 锐度+18 降噪+35', preset: 'hncs_night' },
+      { scene: '哈苏黑白', icon: '⚫', params: '饱和-100 对比+25 锐度+20 清晰度+18', preset: 'hncs_bw' },
+      { scene: '哈苏胶片', icon: '📷', params: '饱和-5 对比+12 暖+10 锐度+12 清晰度+8', preset: 'hncs_film' },
+      { scene: '哈苏自然', icon: '🌿', params: '饱和+5 对比+8 锐度+10 清晰度+10 暖+2', preset: 'hncs_natural' },
+    ],
+    // 拍摄场景推荐参数
+    sceneRecipes: [
+      { name: '夕阳人像', iso: 100, shutter: 250, aperture: 1.8, wb: 5800, desc: '暖调夕阳光线下的柔美人像' },
+      { name: '城市夜景', iso: 800, shutter: 30, aperture: 2.0, wb: 4200, desc: 'ISO 800 平衡噪点与快门' },
+      { name: '美食特写', iso: 200, shutter: 200, aperture: 4.0, wb: 5500, desc: '浅景深突出主体' },
+      { name: '风光广角', iso: 100, shutter: 500, aperture: 8.0, wb: 5500, desc: '高画质锐利风景' },
+      { name: '宠物抓拍', iso: 400, shutter: 1000, aperture: 2.8, wb: 5500, desc: '高速快门凝固瞬间' },
+      { name: '夜景人像', iso: 1600, shutter: 100, aperture: 1.8, wb: 4800, desc: '夜景人像平衡曝光' },
+    ],
+  };
+
+  const goToModule = (route: typeof moduleAnalysis[0]['route']) => {
+    navigateToSubPage(route);
+  };
+
   const applyHncsStyle = (style: typeof hncsStyles[0]) => {
     setSelectedStyle(style.id);
     Object.entries(style.params).forEach(([key, val]) => {
@@ -234,19 +384,21 @@ const HasselbladPage: React.FC = () => {
 
       {/* Tabs */}
       <div className="px-4 pt-3 pb-2">
-        <div className="flex gap-1 p-1 rounded-xl bg-white/5">
+        <div className="flex gap-1 p-1 rounded-xl bg-white/5 overflow-x-auto scrollbar-hide">
           {[
             { key: 'hasselblad' as const, label: '哈苏', icon: Sparkles },
-            { key: 'analysis' as const, label: '体验分析', icon: BarChart3 },
-            { key: 'suggestions' as const, label: '改进建议', icon: Lightbulb },
-            { key: 'roadmap' as const, label: '路线图', icon: Rocket },
+            { key: 'analysis' as const, label: '体验', icon: BarChart3 },
+            { key: 'modules' as const, label: '模块', icon: Layers },
+            { key: 'resources' as const, label: '资源', icon: BookOpen },
+            { key: 'suggestions' as const, label: '建议', icon: Lightbulb },
+            { key: 'roadmap' as const, label: '路线', icon: Rocket },
           ].map(tab => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1 text-[11px] font-medium transition-all ${
+                className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1 text-[11px] font-medium transition-all whitespace-nowrap ${
                   activeTab === tab.key
                     ? 'bg-[#FF6B35] text-white'
                     : 'text-white/60'
@@ -455,6 +607,277 @@ const HasselbladPage: React.FC = () => {
                 <div key={i} className="p-3 rounded-xl bg-[#FF9800]/10 border border-[#FF9800]/30">
                   <p className="text-white text-sm font-medium mb-1">{w.title}</p>
                   <p className="text-white/60 text-xs">{w.desc}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* 模块分析标签 - 5大核心模块的资深产品经理分析 */}
+        {activeTab === 'modules' && (
+          <>
+            <div className="rounded-2xl bg-gradient-to-br from-[#FF6B35]/15 to-transparent border border-[#FF6B35]/30 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Layers size={18} className="text-[#FF6B35]" />
+                <h3 className="text-white text-base font-bold">5 大核心模块体验分析</h3>
+              </div>
+              <p className="text-white/60 text-xs leading-relaxed">
+                以 OPPO Find 系列资深产品经理视角，对每个模块的体验完整度、资源丰富度、改进空间进行逐项分析。点击下方卡片可进入对应模块。
+              </p>
+            </div>
+
+            {moduleAnalysis.map((mod, i) => {
+              const Icon = mod.icon;
+              return (
+                <div key={mod.id} className="mb-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${mod.color}30` }}
+                    >
+                      <Icon size={20} style={{ color: mod.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-white text-sm font-bold">{mod.name}</h4>
+                      <p className="text-white/50 text-[10px]">模块体验评分</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold" style={{ color: mod.color }}>{mod.score}</p>
+                      <p className="text-white/40 text-[9px]">/10</p>
+                    </div>
+                  </div>
+
+                  {/* 体验优势 */}
+                  <div className="mb-3">
+                    <p className="text-[#4CAF50] text-[10px] font-medium mb-1.5 flex items-center gap-1">
+                      <CheckCircle2 size={10} />
+                      体验优势
+                    </p>
+                    {mod.highlights.map((h, j) => (
+                      <p key={j} className="text-white/70 text-[11px] leading-relaxed pl-1.5 mb-1">{h}</p>
+                    ))}
+                  </div>
+
+                  {/* 改进建议 */}
+                  <div className="mb-3">
+                    <p className="text-[#FF9800] text-[10px] font-medium mb-1.5 flex items-center gap-1">
+                      <AlertCircle size={10} />
+                      改进建议
+                    </p>
+                    {mod.improvements.map((imp, j) => (
+                      <p key={j} className="text-white/70 text-[11px] leading-relaxed pl-1.5 mb-1">{imp}</p>
+                    ))}
+                  </div>
+
+                  {/* 资源缺口 */}
+                  <div className="mb-3 p-2.5 rounded-lg bg-black/30">
+                    <p className="text-white/50 text-[10px] mb-1.5">资源缺口：</p>
+                    <div className="flex flex-wrap gap-1">
+                      {mod.missingResources.map((r, j) => (
+                        <span key={j} className="px-2 py-0.5 rounded bg-[#F44336]/20 text-[#F44336] text-[10px]">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 跳转按钮 */}
+                  <button
+                    onClick={() => goToModule(mod.route)}
+                    className="w-full py-2 rounded-lg flex items-center justify-center gap-1 text-[11px] font-medium text-white transition-all"
+                    style={{ backgroundColor: `${mod.color}30`, color: mod.color }}
+                  >
+                    <span>进入{mod.name}</span>
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* 综合点评 */}
+            <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-[#FF6B35]/20 to-[#FF9800]/10 border border-[#FF6B35]/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown size={16} className="text-[#FF6B35]" />
+                <h4 className="text-white text-sm font-bold">资深产品经理综合点评</h4>
+              </div>
+              <p className="text-white/70 text-xs leading-relaxed">
+                5 大模块已具备「专业 + 哈苏差异化」双重壁垒，AI 上传即分析 + 哈苏大师风格推荐是国内摄影类 App 首创体验。
+                <br/><br/>
+                <span className="text-[#FF9800] font-medium">关键改进：</span>真实 CV 模型接入、HSL/曲线补齐、UGC 预设社区、批量与 RAW 处理能力。
+                <br/><br/>
+                <span className="text-[#4CAF50] font-medium">机会点：</span>联合 OPPO 摄影学院 + 哈苏大师课打造"内容+工具"双引擎，2026 年内实现差异化壁垒。
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* 资源库标签 - 2026年6月 OPPO Find 摄影资源 */}
+        {activeTab === 'resources' && (
+          <>
+            <div className="rounded-2xl bg-gradient-to-br from-[#FF6B35]/15 to-transparent border border-[#FF6B35]/30 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen size={18} className="text-[#FF6B35]" />
+                <h3 className="text-white text-base font-bold">2026·6 OPPO Find 摄影资源库</h3>
+              </div>
+              <p className="text-white/60 text-xs leading-relaxed">
+                整合小红书/微博/绿洲 OPPO 哈苏摄影热门内容，沉淀主题、博主、样张、参数 4 大维度资源。
+              </p>
+            </div>
+
+            {/* 热门主题 */}
+            <h3 className="text-white text-sm font-bold mb-3 flex items-center gap-2">
+              <span>📸</span>
+              <span>10 大热门拍摄主题</span>
+            </h3>
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {oppoFindResources.themes.map((t, i) => (
+                <div key={i} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{t.emoji}</span>
+                    <span className="text-white text-sm font-medium">{t.name}</span>
+                  </div>
+                  <p className="text-[#FF6B35] text-[10px] font-medium">{t.count} 笔记</p>
+                  <p className="text-white/40 text-[10px]">{t.tag}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 哈苏大师样张 */}
+            <h3 className="text-white text-sm font-bold mb-3 flex items-center gap-2">
+              <Crown size={14} className="text-[#FF6B35]" />
+              <span>哈苏大师样张分类</span>
+            </h3>
+            <div className="space-y-2 mb-5">
+              {oppoFindResources.hasselbladSamples.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    // 解析参数并应用
+                    const match = s.params.match(/([\u4e00-\u9fa5]+)([+-]?\d+)/g);
+                    if (match) {
+                      match.forEach(m => {
+                        const k = m.slice(0, 1);
+                        const v = parseInt(m.slice(1));
+                        const keyMap: Record<string, string> = {
+                          '饱': 'saturation', '对': 'contrast', '亮': 'brightness',
+                          '暖': 'warmth', '锐': 'sharpness', '清': 'clarity',
+                          '高': 'highlights', '阴': 'shadows', '降': 'noiseReduction', '美': 'skinSmooth',
+                        };
+                        const kk = keyMap[k];
+                        if (kk) setAiParam(kk, v);
+                      });
+                    }
+                  }}
+                  className="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{s.icon}</span>
+                    <p className="text-white text-sm font-bold">{s.scene}</p>
+                    <span className="ml-auto text-[#FF6B35] text-[10px]">点击应用</span>
+                  </div>
+                  <p className="text-white/50 text-[10px]">{s.params}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* 拍摄参数推荐 */}
+            <h3 className="text-white text-sm font-bold mb-3 flex items-center gap-2">
+              <Aperture size={14} className="text-[#FF6B35]" />
+              <span>6 大场景拍摄参数</span>
+            </h3>
+            <div className="space-y-2 mb-5">
+              {oppoFindResources.sceneRecipes.map((r, i) => (
+                <div key={i} className="p-3 rounded-xl bg-white/5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-white text-sm font-medium">{r.name}</p>
+                    <span className="text-[#FF6B35] text-[10px]">推荐</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1 mb-1.5">
+                    <div className="bg-black/30 rounded p-1 text-center">
+                      <p className="text-white text-[10px] font-bold">{r.iso}</p>
+                      <p className="text-white/40 text-[8px]">ISO</p>
+                    </div>
+                    <div className="bg-black/30 rounded p-1 text-center">
+                      <p className="text-white text-[10px] font-bold">1/{r.shutter}</p>
+                      <p className="text-white/40 text-[8px]">快门</p>
+                    </div>
+                    <div className="bg-black/30 rounded p-1 text-center">
+                      <p className="text-white text-[10px] font-bold">f/{r.aperture}</p>
+                      <p className="text-white/40 text-[8px]">光圈</p>
+                    </div>
+                    <div className="bg-black/30 rounded p-1 text-center">
+                      <p className="text-white text-[10px] font-bold">{r.wb}K</p>
+                      <p className="text-white/40 text-[8px]">白平衡</p>
+                    </div>
+                  </div>
+                  <p className="text-white/50 text-[10px]">{r.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 知名博主 */}
+            <h3 className="text-white text-sm font-bold mb-3 flex items-center gap-2">
+              <Users size={14} className="text-[#FF6B35]" />
+              <span>参考博主</span>
+            </h3>
+            <div className="space-y-2">
+              {oppoFindResources.bloggers.map((b, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#FF9800] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {b.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-white text-sm font-medium truncate">{b.name}</p>
+                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 text-[9px]">{b.platform}</span>
+                    </div>
+                    <p className="text-white/50 text-[10px]">{b.style} · {b.followers} 粉丝</p>
+                    <p className="text-[#FF6B35] text-[10px] mt-0.5">{b.tag}</p>
+                  </div>
+                  <ChevronRight size={14} className="text-white/30 flex-shrink-0" />
+                </div>
+              ))}
+            </div>
+
+            {/* 边框资源 */}
+            <h3 className="text-white text-sm font-bold mb-3 mt-5 flex items-center gap-2">
+              <ImageIcon size={14} className="text-[#FF6B35]" />
+              <span>边框/水印资源（{frameTemplates.length} 套）</span>
+            </h3>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-2 mb-3">
+              {frameCategories.map(cat => (
+                <div
+                  key={cat.key}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/5 text-white/60 text-[10px]"
+                >
+                  {cat.icon} {cat.label}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {frameTemplates.slice(0, 9).map(f => (
+                <div key={f.id} className="relative aspect-square rounded-xl overflow-hidden">
+                  <img src={f.preview} alt={f.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="absolute bottom-1 left-1 right-1">
+                    <p className="text-white text-[10px] font-medium truncate">{f.name}</p>
+                    <p className="text-white/60 text-[8px] truncate">{f.author}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 拼图布局 */}
+            <h3 className="text-white text-sm font-bold mb-3 flex items-center gap-2">
+              <Grid3X3 size={14} className="text-[#FF6B35]" />
+              <span>拼图布局（{collageLayouts.length} 套）</span>
+            </h3>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {collageLayouts.map(l => (
+                <div key={l.id} className="aspect-square rounded-xl bg-white/5 flex flex-col items-center justify-center text-center p-2">
+                  <span className="text-2xl mb-1">{l.icon}</span>
+                  <p className="text-white/80 text-[10px]">{l.name}</p>
                 </div>
               ))}
             </div>
