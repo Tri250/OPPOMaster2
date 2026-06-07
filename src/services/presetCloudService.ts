@@ -272,3 +272,86 @@ export function subscribeToPresets(callback: (presets: CloudPreset[]) => void): 
     clearInterval(intervalId);
   };
 }
+
+// ========== 自定义预设管理 ==========
+
+// 添加自定义预设
+export async function addCustomPreset(preset: Omit<CloudPreset, 'id' | 'updatedAt'>): Promise<CloudPreset> {
+  await delay(500);
+  
+  const newPreset: CloudPreset = {
+    ...preset,
+    id: `custom_${Date.now()}`,
+    updatedAt: new Date().toISOString(),
+  };
+  
+  cloudPresetsData.push(newPreset);
+  return newPreset;
+}
+
+// 删除预设
+export async function deletePreset(id: string): Promise<boolean> {
+  await delay(300);
+  
+  const index = cloudPresetsData.findIndex(p => p.id === id);
+  if (index !== -1) {
+    cloudPresetsData.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+// 更新预设
+export async function updatePreset(id: string, updates: Partial<CloudPreset>): Promise<CloudPreset | null> {
+  await delay(400);
+  
+  const index = cloudPresetsData.findIndex(p => p.id === id);
+  if (index !== -1) {
+    cloudPresetsData[index] = {
+      ...cloudPresetsData[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    return cloudPresetsData[index];
+  }
+  return null;
+}
+
+// 批量删除预设
+export async function batchDeletePresets(ids: string[]): Promise<number> {
+  await delay(500);
+  
+  let deletedCount = 0;
+  ids.forEach(id => {
+    const index = cloudPresetsData.findIndex(p => p.id === id);
+    if (index !== -1) {
+      cloudPresetsData.splice(index, 1);
+      deletedCount++;
+    }
+  });
+  
+  return deletedCount;
+}
+
+// 导出预设数据（用于分享）
+export async function exportPreset(id: string): Promise<string | null> {
+  const preset = await fetchPresetDetail(id);
+  if (preset) {
+    return JSON.stringify(preset, null, 2);
+  }
+  return null;
+}
+
+// 导入预设数据
+export async function importPreset(jsonData: string): Promise<CloudPreset | null> {
+  await delay(500);
+  
+  try {
+    const data = JSON.parse(jsonData);
+    const newPreset = await addCustomPreset(data);
+    return newPreset;
+  } catch (error) {
+    console.error('Import preset failed:', error);
+    return null;
+  }
+}

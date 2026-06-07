@@ -25,6 +25,7 @@ import HistogramPage from './pages/subpages/HistogramPage';
 import FavoritesPage from './pages/subpages/FavoritesPage';
 import Trend2026Page from './pages/subpages/Trend2026Page';
 import SceneDetailPage from './pages/subpages/SceneDetailPage';
+import LUTSharePage from './pages/subpages/LUTSharePage';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -67,6 +68,8 @@ const App: React.FC = () => {
         return <Trend2026Page />;
       case 'scene-detail':
         return <SceneDetailPage />;
+      case 'lut-share':
+        return <LUTSharePage />;
       default:
         return null;
     }

@@ -24,6 +24,7 @@ export type SubPageType =
   | 'favorites'
   | 'trend-2026'
   | 'scene-detail'
+  | 'lut-share'
   | null;
 
 export interface Preset {
@@ -139,7 +140,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     {
       id: 'ai-engine',
       title: 'AI 智能引擎',
-      subtitle: '场景识别 · 一键微调 · 智能优化',
+      subtitle: '场景识别 · 微调 · 增强 · 细分',
       icon: 'Cpu',
       color: '#4CAF50',
       gradientColors: ['#1B5E20', '#2E7D32'],
@@ -150,6 +151,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         { id: 'scene-recognition', name: '场景识别', desc: '36+场景智能识别' },
         { id: 'one-click-tune', name: '一键微调', desc: 'AI色彩风格优化' },
         { id: 'smart-enhance', name: '智能增强', desc: 'HDR/降噪/锐化' },
+        { id: 'scene-detail', name: '场景细分', desc: '细分参数优化' },
       ],
     },
     // ========== 专业调色 ==========
@@ -173,7 +175,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     {
       id: 'workflow',
       title: '工作流',
-      subtitle: 'RAW处理 · 批量操作',
+      subtitle: 'RAW · 批量 · 水印',
       icon: 'Layers',
       color: '#795548',
       gradientColors: ['#3E2723', '#5D4037'],
@@ -183,6 +185,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       subFeatures: [
         { id: 'raw', name: 'RAW处理', desc: 'DNG/CR2/NEF' },
         { id: 'batch', name: '批量处理', desc: '多图同时调节' },
+        { id: 'watermark', name: '水印编辑', desc: '14+专业模板' },
       ],
     },
     // ========== 预设中心 ==========
@@ -202,29 +205,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         { id: 'brand', name: '品牌预设', desc: '哈苏/富士/徕卡' },
       ],
     },
-    // ========== 水印工具 ==========
+    // ========== LUT资源与拍摄分享 ==========
     {
-      id: 'watermark',
-      title: '水印工具',
-      subtitle: '14+专业水印模板',
-      icon: 'Droplets',
-      color: '#00BCD4',
-      gradientColors: ['#006064', '#00838F'],
-      enabled: true,
-      showToggle: true,
-      category: 'tool',
-    },
-    // ========== 场景细分 ==========
-    {
-      id: 'scene-detail',
-      title: '场景细分',
-      subtitle: '细分场景参数优化',
-      icon: 'MapPin',
-      color: '#E91E63',
-      gradientColors: ['#880E4F', '#AD1457'],
+      id: 'lut-share',
+      title: 'LUT资源与分享',
+      subtitle: 'LUT库 · 拍摄分享 · 社区',
+      icon: 'Share2',
+      color: '#3B82F6',
+      gradientColors: ['#1E40AF', '#3B82F6'],
       enabled: true,
       showToggle: false,
-      category: 'scene',
+      category: 'community',
+      subFeatures: [
+        { id: 'lut-library', name: 'LUT资源库', desc: '3D LUT/CUBE文件' },
+        { id: 'shot-share', name: '拍摄分享', desc: '作品展示交流' },
+        { id: 'community', name: '创作者社区', desc: '关注/点赞/评论' },
+      ],
     },
   ],
   toggleFeature: (id) =>

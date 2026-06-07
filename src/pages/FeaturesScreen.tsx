@@ -5,8 +5,7 @@ import {
   Palette,
   Layers,
   Sparkles,
-  Droplets,
-  MapPin,
+  Share2,
   ChevronRight,
   Zap,
   Target,
@@ -21,6 +20,10 @@ import {
   Camera,
   Gauge,
   Timer,
+  Droplets,
+  MapPin,
+  FileCode,
+  Users,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -28,6 +31,7 @@ const iconMap: Record<string, React.ElementType> = {
   Palette,
   Layers,
   Sparkles,
+  Share2,
   Droplets,
   MapPin,
   Zap,
@@ -43,6 +47,8 @@ const iconMap: Record<string, React.ElementType> = {
   Camera,
   Gauge,
   Timer,
+  FileCode,
+  Users,
 };
 
 const featureRouteMap: Record<string, string> = {
@@ -50,22 +56,26 @@ const featureRouteMap: Record<string, string> = {
   'pro-color': 'hsl-adjustment',
   'workflow': 'raw-processing',
   'preset-center': 'favorites',
-  'watermark': 'watermark',
-  'scene-detail': 'scene-detail',
+  'lut-share': 'lut-share',
 };
 
 const subFeatureRouteMap: Record<string, string> = {
   'scene-recognition': 'ai-scene',
   'one-click-tune': 'ai-fine-tune',
   'smart-enhance': 'smart-optimize',
+  'scene-detail': 'scene-detail',
   'hsl': 'hsl-adjustment',
   'curve': 'tone-curve',
   'histogram': 'histogram',
   'raw': 'raw-processing',
   'batch': 'batch-processing',
+  'watermark': 'watermark',
   'favorites': 'favorites',
   'trend': 'trend-2026',
   'brand': 'favorites',
+  'lut-library': 'lut-share',
+  'shot-share': 'lut-share',
+  'community': 'lut-share',
 };
 
 const FeaturesScreen: React.FC = () => {
@@ -141,7 +151,7 @@ const FeaturesScreen: React.FC = () => {
           {/* Sub Features Preview */}
           {hasSubFeatures && !isExpanded && (
             <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/10">
-              {feature.subFeatures!.slice(0, 3).map((sub) => (
+              {feature.subFeatures!.slice(0, 4).map((sub) => (
                 <span
                   key={sub.id}
                   className="px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs"
@@ -161,14 +171,19 @@ const FeaturesScreen: React.FC = () => {
                 'scene-recognition': Camera,
                 'one-click-tune': Wand2,
                 'smart-enhance': Zap,
+                'scene-detail': MapPin,
                 'hsl': SlidersHorizontal,
                 'curve': TrendingUp,
                 'histogram': BarChart3,
                 'raw': Aperture,
                 'batch': Images,
+                'watermark': Droplets,
                 'favorites': Heart,
                 'trend': Crown,
                 'brand': Sparkles,
+                'lut-library': FileCode,
+                'shot-share': Camera,
+                'community': Users,
               };
               const SubIcon = subIconMap[sub.id] || Target;
               
@@ -213,7 +228,7 @@ const FeaturesScreen: React.FC = () => {
             </div>
             <div>
               <h2 className="text-white font-semibold text-sm">AI 智能引擎</h2>
-              <p className="text-white/40 text-xs">场景识别 · 一键优化</p>
+              <p className="text-white/40 text-xs">场景识别 · 一键优化 · 细分参数</p>
             </div>
           </div>
           <FeatureCard feature={features[0]} index={0} />
@@ -241,7 +256,7 @@ const FeaturesScreen: React.FC = () => {
             </div>
             <div>
               <h2 className="text-white font-semibold text-sm">工作流</h2>
-              <p className="text-white/40 text-xs">高效批量处理</p>
+              <p className="text-white/40 text-xs">RAW · 批量 · 水印</p>
             </div>
           </div>
           <FeatureCard feature={features[2]} index={2} />
@@ -261,27 +276,18 @@ const FeaturesScreen: React.FC = () => {
           <FeatureCard feature={features[3]} index={3} />
         </div>
 
-        {/* Tools Row */}
-        <div className="grid grid-cols-2 gap-3">
-          {features.slice(4).map((feature, index) => {
-            const Icon = iconMap[feature.icon] || Sparkles;
-            return (
-              <button
-                key={feature.id}
-                onClick={() => handleFeatureClick(feature.id)}
-                className="rounded-2xl p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  background: `linear-gradient(135deg, ${feature.gradientColors[0]}, ${feature.gradientColors[1]})`,
-                }}
-              >
-                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-3">
-                  <Icon size={24} className="text-white" />
-                </div>
-                <h3 className="text-white font-bold text-sm">{feature.title}</h3>
-                <p className="text-white/60 text-xs mt-1">{feature.subtitle}</p>
-              </button>
-            );
-          })}
+        {/* LUT & Share Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <Share2 size={16} className="text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-sm">LUT资源与分享</h2>
+              <p className="text-white/40 text-xs">LUT库 · 拍摄分享 · 社区</p>
+            </div>
+          </div>
+          <FeatureCard feature={features[4]} index={4} />
         </div>
 
         {/* Bottom Spacing */}
