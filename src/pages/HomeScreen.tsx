@@ -5,7 +5,8 @@ import { CloudPreset } from '../types/cloudPreset';
 import { fetchCloudPresets, CloudPreset as CloudPresetType } from '../services/presetCloudService';
 import PresetDetailModal from '../components/PresetDetailModal';
 import { 
-  Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp
+  Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp,
+  Camera, Aperture, Gauge, Sun, Moon, Droplets, Zap, Award, Crown
 } from 'lucide-react';
 
 // Tab 配置 - 参考 iCurrer/OMaster 主页结构
@@ -240,25 +241,27 @@ const HomeScreen: React.FC = () => {
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-        {/* HNCS Badge */}
+        {/* HNCS Badge - 哈苏自然色彩解决方案 */}
         {preset.isHncs && (
-          <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-gradient-to-r from-[#FF6B35] to-[#FF9800] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20 flex items-center gap-0.5">
-            <Sparkles size={8} />
-            <span>HNCS</span>
+          <div className="absolute top-2 left-2 px-2 py-1 bg-gradient-to-r from-[#FF6B35] to-[#FF9800] backdrop-blur-sm rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1 shadow-lg shadow-orange-500/30">
+            <Crown size={10} />
+            <span>HNCS 3.0</span>
           </div>
         )}
 
         {/* NEW Badge */}
         {preset.isNew && !preset.isHncs && (
-          <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#4CAF50] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
-            NEW
+          <div className="absolute top-2 left-2 px-2 py-1 bg-[#4CAF50] backdrop-blur-sm rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1">
+            <Sparkles size={10} />
+            <span>NEW</span>
           </div>
         )}
 
         {/* Pinned Badge */}
         {preset.isPinned && (
-          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-yellow-500/80 backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
-            📌
+          <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500/80 backdrop-blur-sm rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1">
+            <Award size={10} />
+            <span>精选</span>
           </div>
         )}
 
@@ -268,31 +271,38 @@ const HomeScreen: React.FC = () => {
             e.stopPropagation();
             toggleFavorite(preset.id);
           }}
-          className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20"
+          className="absolute bottom-2 right-2 p-2 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20"
         >
           <Heart
-            size={14}
+            size={16}
             className={preset.isFavorite ? 'text-red-500 fill-red-500' : 'text-white/70'}
           />
         </button>
 
         {/* Content */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 pr-10">
+        <div className="absolute bottom-0 left-0 right-0 p-3 pr-12">
           <h3 className="text-white font-semibold text-sm mb-0.5 truncate">{preset.name}</h3>
           <p className="text-white/60 text-xs truncate">{preset.author}</p>
           
           {/* Stats */}
-          <div className="flex items-center gap-2 mt-1">
-            <div className="flex items-center gap-0.5">
-              <Star size={9} className="text-yellow-400 fill-yellow-400" />
+          <div className="flex items-center gap-3 mt-1.5">
+            <div className="flex items-center gap-1">
+              <Star size={10} className="text-yellow-400 fill-yellow-400" />
               <span className="text-white/50 text-[10px]">{preset.rating.toFixed(1)}</span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <Download size={9} className="text-white/40" />
+            <div className="flex items-center gap-1">
+              <Download size={10} className="text-white/40" />
               <span className="text-white/50 text-[10px]">
                 {preset.downloadCount > 10000 ? `${(preset.downloadCount / 10000).toFixed(1)}w` : preset.downloadCount}
               </span>
             </div>
+            {/* 设备标识 */}
+            {preset.brand && (
+              <div className="flex items-center gap-1 ml-auto">
+                <Camera size={10} className="text-white/40" />
+                <span className="text-white/40 text-[10px]">{preset.brand}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -331,13 +341,14 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
-      {/* Header - 参考 OMaster 紧凑标题栏 */}
+      {/* Header - OPPO哈苏大师模式风格 */}
       <div className="px-4 pt-2 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-white">OMaster</h1>
-            <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-[9px] font-bold text-white">
-              2026
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-[9px] font-bold text-white">
+              <Crown size={10} />
+              <span>哈苏大师</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -345,9 +356,9 @@ const HomeScreen: React.FC = () => {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
             >
-              <RefreshCw size={16} className={`text-white/70 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw size={18} className={`text-white/70 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

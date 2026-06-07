@@ -9,6 +9,14 @@ import {
   FileText,
   ChevronRight,
   Camera,
+  Crown,
+  Cloud,
+  Heart,
+  Settings,
+  Award,
+  Zap,
+  Star,
+  Download,
 } from 'lucide-react';
 
 const AboutScreen: React.FC = () => {
@@ -34,38 +42,51 @@ const AboutScreen: React.FC = () => {
       icon: Palette, 
       label: '主题设置', 
       value: themeNames[theme] || '哈苏橙',
-      route: 'theme-settings' as const
+      route: 'theme-settings' as const,
+      badge: null,
     },
     { 
       icon: Moon, 
       label: '深色模式', 
       value: darkModeNames[darkMode] || '跟随系统',
-      route: 'dark-mode' as const
+      route: 'dark-mode' as const,
+      badge: null,
     },
     { 
       icon: Globe, 
       label: '更新渠道', 
       value: 'Gitee',
-      route: null
+      route: null,
+      badge: null,
     },
     { 
       icon: Bell, 
       label: '通知设置', 
       value: '',
-      route: 'notification' as const
+      route: 'notification' as const,
+      badge: '3',
     },
     { 
       icon: Shield, 
       label: '隐私政策', 
       value: '',
-      route: 'privacy' as const
+      route: 'privacy' as const,
+      badge: null,
     },
     { 
       icon: FileText, 
       label: '用户协议', 
       value: '',
-      route: 'privacy' as const
+      route: 'privacy' as const,
+      badge: null,
     },
+  ];
+
+  const statsItems = [
+    { icon: Download, label: '下载预设', value: '128', unit: '个' },
+    { icon: Heart, label: '收藏', value: '56', unit: '个' },
+    { icon: Star, label: '评分', value: '4.8', unit: '分' },
+    { icon: Award, label: '等级', value: '大师', unit: '' },
   ];
 
   const handleItemClick = (route: string | null) => {
@@ -78,33 +99,76 @@ const AboutScreen: React.FC = () => {
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-2 pb-3">
-        <h1 className="text-xl font-bold text-white">关于</h1>
+        <h1 className="text-xl font-bold text-white">我的</h1>
       </div>
 
-      {/* App Info Card */}
+      {/* User Profile Card - 哈苏大师模式风格 */}
       <div className="px-4 pb-4">
         <div className="relative rounded-2xl overflow-hidden">
           {/* Glass Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B35]/20 via-[#FF6B35]/10 to-transparent" />
           <div className="absolute inset-0 backdrop-blur-xl bg-white/5" />
           
-          <div className="relative p-6 text-center">
-            {/* Logo */}
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#FF8C42] flex items-center justify-center shadow-lg shadow-[#FF6B35]/30">
-              <Camera size={36} className="text-white" />
+          <div className="relative p-6">
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#FF8C42] flex items-center justify-center shadow-lg shadow-[#FF6B35]/30">
+                <Camera size={32} className="text-white" />
+              </div>
+
+              {/* User Info */}
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-bold text-white">摄影大师</h2>
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-[9px] font-bold text-white">
+                    <Crown size={10} />
+                    <span>哈苏认证</span>
+                  </div>
+                </div>
+                <p className="text-white/50 text-xs">OPPO Find X7 Ultra 用户</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex items-center gap-1">
+                    <Zap size={12} className="text-yellow-400" />
+                    <span className="text-white/60 text-xs">Lv.12</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Cloud size={12} className="text-blue-400" />
+                    <span className="text-white/60 text-xs">已同步</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* App Name */}
-            <h2 className="text-2xl font-bold text-white mb-1">OMaster</h2>
-            <p className="text-white/50 text-sm mb-4">专业影像参数管理工具</p>
-
-            {/* Version */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm">
-              <span className="text-white/70 text-xs">版本 1.3.1</span>
-              <span className="w-1 h-1 rounded-full bg-[#FF6B35]" />
-              <span className="text-[#FF6B35] text-xs">最新</span>
+            {/* Stats */}
+            <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/10">
+              {statsItems.map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <stat.icon size={14} className="text-[#FF6B35]" />
+                    <span className="text-lg font-bold text-white">{stat.value}</span>
+                  </div>
+                  <span className="text-white/40 text-xs">{stat.label}</span>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="px-4 pb-4">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { icon: Heart, label: '我的收藏', color: 'text-red-400' },
+            { icon: Download, label: '下载管理', color: 'text-blue-400' },
+            { icon: Award, label: '成就', color: 'text-yellow-400' },
+            { icon: Settings, label: '设置', color: 'text-white/60' },
+          ].map((action) => (
+            <button key={action.label} className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+              <action.icon size={20} className={action.color} />
+              <span className="text-white/60 text-xs">{action.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -126,6 +190,11 @@ const AboutScreen: React.FC = () => {
                 <span className="text-white text-sm font-medium">{item.label}</span>
               </div>
               <div className="flex items-center gap-2">
+                {item.badge && (
+                  <span className="px-2 py-0.5 rounded-full bg-[#FF6B35] text-white text-xs font-bold">
+                    {item.badge}
+                  </span>
+                )}
                 {item.value && (
                   <span className="text-white/50 text-xs">{item.value}</span>
                 )}
