@@ -4,150 +4,143 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * =====================================================
- * OMaster 设计系统 - OPPOMaster Web风格
+ * OMaster 设计系统 v2.0
  * =====================================================
- * 设计风格：深灰背景 + 橙色主色调
- * 参考：https://github.com/Tri250/OPPOMaster
+ * 设计风格：ColorOS 16 系统级水准
+ * 
+ * 色彩规范：
+ * - 主色调（哈苏橙）：#E65100
+ * - 辅助色（OPPO绿）：#00C853
+ * - 深色背景：#1A1A1A / #18181B
+ * - 卡片背景：#27272A
+ * - 边框/分割线：#3F3F46 / #52525B
+ * - 文字主色：纯白 #FFFFFF
+ * - 文字次色：#A1A1AA / #D4D4D8
  */
 
-// ==================== 核心背景色 ====================
+// ==================== 主色调 ====================
 
 /**
- * Zinc色系 - 深灰背景
- * 主背景色，营造专业沉稳氛围
+ * 哈苏橙 - 品牌主色
+ * 用于：按钮、强调、认证标识
  */
-val Zinc900 = Color(0xFF18181B)      // 主背景
-val Zinc800 = Color(0xFF27272A)      // 卡片背景
-val Zinc700 = Color(0xFF3F3F46)      // 边框/分割
-val Zinc600 = Color(0xFF52525B)      // 悬停状态
-val Zinc500 = Color(0xFF71717A)      // 禁用文字
-val Zinc400 = Color(0xFFA1A1AA)      // 副标题文字
-val Zinc300 = Color(0xFFD4D4D8)      // 次级文字
-val Zinc200 = Color(0xFFE4E4E7)      // 浅色文字
-val Zinc100 = Color(0xFFF4F4F5)      // 最浅文字
+val HasselbladOrange = Color(0xFFE65100)
+val HasselbladOrangeLight = Color(0xFFFF7A1A)
+val HasselbladOrangeDark = Color(0xFFBF4000)
 
-// ==================== 橙色主色调 ====================
+// 哈苏橙透明度变体
+val HasselbladOrange10 = Color(0x1AE65100)
+val HasselbladOrange20 = Color(0x33E65100)
+val HasselbladOrange30 = Color(0x4DE65100)
+val HasselbladOrange50 = Color(0x80E65100)
 
 /**
- * Orange色系 - 品牌主色
- * 代表活力、专业、哈苏认证
+ * OPPO绿 - 辅助色
+ * 用于：成功状态、下载、积极反馈
  */
-val Orange500 = Color(0xFFF97316)    // 主色调
-val Orange600 = Color(0xFFEA580C)    // 深色变体
-val Orange400 = Color(0xFFFB923C)    // 浅色变体
-val Orange700 = Color(0xFFC2410C)    // 更深变体
-val Orange300 = Color(0xFFFDBA74)    // 更浅变体
+val OPPOGreen = Color(0xFF00C853)
+val OPPOGreenLight = Color(0xFF00E676)
+val OPPOGreenDark = Color(0xFF00A344)
 
-// 橙色透明度变体（用于光晕效果）
-val Orange500_20 = Color(0x33F97316) // 20%透明度光晕
-val Orange500_10 = Color(0x19F97316) // 10%透明度光晕
-val Orange500_30 = Color(0x4DF97316) // 30%透明度边框
-val Orange500_25 = Color(0x40F97316) // 25%透明度阴影
+// OPPO绿透明度变体
+val OPPOGreen10 = Color(0x1A00C853)
+val OPPOGreen20 = Color(0x3300C853)
 
-// ==================== 文字色彩 ====================
+// ==================== 背景色 ====================
 
-val TextWhite = Color(0xFFFFFFFF)           // 主标题
-val TextWhiteSemi = Color(0xB3FFFFFF)       // 次标题 70%
-val TextZinc400 = Zinc400                    // 副标题
-val TextZinc500 = Zinc500                    // 描述文字
-val TextZinc600 = Color(0x8071717A)          // 辅助文字 50%
+/**
+ * 深色背景系统
+ * ColorOS 16 深空黑风格
+ */
+val BackgroundPrimary = Color(0xFF18181B)      // 主背景 #18181B
+val BackgroundSecondary = Color(0xFF1A1A1A)    // 次级背景 #1A1A1A
+val BackgroundTertiary = Color(0xFF27272A)     // 卡片背景 #27272A
 
 // ==================== 边框与分割 ====================
 
-val BorderZinc700_50 = Color(0x803F3F46)     // 边框 50%
-val BorderZinc800 = Color(0x4027272A)        // 边框 25%
-val BorderOrange500_30 = Orange500_30        // 橙色边框
+val BorderPrimary = Color(0xFF3F3F46)          // 主边框 #3F3F46
+val BorderSecondary = Color(0xFF52525B)        // 次边框 #52525B
+val BorderTertiary = Color(0xFF71717A)         // 三级边框
+
+// 边框透明度
+val BorderPrimary50 = Color(0x803F3F46)
+val BorderPrimary30 = Color(0x4D3F3F46)
+
+// ==================== 文字色彩 ====================
+
+val TextPrimary = Color(0xFFFFFFFF)            // 主文字 纯白
+val TextSecondary = Color(0xFFD4D4D8)          // 次文字 #D4D4D8
+val TextTertiary = Color(0xFFA1A1AA)           // 三级文字 #A1A1AA
+val TextQuaternary = Color(0xFF71717A)         // 四级文字 #71717A
+
+// 文字透明度
+val TextPrimary70 = Color(0xB3FFFFFF)          // 70%白
+val TextPrimary50 = Color(0x80FFFFFF)          // 50%白
 
 // ==================== 功能色 ====================
 
-val Yellow400 = Color(0xFFFACC15)            // 星星评分
-val Yellow500 = Color(0xFFEAB308)            // 星星填充
+val ErrorRed = Color(0xFFEF4444)               // 错误
+val ErrorRedDark = Color(0xFFDC2626)
 
-val Green500 = Color(0xFF22C55E)             // 成功/下载
-val Green600 = Color(0xFF16A34A)             // 深绿
+val WarningYellow = Color(0xFFFACC15)          // 警告/星星
+val WarningYellowDark = Color(0xFFEAB308)
 
-val Blue500 = Color(0xFF3B82F6)              // 信息
-val Blue600 = Color(0xFF2563EB)              // 深蓝
+val InfoBlue = Color(0xFF3B82F6)               // 信息
+val InfoBlueDark = Color(0xFF2563EB)
 
-val Red500 = Color(0xFFEF4444)               // 错误
-val Red600 = Color(0xFFDC2626)               // 深红
-
-// ==================== 渐变色组 ====================
+// ==================== 渐变色 ====================
 
 /**
- * 橙色渐变 - 用于按钮、强调元素
+ * 哈苏橙渐变 - 用于按钮、强调元素
  */
-val GradientOrange = listOf(
-    Orange400,
-    Orange500,
-    Orange600
+val GradientHasselblad = listOf(
+    HasselbladOrangeLight,
+    HasselbladOrange,
+    HasselbladOrangeDark
 )
 
 /**
- * Zinc渐变 - 用于背景层次
+ * OPPO绿渐变 - 用于成功状态
  */
-val GradientZinc = listOf(
-    Zinc900,
-    Zinc800,
-    Zinc900
+val GradientOPPOGreen = listOf(
+    OPPOGreenLight,
+    OPPOGreen,
+    OPPOGreenDark
 )
 
 /**
- * 遮罩渐变 - 用于图片遮罩
+ * 背景渐变 - 用于Hero区域
  */
-val GradientOverlay = listOf(
-    Color.Transparent,
-    Color(0x3318181B),
-    Color(0xE018181B)
+val GradientBackground = listOf(
+    BackgroundPrimary,
+    BackgroundSecondary,
+    BackgroundPrimary
 )
 
 /**
- * 光晕渐变 - 用于装饰效果
+ * 卡片渐变 - 用于卡片背景
  */
-val GradientGlow = listOf(
-    Orange500_20,
-    Orange500_10,
-    Color.Transparent
+val GradientCard = listOf(
+    BackgroundTertiary,
+    Color(0xFF2E2E33),
+    BackgroundTertiary
 )
 
-// ==================== 兼容旧版本 ====================
+// ==================== 阴影 ====================
 
-val DeepSpaceBlack = Zinc900
-val DeepSpaceBlackElevated = Zinc800
-val DeepSpaceBlackSurface = Zinc700
+val ShadowOrange = Color(0x40E65100)           // 橙色阴影
+val ShadowGreen = Color(0x4000C853)            // 绿色阴影
+val ShadowDark = Color(0x40000000)             // 深色阴影
 
-val CardBackgroundPrimary = Zinc800
-val CardBackgroundSecondary = Zinc700
+// ==================== 主题对象 ====================
 
-val AmberGold = Orange500
-val AmberGoldLight = Orange400
-val AmberGoldDark = Orange600
-
-val TextPrimary = TextWhite
-val TextSecondary = TextZinc400
-val TextTertiary = TextZinc500
-
-val BorderPrimary = BorderZinc700_50
-val BorderAccent = BorderOrange500_30
-
-// ==================== 主题枚举 ====================
-
-enum class OMasterTheme(
-    val displayName: String,
-    val primaryColor: Color,
-    val backgroundColor: Color,
-    val gradient: List<Color>
-) {
-    Orange(
-        displayName = "橙色主题",
-        primaryColor = Orange500,
-        backgroundColor = Zinc900,
-        gradient = GradientOrange
-    ),
-    Zinc(
-        displayName = "深灰主题",
-        primaryColor = Zinc400,
-        backgroundColor = Zinc900,
-        gradient = GradientZinc
-    )
+object OMasterColorScheme {
+    val primary = HasselbladOrange
+    val secondary = OPPOGreen
+    val background = BackgroundPrimary
+    val surface = BackgroundTertiary
+    val onPrimary = TextPrimary
+    val onSecondary = TextPrimary
+    val onBackground = TextPrimary
+    val onSurface = TextPrimary
 }

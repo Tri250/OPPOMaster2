@@ -1,282 +1,331 @@
 package com.silas.omaster.ui.animation
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
 
 /**
  * =====================================================
- * OMaster 设计系统 - 动画效果
+ * OMaster 设计系统 v2.0 - 动画系统
  * =====================================================
- * 动画风格：framer-motion风格，流畅优雅
- * 参考：https://github.com/Tri250/OPPOMaster
+ * 动画风格：Framer Motion风格，流畅优雅
+ * 
+ * 动画库：Framer Motion
+ * 滚动：平滑滚动 scroll-behavior: smooth
+ * 交互：悬停效果、过渡动画
  */
 
 // ==================== 动画时长 ====================
 
-object AnimationDuration {
+object AnimationDurations {
     /** 快速动画 - 100ms */
-    const val Fast = 100
+    const val FAST = 100
     
     /** 正常动画 - 200ms */
-    const val Normal = 200
+    const val NORMAL = 200
     
     /** 慢速动画 - 300ms */
-    const val Slow = 300
+    const val SLOW = 300
     
-    /** 页面进入动画 - 800ms */
-    const val PageEnter = 800
+    /** 页面进入动画 - 500ms */
+    const val PAGE_ENTER = 500
     
     /** 卡片悬停 - 300ms */
-    const val CardHover = 300
+    const val CARD_HOVER = 300
     
-    /** 图片缩放 - 500ms */
-    const val ImageScale = 500
+    /** 图片缩放 - 400ms */
+    const val IMAGE_SCALE = 400
     
     /** 按钮点击 - 100ms */
-    const val ButtonTap = 100
+    const val BUTTON_TAP = 100
 }
 
 // ==================== 动画曲线 ====================
 
-object AnimationEasing {
+object AnimationEasings {
     /** 标准缓动 - ease-out */
     val Standard = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f)
     
-    /** 进入缓动 - ease-out */
+    /** 进入缓动 */
     val Enter = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f)
     
-    /** 退出缓动 - ease-in */
+    /** 退出缓动 */
     val Exit = CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f)
     
     /** 弹性缓动 - spring-like */
     val Bounce = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1.0f)
     
-    /** 平滑缓动 - linear-ish */
+    /** 平滑缓动 */
     val Smooth = CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f)
+    
+    /** 线性 */
+    val Linear = LinearEasing
 }
 
-// ==================== 预设动画规格 ====================
+// ==================== 动画规格 ====================
+
+@Composable
+fun <T> tweenFast(): TweenSpec<T> = remember {
+    tween(
+        durationMillis = AnimationDurations.FAST,
+        easing = AnimationEasings.Standard
+    )
+}
+
+@Composable
+fun <T> tweenNormal(): TweenSpec<T> = remember {
+    tween(
+        durationMillis = AnimationDurations.NORMAL,
+        easing = AnimationEasings.Smooth
+    )
+}
+
+@Composable
+fun <T> tweenSlow(): TweenSpec<T> = remember {
+    tween(
+        durationMillis = AnimationDurations.SLOW,
+        easing = AnimationEasings.Smooth
+    )
+}
+
+@Composable
+fun <T> springBounce(): SpringSpec<T> = remember {
+    spring(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessLow
+    )
+}
+
+// ==================== 按钮动画 ====================
+
+@Composable
+fun tapScaleSpec(): TweenSpec<Float> = remember {
+    tween(
+        durationMillis = AnimationDurations.BUTTON_TAP,
+        easing = AnimationEasings.Standard
+    )
+}
+
+@Composable
+fun hoverYSpec(): TweenSpec<Float> = remember {
+    tween(
+        durationMillis = AnimationDurations.CARD_HOVER,
+        easing = AnimationEasings.Smooth
+    )
+}
+
+@Composable
+fun hoverElevationSpec(): TweenSpec<Float> = remember {
+    tween(
+        durationMillis = AnimationDurations.CARD_HOVER,
+        easing = AnimationEasings.Smooth
+    )
+}
+
+// ==================== Modifier扩展 ====================
 
 /**
- * Fade In + Y位移 - 用于页面进入
+ * 按钮按压效果
+ * scale(0.96) on press
+ */
+fun Modifier.pressEffect(
+    scale: Float = 0.96f
+): Modifier = composed {
+    var isPressed by remember { mutableStateOf(false) }
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) scale else 1f,
+        animationSpec = tween(
+            durationMillis = AnimationDurations.BUTTON_TAP,
+            easing = AnimationEasings.Standard
+        ),
+        label = "press_scale"
+    )
+    
+    this
+        .graphicsLayer {
+            this.scaleX = animatedScale
+            this.scaleY = animatedScale
+            this.transformOrigin = TransformOrigin.Center
+        }
+        .pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitFirstDown()
+                    isPressed = true
+                    waitForUpOrCancellation()
+                    isPressed = false
+                }
+            }
+        }
+}
+
+/**
+ * 悬停上移效果
+ * translateY(-4px) on hover
+ */
+fun Modifier.hoverLift(
+    liftAmount: Float = -4f
+): Modifier = composed {
+    var isHovered by remember { mutableStateOf(false) }
+    val animatedOffset by animateFloatAsState(
+        targetValue = if (isHovered) liftAmount else 0f,
+        animationSpec = tween(
+            durationMillis = AnimationDurations.CARD_HOVER,
+            easing = AnimationEasings.Smooth
+        ),
+        label = "hover_offset"
+    )
+    
+    this
+        .graphicsLayer {
+            this.translationY = animatedOffset
+        }
+}
+
+/**
+ * 进入动画 - Fade In + Y位移
  * framer-motion: initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
  */
-@Composable
-fun fadeInUpSpec(): FiniteAnimationSpec<Float> {
-    return remember {
-        tween<Float>(
-            durationMillis = AnimationDuration.PageEnter,
-            easing = AnimationEasing.Enter
-        )
+fun Modifier.fadeInUp(
+    delayMillis: Int = 0
+): Modifier = composed {
+    var isVisible by remember { mutableStateOf(false) }
+    
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = AnimationDurations.PAGE_ENTER,
+            delayMillis = delayMillis,
+            easing = AnimationEasings.Enter
+        ),
+        label = "fade_alpha"
+    )
+    
+    val animatedOffset by animateFloatAsState(
+        targetValue = if (isVisible) 0f else 20f,
+        animationSpec = tween(
+            durationMillis = AnimationDurations.PAGE_ENTER,
+            delayMillis = delayMillis,
+            easing = AnimationEasings.Enter
+        ),
+        label = "fade_offset"
+    )
+    
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+    
+    this.graphicsLayer {
+        this.alpha = animatedAlpha
+        this.translationY = animatedOffset
     }
 }
 
 /**
- * Scale In - 用于卡片进入
- * framer-motion: initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+ * 缩放进入动画
+ * framer-motion: initial={{ opacity: 0, scale: 0.9 }}
  */
-@Composable
-fun scaleInSpec(): FiniteAnimationSpec<Float> {
-    return remember {
-        tween<Float>(
-            durationMillis = AnimationDuration.Slow,
-            easing = AnimationEasing.Bounce
-        )
+fun Modifier.scaleIn(
+    delayMillis: Int = 0
+): Modifier = composed {
+    var isVisible by remember { mutableStateOf(false) }
+    
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = AnimationDurations.NORMAL,
+            delayMillis = delayMillis,
+            easing = AnimationEasings.Enter
+        ),
+        label = "scale_alpha"
+    )
+    
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.9f,
+        animationSpec = tween(
+            durationMillis = AnimationDurations.NORMAL,
+            delayMillis = delayMillis,
+            easing = AnimationEasings.Bounce
+        ),
+        label = "scale_scale"
+    )
+    
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+    
+    this.graphicsLayer {
+        this.alpha = animatedAlpha
+        this.scaleX = animatedScale
+        this.scaleY = animatedScale
+        this.transformOrigin = TransformOrigin.Center
     }
 }
 
 /**
- * Hover Y位移 - 用于卡片悬停
- * framer-motion: whileHover={{ y: -8 }}
+ * 交错动画延迟计算
+ * index * 100ms
  */
-@Composable
-fun hoverYSpec(): FiniteAnimationSpec<Float> {
-    return remember {
-        tween<Float>(
-            durationMillis = AnimationDuration.CardHover,
-            easing = AnimationEasing.Smooth
-        )
-    }
+fun staggerDelay(index: Int, baseDelay: Int = 100): Int {
+    return index * baseDelay
 }
 
-/**
- * 按钮点击缩放
- * framer-motion: whileTap={{ scale: 0.95 }}
- */
-@Composable
-fun tapScaleSpec(): FiniteAnimationSpec<Float> {
-    return remember {
-        tween<Float>(
-            durationMillis = AnimationDuration.ButtonTap,
-            easing = AnimationEasing.Standard
-        )
-    }
-}
+// ==================== 页面过渡动画 ====================
 
 /**
- * 图片悬停缩放
- * framer-motion: group-hover:scale-105 transition-transform duration-500
- */
-@Composable
-fun imageHoverScaleSpec(): FiniteAnimationSpec<Float> {
-    return remember {
-        tween<Float>(
-            durationMillis = AnimationDuration.ImageScale,
-            easing = AnimationEasing.Smooth
-        )
-    }
-}
-
-// ==================== 动画状态 ====================
-
-/**
- * 进入动画状态
- * opacity: 0 -> 1, y: 20 -> 0
- */
-data class EnterAnimationState(
-    val opacity: Float = 0f,
-    val offsetY: Float = 20f
-)
-
-/**
- * 卡片悬停状态
- * y: 0 -> -8
- */
-data class HoverAnimationState(
-    val offsetY: Float = 0f
-)
-
-/**
- * 按钮点击状态
- * scale: 1 -> 0.95
- */
-data class TapAnimationState(
-    val scale: Float = 1f
-)
-
-// ==================== 动画扩展函数 ====================
-
-/**
- * 卡片悬停效果
- * translateY(-8px) on hover
- */
-fun Modifier.cardHoverAnimation(hovered: Boolean): Modifier {
-    return graphicsLayer {
-        val targetY = if (hovered) -8f else 0f
-        translationY = targetY
-    }
-}
-
-/**
- * 按钮点击效果
- * scale(0.95) on tap
- */
-fun Modifier.buttonTapAnimation(pressed: Boolean): Modifier {
-    return graphicsLayer {
-        val targetScale = if (pressed) 0.95f else 1f
-        scaleX = targetScale
-        scaleY = targetScale
-        transformOrigin = TransformOrigin.Center
-    }
-}
-
-/**
- * 图片悬停缩放
- * scale(1.05) on hover
- */
-fun Modifier.imageHoverAnimation(hovered: Boolean): Modifier {
-    return graphicsLayer {
-        val targetScale = if (hovered) 1.05f else 1f
-        scaleX = targetScale
-        scaleY = targetScale
-        transformOrigin = TransformOrigin.Center
-    }
-}
-
-/**
- * 进入动画效果
- * opacity + y translation
- */
-fun Modifier.enterAnimation(progress: Float): Modifier {
-    return graphicsLayer {
-        alpha = progress
-        translationY = 20f * (1f - progress)
-    }
-}
-
-/**
- * 缩放进入效果
- * opacity + scale
- */
-fun Modifier.scaleEnterAnimation(progress: Float): Modifier {
-    return graphicsLayer {
-        alpha = progress
-        val scale = 0.9f + 0.1f * progress
-        scaleX = scale
-        scaleY = scale
-        transformOrigin = TransformOrigin.Center
-    }
-}
-
-// ==================== 动画Transition ====================
-
-/**
- * 创建进入动画Transition
+ * 页面进入动画规格
  */
 @Composable
-fun enterTransition(): Transition<EnterAnimationState> {
-    return updateTransition(
-        targetState = EnterAnimationState(opacity = 1f, offsetY = 0f),
-        label = "enter"
+fun pageEnterSpec(): TweenSpec<Float> = remember {
+    tween(
+        durationMillis = AnimationDurations.PAGE_ENTER,
+        easing = AnimationEasings.Enter
     )
 }
 
 /**
- * 创建悬停动画Transition
+ * 列表项进入动画
  */
 @Composable
-fun hoverTransition(hovered: Boolean): Transition<HoverAnimationState> {
-    return updateTransition(
-        targetState = HoverAnimationState(offsetY = if (hovered) -8f else 0f),
-        label = "hover"
+fun listItemEnterSpec(index: Int): TweenSpec<Float> = remember(index) {
+    tween(
+        durationMillis = AnimationDurations.NORMAL,
+        delayMillis = staggerDelay(index, 50),
+        easing = AnimationEasings.Enter
     )
 }
 
+// ==================== 手势动画 ====================
+
 /**
- * 创建点击动画Transition
+ * 滑动返回手势动画
  */
 @Composable
-fun tapTransition(pressed: Boolean): Transition<TapAnimationState> {
-    return updateTransition(
-        targetState = TapAnimationState(scale = if (pressed) 0.95f else 1f),
-        label = "tap"
+fun swipeBackSpec(): SpringSpec<Float> = remember {
+    spring(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMedium
     )
 }
 
-// ==================== 延迟动画 ====================
+// ==================== 滚动动画 ====================
 
 /**
- * 计算列表项动画延迟
- * index * 0.1s
- */
-fun calculateStaggerDelay(index: Int, baseDelay: Int = 100): Int {
-    return baseDelay * index
-}
-
-/**
- * 创建延迟动画规格
+ * 平滑滚动行为
+ * 在LazyColumn/LazyRow中使用
  */
 @Composable
-fun delayedAnimationSpec(delayMs: Int): FiniteAnimationSpec<Float> {
-    return remember(delayMs) {
-        tween<Float>(
-            durationMillis = AnimationDuration.Slow,
-            delayMillis = delayMs,
-            easing = AnimationEasing.Enter
-        )
-    }
+fun smoothScrollSpec(): FlingBehavior {
+    return rememberSplineBasedDecay()
 }
