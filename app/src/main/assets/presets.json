@@ -138,6 +138,9 @@
         "images/th_03.webp"
       ],
       "author": "@OPPO影像",
+      "brand": "fujifilm",
+      "rating": 4.7,
+      "downloadCount": 11200,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -201,6 +204,9 @@
         "images/gdbhb_03.webp"
       ],
       "author": "@OPPO影像",
+      "brand": "leica",
+      "rating": 4.5,
+      "downloadCount": 7600,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -264,6 +270,9 @@
         "images/lgl_03.webp"
       ],
       "author": "@OPPO影像",
+      "brand": "ricoh",
+      "rating": 4.6,
+      "downloadCount": 8400,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -327,6 +336,9 @@
         "images/lglan_03.webp"
       ],
       "author": "@OPPO影像",
+      "brand": "ricoh",
+      "rating": 4.4,
+      "downloadCount": 6700,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -518,7 +530,11 @@
         "images/fsnc_02.webp",
         "images/fsnc_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@Aurora",
+      "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.9,
+      "downloadCount": 15600,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -1231,6 +1247,10 @@
         "images/mwmj_02.webp"
       ],
       "author": "@Aurora",
+      "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.3,
+      "downloadCount": 4300,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -1294,6 +1314,11 @@
       ],
       "author": "@屋顶橙子味",
       "isNew": true,
+      "isHncs": true,
+      "isPinned": true,
+      "brand": "oppo",
+      "rating": 4.7,
+      "downloadCount": 9500,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
@@ -1471,6 +1496,9 @@
       ],
       "author": "@屋顶橙子味",
       "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.4,
+      "downloadCount": 6200,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
@@ -1554,6 +1582,9 @@
       ],
       "author": "@屋顶橙子味",
       "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.3,
+      "downloadCount": 5100,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
