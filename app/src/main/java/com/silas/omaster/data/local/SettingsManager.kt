@@ -207,6 +207,50 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putBoolean(KEY_HASSELBLAD_COLOR_ENABLED, value).apply()
         }
 
+    // 自定义设备型号（WM-003）
+    var customDeviceModel: String
+        get() = prefs.getString(KEY_CUSTOM_DEVICE_MODEL, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_CUSTOM_DEVICE_MODEL, value).apply()
+        }
+
+    // 收藏的预设ID列表（PM-003）
+    var favoritePresetIds: List<String>
+        get() = prefs.getStringSet(KEY_FAVORITE_PRESET_IDS, emptySet())?.toList() ?: emptyList()
+        set(value) {
+            prefs.edit().putStringSet(KEY_FAVORITE_PRESET_IDS, value.toSet()).apply()
+        }
+
+    // 置顶的预设ID列表（PM-008）
+    var pinnedPresetIds: List<String>
+        get() = prefs.getStringSet(KEY_PINNED_PRESET_IDS, emptySet())?.toList() ?: emptyList()
+        set(value) {
+            prefs.edit().putStringSet(KEY_PINNED_PRESET_IDS, value.toSet()).apply()
+        }
+
+    // 手动修改的参数（PP-005）
+    var manuallyModifiedParams: List<String>
+        get() = prefs.getStringSet(KEY_MANUALLY_MODIFIED_PARAMS, emptySet())?.toList() ?: emptyList()
+        set(value) {
+            prefs.edit().putStringSet(KEY_MANUALLY_MODIFIED_PARAMS, value.toSet()).apply()
+        }
+
+    // 自定义快捷档位（PP-004）
+    // 注意：需要JSON序列化存储
+    var customQuickPresets: Map<String, Map<String, Int>>
+        get() {
+            val jsonStr = prefs.getString(KEY_CUSTOM_QUICK_PRESETS, null) ?: return emptyMap()
+            return try {
+                kotlinx.serialization.json.Json.decodeFromString(jsonStr)
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        }
+        set(value) {
+            val jsonStr = kotlinx.serialization.json.Json.encodeToString(value)
+            prefs.edit().putString(KEY_CUSTOM_QUICK_PRESETS, jsonStr).apply()
+        }
+
     companion object {
         private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
         private const val KEY_THEME_ID = "theme_id"
@@ -226,6 +270,11 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_AI_FINE_TUNE_ENABLED = "ai_fine_tune_enabled"
         private const val KEY_WATERMARK_EDITOR_ENABLED = "watermark_editor_enabled"
         private const val KEY_HASSELBLAD_COLOR_ENABLED = "hasselblad_color_enabled"
+        private const val KEY_CUSTOM_DEVICE_MODEL = "custom_device_model"
+        private const val KEY_FAVORITE_PRESET_IDS = "favorite_preset_ids"
+        private const val KEY_PINNED_PRESET_IDS = "pinned_preset_ids"
+        private const val KEY_MANUALLY_MODIFIED_PARAMS = "manually_modified_params"
+        private const val KEY_CUSTOM_QUICK_PRESETS = "custom_quick_presets"
 
         @Volatile
         private var instance: SettingsManager? = null

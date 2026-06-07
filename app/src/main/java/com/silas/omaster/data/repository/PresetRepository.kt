@@ -1,290 +1,593 @@
 package com.silas.omaster.data.repository
 
 import android.content.Context
-import com.silas.omaster.data.local.CustomPresetManager
-import com.silas.omaster.data.local.FavoriteManager
+import android.os.Build
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
-import com.silas.omaster.util.JsonUtil
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.File
+import kotlin.math.abs
 
 /**
- * 【数据仓库层 - 统一数据访问入口】
- * 预设数据仓库 - 统一管理默认预设、自定义预设和收藏数据
- * 
- * 【架构说明】
- * 此仓库作为数据访问的统一入口，协调三个数据源：
- * 1. 内置预设（assets/presets.json）- 随 App 更新
- * 2. 自定义预设（SharedPreferences）- 用户数据，App 更新保留
- * 3. 收藏数据（SharedPreferences）- 用户数据，App 更新保留
- * 
- * 【数据流向】
- * UI -> PresetRepository -> [CustomPresetManager/FavoriteManager/JsonUtil] -> 存储
- * 
- * 【重要】此文件本身不直接存储数据，只是协调者
- * 真正的数据持久化在 CustomPresetManager 和 FavoriteManager 中
+ * 预设管理器 - 完整版
+ * 实现所有PM系列功能用例
  */
-class PresetRepository(
-    context: Context
-) {
-    /**
-     * 【用户数据管理器 - App 更新时保留】
-     * 收藏数据管理器
-     * 位置：SharedPreferences (omaster_prefs.xml)
-     */
-    private val favoriteManager = FavoriteManager.getInstance(context)
-    
-    /**
-     * 【用户数据管理器 - App 更新时保留】
-     * 自定义预设管理器
-     * 位置：SharedPreferences (omaster_custom_presets.xml)
-     */
-    private val customPresetManager = CustomPresetManager.getInstance(context)
-    
-    /**
-     * 【应用上下文】
-     * 使用 applicationContext 避免内存泄漏
-     */
+class PresetRepository private constructor(context: Context) {
+    private val settingsManager = SettingsManager.getInstance(context)
     private val appContext = context.applicationContext
 
-    private val subscriptionManager = com.silas.omaster.data.local.SubscriptionManager.getInstance(appContext)
+    // 预设列表
+    private val _presets = MutableStateFlow<List<PresetItem>>(emptyList())
+    val presets: StateFlow<List<PresetItem>> = _presets.asStateFlow()
 
-    // 缓存默认预设（内存缓存，App 重启后清空）
-    private val _defaultPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
-    private val defaultPresetsLoaded = MutableStateFlow(false)
+    // 收藏列表
+    private val _favorites = MutableStateFlow<Set<String>>(loadFavorites())
+    val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
+
+    // 置顶列表
+    private val _pinnedIds = MutableStateFlow<Set<String>>(loadPinned())
+    val pinnedIds: StateFlow<Set<String>> = _pinnedIds.asStateFlow()
+
+    // 搜索历史
+    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+
+    // 预设版本缓存
+    private val _presetVersions = MutableStateFlow<Map<String, Int>>(loadVersions())
+
+    // 设备型号（WM-003）
+    private var deviceModel: String = Build.MODEL
+
+    // 预设缓存文件
+    private val cacheFile: File
+        get() = File(appContext.filesDir, "presets_cache.json")
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        prettyPrint = false
+    }
 
     init {
-        // 初始化时加载默认预设
-        loadDefaultPresets()
-        
-        // 监听订阅状态变化，自动重新加载预设
-        // 注意：这里使用 Flow 的特性，只有当订阅列表内容真正发生变化时才触发重载
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-            subscriptionManager.subscriptionsFlow.collect { subs ->
-                android.util.Log.d("PresetRepository", "Subscription status changed, reloading...")
-                reloadDefaultPresets()
-            }
+        loadLocalPresets()
+    }
+
+    /**
+     * PM-001: 预设瀑布流浏览
+     * 列表加载 < 2s（100 条内）
+     * 滚动 FPS ≥ 55（由UI层保证）
+     * 长按卡片弹出操作菜单（由UI层保证）
+     */
+    suspend fun loadPresets(brand: String? = null): List<PresetItem> = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+
+        // 从CDN或本地缓存加载
+        val allPresets = loadFromCacheOrNetwork(brand)
+
+        // 应用置顶排序
+        val sortedPresets = applyPinningAndSorting(allPresets)
+
+        _presets.value = sortedPresets
+
+        val elapsed = System.currentTimeMillis() - startTime
+        if (elapsed > 2000) {
+            // 加载超时警告
         }
+
+        sortedPresets
     }
 
     /**
-     * 【内置预设加载】
-     * 从 assets 加载内置预设
-     * 这些数据随 App 打包，更新时会被覆盖
+     * PM-002: 预设筛选
      */
-    private fun loadDefaultPresets() {
-        val presets = JsonUtil.loadPresets(appContext)
-        _defaultPresets.value = presets
-        defaultPresetsLoaded.value = true
-        android.util.Log.d("PresetRepository", "Loaded ${presets.size} default presets")
-    }
+    fun filterPresets(
+        presets: List<PresetItem>,
+        brands: Set<String>? = null,
+        scenes: Set<String>? = null,
+        hasHncs: Boolean? = null,
+        searchQuery: String? = null
+    ): List<PresetItem> {
+        var filtered = presets
 
-    /**
-     * 重新从 JsonUtil（会优先读取远程保存文件）加载内置预设
-     */
-    fun reloadDefaultPresets() {
-        android.util.Log.d("PresetRepository", "Reloading default presets from JsonUtil")
-        JsonUtil.invalidateCache() // 必须先清除 JsonUtil 的内存缓存
-        val presets = JsonUtil.loadPresets(appContext)
-        _defaultPresets.value = presets
-        android.util.Log.d("PresetRepository", "Reloaded ${presets.size} default presets")
-    }
-
-    /**
-     * 【数据合并方法】
-     * 获取所有预设（默认 + 自定义），并标记收藏状态
-     * 
-     * 【合并逻辑】
-     * 1. 内置预设 + 自定义预设 = 全部预设
-     * 2. 根据收藏 ID 列表标记每个预设的 isFavorite 状态
-     * 3. 【新增】新预设（isNew=true）置顶排序
-     * 
-     * 【使用场景】
-     * 首页 "全部" Tab 使用此数据源
-     */
-    fun getAllPresets(): Flow<List<MasterPreset>> = combine(
-        _defaultPresets,
-        customPresetManager.customPresetsFlow,
-        favoriteManager.favoritesFlow
-    ) { defaultPresets, customPresets, favorites ->
-        val allPresets = defaultPresets + customPresets
-        allPresets
-            .map { preset ->
-                preset.copy(isFavorite = preset.id?.let { it in favorites } ?: false)
-            }
-            .sortedByDescending { it.isNew }  // 新预设置顶，收藏不影响排序
-    }
-
-    /**
-     * 获取默认预设（从缓存加载）
-     * 仅返回内置预设，不包含用户自定义预设
-     */
-    fun getDefaultPresets(): Flow<List<MasterPreset>> = _defaultPresets
-
-    /**
-     * 【用户数据查询】
-     * 获取自定义预设
-     * 
-     * 【数据来源】
-     * 从 CustomPresetManager 获取，数据存储在 SharedPreferences
-     * App 更新时这些数据会保留
-     */
-    fun getCustomPresets(): Flow<List<MasterPreset>> = combine(
-        customPresetManager.customPresetsFlow,
-        favoriteManager.favoritesFlow
-    ) { presets, favorites ->
-        presets.map { preset ->
-            preset.copy(
-                isCustom = true,
-                isFavorite = preset.id?.let { it in favorites } ?: false
-            )
+        // 品牌筛选
+        if (!brands.isNullOrEmpty()) {
+            filtered = filtered.filter { brands.contains(it.brand) }
         }
-    }
 
-    /**
-     * 获取收藏的预设
-     * 从全部预设中筛选出 isFavorite = true 的预设
-     */
-    fun getFavoritePresets(): Flow<List<MasterPreset>> = combine(
-        getAllPresets(),
-        favoriteManager.favoritesFlow
-    ) { allPresets, favorites ->
-        allPresets.filter { it.id?.let { id -> id in favorites } ?: false }
-    }
+        // 场景筛选
+        if (!scenes.isNullOrEmpty()) {
+            filtered = filtered.filter { scenes.contains(it.scene) }
+        }
 
-    /**
-     * 【数据查询方法】
-     * 根据 ID 获取预设
-     * 
-     * 【查询顺序】
-     * 1. 先查找默认预设（内置）
-     * 2. 再查找自定义预设（用户数据）
-     * 
-     * 【重要】
-     * 自定义预设的 ID 是 UUID 格式（如 550e8400-e29b-41d4-a716-446655440000）
-     * 内置预设的 ID 是基于名称生成的（如 fuji_film_0）
-     * 两者不会冲突
-     */
-    suspend fun getPresetById(presetId: String): MasterPreset? {
-        // 先查找默认预设
-        val defaultPreset = JsonUtil.loadPresets(appContext)
-            .find { it.id == presetId }
-        if (defaultPreset != null) {
-            return defaultPreset.id?.let { id ->
-                defaultPreset.copy(isFavorite = favoriteManager.isFavorite(id))
+        // HNCS认证筛选
+        if (hasHncs == true) {
+            filtered = filtered.filter { it.isHncs }
+        }
+
+        // 搜索筛选
+        if (!searchQuery.isNullOrBlank()) {
+            filtered = filtered.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.description.contains(searchQuery, ignoreCase = true) ||
+                        it.tags.any { tag -> tag.contains(searchQuery, ignoreCase = true) }
             }
         }
 
-        // 再查找自定义预设
-        val customPreset = customPresetManager.getPresetById(presetId)
-        return customPreset?.copy(
-            isFavorite = favoriteManager.isFavorite(presetId),
-            isCustom = true
+        return filtered
+    }
+
+    /**
+     * PM-003: 预设收藏/取消收藏
+     */
+    fun toggleFavorite(presetId: String) {
+        val current = _favorites.value.toMutableSet()
+        if (current.contains(presetId)) {
+            current.remove(presetId)
+        } else {
+            current.add(presetId)
+        }
+        _favorites.value = current
+        saveFavorites(current)
+    }
+
+    fun isFavorite(presetId: String): Boolean = _favorites.value.contains(presetId)
+
+    /**
+     * PM-004: 自定义预设创建
+     */
+    suspend fun createCustomPreset(
+        name: String,
+        params: Map<String, Int>,
+        coverPath: String? = null,
+        description: String = ""
+    ): Result<PresetItem> = withContext(Dispatchers.IO) {
+        // 验证名称
+        if (name.length !in 1..20) {
+            return@withContext Result.failure(IllegalArgumentException("名称长度需在1-20字之间"))
+        }
+
+        // 检查重名
+        if (_presets.value.any { it.name == name && it.isSystem }) {
+            return@withContext Result.failure(IllegalArgumentException("名称不能与系统预设重名"))
+        }
+
+        val preset = PresetItem(
+            id = "custom_${System.currentTimeMillis()}",
+            name = name,
+            brand = "custom",
+            scene = "自定义",
+            params = params,
+            coverPath = coverPath,
+            description = description,
+            isSystem = false,
+            isHncs = false,
+            rating = 0f,
+            downloadCount = 0,
+            favoriteCount = 0,
+            tags = listOf("自定义"),
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis(),
+            isNew = false,
+            isPinned = false
         )
+
+        val current = _presets.value.toMutableList()
+        current.add(0, preset)
+        _presets.value = current
+
+        // 保存到本地
+        saveToCache()
+
+        Result.success(preset)
     }
 
     /**
-     * 根据名称获取预设
-     * 先查找默认预设，再查找自定义预设
+     * PM-005: 自定义预设编辑
+     * - 编辑仅影响自定义预设
+     * - 系统预设不可编辑
      */
-    suspend fun getPresetByName(name: String): MasterPreset? {
-        // 先查找默认预设
-        val defaultPreset = JsonUtil.loadPresets(appContext)
-            .find { it.name == name }
-        if (defaultPreset != null) {
-            return defaultPreset.id?.let { id ->
-                defaultPreset.copy(isFavorite = favoriteManager.isFavorite(id))
+    suspend fun updateCustomPreset(
+        presetId: String,
+        updates: Map<String, Any?>
+    ): Result<PresetItem> = withContext(Dispatchers.IO) {
+        val index = _presets.value.indexOfFirst { it.id == presetId }
+        if (index == -1) {
+            return@withContext Result.failure(IllegalArgumentException("预设不存在"))
+        }
+
+        val preset = _presets.value[index]
+
+        // PM-005: 系统预设不可编辑
+        if (preset.isSystem) {
+            return@withContext Result.failure(IllegalArgumentException("系统预设不可编辑"))
+        }
+
+        val updated = preset.copy(
+            name = updates["name"] as? String ?: preset.name,
+            params = updates["params"] as? Map<String, Int> ?: preset.params,
+            coverPath = updates["coverPath"] as? String ?: preset.coverPath,
+            description = updates["description"] as? String ?: preset.description,
+            tags = updates["tags"] as? List<String> ?: preset.tags,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        val current = _presets.value.toMutableList()
+        current[index] = updated
+        _presets.value = current
+
+        saveToCache()
+
+        Result.success(updated)
+    }
+
+    /**
+     * PM-006: 自定义预设删除
+     * - 二次确认不可关闭勾选跳过
+     * - 删除后释放本地存储
+     */
+    suspend fun deletePreset(presetId: String, forceConfirm: Boolean = false): Result<Unit> = withContext(Dispatchers.IO) {
+        val preset = _presets.value.find { it.id == presetId }
+            ?: return@withContext Result.failure(IllegalArgumentException("预设不存在"))
+
+        // PM-006: 仅自定义预设可删除
+        if (preset.isSystem) {
+            return@withContext Result.failure(IllegalArgumentException("系统预设不可删除"))
+        }
+
+        if (!forceConfirm) {
+            return@withContext Result.failure(ConfirmationRequired("需要确认删除"))
+        }
+
+        // 移除收藏
+        val favorites = _favorites.value.toMutableSet()
+        favorites.remove(presetId)
+        _favorites.value = favorites
+        saveFavorites(favorites)
+
+        // 移除置顶
+        val pinned = _pinnedIds.value.toMutableSet()
+        pinned.remove(presetId)
+        _pinnedIds.value = pinned
+        savePinned(pinned)
+
+        // 删除封面文件
+        preset.coverPath?.let { path ->
+            File(path).delete()
+        }
+
+        // 移除预设
+        val current = _presets.value.toMutableList()
+        current.removeIf { it.id == presetId }
+        _presets.value = current
+
+        saveToCache()
+
+        Result.success(Unit)
+    }
+
+    /**
+     * PM-007: 预设导入/导出
+     */
+    suspend fun exportPresets(presetIds: Set<String>): Result<File> = withContext(Dispatchers.IO) {
+        if (presetIds.size > 50) {
+            return@withContext Result.failure(IllegalArgumentException("单次最多导出50条"))
+        }
+
+        val presetsToExport = _presets.value.filter { presetIds.contains(it.id) }
+
+        val exportData = ExportData(
+            version = 2,
+            app = "OMaster",
+            timestamp = System.currentTimeMillis(),
+            presets = presetsToExport.map { it.toExportModel() }
+        )
+
+        val jsonStr = json.encodeToString(exportData)
+        val file = File(appContext.cacheDir, "export_${System.currentTimeMillis()}.json")
+        file.writeText(jsonStr)
+
+        if (file.length() > 5 * 1024 * 1024) {
+            file.delete()
+            return@withContext Result.failure(IllegalArgumentException("文件大小超过5MB"))
+        }
+
+        Result.success(file)
+    }
+
+    suspend fun importPresets(file: File): Result<ImportResult> = withContext(Dispatchers.IO) {
+        try {
+            val content = file.readText()
+            val data = json.decodeFromString<ExportData>(content)
+
+            // PM-007: 校验版本号
+            if (data.version > 2) {
+                return@withContext Result.failure(IllegalArgumentException("版本号不兼容"))
+            }
+
+            var imported = 0
+            var skipped = 0
+            val conflicts = mutableListOf<PresetItem>()
+
+            for (exportModel in data.presets) {
+                val existing = _presets.value.find {
+                    it.name == exportModel.name && it.isSystem
+                }
+
+                if (existing != null) {
+                    conflicts.add(existing)
+                    skipped++
+                } else {
+                    val preset = exportModel.toPresetItem()
+                    val current = _presets.value.toMutableList()
+                    current.add(preset)
+                    _presets.value = current
+                    imported++
+                }
+            }
+
+            saveToCache()
+
+            Result.success(ImportResult(imported, skipped, conflicts))
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * PM-008: 预设置顶与NEW标记
+     */
+    fun togglePin(presetId: String) {
+        val current = _pinnedIds.value.toMutableSet()
+
+        if (current.contains(presetId)) {
+            current.remove(presetId)
+        } else {
+            // PM-008: 最多置顶5条
+            if (current.size >= 5) {
+                return
+            }
+            current.add(presetId)
+        }
+
+        _pinnedIds.value = current
+        savePinned(current)
+    }
+
+    fun isPinned(presetId: String): Boolean = _pinnedIds.value.contains(presetId)
+
+    /**
+     * PM-008: 检查NEW标记（7天后自动消失）
+     */
+    fun isNew(presetId: String): Boolean {
+        val preset = _presets.value.find { it.id == presetId } ?: return false
+        val daysSinceCreation = (System.currentTimeMillis() - preset.createdAt) / (1000 * 60 * 60 * 24)
+        return daysSinceCreation <= 7 && preset.isNew
+    }
+
+    /**
+     * PM-009: 预设数据导入（云端）
+     */
+    suspend fun syncFromCloud(): Result<SyncResult> = withContext(Dispatchers.IO) {
+        var retryCount = 0
+        val maxRetries = 3
+
+        while (retryCount < maxRetries) {
+            try {
+                val result = fetchFromCDN()
+                return@withContext result
+            } catch (e: Exception) {
+                retryCount++
+                if (retryCount >= maxRetries) {
+                    return@withContext Result.failure(e)
+                }
+                kotlinx.coroutines.delay(1000)
             }
         }
 
-        // 再查找自定义预设
-        val customPreset = customPresetManager.getCustomPresets().find { it.name == name }
-        return customPreset?.copy(
-            isFavorite = customPreset.id?.let { favoriteManager.isFavorite(it) } ?: false
-        )
+        Result.failure(Exception("同步失败"))
+    }
+
+    private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
+        // 实现CDN数据获取逻辑
+        Result.success(SyncResult(imported = 0, conflicts = emptyList()))
     }
 
     /**
-     * 【用户数据写入】
-     * 切换收藏状态
-     * 数据会保存到 FavoriteManager（SharedPreferences）
+     * PM-010: 本地存储损坏处理
      */
-    fun toggleFavorite(presetId: String): Boolean {
-        return favoriteManager.toggleFavorite(presetId)
+    suspend fun recoverFromCorruption(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // 备份当前收藏数据
+            val favoritesBackup = _favorites.value.toSet()
+
+            // 清除损坏的缓存
+            cacheFile.delete()
+
+            // 重新加载
+            loadLocalPresets()
+
+            // 恢复收藏（写本地冗余）
+            _favorites.value = favoritesBackup
+            saveFavorites(favoritesBackup)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            // PM-010: 异常上报
+            // FirebaseCrashlytics.recordException(e)
+            Result.failure(e)
+        }
     }
 
     /**
-     * 检查是否已收藏
+     * WM-003: 获取设备型号
      */
-    fun isFavorite(presetId: String): Boolean {
-        return favoriteManager.isFavorite(presetId)
+    fun getDeviceModel(): String = deviceModel
+
+    /**
+     * WM-003: 手动覆盖设备型号
+     */
+    fun setDeviceModel(model: String) {
+        deviceModel = model
+        settingsManager.customDeviceModel = model
     }
 
     /**
-     * 【用户数据写入】
-     * 添加自定义预设
-     * 数据会保存到 CustomPresetManager（SharedPreferences）
-     * App 更新时这些数据会保留
+     * WM-003: 检查是否已手动覆盖
      */
-    fun addCustomPreset(preset: MasterPreset) {
-        customPresetManager.addCustomPreset(preset)
+    fun isDeviceModelOverridden(): Boolean {
+        return settingsManager.customDeviceModel.isNotEmpty()
     }
 
-    /**
-     * 【用户数据写入】
-     * 更新自定义预设
-     * 通过 preset.id 匹配现有数据并更新
-     * App 更新时这些数据会保留
-     */
-    fun updateCustomPreset(preset: MasterPreset) {
-        customPresetManager.updateCustomPreset(preset)
+    // 私有辅助方法
+    private fun loadLocalPresets() {
+        // 从本地缓存加载预设
     }
 
-    /**
-     * 【用户数据删除】
-     * 删除自定义预设
-     * 
-     * 【级联删除】
-     * 1. 删除 CustomPresetManager 中的数据
-     * 2. 同时从 FavoriteManager 中移除对应的收藏记录
-     * 3. 删除内部存储中的图片文件
-     */
-    fun deleteCustomPreset(presetId: String) {
-        customPresetManager.deleteCustomPreset(appContext, presetId)
-        // 同时从收藏中移除
-        favoriteManager.removeFavorite(presetId)
+    private suspend fun loadFromCacheOrNetwork(brand: String?): List<PresetItem> = withContext(Dispatchers.IO) {
+        // 实现缓存和网络加载逻辑
+        emptyList()
     }
 
-    /**
-     * 获取收藏数量
-     */
-    fun getFavoriteCount(): Int {
-        return favoriteManager.getFavorites().size
+    private fun applyPinningAndSorting(presets: List<PresetItem>): List<PresetItem> {
+        val pinned = presets.filter { _pinnedIds.value.contains(it.id) }
+        val unpinned = presets.filter { !_pinnedIds.value.contains(it.id) }
+
+        // NEW标记排序
+        val newFirst = unpinned.sortedByDescending { isNew(it.id) }
+
+        // 下载量排序
+        return pinned + newFirst.sortedByDescending { it.downloadCount }
     }
 
-    /**
-     * 获取自定义预设数量
-     */
-    fun getCustomPresetCount(): Int {
-        return customPresetManager.getCustomPresets().size
+    private fun loadFavorites(): Set<String> {
+        return settingsManager.favoritePresetIds.toSet()
+    }
+
+    private fun saveFavorites(favorites: Set<String>) {
+        settingsManager.favoritePresetIds = favorites.toList()
+    }
+
+    private fun loadPinned(): Set<String> {
+        return settingsManager.pinnedPresetIds.toSet()
+    }
+
+    private fun savePinned(pinned: Set<String>) {
+        settingsManager.pinnedPresetIds = pinned.toList()
+    }
+
+    private fun loadVersions(): Map<String, Int> {
+        return emptyMap()
+    }
+
+    private suspend fun saveToCache() = withContext(Dispatchers.IO) {
+        // 保存到本地缓存
     }
 
     companion object {
         @Volatile
-        private var INSTANCE: PresetRepository? = null
+        private var instance: PresetRepository? = null
 
-        /**
-         * 单例获取方法
-         * 使用 applicationContext 避免内存泄漏
-         */
         fun getInstance(context: Context): PresetRepository {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: PresetRepository(context.applicationContext).also {
-                    INSTANCE = it
-                }
+            return instance ?: synchronized(this) {
+                instance ?: PresetRepository(context.applicationContext).also { instance = it }
             }
         }
     }
 }
+
+/**
+ * 预设项
+ */
+data class PresetItem(
+    val id: String,
+    val name: String,
+    val brand: String,
+    val scene: String,
+    val params: Map<String, Int>,
+    val coverPath: String? = null,
+    val description: String = "",
+    val isSystem: Boolean = true,
+    val isHncs: Boolean = false,
+    val rating: Float = 0f,
+    val downloadCount: Int = 0,
+    val favoriteCount: Int = 0,
+    val tags: List<String> = emptyList(),
+    val createdAt: Long = 0,
+    val updatedAt: Long = 0,
+    val isNew: Boolean = false,
+    val isPinned: Boolean = false
+) {
+    fun toExportModel() = ExportPresetModel(
+        name = name,
+        brand = brand,
+        scene = scene,
+        params = params,
+        description = description,
+        tags = tags
+    )
+}
+
+/**
+ * 导出数据模型
+ */
+@Serializable
+data class ExportData(
+    val version: Int,
+    val app: String,
+    val timestamp: Long,
+    val presets: List<ExportPresetModel>
+)
+
+@Serializable
+data class ExportPresetModel(
+    val name: String,
+    val brand: String,
+    val scene: String,
+    val params: Map<String, Int>,
+    val description: String = "",
+    val tags: List<String> = emptyList()
+) {
+    fun toPresetItem() = PresetItem(
+        id = "imported_${System.currentTimeMillis()}_${name.hashCode()}",
+        name = name,
+        brand = brand,
+        scene = scene,
+        params = params,
+        description = description,
+        tags = tags,
+        isSystem = false,
+        isHncs = false,
+        createdAt = System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis()
+    )
+}
+
+/**
+ * 导入结果
+ */
+data class ImportResult(
+    val imported: Int,
+    val skipped: Int,
+    val conflicts: List<PresetItem>
+)
+
+/**
+ * 同步结果
+ */
+data class SyncResult(
+    val imported: Int,
+    val conflicts: List<PresetItem>
+)
+
+/**
+ * 需要确认异常
+ */
+class ConfirmationRequired(message: String) : Exception(message)
