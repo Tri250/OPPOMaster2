@@ -3,73 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OMaster - ColorOS 16 专业摄影设计展示</title>
+    <title>OMaster - 精致高端设计展示</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&family=Noto+Sans+SC:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* ============================================
-           ColorOS 16 专业摄影设计规范
-           Aquatic Design - 水感设计
+           OMaster 精致高端设计系统
+           Premium Design System
            ============================================ */
         
         :root {
-            /* 品牌核心色 */
-            --hasselblad-orange: #FF6B35;
-            --hasselblad-orange-light: #FF8A64;
-            --hasselblad-orange-dark: #E55A28;
-            --oppo-green: #00D68F;
-            --oppo-green-light: #33E0A8;
-            --oppo-green-dark: #00B87A;
+            /* 琥珀金 - 高端主色 */
+            --amber-gold: #D4A574;
+            --amber-gold-light: #E8C9A8;
+            --amber-gold-dark: #B88858;
             
-            /* 深空黑系列 */
-            --deep-space-black: #0A0A0F;
-            --deep-space-elevated: #12121A;
-            --deep-space-surface: #1A1A24;
+            /* 哈苏橙 - 品牌灵魂 */
+            --hasselblad-orange: #E07B39;
+            --hasselblad-orange-light: #FF9B5C;
+            --hasselblad-orange-dark: #C66A2E;
             
-            /* 卡片层级 */
-            --card-primary: #15151D;
-            --card-secondary: #1C1C26;
-            --card-tertiary: #23232F;
+            /* 碳黑 - 主背景 */
+            --carbon-black: #0D0D0F;
+            --carbon-elevated: #151518;
+            --carbon-surface: #1D1D21;
             
-            /* 表面层级 */
-            --surface-primary: #1E1E28;
-            --surface-secondary: #252532;
-            --surface-tertiary: #2C2C3C;
+            /* 钛灰 - 卡片背景 */
+            --titanium-gray: #252528;
+            --titanium-gray-light: #2F2F33;
             
-            /* 文字层级 */
-            --text-primary: #FFFFFF;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --text-tertiary: rgba(255, 255, 255, 0.5);
-            --text-quaternary: rgba(255, 255, 255, 0.3);
-            --text-disabled: rgba(255, 255, 255, 0.2);
+            /* 文字色彩 */
+            --text-primary: #F5F5F7;
+            --text-secondary: rgba(245, 245, 247, 0.7);
+            --text-tertiary: rgba(245, 245, 247, 0.5);
+            --text-quaternary: rgba(245, 245, 247, 0.35);
             
-            /* 边框系统 */
-            --border-primary: rgba(255, 255, 255, 0.1);
-            --border-secondary: rgba(255, 255, 255, 0.05);
-            --border-accent: rgba(255, 107, 53, 0.1);
-            --border-focus: rgba(255, 107, 53, 0.2);
+            /* 边框 */
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.04);
             
             /* 功能色 */
-            --success: #00D68F;
-            --warning: #FFB800;
-            --error: #FF4D4F;
-            --info: #1890FF;
+            --jade-green: #2ECC71;
+            --info-sapphire: #42A5F5;
+            --warning-gold: #F4B942;
             
-            /* 渐变色 */
-            --gradient-hasselblad: linear-gradient(135deg, #FF8A64 0%, #FF6B35 50%, #E55A28 100%);
-            --gradient-oppo: linear-gradient(135deg, #33E0A8 0%, #00D68F 50%, #00B87A 100%);
-            --gradient-deep-space: linear-gradient(180deg, #0A0A0F 0%, #12121A 50%, #1A1A24 100%);
-            --gradient-card-hover: linear-gradient(180deg, rgba(255, 107, 53, 0.05) 0%, transparent 100%);
+            /* 渐变 */
+            --gradient-amber: linear-gradient(135deg, #E8C9A8 0%, #D4A574 50%, #B88858 100%);
+            --gradient-hasselblad: linear-gradient(135deg, #FF9B5C 0%, #E07B39 50%, #C66A2E 100%);
+            --gradient-carbon: linear-gradient(180deg, #0D0D0F 0%, #151518 50%, #1D1D21 100%);
             
-            /* 阴影系统 */
-            --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3);
-            --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.3);
-            --shadow-4: 0 8px 16px rgba(0, 0, 0, 0.3);
-            --shadow-glow: 0 0 40px rgba(255, 107, 53, 0.15);
+            /* 阴影 */
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 30px rgba(212, 165, 116, 0.15);
             
-            /* 圆角系统 */
+            /* 圆角 */
             --radius-xs: 4px;
             --radius-sm: 8px;
             --radius-md: 12px;
@@ -77,12 +65,12 @@
             --radius-xl: 24px;
             --radius-full: 9999px;
             
-            /* 动画时长 */
-            --duration-instant: 50ms;
-            --duration-fast: 150ms;
-            --duration-normal: 300ms;
-            --duration-slow: 400ms;
-            --duration-deliberate: 500ms;
+            /* 动画 */
+            --duration-fast: 100ms;
+            --duration-normal: 200ms;
+            --duration-slow: 300ms;
+            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
             
             /* 字体 */
             --font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -96,14 +84,16 @@
 
         body {
             font-family: var(--font-family);
-            background: var(--deep-space-black);
+            background: var(--carbon-black);
             color: var(--text-primary);
             overflow-x: hidden;
-            line-height: 1.5;
+            line-height: 1.6;
+            font-weight: 400;
+            letter-spacing: -0.01em;
         }
 
         /* ============================================
-           手机框架 - ColorOS 16 旗舰级展示
+           手机框架 - 精致展示
            ============================================ */
         .phone-container {
             display: flex;
@@ -111,53 +101,47 @@
             align-items: center;
             min-height: 100vh;
             padding: 40px 20px;
-            background: radial-gradient(ellipse at 30% 20%, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, rgba(0, 214, 143, 0.05) 0%, transparent 50%),
-                        var(--deep-space-black);
+            background: radial-gradient(ellipse at 30% 20%, rgba(212, 165, 116, 0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(224, 123, 57, 0.04) 0%, transparent 50%),
+                        var(--carbon-black);
         }
 
         .phone-frame {
             width: 390px;
             height: 844px;
             background: #000;
-            border-radius: 50px;
-            padding: 12px;
+            border-radius: 48px;
+            padding: 10px;
             box-shadow: 
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 25px 80px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(255, 255, 255, 0.06),
+                var(--shadow-soft),
                 var(--shadow-glow);
             position: relative;
-            animation: phoneFloat 6s ease-in-out infinite;
-        }
-
-        @keyframes phoneFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
         }
 
         .phone-notch {
             position: absolute;
-            top: 12px;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            width: 126px;
-            height: 34px;
+            width: 120px;
+            height: 32px;
             background: #000;
-            border-radius: 0 0 20px 20px;
+            border-radius: 0 0 18px 18px;
             z-index: 100;
         }
 
         .phone-screen {
             width: 100%;
             height: 100%;
-            background: var(--deep-space-black);
+            background: var(--carbon-black);
             border-radius: 40px;
             overflow: hidden;
             position: relative;
         }
 
         /* ============================================
-           状态栏 - ColorOS 16 风格
+           状态栏 - 精致简约
            ============================================ */
         .status-bar {
             position: absolute;
@@ -170,41 +154,31 @@
             align-items: center;
             padding: 0 28px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             z-index: 50;
-            background: linear-gradient(180deg, rgba(10, 10, 15, 0.8) 0%, transparent 100%);
-            backdrop-filter: blur(20px);
-        }
-
-        .status-time {
+            background: linear-gradient(180deg, rgba(13, 13, 15, 0.9) 0%, transparent 100%);
             font-variant-numeric: tabular-nums;
             letter-spacing: -0.3px;
         }
 
-        .status-icons {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
         /* ============================================
-           底部导航 - Aquatic Design
+           底部导航 - 精致胶囊
            ============================================ */
         .bottom-nav {
             position: absolute;
-            bottom: 8px;
+            bottom: 12px;
             left: 50%;
             transform: translateX(-50%);
-            height: 64px;
-            background: rgba(30, 30, 40, 0.9);
+            height: 68px;
+            background: rgba(37, 37, 40, 0.85);
             backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 32px;
+            border-radius: 34px;
             display: flex;
             align-items: center;
-            padding: 0 12px;
-            gap: 8px;
-            border: 1px solid var(--border-primary);
-            box-shadow: var(--shadow-3);
+            padding: 0 8px;
+            gap: 4px;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-soft);
             z-index: 50;
         }
 
@@ -213,44 +187,43 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            padding: 8px 20px;
+            gap: 3px;
+            padding: 8px 18px;
             border-radius: var(--radius-full);
             cursor: pointer;
-            transition: all var(--duration-fast) cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all var(--duration-normal) var(--ease-smooth);
             position: relative;
-            overflow: hidden;
         }
 
         .nav-item::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: var(--gradient-hasselblad);
+            background: var(--gradient-amber);
             opacity: 0;
-            transition: opacity var(--duration-fast);
             border-radius: var(--radius-full);
+            transition: opacity var(--duration-fast) var(--ease-smooth);
         }
 
         .nav-item:hover::before {
-            opacity: 0.1;
+            opacity: 0.08;
         }
 
         .nav-item.active::before {
-            opacity: 0.15;
+            opacity: 0.12;
         }
 
         .nav-item.active {
-            color: var(--hasselblad-orange);
+            color: var(--amber-gold);
         }
 
         .nav-icon {
-            font-size: 22px;
-            transition: transform var(--duration-fast) cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 24px;
+            transition: transform var(--duration-normal) var(--ease-bounce);
         }
 
         .nav-item:hover .nav-icon {
-            transform: scale(1.1);
+            transform: scale(1.08);
         }
 
         .nav-item.active .nav-icon {
@@ -258,14 +231,30 @@
         }
 
         .nav-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 500;
-            opacity: 0.8;
-            transition: all var(--duration-fast);
+            opacity: 0.7;
+            transition: all var(--duration-fast) var(--ease-smooth);
+            letter-spacing: 0.02em;
         }
 
         .nav-item.active .nav-label {
             font-weight: 600;
+            opacity: 1;
+        }
+
+        .nav-indicator {
+            position: absolute;
+            bottom: 6px;
+            width: 4px;
+            height: 4px;
+            background: var(--amber-gold);
+            border-radius: 50%;
+            opacity: 0;
+            transition: all var(--duration-normal) var(--ease-bounce);
+        }
+
+        .nav-item.active .nav-indicator {
             opacity: 1;
         }
 
@@ -277,7 +266,7 @@
             overflow-y: auto;
             overflow-x: hidden;
             padding-top: 44px;
-            padding-bottom: 90px;
+            padding-bottom: 100px;
             scrollbar-width: none;
         }
 
@@ -287,17 +276,17 @@
 
         .page {
             display: none;
-            animation: pageEnter var(--duration-slow) cubic-bezier(0, 0, 0.2, 1);
+            animation: elegantEnter var(--duration-slow) var(--ease-smooth);
         }
 
         .page.active {
             display: block;
         }
 
-        @keyframes pageEnter {
+        @keyframes elegantEnter {
             from { 
                 opacity: 0; 
-                transform: translateY(20px);
+                transform: translateY(12px);
             }
             to { 
                 opacity: 1; 
@@ -314,26 +303,25 @@
 
         .hero-section {
             position: relative;
-            height: 320px;
+            height: 300px;
             border-radius: var(--radius-xl);
             overflow: hidden;
-            margin-bottom: 24px;
-            background: var(--gradient-deep-space);
+            margin-bottom: 20px;
+            background: var(--gradient-carbon);
         }
 
         .hero-bg {
             position: absolute;
             inset: 0;
             background: 
-                radial-gradient(ellipse at 20% 30%, rgba(255, 107, 53, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 70%, rgba(0, 214, 143, 0.08) 0%, transparent 50%),
-                var(--gradient-deep-space);
+                radial-gradient(ellipse at 20% 30%, rgba(212, 165, 116, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(224, 123, 57, 0.06) 0%, transparent 50%);
         }
 
         .hero-content {
             position: relative;
             z-index: 2;
-            padding: 28px;
+            padding: 24px;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -344,50 +332,44 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid rgba(255, 107, 53, 0.2);
-            padding: 6px 12px;
+            background: rgba(212, 165, 116, 0.1);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            padding: 5px 12px;
             border-radius: var(--radius-full);
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            color: var(--hasselblad-orange);
+            color: var(--amber-gold);
             width: fit-content;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            letter-spacing: 0.05em;
         }
 
         .hero-badge::before {
             content: '';
-            width: 6px;
-            height: 6px;
-            background: var(--hasselblad-orange);
+            width: 5px;
+            height: 5px;
+            background: var(--amber-gold);
             border-radius: 50%;
         }
 
         .hero-title {
-            font-size: 32px;
-            font-weight: 800;
+            font-size: 30px;
+            font-weight: 300;
             line-height: 1.2;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--text-primary);
         }
 
         .hero-subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-top: 8px;
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-top: 6px;
             font-weight: 400;
+            letter-spacing: 0.02em;
         }
 
         .hero-stats {
             display: flex;
-            gap: 24px;
+            gap: 20px;
         }
 
         .stat-item {
@@ -395,35 +377,36 @@
         }
 
         .stat-value {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--hasselblad-orange);
-            letter-spacing: -0.5px;
+            font-size: 26px;
+            font-weight: 300;
+            color: var(--amber-gold);
+            letter-spacing: -1px;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-tertiary);
             margin-top: 2px;
             font-weight: 500;
+            letter-spacing: 0.05em;
         }
 
         /* ============================================
-           功能卡片 - ColorOS 16 风格
+           功能卡片 - 精致设计
            ============================================ */
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
         .feature-card {
-            background: var(--card-primary);
+            background: var(--titanium-gray);
             border-radius: var(--radius-lg);
-            padding: 16px;
-            border: 1px solid var(--border-secondary);
-            transition: all var(--duration-fast) cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 14px;
+            border: 1px solid var(--border-light);
+            transition: all var(--duration-normal) var(--ease-smooth);
             cursor: pointer;
             position: relative;
             overflow: hidden;
@@ -433,15 +416,14 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: var(--gradient-card-hover);
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.04) 0%, transparent 100%);
             opacity: 0;
-            transition: opacity var(--duration-fast);
+            transition: opacity var(--duration-normal);
         }
 
         .feature-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--border-accent);
-            box-shadow: var(--shadow-2);
+            transform: translateY(-2px);
+            border-color: rgba(212, 165, 116, 0.15);
         }
 
         .feature-card:hover::before {
@@ -449,59 +431,59 @@
         }
 
         .feature-icon {
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
-            margin-bottom: 12px;
-            transition: transform var(--duration-fast) cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 20px;
+            margin-bottom: 10px;
+            transition: transform var(--duration-normal) var(--ease-bounce);
         }
 
         .feature-card:hover .feature-icon {
-            transform: scale(1.1);
+            transform: scale(1.05);
         }
 
-        .feature-card:nth-child(1) .feature-icon { background: var(--gradient-hasselblad); }
-        .feature-card:nth-child(2) .feature-icon { background: var(--gradient-oppo); }
-        .feature-card:nth-child(3) .feature-icon { background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); }
-        .feature-card:nth-child(4) .feature-icon { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); }
+        .feature-card:nth-child(1) .feature-icon { background: var(--gradient-amber); }
+        .feature-card:nth-child(2) .feature-icon { background: var(--gradient-hasselblad); }
+        .feature-card:nth-child(3) .feature-icon { background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%); }
+        .feature-card:nth-child(4) .feature-icon { background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%); }
 
         .feature-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 3px;
             color: var(--text-primary);
+            letter-spacing: -0.1px;
         }
 
         .feature-desc {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-tertiary);
             line-height: 1.4;
         }
 
         /* ============================================
-           预设卡片 - ColorOS 16 专业摄影风格
+           预设卡片 - 高端摄影风格
            ============================================ */
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            padding: 0 4px;
+            margin-bottom: 12px;
         }
 
         .section-title {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
         }
 
         .section-more {
-            font-size: 13px;
-            color: var(--hasselblad-orange);
+            font-size: 12px;
+            color: var(--amber-gold);
             cursor: pointer;
             font-weight: 500;
             transition: opacity var(--duration-fast);
@@ -514,28 +496,26 @@
         .preset-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .preset-card {
-            background: var(--card-primary);
+            background: var(--titanium-gray);
             border-radius: var(--radius-lg);
             overflow: hidden;
-            border: 1px solid var(--border-secondary);
-            transition: all var(--duration-fast) cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border-light);
+            transition: all var(--duration-normal) var(--ease-smooth);
             cursor: pointer;
-            position: relative;
         }
 
         .preset-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--border-accent);
-            box-shadow: var(--shadow-3);
+            transform: translateY(-2px);
+            border-color: rgba(212, 165, 116, 0.15);
         }
 
         .preset-image {
-            height: 160px;
-            background: linear-gradient(135deg, var(--card-secondary) 0%, var(--card-tertiary) 100%);
+            height: 140px;
+            background: linear-gradient(135deg, var(--titanium-gray-light) 0%, var(--carbon-surface) 100%);
             position: relative;
             overflow: hidden;
         }
@@ -544,108 +524,104 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, transparent 30%, rgba(10, 10, 15, 0.8) 100%);
+            background: linear-gradient(180deg, transparent 20%, rgba(13, 13, 15, 0.8) 100%);
         }
 
         .preset-hncs {
             position: absolute;
-            top: 12px;
-            right: 12px;
-            background: rgba(255, 107, 53, 0.9);
-            padding: 4px 8px;
-            border-radius: var(--radius-sm);
-            font-size: 10px;
+            top: 10px;
+            right: 10px;
+            background: rgba(212, 165, 116, 0.9);
+            padding: 3px 8px;
+            border-radius: var(--radius-xs);
+            font-size: 9px;
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             z-index: 2;
-            backdrop-filter: blur(10px);
+            letter-spacing: 0.08em;
         }
 
         .preset-rating {
             position: absolute;
-            top: 12px;
-            left: 12px;
+            top: 10px;
+            left: 10px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            font-weight: 700;
+            gap: 3px;
+            font-size: 11px;
+            font-weight: 600;
             z-index: 2;
             background: rgba(0, 0, 0, 0.5);
-            padding: 4px 8px;
-            border-radius: var(--radius-sm);
-            backdrop-filter: blur(10px);
+            padding: 3px 8px;
+            border-radius: var(--radius-xs);
         }
 
         .preset-rating::before {
             content: '★';
-            color: #FFB800;
+            color: var(--amber-gold);
         }
 
         .preset-info {
-            padding: 16px;
+            padding: 14px;
         }
 
         .preset-name {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 3px;
             letter-spacing: -0.2px;
         }
 
         .preset-device {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-tertiary);
             margin-bottom: 8px;
-            font-weight: 500;
         }
 
         .preset-tags {
             display: flex;
-            gap: 6px;
+            gap: 5px;
             flex-wrap: wrap;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .preset-tag {
-            font-size: 10px;
-            padding: 3px 8px;
-            background: var(--surface-primary);
-            border-radius: var(--radius-xs);
+            font-size: 9px;
+            padding: 2px 6px;
+            background: var(--carbon-surface);
+            border-radius: 3px;
             color: var(--text-secondary);
             font-weight: 500;
-            border: 1px solid var(--border-secondary);
+            border: 1px solid var(--border-light);
         }
 
         .preset-params {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-quaternary);
             font-weight: 500;
-            font-variant-numeric: tabular-nums;
         }
 
         .preset-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border-secondary);
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-light);
         }
 
         .preset-author {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-quaternary);
-            font-weight: 500;
         }
 
         .preset-downloads {
-            font-size: 11px;
-            color: var(--oppo-green);
+            font-size: 10px;
+            color: var(--jade-green);
             font-weight: 600;
         }
 
@@ -657,10 +633,10 @@
         }
 
         .ai-hero {
-            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            background: linear-gradient(135deg, #1E3A5F 0%, #2D5A8A 100%);
             border-radius: var(--radius-xl);
-            padding: 28px;
-            margin-bottom: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
             position: relative;
             overflow: hidden;
         }
@@ -668,70 +644,62 @@
         .ai-hero::before {
             content: '';
             position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(10deg); }
+            top: -30%;
+            right: -10%;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
         }
 
         .ai-title {
-            font-size: 26px;
-            font-weight: 800;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
         }
 
         .ai-subtitle {
-            font-size: 13px;
-            opacity: 0.8;
-            font-weight: 400;
+            font-size: 12px;
+            opacity: 0.7;
         }
 
         .scene-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 24px;
+            gap: 8px;
+            margin-bottom: 20px;
         }
 
         .scene-item {
             aspect-ratio: 1;
-            background: var(--card-primary);
+            background: var(--titanium-gray);
             border-radius: var(--radius-lg);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            border: 1px solid var(--border-secondary);
-            transition: all var(--duration-fast) cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 6px;
+            border: 1px solid var(--border-light);
+            transition: all var(--duration-normal) var(--ease-smooth);
             cursor: pointer;
         }
 
         .scene-item:hover {
-            background: var(--card-secondary);
-            border-color: rgba(102, 126, 234, 0.3);
-            transform: scale(1.05);
+            background: var(--titanium-gray-light);
+            transform: scale(1.03);
         }
 
         .scene-icon {
-            font-size: 28px;
-            transition: transform var(--duration-fast) cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 26px;
+            transition: transform var(--duration-normal) var(--ease-bounce);
         }
 
         .scene-item:hover .scene-icon {
-            transform: scale(1.15);
+            transform: scale(1.1);
         }
 
         .scene-name {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-secondary);
             font-weight: 500;
         }
@@ -745,11 +713,10 @@
 
         .watermark-categories {
             display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
+            gap: 6px;
+            margin-bottom: 16px;
             overflow-x: auto;
             scrollbar-width: none;
-            padding-bottom: 4px;
         }
 
         .watermark-categories::-webkit-scrollbar {
@@ -757,23 +724,23 @@
         }
 
         .category-chip {
-            padding: 8px 16px;
-            background: var(--card-primary);
+            padding: 6px 14px;
+            background: var(--titanium-gray);
             border-radius: var(--radius-full);
-            font-size: 13px;
+            font-size: 12px;
             white-space: nowrap;
-            border: 1px solid var(--border-secondary);
+            border: 1px solid var(--border-light);
             cursor: pointer;
             transition: all var(--duration-fast);
             font-weight: 500;
         }
 
         .category-chip:hover {
-            background: var(--card-secondary);
+            background: var(--titanium-gray-light);
         }
 
         .category-chip.active {
-            background: var(--gradient-hasselblad);
+            background: var(--gradient-amber);
             border-color: transparent;
             font-weight: 600;
         }
@@ -781,58 +748,56 @@
         .watermark-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            gap: 10px;
         }
 
         .watermark-card {
-            background: var(--card-primary);
+            background: var(--titanium-gray);
             border-radius: var(--radius-lg);
             overflow: hidden;
-            border: 1px solid var(--border-secondary);
+            border: 1px solid var(--border-light);
             cursor: pointer;
-            transition: all var(--duration-fast) cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all var(--duration-normal) var(--ease-smooth);
         }
 
         .watermark-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--border-accent);
-            box-shadow: var(--shadow-2);
+            transform: translateY(-2px);
+            border-color: rgba(212, 165, 116, 0.15);
         }
 
         .watermark-preview {
-            height: 100px;
+            height: 90px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 600;
             letter-spacing: 0.5px;
         }
 
         .watermark-info {
-            padding: 12px;
+            padding: 10px;
         }
 
         .watermark-name {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .watermark-features {
             display: flex;
-            gap: 4px;
+            gap: 3px;
             flex-wrap: wrap;
         }
 
         .watermark-feature {
-            font-size: 9px;
-            padding: 2px 6px;
-            background: var(--surface-primary);
-            border-radius: 3px;
+            font-size: 8px;
+            padding: 2px 5px;
+            background: var(--carbon-surface);
+            border-radius: 2px;
             color: var(--text-tertiary);
             font-weight: 500;
-            border: 1px solid var(--border-secondary);
         }
 
         /* ============================================
@@ -843,19 +808,19 @@
         }
 
         .settings-group {
-            background: var(--card-primary);
+            background: var(--titanium-gray);
             border-radius: var(--radius-lg);
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             overflow: hidden;
-            border: 1px solid var(--border-secondary);
+            border: 1px solid var(--border-light);
         }
 
         .settings-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 16px;
-            border-bottom: 1px solid var(--border-secondary);
+            padding: 14px;
+            border-bottom: 1px solid var(--border-light);
             cursor: pointer;
             transition: background var(--duration-fast);
         }
@@ -865,32 +830,32 @@
         }
 
         .settings-item:hover {
-            background: var(--card-secondary);
+            background: var(--titanium-gray-light);
         }
 
         .settings-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .settings-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         .settings-text {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
         }
 
         .settings-arrow {
-            font-size: 18px;
+            font-size: 16px;
             color: var(--text-quaternary);
         }
 
@@ -899,13 +864,13 @@
            ============================================ */
         .home-indicator {
             position: absolute;
-            bottom: 8px;
+            bottom: 12px;
             left: 50%;
             transform: translateX(-50%);
-            width: 134px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 2px;
             z-index: 100;
         }
 
@@ -917,74 +882,72 @@
             left: 50px;
             top: 50%;
             transform: translateY(-50%);
-            max-width: 420px;
+            max-width: 400px;
         }
 
         .desktop-title {
-            font-size: 52px;
-            font-weight: 900;
-            margin-bottom: 20px;
-            background: var(--gradient-hasselblad);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -1px;
+            font-size: 48px;
+            font-weight: 300;
+            margin-bottom: 16px;
+            letter-spacing: -2px;
+            color: var(--text-primary);
             line-height: 1.1;
         }
 
         .desktop-subtitle {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 16px;
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
         }
 
         .desktop-desc {
-            font-size: 15px;
-            color: var(--text-secondary);
+            font-size: 14px;
+            color: var(--text-tertiary);
             line-height: 1.8;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         .feature-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
         .feature-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 14px;
+            gap: 10px;
+            font-size: 13px;
             color: var(--text-secondary);
         }
 
         .feature-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--hasselblad-orange);
+            width: 6px;
+            height: 6px;
+            background: var(--amber-gold);
             border-radius: 50%;
         }
 
         .design-specs {
-            margin-top: 32px;
-            padding: 20px;
-            background: var(--card-primary);
+            margin-top: 28px;
+            padding: 18px;
+            background: var(--titanium-gray);
             border-radius: var(--radius-lg);
-            border: 1px solid var(--border-secondary);
+            border: 1px solid var(--border-light);
         }
 
         .design-specs-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
             color: var(--text-primary);
         }
 
         .design-specs-item {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-tertiary);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         @media (max-width: 1200px) {
@@ -992,74 +955,45 @@
                 display: none;
             }
         }
-
-        /* ============================================
-           动画工具类
-           ============================================ */
-        .shimmer {
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.03) 50%,
-                transparent 100%
-            );
-            background-size: 200% 100%;
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-
-        .fade-in {
-            animation: fadeIn var(--duration-slow) cubic-bezier(0, 0, 0.2, 1);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body>
     <!-- 桌面端展示信息 -->
     <div class="desktop-info">
         <h1 class="desktop-title">OMaster</h1>
-        <div class="desktop-subtitle">ColorOS 16 专业摄影设计规范</div>
+        <div class="desktop-subtitle">精致高端设计系统</div>
         <p class="desktop-desc">
-            基于 Aquatic Design 水感设计理念，为 OPPO Find 系列高端摄影用户打造。
-            融合哈苏色彩科学与 ColorOS 系统美学，呈现专业级视觉体验。
+            基于高端摄影美学与精致工艺，为 OPPO Find 系列用户打造。
+            每一处细节都经过精心打磨，呈现行业顶尖的视觉体验。
         </p>
         <div class="feature-list">
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>哈苏HNCS色彩科学认证</span>
+                <span>琥珀金主色调 - 高端尊贵</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>AI智能场景识别与优化</span>
+                <span>精致字体层级 - 细腻层次</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>16+ 专业水印模板</span>
+                <span>高端图标设计 - 简约精致</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>8个精选摄影预设</span>
+                <span>精致动画系统 - 流畅优雅</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>精细参数调节控制</span>
+                <span>碳黑钛灰配色 - 专业深沉</span>
             </div>
         </div>
         <div class="design-specs">
             <div class="design-specs-title">设计规范</div>
-            <div class="design-specs-item">色彩：深空黑系列 + 哈苏橙 #FF6B35</div>
-            <div class="design-specs-item">字体：Inter + Noto Sans SC，Display 57sp</div>
+            <div class="design-specs-item">色彩：琥珀金 #D4A574 + 碳黑 #0D0D0F</div>
+            <div class="design-specs-item">字体：Inter + Noto Sans SC，Light 300</div>
             <div class="design-specs-item">动画：cubic-bezier(0.4, 0, 0.2, 1)</div>
-            <div class="design-specs-item">圆角：4dp/8dp/12dp/16dp/24dp</div>
-            <div class="design-specs-item">阴影：4层阴影系统</div>
+            <div class="design-specs-item">圆角：4dp / 8dp / 12dp / 16dp / 24dp</div>
         </div>
     </div>
 
@@ -1082,7 +1016,6 @@
                 <div class="screen-content">
                     <!-- 首页 -->
                     <div class="page home-page active" id="page-home">
-                        <!-- Hero区域 -->
                         <div class="hero-section">
                             <div class="hero-bg"></div>
                             <div class="hero-content">
@@ -1108,7 +1041,6 @@
                             </div>
                         </div>
 
-                        <!-- 功能卡片 -->
                         <div class="feature-grid">
                             <div class="feature-card" onclick="switchPage('ai')">
                                 <div class="feature-icon">🤖</div>
@@ -1132,7 +1064,6 @@
                             </div>
                         </div>
 
-                        <!-- 预设列表 -->
                         <div class="section-header">
                             <h2 class="section-title">热门预设</h2>
                             <span class="section-more">查看全部 →</span>
@@ -1182,28 +1113,6 @@
                                     <div class="preset-footer">
                                         <span class="preset-author">OPPO影像团队</span>
                                         <span class="preset-downloads">↓ 98K</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="preset-card">
-                                <div class="preset-image">
-                                    <div class="preset-rating">4.9</div>
-                                </div>
-                                <div class="preset-info">
-                                    <div class="preset-name">风光大片</div>
-                                    <div class="preset-device">OPPO Find X8 Ultra</div>
-                                    <div class="preset-tags">
-                                        <span class="preset-tag">风景</span>
-                                        <span class="preset-tag">HDR</span>
-                                    </div>
-                                    <div class="preset-params">
-                                        <span>ISO 100</span>
-                                        <span>1/500</span>
-                                        <span>f/8.0</span>
-                                    </div>
-                                    <div class="preset-footer">
-                                        <span class="preset-author">风光摄影师</span>
-                                        <span class="preset-downloads">↓ 123K</span>
                                     </div>
                                 </div>
                             </div>
@@ -1286,7 +1195,7 @@
                         </div>
                         <div class="watermark-grid">
                             <div class="watermark-card">
-                                <div class="watermark-preview" style="background: linear-gradient(135deg, #FF6B35 0%, #E55A28 100%);">
+                                <div class="watermark-preview" style="background: linear-gradient(135deg, #D4A574 0%, #B88858 100%);">
                                     HASSELBLAD
                                 </div>
                                 <div class="watermark-info">
@@ -1298,7 +1207,7 @@
                                 </div>
                             </div>
                             <div class="watermark-card">
-                                <div class="watermark-preview" style="background: #1A1A1A; color: #E60012; border: 2px solid #E60012;">
+                                <div class="watermark-preview" style="background: #1A1A1A; color: #D6001F; border: 1px solid #D6001F;">
                                     LEICA
                                 </div>
                                 <div class="watermark-info">
@@ -1310,7 +1219,7 @@
                                 </div>
                             </div>
                             <div class="watermark-card">
-                                <div class="watermark-preview" style="background: #0066CC;">
+                                <div class="watermark-preview" style="background: #0057B8;">
                                     ZEISS T*
                                 </div>
                                 <div class="watermark-info">
@@ -1321,7 +1230,7 @@
                                 </div>
                             </div>
                             <div class="watermark-card">
-                                <div class="watermark-preview" style="background: #F9F5E7; color: #8B4513;">
+                                <div class="watermark-preview" style="background: #E8C9A8; color: #8B4513;">
                                     邮票
                                 </div>
                                 <div class="watermark-info">
@@ -1329,30 +1238,6 @@
                                     <div class="watermark-features">
                                         <span class="watermark-feature">复古</span>
                                         <span class="watermark-feature">文艺</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="watermark-card">
-                                <div class="watermark-preview" style="background: transparent; color: #C41E3A; border: 2px solid #C41E3A;">
-                                    印章
-                                </div>
-                                <div class="watermark-info">
-                                    <div class="watermark-name">国风印章</div>
-                                    <div class="watermark-features">
-                                        <span class="watermark-feature">国风</span>
-                                        <span class="watermark-feature">水墨</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="watermark-card">
-                                <div class="watermark-preview" style="background: #1A1A1A; color: #F5F5F5;">
-                                    FILM
-                                </div>
-                                <div class="watermark-info">
-                                    <div class="watermark-name">胶片相框</div>
-                                    <div class="watermark-features">
-                                        <span class="watermark-feature">胶片</span>
-                                        <span class="watermark-feature">怀旧</span>
                                     </div>
                                 </div>
                             </div>
@@ -1367,21 +1252,21 @@
                         <div class="settings-group">
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #FF6B35 0%, #E55A28 100%);">🎨</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #D4A574 0%, #B88858 100%);">🎨</div>
                                     <span class="settings-text">哈苏色彩设置</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #00D68F 0%, #00B87A 100%);">💾</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);">💾</div>
                                     <span class="settings-text">预设管理</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);">🔔</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%);">🔔</div>
                                     <span class="settings-text">通知设置</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
@@ -1390,22 +1275,22 @@
                         <div class="settings-group">
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);">ℹ️</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%);">ℹ️</div>
                                     <span class="settings-text">关于 OMaster</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #1890FF 0%, #0E7AE6 100%);">⭐</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #F4B942 0%, #E6A030 100%);">⭐</div>
                                     <span class="settings-text">评分应用</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                         </div>
-                        <div style="text-align: center; padding: 24px; color: var(--text-quaternary); font-size: 12px;">
+                        <div style="text-align: center; padding: 20px; color: var(--text-quaternary); font-size: 11px;">
                             OMaster v2.0.0<br>
-                            ColorOS 16 专业摄影设计规范<br>
+                            精致高端设计系统<br>
                             © 2026 OMaster Team
                         </div>
                     </div>
@@ -1416,29 +1301,31 @@
                     <div class="nav-item active" onclick="switchPage('home')">
                         <span class="nav-icon">📷</span>
                         <span class="nav-label">首页</span>
+                        <div class="nav-indicator"></div>
                     </div>
                     <div class="nav-item" onclick="switchPage('ai')">
                         <span class="nav-icon">🤖</span>
                         <span class="nav-label">AI</span>
+                        <div class="nav-indicator"></div>
                     </div>
                     <div class="nav-item" onclick="switchPage('watermark')">
                         <span class="nav-icon">🏷️</span>
                         <span class="nav-label">水印</span>
+                        <div class="nav-indicator"></div>
                     </div>
                     <div class="nav-item" onclick="switchPage('settings')">
                         <span class="nav-icon">⚙️</span>
                         <span class="nav-label">设置</span>
+                        <div class="nav-indicator"></div>
                     </div>
                 </div>
 
-                <!-- 底部指示条 -->
                 <div class="home-indicator"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // 时钟更新
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -1448,7 +1335,6 @@
         updateClock();
         setInterval(updateClock, 1000);
 
-        // 页面切换
         function switchPage(pageName) {
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
@@ -1463,48 +1349,10 @@
             document.querySelectorAll('.nav-item')[navMap[pageName]].classList.add('active');
         }
 
-        // 分类切换
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', function() {
                 document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
                 this.classList.add('active');
-            });
-        });
-
-        // 触摸滑动支持
-        let touchStartX = 0;
-        let touchEndX = 0;
-        const screenContent = document.querySelector('.screen-content');
-        const pages = ['home', 'ai', 'watermark', 'settings'];
-        let currentPageIndex = 0;
-
-        screenContent.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, { passive: true });
-
-        screenContent.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }, { passive: true });
-
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            const diff = touchStartX - touchEndX;
-            
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0 && currentPageIndex < pages.length - 1) {
-                    currentPageIndex++;
-                    switchPage(pages[currentPageIndex]);
-                } else if (diff < 0 && currentPageIndex > 0) {
-                    currentPageIndex--;
-                    switchPage(pages[currentPageIndex]);
-                }
-            }
-        }
-
-        document.querySelectorAll('.nav-item').forEach((item, index) => {
-            item.addEventListener('click', () => {
-                currentPageIndex = index;
             });
         });
     </script>
