@@ -2,6 +2,7 @@ package com.silas.omaster.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
+import com.silas.omaster.data.local.DarkMode
 
 /**
  * 生成深色主题配色方案
@@ -75,18 +77,26 @@ private fun generateLightColorScheme(primaryColor: Color) = lightColorScheme(
 /**
  * OMaster 主题配置
  *
- * @param darkTheme 是否使用深色主题，默认为 true（强制深色模式）
+ * @param darkMode 深色模式设置，默认为跟随系统
  * @param dynamicColor 是否使用动态颜色，默认为 false
  * @param brandTheme 品牌主题，默认为哈苏
  * @param content 主题内容
  */
 @Composable
 fun OMasterTheme(
-    darkTheme: Boolean = true, // 强制深色模式
+    darkMode: DarkMode = DarkMode.SYSTEM,
     dynamicColor: Boolean = false, // 禁用动态颜色，使用品牌色
     brandTheme: BrandTheme = BrandTheme.Hasselblad,
     content: @Composable () -> Unit
 ) {
+    // 根据 darkMode 确定是否使用深色主题
+    val systemInDarkTheme = isSystemInDarkTheme()
+    val darkTheme = when (darkMode) {
+        DarkMode.SYSTEM -> systemInDarkTheme
+        DarkMode.LIGHT -> false
+        DarkMode.DARK -> true
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

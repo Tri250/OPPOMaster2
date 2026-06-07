@@ -27,11 +27,14 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,6 +69,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
+import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.ui.components.OMasterTopAppBar
@@ -92,6 +96,12 @@ fun SettingsScreen() {
     var cacheSize by remember { mutableStateOf(ImageCacheManager.getCacheSize(context)) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+
+    // 新增设置项
+    var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
+    var showDarkModeDialog by remember { mutableStateOf(false) }
+    var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
+    var lastSyncTime by remember { mutableStateOf(settingsManager.lastSyncTime) }
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -128,6 +138,19 @@ fun SettingsScreen() {
                 showChannelDialog = false
             },
             onDismiss = { showChannelDialog = false }
+        )
+    }
+
+    if (showDarkModeDialog) {
+        DarkModeDialog(
+            currentMode = darkMode,
+            onModeSelected = { mode ->
+                haptic.perform(HapticFeedbackType.Confirm)
+                settingsManager.darkMode = mode
+                darkMode = mode
+                showDarkModeDialog = false
+            },
+            onDismiss = { showDarkModeDialog = false }
         )
     }
 
@@ -179,6 +202,24 @@ fun SettingsScreen() {
         // Appearance Section
         SettingsSectionCard {
             SettingsSectionTitle(title = stringResource(R.string.settings_section_appearance))
+
+            // Dark Mode Setting
+            SettingsClickableItem(
+                icon = when (darkMode) {
+                    DarkMode.LIGHT -> Icons.Default.WbSunny
+                    DarkMode.DARK -> Icons.Default.DarkMode
+                    else -> Icons.Default.Brush
+                },
+                title = "深色模式",
+                subtitle = when (darkMode) {
+                    DarkMode.SYSTEM -> "跟随系统"
+                    DarkMode.LIGHT -> "浅色模式"
+                    DarkMode.DARK -> "深色模式"
+                },
+                onClick = { showDarkModeDialog = true }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
             // Theme Setting
             SettingsClickableItem(
@@ -264,6 +305,59 @@ fun SettingsScreen() {
                         color = Color.Gray
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Cloud Sync Section
+        SettingsSectionCard {
+            SettingsSectionTitle(title = "云同步")
+
+            SettingsSwitchItem(
+                icon = Icons.Default.Sync,
+                title = "启用云同步",
+                subtitle = "从CDN同步最新预设数据",
+                checked = cloudSyncEnabled,
+                onCheckedChange = { enabled ->
+                    cloudSyncEnabled = enabled
+                    settingsManager.isCloudSyncEnabled = enabled
+                    if (enabled) {
+                        haptic.perform(HapticFeedbackType.ToggleOn)
+                    } else {
+                        haptic.perform(HapticFeedbackType.ToggleOff)
+                    }
+                }
+            )
+
+            if (cloudSyncEnabled) {
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                SettingsClickableItem(
+                    icon = Icons.Default.Cloud,
+                    title = "同步数据源",
+                    subtitle = "OPPO、realme、vivo、honor",
+                    onClick = { /* 显示数据源详情 */ }
+                )
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                val lastSyncText = if (lastSyncTime > 0) {
+                    val diff = System.currentTimeMillis() - lastSyncTime
+                    val hours = diff / (1000 * 60 * 60)
+                    when {
+                        hours < 1 -> "刚刚"
+                        hours < 24 -> "${hours}小时前"
+                        else -> "${hours / 24}天前"
+                    }
+                } else "从未同步"
+
+                SettingsClickableItem(
+                    icon = Icons.Default.Update,
+                    title = "上次同步",
+                    subtitle = lastSyncText,
+                    onClick = { /* 手动触发同步 */ }
+                )
             }
         }
 
@@ -666,6 +760,69 @@ fun UpdateChannelDialog(
                                     UpdateChannel.GITEE -> "国内访问速度快"
                                     UpdateChannel.GITHUB -> "国际访问，国内可能需要代理"
                                 },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+        containerColor = DarkGray,
+        textContentColor = Color.White
+    )
+}
+
+@Composable
+fun DarkModeDialog(
+    currentMode: DarkMode,
+    onModeSelected: (DarkMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val modes = listOf(
+        DarkMode.SYSTEM to "跟随系统" to "根据系统设置自动切换",
+        DarkMode.LIGHT to "浅色模式" to "始终使用浅色主题",
+        DarkMode.DARK to "深色模式" to "始终使用深色主题"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "选择深色模式")
+        },
+        text = {
+            LazyColumn {
+                items(modes) { (pair, desc) ->
+                    val (mode, name) = pair
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onModeSelected(mode) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (mode == currentMode),
+                            onClick = { onModeSelected(mode) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = MaterialTheme.colorScheme.primary,
+                                unselectedColor = Color.Gray
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White
+                            )
+                            Text(
+                                text = desc,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Gray
                             )

@@ -38,7 +38,6 @@ import com.silas.omaster.ui.components.WelcomeDialog
 import com.silas.omaster.ui.create.PresetSelectionScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetViewModel
-import com.silas.omaster.ui.create.UniversalCreatePresetViewModelFactory
 import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
@@ -54,6 +53,7 @@ import com.silas.omaster.data.repository.PresetRepository
 import androidx.compose.runtime.collectAsState
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
+import com.silas.omaster.ui.features.CoreFeaturesScreen
 
 
 val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided") }
@@ -84,6 +84,9 @@ sealed class Screen {
     data object Subscription : Screen()
 
     @Serializable
+    data object CoreFeatures : Screen()
+
+    @Serializable
     data object PrivacyPolicy : Screen()
 }
 
@@ -104,7 +107,11 @@ class MainActivity : ComponentActivity() {
                 val settingsManager = remember { SettingsManager.getInstance(applicationContext) }
                 val currentTheme by settingsManager.themeFlow.collectAsState()
 
-                OMasterTheme(brandTheme = currentTheme) {
+                val darkMode by settingsManager.darkModeFlow.collectAsState()
+                OMasterTheme(
+                    darkMode = darkMode,
+                    brandTheme = currentTheme
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
@@ -219,7 +226,8 @@ fun MainApp(navController: NavHostController) {
 
     val showBottomNav = currentRoute?.contains("Home") == true || 
                         currentRoute?.contains("About") == true || 
-                        currentRoute?.contains("Subscription") == true
+                        currentRoute?.contains("Subscription") == true ||
+                        currentRoute?.contains("CoreFeatures") == true
 
     var isHomeScrollingUp by remember { mutableStateOf(true) }
     
@@ -227,7 +235,7 @@ fun MainApp(navController: NavHostController) {
     var refreshTrigger by remember { mutableStateOf(0) }
 
     // 底部导航栏页面顺序，用于决定切换动画方向
-    val mainRouteList = remember { listOf("Home", "Subscription", "About") }
+    val mainRouteList = remember { listOf("Home", "Subscription", "CoreFeatures", "About") }
     fun getNavIndex(route: String?): Int {
         return mainRouteList.indexOfFirst { route?.contains(it) == true }
     }
@@ -453,6 +461,22 @@ fun MainApp(navController: NavHostController) {
                     }
                 )
             }
+
+            composable<Screen.CoreFeatures> {
+                CoreFeaturesScreen(
+                    onNavigateToSceneRecognition = { /* TODO */ },
+                    onNavigateToAIFineTune = { /* TODO */ },
+                    onNavigateToWatermarkEditor = { /* TODO */ },
+                    onNavigateToSmartOptimize = { /* TODO */ },
+                    onNavigateToPresetManager = { /* TODO */ },
+                    onNavigateToParamAdjustment = { /* TODO */ },
+                    onNavigateToHasselbladColor = { /* TODO */ },
+                    onNavigateToCloudSync = { navController.navigate(Screen.Settings) },
+                    onScrollStateChanged = { isScrollingUp ->
+                        isHomeScrollingUp = isScrollingUp
+                    }
+                )
+            }
         }
 
         if (showBottomNav) {
@@ -461,6 +485,7 @@ fun MainApp(navController: NavHostController) {
                 currentRoute = when {
                     currentRoute?.contains("Home") == true -> "home"
                     currentRoute?.contains("Subscription") == true -> "subscription"
+                    currentRoute?.contains("CoreFeatures") == true -> "features"
                     currentRoute?.contains("About") == true -> "about"
                     else -> "home"
                 },
@@ -474,6 +499,17 @@ fun MainApp(navController: NavHostController) {
                         "subscription" -> {
                             if (currentRoute?.contains("Subscription") != true) {
                                 navController.navigate(Screen.Subscription) {
+                                    popUpTo(Screen.Home) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        }
+                        "features" -> {
+                            if (currentRoute?.contains("CoreFeatures") != true) {
+                                navController.navigate(Screen.CoreFeatures) {
                                     popUpTo(Screen.Home) {
                                         saveState = true
                                     }

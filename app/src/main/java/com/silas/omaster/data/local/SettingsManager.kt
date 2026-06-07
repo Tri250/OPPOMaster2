@@ -46,10 +46,23 @@ class SettingsManager private constructor(context: Context) {
     private val _themeFlow: MutableStateFlow<BrandTheme>
     val themeFlow: StateFlow<BrandTheme>
 
+    private val _darkModeFlow: MutableStateFlow<DarkMode>
+    val darkModeFlow: StateFlow<DarkMode>
+
     init {
         val themeId = prefs.getString(KEY_THEME_ID, BrandTheme.Hasselblad.id) ?: BrandTheme.Hasselblad.id
         _themeFlow = MutableStateFlow(BrandTheme.fromId(themeId))
         themeFlow = _themeFlow.asStateFlow()
+
+        val darkModeValue = prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name)
+        _darkModeFlow = MutableStateFlow(
+            try {
+                DarkMode.valueOf(darkModeValue ?: DarkMode.SYSTEM.name)
+            } catch (e: Exception) {
+                DarkMode.SYSTEM
+            }
+        )
+        darkModeFlow = _darkModeFlow.asStateFlow()
     }
 
     var currentTheme: BrandTheme
@@ -108,6 +121,7 @@ class SettingsManager private constructor(context: Context) {
         }
         set(value) {
             prefs.edit().putString(KEY_DARK_MODE, value.name).apply()
+            _darkModeFlow.value = value
         }
 
     // 云同步开关（默认开启）

@@ -44,68 +44,11 @@
             flex-direction: column;
         }
 
-        /* Top Navigation - Fixed */
-        .top-nav {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 420px;
-            z-index: 1000;
-            background: linear-gradient(180deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.9) 100%);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 12px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .top-nav-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--hasselblad-orange);
-            letter-spacing: -0.5px;
-        }
-
-        .top-nav-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .nav-icon-btn {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 102, 0, 0.1);
-            border: 1px solid rgba(255, 102, 0, 0.2);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .nav-icon-btn:hover {
-            background: rgba(255, 102, 0, 0.2);
-        }
-
-        .nav-icon-btn svg {
-            width: 18px;
-            height: 18px;
-            color: var(--hasselblad-orange);
-        }
-
         /* Main Content - Scrollable */
         .main-content {
             flex: 1;
             overflow-y: auto;
-            padding: 68px 0 80px;
+            padding: 20px 0 80px;
             scrollbar-width: none;
         }
 
@@ -115,9 +58,9 @@
 
         /* Hero Section */
         .hero-section {
-            padding: 32px 20px;
+            padding: 40px 20px 32px;
             text-align: center;
-            background: linear-gradient(180deg, rgba(255,102,0,0.05) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(255,102,0,0.08) 0%, transparent 100%);
         }
 
         .hero-badge {
@@ -131,7 +74,7 @@
             background: rgba(255, 102, 0, 0.1);
             border: 1px solid rgba(255, 102, 0, 0.2);
             border-radius: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .hero-badge svg {
@@ -140,11 +83,11 @@
         }
 
         .hero-title {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             letter-spacing: -0.5px;
-            line-height: 1.3;
+            line-height: 1.2;
         }
 
         .hero-title span {
@@ -152,9 +95,9 @@
         }
 
         .hero-subtitle {
-            font-size: 14px;
+            font-size: 15px;
             color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 24px;
+            margin-bottom: 32px;
             line-height: 1.6;
         }
 
@@ -162,8 +105,8 @@
         .stats-row {
             display: flex;
             justify-content: center;
-            gap: 32px;
-            margin-bottom: 28px;
+            gap: 40px;
+            margin-bottom: 32px;
         }
 
         .stat-item {
@@ -171,9 +114,9 @@
         }
 
         .stat-icon {
-            width: 28px;
-            height: 28px;
-            margin: 0 auto 6px;
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -181,18 +124,18 @@
         }
 
         .stat-icon svg {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
         }
 
         .stat-value {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
         }
 
@@ -200,7 +143,8 @@
         .cta-buttons {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            padding: 0 20px;
         }
 
         .btn-primary {
@@ -208,8 +152,8 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            padding: 14px 24px;
-            font-size: 15px;
+            padding: 16px 24px;
+            font-size: 16px;
             font-weight: 600;
             color: var(--pure-black);
             background: var(--hasselblad-orange);
@@ -221,19 +165,20 @@
 
         .btn-primary:hover {
             background: var(--hasselblad-orange-light);
+            transform: translateY(-1px);
         }
 
         .btn-primary svg {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
         }
 
         .btn-secondary {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 14px 24px;
-            font-size: 15px;
+            padding: 16px 24px;
+            font-size: 16px;
             font-weight: 500;
             color: var(--off-white);
             background: var(--medium-gray);
@@ -250,33 +195,34 @@
         /* Section Title */
         .section-header {
             text-align: center;
-            padding: 32px 20px 20px;
+            padding: 40px 20px 24px;
         }
 
         .section-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
             margin-bottom: 8px;
         }
 
         .section-desc {
-            font-size: 13px;
+            font-size: 14px;
             color: rgba(255, 255, 255, 0.5);
         }
 
-        /* Core Features Grid */
+        /* Core Features Grid - 3列布局 */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
-            padding: 0 20px 24px;
+            padding: 0 16px 32px;
         }
 
         .feature-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            padding: 16px;
+            padding: 16px 12px;
+            text-align: center;
             cursor: pointer;
             transition: all 0.25s;
         }
@@ -287,44 +233,45 @@
         }
 
         .feature-icon {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: var(--hasselblad-orange);
-            border-radius: 10px;
-            margin-bottom: 12px;
+            border-radius: 12px;
+            margin: 0 auto 12px;
         }
 
         .feature-icon svg {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             color: var(--pure-black);
         }
 
         .feature-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             margin-bottom: 6px;
         }
 
         .feature-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 10px;
             line-height: 1.4;
+            margin-bottom: 8px;
         }
 
         .feature-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            justify-content: center;
+            gap: 4px;
         }
 
         .feature-tag {
-            padding: 3px 8px;
-            font-size: 10px;
+            padding: 2px 6px;
+            font-size: 9px;
             color: rgba(255, 255, 255, 0.6);
             background: rgba(255, 255, 255, 0.06);
             border-radius: 4px;
@@ -348,7 +295,7 @@
         .preset-image-wrap {
             position: relative;
             width: 100%;
-            height: 160px;
+            height: 180px;
             overflow: hidden;
         }
 
@@ -404,32 +351,31 @@
         }
 
         .preset-card-content {
-            padding: 14px;
+            padding: 16px;
         }
 
         .preset-card-title {
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
         .preset-card-author {
-            font-size: 11px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
             margin-bottom: 6px;
         }
 
         .preset-card-desc {
-            font-size: 12px;
+            font-size: 13px;
             color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 8px;
-            line-height: 1.4;
+            margin-bottom: 10px;
         }
 
         .preset-card-tags {
             display: flex;
             gap: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .preset-card-tag {
@@ -443,7 +389,7 @@
         .preset-params {
             display: flex;
             gap: 12px;
-            padding-top: 8px;
+            padding-top: 10px;
             border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
@@ -500,7 +446,7 @@
             display: flex;
             align-items: flex-start;
             gap: 12px;
-            padding: 10px 0;
+            padding: 12px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
 
@@ -522,13 +468,13 @@
         }
 
         .ai-scene-name {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
 
         .ai-scene-features {
-            font-size: 11px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
         }
 
@@ -556,7 +502,7 @@
         .watermark-image {
             position: relative;
             width: 100%;
-            height: 100px;
+            height: 120px;
             background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
             display: flex;
             align-items: center;
@@ -564,7 +510,7 @@
         }
 
         .watermark-preview {
-            padding: 10px 16px;
+            padding: 12px 20px;
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 102, 0, 0.3);
             border-radius: 6px;
@@ -572,7 +518,7 @@
         }
 
         .watermark-brand {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
             color: var(--hasselblad-orange);
         }
@@ -582,7 +528,7 @@
         }
 
         .watermark-title {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             margin-bottom: 4px;
         }
@@ -621,7 +567,7 @@
             color: rgba(255, 255, 255, 0.4);
             cursor: pointer;
             transition: color 0.2s;
-            padding: 4px 12px;
+            padding: 4px 16px;
         }
 
         .nav-item.active {
@@ -655,7 +601,7 @@
 
         /* Settings Screen */
         .settings-content {
-            padding: 68px 0 100px;
+            padding: 20px 0 100px;
         }
 
         .settings-group {
@@ -682,7 +628,7 @@
         .settings-row {
             display: flex;
             align-items: center;
-            padding: 12px 14px;
+            padding: 14px 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             cursor: pointer;
             transition: background 0.2s;
@@ -697,19 +643,19 @@
         }
 
         .settings-row-icon {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: rgba(255, 102, 0, 0.1);
-            border-radius: 9px;
+            border-radius: 10px;
             margin-right: 12px;
         }
 
         .settings-row-icon svg {
-            width: 17px;
-            height: 17px;
+            width: 18px;
+            height: 18px;
             color: var(--hasselblad-orange);
         }
 
@@ -718,14 +664,14 @@
         }
 
         .settings-row-title {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 500;
         }
 
         .settings-row-subtitle {
-            font-size: 11px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
-            margin-top: 1px;
+            margin-top: 2px;
         }
 
         .settings-row-arrow {
@@ -733,10 +679,10 @@
         }
 
         .toggle {
-            width: 42px;
-            height: 24px;
+            width: 48px;
+            height: 26px;
             background: var(--medium-gray);
-            border-radius: 12px;
+            border-radius: 13px;
             position: relative;
             cursor: pointer;
             transition: background 0.3s;
@@ -749,8 +695,8 @@
         .toggle::after {
             content: '';
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             background: white;
             border-radius: 50%;
             top: 2px;
@@ -759,7 +705,7 @@
         }
 
         .toggle.active::after {
-            transform: translateX(18px);
+            transform: translateX(22px);
         }
 
         /* Debug Toolbar */
@@ -801,34 +747,34 @@
 
         /* CTA Section */
         .cta-section {
-            padding: 32px 20px;
+            padding: 40px 20px;
             text-align: center;
             background: linear-gradient(180deg, transparent 0%, rgba(255,102,0,0.03) 100%);
         }
 
         .cta-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
             margin-bottom: 8px;
         }
 
         .cta-desc {
-            font-size: 13px;
+            font-size: 14px;
             color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         /* Footer */
         .footer {
-            padding: 20px;
+            padding: 24px 20px;
             text-align: center;
             border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .footer-text {
-            font-size: 11px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .footer-badges {
@@ -859,30 +805,49 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Feature Detail Modal */
+        .feature-detail {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 0 20px 20px;
+        }
+
+        .feature-detail-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--hasselblad-orange);
+        }
+
+        .feature-detail-list {
+            list-style: none;
+        }
+
+        .feature-detail-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .feature-detail-item:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
     <!-- Debug Toolbar -->
     <div class="debug-toolbar">
         <button class="debug-btn active" onclick="showScreen('home')">首页</button>
-        <button class="debug-btn" onclick="showScreen('presets')">预设</button>
-        <button class="debug-btn" onclick="showScreen('ai')">AI识别</button>
+        <button class="debug-btn" onclick="showScreen('presets')">精选推荐</button>
+        <button class="debug-btn" onclick="showScreen('ai')">核心功能</button>
         <button class="debug-btn" onclick="showScreen('settings')">设置</button>
     </div>
 
     <div class="phone-frame">
-        <!-- Top Navigation - Fixed -->
-        <div class="top-nav">
-            <div class="top-nav-content">
-                <div class="logo">OMaster</div>
-                <div class="top-nav-actions">
-                    <div class="nav-icon-btn" onclick="showScreen('settings')">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Main Content -->
         <div class="main-content">
             <!-- Home Screen -->
@@ -923,12 +888,12 @@
                 </div>
 
                 <!-- CTA Buttons -->
-                <div class="cta-buttons" style="padding: 0 20px 24px;">
+                <div class="cta-buttons">
                     <button class="btn-primary" onclick="showScreen('presets')">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
-                        浏览预设
+                        浏览精选推荐
                     </button>
-                    <button class="btn-secondary" onclick="showScreen('ai')">体验AI功能</button>
+                    <button class="btn-secondary" onclick="showScreen('ai')">体验核心功能</button>
                 </div>
 
                 <!-- Core Features Section -->
@@ -938,29 +903,81 @@
                 </div>
 
                 <div class="features-grid">
-                    <!-- Preset Management -->
-                    <div class="feature-card" onclick="showScreen('presets')">
-                        <div class="feature-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
-                        </div>
-                        <div class="feature-title">预设管理</div>
-                        <div class="feature-desc">500+专业预设，支持云端同步</div>
-                        <div class="feature-tags">
-                            <span class="feature-tag">分类筛选</span>
-                            <span class="feature-tag">收藏管理</span>
-                        </div>
-                    </div>
-
                     <!-- AI Scene Recognition -->
                     <div class="feature-card" onclick="showScreen('ai')">
                         <div class="feature-icon">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         </div>
                         <div class="feature-title">AI场景识别</div>
-                        <div class="feature-desc">智能识别35+拍摄场景，自动推荐参数</div>
+                        <div class="feature-desc">35+场景智能识别</div>
                         <div class="feature-tags">
                             <span class="feature-tag">实时识别</span>
                             <span class="feature-tag">参数推荐</span>
+                        </div>
+                    </div>
+
+                    <!-- AI Fine Tune -->
+                    <div class="feature-card" onclick="showScreen('ai')">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4V5h2v4h-2z"/></svg>
+                        </div>
+                        <div class="feature-title">AI 微调</div>
+                        <div class="feature-desc">色彩风格参数控制</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">色彩风格</span>
+                            <span class="feature-tag">参数控制</span>
+                        </div>
+                    </div>
+
+                    <!-- Watermark Editor -->
+                    <div class="feature-card" onclick="showScreen('ai')">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5H5c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 12H5V7h14v10zm-7-4l2.5-3.5 1.5 2 2.5-3.5L12 16l-3-4z"/></svg>
+                        </div>
+                        <div class="feature-title">水印编辑</div>
+                        <div class="feature-desc">12+水印模板</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">品牌认证</span>
+                            <span class="feature-tag">自定义</span>
+                        </div>
+                    </div>
+
+                    <!-- Smart Optimize -->
+                    <div class="feature-card" onclick="showScreen('ai')">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        </div>
+                        <div class="feature-title">智能优化</div>
+                        <div class="feature-desc">AI一键优化</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">自动优化</span>
+                            <span class="feature-tag">风格迁移</span>
+                        </div>
+                    </div>
+
+                    <!-- Preset Management -->
+                    <div class="feature-card" onclick="showScreen('presets')">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
+                        </div>
+                        <div class="feature-title">预设管理</div>
+                        <div class="feature-desc">500+专业预设</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">云端同步</span>
+                            <span class="feature-tag">分类筛选</span>
+                        </div>
+                    </div>
+
+                    <!-- Fine Tune -->
+                    <div class="feature-card" onclick="showScreen('ai')">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4V5h2v4h-2z"/></svg>
+                        </div>
+                        <div class="feature-title">参数精细调节</div>
+                        <div class="feature-desc">专业级参数控制</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">ISO/快门</span>
+                            <span class="feature-tag">白平衡</span>
                         </div>
                     </div>
                 </div>
@@ -976,10 +993,10 @@
                 </div>
             </div>
 
-            <!-- Presets Screen -->
+            <!-- Presets Screen (精选推荐) -->
             <div id="presets-screen" class="screen">
                 <div class="section-header">
-                    <h2 class="section-title">精选预设</h2>
+                    <h2 class="section-title">精选推荐</h2>
                     <p class="section-desc">专业摄影师精心调校的参数预设</p>
                 </div>
 
@@ -1001,15 +1018,15 @@
                 </div>
             </div>
 
-            <!-- AI Screen -->
+            <!-- AI Screen (核心功能) -->
             <div id="ai-screen" class="screen">
                 <div class="section-header">
-                    <h2 class="section-title">AI 功能</h2>
-                    <p class="section-desc">智能识别与创意工具</p>
+                    <h2 class="section-title">核心功能</h2>
+                    <p class="section-desc">AI智能识别与专业摄影工具</p>
                 </div>
 
                 <!-- AI Features Grid -->
-                <div class="features-grid" style="padding-bottom: 16px;">
+                <div class="features-grid" style="padding-bottom: 24px;">
                     <!-- AI Scene Recognition -->
                     <div class="feature-card" onclick="showAISceneDetail()">
                         <div class="feature-icon">
@@ -1042,7 +1059,7 @@
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                         </div>
                         <div class="feature-title">智能优化</div>
-                        <div class="feature-desc">AI一键优化，智能调整参数</div>
+                        <div class="feature-desc">AI一键优化</div>
                         <div class="feature-tags">
                             <span class="feature-tag">自动优化</span>
                             <span class="feature-tag">风格迁移</span>
@@ -1055,12 +1072,25 @@
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4V5h2v4h-2z"/></svg>
                         </div>
                         <div class="feature-title">参数精细调节</div>
-                        <div class="feature-desc">专业级参数控制，实时预览</div>
+                        <div class="feature-desc">专业级参数控制</div>
                         <div class="feature-tags">
                             <span class="feature-tag">ISO/快门</span>
                             <span class="feature-tag">白平衡</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- AI Scene Detail -->
+                <div class="feature-detail" id="ai-scene-detail">
+                    <div class="feature-detail-title">AI场景识别 - 支持场景</div>
+                    <ul class="feature-detail-list">
+                        <li class="feature-detail-item">人像场景 - 智能美颜、肤色优化、背景虚化</li>
+                        <li class="feature-detail-item">夜景场景 - 降噪增强、高光抑制、暗部提亮</li>
+                        <li class="feature-detail-item">美食场景 - 色彩增强、饱和度优化、暖色调</li>
+                        <li class="feature-detail-item">风景场景 - HDR增强、广角优化、动态范围</li>
+                        <li class="feature-detail-item">街拍场景 - 快速对焦、运动捕捉、胶片风格</li>
+                        <li class="feature-detail-item">宠物场景 - 眼部对焦、毛发细节、动态捕捉</li>
+                    </ul>
                 </div>
 
                 <!-- Watermark Section -->
@@ -1112,45 +1142,6 @@
                         <div class="watermark-content">
                             <div class="watermark-title">位置标签</div>
                             <div class="watermark-desc">GPS定位水印</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AI Scene Detail -->
-                <div class="section-header" id="ai-scene-detail">
-                    <h2 class="section-title">AI场景识别</h2>
-                    <p class="section-desc">支持35+拍摄场景自动识别</p>
-                </div>
-
-                <div class="ai-scene-section">
-                    <div class="ai-scene-list">
-                        <div class="ai-scene-item">
-                            <div class="ai-scene-dot"></div>
-                            <div class="ai-scene-content">
-                                <div class="ai-scene-name">人像场景</div>
-                                <div class="ai-scene-features">智能美颜、肤色优化、背景虚化</div>
-                            </div>
-                        </div>
-                        <div class="ai-scene-item">
-                            <div class="ai-scene-dot"></div>
-                            <div class="ai-scene-content">
-                                <div class="ai-scene-name">夜景场景</div>
-                                <div class="ai-scene-features">降噪增强、高光抑制、暗部提亮</div>
-                            </div>
-                        </div>
-                        <div class="ai-scene-item">
-                            <div class="ai-scene-dot"></div>
-                            <div class="ai-scene-content">
-                                <div class="ai-scene-name">美食场景</div>
-                                <div class="ai-scene-features">色彩增强、饱和度优化、暖色调</div>
-                            </div>
-                        </div>
-                        <div class="ai-scene-item">
-                            <div class="ai-scene-dot"></div>
-                            <div class="ai-scene-content">
-                                <div class="ai-scene-name">风景场景</div>
-                                <div class="ai-scene-features">HDR增强、广角优化、动态范围</div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1235,7 +1226,7 @@
                                     <div class="settings-row-title">主题颜色</div>
                                     <div class="settings-row-subtitle">哈苏橙</div>
                                 </div>
-                                <div style="width: 18px; height: 18px; background: #FF6600; border-radius: 50%; margin-right: 8px;"></div>
+                                <div style="width: 20px; height: 20px; background: #FF6600; border-radius: 50%; margin-right: 8px;"></div>
                                 <div class="settings-row-arrow">›</div>
                             </div>
                         </div>
@@ -1296,11 +1287,11 @@
                 </div>
                 <div class="nav-item" onclick="showScreen('presets')">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
-                    <span>预设</span>
+                    <span>精选推荐</span>
                 </div>
                 <div class="nav-item" onclick="showScreen('ai')">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                    <span>AI识别</span>
+                    <span>核心功能</span>
                 </div>
                 <div class="nav-item" onclick="showScreen('settings')">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
@@ -1375,16 +1366,16 @@
             container.innerHTML = filtered.map(preset => `
                 <div class="preset-card-large">
                     <div class="preset-image-wrap">
-                        <img src="${preset.coverPath}" alt="${preset.name}" onerror="this.src='https://via.placeholder.com/400x160/2a2a2a/FF6600?text=${encodeURIComponent(preset.name)}'">
+                        <img src="${preset.coverPath}" alt="${preset.name}" onerror="this.src='https://via.placeholder.com/400x180/2a2a2a/FF6600?text=${encodeURIComponent(preset.name)}'">
                         <div class="preset-image-overlay">
                             <div class="preset-rating">
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                                 ${(4.5 + Math.random() * 0.5).toFixed(1)}
                             </div>
-                            ${preset.tags && preset.tags.includes('HNCS') ? `
+                            ${preset.isNew ? `
                             <div class="preset-badge-hncs">
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                HNCS
+                                NEW
                             </div>
                             ` : ''}
                         </div>
@@ -1452,7 +1443,7 @@
 
         // Show AI Fine Tune
         function showAIFineTune() {
-            alert('AI 微调功能：支持8种色彩风格、6种智能优化预设、11项参数调节');
+            alert('AI 微调功能：\n\n• 8种色彩风格（自然/鲜艳/胶片/黑白/暖调/冷调/人像/风景）\n• 6种智能优化预设\n• 11项参数精细调节\n• 实时预览效果');
         }
 
         // Show Smart Optimize
