@@ -110,12 +110,21 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putString(KEY_DARK_MODE, value.name).apply()
         }
 
-    // 云同步开关
+    // 云同步开关（默认开启）
     var isCloudSyncEnabled: Boolean
-        get() = prefs.getBoolean(KEY_CLOUD_SYNC_ENABLED, false)
+        get() = prefs.getBoolean(KEY_CLOUD_SYNC_ENABLED, true)
         set(value) {
             prefs.edit().putBoolean(KEY_CLOUD_SYNC_ENABLED, value).apply()
         }
+
+    // 云端预设数据源 URL
+    val cloudPresetUrls: Map<String, String>
+        get() = mapOf(
+            "oppo" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json",
+            "realme" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json",
+            "vivo" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json",
+            "honor" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json"
+        )
 
     // 云同步状态
     var cloudSyncStatus: CloudSyncStatus

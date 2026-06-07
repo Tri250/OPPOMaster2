@@ -332,7 +332,7 @@
 
         /* Preset Card */
         .preset-card-large {
-            margin: 0 20px 24px;
+            margin: 0 20px 16px;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
@@ -348,7 +348,7 @@
         .preset-image-wrap {
             position: relative;
             width: 100%;
-            height: 180px;
+            height: 160px;
             overflow: hidden;
         }
 
@@ -404,31 +404,32 @@
         }
 
         .preset-card-content {
-            padding: 16px;
+            padding: 14px;
         }
 
         .preset-card-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             margin-bottom: 4px;
         }
 
         .preset-card-author {
-            font-size: 12px;
+            font-size: 11px;
             color: rgba(255, 255, 255, 0.4);
             margin-bottom: 6px;
         }
 
         .preset-card-desc {
-            font-size: 13px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            line-height: 1.4;
         }
 
         .preset-card-tags {
             display: flex;
             gap: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .preset-card-tag {
@@ -442,7 +443,7 @@
         .preset-params {
             display: flex;
             gap: 12px;
-            padding-top: 10px;
+            padding-top: 8px;
             border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
@@ -451,87 +452,36 @@
             color: rgba(255, 255, 255, 0.5);
         }
 
-        /* Watermark Section */
-        .watermark-card {
-            margin: 0 20px 24px;
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            overflow: hidden;
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .category-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-tab {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            white-space: nowrap;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .watermark-image {
-            position: relative;
-            width: 100%;
-            height: 140px;
-            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .watermark-preview {
-            padding: 16px 24px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 102, 0, 0.3);
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .watermark-brand {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--hasselblad-orange);
-            margin-bottom: 2px;
-        }
-
-        .watermark-model {
-            font-size: 10px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .watermark-badges {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .watermark-badge {
-            padding: 4px 10px;
-            font-size: 10px;
-            font-weight: 600;
-            border-radius: 6px;
-        }
-
-        .watermark-badge.brand {
+        .category-tab.active {
             color: var(--pure-black);
             background: var(--hasselblad-orange);
-        }
-
-        .watermark-badge.device {
-            color: var(--off-white);
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-        }
-
-        .watermark-content {
-            padding: 14px;
-        }
-
-        .watermark-title {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .watermark-desc {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 10px;
+            border-color: var(--hasselblad-orange);
         }
 
         /* AI Scene Recognition */
@@ -580,6 +530,66 @@
         .ai-scene-features {
             font-size: 11px;
             color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Watermark Grid */
+        .watermark-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 0 20px 24px;
+        }
+
+        .watermark-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .watermark-card:hover {
+            border-color: rgba(255, 102, 0, 0.3);
+        }
+
+        .watermark-image {
+            position: relative;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .watermark-preview {
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 102, 0, 0.3);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .watermark-brand {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--hasselblad-orange);
+        }
+
+        .watermark-content {
+            padding: 12px;
+        }
+
+        .watermark-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .watermark-desc {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
         }
 
         /* Bottom Navigation - Fixed */
@@ -828,12 +838,35 @@
             font-size: 11px;
             color: rgba(255, 255, 255, 0.3);
         }
+
+        /* Loading State */
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 102, 0, 0.2);
+            border-top-color: var(--hasselblad-orange);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <!-- Debug Toolbar -->
     <div class="debug-toolbar">
         <button class="debug-btn active" onclick="showScreen('home')">首页</button>
+        <button class="debug-btn" onclick="showScreen('presets')">预设</button>
+        <button class="debug-btn" onclick="showScreen('ai')">AI识别</button>
         <button class="debug-btn" onclick="showScreen('settings')">设置</button>
     </div>
 
@@ -870,7 +903,7 @@
                         <div class="stat-icon">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 10.5l4.77-8.26C13.47 2.09 12.75 2 12 2c-2.4 0-4.6.85-6.32 2.25l3.66 6.35.06-.1zM21.54 9c-.93 0-1.81-.19-2.63-.5l-3.24 5.62 3.24 5.62c.82-.31 1.7-.5 2.63-.5 2.9 0 5.37 1.87 6.28 4.46.22-.64.35-1.32.35-2.04 0-3.87-3.13-7-7-7zM12 22c2.4 0 4.6-.85 6.32-2.25l-3.66-6.35-.06.1-4.77 8.26C10.53 21.91 11.25 22 12 22zM3.46 9c.93 0 1.81.19 2.63.5l3.24-5.62-3.24-5.62C5.27 1.57 4.39 1.76 3.46 1.76.56 1.76-1.91 3.63-2.82 6.22c-.22.64-.35 1.32-.35 2.04 0 3.87 3.13 7 7 7z"/></svg>
                         </div>
-                        <div class="stat-value">500+</div>
+                        <div class="stat-value" id="stat-presets">500+</div>
                         <div class="stat-label">专业预设</div>
                     </div>
                     <div class="stat-item">
@@ -891,11 +924,11 @@
 
                 <!-- CTA Buttons -->
                 <div class="cta-buttons" style="padding: 0 20px 24px;">
-                    <button class="btn-primary">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                        下载 App
+                    <button class="btn-primary" onclick="showScreen('presets')">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
+                        浏览预设
                     </button>
-                    <button class="btn-secondary">了解更多</button>
+                    <button class="btn-secondary" onclick="showScreen('ai')">体验AI功能</button>
                 </div>
 
                 <!-- Core Features Section -->
@@ -905,92 +938,101 @@
                 </div>
 
                 <div class="features-grid">
-                    <!-- AI Scene Recognition -->
-                    <div class="feature-card" onclick="showAIScene()">
-                        <div class="feature-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        </div>
-                        <div class="feature-title">AI场景识别</div>
-                        <div class="feature-desc">智能识别35+拍摄场景，自动推荐最佳参数配置</div>
-                        <div class="feature-tags">
-                            <span class="feature-tag">实时识别</span>
-                            <span class="feature-tag">参数推荐</span>
-                        </div>
-                    </div>
-
-                    <!-- Hasselblad Color Science -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/></svg>
-                        </div>
-                        <div class="feature-title">哈苏色彩科学</div>
-                        <div class="feature-desc">官方HNCS认证，还原专业级哈苏色彩表现</div>
-                        <div class="feature-tags">
-                            <span class="feature-tag">HNCS 3.0</span>
-                            <span class="feature-tag">自然色彩</span>
-                        </div>
-                    </div>
-
                     <!-- Preset Management -->
-                    <div class="feature-card">
+                    <div class="feature-card" onclick="showScreen('presets')">
                         <div class="feature-icon">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
                         </div>
                         <div class="feature-title">预设管理</div>
-                        <div class="feature-desc">500+专业预设，支持导入导出与云端同步</div>
+                        <div class="feature-desc">500+专业预设，支持云端同步</div>
                         <div class="feature-tags">
                             <span class="feature-tag">分类筛选</span>
                             <span class="feature-tag">收藏管理</span>
                         </div>
                     </div>
 
+                    <!-- AI Scene Recognition -->
+                    <div class="feature-card" onclick="showScreen('ai')">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        </div>
+                        <div class="feature-title">AI场景识别</div>
+                        <div class="feature-desc">智能识别35+拍摄场景，自动推荐参数</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">实时识别</span>
+                            <span class="feature-tag">参数推荐</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <div class="footer-text">© 2025 OMaster. 专业摄影参数预设管理应用</div>
+                    <div class="footer-badges">
+                        <span>哈苏 HNCS 官方认证</span>
+                        <span>·</span>
+                        <span>OPPO Find 系列</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Presets Screen -->
+            <div id="presets-screen" class="screen">
+                <div class="section-header">
+                    <h2 class="section-title">精选预设</h2>
+                    <p class="section-desc">专业摄影师精心调校的参数预设</p>
+                </div>
+
+                <!-- Category Tabs -->
+                <div class="category-tabs">
+                    <button class="category-tab active" data-category="all">全部</button>
+                    <button class="category-tab" data-category="oppo">OPPO</button>
+                    <button class="category-tab" data-category="realme">realme</button>
+                    <button class="category-tab" data-category="vivo">vivo</button>
+                    <button class="category-tab" data-category="honor">荣耀</button>
+                </div>
+
+                <!-- Presets Container -->
+                <div id="presets-container">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <div>加载预设中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Screen -->
+            <div id="ai-screen" class="screen">
+                <div class="section-header">
+                    <h2 class="section-title">AI 功能</h2>
+                    <p class="section-desc">智能识别与创意工具</p>
+                </div>
+
+                <!-- AI Features Grid -->
+                <div class="features-grid" style="padding-bottom: 16px;">
+                    <!-- AI Scene Recognition -->
+                    <div class="feature-card" onclick="showAISceneDetail()">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        </div>
+                        <div class="feature-title">AI场景识别</div>
+                        <div class="feature-desc">35+场景智能识别</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">实时识别</span>
+                            <span class="feature-tag">参数推荐</span>
+                        </div>
+                    </div>
+
                     <!-- AI Fine Tune -->
-                    <div class="feature-card">
+                    <div class="feature-card" onclick="showAIFineTune()">
                         <div class="feature-icon">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4V5h2v4h-2z"/></svg>
                         </div>
                         <div class="feature-title">AI 微调</div>
-                        <div class="feature-desc">色彩风格、参数精细调节控制</div>
+                        <div class="feature-desc">色彩风格参数控制</div>
                         <div class="feature-tags">
                             <span class="feature-tag">色彩风格</span>
-                            <span class="feature-tag">参数控制</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Featured Preset Section -->
-                <div class="section-header">
-                    <h2 class="section-title">精选预设</h2>
-                    <p class="section-desc">专业摄影师精心调校的参数预设，一键获得大片效果</p>
-                </div>
-
-                <div class="preset-card-large">
-                    <div class="preset-image-wrap">
-                        <img src="https://via.placeholder.com/400x180/2a2a2a/FF6600?text=Hasselblad+Portrait" alt="哈苏人像大师">
-                        <div class="preset-image-overlay">
-                            <div class="preset-rating">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                                4.9
-                            </div>
-                            <div class="preset-badge-hncs">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                HNCS
-                            </div>
-                        </div>
-                    </div>
-                    <div class="preset-card-content">
-                        <div class="preset-card-title">哈苏人像大师</div>
-                        <div class="preset-card-author">哈苏影像实验室 · OPPO Find X8 Ultra</div>
-                        <div class="preset-card-desc">专业人像拍摄预设，完美还原肤色质感</div>
-                        <div class="preset-card-tags">
-                            <span class="preset-card-tag">人像</span>
-                            <span class="preset-card-tag">哈苏</span>
-                            <span class="preset-card-tag">专业</span>
-                        </div>
-                        <div class="preset-params">
-                            <span class="preset-param">ISO 100</span>
-                            <span class="preset-param">1/200</span>
-                            <span class="preset-param">f/1.6</span>
+                            <span class="feature-tag">智能优化</span>
                         </div>
                     </div>
                 </div>
@@ -998,35 +1040,60 @@
                 <!-- Watermark Section -->
                 <div class="section-header">
                     <h2 class="section-title">水印模板</h2>
-                    <p class="section-desc">品牌认证、功能水印、开源模板，满足各种创作需求</p>
+                    <p class="section-desc">12+模板，品牌认证、功能水印</p>
                 </div>
 
-                <div class="watermark-card">
-                    <div class="watermark-image">
-                        <div class="watermark-badges">
-                            <span class="watermark-badge brand">品牌</span>
-                            <span class="watermark-badge device">OPPO</span>
+                <div class="watermark-grid">
+                    <div class="watermark-card">
+                        <div class="watermark-image">
+                            <div class="watermark-preview">
+                                <div class="watermark-brand">Hasselblad</div>
+                            </div>
                         </div>
-                        <div class="watermark-preview">
-                            <div class="watermark-brand">Hasselblad</div>
-                            <div class="watermark-model">OPPO Find X8 Ultra</div>
+                        <div class="watermark-content">
+                            <div class="watermark-title">哈苏认证</div>
+                            <div class="watermark-desc">HNCS官方认证</div>
                         </div>
                     </div>
-                    <div class="watermark-content">
-                        <div class="watermark-title">哈苏认证</div>
-                        <div class="watermark-desc">OPPO哈苏HNCS官方认证水印</div>
-                        <div class="feature-tags">
-                            <span class="feature-tag">HNCS认证</span>
-                            <span class="feature-tag">官方授权</span>
-                            <span class="feature-tag">专业风格</span>
+                    <div class="watermark-card">
+                        <div class="watermark-image">
+                            <div class="watermark-preview">
+                                <div class="watermark-brand">OPPO Find</div>
+                            </div>
+                        </div>
+                        <div class="watermark-content">
+                            <div class="watermark-title">Find系列</div>
+                            <div class="watermark-desc">影像旗舰标识</div>
+                        </div>
+                    </div>
+                    <div class="watermark-card">
+                        <div class="watermark-image">
+                            <div class="watermark-preview">
+                                <div class="watermark-brand">EXIF</div>
+                            </div>
+                        </div>
+                        <div class="watermark-content">
+                            <div class="watermark-title">参数信息</div>
+                            <div class="watermark-desc">ISO/快门/光圈</div>
+                        </div>
+                    </div>
+                    <div class="watermark-card">
+                        <div class="watermark-image">
+                            <div class="watermark-preview">
+                                <div class="watermark-brand">Location</div>
+                            </div>
+                        </div>
+                        <div class="watermark-content">
+                            <div class="watermark-title">位置标签</div>
+                            <div class="watermark-desc">GPS定位水印</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- AI Scene Recognition Detail -->
-                <div class="section-header">
+                <!-- AI Scene Detail -->
+                <div class="section-header" id="ai-scene-detail">
                     <h2 class="section-title">AI场景识别</h2>
-                    <p class="section-desc">基于深度学习的场景识别引擎，支持35+拍摄场景自动识别</p>
+                    <p class="section-desc">支持35+拍摄场景自动识别</p>
                 </div>
 
                 <div class="ai-scene-section">
@@ -1059,29 +1126,6 @@
                                 <div class="ai-scene-features">HDR增强、广角优化、动态范围</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- CTA Section -->
-                <div class="cta-section">
-                    <h2 class="cta-title">开始你的专业摄影之旅</h2>
-                    <p class="cta-desc">下载OMaster，体验哈苏色彩科学的魅力</p>
-                    <div class="cta-buttons">
-                        <button class="btn-primary">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                            下载 Android 版
-                        </button>
-                        <button class="btn-secondary">GitHub</button>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="footer">
-                    <div class="footer-text">© 2025 OMaster. 专业摄影参数预设管理应用</div>
-                    <div class="footer-badges">
-                        <span>哈苏 HNCS 官方认证</span>
-                        <span>·</span>
-                        <span>OPPO Find 系列</span>
                     </div>
                 </div>
             </div>
@@ -1181,9 +1225,19 @@
                                 </div>
                                 <div class="settings-row-content">
                                     <div class="settings-row-title">云同步</div>
-                                    <div class="settings-row-subtitle">预设跨设备同步</div>
+                                    <div class="settings-row-subtitle">预设跨设备同步 · 已开启</div>
                                 </div>
-                                <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                                <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                            <div class="settings-row" onclick="syncPresets()">
+                                <div class="settings-row-icon">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                                </div>
+                                <div class="settings-row-content">
+                                    <div class="settings-row-title">立即同步</div>
+                                    <div class="settings-row-subtitle">从云端更新预设数据</div>
+                                </div>
+                                <div class="settings-row-arrow">›</div>
                             </div>
                         </div>
                     </div>
@@ -1214,11 +1268,11 @@
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                     <span>首页</span>
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" onclick="showScreen('presets')">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
                     <span>预设</span>
                 </div>
-                <div class="nav-item">
+                <div class="nav-item" onclick="showScreen('ai')">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                     <span>AI识别</span>
                 </div>
@@ -1231,29 +1285,154 @@
     </div>
 
     <script>
+        // Preset data URLs
+        const PRESET_URLS = {
+            oppo: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json',
+            realme: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json',
+            vivo: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json',
+            honor: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json'
+        };
+
+        let allPresets = [];
+        let currentCategory = 'all';
+
+        // Load presets on startup
+        async function loadPresets() {
+            try {
+                const responses = await Promise.all([
+                    fetch(PRESET_URLS.oppo),
+                    fetch(PRESET_URLS.realme),
+                    fetch(PRESET_URLS.vivo),
+                    fetch(PRESET_URLS.honor)
+                ]);
+                
+                const data = await Promise.all(responses.map(r => r.json()));
+                
+                allPresets = [];
+                data.forEach((json, index) => {
+                    const category = ['oppo', 'realme', 'vivo', 'honor'][index];
+                    const presets = json.presets.map(p => ({
+                        ...p,
+                        category: category,
+                        brand: json.name
+                    }));
+                    allPresets.push(...presets);
+                });
+                
+                // Update stats
+                document.getElementById('stat-presets').textContent = allPresets.length + '+';
+                
+                // Render presets
+                renderPresets();
+            } catch (error) {
+                console.error('Failed to load presets:', error);
+                document.getElementById('presets-container').innerHTML = `
+                    <div class="loading-state">
+                        <div>加载失败，请检查网络连接</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Render presets
+        function renderPresets() {
+            const container = document.getElementById('presets-container');
+            const filtered = currentCategory === 'all' 
+                ? allPresets 
+                : allPresets.filter(p => p.category === currentCategory);
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="loading-state"><div>暂无预设</div></div>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(preset => `
+                <div class="preset-card-large">
+                    <div class="preset-image-wrap">
+                        <img src="${preset.coverPath}" alt="${preset.name}" onerror="this.src='https://via.placeholder.com/400x160/2a2a2a/FF6600?text=${encodeURIComponent(preset.name)}'">
+                        <div class="preset-image-overlay">
+                            <div class="preset-rating">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                ${(4.5 + Math.random() * 0.5).toFixed(1)}
+                            </div>
+                            ${preset.tags && preset.tags.includes('HNCS') ? `
+                            <div class="preset-badge-hncs">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                HNCS
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="preset-card-content">
+                        <div class="preset-card-title">${preset.name}</div>
+                        <div class="preset-card-author">${preset.author} · ${preset.brand}</div>
+                        <div class="preset-card-desc">${preset.description ? preset.description.content.split('【')[0] : '专业摄影预设'}</div>
+                        <div class="preset-card-tags">
+                            ${(preset.tags || []).slice(0, 3).map(tag => `<span class="preset-card-tag">${tag}</span>`).join('')}
+                        </div>
+                        <div class="preset-params">
+                            ${preset.sections && preset.sections[0] && preset.sections[0].items ? 
+                                preset.sections[0].items.slice(0, 3).map(item => 
+                                    `<span class="preset-param">${item.label}: ${item.value}</span>`
+                                ).join('') : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Category tab click
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                currentCategory = this.dataset.category;
+                renderPresets();
+            });
+        });
+
+        // Screen navigation
         function showScreen(screenName) {
             // Update debug buttons
             document.querySelectorAll('.debug-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            const debugBtn = document.querySelector(`.debug-btn[onclick="showScreen('${screenName}')"]`);
+            if (debugBtn) debugBtn.classList.add('active');
 
             // Hide all screens
             document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
 
             // Show selected screen
-            document.getElementById(screenName + '-screen').classList.add('active');
+            const screen = document.getElementById(screenName + '-screen');
+            if (screen) screen.classList.add('active');
 
             // Update nav items
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            if (screenName === 'home') {
-                document.querySelectorAll('.nav-item')[0].classList.add('active');
-            } else if (screenName === 'settings') {
-                document.querySelectorAll('.nav-item')[3].classList.add('active');
+            const navMap = { home: 0, presets: 1, ai: 2, settings: 3 };
+            const navIndex = navMap[screenName];
+            if (navIndex !== undefined) {
+                document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+            }
+
+            // Load presets if entering presets screen
+            if (screenName === 'presets' && allPresets.length === 0) {
+                loadPresets();
             }
         }
 
-        function showAIScene() {
-            // Scroll to AI Scene section
-            document.querySelector('.ai-scene-section').scrollIntoView({ behavior: 'smooth' });
+        // Show AI Scene Detail
+        function showAISceneDetail() {
+            document.getElementById('ai-scene-detail').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Show AI Fine Tune
+        function showAIFineTune() {
+            alert('AI 微调功能：支持8种色彩风格、6种智能优化预设、11项参数调节');
+        }
+
+        // Sync presets
+        function syncPresets() {
+            alert('正在从云端同步预设数据...');
+            loadPresets();
         }
 
         // Toggle handlers
@@ -1262,6 +1441,11 @@
                 e.stopPropagation();
                 this.classList.toggle('active');
             });
+        });
+
+        // Load presets on page load
+        window.addEventListener('load', () => {
+            // Presets will be loaded when user navigates to presets screen
         });
     </script>
 </body>
