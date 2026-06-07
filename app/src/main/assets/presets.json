@@ -12,6 +12,9 @@
         "images/fsjp_03.webp"
       ],
       "author": "@OPPO影像",
+      "brand": "fujifilm",
+      "rating": 4.8,
+      "downloadCount": 14500,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -75,6 +78,9 @@
         "images/jpg_03.webp"
       ],
       "author": "@OPPO影像",
+      "brand": "fujifilm",
+      "rating": 4.6,
+      "downloadCount": 9800,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -468,6 +474,10 @@
         "images/mhhr_03.webp"
       ],
       "author": "@OPPO影像",
+      "isNew": true,
+      "brand": "hasselblad",
+      "rating": 4.7,
+      "downloadCount": 10100,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -597,7 +607,10 @@
         "images/rw_02.webp",
         "images/rw_03.webp"
       ],
-      "author": "@蘭州白鴿",
+      "author": "@OPPO影像",
+      "brand": "leica",
+      "rating": 4.7,
+      "downloadCount": 9200,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
@@ -690,7 +703,10 @@
         "images/qxrw_02.webp",
         "images/qxrw_03.webp"
       ],
-      "author": "@蘭州白鴿",
+      "author": "@OPPO影像",
+      "brand": "fujifilm",
+      "rating": 4.6,
+      "downloadCount": 8100,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
@@ -784,6 +800,9 @@
         "images/fwxy_03.webp"
       ],
       "author": "@派瑞特凯",
+      "brand": "hasselblad",
+      "rating": 4.6,
+      "downloadCount": 6800,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -846,6 +865,10 @@
         "images/mwlf_02.webp"
       ],
       "author": "@ONESTEP™",
+      "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.5,
+      "downloadCount": 5400,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -908,7 +931,11 @@
         "images/sjlk_02.webp",
         "images/sjlk_03.webp"
       ],
-      "author": "@盒子叔",
+      "author": "@OPPO影像",
+      "isNew": true,
+      "brand": "leica",
+      "rating": 4.8,
+      "downloadCount": 13200,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -972,6 +999,10 @@
         "images/mhfs_03.webp"
       ],
       "author": "@盒子叔",
+      "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.6,
+      "downloadCount": 7200,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
@@ -1122,7 +1153,11 @@
         "images/jrqx_02.webp",
         "images/jrqx_03.webp"
       ],
-      "author": "@Aurora",
+      "author": "@盒子叔",
+      "isNew": true,
+      "brand": "fujifilm",
+      "rating": 4.4,
+      "downloadCount": 4900,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -1185,6 +1220,10 @@
         "images/mhhb_02.webp"
       ],
       "author": "@Aurora",
+      "isNew": true,
+      "brand": "leica",
+      "rating": 4.5,
+      "downloadCount": 5800,
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -1402,6 +1441,9 @@
       ],
       "author": "@屋顶橙子味",
       "isNew": true,
+      "brand": "oppo",
+      "rating": 4.6,
+      "downloadCount": 7400,
       "sections": [
         {
           "title": "@string/param_pro_adjust",
