@@ -1,14 +1,20 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -56,15 +64,47 @@ import coil.request.CachePolicy
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.BorderDefault
+import com.silas.omaster.ui.theme.BorderLight
+import com.silas.omaster.ui.theme.ButtonTextStyle
+import com.silas.omaster.ui.theme.CardTitleStyle
+import com.silas.omaster.ui.theme.GradientOrangeEnd
+import com.silas.omaster.ui.theme.GradientOrangeStart
+import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.ParameterLabelStyle
+import com.silas.omaster.ui.theme.ParameterValueStyle
+import com.silas.omaster.ui.theme.TagTextStyle
+import com.silas.omaster.ui.theme.TextPrimary
+import com.silas.omaster.ui.theme.TextSecondary
+import com.silas.omaster.ui.theme.TextTertiary
+import com.silas.omaster.ui.theme.Zinc700
+import com.silas.omaster.ui.theme.Zinc800
+import com.silas.omaster.ui.theme.Zinc900
 import com.silas.omaster.util.DownloadResult
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.ImageDownloadCallback
-import com.silas.omaster.ui.theme.DarkGray
-import com.silas.omaster.ui.theme.PureBlack
 import java.io.File
 
+// ============================================
+// 圆角规范
+// ============================================
+private val CardCornerRadius = 12.dp
+private val ButtonCornerRadius = 12.dp
+private val BadgeCornerRadius = 6.dp
+
+// ============================================
+// 间距规范
+// ============================================
+private val ComponentSpacing = 16.dp
+private val SmallSpacing = 8.dp
+private val TinySpacing = 4.dp
+
 /**
- * 通用顶部导航栏组件
+ * OMaster 通用顶部导航栏组件
+ *
+ * 设计规范:
+ * - 背景: PureBlack
+ * - 标题: 加粗白色
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,13 +122,13 @@ fun OMasterTopAppBar(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = TextPrimary
                 )
                 subtitle?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = HasselbladOrange
                     )
                 }
             }
@@ -99,15 +139,15 @@ fun OMasterTopAppBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back),
-                        tint = Color.White
+                        tint = TextPrimary
                     )
                 }
-            } ?: Box {}
+            }
         },
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = PureBlack,
-            titleContentColor = Color.White
+            containerColor = Zinc900,
+            titleContentColor = TextPrimary
         ),
         modifier = modifier
     )
@@ -115,6 +155,12 @@ fun OMasterTopAppBar(
 
 /**
  * 功能特性卡片组件
+ *
+ * 设计规范:
+ * - 图标: 渐变橙色背景 + 12dp 圆角
+ * - 标题: 加粗白色
+ * - 描述: Zinc400
+ * - 标签: Zinc700 半透明背景
  */
 @Composable
 fun FeatureCard(
@@ -126,37 +172,59 @@ fun FeatureCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(CardCornerRadius),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = Zinc800
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = BorderLight
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(ComponentSpacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = icon,
-                fontSize = iconSize
-            )
+            // 图标容器 - 渐变橙色背景
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                GradientOrangeStart,
+                                GradientOrangeEnd
+                            )
+                        ),
+                        shape = RoundedCornerShape(ButtonCornerRadius)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = icon,
+                    fontSize = iconSize
+                )
+            }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(ComponentSpacing))
 
-            Column {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    style = CardTitleStyle,
+                    fontSize = 18.sp
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(TinySpacing))
 
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f)
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
                 )
             }
         }
@@ -178,21 +246,23 @@ fun ParameterItem(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f)
+            style = ParameterLabelStyle
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(TinySpacing))
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
+            style = ParameterValueStyle
         )
     }
 }
 
 /**
- * 通用卡片组件
+ * OMaster 通用卡片组件
+ *
+ * 设计规范:
+ * - 圆角: 12dp
+ * - 背景: Zinc800
+ * - 边框: 1px Zinc700 半透明
  */
 @Composable
 fun OMasterCard(
@@ -201,9 +271,13 @@ fun OMasterCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CardCornerRadius),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = Zinc800
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = BorderLight
         ),
         content = content
     )
@@ -223,7 +297,12 @@ fun HorizontalSpacer(width: Dp) = Spacer(modifier = Modifier.width(width))
 
 /**
  * 模式标签组件
- * 支持显示多个标签
+ *
+ * 设计规范:
+ * - 支持显示多个标签
+ * - 圆角: 6dp
+ * - 背景: Zinc800
+ * - 边框: 0.5px Zinc700 半透明
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -239,27 +318,41 @@ fun ModeBadge(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         tags.forEach { tag ->
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(DarkGray)
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = tag,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            TagItem(text = tag)
         }
     }
 }
 
 /**
+ * 单个标签组件
+ */
+@Composable
+private fun TagItem(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(BadgeCornerRadius))
+            .background(Zinc800)
+            .border(
+                width = 0.5.dp,
+                color = BorderDefault.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(BadgeCornerRadius)
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = text,
+            style = TagTextStyle,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
  * 预设图片组件
- * 支持 assets、内部存储和网络图片（带本地缓存）
- * 优化：使用更短的 crossfade 动画时长，优先加载本地缓存，带下载状态
+ *
+ * 设计规范:
+ * - 支持 assets、内部存储和网络图片（带本地缓存）
+ * - 优化: 使用更短的 crossfade 动画时长，优先加载本地缓存，带下载状态
  */
 @Composable
 fun PresetImage(
@@ -277,7 +370,8 @@ fun PresetImage(
     // 如果是网络图片且未缓存，后台下载
     LaunchedEffect(preset.coverPath) {
         if (preset.coverPath.startsWith("http") &&
-            !ImageCacheManager.isImageCached(context, preset.coverPath)) {
+            !ImageCacheManager.isImageCached(context, preset.coverPath)
+        ) {
 
             downloadState = DownloadState.Downloading
 
@@ -325,6 +419,9 @@ fun PresetImage(
 
 /**
  * 简单加载指示器 - Material 3 风格
+ *
+ * 设计规范:
+ * - 使用品牌橙色
  */
 @Composable
 fun LoadingIndicator(
@@ -336,7 +433,7 @@ fun LoadingIndicator(
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(32.dp),
-            color = MaterialTheme.colorScheme.primary,
+            color = HasselbladOrange,
             strokeWidth = 3.dp
         )
     }
@@ -359,7 +456,7 @@ private sealed class DownloadState {
 fun SectionTitle(
     title: String,
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary
+    color: Color = HasselbladOrange
 ) {
     Text(
         text = title,
@@ -372,6 +469,11 @@ fun SectionTitle(
 
 /**
  * 带卡片的参数项组件
+ *
+ * 设计规范:
+ * - 圆角: 12dp
+ * - 背景: Zinc800
+ * - 边框: 0.5px Zinc700 半透明
  */
 @Composable
 fun ParameterCard(
@@ -381,32 +483,29 @@ fun ParameterCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CardCornerRadius),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = Zinc800
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 0.5.dp,
-            color = Color.White.copy(alpha = 0.08f)
+            color = BorderLight
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(ComponentSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f)
+                style = ParameterLabelStyle
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(TinySpacing))
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                style = ParameterValueStyle
             )
         }
     }
@@ -429,6 +528,11 @@ fun ShootingTipsCard(
 
 /**
  * 通用描述卡片组件
+ *
+ * 设计规范:
+ * - 圆角: 12dp
+ * - 背景: Zinc800 半透明
+ * - 图标: 品牌橙色
  */
 @Composable
 fun DescriptionCard(
@@ -438,15 +542,19 @@ fun DescriptionCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CardCornerRadius),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray.copy(alpha = 0.8f)
+            containerColor = Zinc800.copy(alpha = 0.8f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = BorderLight
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(ComponentSpacing)
         ) {
             // 标题行
             Row(
@@ -455,19 +563,19 @@ fun DescriptionCard(
                 Icon(
                     imageVector = Icons.Filled.Lightbulb,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = HasselbladOrange,
                     modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(SmallSpacing))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = HasselbladOrange
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(SmallSpacing))
 
             // 内容
             content.split("\n").forEach { line ->
@@ -475,12 +583,126 @@ fun DescriptionCard(
                     Text(
                         text = line.trim(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = TextPrimary.copy(alpha = 0.9f),
                         lineHeight = 22.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(TinySpacing))
                 }
             }
         }
+    }
+}
+
+/**
+ * 主按钮组件
+ *
+ * 设计规范:
+ * - 渐变背景: 橙色渐变
+ * - 圆角: 12dp
+ * - 文字: 白色加粗
+ * - 悬停效果: 缩放 1.05x
+ */
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "buttonScale"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .clip(RoundedCornerShape(ButtonCornerRadius))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        GradientOrangeStart,
+                        GradientOrangeEnd
+                    )
+                ),
+                shape = RoundedCornerShape(ButtonCornerRadius)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick
+            )
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            leadingIcon?.let { it() }
+            Text(
+                text = text,
+                style = ButtonTextStyle,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+/**
+ * 次要按钮组件
+ *
+ * 设计规范:
+ * - 背景: Zinc800
+ * - 边框: 1px Zinc700
+ * - 圆角: 12dp
+ */
+@Composable
+fun SecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "buttonScale"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .clip(RoundedCornerShape(ButtonCornerRadius))
+            .background(Zinc800)
+            .border(
+                width = 1.dp,
+                color = BorderDefault,
+                shape = RoundedCornerShape(ButtonCornerRadius)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick
+            )
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = ButtonTextStyle,
+            color = TextPrimary
+        )
     }
 }

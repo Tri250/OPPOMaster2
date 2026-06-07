@@ -6,14 +6,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntOffset
 
 /**
- * 全局动画配置
+ * OMaster 全局动画配置
+ *
+ * 设计规范:
+ * - 快速动画: 150-200ms (按钮点击、图标变化等)
+ * - 标准动画: 250-300ms (页面切换、内容显示等)
+ * - 慢速动画: 400-500ms (卡片入场、重要提示等)
+ * - 列表项入场: 使用 Spring 减少计算量
+ *
  * 统一管理应用内所有动画规格，确保一致性和性能
  */
 object AnimationSpecs {
 
     /**
      * 快速动画 - 用于微交互（按钮点击、图标变化等）
-     * 时长：150ms
+     * 时长: 150ms
      */
     val FastTween = tween<Float>(
         durationMillis = 150,
@@ -22,25 +29,61 @@ object AnimationSpecs {
 
     /**
      * 标准动画 - 用于一般过渡（页面切换、内容显示等）
-     * 时长：250ms
+     * 时长: 300ms (符合设计规范)
      */
     val NormalTween = tween<Float>(
-        durationMillis = 250,
+        durationMillis = 300,
         easing = FastOutSlowInEasing
     )
 
     /**
      * 慢速动画 - 用于强调动画（卡片入场、重要提示等）
-     * 时长：400ms
+     * 时长: 500ms (符合设计规范)
      */
     val SlowTween = tween<Float>(
-        durationMillis = 400,
+        durationMillis = 500,
+        easing = FastOutSlowInEasing
+    )
+
+    /**
+     * 淡入动画规格
+     * 时长: 200ms
+     */
+    val FadeInSpec = tween<Float>(
+        durationMillis = 200,
+        easing = LinearOutSlowInEasing
+    )
+
+    /**
+     * 淡出动画规格
+     * 时长: 150ms
+     */
+    val FadeOutSpec = tween<Float>(
+        durationMillis = 150,
+        easing = FastOutLinearInEasing
+    )
+
+    /**
+     * 滑动动画规格
+     * 时长: 300ms
+     */
+    val SlideSpec = tween<Int>(
+        durationMillis = 300,
+        easing = FastOutSlowInEasing
+    )
+
+    /**
+     * 缩放动画规格
+     * 时长: 200ms
+     */
+    val ScaleSpec = tween<Float>(
+        durationMillis = 200,
         easing = FastOutSlowInEasing
     )
 
     /**
      * 列表项入场动画 - 轻量级，适合大量列表项
-     * 使用较硬的 spring 减少计算量
+     * 使用较硬的 Spring 减少计算量
      */
     val ListItemSpring = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
@@ -50,7 +93,7 @@ object AnimationSpecs {
 
     /**
      * 卡片弹性动画 - 用于卡片等需要弹性的元素
-     * 优化：提高刚度，减少拖沓感
+     * 优化: 提高刚度，减少拖沓感
      */
     val CardSpring = spring<Float>(
         dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -59,46 +102,42 @@ object AnimationSpecs {
     )
 
     /**
-     * 淡入动画规格
+     * 按钮缩放动画 - 用于按钮悬停/点击效果
+     * 缩放: 1.05x (悬停), 0.95x (点击)
      */
-    val FadeInSpec = tween<Float>(
-        durationMillis = 200,
-        easing = LinearOutSlowInEasing
+    val ButtonScaleSpec = spring<Float>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium
     )
 
     /**
-     * 淡出动画规格
+     * 图片缩放动画 - 用于卡片图片悬停效果
+     * 缩放: 1.05x
+     * 时长: 500ms
      */
-    val FadeOutSpec = tween<Float>(
-        durationMillis = 150,
-        easing = FastOutLinearInEasing
-    )
-
-    /**
-     * 滑动动画规格
-     */
-    val SlideSpec = tween<Int>(
-        durationMillis = 300,
+    val ImageScaleSpec = tween<Float>(
+        durationMillis = 500,
         easing = FastOutSlowInEasing
     )
 
     /**
-     * 缩放动画规格
+     * Hero 区域入场动画
+     * 时长: 800ms
      */
-    val ScaleSpec = tween<Float>(
-        durationMillis = 200,
+    val HeroEnterSpec = tween<Float>(
+        durationMillis = 800,
         easing = FastOutSlowInEasing
     )
 
     /**
      * 列表项错开延迟基准值
-     * 优化：从 50ms 减少到 20ms，提升加载流畅度
+     * 优化: 从 50ms 减少到 20ms，提升加载流畅度
      */
     const val StaggerDelayMillis = 20
 
     /**
      * 列表项最大延迟
-     * 优化：从 300ms 减少到 150ms，提升加载流畅度
+     * 优化: 从 300ms 减少到 150ms，提升加载流畅度
      */
     const val MaxStaggerDelayMillis = 150
 
@@ -110,7 +149,7 @@ object AnimationSpecs {
     /**
      * 页面切换动画时长
      */
-    const val PageTransitionMillis = 250
+    const val PageTransitionMillis = 300
 }
 
 /**
@@ -153,3 +192,19 @@ val ListItemFadeInSpec = spring<Float>(
     stiffness = Spring.StiffnessMedium,
     visibilityThreshold = 0.01f
 )
+
+/**
+ * 创建入场动画配置
+ * @param delayMillis 延迟毫秒数
+ * @return TweenSpec
+ */
+fun createEnterAnimationSpec(
+    delayMillis: Int = 0,
+    durationMillis: Int = AnimationSpecs.NormalTween.durationMillis
+): TweenSpec<Float> {
+    return tween(
+        durationMillis = durationMillis,
+        delayMillis = delayMillis,
+        easing = FastOutSlowInEasing
+    )
+}
