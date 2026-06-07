@@ -1,6 +1,22 @@
 import { create } from 'zustand';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
+export type SubPageType = 
+  | 'ai-scene' 
+  | 'ai-fine-tune' 
+  | 'smart-optimize' 
+  | 'watermark' 
+  | 'param-adjust' 
+  | 'preset-manager'
+  | 'hasselblad'
+  | 'cloud-sync'
+  | 'theme-settings'
+  | 'dark-mode'
+  | 'update-channel'
+  | 'notification'
+  | 'privacy'
+  | 'terms'
+  | null;
 
 export interface Preset {
   id: string;
@@ -33,6 +49,10 @@ export interface Feature {
 interface AppState {
   currentPage: PageType;
   setCurrentPage: (page: PageType) => void;
+  currentSubPage: SubPageType;
+  setCurrentSubPage: (page: SubPageType) => void;
+  navigateToSubPage: (page: SubPageType) => void;
+  goBack: () => void;
   selectedTab: number;
   setSelectedTab: (tab: number) => void;
   selectedBrand: string | null;
@@ -41,11 +61,52 @@ interface AppState {
   setSelectedScene: (scene: string | null) => void;
   features: Feature[];
   toggleFeature: (id: string) => void;
+  // AI 微调参数
+  aiParams: {
+    saturation: number;
+    contrast: number;
+    brightness: number;
+    warmth: number;
+    sharpness: number;
+  };
+  setAiParam: (key: string, value: number) => void;
+  // 参数调节
+  cameraParams: {
+    iso: number;
+    shutter: number;
+    aperture: number;
+    wb: number;
+  };
+  setCameraParam: (key: string, value: number) => void;
+  // 水印设置
+  watermarkSettings: {
+    enabled: boolean;
+    template: string;
+    customText: string;
+    position: string;
+  };
+  setWatermarkSetting: (key: string, value: string | boolean) => void;
+  // 主题设置
+  theme: 'hasselblad' | 'oppo' | 'vivo' | 'realme' | 'honor' | 'xiaomi';
+  setTheme: (theme: AppState['theme']) => void;
+  darkMode: 'system' | 'light' | 'dark';
+  setDarkMode: (mode: AppState['darkMode']) => void;
+  // 通知设置
+  notifications: {
+    enabled: boolean;
+    updates: boolean;
+    promotions: boolean;
+  };
+  setNotification: (key: string, value: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   currentPage: 'home',
   setCurrentPage: (page) => set({ currentPage: page }),
+  currentSubPage: null,
+  setCurrentSubPage: (page) => set({ currentSubPage: page }),
+  navigateToSubPage: (page) => set({ currentSubPage: page }),
+  goBack: () => set({ currentSubPage: null }),
   selectedTab: 0,
   setSelectedTab: (tab) => set({ selectedTab: tab }),
   selectedBrand: null,
@@ -139,6 +200,55 @@ export const useAppStore = create<AppState>((set) => ({
       features: state.features.map((f) =>
         f.id === id ? { ...f, enabled: !f.enabled } : f
       ),
+    })),
+  // AI 微调参数
+  aiParams: {
+    saturation: 10,
+    contrast: 5,
+    brightness: 0,
+    warmth: 8,
+    sharpness: 15,
+  },
+  setAiParam: (key, value) =>
+    set((state) => ({
+      aiParams: { ...state.aiParams, [key]: value },
+    })),
+  // 参数调节
+  cameraParams: {
+    iso: 100,
+    shutter: 125,
+    aperture: 2.8,
+    wb: 5500,
+  },
+  setCameraParam: (key, value) =>
+    set((state) => ({
+      cameraParams: { ...state.cameraParams, [key]: value },
+    })),
+  // 水印设置
+  watermarkSettings: {
+    enabled: true,
+    template: 'default',
+    customText: 'Shot on OMaster',
+    position: 'bottom-right',
+  },
+  setWatermarkSetting: (key, value) =>
+    set((state) => ({
+      watermarkSettings: { ...state.watermarkSettings, [key]: value },
+    })),
+  // 主题设置
+  theme: 'hasselblad',
+  setTheme: (theme) => set({ theme }),
+  darkMode: 'system',
+  setDarkMode: (mode) => set({ darkMode: mode }),
+  // 通知设置
+  notifications: {
+    enabled: true,
+    updates: true,
+    promotions: false,
+  },
+  setNotification: (key, value) =>
+    set((state) => ({
+      notifications: { ...state.notifications, [key]: value },
     })),
 }));
 

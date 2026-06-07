@@ -1,20 +1,26 @@
 import React from 'react';
 import { useAppStore, homePresets } from '../store/appStore';
-import { Camera, Palette, Droplets, Cpu, Images, SlidersHorizontal, Heart } from 'lucide-react';
+import { Camera, Palette, Droplets, Cpu, Images, SlidersHorizontal, Heart, ChevronRight } from 'lucide-react';
 
 const featureEntries = [
-  { id: 'scene', title: 'AI场景', icon: Camera, color: '#4CAF50' },
-  { id: 'fine-tune', title: 'AI微调', icon: Palette, color: '#9C27B0' },
-  { id: 'watermark', title: '水印', icon: Droplets, color: '#00BCD4' },
-  { id: 'optimize', title: '优化', icon: Cpu, color: '#2196F3' },
-  { id: 'preset', title: '预设', icon: Images, color: '#FF9800' },
-  { id: 'param', title: '参数', icon: SlidersHorizontal, color: '#E91E63' },
+  { id: 'scene', title: 'AI场景', icon: Camera, color: '#4CAF50', route: 'ai-fine-tune' as const },
+  { id: 'fine-tune', title: 'AI微调', icon: Palette, color: '#9C27B0', route: 'ai-fine-tune' as const },
+  { id: 'watermark', title: '水印', icon: Droplets, color: '#00BCD4', route: 'watermark' as const },
+  { id: 'optimize', title: '优化', icon: Cpu, color: '#2196F3', route: 'ai-fine-tune' as const },
+  { id: 'preset', title: '预设', icon: Images, color: '#FF9800', route: null },
+  { id: 'param', title: '参数', icon: SlidersHorizontal, color: '#E91E63', route: 'param-adjust' as const },
 ];
 
 const tabs = ['全部', '收藏', '我的'];
 
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab } = useAppStore();
+  const { selectedTab, setSelectedTab, navigateToSubPage } = useAppStore();
+
+  const handleFeatureClick = (route: string | null) => {
+    if (route) {
+      navigateToSubPage(route as any);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
@@ -29,11 +35,17 @@ const HomeScreen: React.FC = () => {
           {featureEntries.map((entry) => (
             <button
               key={entry.id}
-              className="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-              style={{ backgroundColor: `${entry.color}20` }}
+              onClick={() => handleFeatureClick(entry.route)}
+              className="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 group relative overflow-hidden"
+              style={{ backgroundColor: `${entry.color}15` }}
             >
-              <entry.icon size={18} style={{ color: entry.color }} />
-              <span className="text-[10px] font-medium" style={{ color: entry.color }}>
+              {/* Glass Effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              <div className="relative z-10">
+                <entry.icon size={18} style={{ color: entry.color }} />
+              </div>
+              <span className="relative z-10 text-[10px] font-medium" style={{ color: entry.color }}>
                 {entry.title}
               </span>
             </button>
@@ -62,7 +74,7 @@ const HomeScreen: React.FC = () => {
       </div>
 
       {/* Preset Grid */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
         <div className="grid grid-cols-2 gap-3">
           {homePresets.map((preset, index) => (
             <div
@@ -71,6 +83,9 @@ const HomeScreen: React.FC = () => {
                 index % 3 === 0 ? 'aspect-[3/4]' : index % 3 === 1 ? 'aspect-square' : 'aspect-[4/5]'
               }`}
             >
+              {/* Glass Border Effect */}
+              <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
+              
               {/* Image */}
               <img
                 src={preset.coverPath}
@@ -89,13 +104,13 @@ const HomeScreen: React.FC = () => {
 
               {/* HNCS Badge */}
               {preset.isHncs && (
-                <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#FF6B35]/80 rounded text-[8px] font-bold text-white">
+                <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#FF6B35]/80 backdrop-blur-sm rounded text-[8px] font-bold text-white z-20">
                   HNCS
                 </div>
               )}
 
               {/* Favorite Button */}
-              <button className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60">
+              <button className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20">
                 <Heart size={14} className="text-white/70" />
               </button>
             </div>
