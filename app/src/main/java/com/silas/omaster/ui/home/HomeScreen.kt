@@ -27,15 +27,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.PhotoFilter
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -97,12 +89,6 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit,
-    onNavigateToSceneRecognition: () -> Unit = {},
-    onNavigateToAIFineTune: () -> Unit = {},
-    onNavigateToWatermarkEditor: () -> Unit = {},
-    onNavigateToSmartOptimize: () -> Unit = {},
-    onNavigateToPresetManager: () -> Unit = {},
-    onNavigateToParamAdjustment: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0
@@ -191,16 +177,6 @@ fun HomeScreen(
                     color = Color.White
                 )
             }
-
-            // 功能入口卡片区域
-            FeatureEntryRow(
-                onNavigateToSceneRecognition = onNavigateToSceneRecognition,
-                onNavigateToAIFineTune = onNavigateToAIFineTune,
-                onNavigateToWatermarkEditor = onNavigateToWatermarkEditor,
-                onNavigateToSmartOptimize = onNavigateToSmartOptimize,
-                onNavigateToPresetManager = onNavigateToPresetManager,
-                onNavigateToParamAdjustment = onNavigateToParamAdjustment
-            )
 
             // Tab 切换栏 - 带动画指示器
             ScrollableTabRow(
@@ -711,145 +687,6 @@ private fun LoadingMoreTip() {
                             )
                         )
                     )
-            )
-        }
-    }
-}
-
-/**
- * 功能入口卡片行 - 首页快速访问
- */
-@Composable
-private fun FeatureEntryRow(
-    onNavigateToSceneRecognition: () -> Unit,
-    onNavigateToAIFineTune: () -> Unit,
-    onNavigateToWatermarkEditor: () -> Unit,
-    onNavigateToSmartOptimize: () -> Unit,
-    onNavigateToPresetManager: () -> Unit,
-    onNavigateToParamAdjustment: () -> Unit
-) {
-    val haptic = LocalHapticFeedback.current
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // AI场景识别
-        FeatureEntryCard(
-            title = "AI场景",
-            icon = Icons.Default.CameraAlt,
-            color = Color(0xFF4CAF50),
-            onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
-                onNavigateToSceneRecognition()
-            },
-            modifier = Modifier.weight(1f)
-        )
-        
-        // AI微调
-        FeatureEntryCard(
-            title = "AI微调",
-            icon = Icons.Default.ColorLens,
-            color = Color(0xFF9C27B0),
-            onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
-                onNavigateToAIFineTune()
-            },
-            modifier = Modifier.weight(1f)
-        )
-        
-        // 水印编辑
-        FeatureEntryCard(
-            title = "水印",
-            icon = Icons.Default.WaterDrop,
-            color = Color(0xFF00BCD4),
-            onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
-                onNavigateToWatermarkEditor()
-            },
-            modifier = Modifier.weight(1f)
-        )
-        
-        // 智能优化
-        FeatureEntryCard(
-            title = "优化",
-            icon = Icons.Default.Memory,
-            color = Color(0xFF2196F3),
-            onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
-                onNavigateToSmartOptimize()
-            },
-            modifier = Modifier.weight(1f)
-        )
-        
-        // 预设管理
-        FeatureEntryCard(
-            title = "预设",
-            icon = Icons.Default.PhotoFilter,
-            color = Color(0xFFFF9800),
-            onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
-                onNavigateToPresetManager()
-            },
-            modifier = Modifier.weight(1f)
-        )
-        
-        // 参数调节
-        FeatureEntryCard(
-            title = "参数",
-            icon = Icons.Default.Tune,
-            color = Color(0xFFE91E63),
-            onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
-                onNavigateToParamAdjustment()
-            },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-/**
- * 单个功能入口卡片
- */
-@Composable
-private fun FeatureEntryCard(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .height(56.dp)
-            .hapticClickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.15f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = color,
-                modifier = Modifier.size(20.dp)
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(top = 2.dp)
             )
         }
     }

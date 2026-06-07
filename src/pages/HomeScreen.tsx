@@ -3,9 +3,7 @@ import { useAppStore } from '../store/appStore';
 import { useCloudPresets } from '../hooks/useCloudPresets';
 import { CloudPreset } from '../types/cloudPreset';
 import { 
-  Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search,
-  Camera, Palette, Droplets, Cpu, Image as ImageIcon, Sliders,
-  ChevronRight, Zap, Crown, TrendingUp
+  Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp
 } from 'lucide-react';
 
 const tabs = [
@@ -24,24 +22,13 @@ const brands = [
   { key: 'Hasselblad', label: '哈苏' },
 ];
 
-// 功能入口配置 - 参考 iCurrer/OMaster 首页设计
-const featureEntries = [
-  { id: 'ai-scene', title: 'AI场景', icon: Camera, color: '#4CAF50', route: 'ai-scene' as const },
-  { id: 'ai-fine-tune', title: 'AI微调', icon: Palette, color: '#9C27B0', route: 'ai-fine-tune' as const },
-  { id: 'watermark', title: '水印', icon: Droplets, color: '#00BCD4', route: 'watermark' as const },
-  { id: 'smart-optimize', title: '优化', icon: Cpu, color: '#2196F3', route: 'smart-optimize' as const },
-  { id: 'preset-manager', title: '预设', icon: ImageIcon, color: '#FF9800', route: 'preset-manager' as const },
-  { id: 'param-adjust', title: '参数', icon: Sliders, color: '#E91E63', route: 'param-adjust' as const },
-];
-
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab, setAiParam, navigateToSubPage } = useAppStore();
+  const { selectedTab, setSelectedTab, setAiParam } = useAppStore();
   const { presets, state, loading, refresh, toggleFavorite } = useCloudPresets();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
-  const [pullDistance, setPullDistance] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 下拉刷新
@@ -58,11 +45,6 @@ const HomeScreen: React.FC = () => {
     setAiParam('brightness', preset.params.brightness);
     setAiParam('warmth', preset.params.warmth);
   }, [setAiParam]);
-
-  // 功能入口点击
-  const handleFeatureClick = useCallback((route: typeof featureEntries[0]['route']) => {
-    navigateToSubPage(route);
-  }, [navigateToSubPage]);
 
   // 过滤和排序
   const filteredPresets = useMemo(() => {
@@ -164,36 +146,6 @@ const HomeScreen: React.FC = () => {
               <RefreshCw size={16} className={`text-white/70 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* 功能入口卡片行 - 参考 iCurrer/OMaster FeatureEntryRow */}
-      <div className="px-4 py-2">
-        <div className="grid grid-cols-6 gap-2">
-          {featureEntries.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <button
-                key={feature.id}
-                onClick={() => handleFeatureClick(feature.route)}
-                className="group flex flex-col items-center justify-center py-3 rounded-xl transition-all hover:scale-105 active:scale-95"
-                style={{ backgroundColor: `${feature.color}15` }}
-              >
-                <div 
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-transform group-hover:scale-110"
-                  style={{ backgroundColor: `${feature.color}25` }}
-                >
-                  <Icon size={16} style={{ color: feature.color }} />
-                </div>
-                <span 
-                  className="text-[10px] font-medium"
-                  style={{ color: feature.color }}
-                >
-                  {feature.title}
-                </span>
-              </button>
-            );
-          })}
         </div>
       </div>
 
