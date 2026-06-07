@@ -1,17 +1,145 @@
-import React from 'react';
-import { useAppStore, homePresets } from '../store/appStore';
-import { Heart } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { useAppStore } from '../store/appStore';
+import { useCloudPresets } from '../hooks/useCloudPresets';
+import { CloudPreset } from '../types/cloudPreset';
+import { Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search } from 'lucide-react';
 
-const tabs = ['全部', '收藏', '我的'];
+const tabs = [
+  { key: 'all', label: '全部' },
+  { key: 'favorites', label: '收藏' },
+  { key: 'hncs', label: '哈苏' },
+  { key: 'new', label: '上新' },
+];
+
+const brands = [
+  { key: 'all', label: '全部品牌' },
+  { key: 'oppo', label: 'OPPO' },
+  { key: 'oneplus', label: '一加' },
+  { key: 'realme', label: '真我' },
+];
 
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab } = useAppStore();
+  const { selectedTab, setSelectedTab, setAiParam } = useAppStore();
+  const { presets, state, loading, refresh, toggleFavorite } = useCloudPresets();
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeBrand, setActiveBrand] = useState('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
+
+  // 下拉刷新
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh(true);
+    setRefreshing(false);
+  };
+
+  // 应用预设
+  const handleApplyPreset = (preset: CloudPreset) => {
+    setAiParam('saturation', preset.params.saturation);
+    setAiParam('contrast', preset.params.contrast);
+    setAiParam('brightness', preset.params.brightness);
+    setAiParam('warmth', preset.params.warmth);
+  };
+
+  // 过滤和排序
+  const filteredPresets = useMemo(() => {
+    let result = [...presets];
+    
+    // Tab过滤
+    switch (tabs[selectedTab]?.key) {
+      case 'favorites':
+        result = result.filter(p => p.isFavorite);
+        break;
+      case 'hncs':
+        result = result.filter(p => p.isHncs);
+        break;
+      case 'new':
+        result = result.filter(p => p.isNew);
+        break;
+    }
+
+    // 品牌过滤
+    if (activeBrand !== 'all') {
+      result = result.filter(p => p.brand === activeBrand);
+    }
+
+    // 搜索过滤
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.author.toLowerCase().includes(q) ||
+        p.tags.some(t => t.toLowerCase().includes(q))
+      );
+    }
+
+    // 排序
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest': return b.updatedAt - a.updatedAt;
+        case 'popular': return b.downloadCount - a.downloadCount;
+        case 'rating': return b.rating - a.rating;
+        default: return 0;
+      }
+    });
+
+    // 置顶置顶
+    return [
+      ...result.filter(p => p.isPinned),
+      ...result.filter(p => !p.isPinned),
+    ];
+  }, [presets, selectedTab, activeBrand, searchQuery, sortBy]);
+
+  // 同步状态指示器
+  const SyncIndicator = () => {
+    if (state.status === 'syncing' || refreshing) {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-white/60">
+          <RefreshCw size={12} className="animate-spin" />
+          <span>同步中...</span>
+        </div>
+      );
+    }
+    if (state.status === 'success' && state.lastSyncTime > 0) {
+      return (
+        <div className="flex items-center gap-1.5 text-xs text-white/60">
+          <Cloud size={12} className="text-[#4CAF50]" />
+          <span>云端 {state.newCount > 0 ? `+${state.newCount}` : '已同步'}</span>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-2 pb-3">
-        <h1 className="text-xl font-bold text-white">OMaster</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl font-bold text-white">OMaster</h1>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <RefreshCw size={16} className={`text-white/70 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        <SyncIndicator />
+      </div>
+
+      {/* Search Bar */}
+      <div className="px-4 pb-3">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索预设 / 作者 / 标签"
+            className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#FF6B35] outline-none transition-colors"
+          />
+        </div>
       </div>
 
       {/* Tab Bar */}
@@ -19,13 +147,13 @@ const HomeScreen: React.FC = () => {
         <div className="flex gap-6 border-b border-white/10">
           {tabs.map((tab, index) => (
             <button
-              key={tab}
+              key={tab.key}
               onClick={() => setSelectedTab(index)}
               className={`relative pb-2 text-sm font-medium transition-colors duration-200 ${
                 selectedTab === index ? 'text-[#FF6B35]' : 'text-white/50 hover:text-white/70'
               }`}
             >
-              {tab}
+              {tab.label}
               {selectedTab === index && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6B35] rounded-full" />
               )}
@@ -34,54 +162,147 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* Brand Filter */}
+      <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        {brands.map((brand) => (
+          <button
+            key={brand.key}
+            onClick={() => setActiveBrand(brand.key)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              activeBrand === brand.key
+                ? 'bg-[#FF6B35] text-white'
+                : 'bg-white/5 text-white/60'
+            }`}
+          >
+            {brand.label}
+          </button>
+        ))}
+        
+        {/* Sort Dropdown */}
+        <div className="flex-shrink-0 ml-auto flex items-center gap-1">
+          <Filter size={12} className="text-white/40" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'popular' | 'rating')}
+            className="bg-transparent text-white/60 text-xs outline-none cursor-pointer"
+          >
+            <option value="newest" className="bg-[#1a1a1a]">最新</option>
+            <option value="popular" className="bg-[#1a1a1a]">最热</option>
+            <option value="rating" className="bg-[#1a1a1a]">评分</option>
+          </select>
+        </div>
+      </div>
+
       {/* Preset Grid */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
-        <div className="grid grid-cols-2 gap-3">
-          {homePresets.map((preset, index) => (
-            <div
-              key={preset.id}
-              className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${
-                index % 3 === 0 ? 'aspect-[3/4]' : index % 3 === 1 ? 'aspect-square' : 'aspect-[4/5]'
-              }`}
-            >
-              {/* Glass Border Effect */}
-              <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
+        {loading && presets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <RefreshCw size={32} className="text-[#FF6B35] animate-spin mb-3" />
+            <p className="text-white/50 text-sm">加载云端样张中...</p>
+          </div>
+        ) : filteredPresets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Cloud size={32} className="text-white/20 mb-3" />
+            <p className="text-white/50 text-sm">未找到匹配的预设</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredPresets.map((preset, index) => {
+              const aspectClass = 
+                preset.isPinned ? 'aspect-[3/4]' :
+                index % 3 === 0 ? 'aspect-[3/4]' :
+                index % 3 === 1 ? 'aspect-square' :
+                'aspect-[4/5]';
               
-              {/* Image */}
-              <img
-                src={preset.coverPath}
-                alt={preset.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
+              return (
+                <div
+                  key={preset.id}
+                  onClick={() => handleApplyPreset(preset)}
+                  className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${aspectClass}`}
+                >
+                  {/* Glass Border Effect */}
+                  <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
+                  
+                  {/* Image */}
+                  <img
+                    src={preset.coverPath}
+                    alt={preset.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    style={{
+                      filter: `saturate(${100 + preset.params.saturation}%) contrast(${100 + preset.params.contrast}%) brightness(${100 + preset.params.brightness}%)`,
+                    }}
+                  />
 
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-              {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-3">
-                <h3 className="text-white font-semibold text-sm mb-0.5">{preset.name}</h3>
-                <p className="text-white/60 text-xs">{preset.author}</p>
-              </div>
+                  {/* HNCS Badge */}
+                  {preset.isHncs && (
+                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-gradient-to-r from-[#FF6B35] to-[#FF9800] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20 flex items-center gap-0.5">
+                      <Sparkles size={8} />
+                      <span>HNCS</span>
+                    </div>
+                  )}
 
-              {/* HNCS Badge */}
-              {preset.isHncs && (
-                <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#FF6B35]/80 backdrop-blur-sm rounded text-[8px] font-bold text-white z-20">
-                  HNCS
+                  {/* NEW Badge */}
+                  {preset.isNew && !preset.isHncs && (
+                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#4CAF50] backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
+                      NEW
+                    </div>
+                  )}
+
+                  {/* Pinned Badge */}
+                  {preset.isPinned && (
+                    <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-yellow-500/80 backdrop-blur-sm rounded text-[9px] font-bold text-white z-20">
+                      📌
+                    </div>
+                  )}
+
+                  {/* Favorite Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(preset.id);
+                    }}
+                    className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20"
+                  >
+                    <Heart
+                      size={14}
+                      className={preset.isFavorite ? 'text-red-500 fill-red-500' : 'text-white/70'}
+                    />
+                  </button>
+
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 pr-10">
+                    <h3 className="text-white font-semibold text-sm mb-0.5 truncate">{preset.name}</h3>
+                    <p className="text-white/60 text-xs truncate">{preset.author}</p>
+                    
+                    {/* Stats */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-0.5">
+                        <Star size={9} className="text-yellow-400 fill-yellow-400" />
+                        <span className="text-white/50 text-[10px]">{preset.rating.toFixed(1)}</span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <Download size={9} className="text-white/40" />
+                        <span className="text-white/50 text-[10px]">
+                          {preset.downloadCount > 10000 ? `${(preset.downloadCount / 10000).toFixed(1)}w` : preset.downloadCount}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              {/* Favorite Button */}
-              <button className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-200 hover:bg-black/60 z-20">
-                <Heart size={14} className="text-white/70" />
-              </button>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Loading Hint */}
         <div className="py-6 text-center">
           <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mb-3" />
-          <p className="text-[#FF6B35]/80 text-xs font-medium tracking-wider">持续更新 敬请期待</p>
+          <p className="text-[#FF6B35]/80 text-xs font-medium tracking-wider">
+            持续更新 敬请期待
+          </p>
           <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mt-3" />
         </div>
       </div>
