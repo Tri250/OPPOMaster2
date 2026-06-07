@@ -601,46 +601,101 @@
         }
 
         /* ============================================
-           AI页面
+           AI场景识别页面 - 新设计
            ============================================ */
         .ai-page {
             padding: 20px;
         }
 
-        .ai-hero {
-            background: linear-gradient(135deg, #1E3A5F 0%, #2D5A8A 100%);
+        /* 顶部功能卡片 - 参考图片风格 */
+        .ai-feature-card {
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
             border-radius: var(--radius-xl);
-            padding: 24px;
+            padding: 20px;
             margin-bottom: 24px;
-            position: relative;
-            overflow: hidden;
+            transition: all var(--duration-slow) var(--ease-out);
         }
 
-        .ai-hero::before {
-            content: '';
-            position: absolute;
-            top: -30%;
-            right: -10%;
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        .ai-feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(249, 115, 22, 0.3);
         }
 
-        .ai-title {
-            font-size: 24px;
+        .ai-feature-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        /* 橙色方形图标背景 */
+        .ai-feature-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-orange);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ai-feature-icon svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+            stroke-width: 2;
+        }
+
+        .ai-feature-content {
+            flex: 1;
+        }
+
+        /* 白色粗体标题 */
+        .ai-feature-title {
+            font-size: 20px;
             font-weight: 700;
-            margin-bottom: 8px;
+            color: white;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
         }
 
-        .ai-subtitle {
+        /* 灰色描述文字 */
+        .ai-feature-desc {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--zinc-400);
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        /* 灰色圆角标签 */
+        .ai-feature-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .ai-feature-tag {
+            font-size: 12px;
+            padding: 6px 12px;
+            background: rgba(63, 63, 70, 0.6);
+            border-radius: var(--radius-sm);
+            color: var(--zinc-300);
+            font-weight: 500;
+        }
+
+        /* 场景识别网格 */
+        .ai-section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
         }
 
         .scene-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 24px;
         }
 
@@ -660,7 +715,13 @@
 
         .scene-item:hover {
             background: rgba(39, 39, 42, 0.7);
-            transform: scale(1.03);
+            border-color: rgba(249, 115, 22, 0.3);
+            transform: scale(1.02);
+        }
+
+        .scene-item.active {
+            background: rgba(249, 115, 22, 0.15);
+            border-color: rgba(249, 115, 22, 0.5);
         }
 
         .scene-icon {
@@ -675,6 +736,65 @@
         .scene-name {
             font-size: 12px;
             color: var(--zinc-400);
+            font-weight: 500;
+        }
+
+        .scene-item.active .scene-name {
+            color: var(--orange-400);
+        }
+
+        /* 场景详情卡片 */
+        .scene-detail-card {
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .scene-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .scene-detail-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-orange);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .scene-detail-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .scene-detail-desc {
+            font-size: 14px;
+            color: var(--zinc-400);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .scene-params {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .scene-param {
+            font-size: 12px;
+            padding: 6px 12px;
+            background: rgba(63, 63, 70, 0.6);
+            border-radius: var(--radius-sm);
+            color: var(--zinc-300);
             font-weight: 500;
         }
 
@@ -1137,14 +1257,37 @@
                         </div>
                     </div>
 
-                    <!-- AI页面 -->
+                    <!-- AI页面 - 新设计 -->
                     <div class="page ai-page" id="page-ai">
-                        <div class="ai-hero">
-                            <h2 class="ai-title">AI 场景识别</h2>
-                            <p class="ai-subtitle">智能分析画面内容，推荐最佳拍摄参数</p>
+                        <!-- 顶部功能卡片 - 参考图片风格 -->
+                        <div class="ai-feature-card">
+                            <div class="ai-feature-header">
+                                <div class="ai-feature-icon">
+                                    <!-- 魔法棒图标 -->
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <path d="M12 18v-6"/>
+                                        <path d="M9 15l3-3 3 3"/>
+                                        <circle cx="12" cy="9" r="2"/>
+                                    </svg>
+                                </div>
+                                <div class="ai-feature-content">
+                                    <div class="ai-feature-title">AI 场景识别</div>
+                                    <div class="ai-feature-desc">基于深度学习的场景识别引擎，支持35+拍摄场景自动识别，智能推荐最佳参数配置</div>
+                                    <div class="ai-feature-tags">
+                                        <span class="ai-feature-tag">人像场景</span>
+                                        <span class="ai-feature-tag">夜景场景</span>
+                                        <span class="ai-feature-tag">美食场景</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- 场景网格 -->
+                        <div class="ai-section-title">拍摄场景</div>
                         <div class="scene-grid">
-                            <div class="scene-item">
+                            <div class="scene-item active">
                                 <span class="scene-icon">👤</span>
                                 <span class="scene-name">人像</span>
                             </div>
@@ -1181,21 +1324,66 @@
                                 <span class="scene-name">日落</span>
                             </div>
                         </div>
-                        <div class="section-header">
-                            <h2 class="section-title">智能优化建议</h2>
-                        </div>
-                        <div class="preset-list">
-                            <div class="preset-card">
-                                <div class="preset-info">
-                                    <div class="preset-name">🎯 人像增强</div>
-                                    <div class="preset-device">检测到人脸，建议开启美颜和背景虚化</div>
-                                </div>
+
+                        <!-- 场景详情卡片 - 新设计 -->
+                        <div class="ai-section-title">场景优化</div>
+                        <div class="scene-detail-card">
+                            <div class="scene-detail-header">
+                                <div class="scene-detail-icon">👤</div>
+                                <div class="scene-detail-title">人像场景</div>
                             </div>
-                            <div class="preset-card">
-                                <div class="preset-info">
-                                    <div class="preset-name">🌙 夜景降噪</div>
-                                    <div class="preset-device">光线不足，建议降低ISO并延长曝光时间</div>
-                                </div>
+                            <div class="scene-detail-desc">
+                                智能美颜、肤色优化、背景虚化。自动识别人脸位置，优化曝光和对焦，让人像更加清晰自然。
+                            </div>
+                            <div class="scene-params">
+                                <span class="scene-param">智能美颜</span>
+                                <span class="scene-param">肤色优化</span>
+                                <span class="scene-param">背景虚化</span>
+                            </div>
+                        </div>
+
+                        <div class="scene-detail-card">
+                            <div class="scene-detail-header">
+                                <div class="scene-detail-icon">🌃</div>
+                                <div class="scene-detail-title">夜景场景</div>
+                            </div>
+                            <div class="scene-detail-desc">
+                                降噪增强、高光抑制、暗部提亮。多帧合成技术，夜景照片更清晰明亮。
+                            </div>
+                            <div class="scene-params">
+                                <span class="scene-param">降噪增强</span>
+                                <span class="scene-param">高光抑制</span>
+                                <span class="scene-param">暗部提亮</span>
+                            </div>
+                        </div>
+
+                        <div class="scene-detail-card">
+                            <div class="scene-detail-header">
+                                <div class="scene-detail-icon">🍜</div>
+                                <div class="scene-detail-title">美食场景</div>
+                            </div>
+                            <div class="scene-detail-desc">
+                                色彩增强、饱和度优化、暖色调。让美食照片更加诱人，色彩更加饱满。
+                            </div>
+                            <div class="scene-params">
+                                <span class="scene-param">色彩增强</span>
+                                <span class="scene-param">饱和度优化</span>
+                                <span class="scene-param">暖色调</span>
+                            </div>
+                        </div>
+
+                        <div class="scene-detail-card">
+                            <div class="scene-detail-header">
+                                <div class="scene-detail-icon">🏔️</div>
+                                <div class="scene-detail-title">风景场景</div>
+                            </div>
+                            <div class="scene-detail-desc">
+                                HDR增强、广角优化、动态范围。风景照片层次更丰富，细节更清晰。
+                            </div>
+                            <div class="scene-params">
+                                <span class="scene-param">HDR增强</span>
+                                <span class="scene-param">广角优化</span>
+                                <span class="scene-param">动态范围</span>
                             </div>
                         </div>
                     </div>
