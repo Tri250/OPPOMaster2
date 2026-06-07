@@ -159,7 +159,14 @@ data class MasterPreset(
     val description: PresetDescription? = null,
     val shootingTips: String? = null,
     val sections: List<PresetSection>? = null,
-    val tags: List<String>? = emptyList()
+    val tags: List<String>? = emptyList(),
+    // Web端新增字段
+    val deviceModel: String? = null,           // 设备型号，如 "OPPO Find X8 Ultra"
+    val sceneType: String? = null,             // 场景类型，如 "人像", "夜景"
+    val rating: Float? = null,                 // 评分，如 4.9
+    val downloadCount: Int? = null,            // 下载次数，如 158642
+    val isHncsCertified: Boolean = false,      // 是否哈苏HNCS认证
+    val cameraParams: CameraParams? = null     // 相机参数详情
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString(),

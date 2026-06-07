@@ -5,16 +5,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,11 +40,14 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.theme.CardBorderHighlight
 import com.silas.omaster.ui.theme.CardBorderLight
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.PresetI18n
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 
+/**
+ * PresetCard - 适配Web端设计
+ * 包含：评分、下载量、HNCS认证徽章、参数预览
+ */
 @Composable
 fun PresetCard(
     preset: MasterPreset,
@@ -54,12 +57,12 @@ fun PresetCard(
     showFavoriteButton: Boolean = false,
     showDeleteButton: Boolean = false,
     modifier: Modifier = Modifier,
-    imageHeight: Int = 200
+    imageHeight: Int = 160
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val haptic = LocalHapticFeedback.current
-    
+
     val borderColor = if (isPressed) CardBorderHighlight else CardBorderLight
     val borderWidth = if (isPressed) 1.5.dp else 1.dp
 
@@ -96,42 +99,119 @@ fun PresetCard(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                if (showFavoriteButton) {
-                    IconButton(
-            onClick = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
-                onFavoriteClick()
-            },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp)
-                .size(36.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(
-                        color = if (preset.isFavorite) 
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) 
-                        else 
-                            Color.Black.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(14.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (preset.isFavorite)
-                        Icons.Filled.Favorite
-                    else
-                        Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (preset.isFavorite) stringResource(R.string.preset_favorited) else stringResource(R.string.preset_favorite),
-                    tint = if (preset.isFavorite) MaterialTheme.colorScheme.primary else Color.White,
-                    modifier = Modifier.size(18.dp)
+                // 渐变遮罩
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.6f)
+                                )
+                            )
+                        )
                 )
-            }
-        }
+
+                // HNCS认证徽章 - Web端设计
+                if (preset.isHncsCertified) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(
+                                color = HasselbladOrange.copy(alpha = 0.9f),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Shield,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "HNCS",
+                                fontSize = 10.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
 
+                // 评分 - Web端设计
+                if (preset.rating != null && preset.rating > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "${preset.rating}",
+                                fontSize = 10.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                // 收藏按钮
+                if (showFavoriteButton) {
+                    IconButton(
+                        onClick = {
+                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            onFavoriteClick()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .size(32.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(
+                                    color = if (preset.isFavorite)
+                                        HasselbladOrange.copy(alpha = 0.3f)
+                                    else
+                                        Color.Black.copy(alpha = 0.4f),
+                                    shape = RoundedCornerShape(14.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (preset.isFavorite)
+                                    Icons.Filled.Favorite
+                                else
+                                    Icons.Outlined.FavoriteBorder,
+                                contentDescription = if (preset.isFavorite) stringResource(R.string.preset_favorited) else stringResource(R.string.preset_favorite),
+                                tint = if (preset.isFavorite) HasselbladOrange else Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 删除按钮
                 if (showDeleteButton && preset.isCustom) {
                     IconButton(
                         onClick = {
@@ -139,15 +219,15 @@ fun PresetCard(
                             onDeleteClick()
                         },
                         modifier = Modifier
-                            .align(Alignment.TopStart)
+                            .align(Alignment.BottomStart)
                             .padding(8.dp)
-                            .size(36.dp)
+                            .size(32.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
                                 .background(
-                                    color = Color.Black.copy(alpha = 0.3f),
+                                    color = Color.Black.copy(alpha = 0.4f),
                                     shape = RoundedCornerShape(14.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -156,22 +236,23 @@ fun PresetCard(
                                 imageVector = Icons.Filled.Delete,
                                 contentDescription = stringResource(R.string.preset_delete),
                                 tint = Color.Red,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
                 }
 
+                // NEW标签
                 if (preset.isNew) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopStart)
+                            .align(Alignment.TopCenter)
                             .padding(8.dp)
                             .background(
                                 brush = Brush.horizontalGradient(
                                     colors = listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.tertiary
+                                        HasselbladOrange,
+                                        HasselbladOrange.copy(alpha = 0.8f)
                                     )
                                 ),
                                 shape = RoundedCornerShape(4.dp)
@@ -188,20 +269,138 @@ fun PresetCard(
                 }
             }
 
+            // 内容区域 - Web端设计
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
+                // 标题
                 Text(
                     text = PresetI18n.getLocalizedPresetName(preset.name),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                // 作者和设备型号 - Web端设计
+                val authorText = buildString {
+                    append(preset.author)
+                    preset.deviceModel?.let {
+                        append(" · ")
+                        append(it)
+                    }
+                }
+                Text(
+                    text = authorText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.5f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+
+                // 描述 - Web端设计
+                preset.description?.content?.let { desc ->
+                    Text(
+                        text = desc,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                // 标签 - Web端设计
+                if (!preset.tags.isNullOrEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        preset.tags.take(3).forEach { tag ->
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = tag,
+                                    fontSize = 9.sp,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 参数预览 - Web端设计
+                if (preset.cameraParams != null) {
+                    val params = preset.cameraParams
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "ISO ${params.iso}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = params.shutter,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = params.aperture,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+
+                // 下载量 - Web端设计
+                if (preset.downloadCount != null && preset.downloadCount > 0) {
+                    Row(
+                        modifier = Modifier.padding(top = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Download,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = formatDownloadCount(preset.downloadCount),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.4f)
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * 格式化下载次数
+ */
+private fun formatDownloadCount(count: Int): String {
+    return when {
+        count >= 10000 -> "${count / 10000}万+ 次下载"
+        count >= 1000 -> "${count / 1000}k+ 次下载"
+        else -> "$count 次下载"
     }
 }
 
@@ -212,13 +411,13 @@ fun PresetCardPlaceholder(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(250.dp)
+            .height(280.dp)
             .border(
                 width = 1.dp,
                 color = CardBorderLight,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(16.dp)
             ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = DarkGray
         )
