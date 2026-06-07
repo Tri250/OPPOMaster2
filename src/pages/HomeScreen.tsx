@@ -1,8 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useAppStore } from '../store/appStore';
 import { useCloudPresets } from '../hooks/useCloudPresets';
 import { CloudPreset } from '../types/cloudPreset';
-import { Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search } from 'lucide-react';
+import { 
+  Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search,
+  Camera, Palette, Droplets, Cpu, Image as ImageIcon, Sliders,
+  ChevronRight, Zap, Crown, TrendingUp
+} from 'lucide-react';
 
 const tabs = [
   { key: 'all', label: '全部' },
@@ -13,33 +17,52 @@ const tabs = [
 
 const brands = [
   { key: 'all', label: '全部品牌' },
-  { key: 'oppo', label: 'OPPO' },
-  { key: 'oneplus', label: '一加' },
+  { key: 'OPPO', label: 'OPPO' },
+  { key: 'OnePlus', label: '一加' },
   { key: 'realme', label: '真我' },
+  { key: 'vivo', label: 'vivo' },
+  { key: 'Hasselblad', label: '哈苏' },
+];
+
+// 功能入口配置 - 参考 iCurrer/OMaster 首页设计
+const featureEntries = [
+  { id: 'ai-scene', title: 'AI场景', icon: Camera, color: '#4CAF50', route: 'ai-scene' as const },
+  { id: 'ai-fine-tune', title: 'AI微调', icon: Palette, color: '#9C27B0', route: 'ai-fine-tune' as const },
+  { id: 'watermark', title: '水印', icon: Droplets, color: '#00BCD4', route: 'watermark' as const },
+  { id: 'smart-optimize', title: '优化', icon: Cpu, color: '#2196F3', route: 'smart-optimize' as const },
+  { id: 'preset-manager', title: '预设', icon: ImageIcon, color: '#FF9800', route: 'preset-manager' as const },
+  { id: 'param-adjust', title: '参数', icon: Sliders, color: '#E91E63', route: 'param-adjust' as const },
 ];
 
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab, setAiParam } = useAppStore();
+  const { selectedTab, setSelectedTab, setAiParam, navigateToSubPage } = useAppStore();
   const { presets, state, loading, refresh, toggleFavorite } = useCloudPresets();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
+  const [pullDistance, setPullDistance] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // 下拉刷新
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await refresh(true);
-    setRefreshing(false);
-  };
+    setTimeout(() => setRefreshing(false), 500);
+  }, [refresh]);
 
   // 应用预设
-  const handleApplyPreset = (preset: CloudPreset) => {
+  const handleApplyPreset = useCallback((preset: CloudPreset) => {
     setAiParam('saturation', preset.params.saturation);
     setAiParam('contrast', preset.params.contrast);
     setAiParam('brightness', preset.params.brightness);
     setAiParam('warmth', preset.params.warmth);
-  };
+  }, [setAiParam]);
+
+  // 功能入口点击
+  const handleFeatureClick = useCallback((route: typeof featureEntries[0]['route']) => {
+    navigateToSubPage(route);
+  }, [navigateToSubPage]);
 
   // 过滤和排序
   const filteredPresets = useMemo(() => {
@@ -90,6 +113,15 @@ const HomeScreen: React.FC = () => {
     ];
   }, [presets, selectedTab, activeBrand, searchQuery, sortBy]);
 
+  // 计算瀑布流高度 - 参考 iCurrer/OMaster 的 staggered grid
+  const getImageHeight = (index: number) => {
+    switch (index % 3) {
+      case 0: return 'h-[220px]';
+      case 1: return 'h-[180px]';
+      default: return 'h-[260px]';
+    }
+  };
+
   // 同步状态指示器
   const SyncIndicator = () => {
     if (state.status === 'syncing' || refreshing) {
@@ -113,23 +145,60 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
-      {/* Header */}
-      <div className="px-4 pt-2 pb-3">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl font-bold text-white">OMaster</h1>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <RefreshCw size={16} className={`text-white/70 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+      {/* Header - 参考 iCurrer/OMaster 紧凑标题栏 */}
+      <div className="px-4 pt-2 pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-white">OMaster</h1>
+            <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-[9px] font-bold text-white">
+              2026
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <SyncIndicator />
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <RefreshCw size={16} className={`text-white/70 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
-        <SyncIndicator />
+      </div>
+
+      {/* 功能入口卡片行 - 参考 iCurrer/OMaster FeatureEntryRow */}
+      <div className="px-4 py-2">
+        <div className="grid grid-cols-6 gap-2">
+          {featureEntries.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <button
+                key={feature.id}
+                onClick={() => handleFeatureClick(feature.route)}
+                className="group flex flex-col items-center justify-center py-3 rounded-xl transition-all hover:scale-105 active:scale-95"
+                style={{ backgroundColor: `${feature.color}15` }}
+              >
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-1 transition-transform group-hover:scale-110"
+                  style={{ backgroundColor: `${feature.color}25` }}
+                >
+                  <Icon size={16} style={{ color: feature.color }} />
+                </div>
+                <span 
+                  className="text-[10px] font-medium"
+                  style={{ color: feature.color }}
+                >
+                  {feature.title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Search Bar */}
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-2">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
           <input
@@ -142,28 +211,38 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Tab Bar */}
-      <div className="px-4 pb-3">
-        <div className="flex gap-6 border-b border-white/10">
-          {tabs.map((tab, index) => (
-            <button
-              key={tab.key}
-              onClick={() => setSelectedTab(index)}
-              className={`relative pb-2 text-sm font-medium transition-colors duration-200 ${
-                selectedTab === index ? 'text-[#FF6B35]' : 'text-white/50 hover:text-white/70'
-              }`}
-            >
-              {tab.label}
-              {selectedTab === index && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6B35] rounded-full" />
-              )}
-            </button>
-          ))}
+      {/* Tab Bar - 参考 iCurrer/OMaster ScrollableTabRow */}
+      <div className="px-4 pb-2">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+          {tabs.map((tab, index) => {
+            const count = tab.key === 'all' ? presets.length :
+                          tab.key === 'favorites' ? presets.filter(p => p.isFavorite).length :
+                          tab.key === 'hncs' ? presets.filter(p => p.isHncs).length :
+                          presets.filter(p => p.isNew).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setSelectedTab(index)}
+                className={`flex-shrink-0 relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  selectedTab === index 
+                    ? 'bg-[#FF6B35] text-white' 
+                    : 'text-white/50 hover:text-white/70 hover:bg-white/5'
+                }`}
+              >
+                <span>{tab.label}</span>
+                {count > 0 && (
+                  <span className={`ml-1 text-[10px] ${selectedTab === index ? 'text-white/80' : 'text-white/30'}`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Brand Filter */}
-      <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+      <div className="px-4 pb-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
         {brands.map((brand) => (
           <button
             key={brand.key}
@@ -193,8 +272,18 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Preset Grid */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+      {/* Pull to Refresh Indicator - 参考 iCurrer/OMaster */}
+      {refreshing && (
+        <div className="flex items-center justify-center py-2">
+          <RefreshCw size={20} className="text-[#FF6B35] animate-spin" />
+        </div>
+      )}
+
+      {/* Preset Grid - 瀑布流布局 */}
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide"
+      >
         {loading && presets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <RefreshCw size={32} className="text-[#FF6B35] animate-spin mb-3" />
@@ -203,22 +292,19 @@ const HomeScreen: React.FC = () => {
         ) : filteredPresets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Cloud size={32} className="text-white/20 mb-3" />
-            <p className="text-white/50 text-sm">未找到匹配的预设</p>
+            <p className="text-white/50 text-sm mb-2">未找到匹配的预设</p>
+            <p className="text-white/30 text-xs">下拉刷新或切换筛选条件</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {filteredPresets.map((preset, index) => {
-              const aspectClass = 
-                preset.isPinned ? 'aspect-[3/4]' :
-                index % 3 === 0 ? 'aspect-[3/4]' :
-                index % 3 === 1 ? 'aspect-square' :
-                'aspect-[4/5]';
+              const heightClass = getImageHeight(index);
               
               return (
                 <div
                   key={preset.id}
                   onClick={() => handleApplyPreset(preset)}
-                  className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${aspectClass}`}
+                  className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${heightClass}`}
                 >
                   {/* Glass Border Effect */}
                   <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
@@ -228,6 +314,7 @@ const HomeScreen: React.FC = () => {
                     src={preset.coverPath}
                     alt={preset.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                     style={{
                       filter: `saturate(${100 + preset.params.saturation}%) contrast(${100 + preset.params.contrast}%) brightness(${100 + preset.params.brightness}%)`,
                     }}
@@ -297,11 +384,12 @@ const HomeScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Loading Hint */}
-        <div className="py-6 text-center">
+        {/* Loading Hint - 参考 iCurrer/OMaster LoadingMoreTip */}
+        <div className="py-8 text-center">
           <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mb-3" />
-          <p className="text-[#FF6B35]/80 text-xs font-medium tracking-wider">
-            持续更新 敬请期待
+          <p className="text-[#FF6B35]/80 text-xs font-medium tracking-wider flex items-center justify-center gap-1.5">
+            <TrendingUp size={12} />
+            <span>持续更新 敬请期待</span>
           </p>
           <div className="w-16 h-0.5 mx-auto bg-gradient-to-r from-transparent via-[#FF6B35]/50 to-transparent mt-3" />
         </div>

@@ -110,7 +110,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     val viewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(repository)
+        factory = HomeViewModelFactory(repository, context.applicationContext as android.app.Application)
     )
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -393,7 +393,7 @@ private fun PresetGrid(
     onScrollStateChanged: (Boolean) -> Unit = {},
     showLoadingTip: Boolean = true,
     showTopHint: Boolean = false,
-    onRefresh: (onComplete: () -> Unit) -> Unit = {}
+    onRefresh: (onComplete: (HomeViewModel.RefreshResult) -> Unit) -> Unit = {}
 ) {
     val listState = rememberLazyStaggeredGridState()
     val haptic = LocalHapticFeedback.current
