@@ -1,7 +1,10 @@
 package com.silas.omaster.ui.home
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 // pullrefresh experimental annotation not available in this compose version
 import androidx.compose.foundation.background
@@ -27,6 +30,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +54,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -186,19 +193,19 @@ fun HomeScreen(
 
                     // 功能入口按钮
                     FeatureEntryButton(
-                        icon = androidx.compose.material.icons.Icons.Filled.AutoAwesome,
+                        icon = Icons.Filled.AutoAwesome,
                         contentDescription = "AI 功能",
                         onClick = onNavigateToAi
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     FeatureEntryButton(
-                        icon = androidx.compose.material.icons.Icons.Filled.Brush,
+                        icon = Icons.Filled.Brush,
                         contentDescription = "水印编辑器",
                         onClick = onNavigateToWatermark
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     FeatureEntryButton(
-                        icon = androidx.compose.material.icons.Icons.Filled.Palette,
+                        icon = Icons.Filled.Palette,
                         contentDescription = "哈苏色彩",
                         onClick = onNavigateToHasselbladColor
                     )
@@ -721,6 +728,7 @@ private fun LoadingMoreTip() {
 
 /**
  * 功能入口按钮 - 顶部导航栏使用
+ * 优化：添加触摸反馈、动画效果、无障碍支持
  */
 @Composable
 private fun FeatureEntryButton(
@@ -728,19 +736,45 @@ private fun FeatureEntryButton(
     contentDescription: String,
     onClick: () -> Unit
 ) {
-    androidx.compose.material3.Surface(
-        onClick = onClick,
-        shape = androidx.compose.foundation.shape.CircleShape,
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-        modifier = Modifier.size(36.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+    val haptic = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = tween(100),
+        label = "button_scale"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(CircleShape)
+            .background(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    )
+                )
             )
-        }
+            .hapticClickable(
+                onClick = {
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+                onPress = { isPressed = true },
+                onRelease = { isPressed = false }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
