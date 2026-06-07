@@ -1032,7 +1032,33 @@
                         <div class="feature-desc">色彩风格参数控制</div>
                         <div class="feature-tags">
                             <span class="feature-tag">色彩风格</span>
-                            <span class="feature-tag">智能优化</span>
+                            <span class="feature-tag">参数控制</span>
+                        </div>
+                    </div>
+
+                    <!-- Smart Optimize -->
+                    <div class="feature-card" onclick="showSmartOptimize()">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        </div>
+                        <div class="feature-title">智能优化</div>
+                        <div class="feature-desc">AI一键优化，智能调整参数</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">自动优化</span>
+                            <span class="feature-tag">风格迁移</span>
+                        </div>
+                    </div>
+
+                    <!-- Fine Tune -->
+                    <div class="feature-card" onclick="showFineTune()">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4V5h2v4h-2z"/></svg>
+                        </div>
+                        <div class="feature-title">参数精细调节</div>
+                        <div class="feature-desc">专业级参数控制，实时预览</div>
+                        <div class="feature-tags">
+                            <span class="feature-tag">ISO/快门</span>
+                            <span class="feature-tag">白平衡</span>
                         </div>
                     </div>
                 </div>
@@ -1427,6 +1453,16 @@
         // Show AI Fine Tune
         function showAIFineTune() {
             alert('AI 微调功能：支持8种色彩风格、6种智能优化预设、11项参数调节');
+        }
+
+        // Show Smart Optimize
+        function showSmartOptimize() {
+            alert('智能优化功能：\n\n• HDR 增强 - 提升动态范围\n• 降噪处理 - 减少画面噪点\n• 清晰度 - 增强细节锐度\n• 肤色优化 - 自然美肤效果\n• 天空增强 - 优化天空色彩');
+        }
+
+        // Show Fine Tune
+        function showFineTune() {
+            alert('参数精细调节功能：\n\n• ISO/快门速度\n• 白平衡调节\n• 曝光补偿\n• 对焦模式\n• 测光模式\n• 实时预览效果');
         }
 
         // Sync presets
