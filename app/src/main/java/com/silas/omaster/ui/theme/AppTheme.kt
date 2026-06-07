@@ -3,6 +3,16 @@ package com.silas.omaster.ui.theme
 import androidx.compose.ui.graphics.Color
 import com.silas.omaster.R
 
+// 兼容其他品牌主题色 - 使用已定义的颜色
+private val ZeissBlue = DeepOceanBlue
+private val LeicaRed = SunsetRed
+private val RicohGreen = AuroraGreen
+private val FujifilmGreen = AuroraGreen
+private val CanonRed = SunsetRed
+private val NikonYellow = OppoSunriseGold
+private val SonyOrange = HasselbladOrangePro
+private val PhaseOneGrey = ColorOSGrey500
+
 enum class BrandTheme(
     val id: String,
     val brandNameResId: Int,
@@ -26,13 +36,3 @@ enum class BrandTheme(
         }
     }
 }
-
-// 兼容其他品牌主题色
-private val ZeissBlue = DeepOceanBlue
-private val LeicaRed = SunsetRed
-private val RicohGreen = AuroraGreen
-private val FujifilmGreen = AuroraGreen
-private val CanonRed = SunsetRed
-private val NikonYellow = OppoSunriseGold
-private val SonyOrange = HasselbladOrangePro
-private val PhaseOneGrey = ColorOSGrey500

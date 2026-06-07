@@ -4,11 +4,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.unit.dp
 
 /**
  * ColorOS 风格的点击反馈动画
@@ -21,7 +22,7 @@ fun Modifier.clickableWithColorOSFeedback(
     val scale = remember { Animatable(1f) }
     
     // 监听按压状态
-    androidx.compose.runtime.LaunchedEffect(interactionSource) {
+    LaunchedEffect(interactionSource) {
         interactionSource.interactions.collect { interaction ->
             when (interaction) {
                 is PressInteraction.Press -> {
@@ -46,8 +47,10 @@ fun Modifier.clickableWithColorOSFeedback(
         }
     }
     
+    val scaleValue by scale.asState()
+    
     this
-        .scale(scale.value)
+        .scale(scaleValue)
         .clickable(
             interactionSource = interactionSource,
             indication = null,

@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -76,6 +77,7 @@ val ColorOSLightColorScheme = lightColorScheme(
 fun OMasterTheme(
     darkTheme: Boolean = true,
     dynamicColor: Boolean = false,
+    brandTheme: BrandTheme = BrandTheme.Hasselblad,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -87,19 +89,29 @@ fun OMasterTheme(
         else -> ColorOSLightColorScheme
     }
     
+    // 根据品牌主题调整主色调
+    val brandedColorScheme = remember(brandTheme, colorScheme) {
+        colorScheme.copy(
+            primary = brandTheme.primaryColor,
+            onPrimary = if (darkTheme) ColorOSBlack else Color.White,
+            primaryContainer = brandTheme.primaryColor.copy(alpha = 0.2f),
+            onPrimaryContainer = if (darkTheme) ColorOSTextPrimary else ColorOSLightTextPrimary
+        )
+    }
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            window.navigationBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = brandedColorScheme.background.toArgb()
+            window.navigationBarColor = brandedColorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
             WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = brandedColorScheme,
         typography = ColorOSTypography,
         shapes = ColorOSShapes,
         content = content
