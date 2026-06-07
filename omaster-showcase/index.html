@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMaster - Android APP 功能展示</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --hasselblad-orange: #FF6B35;
+            --oppo-green: #00D68F;
+            --dark-bg: #0A0A0F;
+            --card-bg: #12121A;
+            --surface-bg: #1A1A24;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --gradient-1: linear-gradient(135deg, #FF6B35 0%, #FF8F5C 100%);
+            --gradient-2: linear-gradient(135deg, #00D68F 0%, #00B4D8 100%);
+            --gradient-dark: linear-gradient(180deg, #1A1A24 0%, #0A0A0F 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* 手机框架 */
+        .phone-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 70%);
+        }
+
+        .phone-frame {
+            width: 390px;
+            height: 844px;
+            background: #000;
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 
+                0 0 0 2px #333,
+                0 25px 80px rgba(0, 0, 0, 0.8),
+                0 0 100px rgba(255, 107, 53, 0.1);
+            position: relative;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 126px;
+            height: 34px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: var(--dark-bg);
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 50;
+            background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+        }
+
+        .status-time {
+            font-family: 'Orbitron', monospace;
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .signal-icon, .wifi-icon, .battery-icon {
+            width: 18px;
+            height: 12px;
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 84px;
+            background: rgba(18, 18, 26, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 50;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            color: var(--hasselblad-orange);
+        }
+
+        .nav-item.active .nav-icon {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        /* 页面内容区 */
+        .screen-content {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-top: 44px;
+            padding-bottom: 84px;
+            scrollbar-width: none;
+        }
+
+        .screen-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 页面切换 */
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 首页样式 */
+        .home-page {
+            padding: 16px;
+        }
+
+        .hero-section {
+            position: relative;
+            height: 280px;
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+
+        .hero-gradient {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 30% 20%, rgba(255, 107, 53, 0.3) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(0, 214, 143, 0.2) 0%, transparent 50%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            padding: 24px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 107, 53, 0.2);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--hasselblad-orange);
+            width: fit-content;
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--hasselblad-orange);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hero-title {
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 24px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--hasselblad-orange);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* 功能卡片 */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 107, 53, 0.3);
+            box-shadow: 0 8px 32px rgba(255, 107, 53, 0.1);
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+
+        .feature-card:nth-child(1) .feature-icon { background: linear-gradient(135deg, #FF6B35 0%, #FF8F5C 100%); }
+        .feature-card:nth-child(2) .feature-icon { background: linear-gradient(135deg, #00D68F 0%, #00B4D8 100%); }
+        .feature-card:nth-child(3) .feature-icon { background: linear-gradient(135deg, #9B59B6 0%, #E74C3C 100%); }
+        .feature-card:nth-child(4) .feature-icon { background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%); }
+
+        .feature-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .feature-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* 预设卡片 */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .section-more {
+            font-size: 13px;
+            color: var(--hasselblad-orange);
+            cursor: pointer;
+        }
+
+        .preset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .preset-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .preset-card:hover {
+            border-color: rgba(255, 107, 53, 0.2);
+        }
+
+        .preset-image {
+            height: 140px;
+            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preset-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.6) 100%);
+        }
+
+        .preset-hncs {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 107, 53, 0.9);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 2;
+        }
+
+        .preset-rating {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            z-index: 2;
+        }
+
+        .preset-rating::before {
+            content: '★';
+            color: #FFC107;
+        }
+
+        .preset-info {
+            padding: 16px;
+        }
+
+        .preset-name {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .preset-device {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .preset-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .preset-tag {
+            font-size: 10px;
+            padding: 3px 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .preset-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .preset-author {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .preset-downloads {
+            font-size: 11px;
+            color: var(--oppo-green);
+            font-weight: 600;
+        }
+
+        /* AI页面 */
+        .ai-page {
+            padding: 16px;
+        }
+
+        .ai-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        .ai-title {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .ai-subtitle {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .scene-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .scene-item {
+            aspect-ratio: 1;
+            background: var(--card-bg);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .scene-item:hover {
+            background: var(--surface-bg);
+            border-color: rgba(102, 126, 234, 0.3);
+            transform: scale(1.05);
+        }
+
+        .scene-icon {
+            font-size: 28px;
+        }
+
+        .scene-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* 水印页面 */
+        .watermark-page {
+            padding: 16px;
+        }
+
+        .watermark-categories {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .watermark-categories::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-chip {
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .category-chip.active {
+            background: var(--gradient-1);
+            border-color: transparent;
+        }
+
+        .watermark-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .watermark-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .watermark-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 107, 53, 0.3);
+        }
+
+        .watermark-preview {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .watermark-info {
+            padding: 12px;
+        }
+
+        .watermark-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .watermark-features {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .watermark-feature {
+            font-size: 9px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            color: var(--text-muted);
+        }
+
+        /* 设置页面 */
+        .settings-page {
+            padding: 16px;
+        }
+
+        .settings-group {
+            background: var(--card-bg);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .settings-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .settings-arrow {
+            font-size: 18px;
+            color: var(--text-muted);
+        }
+
+        /* 底部指示条 */
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            z-index: 100;
+        }
+
+        /* 桌面端展示信息 */
+        .desktop-info {
+            position: fixed;
+            left: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            max-width: 400px;
+        }
+
+        .desktop-title {
+            font-size: 48px;
+            font-weight: 900;
+            margin-bottom: 16px;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .desktop-desc {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 32px;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--hasselblad-orange);
+            border-radius: 50%;
+        }
+
+        @media (max-width: 1200px) {
+            .desktop-info {
+                display: none;
+            }
+        }
+
+        /* 动画 */
+        .shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 桌面端展示信息 -->
+    <div class="desktop-info">
+        <h1 class="desktop-title">OMaster</h1>
+        <p class="desktop-desc">
+            专业级手机摄影参数调节工具，为OPPO/一加/Realme用户打造。
+            集成哈苏色彩科学、AI场景识别、智能水印等强大功能。
+        </p>
+        <div class="feature-list">
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>哈苏HNCS色彩科学认证</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>AI智能场景识别与优化</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>16+ 专业水印模板</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>8个精选摄影预设</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>精细参数调节控制</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 手机展示 -->
+    <div class="phone-container">
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+                <!-- 状态栏 -->
+                <div class="status-bar">
+                    <span class="status-time" id="clock">12:00</span>
+                    <div class="status-icons">
+                        <span class="signal-icon">📶</span>
+                        <span class="wifi-icon">📡</span>
+                        <span class="battery-icon">🔋</span>
+                    </div>
+                </div>
+
+                <!-- 页面内容 -->
+                <div class="screen-content">
+                    <!-- 首页 -->
+                    <div class="page home-page active" id="page-home">
+                        <!-- Hero区域 -->
+                        <div class="hero-section">
+                            <div class="hero-bg"></div>
+                            <div class="hero-gradient"></div>
+                            <div class="hero-content">
+                                <div class="hero-badge">HNCS 认证</div>
+                                <div>
+                                    <h1 class="hero-title">哈苏色彩<br>大师级摄影</h1>
+                                    <p class="hero-subtitle">专业预设 · 智能优化 · 一键出片</p>
+                                </div>
+                                <div class="hero-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value">8</div>
+                                        <div class="stat-label">精选预设</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">16</div>
+                                        <div class="stat-label">水印模板</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">50K+</div>
+                                        <div class="stat-label">活跃用户</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 功能卡片 -->
+                        <div class="feature-grid">
+                            <div class="feature-card" onclick="switchPage('ai')">
+                                <div class="feature-icon">🤖</div>
+                                <div class="feature-title">AI场景识别</div>
+                                <div class="feature-desc">智能识别拍摄场景，自动优化参数</div>
+                            </div>
+                            <div class="feature-card" onclick="switchPage('watermark')">
+                                <div class="feature-icon">🏷️</div>
+                                <div class="feature-title">水印编辑器</div>
+                                <div class="feature-desc">品牌联名、国风印章、胶片相框</div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">🎨</div>
+                                <div class="feature-title">哈苏色彩</div>
+                                <div class="feature-desc">HNCS认证色彩科学，专业调色</div>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">⚙️</div>
+                                <div class="feature-title">参数调节</div>
+                                <div class="feature-desc">ISO、快门、光圈精细控制</div>
+                            </div>
+                        </div>
+
+                        <!-- 预设列表 -->
+                        <div class="section-header">
+                            <h2 class="section-title">热门预设</h2>
+                            <span class="section-more">查看全部 →</span>
+                        </div>
+                        <div class="preset-list">
+                            <div class="preset-card">
+                                <div class="preset-image">
+                                    <div class="preset-hncs">🛡️ HNCS</div>
+                                    <div class="preset-rating">4.9</div>
+                                </div>
+                                <div class="preset-info">
+                                    <div class="preset-name">哈苏人像大师</div>
+                                    <div class="preset-device">OPPO Find X8 Ultra</div>
+                                    <div class="preset-tags">
+                                        <span class="preset-tag">人像</span>
+                                        <span class="preset-tag">哈苏</span>
+                                        <span class="preset-tag">专业</span>
+                                    </div>
+                                    <div class="preset-footer">
+                                        <span class="preset-author">哈苏影像实验室</span>
+                                        <span class="preset-downloads">↓ 158K</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="preset-card">
+                                <div class="preset-image">
+                                    <div class="preset-hncs">🛡️ HNCS</div>
+                                    <div class="preset-rating">4.8</div>
+                                </div>
+                                <div class="preset-info">
+                                    <div class="preset-name">夜景璀璨</div>
+                                    <div class="preset-device">OPPO Find X8 Pro</div>
+                                    <div class="preset-tags">
+                                        <span class="preset-tag">夜景</span>
+                                        <span class="preset-tag">城市</span>
+                                    </div>
+                                    <div class="preset-footer">
+                                        <span class="preset-author">OPPO影像团队</span>
+                                        <span class="preset-downloads">↓ 98K</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="preset-card">
+                                <div class="preset-image">
+                                    <div class="preset-rating">4.9</div>
+                                </div>
+                                <div class="preset-info">
+                                    <div class="preset-name">风光大片</div>
+                                    <div class="preset-device">OPPO Find X8 Ultra</div>
+                                    <div class="preset-tags">
+                                        <span class="preset-tag">风景</span>
+                                        <span class="preset-tag">HDR</span>
+                                    </div>
+                                    <div class="preset-footer">
+                                        <span class="preset-author">风光摄影师</span>
+                                        <span class="preset-downloads">↓ 123K</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI页面 -->
+                    <div class="page ai-page" id="page-ai">
+                        <div class="ai-hero">
+                            <h2 class="ai-title">AI 场景识别</h2>
+                            <p class="ai-subtitle">智能分析画面内容，推荐最佳拍摄参数</p>
+                        </div>
+                        <div class="scene-grid">
+                            <div class="scene-item">
+                                <span class="scene-icon">👤</span>
+                                <span class="scene-name">人像</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🌃</span>
+                                <span class="scene-name">夜景</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🍜</span>
+                                <span class="scene-name">美食</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🏔️</span>
+                                <span class="scene-name">风景</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🏙️</span>
+                                <span class="scene-name">街拍</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🌸</span>
+                                <span class="scene-name">微距</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🐕</span>
+                                <span class="scene-name">宠物</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">📄</span>
+                                <span class="scene-name">文档</span>
+                            </div>
+                            <div class="scene-item">
+                                <span class="scene-icon">🌅</span>
+                                <span class="scene-name">日落</span>
+                            </div>
+                        </div>
+                        <div class="section-header">
+                            <h2 class="section-title">智能优化建议</h2>
+                        </div>
+                        <div class="preset-list">
+                            <div class="preset-card">
+                                <div class="preset-info">
+                                    <div class="preset-name">🎯 人像增强</div>
+                                    <div class="preset-device">检测到人脸，建议开启美颜和背景虚化</div>
+                                </div>
+                            </div>
+                            <div class="preset-card">
+                                <div class="preset-info">
+                                    <div class="preset-name">🌙 夜景降噪</div>
+                                    <div class="preset-device">光线不足，建议降低ISO并延长曝光时间</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 水印页面 -->
+                    <div class="page watermark-page" id="page-watermark">
+                        <div class="section-header">
+                            <h2 class="section-title">水印模板</h2>
+                        </div>
+                        <div class="watermark-categories">
+                            <div class="category-chip active">全部</div>
+                            <div class="category-chip">品牌</div>
+                            <div class="category-chip">功能</div>
+                            <div class="category-chip">免费</div>
+                        </div>
+                        <div class="watermark-grid">
+                            <div class="watermark-card">
+                                <div class="watermark-preview" style="background: linear-gradient(135deg, #FF6B35 0%, #FF8F5C 100%);">
+                                    HASSELBLAD
+                                </div>
+                                <div class="watermark-info">
+                                    <div class="watermark-name">哈苏认证</div>
+                                    <div class="watermark-features">
+                                        <span class="watermark-feature">HNCS</span>
+                                        <span class="watermark-feature">官方</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="watermark-card">
+                                <div class="watermark-preview" style="background: #1A1A1A; color: #E60012;">
+                                    LEICA
+                                </div>
+                                <div class="watermark-info">
+                                    <div class="watermark-name">徕卡经典</div>
+                                    <div class="watermark-features">
+                                        <span class="watermark-feature">红标</span>
+                                        <span class="watermark-feature">大师</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="watermark-card">
+                                <div class="watermark-preview" style="background: #0066CC;">
+                                    ZEISS T*
+                                </div>
+                                <div class="watermark-info">
+                                    <div class="watermark-name">蔡司光学</div>
+                                    <div class="watermark-features">
+                                        <span class="watermark-feature">T*镀膜</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="watermark-card">
+                                <div class="watermark-preview" style="background: #F9F5E7; color: #8B4513;">
+                                    邮票
+                                </div>
+                                <div class="watermark-info">
+                                    <div class="watermark-name">邮票邮戳</div>
+                                    <div class="watermark-features">
+                                        <span class="watermark-feature">复古</span>
+                                        <span class="watermark-feature">文艺</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="watermark-card">
+                                <div class="watermark-preview" style="background: transparent; color: #C41E3A; border: 2px solid #C41E3A;">
+                                    印章
+                                </div>
+                                <div class="watermark-info">
+                                    <div class="watermark-name">国风印章</div>
+                                    <div class="watermark-features">
+                                        <span class="watermark-feature">国风</span>
+                                        <span class="watermark-feature">水墨</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="watermark-card">
+                                <div class="watermark-preview" style="background: #1A1A1A; color: #F5F5F5;">
+                                    FILM
+                                </div>
+                                <div class="watermark-info">
+                                    <div class="watermark-name">胶片相框</div>
+                                    <div class="watermark-features">
+                                        <span class="watermark-feature">胶片</span>
+                                        <span class="watermark-feature">怀旧</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 设置页面 -->
+                    <div class="page settings-page" id="page-settings">
+                        <div class="section-header">
+                            <h2 class="section-title">设置</h2>
+                        </div>
+                        <div class="settings-group">
+                            <div class="settings-item">
+                                <div class="settings-left">
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #FF6B35 0%, #FF8F5C 100%);">🎨</div>
+                                    <span class="settings-text">哈苏色彩设置</span>
+                                </div>
+                                <span class="settings-arrow">›</span>
+                            </div>
+                            <div class="settings-item">
+                                <div class="settings-left">
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #00D68F 0%, #00B4D8 100%);">💾</div>
+                                    <span class="settings-text">预设管理</span>
+                                </div>
+                                <span class="settings-arrow">›</span>
+                            </div>
+                            <div class="settings-item">
+                                <div class="settings-left">
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #9B59B6 0%, #E74C3C 100%);">🔔</div>
+                                    <span class="settings-text">通知设置</span>
+                                </div>
+                                <span class="settings-arrow">›</span>
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <div class="settings-item">
+                                <div class="settings-left">
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%);">ℹ️</div>
+                                    <span class="settings-text">关于 OMaster</span>
+                                </div>
+                                <span class="settings-arrow">›</span>
+                            </div>
+                            <div class="settings-item">
+                                <div class="settings-left">
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);">⭐</div>
+                                    <span class="settings-text">评分应用</span>
+                                </div>
+                                <span class="settings-arrow">›</span>
+                            </div>
+                        </div>
+                        <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;">
+                            OMaster v2.0.0<br>
+                            © 2026 OMaster Team
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部导航 -->
+                <div class="bottom-nav">
+                    <div class="nav-item active" onclick="switchPage('home')">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label">首页</span>
+                    </div>
+                    <div class="nav-item" onclick="switchPage('ai')">
+                        <span class="nav-icon">🤖</span>
+                        <span class="nav-label">AI</span>
+                    </div>
+                    <div class="nav-item" onclick="switchPage('watermark')">
+                        <span class="nav-icon">🏷️</span>
+                        <span class="nav-label">水印</span>
+                    </div>
+                    <div class="nav-item" onclick="switchPage('settings')">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-label">设置</span>
+                    </div>
+                </div>
+
+                <!-- 底部指示条 -->
+                <div class="home-indicator"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 时钟更新
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // 页面切换
+        function switchPage(pageName) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // 显示目标页面
+            document.getElementById(`page-${pageName}`).classList.add('active');
+            
+            // 更新导航状态
+            document.querySelectorAll('.nav-item').forEach((item, index) => {
+                item.classList.remove('active');
+            });
+            
+            // 激活对应导航项
+            const navMap = { home: 0, ai: 1, watermark: 2, settings: 3 };
+            document.querySelectorAll('.nav-item')[navMap[pageName]].classList.add('active');
+        }
+
+        // 分类切换
+        document.querySelectorAll('.category-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 添加触摸滑动支持
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const screenContent = document.querySelector('.screen-content');
+        
+        const pages = ['home', 'ai', 'watermark', 'settings'];
+        let currentPageIndex = 0;
+
+        screenContent.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        screenContent.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0 && currentPageIndex < pages.length - 1) {
+                    // 向左滑，下一页
+                    currentPageIndex++;
+                    switchPage(pages[currentPageIndex]);
+                } else if (diff < 0 && currentPageIndex > 0) {
+                    // 向右滑，上一页
+                    currentPageIndex--;
+                    switchPage(pages[currentPageIndex]);
+                }
+            }
+        }
+
+        // 更新当前页面索引
+        document.querySelectorAll('.nav-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                currentPageIndex = index;
+            });
+        });
+    </script>
+</body>
+</html>
