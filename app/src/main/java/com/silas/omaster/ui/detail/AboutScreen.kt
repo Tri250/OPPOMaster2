@@ -88,9 +88,6 @@ import android.widget.Toast
 import com.silas.omaster.util.UpdateConfigManager
 import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.data.repository.PresetRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType

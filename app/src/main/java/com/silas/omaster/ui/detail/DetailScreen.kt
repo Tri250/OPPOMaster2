@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -166,6 +167,20 @@ fun DetailScreen(
                     }
                 }
 
+                // 分享按钮
+                IconButton(
+                    onClick = {
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
+                        preset?.let { sharePreset(context, it) }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = stringResource(R.string.share),
+                        tint = Color.White
+                    )
+                }
+
                 // 收藏按钮
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.ToggleOn)
@@ -293,6 +308,32 @@ fun DetailScreen(
             }
         )
     }
+}
+
+/**
+ * 分享预设
+ */
+private fun sharePreset(context: android.content.Context, preset: MasterPreset) {
+    val shareText = buildString {
+        appendLine("📷 ${preset.name}")
+        appendLine("作者：${preset.author}")
+        appendLine("")
+        preset.description?.let {
+            appendLine(it.content)
+            appendLine("")
+        }
+        appendLine("—— 来自 OMaster 大师模式调色参数库")
+    }
+
+    val sendIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, shareText)
+        putExtra(Intent.EXTRA_SUBJECT, "分享预设：${preset.name}")
+    }
+
+    val shareIntent = Intent.createChooser(sendIntent, context.getString(R.string.share_preset))
+    context.startActivity(shareIntent)
 }
 
 /**

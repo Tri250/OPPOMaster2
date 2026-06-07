@@ -378,6 +378,22 @@
     <string name="go_to_settings">去开启权限</string>
     <string name="later">以后再说</string>
 
+    <!-- 分享功能 -->
+    <string name="share">分享</string>
+    <string name="share_preset">分享预设</string>
+    <string name="share_preset_desc">将预设参数分享给好友</string>
+    <string name="share_via">通过以下方式分享</string>
+    <string name="share_success">分享成功</string>
+    <string name="share_failed">分享失败</string>
+    <string name="copy_to_clipboard">复制到剪贴板</string>
+    <string name="copied">已复制</string>
+
+    <!-- AI功能说明 -->
+    <string name="ai_feature_demo">AI功能演示模式</string>
+    <string name="ai_scene_detection_desc">AI场景识别功能当前为演示模式，展示未来可能的功能方向。</string>
+    <string name="ai_optimization_desc">AI智能优化功能当前为演示模式，实际效果可能因设备而异。</string>
+    <string name="ai_learn_more">了解更多</string>
+
     <!-- 悬浮窗服务 -->
     <string name="floating_preset">预设</string>
     <string name="floating_original">原图</string>
