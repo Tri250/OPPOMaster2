@@ -5,285 +5,372 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import com.silas.omaster.data.local.SettingsManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
  * 水印编辑器管理器
- * 支持 12+ 水印模板，品牌、功能、多种风格
+ *
+ * WM-001: 基础水印添加 - OPPO哈苏风模板
+ * WM-002: 水印元素自由编辑 - 拖拽编辑、元素开关、模板另存
  */
 class WatermarkEditorManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
-    
-    // 12+ 水印模板
+
+    // 水印模板库
     val templates = listOf(
-        WatermarkTemplate(
-            id = "hasselblad_official",
-            name = "哈苏认证",
-            type = WatermarkType.BRAND,
-            description = "OPPO哈苏HNCS官方认证水印",
-            features = listOf("HNCS认证", "官方授权", "专业风格")
-        ),
-        WatermarkTemplate(
-            id = "oppo_find",
-            name = "Find系列",
-            type = WatermarkType.BRAND,
-            description = "OPPO Find X系列专属水印",
-            features = listOf("Find X8", "影像旗舰", "专业标识")
-        ),
-        WatermarkTemplate(
-            id = "classic_frame",
-            name = "经典边框",
-            type = WatermarkType.FUNCTIONAL,
-            description = "复古胶片风格边框水印",
-            features = listOf("胶片感", "复古", "边框")
-        ),
-        WatermarkTemplate(
-            id = "exif_info",
-            name = "EXIF信息",
-            type = WatermarkType.FUNCTIONAL,
-            description = "显示拍摄参数信息",
-            features = listOf("ISO", "快门", "光圈", "焦距")
-        ),
-        WatermarkTemplate(
-            id = "location_tag",
-            name = "位置标签",
-            type = WatermarkType.FUNCTIONAL,
-            description = "显示拍摄地点信息",
-            features = listOf("GPS", "城市", "地标")
-        ),
-        WatermarkTemplate(
-            id = "date_time",
-            name = "时间戳",
-            type = WatermarkType.FUNCTIONAL,
-            description = "显示拍摄日期时间",
-            features = listOf("日期", "时间", "纪念")
-        ),
-        WatermarkTemplate(
-            id = "minimalist",
-            name = "极简风格",
-            type = WatermarkType.STYLE,
-            description = "简洁现代风格水印",
-            features = listOf("极简", "现代", "干净")
-        ),
-        WatermarkTemplate(
-            id = "artistic",
-            name = "艺术签名",
-            type = WatermarkType.STYLE,
-            description = "手写风格艺术签名",
-            features = listOf("手写", "艺术", "个性")
-        ),
-        WatermarkTemplate(
-            id = "cyberpunk",
-            name = "赛博朋克",
-            type = WatermarkType.STYLE,
-            description = "未来科技风格水印",
-            features = listOf("科技", "未来", "霓虹")
-        ),
-        WatermarkTemplate(
-            id = "film_strip",
-            name = "胶片条",
-            type = WatermarkType.STYLE,
-            description = "电影胶片风格水印",
-            features = listOf("电影", "胶片", "故事")
-        ),
-        WatermarkTemplate(
-            id = "copyright",
-            name = "版权声明",
-            type = WatermarkType.FUNCTIONAL,
-            description = "版权保护水印",
-            features = listOf("版权", "保护", "作者")
-        ),
-        WatermarkTemplate(
-            id = "social_share",
-            name = "社交分享",
-            type = WatermarkType.FUNCTIONAL,
-            description = "社交媒体优化水印",
-            features = listOf("社交", "分享", "平台")
-        )
+        // 品牌水印
+        WatermarkTemplate("hasselblad_official", "哈苏认证", WatermarkType.BRAND),
+        WatermarkTemplate("oppo_find", "Find系列", WatermarkType.BRAND),
+        WatermarkTemplate("oneplus_leica", "一加哈苏", WatermarkType.BRAND),
+        WatermarkTemplate("realme_dart", "realme风格", WatermarkType.BRAND),
+
+        // 功能水印
+        WatermarkTemplate("classic_frame", "经典边框", WatermarkType.FUNCTIONAL),
+        WatermarkTemplate("exif_info", "EXIF信息", WatermarkType.FUNCTIONAL),
+        WatermarkTemplate("location_tag", "位置标签", WatermarkType.FUNCTIONAL),
+        WatermarkTemplate("timestamp", "时间戳", WatermarkType.FUNCTIONAL),
+        WatermarkTemplate("minimal_corner", "极简角标", WatermarkType.FUNCTIONAL),
+
+        // 风格水印
+        WatermarkTemplate("art_signature", "艺术签名", WatermarkType.STYLE),
+        WatermarkTemplate("cyberpunk", "赛博朋克", WatermarkType.STYLE),
+        WatermarkTemplate("film_strip", "胶片条", WatermarkType.STYLE),
+        WatermarkTemplate("copyright", "版权声明", WatermarkType.STYLE),
+        WatermarkTemplate("social_share", "社交分享", WatermarkType.STYLE)
     )
 
+    // 当前选中的模板
+    private val _selectedTemplate = MutableStateFlow<WatermarkTemplate?>(null)
+    val selectedTemplate: StateFlow<WatermarkTemplate?> = _selectedTemplate.asStateFlow()
+
+    // 水印配置（可编辑）
+    private val _watermarkConfig = MutableStateFlow(WatermarkConfig())
+    val watermarkConfig: StateFlow<WatermarkConfig> = _watermarkConfig.asStateFlow()
+
+    // 自定义模板列表
+    private val _customTemplates = MutableStateFlow<List<WatermarkTemplate>>(emptyList())
+    val customTemplates: StateFlow<List<WatermarkTemplate>> = _customTemplates.asStateFlow()
+
+    // 水印元素配置
+    private val _elementConfig = MutableStateFlow(WatermarkElementConfig())
+    val elementConfig: StateFlow<WatermarkElementConfig> = _elementConfig.asStateFlow()
+
     /**
-     * 应用水印到图片
-     * @param bitmap 原图
-     * @param templateId 模板ID
-     * @param config 水印配置
-     * @return 带水印的图片
+     * WM-001: 选择水印模板
+     */
+    fun selectTemplate(templateId: String) {
+        val template = templates.find { it.id == templateId }
+            ?: customTemplates.value.find { it.id == templateId }
+        _selectedTemplate.value = template
+
+        // 根据模板设置默认配置
+        when (templateId) {
+            "hasselblad_official" -> {
+                _elementConfig.value = WatermarkElementConfig(
+                    showBrand = true,
+                    showModel = true,
+                    showParams = true,
+                    brandName = "HASSELBLAD",
+                    brandPosition = WatermarkPosition.TOP_CENTER,
+                    modelPosition = WatermarkPosition.CENTER_BOTTOM,
+                    paramsPosition = WatermarkPosition.BOTTOM,
+                    brandColor = Color.WHITE,
+                    brandAlpha = 0.9f,
+                    modelColor = Color.WHITE,
+                    modelAlpha = 0.8f,
+                    paramsColor = Color.WHITE,
+                    paramsAlpha = 0.7f
+                )
+            }
+            "oppo_find" -> {
+                _elementConfig.value = WatermarkElementConfig(
+                    showBrand = true,
+                    showModel = true,
+                    showParams = true,
+                    brandName = "OPPO Find X8 Pro",
+                    brandPosition = WatermarkPosition.TOP_CENTER,
+                    modelPosition = WatermarkPosition.CENTER_BOTTOM,
+                    paramsPosition = WatermarkPosition.BOTTOM,
+                    brandColor = Color.WHITE,
+                    brandAlpha = 0.95f,
+                    modelColor = Color.WHITE,
+                    modelAlpha = 0.85f,
+                    paramsColor = Color.WHITE,
+                    paramsAlpha = 0.75f
+                )
+            }
+            else -> {
+                // 默认配置
+                _elementConfig.value = WatermarkElementConfig()
+            }
+        }
+    }
+
+    /**
+     * WM-002: 更新元素配置
+     */
+    fun updateElementConfig(config: WatermarkElementConfig) {
+        _elementConfig.value = config
+    }
+
+    /**
+     * WM-002: 切换元素显示
+     */
+    fun toggleElement(element: WatermarkElement) {
+        val current = _elementConfig.value
+        _elementConfig.value = when (element) {
+            WatermarkElement.BRAND -> current.copy(showBrand = !current.showBrand)
+            WatermarkElement.MODEL -> current.copy(showModel = !current.showModel)
+            WatermarkElement.PARAMS -> current.copy(showParams = !current.showParams)
+            WatermarkElement.TIMESTAMP -> current.copy(showTimestamp = !current.showTimestamp)
+            WatermarkElement.LOCATION -> current.copy(showLocation = !current.showLocation)
+            WatermarkElement.VIGNETTE -> current.copy(showVignette = !current.showVignette)
+        }
+    }
+
+    /**
+     * WM-002: 更新元素位置
+     */
+    fun updateElementPosition(element: WatermarkElement, position: WatermarkPosition) {
+        val current = _elementConfig.value
+        _elementConfig.value = when (element) {
+            WatermarkElement.BRAND -> current.copy(brandPosition = position)
+            WatermarkElement.MODEL -> current.copy(modelPosition = position)
+            WatermarkElement.PARAMS -> current.copy(paramsPosition = position)
+            WatermarkElement.TIMESTAMP -> current.copy(timestampPosition = position)
+            WatermarkElement.LOCATION -> current.copy(locationPosition = position)
+            WatermarkElement.VIGNETTE -> current
+        }
+    }
+
+    /**
+     * WM-002: 更新元素颜色
+     */
+    fun updateElementColor(element: WatermarkElement, color: Int) {
+        val current = _elementConfig.value
+        _elementConfig.value = when (element) {
+            WatermarkElement.BRAND -> current.copy(brandColor = color)
+            WatermarkElement.MODEL -> current.copy(modelColor = color)
+            WatermarkElement.PARAMS -> current.copy(paramsColor = color)
+            WatermarkElement.TIMESTAMP -> current.copy(timestampColor = color)
+            WatermarkElement.LOCATION -> current.copy(locationColor = color)
+            WatermarkElement.VIGNETTE -> current
+        }
+    }
+
+    /**
+     * WM-002: 更新元素透明度
+     */
+    fun updateElementAlpha(element: WatermarkElement, alpha: Float) {
+        val current = _elementConfig.value
+        _elementConfig.value = when (element) {
+            WatermarkElement.BRAND -> current.copy(brandAlpha = alpha)
+            WatermarkElement.MODEL -> current.copy(modelAlpha = alpha)
+            WatermarkElement.PARAMS -> current.copy(paramsAlpha = alpha)
+            WatermarkElement.TIMESTAMP -> current.copy(timestampAlpha = alpha)
+            WatermarkElement.LOCATION -> current.copy(locationAlpha = alpha)
+            WatermarkElement.VIGNETTE -> current.copy(vignetteAlpha = alpha)
+        }
+    }
+
+    /**
+     * WM-002: 保存为自定义模板
+     * 模板名不允许与系统模板同名
+     */
+    fun saveAsCustomTemplate(name: String): Boolean {
+        // 检查是否与系统模板同名
+        if (templates.any { it.name == name }) {
+            return false
+        }
+
+        val customTemplate = WatermarkTemplate(
+            id = "custom_${System.currentTimeMillis()}",
+            name = name,
+            type = WatermarkType.CUSTOM,
+            elementConfig = _elementConfig.value
+        )
+
+        val current = _customTemplates.value.toMutableList()
+        current.add(customTemplate)
+        _customTemplates.value = current
+
+        return true
+    }
+
+    /**
+     * WM-001: 应用水印到图片
+     * 生成带水印图，结构：顶部HASSELBLAD，中下部手机型号，底部参数栏
      */
     suspend fun applyWatermark(
         bitmap: Bitmap,
-        templateId: String,
-        config: WatermarkConfig = WatermarkConfig()
+        deviceModel: String = "OPPO Find X8 Pro",
+        params: String = "f/1.6 1/500s ISO100"
     ): Bitmap = withContext(Dispatchers.Default) {
-        if (!settingsManager.isWatermarkEditorEnabled) {
-            return@withContext bitmap
+        val config = _watermarkConfig.value
+        val elementConfig = _elementConfig.value
+
+        // 创建可变位图
+        val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(result)
+
+        // 水印画笔
+        val brandPaint = Paint().apply {
+            color = elementConfig.brandColor
+            alpha = (elementConfig.brandAlpha * 255).toInt()
+            textSize = bitmap.width * 0.04f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+            setShadowLayer(2f, 1f, 1f, Color.BLACK)
         }
 
-        val template = templates.find { it.id == templateId } ?: templates.first()
-        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
-        val canvas = Canvas(result)
-        
-        // 绘制原图
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
-        
-        // 根据模板类型绘制水印
-        when (template.type) {
-            WatermarkType.BRAND -> drawBrandWatermark(canvas, template, config, bitmap.width, bitmap.height)
-            WatermarkType.FUNCTIONAL -> drawFunctionalWatermark(canvas, template, config, bitmap.width, bitmap.height)
-            WatermarkType.STYLE -> drawStyleWatermark(canvas, template, config, bitmap.width, bitmap.height)
+        val modelPaint = Paint().apply {
+            color = elementConfig.modelColor
+            alpha = (elementConfig.modelAlpha * 255).toInt()
+            textSize = bitmap.width * 0.025f
+            typeface = Typeface.DEFAULT
+            isAntiAlias = true
+            setShadowLayer(2f, 1f, 1f, Color.BLACK)
         }
-        
+
+        val paramsPaint = Paint().apply {
+            color = elementConfig.paramsColor
+            alpha = (elementConfig.paramsAlpha * 255).toInt()
+            textSize = bitmap.width * 0.02f
+            typeface = Typeface.MONOSPACE
+            isAntiAlias = true
+            setShadowLayer(1f, 1f, 1f, Color.BLACK)
+        }
+
+        // 根据配置绘制水印
+        if (elementConfig.showBrand) {
+            drawTextAtPosition(canvas, elementConfig.brandName, brandPaint, elementConfig.brandPosition, bitmap)
+        }
+
+        if (elementConfig.showModel) {
+            drawTextAtPosition(canvas, deviceModel, modelPaint, elementConfig.modelPosition, bitmap)
+        }
+
+        if (elementConfig.showParams) {
+            drawTextAtPosition(canvas, params, paramsPaint, elementConfig.paramsPosition, bitmap)
+        }
+
+        if (elementConfig.showTimestamp) {
+            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                .format(java.util.Date())
+            val timestampPaint = Paint().apply {
+                color = elementConfig.timestampColor
+                alpha = (elementConfig.timestampAlpha * 255).toInt()
+                textSize = bitmap.width * 0.018f
+                typeface = Typeface.DEFAULT
+                isAntiAlias = true
+            }
+            drawTextAtPosition(canvas, timestamp, timestampPaint, elementConfig.timestampPosition, bitmap)
+        }
+
+        if (elementConfig.showVignette) {
+            drawVignette(canvas, bitmap, elementConfig.vignetteAlpha)
+        }
+
         result
     }
 
     /**
-     * 绘制品牌水印
+     * 在指定位置绘制文本
      */
-    private fun drawBrandWatermark(
+    private fun drawTextAtPosition(
         canvas: Canvas,
-        template: WatermarkTemplate,
-        config: WatermarkConfig,
-        width: Int,
-        height: Int
+        text: String,
+        paint: Paint,
+        position: WatermarkPosition,
+        bitmap: Bitmap
     ) {
-        val paint = Paint().apply {
-            color = Color.WHITE
-            textSize = 48f
-            typeface = Typeface.DEFAULT_BOLD
-            isAntiAlias = true
-            alpha = (config.opacity * 255).toInt()
-        }
-        
-        val text = when (template.id) {
-            "hasselblad_official" -> "Hasselblad"
-            "oppo_find" -> "OPPO Find X8 Ultra"
-            else -> template.name
-        }
-        
-        val x = when (config.position) {
-            WatermarkPosition.BOTTOM_LEFT -> 40f
-            WatermarkPosition.BOTTOM_RIGHT -> width - paint.measureText(text) - 40f
-            WatermarkPosition.TOP_LEFT -> 40f
-            WatermarkPosition.TOP_RIGHT -> width - paint.measureText(text) - 40f
-            WatermarkPosition.CENTER -> (width - paint.measureText(text)) / 2
-        }
-        
-        val y = when (config.position) {
-            WatermarkPosition.BOTTOM_LEFT, WatermarkPosition.BOTTOM_RIGHT -> height - 60f
-            WatermarkPosition.TOP_LEFT, WatermarkPosition.TOP_RIGHT -> 80f
-            WatermarkPosition.CENTER -> height / 2f
-        }
-        
-        // 绘制背景
-        val bgPaint = Paint().apply {
-            color = Color.BLACK
-            alpha = (0.4f * 255).toInt()
-        }
         val textWidth = paint.measureText(text)
-        canvas.drawRect(x - 20, y - 60, x + textWidth + 20, y + 20, bgPaint)
-        
-        // 绘制文字
-        canvas.drawText(text, x, y, paint)
-        
-        // 绘制副标题
-        paint.textSize = 24f
-        paint.typeface = Typeface.DEFAULT
-        val subText = "OPPO | Hasselblad"
-        canvas.drawText(subText, x, y + 35, paint)
-    }
+        val textHeight = paint.textSize
 
-    /**
-     * 绘制功能水印
-     */
-    private fun drawFunctionalWatermark(
-        canvas: Canvas,
-        template: WatermarkTemplate,
-        config: WatermarkConfig,
-        width: Int,
-        height: Int
-    ) {
-        val paint = Paint().apply {
-            color = Color.WHITE
-            textSize = 32f
-            isAntiAlias = true
-            alpha = (config.opacity * 255).toInt()
+        val (x, y) = when (position) {
+            WatermarkPosition.TOP_LEFT -> Pair(bitmap.width * 0.05f, textHeight + bitmap.height * 0.03f)
+            WatermarkPosition.TOP_CENTER -> Pair((bitmap.width - textWidth) / 2, textHeight + bitmap.height * 0.03f)
+            WatermarkPosition.TOP_RIGHT -> Pair(bitmap.width - textWidth - bitmap.width * 0.05f, textHeight + bitmap.height * 0.03f)
+            WatermarkPosition.CENTER_LEFT -> Pair(bitmap.width * 0.05f, bitmap.height / 2f)
+            WatermarkPosition.CENTER -> Pair((bitmap.width - textWidth) / 2, bitmap.height / 2f)
+            WatermarkPosition.CENTER_RIGHT -> Pair(bitmap.width - textWidth - bitmap.width * 0.05f, bitmap.height / 2f)
+            WatermarkPosition.BOTTOM_LEFT -> Pair(bitmap.width * 0.05f, bitmap.height - bitmap.height * 0.03f)
+            WatermarkPosition.BOTTOM -> Pair((bitmap.width - textWidth) / 2, bitmap.height - bitmap.height * 0.03f)
+            WatermarkPosition.BOTTOM_RIGHT -> Pair(bitmap.width - textWidth - bitmap.width * 0.05f, bitmap.height - bitmap.height * 0.03f)
         }
-        
-        val lines = when (template.id) {
-            "exif_info" -> listOf(
-                "ISO 100 | 1/200s | f/1.6",
-                "23mm | OPPO Find X8"
-            )
-            "location_tag" -> listOf(
-                "📍 上海市",
-                "外滩"
-            )
-            "date_time" -> listOf(
-                "2025.01.15",
-                "14:30"
-            )
-            else -> listOf(template.name, template.description)
-        }
-        
-        val x = 40f
-        var y = height - 100f
-        
-        // 绘制背景
-        val bgPaint = Paint().apply {
-            color = Color.BLACK
-            alpha = (0.3f * 255).toInt()
-        }
-        val maxWidth = lines.maxOf { paint.measureText(it) }
-        canvas.drawRect(x - 15, y - 40, x + maxWidth + 15, y + lines.size * 40 + 10, bgPaint)
-        
-        lines.forEach { line ->
-            canvas.drawText(line, x, y, paint)
-            y += 40
-        }
-    }
 
-    /**
-     * 绘制风格水印
-     */
-    private fun drawStyleWatermark(
-        canvas: Canvas,
-        template: WatermarkTemplate,
-        config: WatermarkConfig,
-        width: Int,
-        height: Int
-    ) {
-        val paint = Paint().apply {
-            when (template.id) {
-                "cyberpunk" -> color = Color.CYAN
-                "artistic" -> color = Color.parseColor("#D4AF37")
-                else -> color = Color.WHITE
-            }
-            textSize = 42f
-            isAntiAlias = true
-            alpha = (config.opacity * 255).toInt()
-        }
-        
-        val text = when (template.id) {
-            "minimalist" -> "SHOT ON OPPO"
-            "artistic" -> "Captured"
-            "cyberpunk" -> "CYBER_2077"
-            "film_strip" -> "CINEMA"
-            else -> template.name
-        }
-        
-        val x = (width - paint.measureText(text)) / 2
-        val y = height - 80f
-        
         canvas.drawText(text, x, y, paint)
     }
 
     /**
-     * 切换水印编辑器开关
+     * 绘制暗角效果
      */
-    fun toggleWatermarkEditor(enabled: Boolean) {
-        settingsManager.isWatermarkEditorEnabled = enabled
+    private fun drawVignette(canvas: Canvas, bitmap: Bitmap, alpha: Float) {
+        val centerX = bitmap.width / 2f
+        val centerY = bitmap.height / 2f
+        val radius = maxOf(bitmap.width, bitmap.height) * 0.8f
+
+        val gradientPaint = Paint().apply {
+            shader = android.graphics.RadialGradient(
+                centerX, centerY, radius,
+                intArrayOf(Color.TRANSPARENT, Color.argb((alpha * 180).toInt(), 0, 0, 0)),
+                floatArrayOf(0.5f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        }
+
+        canvas.drawRect(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat(), gradientPaint)
+    }
+
+    /**
+     * WM-001: 导出为JPG
+     */
+    suspend fun exportAsJpg(bitmap: Bitmap, quality: Int = 95): ByteArray = withContext(Dispatchers.Default) {
+        val outputStream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        outputStream.toByteArray()
+    }
+
+    /**
+     * WM-001: 导出为PNG
+     */
+    suspend fun exportAsPng(bitmap: Bitmap): ByteArray = withContext(Dispatchers.Default) {
+        val outputStream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        outputStream.toByteArray()
+    }
+
+    /**
+     * 保存水印偏好
+     */
+    fun savePreference(templateId: String) {
+        settingsManager.lastWatermarkTemplate = templateId
+    }
+
+    /**
+     * 加载上次使用的水印模板
+     */
+    fun loadLastTemplate() {
+        val lastTemplate = settingsManager.lastWatermarkTemplate
+        if (lastTemplate != null) {
+            selectTemplate(lastTemplate)
+        }
+    }
+
+    /**
+     * 重置配置
+     */
+    fun resetConfig() {
+        _selectedTemplate.value = null
+        _watermarkConfig.value = WatermarkConfig()
+        _elementConfig.value = WatermarkElementConfig()
     }
 
     companion object {
@@ -305,8 +392,7 @@ data class WatermarkTemplate(
     val id: String,
     val name: String,
     val type: WatermarkType,
-    val description: String,
-    val features: List<String>
+    val elementConfig: WatermarkElementConfig? = null
 )
 
 /**
@@ -315,26 +401,84 @@ data class WatermarkTemplate(
 enum class WatermarkType {
     BRAND,      // 品牌水印
     FUNCTIONAL, // 功能水印
-    STYLE       // 风格水印
+    STYLE,      // 风格水印
+    CUSTOM      // 自定义水印
 }
-
-/**
- * 水印配置
- */
-data class WatermarkConfig(
-    val position: WatermarkPosition = WatermarkPosition.BOTTOM_RIGHT,
-    val opacity: Float = 0.8f,
-    val scale: Float = 1.0f,
-    val rotation: Float = 0f
-)
 
 /**
  * 水印位置
  */
 enum class WatermarkPosition {
     TOP_LEFT,
+    TOP_CENTER,
     TOP_RIGHT,
+    CENTER_LEFT,
+    CENTER,
+    CENTER_RIGHT,
     BOTTOM_LEFT,
-    BOTTOM_RIGHT,
-    CENTER
+    BOTTOM,
+    BOTTOM_RIGHT
 }
+
+/**
+ * 水印元素
+ */
+enum class WatermarkElement {
+    BRAND,
+    MODEL,
+    PARAMS,
+    TIMESTAMP,
+    LOCATION,
+    VIGNETTE
+}
+
+/**
+ * 水印配置
+ */
+data class WatermarkConfig(
+    val opacity: Float = 1.0f,
+    val scale: Float = 1.0f,
+    val rotation: Float = 0f
+)
+
+/**
+ * 水印元素配置
+ */
+data class WatermarkElementConfig(
+    // 显示控制
+    val showBrand: Boolean = true,
+    val showModel: Boolean = true,
+    val showParams: Boolean = true,
+    val showTimestamp: Boolean = false,
+    val showLocation: Boolean = false,
+    val showVignette: Boolean = false,
+
+    // 品牌配置
+    val brandName: String = "HASSELBLAD",
+    val brandPosition: WatermarkPosition = WatermarkPosition.TOP_CENTER,
+    val brandColor: Int = Color.WHITE,
+    val brandAlpha: Float = 0.9f,
+
+    // 型号配置
+    val modelPosition: WatermarkPosition = WatermarkPosition.CENTER_BOTTOM,
+    val modelColor: Int = Color.WHITE,
+    val modelAlpha: Float = 0.8f,
+
+    // 参数配置
+    val paramsPosition: WatermarkPosition = WatermarkPosition.BOTTOM,
+    val paramsColor: Int = Color.WHITE,
+    val paramsAlpha: Float = 0.7f,
+
+    // 时间戳配置
+    val timestampPosition: WatermarkPosition = WatermarkPosition.TOP_RIGHT,
+    val timestampColor: Int = Color.WHITE,
+    val timestampAlpha: Float = 0.8f,
+
+    // 位置配置
+    val locationPosition: WatermarkPosition = WatermarkPosition.TOP_LEFT,
+    val locationColor: Int = Color.WHITE,
+    val locationAlpha: Float = 0.8f,
+
+    // 暗角配置
+    val vignetteAlpha: Float = 0.5f
+)

@@ -124,6 +124,17 @@ class SettingsManager private constructor(context: Context) {
             _darkModeFlow.value = value
         }
 
+    // 上次使用的水印模板
+    var lastWatermarkTemplate: String?
+        get() = prefs.getString(KEY_LAST_WATERMARK_TEMPLATE, null)
+        set(value) {
+            if (value != null) {
+                prefs.edit().putString(KEY_LAST_WATERMARK_TEMPLATE, value).apply()
+            } else {
+                prefs.edit().remove(KEY_LAST_WATERMARK_TEMPLATE).apply()
+            }
+        }
+
     // 云同步开关（默认开启）
     var isCloudSyncEnabled: Boolean
         get() = prefs.getBoolean(KEY_CLOUD_SYNC_ENABLED, true)
@@ -211,6 +222,7 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_AI_SCENE_ENABLED = "ai_scene_enabled"
+        private const val KEY_LAST_WATERMARK_TEMPLATE = "last_watermark_template"
         private const val KEY_AI_FINE_TUNE_ENABLED = "ai_fine_tune_enabled"
         private const val KEY_WATERMARK_EDITOR_ENABLED = "watermark_editor_enabled"
         private const val KEY_HASSELBLAD_COLOR_ENABLED = "hasselblad_color_enabled"
