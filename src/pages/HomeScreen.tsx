@@ -1,56 +1,17 @@
 import React from 'react';
 import { useAppStore, homePresets } from '../store/appStore';
-import { Camera, Palette, Droplets, Cpu, Images, SlidersHorizontal, Heart, ChevronRight } from 'lucide-react';
-
-const featureEntries = [
-  { id: 'scene', title: 'AI场景', icon: Camera, color: '#4CAF50', route: 'ai-fine-tune' as const },
-  { id: 'fine-tune', title: 'AI微调', icon: Palette, color: '#9C27B0', route: 'ai-fine-tune' as const },
-  { id: 'watermark', title: '水印', icon: Droplets, color: '#00BCD4', route: 'watermark' as const },
-  { id: 'optimize', title: '优化', icon: Cpu, color: '#2196F3', route: 'ai-fine-tune' as const },
-  { id: 'preset', title: '预设', icon: Images, color: '#FF9800', route: null },
-  { id: 'param', title: '参数', icon: SlidersHorizontal, color: '#E91E63', route: 'param-adjust' as const },
-];
+import { Heart } from 'lucide-react';
 
 const tabs = ['全部', '收藏', '我的'];
 
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab, navigateToSubPage } = useAppStore();
-
-  const handleFeatureClick = (route: string | null) => {
-    if (route) {
-      navigateToSubPage(route as any);
-    }
-  };
+  const { selectedTab, setSelectedTab } = useAppStore();
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-2 pb-3">
         <h1 className="text-xl font-bold text-white">OMaster</h1>
-      </div>
-
-      {/* Feature Entry Row */}
-      <div className="px-4 pb-3">
-        <div className="flex gap-2">
-          {featureEntries.map((entry) => (
-            <button
-              key={entry.id}
-              onClick={() => handleFeatureClick(entry.route)}
-              className="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 group relative overflow-hidden"
-              style={{ backgroundColor: `${entry.color}15` }}
-            >
-              {/* Glass Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              <div className="relative z-10">
-                <entry.icon size={18} style={{ color: entry.color }} />
-              </div>
-              <span className="relative z-10 text-[10px] font-medium" style={{ color: entry.color }}>
-                {entry.title}
-              </span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Tab Bar */}

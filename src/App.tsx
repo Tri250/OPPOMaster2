@@ -7,9 +7,12 @@ import FeaturesScreen from './pages/FeaturesScreen';
 import AboutScreen from './pages/AboutScreen';
 
 // Sub pages
+import AISceneRecognitionPage from './pages/subpages/AISceneRecognitionPage';
 import AIFineTunePage from './pages/subpages/AIFineTunePage';
-import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
+import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
 import WatermarkPage from './pages/subpages/WatermarkPage';
+import PresetManagerPage from './pages/subpages/PresetManagerPage';
+import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
 import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
 import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
@@ -20,12 +23,18 @@ const App: React.FC = () => {
 
   const renderSubPage = () => {
     switch (currentSubPage) {
+      case 'ai-scene':
+        return <AISceneRecognitionPage />;
       case 'ai-fine-tune':
         return <AIFineTunePage />;
-      case 'param-adjust':
-        return <ParamAdjustPage />;
+      case 'smart-optimize':
+        return <SmartOptimizePage />;
       case 'watermark':
         return <WatermarkPage />;
+      case 'preset-manager':
+        return <PresetManagerPage />;
+      case 'param-adjust':
+        return <ParamAdjustPage />;
       case 'theme-settings':
         return <ThemeSettingsPage />;
       case 'dark-mode':
