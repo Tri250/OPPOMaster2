@@ -26,8 +26,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,13 +42,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,6 +54,7 @@ import com.silas.omaster.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
+import androidx.compose.ui.text.font.FontWeight
 
 private val NavBarBackground = Color(0xFF1A1A1A)
 private val NavBarBorder = Color(0xFF2A2A2A)
@@ -57,9 +62,14 @@ private val NavBarBorder = Color(0xFF2A2A2A)
 data class NavItem(
     val route: String,
     val title: String,
-    val icon: ImageVector
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
 )
 
+/**
+ * PillNavBar - Web风格底部导航栏
+ * 统一使用Outlined/Filled图标风格
+ */
 @Composable
 fun PillNavBar(
     visible: Boolean,
@@ -67,10 +77,26 @@ fun PillNavBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 统一的图标风格：Outlined未选中，Filled选中
     val navItems = listOf(
-        NavItem("home", stringResource(R.string.nav_home), Icons.Default.Home),
-        NavItem("subscription", stringResource(R.string.nav_subscription), Icons.Default.RssFeed),
-        NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
+        NavItem(
+            route = "home",
+            title = stringResource(R.string.nav_home),
+            selectedIcon = Icons.Filled.PhotoCamera,
+            unselectedIcon = Icons.Outlined.PhotoCamera
+        ),
+        NavItem(
+            route = "subscription",
+            title = stringResource(R.string.nav_subscription),
+            selectedIcon = Icons.Filled.Person,
+            unselectedIcon = Icons.Outlined.Person
+        ),
+        NavItem(
+            route = "about",
+            title = stringResource(R.string.nav_about),
+            selectedIcon = Icons.Filled.Info,
+            unselectedIcon = Icons.Outlined.Info
+        )
     )
 
     AnimatedVisibility(
@@ -248,8 +274,9 @@ private fun NavItemButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // 使用统一的Outlined/Filled图标风格
         Icon(
-            imageVector = item.icon,
+            imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
             contentDescription = item.title,
             modifier = Modifier
                 .size(if (selected) 22.dp else 20.dp)
@@ -261,7 +288,7 @@ private fun NavItemButton(
             text = item.title,
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
-            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
     }
 }
