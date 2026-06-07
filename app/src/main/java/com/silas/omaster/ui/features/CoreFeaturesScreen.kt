@@ -1,13 +1,11 @@
 package com.silas.omaster.ui.features
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -18,7 +16,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,21 +24,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.MotionPhotosAuto
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhotoFilter
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsSuggest
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -52,9 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,33 +64,36 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.util.HapticFeedbackType as HapticType
 import com.silas.omaster.util.perform
 
 /**
- * 核心功能页面
- * 整合所有AI功能和高级特性
+ * 核心功能页面 - 重新设计排版
+ * 6大核心功能入口，清晰分类，专业布局
  */
 @Composable
 fun CoreFeaturesScreen(
-    onNavigateToSceneRecognition: () -> Unit = {},
-    onNavigateToAIFineTune: () -> Unit = {},
-    onNavigateToWatermarkEditor: () -> Unit = {},
-    onNavigateToSmartOptimize: () -> Unit = {},
-    onNavigateToPresetManager: () -> Unit = {},
-    onNavigateToParamAdjustment: () -> Unit = {},
-    onNavigateToHasselbladColor: () -> Unit = {},
-    onNavigateToCloudSync: () -> Unit = {},
+    onNavigateToSceneRecognition: () -> Unit,
+    onNavigateToAIFineTune: () -> Unit,
+    onNavigateToWatermarkEditor: () -> Unit,
+    onNavigateToSmartOptimize: () -> Unit,
+    onNavigateToPresetManager: () -> Unit,
+    onNavigateToParamAdjustment: () -> Unit,
+    onNavigateToHasselbladColor: () -> Unit,
+    onNavigateToCloudSync: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
     val haptic = LocalHapticFeedback.current
-    val scrollState = rememberScrollState()
 
     // 功能开关状态
     var aiSceneEnabled by remember { mutableStateOf(settingsManager.isAISceneRecognitionEnabled) }
@@ -101,20 +102,16 @@ fun CoreFeaturesScreen(
     var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
     var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(PureBlack)
-            .verticalScroll(scrollState)
-            .windowInsetsPadding(WindowInsets.statusBars)
+            .windowInsetsPadding(WindowInsets.statusBars),
+        contentPadding = PaddingValues(16.dp)
     ) {
-        // 标题栏
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            Column {
+        // 页面标题
+        item {
+            Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
                     text = "核心功能",
                     style = MaterialTheme.typography.headlineMedium,
@@ -122,7 +119,7 @@ fun CoreFeaturesScreen(
                     color = Color.White
                 )
                 Text(
-                    text = "AI驱动的专业摄影体验",
+                    text = "AI驱动的专业影像体验",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 4.dp)
@@ -130,176 +127,221 @@ fun CoreFeaturesScreen(
             }
         }
 
-        // AI功能区域标题
-        SectionTitle(title = "AI 智能功能", icon = Icons.Default.AutoAwesome)
-
-        // AI功能网格
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.height(280.dp),
-            userScrollEnabled = false
-        ) {
-            item {
-                FeatureCard(
-                    title = "AI场景识别",
-                    subtitle = "35+场景智能识别",
-                    icon = Icons.Default.CameraAlt,
-                    iconColor = Color(0xFF4CAF50),
-                    gradientColors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32)),
-                    isEnabled = aiSceneEnabled,
-                    onToggle = { enabled ->
-                        aiSceneEnabled = enabled
-                        settingsManager.isAISceneRecognitionEnabled = enabled
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                    },
-                    onClick = onNavigateToSceneRecognition
-                )
-            }
-
-            item {
-                FeatureCard(
-                    title = "AI微调",
-                    subtitle = "色彩风格智能调整",
-                    icon = Icons.Default.ColorLens,
-                    iconColor = Color(0xFF9C27B0),
-                    gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
-                    isEnabled = aiFineTuneEnabled,
-                    onToggle = { enabled ->
-                        aiFineTuneEnabled = enabled
-                        settingsManager.isAIFineTuneEnabled = enabled
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                    },
-                    onClick = onNavigateToAIFineTune
-                )
-            }
-
-            item {
-                FeatureCard(
-                    title = "智能优化",
-                    subtitle = "一键HDR/降噪/锐化",
-                    icon = Icons.Default.MotionPhotosAuto,
-                    iconColor = Color(0xFF2196F3),
-                    gradientColors = listOf(Color(0xFF0D47A1), Color(0xFF1565C0)),
-                    isEnabled = aiFineTuneEnabled,
-                    onToggle = { enabled ->
-                        aiFineTuneEnabled = enabled
-                        settingsManager.isAIFineTuneEnabled = enabled
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                    },
-                    onClick = onNavigateToSmartOptimize
-                )
-            }
-
-            item {
-                FeatureCard(
-                    title = "水印编辑",
-                    subtitle = "12+专业水印模板",
-                    icon = Icons.Default.WaterDrop,
-                    iconColor = Color(0xFF00BCD4),
-                    gradientColors = listOf(Color(0xFF006064), Color(0xFF00838F)),
-                    isEnabled = watermarkEnabled,
-                    onToggle = { enabled ->
-                        watermarkEnabled = enabled
-                        settingsManager.isWatermarkEditorEnabled = enabled
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                    },
-                    onClick = onNavigateToWatermarkEditor
-                )
-            }
+        // AI智能功能区域
+        item {
+            SectionHeader(
+                title = "AI 智能功能",
+                icon = Icons.Default.AutoAwesome,
+                description = "智能识别与自动优化"
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 专业功能区域标题
-        SectionTitle(title = "专业功能", icon = Icons.Default.SettingsSuggest)
-
-        // 专业功能列表
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            // 预设管理
-            FeatureListItem(
-                title = "预设管理",
-                subtitle = "云端预设库管理",
-                icon = Icons.Default.PhotoFilter,
-                iconColor = Color(0xFFFF9800),
-                onClick = onNavigateToPresetManager
+        // AI场景识别
+        item {
+            FeatureCard(
+                title = "AI 场景识别",
+                subtitle = "智能识别36+拍摄场景，自动推荐最佳参数",
+                icon = Icons.Default.CameraAlt,
+                iconColor = Color(0xFF4CAF50),
+                gradientColors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32)),
+                isEnabled = aiSceneEnabled,
+                onToggle = { enabled ->
+                    haptic.perform(HapticType.ToggleOn)
+                    aiSceneEnabled = enabled
+                    settingsManager.isAISceneRecognitionEnabled = enabled
+                },
+                onClick = onNavigateToSceneRecognition
             )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-            // 参数精细调节
-            FeatureListItem(
+        // AI微调
+        item {
+            FeatureCard(
+                title = "AI 微调",
+                subtitle = "一键智能微调，色彩风格精准控制",
+                icon = Icons.Default.ColorLens,
+                iconColor = Color(0xFF9C27B0),
+                gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
+                isEnabled = aiFineTuneEnabled,
+                onToggle = { enabled ->
+                    haptic.perform(HapticType.ToggleOn)
+                    aiFineTuneEnabled = enabled
+                    settingsManager.isAIFineTuneEnabled = enabled
+                },
+                onClick = onNavigateToAIFineTune
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 智能优化
+        item {
+            FeatureCard(
+                title = "智能优化",
+                subtitle = "一键HDR增强、降噪、锐化优化",
+                icon = Icons.Default.Memory,
+                iconColor = Color(0xFF2196F3),
+                gradientColors = listOf(Color(0xFF0D47A1), Color(0xFF1565C0)),
+                isEnabled = aiFineTuneEnabled,
+                onToggle = { enabled ->
+                    haptic.perform(HapticType.ToggleOn)
+                    aiFineTuneEnabled = enabled
+                    settingsManager.isAIFineTuneEnabled = enabled
+                },
+                onClick = onNavigateToSmartOptimize
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // 专业工具区域
+        item {
+            SectionHeader(
+                title = "专业工具",
+                icon = Icons.Default.SettingsSuggest,
+                description = "精细调节与创作工具"
+            )
+        }
+
+        // 水印编辑器
+        item {
+            FeatureCard(
+                title = "水印编辑器",
+                subtitle = "14+专业水印模板，品牌认证水印",
+                icon = Icons.Default.WaterDrop,
+                iconColor = Color(0xFF00BCD4),
+                gradientColors = listOf(Color(0xFF006064), Color(0xFF00838F)),
+                isEnabled = watermarkEnabled,
+                onToggle = { enabled ->
+                    haptic.perform(HapticType.ToggleOn)
+                    watermarkEnabled = enabled
+                    settingsManager.isWatermarkEditorEnabled = enabled
+                },
+                onClick = onNavigateToWatermarkEditor
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 参数精细调节
+        item {
+            FeatureCard(
                 title = "参数精细调节",
-                subtitle = "ISO/快门/光圈精确控制",
-                icon = Icons.Default.Brush,
+                subtitle = "ISO、快门、光圈、白平衡精确控制",
+                icon = Icons.Default.Tune,
                 iconColor = Color(0xFFE91E63),
+                gradientColors = listOf(Color(0xFF880E4F), Color(0xFFAD1457)),
+                isEnabled = true,
+                showToggle = false,
                 onClick = onNavigateToParamAdjustment
             )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-            // 哈苏色彩科学
-            FeatureListItem(
+        // 预设管理
+        item {
+            FeatureCard(
+                title = "预设管理",
+                subtitle = "云端预设库，收藏、创建、分享",
+                icon = Icons.Default.PhotoFilter,
+                iconColor = Color(0xFFFF9800),
+                gradientColors = listOf(Color(0xFFE65100), Color(0xFFF57C00)),
+                isEnabled = true,
+                showToggle = false,
+                onClick = onNavigateToPresetManager
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // 品牌特色区域
+        item {
+            SectionHeader(
+                title = "品牌特色",
+                icon = Icons.Default.Brush,
+                description = "哈苏影像系统专属功能"
+            )
+        }
+
+        // 哈苏色彩科学
+        item {
+            FeatureCard(
                 title = "哈苏色彩科学",
-                subtitle = "HNCS 3.0 自然色彩",
-                icon = Icons.Default.CameraAlt,
-                iconColor = Color(0xFFFFB347),
+                subtitle = "HNCS 3.0 自然色彩解决方案",
+                icon = Icons.Default.Image,
+                iconColor = HasselbladOrange,
+                gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
                 isEnabled = hasselbladEnabled,
                 onToggle = { enabled ->
+                    haptic.perform(HapticType.ToggleOn)
                     hasselbladEnabled = enabled
                     settingsManager.isHasselbladColorEnabled = enabled
-                    haptic.perform(HapticFeedbackType.ToggleOn)
                 },
                 onClick = onNavigateToHasselbladColor
             )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-            // 云同步
-            FeatureListItem(
+        // 云同步
+        item {
+            FeatureCard(
                 title = "云同步",
-                subtitle = "预设数据云端备份",
-                icon = Icons.Default.AutoAwesome,
+                subtitle = "OPPO/realme/vivo/荣耀 CDN数据同步",
+                icon = Icons.Default.Settings,
                 iconColor = Color(0xFF3F51B5),
+                gradientColors = listOf(Color(0xFF1A237E), Color(0xFF303F9F)),
                 isEnabled = cloudSyncEnabled,
                 onToggle = { enabled ->
+                    haptic.perform(HapticType.ToggleOn)
                     cloudSyncEnabled = enabled
                     settingsManager.isCloudSyncEnabled = enabled
-                    haptic.perform(HapticFeedbackType.ToggleOn)
                 },
                 onClick = onNavigateToCloudSync
             )
+            Spacer(modifier = Modifier.height(80.dp))
         }
-
-        Spacer(modifier = Modifier.height(100.dp))
     }
 }
 
 @Composable
-private fun SectionTitle(
+private fun SectionHeader(
     title: String,
-    icon: ImageVector
+    icon: ImageVector,
+    description: String
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(HasselbladOrange.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = HasselbladOrange,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.5f)
+            )
+        }
     }
+    Spacer(modifier = Modifier.height(12.dp))
 }
 
 @Composable
@@ -310,7 +352,8 @@ private fun FeatureCard(
     iconColor: Color,
     gradientColors: List<Color>,
     isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit,
+    showToggle: Boolean = true,
+    onToggle: (Boolean) -> Unit = {},
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -327,7 +370,6 @@ private fun FeatureCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
             .scale(scale)
             .clickable(
                 interactionSource = interactionSource,
@@ -342,7 +384,7 @@ private fun FeatureCard(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
                         colors = if (isEnabled) gradientColors else listOf(
@@ -353,31 +395,65 @@ private fun FeatureCard(
                 )
                 .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // 顶部：图标和开关
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                // 图标
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // 文字
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f)
+                        )
+                        if (isEnabled && showToggle) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isEnabled) Color.White.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                // 开关
+                if (showToggle) {
                     Switch(
                         checked = isEnabled,
                         onCheckedChange = onToggle,
@@ -386,122 +462,29 @@ private fun FeatureCard(
                             checkedTrackColor = Color.White.copy(alpha = 0.5f),
                             uncheckedThumbColor = Color.Gray,
                             uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
-                        ),
-                        modifier = Modifier.size(40.dp, 24.dp)
+                        )
                     )
+                } else {
+                    // 进入按钮
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.3f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Brush,
+                            null,
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
-
-                // 底部：文字
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isEnabled) Color.White.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeatureListItem(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    iconColor: Color,
-    isEnabled: Boolean? = null,
-    onToggle: ((Boolean) -> Unit)? = null,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "scale"
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .scale(scale)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1A1A1A)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 图标
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(iconColor.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // 文字
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
-            // 开关（如果有）
-            if (isEnabled != null && onToggle != null) {
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
-                    )
-                )
             }
         }
     }

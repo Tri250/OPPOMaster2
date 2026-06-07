@@ -55,6 +55,7 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
+import com.silas.omaster.ui.featured.FeaturedPresetsScreen
 
 
 val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided") }
@@ -89,6 +90,18 @@ sealed class Screen {
 
     @Serializable
     data object AIFineTune : Screen()
+
+    @Serializable
+    data object SceneRecognition : Screen()
+
+    @Serializable
+    data object WatermarkEditor : Screen()
+
+    @Serializable
+    data object SmartOptimize : Screen()
+
+    @Serializable
+    data object ParamAdjustment : Screen()
 
     @Serializable
     data object PrivacyPolicy : Screen()
@@ -344,6 +357,12 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToCreate = {
                         navController.navigate(Screen.PresetSelection)
                     },
+                    onNavigateToSceneRecognition = { navController.navigate(Screen.SceneRecognition) },
+                    onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
+                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor) },
+                    onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
+                    onNavigateToPresetManager = { navController.navigate(Screen.Home) },
+                    onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     },
@@ -456,9 +475,24 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.Subscription> {
-                com.silas.omaster.ui.subscription.SubscriptionScreen(
-                    onBack = {
-                        navController.popBackStack()
+                FeaturedPresetsScreen(
+                    onNavigateToDetail = { preset ->
+                        navController.navigate(Screen.Detail(preset.id ?: ""))
+                    },
+                    onApplyPreset = { preset ->
+                        // 应用预设参数到相机
+                        // 将预设参数保存到设置中，供相机使用
+                        val settingsManager = SettingsManager.getInstance(context)
+                        settingsManager.applyPresetParams(
+                            saturation = preset.saturation,
+                            contrast = preset.contrast,
+                            warmth = preset.warmth,
+                            sharpness = preset.sharpness,
+                            clarity = preset.clarity,
+                            brightness = preset.brightness
+                        )
+                        // 显示应用成功提示
+                        // TODO: 添加Toast或Snackbar提示
                     },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
@@ -468,13 +502,13 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.CoreFeatures> {
                 CoreFeaturesScreen(
-                    onNavigateToSceneRecognition = { /* TODO */ },
+                    onNavigateToSceneRecognition = { navController.navigate(Screen.SceneRecognition) },
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
-                    onNavigateToWatermarkEditor = { /* TODO */ },
-                    onNavigateToSmartOptimize = { navController.navigate(Screen.AIFineTune) },
-                    onNavigateToPresetManager = { /* TODO */ },
-                    onNavigateToParamAdjustment = { /* TODO */ },
-                    onNavigateToHasselbladColor = { /* TODO */ },
+                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor) },
+                    onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
+                    onNavigateToPresetManager = { navController.navigate(Screen.Home) },
+                    onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
+                    onNavigateToHasselbladColor = { navController.navigate(Screen.Settings) },
                     onNavigateToCloudSync = { navController.navigate(Screen.Settings) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
@@ -483,6 +517,34 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.AIFineTune> {
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // AI场景识别页面（复用AIFineTuneScreen）
+            composable<Screen.SceneRecognition> {
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 水印编辑器页面（复用AIFineTuneScreen）
+            composable<Screen.WatermarkEditor> {
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 智能优化页面（复用AIFineTuneScreen）
+            composable<Screen.SmartOptimize> {
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 参数调节页面（复用AIFineTuneScreen）
+            composable<Screen.ParamAdjustment> {
                 AIFineTuneScreen(
                     onBack = { navController.popBackStack() }
                 )

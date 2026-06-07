@@ -251,6 +251,56 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putString(KEY_CUSTOM_QUICK_PRESETS, jsonStr).apply()
         }
 
+    // 应用预设参数（精选推荐功能）
+    fun applyPresetParams(
+        saturation: Int = 0,
+        contrast: Int = 0,
+        warmth: Int = 0,
+        sharpness: Int = 0,
+        clarity: Int = 0,
+        brightness: Int = 0
+    ) {
+        prefs.edit().apply {
+            putInt(KEY_APPLIED_SATURATION, saturation)
+            putInt(KEY_APPLIED_CONTRAST, contrast)
+            putInt(KEY_APPLIED_WARMTH, warmth)
+            putInt(KEY_APPLIED_SHARPNESS, sharpness)
+            putInt(KEY_APPLIED_CLARITY, clarity)
+            putInt(KEY_APPLIED_BRIGHTNESS, brightness)
+            putBoolean(KEY_HAS_APPLIED_PRESET, true)
+        }.apply()
+    }
+
+    // 获取已应用的预设参数
+    fun getAppliedPresetParams(): Map<String, Int> {
+        return mapOf(
+            "saturation" to prefs.getInt(KEY_APPLIED_SATURATION, 0),
+            "contrast" to prefs.getInt(KEY_APPLIED_CONTRAST, 0),
+            "warmth" to prefs.getInt(KEY_APPLIED_WARMTH, 0),
+            "sharpness" to prefs.getInt(KEY_APPLIED_SHARPNESS, 0),
+            "clarity" to prefs.getInt(KEY_APPLIED_CLARITY, 0),
+            "brightness" to prefs.getInt(KEY_APPLIED_BRIGHTNESS, 0)
+        )
+    }
+
+    // 是否已应用预设
+    fun hasAppliedPreset(): Boolean {
+        return prefs.getBoolean(KEY_HAS_APPLIED_PRESET, false)
+    }
+
+    // 清除已应用的预设
+    fun clearAppliedPreset() {
+        prefs.edit().apply {
+            remove(KEY_APPLIED_SATURATION)
+            remove(KEY_APPLIED_CONTRAST)
+            remove(KEY_APPLIED_WARMTH)
+            remove(KEY_APPLIED_SHARPNESS)
+            remove(KEY_APPLIED_CLARITY)
+            remove(KEY_APPLIED_BRIGHTNESS)
+            putBoolean(KEY_HAS_APPLIED_PRESET, false)
+        }.apply()
+    }
+
     companion object {
         private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
         private const val KEY_THEME_ID = "theme_id"
@@ -275,6 +325,15 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_PINNED_PRESET_IDS = "pinned_preset_ids"
         private const val KEY_MANUALLY_MODIFIED_PARAMS = "manually_modified_params"
         private const val KEY_CUSTOM_QUICK_PRESETS = "custom_quick_presets"
+
+        // 应用预设参数 Key
+        private const val KEY_APPLIED_SATURATION = "applied_saturation"
+        private const val KEY_APPLIED_CONTRAST = "applied_contrast"
+        private const val KEY_APPLIED_WARMTH = "applied_warmth"
+        private const val KEY_APPLIED_SHARPNESS = "applied_sharpness"
+        private const val KEY_APPLIED_CLARITY = "applied_clarity"
+        private const val KEY_APPLIED_BRIGHTNESS = "applied_brightness"
+        private const val KEY_HAS_APPLIED_PRESET = "has_applied_preset"
 
         @Volatile
         private var instance: SettingsManager? = null
