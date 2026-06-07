@@ -3,77 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OMaster - 精致高端设计展示</title>
+    <title>OMaster - 专业摄影参数预设</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&family=Noto+Sans+SC:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* ============================================
-           OMaster 精致高端设计系统
-           Premium Design System
+           OMaster 设计系统 - OPPOMaster Web风格
            ============================================ */
         
         :root {
-            /* 琥珀金 - 高端主色 */
-            --amber-gold: #D4A574;
-            --amber-gold-light: #E8C9A8;
-            --amber-gold-dark: #B88858;
+            /* Zinc色系 - 深灰背景 */
+            --zinc-900: #18181B;
+            --zinc-800: #27272A;
+            --zinc-700: #3F3F46;
+            --zinc-600: #52525B;
+            --zinc-500: #71717A;
+            --zinc-400: #A1A1AA;
+            --zinc-300: #D4D4D8;
+            --zinc-200: #E4E4E7;
+            --zinc-100: #F4F4F5;
             
-            /* 哈苏橙 - 品牌灵魂 */
-            --hasselblad-orange: #E07B39;
-            --hasselblad-orange-light: #FF9B5C;
-            --hasselblad-orange-dark: #C66A2E;
-            
-            /* 碳黑 - 主背景 */
-            --carbon-black: #0D0D0F;
-            --carbon-elevated: #151518;
-            --carbon-surface: #1D1D21;
-            
-            /* 钛灰 - 卡片背景 */
-            --titanium-gray: #252528;
-            --titanium-gray-light: #2F2F33;
-            
-            /* 文字色彩 */
-            --text-primary: #F5F5F7;
-            --text-secondary: rgba(245, 245, 247, 0.7);
-            --text-tertiary: rgba(245, 245, 247, 0.5);
-            --text-quaternary: rgba(245, 245, 247, 0.35);
-            
-            /* 边框 */
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-light: rgba(255, 255, 255, 0.04);
+            /* Orange色系 - 品牌主色 */
+            --orange-500: #F97316;
+            --orange-600: #EA580C;
+            --orange-400: #FB923C;
+            --orange-700: #C2410C;
+            --orange-300: #FDBA74;
             
             /* 功能色 */
-            --jade-green: #2ECC71;
-            --info-sapphire: #42A5F5;
-            --warning-gold: #F4B942;
+            --yellow-400: #FACC15;
+            --green-500: #22C55E;
+            --blue-500: #3B82F6;
+            
+            /* 透明度变体 */
+            --orange-500-20: rgba(249, 115, 22, 0.2);
+            --orange-500-10: rgba(249, 115, 22, 0.1);
+            --orange-500-30: rgba(249, 115, 22, 0.3);
+            --orange-500-25: rgba(249, 115, 22, 0.25);
             
             /* 渐变 */
-            --gradient-amber: linear-gradient(135deg, #E8C9A8 0%, #D4A574 50%, #B88858 100%);
-            --gradient-hasselblad: linear-gradient(135deg, #FF9B5C 0%, #E07B39 50%, #C66A2E 100%);
-            --gradient-carbon: linear-gradient(180deg, #0D0D0F 0%, #151518 50%, #1D1D21 100%);
+            --gradient-orange: linear-gradient(to right, #FB923C, #F97316, #EA580C);
+            --gradient-zinc: linear-gradient(135deg, #18181B, #27272A, #18181B);
+            --gradient-hero: linear-gradient(135deg, #18181B, #27272A, #18181B);
             
             /* 阴影 */
-            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.4);
-            --shadow-glow: 0 0 30px rgba(212, 165, 116, 0.15);
+            --shadow-orange: 0 10px 30px rgba(249, 115, 22, 0.25);
+            --shadow-orange-hover: 0 15px 40px rgba(249, 115, 22, 0.4);
             
             /* 圆角 */
-            --radius-xs: 4px;
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
             --radius-xl: 24px;
-            --radius-full: 9999px;
             
             /* 动画 */
             --duration-fast: 100ms;
             --duration-normal: 200ms;
             --duration-slow: 300ms;
-            --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --duration-page: 800ms;
+            --ease-out: cubic-bezier(0, 0, 0.2, 1);
             --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
             
             /* 字体 */
-            --font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         * {
@@ -84,16 +77,36 @@
 
         body {
             font-family: var(--font-family);
-            background: var(--carbon-black);
-            color: var(--text-primary);
-            overflow-x: hidden;
-            line-height: 1.6;
-            font-weight: 400;
-            letter-spacing: -0.01em;
+            background-color: var(--zinc-900);
+            color: white;
+            -webkit-font-smoothing: antialiased;
+            scroll-behavior: smooth;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--zinc-900);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--zinc-700);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--zinc-600);
+        }
+
+        /* 文字选中 */
+        ::selection {
+            background-color: rgba(234, 88, 12, 0.3);
+            color: white;
         }
 
         /* ============================================
-           手机框架 - 精致展示
+           手机框架
            ============================================ */
         .phone-container {
             display: flex;
@@ -101,9 +114,9 @@
             align-items: center;
             min-height: 100vh;
             padding: 40px 20px;
-            background: radial-gradient(ellipse at 30% 20%, rgba(212, 165, 116, 0.06) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, rgba(224, 123, 57, 0.04) 0%, transparent 50%),
-                        var(--carbon-black);
+            background: radial-gradient(ellipse at 30% 20%, var(--orange-500-20) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, var(--orange-500-10) 0%, transparent 50%),
+                        var(--zinc-900);
         }
 
         .phone-frame {
@@ -112,10 +125,9 @@
             background: #000;
             border-radius: 48px;
             padding: 10px;
-            box-shadow: 
-                0 0 0 1px rgba(255, 255, 255, 0.06),
-                var(--shadow-soft),
-                var(--shadow-glow);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06),
+                        0 20px 60px rgba(0, 0, 0, 0.4),
+                        0 0 40px var(--orange-500-20);
             position: relative;
         }
 
@@ -134,14 +146,14 @@
         .phone-screen {
             width: 100%;
             height: 100%;
-            background: var(--carbon-black);
+            background: var(--zinc-900);
             border-radius: 40px;
             overflow: hidden;
             position: relative;
         }
 
         /* ============================================
-           状态栏 - 精致简约
+           状态栏
            ============================================ */
         .status-bar {
             position: absolute;
@@ -154,31 +166,29 @@
             align-items: center;
             padding: 0 28px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             z-index: 50;
-            background: linear-gradient(180deg, rgba(13, 13, 15, 0.9) 0%, transparent 100%);
-            font-variant-numeric: tabular-nums;
-            letter-spacing: -0.3px;
+            background: linear-gradient(180deg, rgba(24, 24, 27, 0.9) 0%, transparent 100%);
         }
 
         /* ============================================
-           底部导航 - 精致胶囊
+           底部导航 - 简洁胶囊
            ============================================ */
         .bottom-nav {
             position: absolute;
             bottom: 12px;
             left: 50%;
             transform: translateX(-50%);
-            height: 68px;
-            background: rgba(37, 37, 40, 0.85);
+            height: 64px;
+            background: rgba(39, 39, 42, 0.85);
             backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 34px;
+            border-radius: 32px;
             display: flex;
             align-items: center;
-            padding: 0 8px;
-            gap: 4px;
-            border: 1px solid var(--border-subtle);
-            box-shadow: var(--shadow-soft);
+            padding: 0 12px;
+            gap: 8px;
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             z-index: 50;
         }
 
@@ -187,75 +197,45 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 3px;
-            padding: 8px 18px;
-            border-radius: var(--radius-full);
+            gap: 4px;
+            padding: 10px 20px;
+            border-radius: 24px;
             cursor: pointer;
-            transition: all var(--duration-normal) var(--ease-smooth);
+            transition: all var(--duration-normal) var(--ease-out);
             position: relative;
         }
 
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: var(--gradient-amber);
-            opacity: 0;
-            border-radius: var(--radius-full);
-            transition: opacity var(--duration-fast) var(--ease-smooth);
-        }
-
-        .nav-item:hover::before {
-            opacity: 0.08;
-        }
-
-        .nav-item.active::before {
-            opacity: 0.12;
+        .nav-item:hover {
+            background: rgba(249, 115, 22, 0.1);
         }
 
         .nav-item.active {
-            color: var(--amber-gold);
+            background: rgba(249, 115, 22, 0.15);
         }
 
         .nav-icon {
-            font-size: 24px;
+            font-size: 22px;
             transition: transform var(--duration-normal) var(--ease-bounce);
         }
 
         .nav-item:hover .nav-icon {
-            transform: scale(1.08);
+            transform: scale(1.05);
         }
 
         .nav-item.active .nav-icon {
-            transform: scale(1.1);
+            color: var(--orange-500);
         }
 
         .nav-label {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 500;
-            opacity: 0.7;
-            transition: all var(--duration-fast) var(--ease-smooth);
-            letter-spacing: 0.02em;
+            color: var(--zinc-400);
+            transition: all var(--duration-fast);
         }
 
         .nav-item.active .nav-label {
+            color: var(--orange-500);
             font-weight: 600;
-            opacity: 1;
-        }
-
-        .nav-indicator {
-            position: absolute;
-            bottom: 6px;
-            width: 4px;
-            height: 4px;
-            background: var(--amber-gold);
-            border-radius: 50%;
-            opacity: 0;
-            transition: all var(--duration-normal) var(--ease-bounce);
-        }
-
-        .nav-item.active .nav-indicator {
-            opacity: 1;
         }
 
         /* ============================================
@@ -276,17 +256,17 @@
 
         .page {
             display: none;
-            animation: elegantEnter var(--duration-slow) var(--ease-smooth);
+            animation: fadeInUp var(--duration-page) var(--ease-out);
         }
 
         .page.active {
             display: block;
         }
 
-        @keyframes elegantEnter {
+        @keyframes fadeInUp {
             from { 
                 opacity: 0; 
-                transform: translateY(12px);
+                transform: translateY(20px);
             }
             to { 
                 opacity: 1; 
@@ -295,27 +275,27 @@
         }
 
         /* ============================================
-           首页 - Hero区域
+           Hero区域 - 首页
            ============================================ */
         .home-page {
-            padding: 16px;
+            padding: 20px;
         }
 
         .hero-section {
             position: relative;
-            height: 300px;
+            height: 320px;
             border-radius: var(--radius-xl);
             overflow: hidden;
-            margin-bottom: 20px;
-            background: var(--gradient-carbon);
+            margin-bottom: 24px;
+            background: var(--gradient-zinc);
         }
 
         .hero-bg {
             position: absolute;
             inset: 0;
             background: 
-                radial-gradient(ellipse at 20% 30%, rgba(212, 165, 116, 0.12) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 70%, rgba(224, 123, 57, 0.06) 0%, transparent 50%);
+                radial-gradient(ellipse at 20% 30%, var(--orange-500-20) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, var(--orange-500-10) 0%, transparent 50%);
         }
 
         .hero-content {
@@ -332,102 +312,95 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(212, 165, 116, 0.1);
-            border: 1px solid rgba(212, 165, 116, 0.2);
-            padding: 5px 12px;
-            border-radius: var(--radius-full);
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--amber-gold);
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            padding: 6px 14px;
+            border-radius: var(--radius-lg);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--orange-400);
             width: fit-content;
-            letter-spacing: 0.05em;
         }
 
-        .hero-badge::before {
-            content: '';
-            width: 5px;
-            height: 5px;
-            background: var(--amber-gold);
-            border-radius: 50%;
+        .hero-badge svg {
+            width: 14px;
+            height: 14px;
         }
 
         .hero-title {
-            font-size: 30px;
-            font-weight: 300;
+            font-size: 32px;
+            font-weight: 700;
             line-height: 1.2;
             letter-spacing: -0.5px;
-            color: var(--text-primary);
+        }
+
+        .hero-title .gradient {
+            background: var(--gradient-orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .hero-subtitle {
-            font-size: 13px;
-            color: var(--text-tertiary);
-            margin-top: 6px;
-            font-weight: 400;
-            letter-spacing: 0.02em;
+            font-size: 14px;
+            color: var(--zinc-400);
+            margin-top: 8px;
+            line-height: 1.6;
         }
 
         .hero-stats {
             display: flex;
-            gap: 20px;
+            gap: 24px;
         }
 
         .stat-item {
             text-align: center;
         }
 
+        .stat-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--orange-500);
+            margin-bottom: 4px;
+        }
+
         .stat-value {
-            font-size: 26px;
-            font-weight: 300;
-            color: var(--amber-gold);
-            letter-spacing: -1px;
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
         }
 
         .stat-label {
-            font-size: 10px;
-            color: var(--text-tertiary);
+            font-size: 12px;
+            color: var(--zinc-500);
             margin-top: 2px;
-            font-weight: 500;
-            letter-spacing: 0.05em;
         }
 
         /* ============================================
-           功能卡片 - 精致设计
+           功能卡片 - 2x2网格
            ============================================ */
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 24px;
         }
 
         .feature-card {
-            background: var(--titanium-gray);
-            border-radius: var(--radius-lg);
-            padding: 14px;
-            border: 1px solid var(--border-light);
-            transition: all var(--duration-normal) var(--ease-smooth);
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-xl);
+            padding: 16px;
+            transition: all var(--duration-slow) var(--ease-out);
             cursor: pointer;
             position: relative;
             overflow: hidden;
         }
 
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(212, 165, 116, 0.04) 0%, transparent 100%);
-            opacity: 0;
-            transition: opacity var(--duration-normal);
-        }
-
         .feature-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(212, 165, 116, 0.15);
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
+            transform: translateY(-8px);
+            border-color: rgba(249, 115, 22, 0.3);
+            background: rgba(39, 39, 42, 0.7);
         }
 
         .feature-icon {
@@ -438,7 +411,7 @@
             align-items: center;
             justify-content: center;
             font-size: 20px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             transition: transform var(--duration-normal) var(--ease-bounce);
         }
 
@@ -446,44 +419,42 @@
             transform: scale(1.05);
         }
 
-        .feature-card:nth-child(1) .feature-icon { background: var(--gradient-amber); }
-        .feature-card:nth-child(2) .feature-icon { background: var(--gradient-hasselblad); }
-        .feature-card:nth-child(3) .feature-icon { background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%); }
-        .feature-card:nth-child(4) .feature-icon { background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%); }
+        .feature-card:nth-child(1) .feature-icon { background: var(--gradient-orange); }
+        .feature-card:nth-child(2) .feature-icon { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+        .feature-card:nth-child(3) .feature-icon { background: linear-gradient(135deg, #22C55E, #16A34A); }
+        .feature-card:nth-child(4) .feature-icon { background: linear-gradient(135deg, #A855F7, #7C3AED); }
 
         .feature-title {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 3px;
-            color: var(--text-primary);
-            letter-spacing: -0.1px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: white;
         }
 
         .feature-desc {
-            font-size: 10px;
-            color: var(--text-tertiary);
-            line-height: 1.4;
+            font-size: 12px;
+            color: var(--zinc-400);
+            line-height: 1.5;
         }
 
         /* ============================================
-           预设卡片 - 高端摄影风格
+           预设卡片 - rounded-2xl
            ============================================ */
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
 
         .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: -0.2px;
+            font-size: 20px;
+            font-weight: 700;
         }
 
         .section-more {
-            font-size: 12px;
-            color: var(--amber-gold);
+            font-size: 14px;
+            color: var(--orange-500);
             cursor: pointer;
             font-weight: 500;
             transition: opacity var(--duration-fast);
@@ -496,26 +467,26 @@
         .preset-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .preset-card {
-            background: var(--titanium-gray);
-            border-radius: var(--radius-lg);
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-xl);
             overflow: hidden;
-            border: 1px solid var(--border-light);
-            transition: all var(--duration-normal) var(--ease-smooth);
+            transition: all var(--duration-slow) var(--ease-out);
             cursor: pointer;
         }
 
         .preset-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(212, 165, 116, 0.15);
+            transform: translateY(-8px);
+            border-color: rgba(249, 115, 22, 0.3);
         }
 
         .preset-image {
-            height: 140px;
-            background: linear-gradient(135deg, var(--titanium-gray-light) 0%, var(--carbon-surface) 100%);
+            height: 160px;
+            background: linear-gradient(135deg, var(--zinc-800) 0%, var(--zinc-700) 100%);
             position: relative;
             overflow: hidden;
         }
@@ -524,119 +495,123 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, transparent 20%, rgba(13, 13, 15, 0.8) 100%);
+            background: linear-gradient(180deg, transparent 20%, rgba(24, 24, 27, 0.9) 100%);
         }
 
         .preset-hncs {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(212, 165, 116, 0.9);
-            padding: 3px 8px;
-            border-radius: var(--radius-xs);
-            font-size: 9px;
-            font-weight: 700;
+            top: 12px;
+            right: 12px;
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
+            background: rgba(249, 115, 22, 0.9);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 500;
             z-index: 2;
-            letter-spacing: 0.08em;
         }
 
         .preset-rating {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 12px;
+            left: 12px;
             display: flex;
             align-items: center;
-            gap: 3px;
-            font-size: 11px;
-            font-weight: 600;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
             z-index: 2;
             background: rgba(0, 0, 0, 0.5);
-            padding: 3px 8px;
-            border-radius: var(--radius-xs);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
         }
 
-        .preset-rating::before {
-            content: '★';
-            color: var(--amber-gold);
+        .preset-rating svg {
+            width: 12px;
+            height: 12px;
+            color: var(--yellow-400);
+            fill: var(--yellow-400);
         }
 
         .preset-info {
-            padding: 14px;
+            padding: 16px;
         }
 
         .preset-name {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 3px;
-            letter-spacing: -0.2px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
         }
 
         .preset-device {
-            font-size: 11px;
-            color: var(--text-tertiary);
+            font-size: 12px;
+            color: var(--zinc-500);
             margin-bottom: 8px;
         }
 
         .preset-tags {
             display: flex;
-            gap: 5px;
+            gap: 6px;
             flex-wrap: wrap;
             margin-bottom: 8px;
         }
 
         .preset-tag {
-            font-size: 9px;
-            padding: 2px 6px;
-            background: var(--carbon-surface);
-            border-radius: 3px;
-            color: var(--text-secondary);
-            font-weight: 500;
-            border: 1px solid var(--border-light);
+            font-size: 12px;
+            padding: 4px 8px;
+            background: rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-sm);
+            color: var(--zinc-300);
         }
 
         .preset-params {
             display: flex;
             justify-content: space-between;
-            font-size: 10px;
-            color: var(--text-quaternary);
-            font-weight: 500;
+            font-size: 12px;
+            color: var(--zinc-500);
         }
 
         .preset-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid var(--border-light);
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(63, 63, 70, 0.5);
         }
 
         .preset-author {
-            font-size: 10px;
-            color: var(--text-quaternary);
+            font-size: 12px;
+            color: var(--zinc-500);
         }
 
         .preset-downloads {
-            font-size: 10px;
-            color: var(--jade-green);
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--zinc-500);
+        }
+
+        .preset-downloads svg {
+            width: 12px;
+            height: 12px;
         }
 
         /* ============================================
            AI页面
            ============================================ */
         .ai-page {
-            padding: 16px;
+            padding: 20px;
         }
 
         .ai-hero {
             background: linear-gradient(135deg, #1E3A5F 0%, #2D5A8A 100%);
             border-radius: var(--radius-xl);
             padding: 24px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
             position: relative;
             overflow: hidden;
         }
@@ -653,44 +628,43 @@
 
         .ai-title {
             font-size: 24px;
-            font-weight: 300;
-            margin-bottom: 6px;
-            letter-spacing: -0.3px;
+            font-weight: 700;
+            margin-bottom: 8px;
         }
 
         .ai-subtitle {
-            font-size: 12px;
-            opacity: 0.7;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         .scene-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 24px;
         }
 
         .scene-item {
             aspect-ratio: 1;
-            background: var(--titanium-gray);
-            border-radius: var(--radius-lg);
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-xl);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            border: 1px solid var(--border-light);
-            transition: all var(--duration-normal) var(--ease-smooth);
+            gap: 8px;
+            transition: all var(--duration-normal) var(--ease-out);
             cursor: pointer;
         }
 
         .scene-item:hover {
-            background: var(--titanium-gray-light);
+            background: rgba(39, 39, 42, 0.7);
             transform: scale(1.03);
         }
 
         .scene-icon {
-            font-size: 26px;
+            font-size: 28px;
             transition: transform var(--duration-normal) var(--ease-bounce);
         }
 
@@ -699,8 +673,8 @@
         }
 
         .scene-name {
-            font-size: 10px;
-            color: var(--text-secondary);
+            font-size: 12px;
+            color: var(--zinc-400);
             font-weight: 500;
         }
 
@@ -708,13 +682,13 @@
            水印页面
            ============================================ */
         .watermark-page {
-            padding: 16px;
+            padding: 20px;
         }
 
         .watermark-categories {
             display: flex;
-            gap: 6px;
-            margin-bottom: 16px;
+            gap: 8px;
+            margin-bottom: 20px;
             overflow-x: auto;
             scrollbar-width: none;
         }
@@ -724,103 +698,104 @@
         }
 
         .category-chip {
-            padding: 6px 14px;
-            background: var(--titanium-gray);
-            border-radius: var(--radius-full);
-            font-size: 12px;
+            padding: 8px 16px;
+            background: rgba(39, 39, 42, 0.5);
+            border-radius: var(--radius-lg);
+            font-size: 14px;
             white-space: nowrap;
-            border: 1px solid var(--border-light);
+            border: 1px solid rgba(63, 63, 70, 0.5);
             cursor: pointer;
             transition: all var(--duration-fast);
             font-weight: 500;
+            color: var(--zinc-400);
         }
 
         .category-chip:hover {
-            background: var(--titanium-gray-light);
+            background: rgba(39, 39, 42, 0.7);
         }
 
         .category-chip.active {
-            background: var(--gradient-amber);
+            background: var(--gradient-orange);
             border-color: transparent;
             font-weight: 600;
+            color: white;
         }
 
         .watermark-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            gap: 12px;
         }
 
         .watermark-card {
-            background: var(--titanium-gray);
-            border-radius: var(--radius-lg);
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-xl);
             overflow: hidden;
-            border: 1px solid var(--border-light);
             cursor: pointer;
-            transition: all var(--duration-normal) var(--ease-smooth);
+            transition: all var(--duration-slow) var(--ease-out);
         }
 
         .watermark-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(212, 165, 116, 0.15);
+            transform: translateY(-8px);
+            border-color: rgba(249, 115, 22, 0.3);
         }
 
         .watermark-preview {
-            height: 90px;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }
 
         .watermark-info {
-            padding: 10px;
+            padding: 12px;
         }
 
         .watermark-name {
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 3px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
         }
 
         .watermark-features {
             display: flex;
-            gap: 3px;
+            gap: 4px;
             flex-wrap: wrap;
         }
 
         .watermark-feature {
-            font-size: 8px;
-            padding: 2px 5px;
-            background: var(--carbon-surface);
-            border-radius: 2px;
-            color: var(--text-tertiary);
-            font-weight: 500;
+            font-size: 10px;
+            padding: 3px 6px;
+            background: rgba(24, 24, 27, 0.8);
+            border-radius: 4px;
+            color: var(--zinc-400);
         }
 
         /* ============================================
            设置页面
            ============================================ */
         .settings-page {
-            padding: 16px;
+            padding: 20px;
         }
 
         .settings-group {
-            background: var(--titanium-gray);
-            border-radius: var(--radius-lg);
-            margin-bottom: 14px;
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: var(--radius-xl);
+            margin-bottom: 16px;
             overflow: hidden;
-            border: 1px solid var(--border-light);
         }
 
         .settings-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px;
-            border-bottom: 1px solid var(--border-light);
+            padding: 16px;
+            border-bottom: 1px solid rgba(63, 63, 70, 0.5);
             cursor: pointer;
             transition: background var(--duration-fast);
         }
@@ -830,33 +805,33 @@
         }
 
         .settings-item:hover {
-            background: var(--titanium-gray-light);
+            background: rgba(39, 39, 42, 0.7);
         }
 
         .settings-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .settings-icon {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: var(--radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 16px;
         }
 
         .settings-text {
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 500;
         }
 
         .settings-arrow {
-            font-size: 16px;
-            color: var(--text-quaternary);
+            font-size: 18px;
+            color: var(--zinc-500);
         }
 
         /* ============================================
@@ -887,23 +862,29 @@
 
         .desktop-title {
             font-size: 48px;
-            font-weight: 300;
+            font-weight: 700;
             margin-bottom: 16px;
             letter-spacing: -2px;
-            color: var(--text-primary);
             line-height: 1.1;
+        }
+
+        .desktop-title .gradient {
+            background: var(--gradient-orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .desktop-subtitle {
             font-size: 18px;
             font-weight: 400;
-            color: var(--text-secondary);
+            color: var(--zinc-400);
             margin-bottom: 12px;
         }
 
         .desktop-desc {
-            font-size: 14px;
-            color: var(--text-tertiary);
+            font-size: 16px;
+            color: var(--zinc-400);
             line-height: 1.8;
             margin-bottom: 28px;
         }
@@ -911,43 +892,42 @@
         .feature-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .feature-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            color: var(--text-secondary);
+            gap: 12px;
+            font-size: 14px;
+            color: var(--zinc-400);
         }
 
         .feature-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--amber-gold);
+            width: 8px;
+            height: 8px;
+            background: var(--orange-500);
             border-radius: 50%;
         }
 
         .design-specs {
             margin-top: 28px;
-            padding: 18px;
-            background: var(--titanium-gray);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border-light);
+            padding: 20px;
+            background: rgba(39, 39, 42, 0.5);
+            border-radius: var(--radius-xl);
+            border: 1px solid rgba(63, 63, 70, 0.5);
         }
 
         .design-specs-title {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-primary);
+            margin-bottom: 12px;
         }
 
         .design-specs-item {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            margin-bottom: 5px;
+            font-size: 12px;
+            color: var(--zinc-400);
+            margin-bottom: 6px;
         }
 
         @media (max-width: 1200px) {
@@ -960,40 +940,40 @@
 <body>
     <!-- 桌面端展示信息 -->
     <div class="desktop-info">
-        <h1 class="desktop-title">OMaster</h1>
-        <div class="desktop-subtitle">精致高端设计系统</div>
+        <h1 class="desktop-title"><span class="gradient">OMaster</span></h1>
+        <div class="desktop-subtitle">专业摄影参数预设管理应用</div>
         <p class="desktop-desc">
-            基于高端摄影美学与精致工艺，为 OPPO Find 系列用户打造。
-            每一处细节都经过精心打磨，呈现行业顶尖的视觉体验。
+            为 OPPO Find 系列打造的专业级摄影工具。
+            哈苏色彩科学 · 智能场景识别 · 一键参数优化。
         </p>
         <div class="feature-list">
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>琥珀金主色调 - 高端尊贵</span>
+                <span>Zinc-900 深灰背景 - 专业沉稳</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>精致字体层级 - 细腻层次</span>
+                <span>Orange-500 橙色主色 - 哈苏认证</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>高端图标设计 - 简约精致</span>
+                <span>Inter Bold 字体 - 清晰层次</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>精致动画系统 - 流畅优雅</span>
+                <span>Lucide 线性图标 - 简洁精致</span>
             </div>
             <div class="feature-item">
                 <div class="feature-dot"></div>
-                <span>碳黑钛灰配色 - 专业深沉</span>
+                <span>Framer-motion 动画 - 流畅优雅</span>
             </div>
         </div>
         <div class="design-specs">
             <div class="design-specs-title">设计规范</div>
-            <div class="design-specs-item">色彩：琥珀金 #D4A574 + 碳黑 #0D0D0F</div>
-            <div class="design-specs-item">字体：Inter + Noto Sans SC，Light 300</div>
-            <div class="design-specs-item">动画：cubic-bezier(0.4, 0, 0.2, 1)</div>
-            <div class="design-specs-item">圆角：4dp / 8dp / 12dp / 16dp / 24dp</div>
+            <div class="design-specs-item">色彩：Zinc-900 #18181B + Orange-500 #F97316</div>
+            <div class="design-specs-item">字体：Inter，Bold 700</div>
+            <div class="design-specs-item">动画：cubic-bezier(0, 0, 0.2, 1)</div>
+            <div class="design-specs-item">圆角：8dp / 12dp / 16dp / 24dp</div>
         </div>
     </div>
 
@@ -1019,23 +999,41 @@
                         <div class="hero-section">
                             <div class="hero-bg"></div>
                             <div class="hero-content">
-                                <div class="hero-badge">HNCS 认证</div>
+                                <div class="hero-badge">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 22s8-4 8-12V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v5c0 8 8 12 8 12z"/>
+                                        <path d="M9 12l2 2 4-4"/>
+                                    </svg>
+                                    哈苏 HNCS 官方认证
+                                </div>
                                 <div>
-                                    <h1 class="hero-title">哈苏色彩<br>大师级摄影</h1>
-                                    <p class="hero-subtitle">专业预设 · 智能优化 · 一键出片</p>
+                                    <h1 class="hero-title"><span class="gradient">OMaster</span><br>专业摄影参数预设</h1>
+                                    <p class="hero-subtitle">为 OPPO Find 系列打造的专业级摄影工具<br>哈苏色彩科学 · 智能场景识别 · 一键参数优化</p>
                                 </div>
                                 <div class="hero-stats">
                                     <div class="stat-item">
-                                        <div class="stat-value">8</div>
-                                        <div class="stat-label">精选预设</div>
+                                        <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                            <circle cx="12" cy="13" r="4"/>
+                                        </svg>
+                                        <div class="stat-value">500+</div>
+                                        <div class="stat-label">专业预设</div>
                                     </div>
                                     <div class="stat-item">
-                                        <div class="stat-value">16</div>
-                                        <div class="stat-label">水印模板</div>
+                                        <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 3l1.9 5.7h6.1l-5 3.7 1.9 5.7-5-3.7-5 3.7 1.9-5.7-5-3.7h6.1z"/>
+                                        </svg>
+                                        <div class="stat-value">35+</div>
+                                        <div class="stat-label">场景识别</div>
                                     </div>
                                     <div class="stat-item">
-                                        <div class="stat-value">50K+</div>
-                                        <div class="stat-label">活跃用户</div>
+                                        <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="7 10 12 15 17 10"/>
+                                            <line x1="12" y1="15" x2="12" y2="3"/>
+                                        </svg>
+                                        <div class="stat-value">100万+</div>
+                                        <div class="stat-label">用户下载</div>
                                     </div>
                                 </div>
                             </div>
@@ -1049,8 +1047,8 @@
                             </div>
                             <div class="feature-card" onclick="switchPage('watermark')">
                                 <div class="feature-icon">🏷️</div>
-                                <div class="feature-title">水印编辑器</div>
-                                <div class="feature-desc">品牌联名、国风印章、胶片相框</div>
+                                <div class="feature-title">水印模板</div>
+                                <div class="feature-desc">品牌认证、功能水印、开源模板</div>
                             </div>
                             <div class="feature-card">
                                 <div class="feature-icon">🎨</div>
@@ -1065,18 +1063,21 @@
                         </div>
 
                         <div class="section-header">
-                            <h2 class="section-title">热门预设</h2>
+                            <h2 class="section-title">精选预设</h2>
                             <span class="section-more">查看全部 →</span>
                         </div>
                         <div class="preset-list">
                             <div class="preset-card">
                                 <div class="preset-image">
                                     <div class="preset-hncs">🛡️ HNCS</div>
-                                    <div class="preset-rating">4.9</div>
+                                    <div class="preset-rating">
+                                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.73 1.18 6.88L12 17.77l-6.18 3.12L7 14.27 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        4.9
+                                    </div>
                                 </div>
                                 <div class="preset-info">
                                     <div class="preset-name">哈苏人像大师</div>
-                                    <div class="preset-device">OPPO Find X8 Ultra</div>
+                                    <div class="preset-device">哈苏影像实验室 · OPPO Find X8 Ultra</div>
                                     <div class="preset-tags">
                                         <span class="preset-tag">人像</span>
                                         <span class="preset-tag">哈苏</span>
@@ -1088,19 +1089,29 @@
                                         <span>f/1.6</span>
                                     </div>
                                     <div class="preset-footer">
-                                        <span class="preset-author">哈苏影像实验室</span>
-                                        <span class="preset-downloads">↓ 158K</span>
+                                        <span class="preset-author">专业摄影师精心调校</span>
+                                        <span class="preset-downloads">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                <polyline points="7 10 12 15 17 10"/>
+                                                <line x1="12" y1="15" x2="12" y2="3"/>
+                                            </svg>
+                                            158K 次下载
+                                        </span>
                                     </div>
                                 </div>
                             </div>
                             <div class="preset-card">
                                 <div class="preset-image">
                                     <div class="preset-hncs">🛡️ HNCS</div>
-                                    <div class="preset-rating">4.8</div>
+                                    <div class="preset-rating">
+                                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.73 1.18 6.88L12 17.77l-6.18 3.12L7 14.27 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        4.8
+                                    </div>
                                 </div>
                                 <div class="preset-info">
                                     <div class="preset-name">夜景璀璨</div>
-                                    <div class="preset-device">OPPO Find X8 Pro</div>
+                                    <div class="preset-device">OPPO影像团队 · OPPO Find X8 Pro</div>
                                     <div class="preset-tags">
                                         <span class="preset-tag">夜景</span>
                                         <span class="preset-tag">城市</span>
@@ -1111,8 +1122,15 @@
                                         <span>f/1.8</span>
                                     </div>
                                     <div class="preset-footer">
-                                        <span class="preset-author">OPPO影像团队</span>
-                                        <span class="preset-downloads">↓ 98K</span>
+                                        <span class="preset-author">夜景降噪增强</span>
+                                        <span class="preset-downloads">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                <polyline points="7 10 12 15 17 10"/>
+                                                <line x1="12" y1="15" x2="12" y2="3"/>
+                                            </svg>
+                                            98K 次下载
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -1195,7 +1213,7 @@
                         </div>
                         <div class="watermark-grid">
                             <div class="watermark-card">
-                                <div class="watermark-preview" style="background: linear-gradient(135deg, #D4A574 0%, #B88858 100%);">
+                                <div class="watermark-preview" style="background: var(--gradient-orange);">
                                     HASSELBLAD
                                 </div>
                                 <div class="watermark-info">
@@ -1230,7 +1248,7 @@
                                 </div>
                             </div>
                             <div class="watermark-card">
-                                <div class="watermark-preview" style="background: #E8C9A8; color: #8B4513;">
+                                <div class="watermark-preview" style="background: var(--zinc-800); color: var(--orange-400);">
                                     邮票
                                 </div>
                                 <div class="watermark-info">
@@ -1252,21 +1270,21 @@
                         <div class="settings-group">
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #D4A574 0%, #B88858 100%);">🎨</div>
+                                    <div class="settings-icon" style="background: var(--gradient-orange);">🎨</div>
                                     <span class="settings-text">哈苏色彩设置</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);">💾</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #22C55E, #16A34A);">💾</div>
                                     <span class="settings-text">预设管理</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%);">🔔</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #A855F7, #7C3AED);">🔔</div>
                                     <span class="settings-text">通知设置</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
@@ -1275,23 +1293,22 @@
                         <div class="settings-group">
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #42A5F5 0%, #1E88E5 100%);">ℹ️</div>
+                                    <div class="settings-icon" style="background: linear-gradient(135deg, #3B82F6, #2563EB);">ℹ️</div>
                                     <span class="settings-text">关于 OMaster</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                             <div class="settings-item">
                                 <div class="settings-left">
-                                    <div class="settings-icon" style="background: linear-gradient(135deg, #F4B942 0%, #E6A030 100%);">⭐</div>
+                                    <div class="settings-icon" style="background: var(--gradient-orange);">⭐</div>
                                     <span class="settings-text">评分应用</span>
                                 </div>
                                 <span class="settings-arrow">›</span>
                             </div>
                         </div>
-                        <div style="text-align: center; padding: 20px; color: var(--text-quaternary); font-size: 11px;">
-                            OMaster v2.0.0<br>
-                            精致高端设计系统<br>
-                            © 2026 OMaster Team
+                        <div style="text-align: center; padding: 24px; color: var(--zinc-500); font-size: 12px;">
+                            © 2025 OMaster. 专业摄影参数预设管理应用<br>
+                            哈苏 HNCS 官方认证 · OPPO Find 系列
                         </div>
                     </div>
                 </div>
@@ -1301,22 +1318,18 @@
                     <div class="nav-item active" onclick="switchPage('home')">
                         <span class="nav-icon">📷</span>
                         <span class="nav-label">首页</span>
-                        <div class="nav-indicator"></div>
                     </div>
                     <div class="nav-item" onclick="switchPage('ai')">
-                        <span class="nav-icon">🤖</span>
+                        <span class="nav-icon">✨</span>
                         <span class="nav-label">AI</span>
-                        <div class="nav-indicator"></div>
                     </div>
                     <div class="nav-item" onclick="switchPage('watermark')">
                         <span class="nav-icon">🏷️</span>
                         <span class="nav-label">水印</span>
-                        <div class="nav-indicator"></div>
                     </div>
                     <div class="nav-item" onclick="switchPage('settings')">
                         <span class="nav-icon">⚙️</span>
                         <span class="nav-label">设置</span>
-                        <div class="nav-indicator"></div>
                     </div>
                 </div>
 
