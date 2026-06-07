@@ -54,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
+import com.silas.omaster.ui.features.AIFineTuneScreen
 
 
 val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided") }
@@ -85,6 +86,9 @@ sealed class Screen {
 
     @Serializable
     data object CoreFeatures : Screen()
+
+    @Serializable
+    data object AIFineTune : Screen()
 
     @Serializable
     data object PrivacyPolicy : Screen()
@@ -465,9 +469,9 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.CoreFeatures> {
                 CoreFeaturesScreen(
                     onNavigateToSceneRecognition = { /* TODO */ },
-                    onNavigateToAIFineTune = { /* TODO */ },
+                    onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { /* TODO */ },
-                    onNavigateToSmartOptimize = { /* TODO */ },
+                    onNavigateToSmartOptimize = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToPresetManager = { /* TODO */ },
                     onNavigateToParamAdjustment = { /* TODO */ },
                     onNavigateToHasselbladColor = { /* TODO */ },
@@ -475,6 +479,12 @@ fun MainApp(navController: NavHostController) {
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     }
+                )
+            }
+
+            composable<Screen.AIFineTune> {
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

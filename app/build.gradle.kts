@@ -7,26 +7,46 @@ plugins {
 
 android {
     namespace = "com.silas.omaster"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.silas.omaster"
-        minSdk = 23
-        targetSdk = 36
+        minSdk = 24
+        targetSdk = 35
         // 版本号规范：
         // versionCode: 内部版本号，每次发布必须递增
         // versionName: 对外显示版本号，格式 主.次.修订
         // 正式版: 1.0, 1.0.1, 1.1.0, 2.0.0
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
-        versionCode = 9
-        versionName = "1.3.0"
+        versionCode = 10
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // 签名配置
+    signingConfigs {
+        getByName("debug") {
+            // 使用默认debug签名
+        }
+        // Release签名需要配置正式密钥库
+        // 发布前请替换为真实签名配置
+        create("release") {
+            // 从环境变量或local.properties读取签名配置
+            // 示例配置（发布时替换）
+            // storeFile = file("omaster-release.jks")
+            // storePassword = "your_store_password"
+            // keyAlias = "omaster"
+            // keyPassword = "your_key_password"
+        }
+    }
+
     buildTypes {
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -34,6 +54,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 使用release签名配置
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

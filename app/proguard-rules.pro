@@ -58,6 +58,23 @@
 # 保留数据模型
 -keep class com.silas.omaster.model.** { *; }
 
+# 保留Manager类（包含StateFlow和SharedPreferences操作）
+-keep class com.silas.omaster.ai.** { *; }
+-keep class com.silas.omaster.cloud.** { *; }
+-keep class com.silas.omaster.watermark.** { *; }
+-keep class com.silas.omaster.param.** { *; }
+-keep class com.silas.omaster.data.** { *; }
+-keep class com.silas.omaster.scene.** { *; }
+
+# 保留UI组件
+-keep class com.silas.omaster.ui.** { *; }
+
+# 保留SettingsManager的所有方法
+-keepclassmembers class com.silas.omaster.data.local.SettingsManager {
+    public *;
+    private *;
+}
+
 # 优化移除未使用的代码
 -dontwarn java.lang.invoke.**
 -dontwarn sun.misc.**
