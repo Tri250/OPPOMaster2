@@ -1,9 +1,56 @@
 import React, { useState } from 'react';
 import { useAppStore, featuredPresets } from '../store/appStore';
-import { Search, Filter, Heart, Sparkles, Check, Crown, Star, Download, Camera, Aperture, Gauge, Sun } from 'lucide-react';
+import { 
+  Search, Filter, Heart, Sparkles, Check, Crown, Star, Download, Camera, Aperture, Gauge, Sun,
+  Users, MessageCircle, Share2, Bookmark, Flame, TrendingUp, Eye, Zap, Award
+} from 'lucide-react';
 
 const brands = ['OPPO', 'realme', 'vivo', '荣耀', '小米'];
 const scenes = ['人像', '风景', '夜景', '美食', '街拍', '建筑'];
+
+// 2026年热门博主推荐
+const hotBloggers2026 = [
+  { 
+    id: 1, 
+    name: '摄影师小王', 
+    avatar: '📷', 
+    followers: '128.5w', 
+    posts: 256, 
+    verified: true,
+    specialty: '人像写真',
+    hot: true,
+  },
+  { 
+    id: 2, 
+    name: '风光大师', 
+    avatar: '🏔️', 
+    followers: '89.2w', 
+    posts: 189, 
+    verified: true,
+    specialty: '风景摄影',
+    hot: false,
+  },
+  { 
+    id: 3, 
+    name: '胶片控', 
+    avatar: '🎬', 
+    followers: '67.8w', 
+    posts: 142, 
+    verified: true,
+    specialty: '胶片调色',
+    hot: true,
+  },
+  { 
+    id: 4, 
+    name: '美食猎人', 
+    avatar: '🍜', 
+    followers: '45.6w', 
+    posts: 98, 
+    verified: false,
+    specialty: '美食探店',
+    hot: false,
+  },
+];
 
 const FeaturedScreen: React.FC = () => {
   const { selectedBrand, setSelectedBrand, selectedScene, setSelectedScene } = useAppStore();
@@ -49,6 +96,42 @@ const FeaturedScreen: React.FC = () => {
           <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
             <Filter size={18} className="text-white/70" />
           </button>
+        </div>
+      </div>
+
+      {/* 2026热门博主推荐 - 微博风格 */}
+      <div className="px-4 pb-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Users size={14} className="text-[#FF6B35]" />
+            <span className="text-white/70 text-xs font-medium">热门博主</span>
+          </div>
+          <button className="text-[#FF6B35] text-xs">查看全部</button>
+        </div>
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+          {hotBloggers2026.map((blogger) => (
+            <div
+              key={blogger.id}
+              className="flex-shrink-0 w-28 p-3 rounded-xl bg-white/5 border border-white/5 text-center"
+            >
+              <div className="relative w-12 h-12 mx-auto mb-2">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#FF9800] flex items-center justify-center text-2xl">
+                  {blogger.avatar}
+                </div>
+                {blogger.verified && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                    <Check size={10} className="text-white" />
+                  </div>
+                )}
+              </div>
+              <h4 className="text-white text-xs font-medium truncate">{blogger.name}</h4>
+              <p className="text-white/40 text-[10px] mt-0.5">{blogger.followers}粉丝</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                {blogger.hot && <Flame size={10} className="text-[#FF6B35]" />}
+                <span className="text-white/50 text-[10px]">{blogger.specialty}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

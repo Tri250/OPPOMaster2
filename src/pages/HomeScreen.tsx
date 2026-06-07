@@ -6,16 +6,37 @@ import { fetchCloudPresets, CloudPreset as CloudPresetType } from '../services/p
 import PresetDetailModal from '../components/PresetDetailModal';
 import { 
   Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp,
-  Camera, Aperture, Gauge, Sun, Moon, Droplets, Zap, Award, Crown
+  Camera, Aperture, Gauge, Sun, Moon, Droplets, Zap, Award, Crown,
+  MessageCircle, Share2, Bookmark, Flame, Eye, Users, MapPin, Leaf, Sunrise, Sunset
 } from 'lucide-react';
 
-// Tab 配置 - 参考 iCurrer/OMaster 主页结构
-// 保留我们原有的 4 个 Tab（全部/收藏/哈苏/上新）但加上计数徽章
+// Tab 配置 - 2026年小红书风格
 const tabs = [
-  { key: 'all', label: '全部' },
-  { key: 'favorites', label: '收藏' },
-  { key: 'hncs', label: '哈苏' },
-  { key: 'new', label: '上新' },
+  { key: 'all', label: '发现', icon: Sparkles },
+  { key: 'favorites', label: '收藏', icon: Heart },
+  { key: 'hncs', label: '哈苏', icon: Crown },
+  { key: 'new', label: '上新', icon: Flame },
+  { key: 'follow', label: '关注', icon: Users },
+];
+
+// 2026年流行场景 - 小红书/微博博主风格
+const hotScenes2026 = [
+  { key: 'oxygen', label: '氧气感', icon: Leaf, color: '#87CEEB', hot: true },
+  { key: 'morandi', label: '莫兰迪', icon: Sun, color: '#988B7E', hot: true },
+  { key: 'sunset', label: '落日余晖', icon: Sunset, color: '#FF6B35', hot: false },
+  { key: 'citynight', label: '城市夜景', icon: Moon, color: '#4DABF7', hot: true },
+  { key: 'portrait', label: '人像写真', icon: Camera, color: '#FF6B6B', hot: false },
+  { key: 'food', label: '美食探店', icon: Star, color: '#FFD700', hot: true },
+  { key: 'travel', label: '旅行打卡', icon: MapPin, color: '#69DB7C', hot: false },
+  { key: 'street', label: '街拍纪实', icon: Eye, color: '#9C27B0', hot: false },
+];
+
+// 2026年热门话题
+const hotTopics2026 = [
+  { tag: '#2026春日写真', views: '2.3亿', trend: '+28%' },
+  { tag: '#哈苏大师模式', views: '1.8亿', trend: '+45%' },
+  { tag: '#胶片感调色', views: '1.5亿', trend: '+32%' },
+  { tag: '#人像摄影技巧', views: '1.2亿', trend: '+18%' },
 ];
 
 const brands = [
@@ -364,7 +385,7 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar - 小红书风格 */}
       <div className="px-4 pb-2">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
@@ -372,18 +393,75 @@ const HomeScreen: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索预设 / 作者 / 标签"
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#FF6B35] outline-none transition-colors"
+            placeholder="搜索预设 / 作者 / 话题 / 场景"
+            className="w-full pl-9 pr-12 py-2.5 rounded-full bg-white/5 text-white text-sm border border-white/10 focus:border-[#FF6B35] outline-none transition-colors"
           />
+          <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-[#FF6B35]">
+            <Camera size={14} className="text-white" />
+          </button>
         </div>
       </div>
 
-      {/* Tab Bar - 参考 OMaster ScrollableTabRow + 计数徽章 */}
+      {/* 2026热门场景 - 小红书风格横向滚动 */}
+      <div className="px-4 pb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Flame size={14} className="text-[#FF6B35]" />
+          <span className="text-white/70 text-xs font-medium">2026热门场景</span>
+        </div>
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {hotScenes2026.map((scene) => {
+            const SceneIcon = scene.icon;
+            return (
+              <button
+                key={scene.key}
+                className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5"
+              >
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${scene.color}20` }}
+                >
+                  <SceneIcon size={16} style={{ color: scene.color }} />
+                </div>
+                <div className="text-left">
+                  <div className="flex items-center gap-1">
+                    <span className="text-white text-xs font-medium">{scene.label}</span>
+                    {scene.hot && (
+                      <Flame size={10} className="text-[#FF6B35]" />
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2026热门话题 - 微博博主风格 */}
+      <div className="px-4 pb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp size={14} className="text-blue-400" />
+          <span className="text-white/70 text-xs font-medium">热门话题</span>
+        </div>
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {hotTopics2026.map((topic, idx) => (
+            <button
+              key={idx}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 hover:from-blue-500/20 transition-all"
+            >
+              <span className="text-blue-400 text-xs font-medium">{topic.tag}</span>
+              <span className="text-white/40 text-[10px] ml-1">{topic.views}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Bar - 2026小红书风格 */}
       <div className="px-4 pb-2">
         <div className="flex gap-1 overflow-x-auto scrollbar-hide border-b border-white/5">
           {tabs.map((tab, index) => {
             const count = getTabCount(tab.key);
             const isSelected = selectedTab === index;
+            const TabIcon = tab.icon;
             return (
               <button
                 key={tab.key}
@@ -394,6 +472,7 @@ const HomeScreen: React.FC = () => {
                 }`}
               >
                 <span className="flex items-center gap-1.5">
+                  <TabIcon size={14} className={isSelected ? 'text-[#FF6B35]' : ''} />
                   <span>{tab.label}</span>
                   {count > 0 && (
                     <span 
@@ -407,7 +486,6 @@ const HomeScreen: React.FC = () => {
                     </span>
                   )}
                 </span>
-                {/* 自定义指示器 - 参考 OMaster TabRowDefaults.SecondaryIndicator */}
                 {isSelected && (
                   <div 
                     className="absolute bottom-0 left-2 right-2 h-[3px] bg-[#FF6B35] rounded-t-full"

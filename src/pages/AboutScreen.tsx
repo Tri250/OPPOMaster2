@@ -17,7 +17,32 @@ import {
   Zap,
   Star,
   Download,
+  Trophy,
+  Target,
+  Flame,
+  Users,
+  MessageCircle,
+  Share2,
+  Eye,
+  TrendingUp,
+  Gift,
+  Medal,
 } from 'lucide-react';
+
+// 2026年成就徽章
+const achievements2026 = [
+  { id: 1, icon: Crown, name: '哈苏大师', desc: '使用HNCS预设100次', progress: 100, unlocked: true, color: '#FF6B35' },
+  { id: 2, icon: Flame, name: '热门创作者', desc: '作品获赞1000+', progress: 78, unlocked: false, color: '#FFD700' },
+  { id: 3, icon: Medal, name: '胶片达人', desc: '使用胶片预设50次', progress: 100, unlocked: true, color: '#9C27B0' },
+  { id: 4, icon: Trophy, name: '摄影大师', desc: '完成全部场景拍摄', progress: 45, unlocked: false, color: '#4CAF50' },
+];
+
+// 2026年每日任务
+const dailyTasks2026 = [
+  { id: 1, name: '分享作品到社区', reward: '+10积分', done: true },
+  { id: 2, name: '使用哈苏预设拍摄', reward: '+20积分', done: false },
+  { id: 3, name: '评论他人作品', reward: '+5积分', done: true },
+];
 
 const AboutScreen: React.FC = () => {
   const { theme, darkMode, navigateToSubPage } = useAppStore();
@@ -169,6 +194,90 @@ const AboutScreen: React.FC = () => {
               <span className="text-white/60 text-xs">{action.label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* 2026成就徽章 - 小红书风格 */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Trophy size={14} className="text-yellow-400" />
+            <span className="text-white/70 text-xs font-medium">成就徽章</span>
+          </div>
+          <button className="text-[#FF6B35] text-xs">查看全部</button>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {achievements2026.map((achievement) => {
+            const AchievementIcon = achievement.icon;
+            return (
+              <div
+                key={achievement.id}
+                className={`p-3 rounded-xl text-center transition-all ${
+                  achievement.unlocked 
+                    ? 'bg-white/5 border border-white/10' 
+                    : 'bg-white/2 border border-white/5 opacity-60'
+                }`}
+              >
+                <div 
+                  className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ${
+                    achievement.unlocked ? '' : 'grayscale'
+                  }`}
+                  style={{ backgroundColor: `${achievement.color}20` }}
+                >
+                  <AchievementIcon size={20} style={{ color: achievement.color }} />
+                </div>
+                <h4 className="text-white text-[10px] font-medium truncate">{achievement.name}</h4>
+                <div className="mt-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all"
+                    style={{ 
+                      width: `${achievement.progress}%`,
+                      backgroundColor: achievement.color,
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2026每日任务 - 游戏化设计 */}
+      <div className="px-4 pb-4">
+        <div className="rounded-2xl bg-gradient-to-r from-[#FF6B35]/10 to-[#FFD700]/10 border border-[#FF6B35]/20 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Gift size={14} className="text-[#FF6B35]" />
+              <span className="text-white text-xs font-medium">每日任务</span>
+            </div>
+            <span className="text-white/40 text-[10px]">2/3 已完成</span>
+          </div>
+          <div className="space-y-2">
+            {dailyTasks2026.map((task) => (
+              <div 
+                key={task.id}
+                className={`flex items-center justify-between p-2 rounded-lg ${
+                  task.done ? 'bg-green-500/10' : 'bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {task.done ? (
+                    <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                      <Star size={12} className="text-white fill-white" />
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border border-white/20" />
+                  )}
+                  <span className={`text-xs ${task.done ? 'text-white/50 line-through' : 'text-white/80'}`}>
+                    {task.name}
+                  </span>
+                </div>
+                <span className={`text-[10px] ${task.done ? 'text-green-400' : 'text-[#FF6B35]'}`}>
+                  {task.reward}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
