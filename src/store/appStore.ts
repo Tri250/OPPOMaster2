@@ -16,6 +16,14 @@ export type SubPageType =
   | 'notification'
   | 'privacy'
   | 'terms'
+  | 'hsl-adjustment'
+  | 'batch-processing'
+  | 'raw-processing'
+  | 'tone-curve'
+  | 'histogram'
+  | 'favorites'
+  | 'trend-2026'
+  | 'scene-detail'
   | null;
 
 export interface Preset {
@@ -160,44 +168,84 @@ export const useAppStore = create<AppState>((set, get) => ({
       showToggle: true,
     },
     {
-      id: 'param-adjust',
-      title: '参数精细调节',
-      subtitle: 'ISO、快门、光圈、白平衡精确控制',
+      id: 'hsl-adjustment',
+      title: 'HSL 调节',
+      subtitle: '8色独立色相/饱和度/明度调节',
       icon: 'SlidersHorizontal',
-      color: '#E91E63',
-      gradientColors: ['#880E4F', '#AD1457'],
+      color: '#FF6B35',
+      gradientColors: ['#D84315', '#FF5722'],
       enabled: true,
       showToggle: false,
     },
     {
-      id: 'preset-manager',
-      title: '预设管理',
-      subtitle: '云端预设库，收藏、创建、分享',
-      icon: 'Images',
+      id: 'batch-processing',
+      title: '批量处理',
+      subtitle: '多图同时批量调节，高效工作流',
+      icon: 'Layers',
       color: '#FF9800',
       gradientColors: ['#E65100', '#F57C00'],
       enabled: true,
       showToggle: false,
     },
     {
-      id: 'hasselblad',
-      title: '哈苏色彩科学',
-      subtitle: 'HNCS 3.0 自然色彩解决方案',
+      id: 'raw-processing',
+      title: 'RAW 处理',
+      subtitle: 'DNG/CR2/NEF专业RAW格式处理',
       icon: 'Aperture',
-      color: '#FF6B35',
-      gradientColors: ['#CC5500', '#E86A17'],
+      color: '#795548',
+      gradientColors: ['#3E2723', '#5D4037'],
       enabled: true,
-      showToggle: true,
+      showToggle: false,
     },
     {
-      id: 'cloud-sync',
-      title: '云同步',
-      subtitle: 'OPPO/realme/vivo/荣耀 CDN数据同步',
-      icon: 'Cloud',
-      color: '#3F51B5',
-      gradientColors: ['#1A237E', '#303F9F'],
-      enabled: false,
-      showToggle: true,
+      id: 'tone-curve',
+      title: '色调曲线',
+      subtitle: '自定义RGB曲线，精准影调控制',
+      icon: 'TrendingUp',
+      color: '#9C27B0',
+      gradientColors: ['#4A148C', '#6A1B9A'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'histogram',
+      title: '直方图',
+      subtitle: 'RGB直方图查看，曝光警告提示',
+      icon: 'BarChart3',
+      color: '#00BCD4',
+      gradientColors: ['#006064', '#00838F'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'favorites',
+      title: '收藏夹',
+      subtitle: '预设分类管理，快速访问喜爱预设',
+      icon: 'Heart',
+      color: '#E91E63',
+      gradientColors: ['#880E4F', '#AD1457'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'trend-2026',
+      title: '2026 趋势',
+      subtitle: '年度流行色，风格趋势预览',
+      icon: 'Sparkles',
+      color: '#FFD700',
+      gradientColors: ['#FFA000', '#FFC107'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'scene-detail',
+      title: '场景细分',
+      subtitle: '细分场景参数，一键应用优化',
+      icon: 'MapPin',
+      color: '#4CAF50',
+      gradientColors: ['#1B5E20', '#2E7D32'],
+      enabled: true,
+      showToggle: false,
     },
   ],
   toggleFeature: (id) =>

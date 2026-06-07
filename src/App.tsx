@@ -17,6 +17,14 @@ import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
 import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
+import HSLAdjustmentPage from './pages/subpages/HSLAdjustmentPage';
+import BatchProcessingPage from './pages/subpages/BatchProcessingPage';
+import RAWProcessingPage from './pages/subpages/RAWProcessingPage';
+import ToneCurvePage from './pages/subpages/ToneCurvePage';
+import HistogramPage from './pages/subpages/HistogramPage';
+import FavoritesPage from './pages/subpages/FavoritesPage';
+import Trend2026Page from './pages/subpages/Trend2026Page';
+import SceneDetailPage from './pages/subpages/SceneDetailPage';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -43,6 +51,22 @@ const App: React.FC = () => {
         return <NotificationPage />;
       case 'privacy':
         return <PrivacyPage />;
+      case 'hsl-adjustment':
+        return <HSLAdjustmentPage />;
+      case 'batch-processing':
+        return <BatchProcessingPage />;
+      case 'raw-processing':
+        return <RAWProcessingPage />;
+      case 'tone-curve':
+        return <ToneCurvePage />;
+      case 'histogram':
+        return <HistogramPage />;
+      case 'favorites':
+        return <FavoritesPage />;
+      case 'trend-2026':
+        return <Trend2026Page />;
+      case 'scene-detail':
+        return <SceneDetailPage />;
       default:
         return null;
     }

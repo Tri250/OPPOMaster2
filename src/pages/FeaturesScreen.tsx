@@ -13,6 +13,11 @@ import {
   Settings,
   Brush,
   ChevronRight,
+  Layers,
+  TrendingUp,
+  BarChart3,
+  Heart,
+  MapPin,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -24,6 +29,11 @@ const iconMap: Record<string, React.ElementType> = {
   Images,
   Aperture,
   Cloud,
+  Layers,
+  TrendingUp,
+  BarChart3,
+  Heart,
+  MapPin,
 };
 
 const featureRouteMap: Record<string, string> = {
@@ -31,8 +41,14 @@ const featureRouteMap: Record<string, string> = {
   'ai-fine-tune': 'ai-fine-tune',
   'watermark': 'watermark',
   'smart-optimize': 'smart-optimize',
-  'preset-manager': 'preset-manager',
-  'param-adjust': 'param-adjust',
+  'hsl-adjustment': 'hsl-adjustment',
+  'batch-processing': 'batch-processing',
+  'raw-processing': 'raw-processing',
+  'tone-curve': 'tone-curve',
+  'histogram': 'histogram',
+  'favorites': 'favorites',
+  'trend-2026': 'trend-2026',
+  'scene-detail': 'scene-detail',
 };
 
 const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
@@ -52,13 +68,37 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
     desc: '14+专业水印模板，品牌认证水印',
     tips: ['标准', '极简', '详细', '品牌'],
   },
-  'param-adjust': {
-    desc: 'ISO、快门、光圈、白平衡精确控制',
-    tips: ['ISO 50-12800', '快门 1/1000s-30s', '光圈 f/1.4-f/22'],
+  'hsl-adjustment': {
+    desc: '8色独立HSL调节，精准色彩控制',
+    tips: ['红/橙/黄/绿', '青/蓝/紫/粉'],
   },
-  'preset-manager': {
-    desc: '云端预设库，收藏、创建、分享',
-    tips: ['云端同步', '本地管理', '批量操作'],
+  'batch-processing': {
+    desc: '多图同时批量处理，提高效率',
+    tips: ['批量导入', '统一参数', '批量导出'],
+  },
+  'raw-processing': {
+    desc: '专业RAW格式处理，最大程度保留细节',
+    tips: ['DNG/CR2/NEF', '曝光补偿', '色温调节'],
+  },
+  'tone-curve': {
+    desc: '自定义RGB曲线，精准影调控制',
+    tips: ['RGB通道', '控制点', '曲线预设'],
+  },
+  'histogram': {
+    desc: 'RGB直方图查看，曝光警告提示',
+    tips: ['实时直方图', '过曝警告', '欠曝提示'],
+  },
+  'favorites': {
+    desc: '收藏夹管理，分类整理喜爱的预设',
+    tips: ['分类管理', '快速访问', '自定义文件夹'],
+  },
+  'trend-2026': {
+    desc: '2026年度流行趋势，风格色彩预览',
+    tips: ['流行色', '趋势风格', '季节推荐'],
+  },
+  'scene-detail': {
+    desc: '细分场景参数，一键应用优化',
+    tips: ['场景参数', '拍摄技巧', '优化建议'],
   },
 };
 
@@ -66,8 +106,8 @@ const FeaturesScreen: React.FC = () => {
   const { features, navigateToSubPage } = useAppStore();
 
   const aiFeatures = features.slice(0, 4);
-  const toolFeatures = features.slice(4, 6);
-  const brandFeatures = features.slice(6, 8);
+  const toolFeatures = features.slice(4, 9);
+  const brandFeatures = features.slice(9, 13);
 
   const handleFeatureClick = (featureId: string) => {
     if (featureRouteMap[featureId]) {
