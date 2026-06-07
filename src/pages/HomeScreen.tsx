@@ -2,6 +2,8 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useAppStore } from '../store/appStore';
 import { useCloudPresets } from '../hooks/useCloudPresets';
 import { CloudPreset } from '../types/cloudPreset';
+import { fetchCloudPresets, CloudPreset as CloudPresetType } from '../services/presetCloudService';
+import PresetDetailModal from '../components/PresetDetailModal';
 import { 
   Heart, Cloud, RefreshCw, Filter, Star, Download, Sparkles, Search, TrendingUp
 } from 'lucide-react';
@@ -35,10 +37,19 @@ const HomeScreen: React.FC = () => {
   const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
   
+  // 样张详情弹窗状态
+  const [selectedPreset, setSelectedPreset] = useState<CloudPresetType | null>(null);
+  const [cloudPresetsData, setCloudPresetsData] = useState<CloudPresetType[]>([]);
+  
   // 参考 OMaster：当前页面与 Pager 双向同步
   const [currentPage, setCurrentPage] = useState(0);
   const pagerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  
+  // 加载云同步数据
+  useEffect(() => {
+    fetchCloudPresets().then(setCloudPresetsData);
+  }, []);
 
   // Pager -> Tab 同步（参考 OMaster LaunchedEffect(pagerState.currentPage)）
   useEffect(() => {
@@ -68,13 +79,41 @@ const HomeScreen: React.FC = () => {
     setTimeout(() => setRefreshing(false), 500);
   }, [refresh]);
 
-  // 应用预设
+  // 应用预设 - 点击样张显示详情弹窗
   const handleApplyPreset = useCallback((preset: CloudPreset) => {
-    setAiParam('saturation', preset.params.saturation);
-    setAiParam('contrast', preset.params.contrast);
-    setAiParam('brightness', preset.params.brightness);
-    setAiParam('warmth', preset.params.warmth);
-  }, [setAiParam]);
+    // 查找对应的云同步预设详情
+    const cloudPreset = cloudPresetsData.find(p => p.name === preset.name);
+    if (cloudPreset) {
+      setSelectedPreset(cloudPreset);
+    } else {
+      // 如果没有找到，创建一个基础的详情
+      setSelectedPreset({
+        id: preset.id,
+        name: preset.name,
+        coverPath: preset.coverPath,
+        author: preset.author,
+        brand: preset.brand,
+        tags: preset.tags,
+        isNew: preset.isNew,
+        isHncs: preset.isHncs,
+        rating: preset.rating,
+        downloadCount: preset.downloadCount,
+        cameraParams: {
+          saturation: preset.params.saturation,
+          contrast: preset.params.contrast,
+          brightness: preset.params.brightness,
+          warmth: preset.params.warmth,
+          sharpness: 15,
+          clarity: 10,
+          highlights: 0,
+          shadows: 0,
+          hue: 0,
+          vibrance: 10,
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }, [cloudPresetsData]);
 
   // Pager 滚动处理
   const handlePagerScroll = useCallback(() => {
@@ -450,7 +489,22 @@ const HomeScreen: React.FC = () => {
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes slide-up {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
       `}</style>
+      
+      {/* 样张详情弹窗 */}
+      {selectedPreset && (
+        <PresetDetailModal 
+          preset={selectedPreset} 
+          onClose={() => setSelectedPreset(null)} 
+        />
+      )}
     </div>
   );
 };

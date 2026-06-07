@@ -1,117 +1,86 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../store/appStore';
 import {
-  Camera,
-  Palette,
   Cpu,
-  Droplets,
-  SlidersHorizontal,
-  Images,
-  Aperture,
-  Cloud,
-  Sparkles,
-  Settings,
-  Brush,
-  ChevronRight,
+  Palette,
   Layers,
+  Sparkles,
+  Droplets,
+  MapPin,
+  ChevronRight,
+  Zap,
+  Target,
+  Wand2,
+  SlidersHorizontal,
   TrendingUp,
   BarChart3,
+  Aperture,
+  Images,
   Heart,
-  MapPin,
+  Crown,
+  Camera,
+  Gauge,
+  Timer,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {
-  Camera,
-  Palette,
   Cpu,
-  Droplets,
-  SlidersHorizontal,
-  Images,
-  Aperture,
-  Cloud,
+  Palette,
   Layers,
+  Sparkles,
+  Droplets,
+  MapPin,
+  Zap,
+  Target,
+  Wand2,
+  SlidersHorizontal,
   TrendingUp,
   BarChart3,
+  Aperture,
+  Images,
   Heart,
-  MapPin,
+  Crown,
+  Camera,
+  Gauge,
+  Timer,
 };
 
 const featureRouteMap: Record<string, string> = {
-  'ai-scene': 'ai-scene',
-  'ai-fine-tune': 'ai-fine-tune',
+  'ai-engine': 'ai-fine-tune',
+  'pro-color': 'hsl-adjustment',
+  'workflow': 'raw-processing',
+  'preset-center': 'favorites',
   'watermark': 'watermark',
-  'smart-optimize': 'smart-optimize',
-  'hsl-adjustment': 'hsl-adjustment',
-  'batch-processing': 'batch-processing',
-  'raw-processing': 'raw-processing',
-  'tone-curve': 'tone-curve',
-  'histogram': 'histogram',
-  'favorites': 'favorites',
-  'trend-2026': 'trend-2026',
   'scene-detail': 'scene-detail',
 };
 
-const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
-  'ai-scene': {
-    desc: '支持36+拍摄场景智能识别',
-    tips: ['人像', '风景', '夜景', '美食', '建筑', '自然'],
-  },
-  'ai-fine-tune': {
-    desc: '一键智能微调，精准控制色彩风格',
-    tips: ['饱和度', '对比度', '亮度', '色温', '锐度'],
-  },
-  'smart-optimize': {
-    desc: 'HDR增强、智能降噪、锐化增强',
-    tips: ['HDR增强', '智能降噪', '锐化'],
-  },
-  'watermark': {
-    desc: '14+专业水印模板，品牌认证水印',
-    tips: ['标准', '极简', '详细', '品牌'],
-  },
-  'hsl-adjustment': {
-    desc: '8色独立HSL调节，精准色彩控制',
-    tips: ['红/橙/黄/绿', '青/蓝/紫/粉'],
-  },
-  'batch-processing': {
-    desc: '多图同时批量处理，提高效率',
-    tips: ['批量导入', '统一参数', '批量导出'],
-  },
-  'raw-processing': {
-    desc: '专业RAW格式处理，最大程度保留细节',
-    tips: ['DNG/CR2/NEF', '曝光补偿', '色温调节'],
-  },
-  'tone-curve': {
-    desc: '自定义RGB曲线，精准影调控制',
-    tips: ['RGB通道', '控制点', '曲线预设'],
-  },
-  'histogram': {
-    desc: 'RGB直方图查看，曝光警告提示',
-    tips: ['实时直方图', '过曝警告', '欠曝提示'],
-  },
-  'favorites': {
-    desc: '收藏夹管理，分类整理喜爱的预设',
-    tips: ['分类管理', '快速访问', '自定义文件夹'],
-  },
-  'trend-2026': {
-    desc: '2026年度流行趋势，风格色彩预览',
-    tips: ['流行色', '趋势风格', '季节推荐'],
-  },
-  'scene-detail': {
-    desc: '细分场景参数，一键应用优化',
-    tips: ['场景参数', '拍摄技巧', '优化建议'],
-  },
+const subFeatureRouteMap: Record<string, string> = {
+  'scene-recognition': 'ai-scene',
+  'one-click-tune': 'ai-fine-tune',
+  'smart-enhance': 'smart-optimize',
+  'hsl': 'hsl-adjustment',
+  'curve': 'tone-curve',
+  'histogram': 'histogram',
+  'raw': 'raw-processing',
+  'batch': 'batch-processing',
+  'favorites': 'favorites',
+  'trend': 'trend-2026',
+  'brand': 'favorites',
 };
 
 const FeaturesScreen: React.FC = () => {
   const { features, navigateToSubPage } = useAppStore();
-
-  const aiFeatures = features.slice(0, 4);
-  const toolFeatures = features.slice(4, 9);
-  const brandFeatures = features.slice(9, 13);
+  const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
 
   const handleFeatureClick = (featureId: string) => {
     if (featureRouteMap[featureId]) {
       navigateToSubPage(featureRouteMap[featureId] as any);
+    }
+  };
+
+  const handleSubFeatureClick = (subFeatureId: string) => {
+    if (subFeatureRouteMap[subFeatureId]) {
+      navigateToSubPage(subFeatureRouteMap[subFeatureId] as any);
     }
   };
 
@@ -120,18 +89,26 @@ const FeaturesScreen: React.FC = () => {
     index: number;
   }> = ({ feature, index }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
-    const route = featureRouteMap[feature.id];
-    const info = featureDescriptions[feature.id];
+    const hasSubFeatures = feature.subFeatures && feature.subFeatures.length > 0;
+    const isExpanded = expandedFeature === feature.id;
 
     return (
-      <button
-        onClick={() => handleFeatureClick(feature.id)}
-        className="w-full text-left rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group"
+      <div className="w-full rounded-2xl overflow-hidden transition-all duration-300"
         style={{
           background: `linear-gradient(135deg, ${feature.gradientColors[0]}, ${feature.gradientColors[1]})`,
         }}
       >
-        <div className="p-4">
+        {/* Main Card */}
+        <button
+          onClick={() => {
+            if (hasSubFeatures) {
+              setExpandedFeature(isExpanded ? null : feature.id);
+            } else {
+              handleFeatureClick(feature.id);
+            }
+          }}
+          className="w-full p-4 text-left"
+        >
           <div className="flex items-start justify-between mb-3">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-sm"
@@ -139,8 +116,20 @@ const FeaturesScreen: React.FC = () => {
             >
               <Icon size={28} className="text-white" />
             </div>
-            <div className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <ChevronRight size={18} className="text-white/70" />
+            <div className="flex items-center gap-2">
+              {feature.showToggle && (
+                <div 
+                  className={`w-12 h-7 rounded-full p-1 transition-colors ${feature.enabled ? 'bg-green-500' : 'bg-white/20'}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white transition-transform ${feature.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                </div>
+              )}
+              <div className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors">
+                <ChevronRight size={18} className={`text-white/70 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+              </div>
             </div>
           </div>
 
@@ -149,103 +138,150 @@ const FeaturesScreen: React.FC = () => {
             <p className="text-white/70 text-xs mt-1">{feature.subtitle}</p>
           </div>
 
-          {info && (
-            <div className="mt-3 pt-3 border-t border-white/10">
-              <p className="text-white/50 text-[10px] mb-2">{info.desc}</p>
-              <div className="flex flex-wrap gap-1">
-                {info.tips?.slice(0, 4).map((tip, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-[10px]"
-                  >
-                    {tip}
-                  </span>
-                ))}
-              </div>
+          {/* Sub Features Preview */}
+          {hasSubFeatures && !isExpanded && (
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/10">
+              {feature.subFeatures!.slice(0, 3).map((sub) => (
+                <span
+                  key={sub.id}
+                  className="px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-xs"
+                >
+                  {sub.name}
+                </span>
+              ))}
             </div>
           )}
-        </div>
-      </button>
+        </button>
+
+        {/* Expanded Sub Features */}
+        {hasSubFeatures && isExpanded && (
+          <div className="px-4 pb-4 space-y-2">
+            {feature.subFeatures!.map((sub) => {
+              const subIconMap: Record<string, React.ElementType> = {
+                'scene-recognition': Camera,
+                'one-click-tune': Wand2,
+                'smart-enhance': Zap,
+                'hsl': SlidersHorizontal,
+                'curve': TrendingUp,
+                'histogram': BarChart3,
+                'raw': Aperture,
+                'batch': Images,
+                'favorites': Heart,
+                'trend': Crown,
+                'brand': Sparkles,
+              };
+              const SubIcon = subIconMap[sub.id] || Target;
+              
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => handleSubFeatureClick(sub.id)}
+                  className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/10 hover:bg-white/15 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                    <SubIcon size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h4 className="text-white font-semibold text-sm">{sub.name}</h4>
+                    <p className="text-white/50 text-xs">{sub.desc}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-white/50" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   };
-
-  const SectionHeader: React.FC<{
-    title: string;
-    description: string;
-    icon: React.ElementType;
-    count?: number;
-  }> = ({ title, description, icon: Icon, count }) => (
-    <div className="flex items-center justify-between py-2">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/20 flex items-center justify-center backdrop-blur-sm">
-          <Icon size={20} className="text-[#FF6B35]" />
-        </div>
-        <div>
-          <h2 className="text-white font-semibold">{title}</h2>
-          <p className="text-white/50 text-xs">{description}</p>
-        </div>
-      </div>
-      {count && (
-        <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
-          {count}
-        </span>
-      )}
-    </div>
-  );
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-2 pb-3">
         <h1 className="text-xl font-bold text-white">摄影工具</h1>
-        <p className="text-white/50 text-xs">点击进入功能操作界面</p>
+        <p className="text-white/50 text-xs">Find 产品经理精心设计 · 功能整合优化</p>
       </div>
 
       {/* Features List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 scrollbar-hide">
-        {/* AI Features */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 scrollbar-hide">
+        {/* AI Section */}
         <div>
-          <SectionHeader
-            title="AI 智能功能"
-            description="智能识别与自动优化"
-            icon={Sparkles}
-            count={aiFeatures.length}
-          />
-          <div className="space-y-3 mt-2">
-            {aiFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
-            ))}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <Cpu size={16} className="text-green-400" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-sm">AI 智能引擎</h2>
+              <p className="text-white/40 text-xs">场景识别 · 一键优化</p>
+            </div>
           </div>
+          <FeatureCard feature={features[0]} index={0} />
         </div>
 
-        {/* Tool Features */}
+        {/* Color Section */}
         <div>
-          <SectionHeader
-            title="专业工具"
-            description="精细调节与创作工具"
-            icon={Settings}
-            count={toolFeatures.length}
-          />
-          <div className="space-y-3 mt-2">
-            {toolFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
-            ))}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
+              <Palette size={16} className="text-orange-400" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-sm">专业调色</h2>
+              <p className="text-white/40 text-xs">精准色彩控制</p>
+            </div>
           </div>
+          <FeatureCard feature={features[1]} index={1} />
         </div>
 
-        {/* Brand Features */}
+        {/* Workflow Section */}
         <div>
-          <SectionHeader
-            title="品牌特色"
-            description="哈苏影像系统专属功能"
-            icon={Brush}
-            count={brandFeatures.length}
-          />
-          <div className="space-y-3 mt-2">
-            {brandFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
-            ))}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-700/20 flex items-center justify-center">
+              <Layers size={16} className="text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-sm">工作流</h2>
+              <p className="text-white/40 text-xs">高效批量处理</p>
+            </div>
           </div>
+          <FeatureCard feature={features[2]} index={2} />
+        </div>
+
+        {/* Preset Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+              <Sparkles size={16} className="text-yellow-400" />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-sm">预设中心</h2>
+              <p className="text-white/40 text-xs">收藏 · 趋势 · 品牌</p>
+            </div>
+          </div>
+          <FeatureCard feature={features[3]} index={3} />
+        </div>
+
+        {/* Tools Row */}
+        <div className="grid grid-cols-2 gap-3">
+          {features.slice(4).map((feature, index) => {
+            const Icon = iconMap[feature.icon] || Sparkles;
+            return (
+              <button
+                key={feature.id}
+                onClick={() => handleFeatureClick(feature.id)}
+                className="rounded-2xl p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: `linear-gradient(135deg, ${feature.gradientColors[0]}, ${feature.gradientColors[1]})`,
+                }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-3">
+                  <Icon size={24} className="text-white" />
+                </div>
+                <h3 className="text-white font-bold text-sm">{feature.title}</h3>
+                <p className="text-white/60 text-xs mt-1">{feature.subtitle}</p>
+              </button>
+            );
+          })}
         </div>
 
         {/* Bottom Spacing */}

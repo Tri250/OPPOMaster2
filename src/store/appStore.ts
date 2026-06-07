@@ -43,6 +43,12 @@ export interface Preset {
   brightness?: number;
 }
 
+export interface SubFeature {
+  id: string;
+  name: string;
+  desc: string;
+}
+
 export interface Feature {
   id: string;
   title: string;
@@ -52,6 +58,8 @@ export interface Feature {
   gradientColors: [string, string];
   enabled: boolean;
   showToggle: boolean;
+  category?: string;
+  subFeatures?: SubFeature[];
 }
 
 interface AppState {
@@ -127,125 +135,96 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedScene: null,
   setSelectedScene: (scene) => set({ selectedScene: scene }),
   features: [
+    // ========== AI 智能引擎 ==========
     {
-      id: 'ai-scene',
-      title: 'AI 场景识别',
-      subtitle: '智能识别36+拍摄场景，自动推荐最佳参数',
-      icon: 'Camera',
+      id: 'ai-engine',
+      title: 'AI 智能引擎',
+      subtitle: '场景识别 · 一键微调 · 智能优化',
+      icon: 'Cpu',
       color: '#4CAF50',
       gradientColors: ['#1B5E20', '#2E7D32'],
       enabled: true,
       showToggle: true,
+      category: 'ai',
+      subFeatures: [
+        { id: 'scene-recognition', name: '场景识别', desc: '36+场景智能识别' },
+        { id: 'one-click-tune', name: '一键微调', desc: 'AI色彩风格优化' },
+        { id: 'smart-enhance', name: '智能增强', desc: 'HDR/降噪/锐化' },
+      ],
     },
+    // ========== 专业调色 ==========
     {
-      id: 'ai-fine-tune',
-      title: 'AI 微调',
-      subtitle: '一键智能微调，色彩风格精准控制',
+      id: 'pro-color',
+      title: '专业调色',
+      subtitle: 'HSL · 曲线 · 直方图',
       icon: 'Palette',
-      color: '#9C27B0',
-      gradientColors: ['#4A148C', '#6A1B9A'],
-      enabled: true,
-      showToggle: true,
-    },
-    {
-      id: 'smart-optimize',
-      title: '智能优化',
-      subtitle: '一键HDR增强、降噪、锐化优化',
-      icon: 'Cpu',
-      color: '#2196F3',
-      gradientColors: ['#0D47A1', '#1565C0'],
-      enabled: true,
-      showToggle: true,
-    },
-    {
-      id: 'watermark',
-      title: '水印编辑器',
-      subtitle: '14+专业水印模板，品牌认证水印',
-      icon: 'Droplets',
-      color: '#00BCD4',
-      gradientColors: ['#006064', '#00838F'],
-      enabled: true,
-      showToggle: true,
-    },
-    {
-      id: 'hsl-adjustment',
-      title: 'HSL 调节',
-      subtitle: '8色独立色相/饱和度/明度调节',
-      icon: 'SlidersHorizontal',
       color: '#FF6B35',
       gradientColors: ['#D84315', '#FF5722'],
       enabled: true,
       showToggle: false,
+      category: 'color',
+      subFeatures: [
+        { id: 'hsl', name: 'HSL调节', desc: '8色独立控制' },
+        { id: 'curve', name: '色调曲线', desc: 'RGB曲线调节' },
+        { id: 'histogram', name: '直方图', desc: '曝光分析' },
+      ],
     },
+    // ========== 工作流 ==========
     {
-      id: 'batch-processing',
-      title: '批量处理',
-      subtitle: '多图同时批量调节，高效工作流',
+      id: 'workflow',
+      title: '工作流',
+      subtitle: 'RAW处理 · 批量操作',
       icon: 'Layers',
-      color: '#FF9800',
-      gradientColors: ['#E65100', '#F57C00'],
-      enabled: true,
-      showToggle: false,
-    },
-    {
-      id: 'raw-processing',
-      title: 'RAW 处理',
-      subtitle: 'DNG/CR2/NEF专业RAW格式处理',
-      icon: 'Aperture',
       color: '#795548',
       gradientColors: ['#3E2723', '#5D4037'],
       enabled: true,
       showToggle: false,
+      category: 'workflow',
+      subFeatures: [
+        { id: 'raw', name: 'RAW处理', desc: 'DNG/CR2/NEF' },
+        { id: 'batch', name: '批量处理', desc: '多图同时调节' },
+      ],
     },
+    // ========== 预设中心 ==========
     {
-      id: 'tone-curve',
-      title: '色调曲线',
-      subtitle: '自定义RGB曲线，精准影调控制',
-      icon: 'TrendingUp',
-      color: '#9C27B0',
-      gradientColors: ['#4A148C', '#6A1B9A'],
-      enabled: true,
-      showToggle: false,
-    },
-    {
-      id: 'histogram',
-      title: '直方图',
-      subtitle: 'RGB直方图查看，曝光警告提示',
-      icon: 'BarChart3',
-      color: '#00BCD4',
-      gradientColors: ['#006064', '#00838F'],
-      enabled: true,
-      showToggle: false,
-    },
-    {
-      id: 'favorites',
-      title: '收藏夹',
-      subtitle: '预设分类管理，快速访问喜爱预设',
-      icon: 'Heart',
-      color: '#E91E63',
-      gradientColors: ['#880E4F', '#AD1457'],
-      enabled: true,
-      showToggle: false,
-    },
-    {
-      id: 'trend-2026',
-      title: '2026 趋势',
-      subtitle: '年度流行色，风格趋势预览',
+      id: 'preset-center',
+      title: '预设中心',
+      subtitle: '收藏 · 趋势 · 品牌',
       icon: 'Sparkles',
       color: '#FFD700',
       gradientColors: ['#FFA000', '#FFC107'],
       enabled: true,
       showToggle: false,
+      category: 'preset',
+      subFeatures: [
+        { id: 'favorites', name: '我的收藏', desc: '收藏夹管理' },
+        { id: 'trend', name: '2026趋势', desc: '年度流行风格' },
+        { id: 'brand', name: '品牌预设', desc: '哈苏/富士/徕卡' },
+      ],
     },
+    // ========== 水印工具 ==========
+    {
+      id: 'watermark',
+      title: '水印工具',
+      subtitle: '14+专业水印模板',
+      icon: 'Droplets',
+      color: '#00BCD4',
+      gradientColors: ['#006064', '#00838F'],
+      enabled: true,
+      showToggle: true,
+      category: 'tool',
+    },
+    // ========== 场景细分 ==========
     {
       id: 'scene-detail',
       title: '场景细分',
-      subtitle: '细分场景参数，一键应用优化',
+      subtitle: '细分场景参数优化',
       icon: 'MapPin',
-      color: '#4CAF50',
-      gradientColors: ['#1B5E20', '#2E7D32'],
+      color: '#E91E63',
+      gradientColors: ['#880E4F', '#AD1457'],
       enabled: true,
       showToggle: false,
+      category: 'scene',
     },
   ],
   toggleFeature: (id) =>
