@@ -68,6 +68,11 @@ interface AppState {
     brightness: number;
     warmth: number;
     sharpness: number;
+    highlights: number;
+    shadows: number;
+    clarity: number;
+    noiseReduction: number;
+    skinSmooth: number;
   };
   setAiParam: (key: string, value: number) => void;
   // 参数调节
@@ -208,6 +213,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     brightness: 0,
     warmth: 8,
     sharpness: 15,
+    highlights: 0,
+    shadows: 0,
+    clarity: 10,
+    noiseReduction: 0,
+    skinSmooth: 0,
   },
   setAiParam: (key, value) =>
     set((state) => ({

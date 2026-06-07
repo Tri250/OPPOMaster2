@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, Camera, Sparkles, Check, RefreshCw, Mountain, User, Moon, 
   UtensilsCrossed, Building2, TreePine, Sun, Cloud, Coffee, Heart,
