@@ -21,13 +21,13 @@
             --medium-gray: #333333;
             --light-gray: #999999;
             --off-white: #F5F5F5;
-            --card-bg: #1A1A1A;
-            --card-border: rgba(255, 255, 255, 0.05);
+            --card-bg: #161616;
+            --card-border: rgba(255, 255, 255, 0.04);
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--pure-black);
+            background-color: #0D0D0D;
             color: var(--off-white);
             min-height: 100vh;
             overflow-x: hidden;
@@ -35,7 +35,7 @@
 
         /* Phone Frame Container */
         .phone-frame {
-            max-width: 430px;
+            max-width: 420px;
             margin: 0 auto;
             min-height: 100vh;
             background-color: var(--pure-black);
@@ -47,7 +47,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 16px;
+            padding: 10px 20px;
             background-color: var(--pure-black);
             font-size: 14px;
             font-weight: 500;
@@ -55,6 +55,7 @@
 
         .status-bar-time {
             font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .status-bar-icons {
@@ -64,197 +65,293 @@
         }
 
         .status-bar-icons svg {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
         }
 
-        /* Header */
-        .header {
-            padding: 8px 16px 12px;
-            background-color: var(--pure-black);
+        /* ========== HOME SCREEN ========== */
+        #home-screen {
+            padding-bottom: 80px;
         }
 
-        .header-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--off-white);
-        }
-
-        /* Tab Bar */
-        .tab-bar {
+        /* Minimal Header */
+        .home-header {
             display: flex;
-            gap: 8px;
-            padding: 0 16px 8px;
-            background-color: var(--pure-black);
-            overflow-x: auto;
-        }
-
-        .tab-bar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .tab-item {
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 4px;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.6);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            position: relative;
-            white-space: nowrap;
-            transition: color 0.2s;
+            padding: 8px 20px 16px;
         }
 
-        .tab-item.active {
+        .home-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .home-title span {
             color: var(--hasselblad-orange);
         }
 
-        .tab-item.active::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 24px;
-            height: 3px;
-            background-color: var(--hasselblad-orange);
-            border-radius: 2px;
-        }
-
-        .tab-count {
-            font-size: 10px;
-            opacity: 0.7;
-        }
-
-        /* Content Area */
-        .content {
-            padding: 8px 16px 100px;
-            background-color: var(--pure-black);
-        }
-
-        /* Preset Grid */
-        .preset-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-
-        /* Preset Card */
-        .preset-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--card-border);
-            cursor: pointer;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .preset-card:hover {
-            transform: translateY(-4px);
-        }
-
-        .preset-card-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background: linear-gradient(135deg, var(--dark-gray), var(--medium-gray));
+        .header-icon-btn {
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--light-gray);
-            font-size: 12px;
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .preset-card-image img {
+        .header-icon-btn:hover {
+            background: rgba(255, 102, 0, 0.2);
+        }
+
+        .header-icon-btn svg {
+            width: 20px;
+            height: 20px;
+            color: var(--hasselblad-orange);
+        }
+
+        /* Category Pills - 简洁横向滚动 */
+        .category-scroll {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .category-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-pill {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .category-pill.active {
+            color: var(--pure-black);
+            background: var(--hasselblad-orange);
+            border-color: var(--hasselblad-orange);
+        }
+
+        .category-pill:hover:not(.active) {
+            border-color: rgba(255, 102, 0, 0.5);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Featured Card - 大图突出 */
+        .featured-section {
+            padding: 0 20px 24px;
+        }
+
+        .featured-card {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .featured-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .featured-card:hover img {
+            transform: scale(1.03);
+        }
+
+        .featured-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 24px 16px 16px;
+            background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+        }
+
+        .featured-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--pure-black);
+            background: var(--hasselblad-orange);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .featured-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .featured-subtitle {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Section Header */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px 12px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .section-more {
+            font-size: 12px;
+            color: var(--hasselblad-orange);
+            cursor: pointer;
+        }
+
+        /* Preset List - 简洁列表式 */
+        .preset-list {
+            padding: 0 20px;
+        }
+
+        .preset-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .preset-item:hover {
+            opacity: 0.8;
+        }
+
+        .preset-item:last-child {
+            border-bottom: none;
+        }
+
+        .preset-thumb {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .preset-thumb img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .preset-card-content {
-            padding: 12px;
+        .preset-info {
+            flex: 1;
+            min-width: 0;
         }
 
-        .preset-card-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--off-white);
+        .preset-name {
+            font-size: 15px;
+            font-weight: 500;
             margin-bottom: 4px;
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .preset-badge {
-            font-size: 9px;
-            padding: 2px 6px;
-            background-color: var(--hasselblad-orange);
-            color: white;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-
-        .preset-card-author {
-            font-size: 12px;
-            color: var(--light-gray);
-        }
-
-        .preset-card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-        }
-
-        .preset-tags {
-            display: flex;
-            gap: 4px;
-        }
-
-        .preset-tag {
+        .preset-mode {
             font-size: 10px;
             padding: 2px 6px;
-            background-color: rgba(255, 102, 0, 0.2);
+            background: rgba(255, 102, 0, 0.15);
             color: var(--hasselblad-orange);
             border-radius: 4px;
         }
 
-        .preset-actions {
+        .preset-author {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .preset-arrow {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Quick Actions Grid */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 24px 20px;
+        }
+
+        .quick-action-item {
             display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 8px;
-        }
-
-        .preset-action-btn {
-            background: none;
-            border: none;
+            padding: 16px 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
             cursor: pointer;
-            font-size: 16px;
-            opacity: 0.6;
-            transition: opacity 0.2s, transform 0.2s;
+            transition: all 0.2s;
         }
 
-        .preset-action-btn:hover {
-            opacity: 1;
-            transform: scale(1.2);
+        .quick-action-item:hover {
+            border-color: rgba(255, 102, 0, 0.3);
+            transform: translateY(-2px);
         }
 
-        /* Bottom Navigation */
+        .quick-action-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .quick-action-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Bottom Nav */
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
-            max-width: 430px;
+            max-width: 420px;
             display: flex;
             justify-content: space-around;
-            background-color: var(--near-black);
-            padding: 12px 0 24px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 8px 0 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .nav-item {
@@ -262,9 +359,10 @@
             flex-direction: column;
             align-items: center;
             gap: 4px;
-            color: var(--light-gray);
+            color: rgba(255, 255, 255, 0.35);
             cursor: pointer;
             transition: color 0.2s;
+            padding: 4px 16px;
         }
 
         .nav-item.active {
@@ -272,402 +370,470 @@
         }
 
         .nav-item svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
         }
 
         .nav-item span {
             font-size: 10px;
+            font-weight: 500;
         }
 
-        /* FAB */
-        .fab {
-            position: fixed;
-            bottom: 100px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
-            background-color: var(--hasselblad-orange);
-            border-radius: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(255, 102, 0, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            z-index: 100;
+        /* ========== DETAIL SCREEN ========== */
+        #detail-screen {
+            padding-bottom: 24px;
         }
 
-        .fab:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(255, 102, 0, 0.5);
-        }
-
-        .fab svg {
-            width: 28px;
-            height: 28px;
-            color: white;
-        }
-
-        /* Detail Screen */
-        .screen {
-            display: none;
-            min-height: 100vh;
-            background-color: var(--pure-black);
-        }
-
-        .screen.active {
-            display: block;
-        }
-
-        /* Detail Header */
         .detail-header {
             display: flex;
             align-items: center;
-            padding: 8px 16px 16px;
-            gap: 16px;
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            color: var(--off-white);
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        .detail-title {
-            flex: 1;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .header-actions {
-            display: flex;
+            padding: 6px 12px 6px 4px;
             gap: 8px;
         }
 
-        .header-btn {
-            background: none;
-            border: none;
-            color: var(--hasselblad-orange);
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        /* Image Gallery */
-        .image-gallery {
-            padding: 0 16px;
-            margin-bottom: 16px;
-        }
-
-        .gallery-main {
-            width: 100%;
-            height: 240px;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            border-radius: 12px;
-            overflow: hidden;
+        .back-btn {
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
 
-        .gallery-main img {
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-title-wrap {
+            flex: 1;
+        }
+
+        .detail-title {
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .detail-subtitle {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .detail-action-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .detail-action-btn:hover {
+            background: rgba(255, 102, 0, 0.2);
+        }
+
+        .detail-action-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .detail-action-btn.favorite svg {
+            color: var(--hasselblad-orange);
+        }
+
+        /* Hero Gallery */
+        .detail-gallery {
+            padding: 8px 20px 20px;
+        }
+
+        .gallery-container {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .gallery-container img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
+        .gallery-indicator {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            padding: 4px 10px;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 6px;
+        }
+
         .gallery-dots {
             display: flex;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             margin-top: 12px;
         }
 
         .gallery-dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background-color: var(--medium-gray);
+            background: var(--medium-gray);
+            transition: all 0.3s;
         }
 
         .gallery-dot.active {
-            background-color: var(--hasselblad-orange);
-            width: 24px;
-            border-radius: 4px;
+            width: 20px;
+            border-radius: 3px;
+            background: var(--hasselblad-orange);
         }
 
-        /* Mode Badge */
-        .mode-badge {
+        /* Mode & Tags */
+        .detail-tags {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 16px;
+        }
+
+        .detail-tag {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 4px 12px;
-            background-color: rgba(255, 102, 0, 0.15);
-            border: 1px solid rgba(255, 102, 0, 0.3);
-            border-radius: 16px;
+            padding: 6px 12px;
             font-size: 12px;
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+            border-radius: 8px;
             color: var(--hasselblad-orange);
-            margin: 0 16px 16px;
         }
 
-        /* Description Card */
-        .description-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 16px;
-            margin: 0 16px 16px;
+        .detail-tag svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Content Cards - 紧凑精致 */
+        .detail-content {
+            padding: 0 20px;
+        }
+
+        .content-card {
+            background: var(--card-bg);
             border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
         }
 
-        .description-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--hasselblad-orange);
-            margin-bottom: 8px;
-        }
-
-        .description-content {
-            font-size: 13px;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.8);
-            white-space: pre-line;
-        }
-
-        /* Parameter Section */
-        .param-section {
-            margin: 0 16px 24px;
-        }
-
-        .param-section-title {
+        .content-card-title {
             font-size: 12px;
             font-weight: 600;
             color: var(--hasselblad-orange);
-            margin-bottom: 12px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
         }
 
+        .content-card-text {
+            font-size: 13px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        /* Parameters - 网格布局 */
         .param-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
         }
 
-        .param-card {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 12px;
-            border: 1px solid var(--card-border);
+        .param-cell {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            padding: 12px 10px;
+            text-align: center;
         }
 
-        .param-label {
-            font-size: 11px;
-            color: var(--light-gray);
+        .param-cell-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
             margin-bottom: 4px;
         }
 
-        .param-value {
+        .param-cell-value {
             font-size: 14px;
             font-weight: 600;
-            color: var(--off-white);
         }
 
-        .param-card.full-width {
-            grid-column: span 2;
+        .param-cell.highlight {
+            background: rgba(255, 102, 0, 0.1);
         }
 
-        /* Settings Screen */
-        .settings-content {
-            padding: 0 16px 100px;
+        .param-cell.highlight .param-cell-value {
+            color: var(--hasselblad-orange);
         }
 
-        .settings-section {
-            background-color: rgba(45, 45, 45, 0.5);
+        /* Floating Action */
+        .fab-detail {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 52px;
+            height: 52px;
+            background: var(--hasselblad-orange);
             border-radius: 16px;
-            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 102, 0, 0.4);
+            transition: all 0.2s;
+        }
+
+        .fab-detail:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 24px rgba(255, 102, 0, 0.5);
+        }
+
+        .fab-detail svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        /* ========== SETTINGS SCREEN ========== */
+        #settings-screen {
+            padding-bottom: 100px;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 20px 20px;
+        }
+
+        .settings-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        /* Settings Group */
+        .settings-group {
+            padding: 0 20px 20px;
+        }
+
+        .settings-group-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--hasselblad-orange);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .settings-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
             overflow: hidden;
         }
 
-        .settings-section-title {
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--hasselblad-orange);
-            padding: 16px 16px 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .settings-item {
+        .settings-row {
             display: flex;
             align-items: center;
             padding: 14px 16px;
-            gap: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+            transition: background 0.2s;
         }
 
-        .settings-item:last-child {
+        .settings-row:last-child {
             border-bottom: none;
         }
 
-        .settings-item-icon {
-            width: 24px;
-            height: 24px;
+        .settings-row:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .settings-row-icon {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 102, 0, 0.1);
+            border-radius: 10px;
+            margin-right: 12px;
+        }
+
+        .settings-row-icon svg {
+            width: 18px;
+            height: 18px;
             color: var(--hasselblad-orange);
         }
 
-        .settings-item-content {
+        .settings-row-content {
             flex: 1;
         }
 
-        .settings-item-title {
+        .settings-row-title {
             font-size: 14px;
-            color: var(--off-white);
+            font-weight: 500;
         }
 
-        .settings-item-subtitle {
-            font-size: 12px;
-            color: var(--light-gray);
+        .settings-row-subtitle {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
             margin-top: 2px;
         }
 
-        .settings-item-arrow {
-            color: var(--light-gray);
+        .settings-row-value {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-right: 8px;
         }
 
-        /* Toggle Switch */
+        .settings-row-arrow {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Toggle */
         .toggle {
-            width: 48px;
-            height: 28px;
-            background-color: var(--medium-gray);
-            border-radius: 14px;
+            width: 44px;
+            height: 26px;
+            background: var(--medium-gray);
+            border-radius: 13px;
             position: relative;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background 0.3s;
         }
 
         .toggle.active {
-            background-color: var(--hasselblad-orange);
+            background: var(--hasselblad-orange);
         }
 
         .toggle::after {
             content: '';
             position: absolute;
-            width: 24px;
-            height: 24px;
-            background-color: white;
-            border-radius: 12px;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
             top: 2px;
             left: 2px;
             transition: transform 0.3s;
         }
 
         .toggle.active::after {
-            transform: translateX(20px);
+            transform: translateX(18px);
         }
 
         /* Slider */
-        .slider-container {
-            padding: 12px 16px;
+        .slider-wrap {
+            padding: 8px 16px 16px;
         }
 
         .slider-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .slider-label {
             font-size: 14px;
-            color: var(--off-white);
+            font-weight: 500;
         }
 
         .slider-value {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--hasselblad-orange);
+            font-weight: 500;
         }
 
         .slider-track {
-            width: 100%;
             height: 4px;
-            background-color: rgba(255, 102, 0, 0.3);
+            background: rgba(255, 102, 0, 0.2);
             border-radius: 2px;
             position: relative;
         }
 
         .slider-fill {
-            width: 50%;
+            position: absolute;
+            left: 0;
+            top: 0;
             height: 100%;
-            background-color: var(--hasselblad-orange);
+            width: 50%;
+            background: var(--hasselblad-orange);
             border-radius: 2px;
         }
 
         .slider-thumb {
-            width: 20px;
-            height: 20px;
-            background-color: var(--hasselblad-orange);
-            border-radius: 50%;
             position: absolute;
+            width: 18px;
+            height: 18px;
+            background: var(--hasselblad-orange);
+            border-radius: 50%;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             box-shadow: 0 2px 8px rgba(255, 102, 0, 0.4);
         }
 
-        /* Loading Hint */
-        .loading-hint {
-            text-align: center;
-            padding: 24px;
-            margin-top: 16px;
+        .slider-range {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
         }
 
-        .loading-hint-line {
-            width: 60px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--hasselblad-orange), transparent);
-            margin: 0 auto;
+        .slider-range span {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.3);
         }
 
-        .loading-hint-text {
-            font-size: 12px;
-            color: var(--hasselblad-orange);
-            letter-spacing: 2px;
-            margin: 8px 0;
-            opacity: 0.8;
+        /* Screen transitions */
+        .screen {
+            display: none;
+            animation: fadeIn 0.25s ease;
         }
 
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 48px 24px;
-            color: rgba(255, 255, 255, 0.6);
+        .screen.active {
+            display: block;
         }
 
-        .empty-state-title {
-            font-size: 16px;
-            margin-bottom: 8px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .empty-state-hint {
-            font-size: 13px;
-            color: var(--hasselblad-orange);
-            opacity: 0.8;
-        }
-
-        /* Web Debug Toolbar */
+        /* Debug Toolbar */
         .debug-toolbar {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background-color: rgba(0, 0, 0, 0.95);
-            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 8px 12px;
             display: flex;
             gap: 8px;
             overflow-x: auto;
             z-index: 1000;
             border-bottom: 1px solid var(--dark-gray);
+            scrollbar-width: none;
         }
 
         .debug-toolbar::-webkit-scrollbar {
@@ -675,11 +841,11 @@
         }
 
         .debug-btn {
-            padding: 6px 12px;
-            background-color: var(--dark-gray);
+            padding: 6px 14px;
+            background: var(--dark-gray);
             border: 1px solid var(--medium-gray);
             color: var(--off-white);
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 12px;
             cursor: pointer;
             white-space: nowrap;
@@ -687,12 +853,12 @@
         }
 
         .debug-btn:hover {
-            background-color: var(--hasselblad-orange);
+            background: var(--hasselblad-orange);
             border-color: var(--hasselblad-orange);
         }
 
         .debug-btn.active {
-            background-color: var(--hasselblad-orange);
+            background: var(--hasselblad-orange);
             border-color: var(--hasselblad-orange);
         }
 
@@ -714,198 +880,152 @@
         <div class="status-bar">
             <span class="status-bar-time">9:41</span>
             <div class="status-bar-icons">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 3C7.46 3 3.34 4.78.29 7.67c-.18.18-.29.43-.29.71 0 .28.11.53.29.71l11.29 11.29c.19.19.44.29.71.29.28 0 .53-.11.71-.29L23.71 9.09c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71C20.66 4.78 16.54 3 12 3z"/>
-                </svg>
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17 4h-3V2h-4v2H7v18h10V4zm-4 16h-2v-2h2v2zm0-4h-2V9h2v7z"/>
-                </svg>
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C7.46 3 3.34 4.78.29 7.67c-.18.18-.29.43-.29.71 0 .28.11.53.29.71l11.29 11.29c.19.19.44.29.71.29.28 0 .53-.11.71-.29L23.71 9.09c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71C20.66 4.78 16.54 3 12 3z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4zm-4 16h-2v-2h2v2zm0-4h-2V9h2v7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
             </div>
         </div>
 
-        <!-- Home Screen -->
+        <!-- ========== HOME SCREEN ========== -->
         <div id="home-screen" class="screen active">
-            <div class="header">
-                <h1 class="header-title">OMaster</h1>
+            <!-- Header -->
+            <div class="home-header">
+                <h1 class="home-title">OMaster</h1>
+                <div class="header-icon-btn" onclick="showScreen('settings')">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                </div>
             </div>
 
-            <div class="tab-bar">
-                <button class="tab-item active">
-                    全部
-                    <span class="tab-count">24</span>
-                </button>
-                <button class="tab-item">
-                    收藏
-                    <span class="tab-count">8</span>
-                </button>
-                <button class="tab-item">
-                    我的
-                    <span class="tab-count">3</span>
-                </button>
+            <!-- Category Pills -->
+            <div class="category-scroll">
+                <button class="category-pill active">全部</button>
+                <button class="category-pill">人像</button>
+                <button class="category-pill">风景</button>
+                <button class="category-pill">街拍</button>
+                <button class="category-pill">美食</button>
+                <button class="category-pill">黑白</button>
             </div>
 
-            <div class="content">
-                <div class="preset-grid">
-                    <div class="preset-card" onclick="showScreen('detail')">
-                        <div class="preset-card-image">
-                            <img src="https://via.placeholder.com/300x200/1a1a1a/FF6600?text=富士胶片" alt="富士胶片">
-                        </div>
-                        <div class="preset-card-content">
-                            <div class="preset-card-title">
-                                富士胶片
-                                <span class="preset-badge">NEW</span>
-                            </div>
-                            <div class="preset-card-author">OMaster</div>
-                            <div class="preset-card-footer">
-                                <div class="preset-tags">
-                                    <span class="preset-tag">Pro</span>
-                                </div>
-                                <div class="preset-actions">
-                                    <button class="preset-action-btn">♥</button>
-                                    <button class="preset-action-btn">⋮</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="preset-card" onclick="showScreen('detail')">
-                        <div class="preset-card-image">
-                            <img src="https://via.placeholder.com/300x200/1a1a1a/005A9C?text=蔡司蓝" alt="蔡司蓝">
-                        </div>
-                        <div class="preset-card-content">
-                            <div class="preset-card-title">蔡司蓝</div>
-                            <div class="preset-card-author">OMaster</div>
-                            <div class="preset-card-footer">
-                                <div class="preset-tags">
-                                    <span class="preset-tag">Auto</span>
-                                </div>
-                                <div class="preset-actions">
-                                    <button class="preset-action-btn">♥</button>
-                                    <button class="preset-action-btn">⋮</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="preset-card" onclick="showScreen('detail')">
-                        <div class="preset-card-image">
-                            <img src="https://via.placeholder.com/300x200/1a1a1a/CC0000?text=徕卡红" alt="徕卡红">
-                        </div>
-                        <div class="preset-card-content">
-                            <div class="preset-card-title">徕卡红</div>
-                            <div class="preset-card-author">OMaster</div>
-                            <div class="preset-card-footer">
-                                <div class="preset-tags">
-                                    <span class="preset-tag">Pro</span>
-                                </div>
-                                <div class="preset-actions">
-                                    <button class="preset-action-btn">♥</button>
-                                    <button class="preset-action-btn">⋮</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="preset-card" onclick="showScreen('detail')">
-                        <div class="preset-card-image">
-                            <img src="https://via.placeholder.com/300x200/1a1a1a/00A95C?text=理光绿" alt="理光绿">
-                        </div>
-                        <div class="preset-card-content">
-                            <div class="preset-card-title">理光绿</div>
-                            <div class="preset-card-author">OMaster</div>
-                            <div class="preset-card-footer">
-                                <div class="preset-tags">
-                                    <span class="preset-tag">Auto</span>
-                                </div>
-                                <div class="preset-actions">
-                                    <button class="preset-action-btn">♥</button>
-                                    <button class="preset-action-btn">⋮</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="preset-card" onclick="showScreen('detail')">
-                        <div class="preset-card-image">
-                            <img src="https://via.placeholder.com/300x200/1a1a1a/009B3A?text=富士绿" alt="富士绿">
-                        </div>
-                        <div class="preset-card-content">
-                            <div class="preset-card-title">富士绿</div>
-                            <div class="preset-card-author">OMaster</div>
-                            <div class="preset-card-footer">
-                                <div class="preset-tags">
-                                    <span class="preset-tag">Pro</span>
-                                </div>
-                                <div class="preset-actions">
-                                    <button class="preset-action-btn">♥</button>
-                                    <button class="preset-action-btn">⋮</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="preset-card" onclick="showScreen('detail')">
-                        <div class="preset-card-image">
-                            <img src="https://via.placeholder.com/300x200/1a1a1a/F15A24?text=索尼橙" alt="索尼橙">
-                        </div>
-                        <div class="preset-card-content">
-                            <div class="preset-card-title">索尼橙</div>
-                            <div class="preset-card-author">OMaster</div>
-                            <div class="preset-card-footer">
-                                <div class="preset-tags">
-                                    <span class="preset-tag">Auto</span>
-                                </div>
-                                <div class="preset-actions">
-                                    <button class="preset-action-btn">♥</button>
-                                    <button class="preset-action-btn">⋮</button>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Featured Card -->
+            <div class="featured-section">
+                <div class="featured-card" onclick="showScreen('detail')">
+                    <img src="https://via.placeholder.com/400x200/1a1a1a/FF6600?text=Featured+Preset" alt="Featured">
+                    <div class="featured-overlay">
+                        <div class="featured-badge">精选</div>
+                        <div class="featured-title">富士胶片 · 经典复古</div>
+                        <div class="featured-subtitle">街拍 · 人像 · 胶片感</div>
                     </div>
                 </div>
+            </div>
 
-                <div class="loading-hint">
-                    <div class="loading-hint-line"></div>
-                    <div class="loading-hint-text">持续更新 · 敬请期待</div>
-                    <div class="loading-hint-line"></div>
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="quick-action-item">
+                    <div class="quick-action-icon">📷</div>
+                    <div class="quick-action-label">Pro 模式</div>
+                </div>
+                <div class="quick-action-item">
+                    <div class="quick-action-icon">✨</div>
+                    <div class="quick-action-label">柔光滤镜</div>
+                </div>
+                <div class="quick-action-item">
+                    <div class="quick-action-icon">🎨</div>
+                    <div class="quick-action-label">调色参考</div>
+                </div>
+            </div>
+
+            <!-- Section Header -->
+            <div class="section-header">
+                <div class="section-title">热门预设</div>
+                <div class="section-more">查看全部 →</div>
+            </div>
+
+            <!-- Preset List -->
+            <div class="preset-list">
+                <div class="preset-item" onclick="showScreen('detail')">
+                    <div class="preset-thumb">
+                        <img src="https://via.placeholder.com/64x64/1a1a1a/005A9C?text=ZEISS" alt="蔡司蓝">
+                    </div>
+                    <div class="preset-info">
+                        <div class="preset-name">
+                            蔡司蓝
+                            <span class="preset-mode">Auto</span>
+                        </div>
+                        <div class="preset-author">OMaster</div>
+                    </div>
+                    <div class="preset-arrow">›</div>
+                </div>
+
+                <div class="preset-item" onclick="showScreen('detail')">
+                    <div class="preset-thumb">
+                        <img src="https://via.placeholder.com/64x64/1a1a1a/CC0000?text=Leica" alt="徕卡红">
+                    </div>
+                    <div class="preset-info">
+                        <div class="preset-name">
+                            徕卡红
+                            <span class="preset-mode">Pro</span>
+                        </div>
+                        <div class="preset-author">OMaster</div>
+                    </div>
+                    <div class="preset-arrow">›</div>
+                </div>
+
+                <div class="preset-item" onclick="showScreen('detail')">
+                    <div class="preset-thumb">
+                        <img src="https://via.placeholder.com/64x64/1a1a1a/00A95C?text=Ricoh" alt="理光绿">
+                    </div>
+                    <div class="preset-info">
+                        <div class="preset-name">
+                            理光绿
+                            <span class="preset-mode">Auto</span>
+                        </div>
+                        <div class="preset-author">OMaster</div>
+                    </div>
+                    <div class="preset-arrow">›</div>
+                </div>
+
+                <div class="preset-item" onclick="showScreen('detail')">
+                    <div class="preset-thumb">
+                        <img src="https://via.placeholder.com/64x64/1a1a1a/009B3A?text=Fuji" alt="富士绿">
+                    </div>
+                    <div class="preset-info">
+                        <div class="preset-name">
+                            富士绿
+                            <span class="preset-mode">Pro</span>
+                        </div>
+                        <div class="preset-author">OMaster</div>
+                    </div>
+                    <div class="preset-arrow">›</div>
                 </div>
             </div>
         </div>
 
-        <!-- Detail Screen -->
+        <!-- ========== DETAIL SCREEN ========== -->
         <div id="detail-screen" class="screen">
+            <!-- Header -->
             <div class="detail-header">
-                <button class="back-btn" onclick="showScreen('home')">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                    </svg>
-                </button>
-                <div class="detail-title">富士胶片</div>
-                <div class="header-actions">
-                    <button class="header-btn">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-                        </svg>
-                    </button>
-                    <button class="header-btn">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                        </svg>
-                    </button>
-                    <button class="header-btn">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </button>
+                <div class="back-btn" onclick="showScreen('home')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                </div>
+                <div class="detail-title-wrap">
+                    <div class="detail-title">富士胶片</div>
+                    <div class="detail-subtitle">OMaster</div>
+                </div>
+                <div class="detail-actions">
+                    <div class="detail-action-btn">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                    </div>
+                    <div class="detail-action-btn favorite">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </div>
                 </div>
             </div>
 
-            <div class="image-gallery">
-                <div class="gallery-main">
-                    <img src="https://via.placeholder.com/400x240/1a1a1a/FF6600?text=富士胶片" alt="富士胶片">
+            <!-- Gallery -->
+            <div class="detail-gallery">
+                <div class="gallery-container">
+                    <img src="https://via.placeholder.com/380x220/1a1a1a/FF6600?text=Fuji+Film+Sample" alt="富士胶片">
+                    <div class="gallery-indicator">1/3</div>
                 </div>
                 <div class="gallery-dots">
                     <span class="gallery-dot active"></span>
@@ -914,206 +1034,229 @@
                 </div>
             </div>
 
-            <div class="mode-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                Pro 模式
+            <!-- Tags -->
+            <div class="detail-tags">
+                <div class="detail-tag">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    Pro 模式
+                </div>
+                <div class="detail-tag">胶片感</div>
+                <div class="detail-tag">复古</div>
             </div>
 
-            <div class="description-card">
-                <div class="description-title">拍摄建议</div>
-                <div class="description-content">【环境建议】日间户外或光线充足的室内
-【场景推荐】街拍、人像、风景、建筑
-【拍摄要点】适合追求经典胶片质感的场景，色彩浓郁复古，建议寻找有光影对比的场景增强层次感</div>
-            </div>
+            <!-- Content -->
+            <div class="detail-content">
+                <!-- Shooting Tips -->
+                <div class="content-card">
+                    <div class="content-card-title">拍摄建议</div>
+                    <div class="content-card-text">【环境】日间户外或光线充足的室内
+【场景】街拍、人像、风景、建筑
+【要点】适合追求经典胶片质感，色彩浓郁复古，建议寻找有光影对比的场景增强层次感</div>
+                </div>
 
-            <div class="param-section">
-                <div class="param-section-title">专业参数</div>
-                <div class="param-grid">
-                    <div class="param-card">
-                        <div class="param-label">ISO</div>
-                        <div class="param-value">50</div>
+                <!-- Pro Parameters -->
+                <div class="content-card">
+                    <div class="content-card-title">专业参数</div>
+                    <div class="param-grid">
+                        <div class="param-cell highlight">
+                            <div class="param-cell-label">ISO</div>
+                            <div class="param-cell-value">50</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">快门</div>
+                            <div class="param-cell-value">1/500s</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">曝光</div>
+                            <div class="param-cell-value">-0.3</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">白平衡</div>
+                            <div class="param-cell-value">5000K</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">色调</div>
+                            <div class="param-cell-value">暖调</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">锐度</div>
+                            <div class="param-cell-value">+3</div>
+                        </div>
                     </div>
-                    <div class="param-card">
-                        <div class="param-label">快门</div>
-                        <div class="param-value">1/500s</div>
-                    </div>
-                    <div class="param-card">
-                        <div class="param-label">曝光补偿</div>
-                        <div class="param-value">-0.3</div>
-                    </div>
-                    <div class="param-card">
-                        <div class="param-label">白平衡</div>
-                        <div class="param-value">5000K</div>
-                    </div>
-                    <div class="param-card full-width">
-                        <div class="param-label">色调风格</div>
-                        <div class="param-value">暖调</div>
+                </div>
+
+                <!-- Color Parameters -->
+                <div class="content-card">
+                    <div class="content-card-title">调色参数</div>
+                    <div class="param-grid">
+                        <div class="param-cell highlight">
+                            <div class="param-cell-label">滤镜</div>
+                            <div class="param-cell-value">复古</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">饱和度</div>
+                            <div class="param-cell-value">+10</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">柔光</div>
+                            <div class="param-cell-value">无</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">暗角</div>
+                            <div class="param-cell-value">开启</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">冷暖</div>
+                            <div class="param-cell-value">+5</div>
+                        </div>
+                        <div class="param-cell">
+                            <div class="param-cell-label">青品</div>
+                            <div class="param-cell-value">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="param-section">
-                <div class="param-section-title">调色参数</div>
-                <div class="param-grid">
-                    <div class="param-card">
-                        <div class="param-label">滤镜</div>
-                        <div class="param-value">复古</div>
-                    </div>
-                    <div class="param-card">
-                        <div class="param-label">饱和度</div>
-                        <div class="param-value">+10</div>
-                    </div>
-                    <div class="param-card">
-                        <div class="param-label">柔光</div>
-                        <div class="param-value">无</div>
-                    </div>
-                    <div class="param-card">
-                        <div class="param-label">暗角</div>
-                        <div class="param-value">开启</div>
-                    </div>
-                    <div class="param-card full-width">
-                        <div class="param-label">影调曲线</div>
-                        <div class="param-value">S-Curve</div>
-                    </div>
-                </div>
+            <!-- FAB -->
+            <div class="fab-detail">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
             </div>
         </div>
 
-        <!-- Settings Screen -->
+        <!-- ========== SETTINGS SCREEN ========== -->
         <div id="settings-screen" class="screen">
-            <div class="header">
-                <h1 class="header-title">设置</h1>
+            <!-- Header -->
+            <div class="settings-header">
+                <h1 class="settings-title">设置</h1>
             </div>
 
-            <div class="settings-content">
-                <div class="settings-section">
-                    <div class="settings-section-title">常规</div>
-                    <div class="settings-item">
-                        <svg class="settings-item-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/>
-                        </svg>
-                        <div class="settings-item-content">
-                            <div class="settings-item-title">震动反馈</div>
+            <!-- General -->
+            <div class="settings-group">
+                <div class="settings-group-title">通用</div>
+                <div class="settings-card">
+                    <div class="settings-row">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3z"/></svg>
                         </div>
-                        <div class="toggle active"></div>
+                        <div class="settings-row-content">
+                            <div class="settings-row-title">震动反馈</div>
+                        </div>
+                        <div class="toggle active" onclick="this.classList.toggle('active')"></div>
                     </div>
-                    <div class="settings-item">
-                        <svg class="settings-item-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-                        </svg>
-                        <div class="settings-item-content">
-                            <div class="settings-item-title">默认启动页面</div>
-                            <div class="settings-item-subtitle">全部</div>
+                    <div class="settings-row">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
                         </div>
-                        <svg class="settings-item-arrow" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-section-title">外观</div>
-                    <div class="settings-item">
-                        <svg class="settings-item-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-                        </svg>
-                        <div class="settings-item-content">
-                            <div class="settings-item-title">主题颜色</div>
-                            <div class="settings-item-subtitle">哈苏橙</div>
+                        <div class="settings-row-content">
+                            <div class="settings-row-title">默认启动页面</div>
+                            <div class="settings-row-subtitle">全部</div>
                         </div>
-                        <div style="width: 24px; height: 24px; background-color: #FF6600; border-radius: 50%;"></div>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-section-title">悬浮窗</div>
-                    <div class="slider-container">
-                        <div class="slider-header">
-                            <span class="slider-label">悬浮窗透明度</span>
-                            <span class="slider-value">50%</span>
-                        </div>
-                        <div class="slider-track">
-                            <div class="slider-fill" style="width: 50%;"></div>
-                            <div class="slider-thumb" style="left: 50%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-section-title">更新设置</div>
-                    <div class="settings-item">
-                        <svg class="settings-item-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/>
-                        </svg>
-                        <div class="settings-item-content">
-                            <div class="settings-item-title">更新渠道</div>
-                            <div class="settings-item-subtitle">Gitee（国内推荐）</div>
-                        </div>
-                        <svg class="settings-item-arrow" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-section-title">隐私</div>
-                    <div class="settings-item">
-                        <svg class="settings-item-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                        </svg>
-                        <div class="settings-item-content">
-                            <div class="settings-item-title">使用友盟统计</div>
-                            <div class="settings-item-subtitle">重启应用后生效</div>
-                        </div>
-                        <div class="toggle active"></div>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-section-title">存储</div>
-                    <div class="settings-item">
-                        <svg class="settings-item-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                        </svg>
-                        <div class="settings-item-content">
-                            <div class="settings-item-title">清理图片缓存</div>
-                            <div class="settings-item-subtitle">缓存大小: 12.5 MB</div>
-                        </div>
-                        <svg class="settings-item-arrow" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                        </svg>
+                        <div class="settings-row-arrow">›</div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- FAB Button (visible on home screen) -->
-        <div class="fab" id="fab" onclick="showScreen('home')">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
+            <!-- Appearance -->
+            <div class="settings-group">
+                <div class="settings-group-title">外观</div>
+                <div class="settings-card">
+                    <div class="settings-row">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/></svg>
+                        </div>
+                        <div class="settings-row-content">
+                            <div class="settings-row-title">主题颜色</div>
+                            <div class="settings-row-subtitle">哈苏橙</div>
+                        </div>
+                        <div style="width: 20px; height: 20px; background: #FF6600; border-radius: 50%; margin-right: 8px;"></div>
+                        <div class="settings-row-arrow">›</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Window -->
+            <div class="settings-group">
+                <div class="settings-group-title">悬浮窗</div>
+                <div class="settings-card slider-wrap">
+                    <div class="slider-header">
+                        <span class="slider-label">悬浮窗透明度</span>
+                        <span class="slider-value">50%</span>
+                    </div>
+                    <div class="slider-track">
+                        <div class="slider-fill"></div>
+                        <div class="slider-thumb"></div>
+                    </div>
+                    <div class="slider-range">
+                        <span>30%</span>
+                        <span>70%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update -->
+            <div class="settings-group">
+                <div class="settings-group-title">更新</div>
+                <div class="settings-card">
+                    <div class="settings-row">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>
+                        </div>
+                        <div class="settings-row-content">
+                            <div class="settings-row-title">更新渠道</div>
+                            <div class="settings-row-subtitle">Gitee（国内推荐）</div>
+                        </div>
+                        <div class="settings-row-arrow">›</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy -->
+            <div class="settings-group">
+                <div class="settings-group-title">隐私</div>
+                <div class="settings-card">
+                    <div class="settings-row">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        </div>
+                        <div class="settings-row-content">
+                            <div class="settings-row-title">使用友盟统计</div>
+                            <div class="settings-row-subtitle">重启应用后生效</div>
+                        </div>
+                        <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage -->
+            <div class="settings-group">
+                <div class="settings-group-title">存储</div>
+                <div class="settings-card">
+                    <div class="settings-row">
+                        <div class="settings-row-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </div>
+                        <div class="settings-row-content">
+                            <div class="settings-row-title">清理图片缓存</div>
+                            <div class="settings-row-subtitle">缓存大小: 12.5 MB</div>
+                        </div>
+                        <div class="settings-row-arrow">›</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Bottom Navigation -->
         <div class="bottom-nav">
             <div class="nav-item active" onclick="showScreen('home')">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                 <span>主页</span>
             </div>
-            <div class="nav-item" onclick="showScreen('settings')">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                </svg>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
                 <span>订阅</span>
             </div>
             <div class="nav-item" onclick="showScreen('settings')">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                 <span>设置</span>
             </div>
         </div>
@@ -1121,47 +1264,41 @@
 
     <script>
         function showScreen(screenName) {
-            // Update debug toolbar buttons
-            document.querySelectorAll('.debug-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            // Update debug buttons
+            document.querySelectorAll('.debug-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
             // Hide all screens
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
-            });
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
 
             // Show selected screen
             document.getElementById(screenName + '-screen').classList.add('active');
 
-            // Toggle FAB visibility
-            const fab = document.getElementById('fab');
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             if (screenName === 'home') {
-                fab.style.display = 'flex';
-            } else {
-                fab.style.display = 'none';
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+            } else if (screenName === 'settings') {
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
             }
-
-            // Update nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
         }
 
-        // Tab click handlers
-        document.querySelectorAll('.tab-item').forEach(tab => {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        // Category pills
+        document.querySelectorAll('.category-pill').forEach(pill => {
+            pill.addEventListener('click', function() {
+                document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
                 this.classList.add('active');
             });
         });
 
-        // Toggle switch handlers
+        // Toggles
         document.querySelectorAll('.toggle').forEach(toggle => {
-            toggle.addEventListener('click', function() {
-                this.classList.toggle('active');
-            });
+            if (!toggle.hasAttribute('data-bound')) {
+                toggle.setAttribute('data-bound', 'true');
+                toggle.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            }
         });
     </script>
 </body>
