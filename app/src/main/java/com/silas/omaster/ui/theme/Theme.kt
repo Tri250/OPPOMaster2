@@ -2,6 +2,7 @@ package com.silas.omaster.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -10,81 +11,71 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.WindowCompat
 
-/**
- * 生成深色主题配色方案
- */
-private fun generateDarkColorScheme(primaryColor: Color) = darkColorScheme(
-    primary = primaryColor,
-    onPrimary = PureBlack,
-    primaryContainer = primaryColor.copy(alpha = 0.8f),
-    onPrimaryContainer = OffWhite,
-    secondary = LightGray,
-    onSecondary = PureBlack,
-    secondaryContainer = DarkGray,
-    onSecondaryContainer = OffWhite,
-    tertiary = primaryColor.copy(alpha = 0.6f),
-    onTertiary = PureBlack,
-    tertiaryContainer = MediumGray,
-    onTertiaryContainer = OffWhite,
-    background = PureBlack,
-    onBackground = OffWhite,
-    surface = NearBlack,
-    onSurface = OffWhite,
-    surfaceVariant = DarkGray,
-    onSurfaceVariant = LightGray,
-    error = ErrorRed,
-    onError = OffWhite,
-    outline = MediumGray,
-    outlineVariant = DarkGray,
-    scrim = PureBlack.copy(alpha = 0.8f)
-)
-
-/**
- * 生成浅色主题配色方案（备用）
- */
-private fun generateLightColorScheme(primaryColor: Color) = lightColorScheme(
-    primary = primaryColor,
-    onPrimary = OffWhite,
-    primaryContainer = primaryColor.copy(alpha = 0.6f),
-    onPrimaryContainer = PureBlack,
-    secondary = DarkGray,
-    onSecondary = OffWhite,
-    secondaryContainer = LightGray,
-    onSecondaryContainer = PureBlack,
-    tertiary = primaryColor.copy(alpha = 0.8f),
-    onTertiary = OffWhite,
-    tertiaryContainer = OffWhite,
-    onTertiaryContainer = PureBlack,
-    background = OffWhite,
-    onBackground = PureBlack,
-    surface = Color.White,
-    onSurface = PureBlack,
-    surfaceVariant = LightGray,
-    onSurfaceVariant = DarkGray,
-    error = ErrorRed,
+// ==================== ColorOS 16 专业摄影深色配色方案 ====================
+val ColorOSDarkColorScheme = darkColorScheme(
+    primary = HasselbladOrange,
+    onPrimary = ColorOSBlack,
+    primaryContainer = HasselbladOrangeDark,
+    onPrimaryContainer = ColorOSTextPrimary,
+    secondary = DeepOceanBlue,
+    onSecondary = Color.White,
+    secondaryContainer = DeepOceanBlueDark,
+    onSecondaryContainer = ColorOSTextPrimary,
+    tertiary = OppoGold,
+    onTertiary = ColorOSBlack,
+    tertiaryContainer = OppoGoldDark,
+    onTertiaryContainer = ColorOSTextPrimary,
+    background = ColorOSBlack,
+    onBackground = ColorOSTextPrimary,
+    surface = ColorOSCard,
+    onSurface = ColorOSTextPrimary,
+    surfaceVariant = ColorOSBlackElevated,
+    onSurfaceVariant = ColorOSTextSecondary,
+    outline = ColorOSBorder,
+    outlineVariant = ColorOSBorderLight,
+    error = ErrorPro,
     onError = Color.White,
-    outline = MediumGray,
-    outlineVariant = LightGray,
-    scrim = PureBlack.copy(alpha = 0.5f)
+    errorContainer = ErrorPro.copy(alpha = 0.15f),
+    onErrorContainer = ColorOSTextPrimary
 )
 
-/**
- * OMaster 主题配置
- *
- * @param darkTheme 是否使用深色主题，默认为 true（强制深色模式）
- * @param dynamicColor 是否使用动态颜色，默认为 false
- * @param brandTheme 品牌主题，默认为哈苏
- * @param content 主题内容
- */
+// ==================== ColorOS 16 专业摄影浅色配色方案 ====================
+val ColorOSLightColorScheme = lightColorScheme(
+    primary = HasselbladOrange,
+    onPrimary = Color.White,
+    primaryContainer = HasselbladOrangeLight,
+    onPrimaryContainer = ColorOSLightTextPrimary,
+    secondary = DeepOceanBlue,
+    onSecondary = Color.White,
+    secondaryContainer = DeepOceanBlueLight,
+    onSecondaryContainer = ColorOSLightTextPrimary,
+    tertiary = OppoGold,
+    onTertiary = Color.White,
+    tertiaryContainer = OppoGoldLight,
+    onTertiaryContainer = ColorOSLightTextPrimary,
+    background = ColorOSLightBackground,
+    onBackground = ColorOSLightTextPrimary,
+    surface = ColorOSLightSurface,
+    onSurface = ColorOSLightTextPrimary,
+    surfaceVariant = ColorOSLightCard,
+    onSurfaceVariant = ColorOSLightTextSecondary,
+    outline = ColorOSLightBorder,
+    outlineVariant = ColorOSLightBorderLight,
+    error = ErrorPro,
+    onError = Color.White,
+    errorContainer = ErrorPro.copy(alpha = 0.15f),
+    onErrorContainer = ColorOSLightTextPrimary
+)
+
 @Composable
 fun OMasterTheme(
-    darkTheme: Boolean = true, // 强制深色模式
-    dynamicColor: Boolean = false, // 禁用动态颜色，使用品牌色
-    brandTheme: BrandTheme = BrandTheme.Hasselblad,
+    darkTheme: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -92,26 +83,25 @@ fun OMasterTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> generateDarkColorScheme(brandTheme.primaryColor)
-        else -> generateLightColorScheme(brandTheme.primaryColor)
+        darkTheme -> ColorOSDarkColorScheme
+        else -> ColorOSLightColorScheme
     }
-
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as? Activity)?.window ?: return@SideEffect
-            val windowInsetsController = WindowInsetsControllerCompat(window, view)
-
-            // 配置状态栏图标颜色（浅色图标用于深色背景）
-            windowInsetsController.isAppearanceLightStatusBars = !darkTheme
-            // 配置导航栏图标颜色
-            windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.background.toArgb()
+            window.navigationBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = ColorOSTypography,
+        shapes = ColorOSShapes,
         content = content
     )
 }
