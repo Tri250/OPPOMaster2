@@ -49,16 +49,48 @@ val LetterSpacingWide = 0.02.sp
 
 /**
  * ============================================
- * Typography 样式
+ * Typography 样式 - Material3完整配置
  * ============================================
  */
 val Typography = Typography(
+    // Display - 展示标题
     displayLarge = TextStyle(
         fontSize = FontSize4xl,
         fontWeight = FontWeightBold,
         lineHeight = (FontSize4xl.value * LineHeightTight).sp,
         letterSpacing = LetterSpacingTight
     ),
+    displayMedium = TextStyle(
+        fontSize = FontSize3xl,
+        fontWeight = FontWeightBold,
+        lineHeight = (FontSize3xl.value * LineHeightTight).sp,
+        letterSpacing = LetterSpacingTight
+    ),
+    displaySmall = TextStyle(
+        fontSize = FontSize2xl,
+        fontWeight = FontWeightBold,
+        lineHeight = (FontSize2xl.value * LineHeightTight).sp,
+        letterSpacing = LetterSpacingTight
+    ),
+    
+    // Headline - 大标题
+    headlineLarge = TextStyle(
+        fontSize = FontSize3xl,
+        fontWeight = FontWeightSemibold,
+        lineHeight = (FontSize3xl.value * LineHeightTight).sp
+    ),
+    headlineMedium = TextStyle(
+        fontSize = FontSize2xl,
+        fontWeight = FontWeightSemibold,
+        lineHeight = (FontSize2xl.value * LineHeightTight).sp
+    ),
+    headlineSmall = TextStyle(
+        fontSize = FontSizeXl,
+        fontWeight = FontWeightSemibold,
+        lineHeight = (FontSizeXl.value * LineHeightTight).sp
+    ),
+    
+    // Title - 页面标题
     titleLarge = TextStyle(
         fontSize = FontSize2xl,
         fontWeight = FontWeightBold,
@@ -69,25 +101,51 @@ val Typography = Typography(
         fontWeight = FontWeightSemibold,
         lineHeight = (FontSizeXl.value * LineHeightTight).sp
     ),
-    subtitle = TextStyle(
+    titleSmall = TextStyle(
         fontSize = FontSizeLg,
         fontWeight = FontWeightMedium,
         lineHeight = (FontSizeLg.value * LineHeightNormal).sp
     ),
-    body = TextStyle(
+    
+    // Body - 正文
+    bodyLarge = TextStyle(
+        fontSize = FontSizeLg,
+        fontWeight = FontWeightNormal,
+        lineHeight = (FontSizeLg.value * LineHeightRelaxed).sp
+    ),
+    bodyMedium = TextStyle(
         fontSize = FontSizeBase,
         fontWeight = FontWeightNormal,
         lineHeight = (FontSizeBase.value * LineHeightRelaxed).sp
     ),
+    bodySmall = TextStyle(
+        fontSize = FontSizeSm,
+        fontWeight = FontWeightNormal,
+        lineHeight = (FontSizeSm.value * LineHeightNormal).sp
+    ),
+    
+    // Label - 标签
+    labelLarge = TextStyle(
+        fontSize = FontSizeBase,
+        fontWeight = FontWeightMedium,
+        lineHeight = (FontSizeBase.value * LineHeightNormal).sp
+    ),
+    labelMedium = TextStyle(
+        fontSize = FontSizeSm,
+        fontWeight = FontWeightMedium,
+        lineHeight = (FontSizeSm.value * LineHeightNormal).sp
+    ),
+    labelSmall = TextStyle(
+        fontSize = FontSizeXs,
+        fontWeight = FontWeightMedium,
+        lineHeight = (FontSizeXs.value * LineHeightNormal).sp
+    ),
+    
+    // Caption - 辅助文字
     caption = TextStyle(
         fontSize = FontSizeSm,
         fontWeight = FontWeightNormal,
         lineHeight = (FontSizeSm.value * LineHeightNormal).sp,
         color = TextTertiary
-    ),
-    label = TextStyle(
-        fontSize = FontSizeXs,
-        fontWeight = FontWeightMedium,
-        lineHeight = (FontSizeXs.value * LineHeightNormal).sp
     )
 )

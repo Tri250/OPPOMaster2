@@ -71,6 +71,15 @@ val BorderAccent = Color(0xFFFF6B35).copy(alpha = 0.25f)   // 强调边框
 
 // 兼容旧命名
 val CardBorderLight = Color(0xFFFFFFFF).copy(alpha = 0.08f)
+val CardBorderHighlight = Color(0xFFFFFFFF).copy(alpha = 0.15f)
+
+/**
+ * ============================================
+ * 主题辅助色
+ * ============================================
+ */
+val OffWhite = Color(0xFFF5F5F5)       // 近白色 - 用于浅色主题
+val LightGray = Color(0xFFB0B0B0)      // 浅灰色 - 用于次要元素
 
 /**
  * ============================================
