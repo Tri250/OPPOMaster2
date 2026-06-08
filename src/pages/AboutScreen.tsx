@@ -37,14 +37,12 @@ const AboutScreen: React.FC = () => {
       icon: Images, 
       label: '预设管理', 
       value: '',
-      desc: '云端预设库，收藏、创建、分享',
       route: 'preset-manager' as const
     },
     { 
       icon: Cloud, 
       label: '云同步', 
-      value: '未连接',
-      desc: 'OPPO/realme/vivo/荣耀 CDN数据同步',
+      value: '已连接',
       route: 'cloud-sync' as const
     },
   ];
@@ -146,12 +144,7 @@ const AboutScreen: React.FC = () => {
                   <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/10 flex items-center justify-center">
                     <item.icon size={18} className="text-[#FF6B35]" />
                   </div>
-                  <div>
-                    <span className="text-white text-sm font-medium">{item.label}</span>
-                    {item.desc && (
-                      <p className="text-white/40 text-xs">{item.desc}</p>
-                    )}
-                  </div>
+                  <span className="text-white text-sm font-medium">{item.label}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {item.value && (
