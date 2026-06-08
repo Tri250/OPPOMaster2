@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.PhotoFilter
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WaterDrop
@@ -85,10 +83,8 @@ fun CoreFeaturesScreen(
     onNavigateToAIFineTune: () -> Unit,
     onNavigateToWatermarkEditor: () -> Unit,
     onNavigateToSmartOptimize: () -> Unit,
-    onNavigateToPresetManager: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToHasselbladColor: () -> Unit,
-    onNavigateToCloudSync: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -100,7 +96,6 @@ fun CoreFeaturesScreen(
     var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
     var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
-    var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
 
     LazyColumn(
         modifier = Modifier
@@ -236,21 +231,6 @@ fun CoreFeaturesScreen(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // 预设管理
-        item {
-            FeatureCard(
-                title = "预设管理",
-                subtitle = "云端预设库，收藏、创建、分享",
-                icon = Icons.Default.PhotoFilter,
-                iconColor = Color(0xFFFF9800),
-                gradientColors = listOf(Color(0xFFE65100), Color(0xFFF57C00)),
-                isEnabled = true,
-                showToggle = false,
-                onClick = onNavigateToPresetManager
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
         // 品牌特色区域
         item {
             SectionHeader(
@@ -275,25 +255,6 @@ fun CoreFeaturesScreen(
                     settingsManager.isHasselbladColorEnabled = enabled
                 },
                 onClick = onNavigateToHasselbladColor
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        // 云同步
-        item {
-            FeatureCard(
-                title = "云同步",
-                subtitle = "OPPO/realme/vivo/荣耀 CDN数据同步",
-                icon = Icons.Default.Settings,
-                iconColor = Color(0xFF3F51B5),
-                gradientColors = listOf(Color(0xFF1A237E), Color(0xFF303F9F)),
-                isEnabled = cloudSyncEnabled,
-                onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
-                    cloudSyncEnabled = enabled
-                    settingsManager.isCloudSyncEnabled = enabled
-                },
-                onClick = onNavigateToCloudSync
             )
             Spacer(modifier = Modifier.height(80.dp))
         }

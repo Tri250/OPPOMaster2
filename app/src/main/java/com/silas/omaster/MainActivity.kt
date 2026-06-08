@@ -506,10 +506,8 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
-                    onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.Settings) },
-                    onNavigateToCloudSync = { navController.navigate(Screen.Settings) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     }

@@ -30,8 +30,8 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PhotoFilter
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WbSunny
@@ -100,8 +100,6 @@ fun SettingsScreen() {
     // 新增设置项
     var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
     var showDarkModeDialog by remember { mutableStateOf(false) }
-    var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
-    var lastSyncTime by remember { mutableStateOf(settingsManager.lastSyncTime) }
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -310,55 +308,30 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Function Settings Section
+        SettingsSectionCard {
+            SettingsSectionTitle(title = "功能设置")
+
+            SettingsClickableItem(
+                icon = Icons.Default.PhotoFilter,
+                title = "预设管理",
+                subtitle = "云端预设库，收藏、创建、分享",
+                onClick = { /* 导航到预设管理页面 */ }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Cloud Sync Section
         SettingsSectionCard {
             SettingsSectionTitle(title = "云同步")
 
-            SettingsSwitchItem(
-                icon = Icons.Default.Sync,
-                title = "启用云同步",
-                subtitle = "从CDN同步最新预设数据",
-                checked = cloudSyncEnabled,
-                onCheckedChange = { enabled ->
-                    cloudSyncEnabled = enabled
-                    settingsManager.isCloudSyncEnabled = enabled
-                    if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                    } else {
-                        haptic.perform(HapticFeedbackType.ToggleOff)
-                    }
-                }
+            SettingsClickableItem(
+                icon = Icons.Default.Cloud,
+                title = "云同步",
+                subtitle = "已连接",
+                onClick = { /* 导航到云同步页面 */ }
             )
-
-            if (cloudSyncEnabled) {
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                SettingsClickableItem(
-                    icon = Icons.Default.Cloud,
-                    title = "同步数据源",
-                    subtitle = "OPPO、realme、vivo、honor",
-                    onClick = { /* 显示数据源详情 */ }
-                )
-
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                val lastSyncText = if (lastSyncTime > 0) {
-                    val diff = System.currentTimeMillis() - lastSyncTime
-                    val hours = diff / (1000 * 60 * 60)
-                    when {
-                        hours < 1 -> "刚刚"
-                        hours < 24 -> "${hours}小时前"
-                        else -> "${hours / 24}天前"
-                    }
-                } else "从未同步"
-
-                SettingsClickableItem(
-                    icon = Icons.Default.Update,
-                    title = "上次同步",
-                    subtitle = lastSyncText,
-                    onClick = { /* 手动触发同步 */ }
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
