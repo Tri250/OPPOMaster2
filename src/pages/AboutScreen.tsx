@@ -114,7 +114,7 @@ const AboutScreen: React.FC = () => {
             className="text-base"
             style={{ color: 'rgba(255, 255, 255, 0.5)' }}
           >
-            为 OPPO Find 系列打造
+            为热爱生活 热爱摄影的 追求梦想您 用心打造
           </p>
         </div>
 
