@@ -18,6 +18,7 @@ export type SubPageType =
   | 'privacy'
   | 'terms'
   | 'preset-sources'
+  | 'preset-detail'
   | null;
 
 export interface Preset {
@@ -118,6 +119,15 @@ interface AppState {
   // 从源获取的预设
   fetchedPresets: Preset[];
   setFetchedPresets: (presets: Preset[]) => void;
+  // 选中的预设（用于详情页）
+  selectedPreset: Preset | null;
+  setSelectedPreset: (preset: Preset | null) => void;
+  // 收藏的预设ID列表
+  favoritePresetIds: string[];
+  toggleFavorite: (id: string) => void;
+  isPresetFavorite: (id: string) => boolean;
+  // 应用预设
+  applyPreset: (id: string) => void;
   // 错误状态
   lastError: string | null;
   setLastError: (error: string | null) => void;
