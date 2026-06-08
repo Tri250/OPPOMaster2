@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OMaster App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --pure-black: #0A0A0A;
+            --dark-gray: #1A1A1A;
+            --accent-orange: #FF6B35;
+            --accent-orange-light: rgba(255, 107, 53, 0.15);
+            --text-white: #FFFFFF;
+            --text-gray: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: var(--text-white);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 手机框架 */
+        .phone-frame {
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            max-height: 850px;
+            background: var(--pure-black);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 420px) {
+            .phone-frame {
+                border-radius: 40px;
+                border: 12px solid #1a1a1a;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+                height: 90vh;
+            }
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            height: 44px;
+            background: var(--pure-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+            padding-top: var(--safe-top);
+        }
+
+        .status-time {
+            color: var(--text-white);
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        /* 页面容器 */
+        .pages-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            background: var(--pure-black);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .page::-webkit-scrollbar {
+            display: none;
+        }
+
+        .page.hidden {
+            transform: translateX(100%);
+        }
+
+        .page.slide-out {
+            transform: translateX(-30%);
+        }
+
+        /* 首页样式 */
+        .home-header {
+            padding: 16px;
+        }
+
+        .home-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .feature-card {
+            height: 72px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            user-select: none;
+        }
+
+        .feature-card:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .feature-card.ai { background: rgba(255, 107, 53, 0.15); color: #FF6B35; }
+        .feature-card.watermark { background: rgba(76, 175, 80, 0.15); color: #4CAF50; }
+        .feature-card.optimize { background: rgba(33, 150, 243, 0.15); color: #2196F3; }
+        .feature-card.preset { background: rgba(156, 39, 176, 0.15); color: #9C27B0; }
+        .feature-card.param { background: rgba(233, 30, 99, 0.15); color: #E91E63; }
+        .feature-card.finetune { background: rgba(0, 150, 136, 0.15); color: #009688; }
+
+        .feature-icon {
+            font-size: 24px;
+        }
+
+        /* Tab栏 */
+        .tab-bar {
+            display: flex;
+            padding: 0 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            height: 48px;
+            align-items: center;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            background: var(--pure-black);
+            z-index: 10;
+        }
+
+        .tab-item {
+            font-size: 15px;
+            color: var(--text-gray);
+            position: relative;
+            padding-bottom: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active {
+            color: var(--accent-orange);
+            font-weight: 600;
+        }
+
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-orange);
+            border-radius: 2px;
+        }
+
+        .tab-badge {
+            position: absolute;
+            top: -8px;
+            right: -14px;
+            background: var(--accent-orange);
+            color: white;
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        /* 预设网格 */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 12px;
+            padding-bottom: 100px;
+        }
+
+        .preset-card {
+            background: var(--dark-gray);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .preset-card:nth-child(3n+1) { height: 200px; }
+        .preset-card:nth-child(3n+2) { height: 160px; }
+        .preset-card:nth-child(3n) { height: 240px; }
+
+        .preset-card:active {
+            transform: scale(0.98);
+        }
+
+        .preset-image {
+            width: 100%;
+            height: calc(100% - 44px);
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .preset-info {
+            padding: 10px 12px;
+        }
+
+        .preset-name {
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preset-favorite {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .preset-favorite:active {
+            transform: scale(0.9);
+        }
+
+        /* FAB按钮 */
+        .fab {
+            position: fixed;
+            bottom: calc(24px + var(--safe-bottom));
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: var(--accent-orange);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* 底部提示 */
+        .footer-hint {
+            text-align: center;
+            padding: 16px;
+            font-size: 13px;
+            color: var(--accent-orange);
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+
+        /* 详情页样式 */
+        .detail-header {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            background: var(--pure-black);
+            z-index: 10;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-title-section {
+            flex: 1;
+        }
+
+        .detail-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .detail-subtitle {
+            font-size: 12px;
+            color: var(--accent-orange);
+            margin-top: 2px;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--dark-gray);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 图片画廊 */
+        .image-gallery {
+            height: 240px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            margin: 0 16px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gallery-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .gallery-nav:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .gallery-nav.prev { left: 12px; }
+        .gallery-nav.next { right: 12px; }
+
+        .gallery-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+
+        .gallery-dot {
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .gallery-dot.active {
+            background: var(--accent-orange);
+        }
+
+        /* 模式标签 */
+        .mode-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 16px;
+        }
+
+        .mode-tag {
+            background: var(--dark-gray);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* 描述卡片 */
+        .desc-card {
+            background: var(--dark-gray);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 0 16px 16px;
+        }
+
+        .desc-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-orange);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .desc-content {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+        }
+
+        /* 参数分区 */
+        .param-section {
+            padding: 0 16px 16px;
+        }
+
+        .param-section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent-orange);
+            margin-bottom: 12px;
+        }
+
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .param-card {
+            background: var(--dark-gray);
+            border: 0.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .param-label {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 4px;
+        }
+
+        .param-value {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        /* 设置页样式 */
+        .settings-header {
+            padding: 16px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .settings-section {
+            background: rgba(26, 26, 26, 0.5);
+            border-radius: 16px;
+            margin: 0 16px 16px;
+            padding: 16px;
+        }
+
+        .settings-section-title {
+            font-size: 13px;
+            color: var(--accent-orange);
+            margin-bottom: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--accent-orange);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-item-title {
+            font-size: 16px;
+        }
+
+        .settings-item-subtitle {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-top: 2px;
+        }
+
+        .settings-item-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-gray);
+        }
+
+        /* 开关 */
+        .switch {
+            width: 50px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .switch.on {
+            background: rgba(255, 107, 53, 0.5);
+        }
+
+        .switch-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .switch.on .switch-thumb {
+            transform: translateX(20px);
+            background: var(--accent-orange);
+        }
+
+        /* 滑块 */
+        .slider-container {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .slider-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            background: var(--accent-orange);
+            border-radius: 2px;
+        }
+
+        .slider-thumb {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: var(--accent-orange);
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+            cursor: grab;
+        }
+
+        .slider-thumb:active {
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        /* 颜色主题 */
+        .theme-colors {
+            display: flex;
+            gap: 10px;
+        }
+
+        .theme-color {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .theme-color:active {
+            transform: scale(0.9);
+        }
+
+        .theme-color.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .theme-color.orange { background: #FF6B35; }
+        .theme-color.green { background: #4CAF50; }
+        .theme-color.blue { background: #2196F3; }
+        .theme-color.red { background: #E91E63; }
+        .theme-color.purple { background: #9C27B0; }
+
+        /* Toast提示 */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--dark-gray);
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+
+        .empty-hint {
+            font-size: 14px;
+            color: var(--accent-orange);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <!-- 状态栏 -->
+        <div class="status-bar">
+            <span class="status-time" id="statusTime">9:41</span>
+            <div class="status-icons">
+                <span>📶</span>
+                <span>📡</span>
+                <span>🔋</span>
+            </div>
+        </div>
+
+        <!-- 页面容器 -->
+        <div class="pages-container">
+            <!-- 首页 -->
+            <div class="page" id="homePage">
+                <div class="home-header">
+                    <div class="home-title">OMaster</div>
+                    <div class="feature-grid">
+                        <div class="feature-card ai" onclick="showToast('AI场景识别功能')">
+                            <span class="feature-icon">🤖</span>
+                            <span>AI场景</span>
+                        </div>
+                        <div class="feature-card finetune" onclick="showToast('AI微调功能')">
+                            <span class="feature-icon">✨</span>
+                            <span>AI微调</span>
+                        </div>
+                        <div class="feature-card watermark" onclick="showToast('水印编辑器')">
+                            <span class="feature-icon">💧</span>
+                            <span>水印</span>
+                        </div>
+                        <div class="feature-card optimize" onclick="showToast('优化功能')">
+                            <span class="feature-icon">⚡</span>
+                            <span>优化</span>
+                        </div>
+                        <div class="feature-card preset" onclick="showToast('预设管理')">
+                            <span class="feature-icon">📷</span>
+                            <span>预设</span>
+                        </div>
+                        <div class="feature-card param" onclick="showToast('参数设置')">
+                            <span class="feature-icon">⚙️</span>
+                            <span>参数</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-bar">
+                    <div class="tab-item active" data-tab="all" onclick="switchTab(this)">
+                        全部
+                        <span class="tab-badge">24</span>
+                    </div>
+                    <div class="tab-item" data-tab="favorites" onclick="switchTab(this)">收藏</div>
+                    <div class="tab-item" data-tab="my" onclick="switchTab(this)">我的</div>
+                </div>
+                <div id="presetContainer">
+                    <div class="preset-grid" id="allPresets">
+                        <div class="preset-card" onclick="openDetail('富士胶片', '🎞️', '经典胶片风格')">
+                            <div class="preset-image">🎞️</div>
+                            <div class="preset-info">
+                                <div class="preset-name">富士胶片</div>
+                            </div>
+                            <div class="preset-favorite" onclick="event.stopPropagation(); toggleFavorite(this)">🤍</div>
+                        </div>
+                        <div class="preset-card" onclick="openDetail('童话', '🌸', '梦幻柔光风格')">
+                            <div class="preset-image">🌸</div>
+                            <div class="preset-info">
+                                <div class="preset-name">童话</div>
+                            </div>
+                            <div class="preset-favorite" onclick="event.stopPropagation(); toggleFavorite(this)">❤️</div>
+                        </div>
+                        <div class="preset-card" onclick="openDetail('理光绿', '🌿', '清新自然风格')">
+                            <div class="preset-image">🌿</div>
+                            <div class="preset-info">
+                                <div class="preset-name">理光绿</div>
+                            </div>
+                            <div class="preset-favorite" onclick="event.stopPropagation(); toggleFavorite(this)">🤍</div>
+                        </div>
+                        <div class="preset-card" onclick="openDetail('高对比黑白', '⚫', '经典黑白风格')">
+                            <div class="preset-image">⚫</div>
+                            <div class="preset-info">
+                                <div class="preset-name">高对比黑白</div>
+                            </div>
+                            <div class="preset-favorite" onclick="event.stopPropagation(); toggleFavorite(this)">🤍</div>
+                        </div>
+                        <div class="preset-card" onclick="openDetail('蓝调时刻', '🌃', '城市夜景风格')">
+                            <div class="preset-image">🌃</div>
+                            <div class="preset-info">
+                                <div class="preset-name">蓝调时刻</div>
+                            </div>
+                            <div class="preset-favorite" onclick="event.stopPropagation(); toggleFavorite(this)">❤️</div>
+                        </div>
+                        <div class="preset-card" onclick="openDetail('胶片感', '📸', '复古胶片风格')">
+                            <div class="preset-image">📸</div>
+                            <div class="preset-info">
+                                <div class="preset-name">胶片感</div>
+                            </div>
+                            <div class="preset-favorite" onclick="event.stopPropagation(); toggleFavorite(this)">🤍</div>
+                        </div>
+                    </div>
+                    <div class="empty-state" id="favoritesEmpty" style="display: none;">
+                        <div class="empty-icon">🤍</div>
+                        <div class="empty-title">暂无收藏预设</div>
+                        <div class="empty-hint">点击心形图标收藏预设</div>
+                    </div>
+                    <div class="empty-state" id="myEmpty" style="display: none;">
+                        <div class="empty-icon">📷</div>
+                        <div class="empty-title">暂无自定义预设</div>
+                        <div class="empty-hint">点击右下角按钮创建预设</div>
+                    </div>
+                </div>
+                <div class="footer-hint">持续更新 · 敬请期待</div>
+                <div class="fab" onclick="showToast('创建新预设')">+</div>
+            </div>
+
+            <!-- 详情页 -->
+            <div class="page hidden" id="detailPage">
+                <div class="detail-header">
+                    <div class="back-btn" onclick="backToHome()">←</div>
+                    <div class="detail-title-section">
+                        <div class="detail-title" id="detailTitle">富士胶片</div>
+                        <div class="detail-subtitle" id="detailSubtitle">经典胶片风格</div>
+                    </div>
+                    <div class="detail-actions">
+                        <div class="action-btn" onclick="toggleDetailFavorite()" id="detailFavorite">🤍</div>
+                        <div class="action-btn" onclick="showToast('开启悬浮窗')">🔲</div>
+                    </div>
+                </div>
+                <div class="image-gallery" id="galleryImage">
+                    🎞️
+                    <div class="gallery-nav prev" onclick="changeImage(-1)">‹</div>
+                    <div class="gallery-nav next" onclick="changeImage(1)">›</div>
+                    <div class="gallery-dots">
+                        <div class="gallery-dot active" onclick="setImage(0)"></div>
+                        <div class="gallery-dot" onclick="setImage(1)"></div>
+                        <div class="gallery-dot" onclick="setImage(2)"></div>
+                    </div>
+                </div>
+                <div class="mode-tags">
+                    <div class="mode-tag">📷 Pro 模式</div>
+                    <div class="mode-tag">🎨 胶片感</div>
+                    <div class="mode-tag">☀️ 日间</div>
+                </div>
+                <div class="desc-card">
+                    <div class="desc-title">💡 拍摄建议</div>
+                    <div class="desc-content" id="detailDesc">适合追求经典胶片质感的场景，色彩浓郁复古，建议寻找有光影对比的场景增强层次感。</div>
+                </div>
+                <div class="param-section">
+                    <div class="param-section-title">调色参数</div>
+                    <div class="param-grid">
+                        <div class="param-card">
+                            <div class="param-label">饱和度</div>
+                            <div class="param-value">+15</div>
+                        </div>
+                        <div class="param-card">
+                            <div class="param-label">对比度</div>
+                            <div class="param-value">+8</div>
+                        </div>
+                        <div class="param-card">
+                            <div class="param-label">色温</div>
+                            <div class="param-value">5200K</div>
+                        </div>
+                        <div class="param-card">
+                            <div class="param-label">锐度</div>
+                            <div class="param-value">+12</div>
+                        </div>
+                        <div class="param-card">
+                            <div class="param-label">曝光补偿</div>
+                            <div class="param-value">-0.3</div>
+                        </div>
+                        <div class="param-card">
+                            <div class="param-label">暗角</div>
+                            <div class="param-value">开启</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="height: 40px;"></div>
+            </div>
+
+            <!-- 设置页 -->
+            <div class="page hidden" id="settingsPage">
+                <div class="settings-header">设置</div>
+                
+                <div class="settings-section">
+                    <div class="settings-section-title">常规</div>
+                    <div class="settings-item" onclick="toggleSwitch(this)">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">📳</div>
+                            <div>
+                                <div class="settings-item-title">震动反馈</div>
+                            </div>
+                        </div>
+                        <div class="switch on">
+                            <div class="switch-thumb"></div>
+                        </div>
+                    </div>
+                    <div class="settings-item" onclick="showToast('选择默认启动页面')">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">🏠</div>
+                            <div>
+                                <div class="settings-item-title">默认启动页面</div>
+                                <div class="settings-item-subtitle">全部</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-right">›</div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">外观</div>
+                    <div class="settings-item" onclick="showToast('选择深色模式')">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">🌙</div>
+                            <div>
+                                <div class="settings-item-title">深色模式</div>
+                                <div class="settings-item-subtitle">跟随系统</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-right">›</div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">🎨</div>
+                            <div>
+                                <div class="settings-item-title">主题颜色</div>
+                            </div>
+                        </div>
+                        <div class="theme-colors">
+                            <div class="theme-color orange active" onclick="selectTheme(this, 'orange')"></div>
+                            <div class="theme-color green" onclick="selectTheme(this, 'green')"></div>
+                            <div class="theme-color blue" onclick="selectTheme(this, 'blue')"></div>
+                            <div class="theme-color red" onclick="selectTheme(this, 'red')"></div>
+                            <div class="theme-color purple" onclick="selectTheme(this, 'purple')"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">悬浮窗</div>
+                    <div class="settings-item" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                            <div class="settings-item-left">
+                                <div class="settings-icon">🔲</div>
+                                <div class="settings-item-title">悬浮窗透明度</div>
+                            </div>
+                            <span style="color: var(--accent-orange);" id="opacityValue">50%</span>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-labels">
+                                <span>30%</span>
+                                <span>70%</span>
+                            </div>
+                            <div class="slider" onclick="handleSliderClick(event)">
+                                <div class="slider-fill" id="sliderFill" style="width: 50%;"></div>
+                                <div class="slider-thumb" id="sliderThumb" style="left: 50%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">存储</div>
+                    <div class="settings-item" onclick="showToast('清理缓存'); updateCacheSize()">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">🗑️</div>
+                            <div>
+                                <div class="settings-item-title">清理图片缓存</div>
+                                <div class="settings-item-subtitle" id="cacheSize">缓存大小: 12.5 MB</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-right">›</div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">关于</div>
+                    <div class="settings-item" onclick="showToast('检查更新')">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">📦</div>
+                            <div>
+                                <div class="settings-item-title">检查更新</div>
+                                <div class="settings-item-subtitle">当前版本: v1.0.0</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-right">›</div>
+                    </div>
+                    <div class="settings-item" onclick="openPage('settings')">
+                        <div class="settings-item-left">
+                            <div class="settings-icon">📄</div>
+                            <div>
+                                <div class="settings-item-title">用户协议和隐私政策</div>
+                            </div>
+                        </div>
+                        <div class="settings-item-right">›</div>
+                    </div>
+                </div>
+
+                <div style="height: 40px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 更新状态栏时间
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('statusTime').textContent = `${hours}:${minutes}`;
+        }
+        updateTime();
+        setInterval(updateTime, 60000);
+
+        // 页面导航
+        function openDetail(title, emoji, subtitle) {
+            document.getElementById('detailTitle').textContent = title;
+            document.getElementById('detailSubtitle').textContent = subtitle;
+            document.getElementById('galleryImage').innerHTML = `
+                ${emoji}
+                <div class="gallery-nav prev" onclick="changeImage(-1)">‹</div>
+                <div class="gallery-nav next" onclick="changeImage(1)">›</div>
+                <div class="gallery-dots">
+                    <div class="gallery-dot active" onclick="setImage(0)"></div>
+                    <div class="gallery-dot" onclick="setImage(1)"></div>
+                    <div class="gallery-dot" onclick="setImage(2)"></div>
+                </div>
+            `;
+            
+            const homePage = document.getElementById('homePage');
+            const detailPage = document.getElementById('detailPage');
+            
+            homePage.classList.add('slide-out');
+            detailPage.classList.remove('hidden');
+            
+            setTimeout(() => {
+                homePage.style.display = 'none';
+            }, 300);
+        }
+
+        function backToHome() {
+            const homePage = document.getElementById('homePage');
+            const detailPage = document.getElementById('detailPage');
+            
+            homePage.style.display = 'block';
+            setTimeout(() => {
+                homePage.classList.remove('slide-out');
+                detailPage.classList.add('hidden');
+            }, 10);
+        }
+
+        // Tab切换
+        function switchTab(tabElement) {
+            document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
+            tabElement.classList.add('active');
+            
+            const tab = tabElement.dataset.tab;
+            const allPresets = document.getElementById('allPresets');
+            const favoritesEmpty = document.getElementById('favoritesEmpty');
+            const myEmpty = document.getElementById('myEmpty');
+            
+            allPresets.style.display = 'none';
+            favoritesEmpty.style.display = 'none';
+            myEmpty.style.display = 'none';
+            
+            if (tab === 'all') {
+                allPresets.style.display = 'grid';
+            } else if (tab === 'favorites') {
+                favoritesEmpty.style.display = 'flex';
+            } else if (tab === 'my') {
+                myEmpty.style.display = 'flex';
+            }
+        }
+
+        // 收藏切换
+        function toggleFavorite(element) {
+            const isFavorite = element.textContent === '❤️';
+            element.textContent = isFavorite ? '🤍' : '❤️';
+            showToast(isFavorite ? '取消收藏' : '已收藏');
+        }
+
+        function toggleDetailFavorite() {
+            const btn = document.getElementById('detailFavorite');
+            const isFavorite = btn.textContent === '❤️';
+            btn.textContent = isFavorite ? '🤍' : '❤️';
+            showToast(isFavorite ? '取消收藏' : '已收藏');
+        }
+
+        // 图片轮播
+        let currentImage = 0;
+        const images = ['🎞️', '📸', '🎨'];
+        
+        function changeImage(direction) {
+            currentImage = (currentImage + direction + images.length) % images.length;
+            updateGallery();
+        }
+
+        function setImage(index) {
+            currentImage = index;
+            updateGallery();
+        }
+
+        function updateGallery() {
+            const gallery = document.getElementById('galleryImage');
+            const emoji = gallery.querySelector('.gallery-nav') ? 
+                gallery.innerHTML.match(/^[\u{1F300}-\u{1F9FF}]/u)?.[0] || images[0] : 
+                images[currentImage];
+            
+            gallery.innerHTML = `
+                ${images[currentImage]}
+                <div class="gallery-nav prev" onclick="changeImage(-1)">‹</div>
+                <div class="gallery-nav next" onclick="changeImage(1)">›</div>
+                <div class="gallery-dots">
+                    ${images.map((_, i) => `
+                        <div class="gallery-dot ${i === currentImage ? 'active' : ''}" onclick="setImage(${i})"></div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // 开关切换
+        function toggleSwitch(element) {
+            const switchEl = element.querySelector('.switch');
+            switchEl.classList.toggle('on');
+            const isOn = switchEl.classList.contains('on');
+            showToast(isOn ? '已开启' : '已关闭');
+        }
+
+        // 主题选择
+        function selectTheme(element, color) {
+            document.querySelectorAll('.theme-color').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            showToast(`已切换到${getColorName(color)}主题`);
+        }
+
+        function getColorName(color) {
+            const names = {
+                'orange': '默认橙色',
+                'green': 'OPPO绿',
+                'blue': 'vivo蓝',
+                'red': '荣耀红',
+                'purple': 'realme紫'
+            };
+            return names[color] || color;
+        }
+
+        // 滑块
+        let isDragging = false;
+        const slider = document.querySelector('.slider');
+        const sliderThumb = document.getElementById('sliderThumb');
+        const sliderFill = document.getElementById('sliderFill');
+        const opacityValue = document.getElementById('opacityValue');
+
+        function handleSliderClick(event) {
+            const rect = slider.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+            updateSlider(percent);
+        }
+
+        function updateSlider(percent) {
+            const value = Math.round(30 + (percent / 100) * 40);
+            sliderThumb.style.left = `${percent}%`;
+            sliderFill.style.width = `${percent}%`;
+            opacityValue.textContent = `${value}%`;
+        }
+
+        sliderThumb.addEventListener('mousedown', () => isDragging = true);
+        document.addEventListener('mouseup', () => isDragging = false);
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = slider.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+            updateSlider(percent);
+        });
+
+        // 触摸支持
+        sliderThumb.addEventListener('touchstart', () => isDragging = true);
+        document.addEventListener('touchend', () => isDragging = false);
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            const rect = slider.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+            updateSlider(percent);
+        });
+
+        // 缓存大小更新
+        function updateCacheSize() {
+            const cacheSize = document.getElementById('cacheSize');
+            cacheSize.textContent = '缓存大小: 0 MB';
+            showToast('缓存已清理');
+        }
+
+        // Toast提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 页面切换（底部导航模拟）
+        function openPage(page) {
+            if (page === 'settings') {
+                showToast('用户协议页面');
+            }
+        }
+
+        // 键盘导航支持
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const detailPage = document.getElementById('detailPage');
+                if (!detailPage.classList.contains('hidden')) {
+                    backToHome();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
