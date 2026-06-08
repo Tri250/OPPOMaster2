@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
 import { Preset } from '../../services/cloudSyncService';
-import { ArrowLeft, Heart, Download, Share2, Star, Eye, Cloud, Settings, Palette, Sun, Contrast, Sparkles, Camera } from 'lucide-react';
+import { ArrowLeft, Heart, Download, Share2, Star, Eye, Cloud, Settings, Palette, Sun, Contrast, Sparkles, Camera, Circle, Thermometer } from 'lucide-react';
 
 interface PresetDetailPageProps {
   preset: Preset;
@@ -17,6 +17,11 @@ const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
       return `${(count / 10000).toFixed(1)}万`;
     }
     return count.toString();
+  };
+
+  // 格式化参数值（带正负号）
+  const formatValue = (value: number) => {
+    return value > 0 ? `+${value}` : `${value}`;
   };
 
   return (
@@ -57,10 +62,17 @@ const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
               HNCS
             </div>
           )}
-          <div className="px-2 py-1 bg-[#4CAF50]/80 backdrop-blur-sm rounded-lg text-xs font-bold text-white flex items-center gap-1">
-            <Cloud size={12} />
-            云端
-          </div>
+          {preset.isNew && (
+            <div className="px-2 py-1 bg-[#4CAF50]/80 backdrop-blur-sm rounded-lg text-xs font-bold text-white flex items-center gap-1">
+              <Cloud size={12} />
+              云端
+            </div>
+          )}
+          {preset.mode === 'pro' && (
+            <div className="px-2 py-1 bg-[#FFC107]/80 backdrop-blur-sm rounded-lg text-xs font-bold text-white">
+              Pro
+            </div>
+          )}
         </div>
 
         {/* Brand Tags */}
@@ -115,80 +127,188 @@ const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
           </div>
         </div>
 
-        {/* Parameters */}
+        {/* Pro Mode Parameters */}
+        {preset.mode === 'pro' && (
+          <div className="py-4">
+            <h3 className="text-white text-sm font-medium mb-3 flex items-center gap-2">
+              <Settings size={16} className="text-[#FFC107]" />
+              专业参数
+            </h3>
+            <div className="space-y-2">
+              {preset.iso && (
+                <div className="p-3 rounded-xl bg-white/5 flex items-center justify-between">
+                  <span className="text-white/70 text-sm">ISO 感光度</span>
+                  <span className="text-white text-sm font-medium">{preset.iso}</span>
+                </div>
+              )}
+              {preset.shutterSpeed && (
+                <div className="p-3 rounded-xl bg-white/5 flex items-center justify-between">
+                  <span className="text-white/70 text-sm">快门速度</span>
+                  <span className="text-white text-sm font-medium">{preset.shutterSpeed}</span>
+                </div>
+              )}
+              {preset.exposureCompensation && (
+                <div className="p-3 rounded-xl bg-white/5 flex items-center justify-between">
+                  <span className="text-white/70 text-sm">曝光补偿</span>
+                  <span className="text-white text-sm font-medium">{preset.exposureCompensation}</span>
+                </div>
+              )}
+              {preset.colorTemperature && (
+                <div className="p-3 rounded-xl bg-white/5 flex items-center justify-between">
+                  <span className="text-white/70 text-sm">色温</span>
+                  <span className="text-white text-sm font-medium">{preset.colorTemperature}K</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Color Grading Parameters */}
         <div className="py-4">
           <h3 className="text-white text-sm font-medium mb-3 flex items-center gap-2">
-            <Settings size={16} className="text-[#FF6B35]" />
-            参数配置
+            <Palette size={16} className="text-[#FF6B35]" />
+            调色参数
           </h3>
           <div className="space-y-3">
+            {/* Filter */}
+            {preset.filter && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Circle size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">滤镜</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{preset.filter}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Soft Light */}
+            {preset.softLight !== undefined && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Sun size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">柔光</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{preset.softLight}</span>
+                </div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-gray-500 to-[#FF6B35]"
+                    style={{ width: `${preset.softLight}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tone */}
+            {preset.tone !== undefined && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Contrast size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">影调</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{formatValue(preset.tone)}</span>
+                </div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-gray-500 to-[#FF6B35]"
+                    style={{ width: `${50 + preset.tone}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Saturation */}
-            <div className="p-3 rounded-xl bg-white/5">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Palette size={16} className="text-[#FF6B35]" />
-                  <span className="text-white text-sm">饱和度</span>
+            {preset.saturation !== undefined && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Palette size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">饱和度</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{formatValue(preset.saturation)}</span>
                 </div>
-                <span className="text-[#FF6B35] text-sm font-medium">{preset.saturation > 0 ? '+' : ''}{preset.saturation}</span>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-gray-500 via-[#FF6B35] to-[#FF6B35]"
+                    style={{ width: `${50 + preset.saturation}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-gray-500 to-[#FF6B35]"
-                  style={{ width: `${50 + preset.saturation}%` }}
-                />
-              </div>
-            </div>
+            )}
 
-            {/* Contrast */}
-            <div className="p-3 rounded-xl bg-white/5">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Contrast size={16} className="text-[#FF6B35]" />
-                  <span className="text-white text-sm">对比度</span>
+            {/* Warm Cool */}
+            {preset.warmCool !== undefined && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Thermometer size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">冷暖色调</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{formatValue(preset.warmCool)}</span>
                 </div>
-                <span className="text-[#FF6B35] text-sm font-medium">{preset.contrast > 0 ? '+' : ''}{preset.contrast}</span>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${preset.warmCool >= 0 ? 'bg-gradient-to-r from-blue-400 to-yellow-500' : 'bg-gradient-to-r from-yellow-500 to-blue-400'}`}
+                    style={{ width: `${50 + Math.abs(preset.warmCool)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-gray-500 to-[#FF6B35]"
-                  style={{ width: `${50 + preset.contrast}%` }}
-                />
-              </div>
-            </div>
+            )}
 
-            {/* Warmth */}
-            <div className="p-3 rounded-xl bg-white/5">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Sun size={16} className="text-[#FF6B35]" />
-                  <span className="text-white text-sm">色温</span>
+            {/* Cyan Magenta */}
+            {preset.cyanMagenta !== undefined && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Palette size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">青品色调</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{formatValue(preset.cyanMagenta)}</span>
                 </div>
-                <span className="text-[#FF6B35] text-sm font-medium">{preset.warmth > 0 ? '+' : ''}{preset.warmth}</span>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${preset.cyanMagenta >= 0 ? 'bg-gradient-to-r from-cyan-400 to-pink-500' : 'bg-gradient-to-r from-pink-500 to-cyan-400'}`}
+                    style={{ width: `${50 + Math.abs(preset.cyanMagenta)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${preset.warmth >= 0 ? 'bg-gradient-to-r from-blue-500 to-yellow-500' : 'bg-gradient-to-r from-yellow-500 to-blue-500'}`}
-                  style={{ width: `${50 + Math.abs(preset.warmth)}%` }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Sharpness */}
-            <div className="p-3 rounded-xl bg-white/5">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-[#FF6B35]" />
-                  <span className="text-white text-sm">锐度</span>
+            {preset.sharpness !== undefined && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">锐度</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{preset.sharpness}</span>
                 </div>
-                <span className="text-[#FF6B35] text-sm font-medium">{preset.sharpness}</span>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-gray-500 to-[#FF6B35]"
+                    style={{ width: `${preset.sharpness}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-gray-500 to-[#FF6B35]"
-                  style={{ width: `${preset.sharpness}%` }}
-                />
+            )}
+
+            {/* Vignette */}
+            {preset.vignette && (
+              <div className="p-3 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Circle size={16} className="text-[#FF6B35]" />
+                    <span className="text-white text-sm">暗角</span>
+                  </div>
+                  <span className="text-[#FF6B35] text-sm font-medium">{preset.vignette}</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,6 @@
 // 云同步服务层 - 支持自动刷新和状态订阅
+// 影像参数名称与Android端 MasterPreset.kt 保持一致
+
 export interface SyncModule {
   id: string;
   name: string;
@@ -23,25 +25,46 @@ export interface CloudSyncState {
   lastFullSyncTime: number;
 }
 
+// 大师模式预设参数 - 与Android端 MasterPreset.kt 一致
 export interface Preset {
   id: string;
   name: string;
   coverPath: string;
+  galleryImages?: string[];
   author: string;
   brand: string;
   brandId: string;
   tags: string[];
   isNew: boolean;
   isHncs: boolean;
-  saturation: number;
-  contrast: number;
-  warmth: number;
-  sharpness: number;
-  clarity?: number;
-  brightness?: number;
+  mode?: 'auto' | 'pro';
+  
+  // 基础调色参数
+  filter?: string;           // 滤镜类型：原图、胶片、黑白等
+  softLight?: number;        // 柔光强度：0-100
+  tone?: number;             // 影调：-100 到 +100，控制整体明暗对比
+  saturation?: number;       // 饱和度：-100 到 +100
+  warmCool?: number;         // 冷暖色调：-100 到 +100，负值偏冷，正值偏暖
+  cyanMagenta?: number;      // 青品色调：-100 到 +100，负值偏青，正值偏品红
+  sharpness?: number;        // 锐度：0-100
+  vignette?: string;         // 暗角：开/关
+  
+  // 专业参数（Pro模式）
+  iso?: string;              // ISO感光度：100, 200-400等
+  shutterSpeed?: string;     // 快门速度：1/125, 1/60等
+  exposureCompensation?: string; // 曝光补偿：-1.0, +0.7等
+  colorTemperature?: number; // 色温数值：2000-8000
+  colorHue?: number;         // 色调数值：-150 到 150
+  whiteBalance?: string;     // 白平衡：2000K, 阴天, 日光等
+  colorTone?: string;        // 色调：暖调, 冷调等
+  
+  // 其他信息
   description?: string;
   downloadCount?: number;
   rating?: number;
+  version?: number;
+  build?: number;
+  createdAt?: number;
 }
 
 // 模块定义
@@ -61,77 +84,125 @@ export const cdnSources: Record<string, { name: string; baseUrl: string; color: 
   xiaomi: { name: '小米', baseUrl: 'https://cdn.mi.com/omaster', color: '#FF6900' },
 };
 
-// 预设数据模板（各品牌共享）
-const presetTemplates = [
+// 预设数据模板（各品牌共享）- 使用正确的参数名称
+const presetTemplates: Partial<Preset>[] = [
   {
-    baseName: '经典人像',
+    name: '经典人像',
     coverPath: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop',
     author: '影像',
     tags: ['人像', '经典'],
     isHncs: true,
+    mode: 'auto',
+    filter: '原图',
+    softLight: 30,
+    tone: 10,
     saturation: 10,
-    contrast: 5,
-    warmth: 8,
+    warmCool: 8,
+    cyanMagenta: 0,
     sharpness: 15,
+    vignette: '关',
     description: '适合人像拍摄，肤色自然柔和，细节丰富',
     downloadCount: 12500,
     rating: 4.8,
   },
   {
-    baseName: '夜景大师',
+    name: '夜景大师',
     coverPath: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=400&h=350&fit=crop',
     author: '夜景专家',
     tags: ['夜景', '大师'],
     isHncs: true,
+    mode: 'pro',
+    filter: '胶片',
+    softLight: 20,
+    tone: 20,
     saturation: 35,
-    contrast: 20,
-    warmth: -10,
+    warmCool: -10,
+    cyanMagenta: 5,
     sharpness: 25,
+    vignette: '开',
+    iso: '400-800',
+    shutterSpeed: '1/30',
+    exposureCompensation: '-0.3',
+    colorTemperature: 4500,
     description: '专为夜景优化，降噪增强，色彩饱满',
     downloadCount: 8900,
     rating: 4.6,
   },
   {
-    baseName: '风景通透',
+    name: '风景通透',
     coverPath: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
     author: '风光摄影',
     tags: ['风景', '通透'],
     isHncs: false,
+    mode: 'auto',
+    filter: '原图',
+    softLight: 10,
+    tone: 15,
     saturation: 20,
-    contrast: 10,
-    warmth: -10,
+    warmCool: -10,
+    cyanMagenta: -5,
     sharpness: 25,
+    vignette: '关',
     description: '风景专用，通透感强，色彩自然',
     downloadCount: 7200,
     rating: 4.5,
   },
   {
-    baseName: '美食暖调',
+    name: '美食暖调',
     coverPath: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=280&fit=crop',
     author: '美食摄影',
     tags: ['美食', '暖调'],
     isHncs: false,
+    mode: 'auto',
+    filter: '原图',
+    softLight: 40,
+    tone: 5,
     saturation: 15,
-    contrast: 10,
-    warmth: 20,
+    warmCool: 20,
+    cyanMagenta: 0,
     sharpness: 12,
+    vignette: '关',
     description: '美食拍摄专用，暖色调，食欲感强',
     downloadCount: 5600,
     rating: 4.4,
   },
   {
-    baseName: '街拍黑白',
+    name: '街拍黑白',
     coverPath: 'https://images.unsplash.com/photo-1444723121867-c61267198d6c?w=400&h=320&fit=crop',
     author: '街拍大师',
     tags: ['街拍', '黑白'],
     isHncs: false,
+    mode: 'auto',
+    filter: '黑白',
+    softLight: 15,
+    tone: 25,
     saturation: -100,
-    contrast: 25,
-    warmth: 0,
+    warmCool: 0,
+    cyanMagenta: 0,
     sharpness: 20,
+    vignette: '开',
     description: '经典黑白风格，高对比度，艺术感强',
     downloadCount: 4300,
     rating: 4.3,
+  },
+  {
+    name: '胶片复古',
+    coverPath: 'https://images.unsplash.com/photo-1502893425584-3b5d3f3f3f3f?w=400&h=300&fit=crop',
+    author: '胶片爱好者',
+    tags: ['胶片', '复古'],
+    isHncs: true,
+    mode: 'auto',
+    filter: '胶片',
+    softLight: 50,
+    tone: -10,
+    saturation: 5,
+    warmCool: 15,
+    cyanMagenta: 10,
+    sharpness: 10,
+    vignette: '开',
+    description: '复古胶片质感，柔光梦幻',
+    downloadCount: 6800,
+    rating: 4.7,
   },
 ];
 
@@ -218,23 +289,20 @@ export class CloudSyncService {
         // 为每个品牌生成预设
         presetTemplates.forEach((template, index) => {
           allPresets.push({
+            ...template,
             id: `${brandState.id}_${index}`,
-            name: `${source.name} ${template.baseName}`,
-            coverPath: template.coverPath,
+            name: `${source.name} ${template.name}`,
+            coverPath: template.coverPath!,
             author: `@${source.name}${template.author}`,
             brand: source.name,
             brandId: brandState.id,
-            tags: template.tags,
+            tags: template.tags!,
             isNew: true,
-            isHncs: template.isHncs,
-            saturation: template.saturation,
-            contrast: template.contrast,
-            warmth: template.warmth,
-            sharpness: template.sharpness,
+            isHncs: template.isHncs!,
             description: template.description,
             downloadCount: template.downloadCount,
             rating: template.rating,
-          });
+          } as Preset);
         });
       }
     }
