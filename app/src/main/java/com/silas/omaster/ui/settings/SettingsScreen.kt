@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -81,7 +83,10 @@ import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    onNavigateToNotificationSettings: (() -> Unit)? = null,
+    onNavigateToTerms: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
     var vibrationEnabled by remember { mutableStateOf(settingsManager.isVibrationEnabled) }
@@ -398,6 +403,24 @@ fun SettingsScreen() {
                         haptic.perform(HapticFeedbackType.ToggleOff)
                     }
                 }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Notifications,
+                title = "通知设置",
+                subtitle = "管理推送通知和提醒",
+                onClick = { onNavigateToNotificationSettings?.invoke() }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Description,
+                title = "用户协议",
+                subtitle = "查看服务条款和隐私政策",
+                onClick = { onNavigateToTerms?.invoke() }
             )
         }
 

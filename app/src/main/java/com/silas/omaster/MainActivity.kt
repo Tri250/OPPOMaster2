@@ -53,6 +53,8 @@ import com.silas.omaster.data.repository.PresetRepository
 import androidx.compose.runtime.collectAsState
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
+import com.silas.omaster.ui.settings.NotificationSettingsScreen
+import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.AISceneRecognitionScreen
@@ -115,6 +117,12 @@ sealed class Screen {
 
     @Serializable
     data object CloudSync : Screen()
+
+    @Serializable
+    data object NotificationSettings : Screen()
+
+    @Serializable
+    data object Terms : Screen()
 
     @Serializable
     data object PrivacyPolicy : Screen()
@@ -468,7 +476,10 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.Settings> {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
+                    onNavigateToTerms = { navController.navigate(Screen.Terms) }
+                )
             }
 
             composable<Screen.About> {
@@ -581,6 +592,20 @@ fun MainApp(navController: NavHostController) {
             // 云同步页面
             composable<Screen.CloudSync> {
                 CloudSyncScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 通知设置页面
+            composable<Screen.NotificationSettings> {
+                NotificationSettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 用户协议页面
+            composable<Screen.Terms> {
+                TermsScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
