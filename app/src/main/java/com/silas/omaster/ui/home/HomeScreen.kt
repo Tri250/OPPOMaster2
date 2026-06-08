@@ -585,9 +585,9 @@ private fun FeatureEntryRow(
             modifier = Modifier.weight(1f)
         )
         
-        // AI微调
+        // AI精调
         GlassFeatureCard(
-            title = "AI微调",
+            title = "AI精调",
             icon = Icons.Default.ColorLens,
             color = HasselbladOrange,
             onClick = {

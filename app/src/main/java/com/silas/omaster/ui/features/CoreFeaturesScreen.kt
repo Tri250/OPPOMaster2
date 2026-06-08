@@ -253,10 +253,10 @@ fun CoreFeaturesScreen(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // LUT资源分享
+        // LUT分享
         item {
             FeatureCard(
-                title = "LUT 资源分享",
+                title = "LUT分享",
                 subtitle = "20+专业 LUT 滤镜，一键下载使用",
                 icon = Icons.Default.Palette,
                 iconColor = Color.White,
