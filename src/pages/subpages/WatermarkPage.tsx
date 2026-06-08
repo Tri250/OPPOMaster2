@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { ArrowLeft, Type, Calendar, MapPin, User, Camera, Palette, Grid, Sparkles, Check, Wand2, RefreshCw, Image as ImageIcon, Frame, Layout, Download, Plus, X } from 'lucide-react';
 import { Film as FilmIcon } from 'lucide-react';
@@ -51,6 +51,15 @@ const brandWatermarks = [
   { id: 'apple', name: 'Shot on iPhone', color: '#FFFFFF' },
 ];
 
+// 字体选择 - 5种字体
+const fontOptions = [
+  { id: 'sans-serif', name: '无衬线', font: 'sans-serif', preview: 'Aa' },
+  { id: 'serif', name: '衬线体', font: 'serif', preview: 'Aa' },
+  { id: 'monospace', name: '等宽体', font: 'monospace', preview: 'Aa' },
+  { id: 'cursive', name: '手写体', font: 'cursive', preview: 'Aa' },
+  { id: 'fantasy', name: '艺术体', font: 'fantasy', preview: 'Aa' },
+];
+
 const WatermarkPage: React.FC = () => {
   const { goBack } = useAppStore();
   const [uploadedImage, setUploadedImage] = useState<string>('');
@@ -63,21 +72,28 @@ const WatermarkPage: React.FC = () => {
   const [showYear, setShowYear] = useState(true);
   const [watermarkPosition, setWatermarkPosition] = useState<WatermarkOptions['position']>('bottom-right');
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
+  // 新增参数
+  const [selectedFont, setSelectedFont] = useState<string>('sans-serif');
+  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(95);
+  const [watermarkSize, setWatermarkSize] = useState<number>(24);
+  const [frameWidth, setFrameWidth] = useState<number>(40);
+  const [collageGap, setCollageGap] = useState<number>(10);
+
   // 拼图模式
   const [collageImages, setCollageImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const year = '2026';
 
-  // 单图处理 - 应用水印和边框
-  const handleProcess = async () => {
+  // 实时预览 - 单图处理
+  const handleProcess = useCallback(async () => {
     if (!uploadedImage) return;
     setIsProcessing(true);
-    
+
     try {
       let result = uploadedImage;
-      
+
       // 应用水印
       if (selectedWatermark) {
         result = await addWatermarkToImage(result, {
@@ -85,56 +101,66 @@ const WatermarkPage: React.FC = () => {
           brand: selectedBrand ? brandWatermarks.find(b => b.id === selectedBrand)?.name : undefined,
           year: showYear ? year : undefined,
           position: watermarkPosition,
-          fontSize: 24,
+          fontSize: watermarkSize,
           color: '#FFFFFF',
-          opacity: 0.95,
+          opacity: watermarkOpacity / 100,
           showYear,
+          fontFamily: selectedFont,
         });
       }
-      
+
       // 应用边框
       if (selectedFrame) {
         const frame = frameStyles.find(f => f.id === selectedFrame);
         if (frame) {
-          result = await addFrameToImage(result, frame);
+          result = await addFrameToImage(result, frame, frameWidth);
         }
       }
-      
+
       setProcessedImage(result);
     } catch (e) {
       console.error('处理失败', e);
-      alert('图片处理失败：' + (e as Error).message);
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [uploadedImage, selectedWatermark, customText, selectedBrand, showYear, watermarkPosition, watermarkSize, watermarkOpacity, selectedFont, selectedFrame, frameWidth]);
 
-  // 拼图处理
-  const handleCollage = async () => {
-    if (collageImages.length < 2) {
-      alert('请至少上传2张图片');
-      return;
-    }
-    if (!selectedCollage) {
-      alert('请选择拼图样式');
-      return;
-    }
-    
+  // 实时预览 - 拼图处理
+  const handleCollage = useCallback(async () => {
+    if (collageImages.length < 2 || !selectedCollage) return;
+
     setIsProcessing(true);
     try {
       const layout = collageStyles.find(c => c.id === selectedCollage)?.layout || 'grid2';
       const result = await createCollage(collageImages, layout, {
-        gap: 10,
+        gap: collageGap,
         background: '#1a1a1a'
       });
       setProcessedImage(result);
     } catch (e) {
       console.error('拼图失败', e);
-      alert('拼图生成失败：' + (e as Error).message);
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [collageImages, selectedCollage, collageGap]);
+
+  // 实时预览 - 参数变化时自动重新合成
+  useEffect(() => {
+    if (!uploadedImage) return;
+    const timer = setTimeout(() => {
+      handleProcess();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [uploadedImage, selectedWatermark, customText, selectedBrand, showYear, watermarkPosition, watermarkSize, watermarkOpacity, selectedFont, selectedFrame, frameWidth, handleProcess]);
+
+  // 拼图实时预览
+  useEffect(() => {
+    if (collageImages.length < 2 || !selectedCollage) return;
+    const timer = setTimeout(() => {
+      handleCollage();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [collageImages, selectedCollage, collageGap, handleCollage]);
 
   // 拼图上传图片
   const handleCollageImageAdd = (url: string) => {
@@ -157,11 +183,40 @@ const WatermarkPage: React.FC = () => {
     setProcessedImage('');
   };
 
+  // 滑块组件
+  const SliderControl: React.FC<{
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    unit: string;
+    onChange: (v: number) => void;
+  }> = ({ label, value, min, max, unit, onChange }) => (
+    <div className="p-3 rounded-xl bg-white/5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-white text-sm">{label}</span>
+        <span className="text-[#FF6B35] text-xs font-medium">{value}{unit}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/10 accent-[#FF6B35]"
+      />
+      <div className="flex justify-between mt-1">
+        <span className="text-white/30 text-[10px]">{min}{unit}</span>
+        <span className="text-white/30 text-[10px]">{max}{unit}</span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a]">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-        <button 
+        <button
           onClick={goBack}
           className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
         >
@@ -178,7 +233,7 @@ const WatermarkPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         {/* 单图模式 */}
         <div className="px-4 py-4">
-          <ImageUploader 
+          <ImageUploader
             onImageSelect={(url) => { setUploadedImage(url); setProcessedImage(''); }}
             currentImage={uploadedImage}
             title="上传照片添加水印"
@@ -190,8 +245,14 @@ const WatermarkPage: React.FC = () => {
         {(uploadedImage || processedImage) && (
           <div className="px-4 pb-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-white/50 text-xs">预览</p>
+              <p className="text-white/50 text-xs">实时预览</p>
               <div className="flex gap-2">
+                {isProcessing && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#FF6B35]/20">
+                    <RefreshCw size={12} className="text-[#FF6B35] animate-spin" />
+                    <span className="text-[#FF6B35] text-[10px]">合成中</span>
+                  </div>
+                )}
                 {processedImage && (
                   <button
                     onClick={handleReset}
@@ -225,26 +286,65 @@ const WatermarkPage: React.FC = () => {
           </div>
         )}
 
-        {/* 单图处理按钮 */}
+        {/* 字体选择 */}
         {uploadedImage && (
-          <div className="px-4 pb-4">
-            <button
-              onClick={handleProcess}
-              disabled={isProcessing}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center gap-2 text-white font-medium disabled:opacity-50"
-            >
-              {isProcessing ? (
-                <>
-                  <RefreshCw size={18} className="animate-spin" />
-                  <span>处理中...</span>
-                </>
-              ) : (
-                <>
-                  <Wand2 size={18} />
-                  <span>应用水印和边框</span>
-                </>
-              )}
-            </button>
+          <div className="px-4 py-3">
+            <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
+              <Type size={12} />
+              字体选择
+            </p>
+            <div className="flex gap-2">
+              {fontOptions.map((font) => {
+                const isSelected = selectedFont === font.id;
+                return (
+                  <button
+                    key={font.id}
+                    onClick={() => setSelectedFont(font.id)}
+                    className={`flex-1 py-2 px-1 rounded-xl flex flex-col items-center gap-1 transition-all ${
+                      isSelected ? 'bg-[#FF6B35]/20 border border-[#FF6B35]' : 'bg-white/5 hover:bg-white/10 border border-transparent'
+                    }`}
+                  >
+                    <span
+                      className="text-lg text-white"
+                      style={{ fontFamily: font.font }}
+                    >
+                      {font.preview}
+                    </span>
+                    <span className={`text-[10px] ${isSelected ? 'text-[#FF6B35]' : 'text-white/50'}`}>
+                      {font.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 透明度精细调节 */}
+        {uploadedImage && (
+          <div className="px-4 py-3">
+            <SliderControl
+              label="水印透明度"
+              value={watermarkOpacity}
+              min={0}
+              max={100}
+              unit="%"
+              onChange={setWatermarkOpacity}
+            />
+          </div>
+        )}
+
+        {/* 水印大小调节 */}
+        {uploadedImage && (
+          <div className="px-4 py-3">
+            <SliderControl
+              label="水印大小"
+              value={watermarkSize}
+              min={12}
+              max={72}
+              unit="px"
+              onChange={setWatermarkSize}
+            />
           </div>
         )}
 
@@ -261,15 +361,15 @@ const WatermarkPage: React.FC = () => {
                 return (
                   <button
                     key={frame.id}
-                    onClick={() => setSelectedFrame(frame.id)}
+                    onClick={() => setSelectedFrame(isSelected ? null : frame.id)}
                     className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${
                       isSelected ? 'bg-[#FF6B35]/20 border border-[#FF6B35]' : 'bg-white/5 hover:bg-white/10'
                     }`}
                   >
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-lg"
                       style={{
-                        backgroundColor: frame.gradient ? '#FF6B35' : 
+                        backgroundColor: frame.gradient ? '#FF6B35' :
                                          frame.background || frame.color || '#FFFFFF',
                         background: frame.gradient ? `linear-gradient(45deg, ${frame.gradient.join(', ')})` : undefined,
                         border: `2px solid ${frame.color || '#FFFFFF'}`,
@@ -280,6 +380,20 @@ const WatermarkPage: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* 边框宽度调节 */}
+        {uploadedImage && selectedFrame && (
+          <div className="px-4 py-3">
+            <SliderControl
+              label="边框宽度"
+              value={frameWidth}
+              min={10}
+              max={100}
+              unit="px"
+              onChange={setFrameWidth}
+            />
           </div>
         )}
 
@@ -352,7 +466,7 @@ const WatermarkPage: React.FC = () => {
                 <div className={`w-5 h-5 rounded-full bg-white transition-all ${showYear ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
             </div>
-            
+
             <div className="p-3 rounded-xl bg-white/5">
               <div className="flex items-center gap-2 mb-2">
                 <Type size={16} className="text-[#FF6B35]" />
@@ -375,7 +489,7 @@ const WatermarkPage: React.FC = () => {
             <Layout size={12} />
             拼图模式 (真实合成)
           </p>
-          
+
           {/* 上传拼图图片 */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             {collageImages.map((img, idx) => (
@@ -417,7 +531,7 @@ const WatermarkPage: React.FC = () => {
               </button>
             )}
           </div>
-          
+
           {/* 拼图样式选择 */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             {collageStyles.map((style) => {
@@ -439,24 +553,19 @@ const WatermarkPage: React.FC = () => {
             })}
           </div>
 
-          {/* 生成拼图按钮 */}
-          <button
-            onClick={handleCollage}
-            disabled={collageImages.length < 2 || isProcessing}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4CAF50] to-[#2E7D32] flex items-center justify-center gap-2 text-white font-medium disabled:opacity-50"
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw size={18} className="animate-spin" />
-                <span>生成中...</span>
-              </>
-            ) : (
-              <>
-                <Wand2 size={18} />
-                <span>生成拼图 ({collageImages.length}张)</span>
-              </>
-            )}
-          </button>
+          {/* 拼图间距调节 */}
+          {selectedCollage && collageImages.length >= 2 && (
+            <div className="mb-3">
+              <SliderControl
+                label="拼图间距"
+                value={collageGap}
+                min={0}
+                max={30}
+                unit="px"
+                onChange={setCollageGap}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -57,6 +57,7 @@ import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.CameraSceneRecognitionScreen
+import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.featured.FeaturedPresetsScreen
 
 
@@ -536,9 +537,9 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            // 智能优化页面（复用AIFineTuneScreen）
+            // 智能优化页面
             composable<Screen.SmartOptimize> {
-                AIFineTuneScreen(
+                SmartOptimizeScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

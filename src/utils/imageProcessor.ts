@@ -34,6 +34,7 @@ export interface WatermarkOptions {
   color: string;
   opacity: number;
   showYear: boolean;
+  fontFamily?: string;
 }
 
 /**
@@ -287,7 +288,7 @@ export async function addWatermarkToImage(
             x = img.width / 2; y = img.height / 2; textAlign = 'center';
         }
         
-        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.font = `bold ${fontSize}px ${options.fontFamily || 'sans-serif'}`;
         ctx.textAlign = textAlign;
         ctx.textBaseline = 'top';
         ctx.globalAlpha = options.opacity;
@@ -325,7 +326,8 @@ export async function addWatermarkToImage(
  */
 export async function addFrameToImage(
   imageUrl: string,
-  frame: FrameStyle
+  frame: FrameStyle,
+  customWidth?: number
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -333,7 +335,7 @@ export async function addFrameToImage(
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const frameWidth = frame.width;
+        const frameWidth = customWidth ?? frame.width;
         const literaryPadding = frame.type === 'literary' ? frameWidth : 0;
         canvas.width = img.width + 2 * (frameWidth + literaryPadding);
         canvas.height = img.height + 2 * (frameWidth + literaryPadding);
