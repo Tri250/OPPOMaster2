@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useAppStore, homePresets } from '../../store/appStore';
-import { ArrowLeft, Plus, Search, Grid, List, Heart, Share2, Trash2, Check, Download, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAppStore, homePresets, Preset } from '../../store/appStore';
+import { cloudSyncService } from '../../services/cloudSyncService';
+import { ArrowLeft, Plus, Search, Grid, List, Heart, Share2, Trash2, Check, Download, Upload, RefreshCw, Cloud } from 'lucide-react';
 
 const PresetManagerPage: React.FC = () => {
   const { goBack } = useAppStore();
@@ -9,6 +10,46 @@ const PresetManagerPage: React.FC = () => {
   const [favorites, setFavorites] = useState<string[]>(['home_1', 'home_3']);
   const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
   const [actionMode, setActionMode] = useState(false);
+  const [presets, setPresets] = useState<Preset[]>(homePresets);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [isSynced, setIsSynced] = useState(false);
+
+  // 自动从云同步加载预设
+  useEffect(() => {
+    const loadPresetsFromCloud = async () => {
+      const state = cloudSyncService.getState();
+      if (state.isConnected) {
+        setIsSyncing(true);
+        try {
+          const cloudPresets = await cloudSyncService.fetchPresets(state.connectedBrand);
+          setPresets([...cloudPresets, ...homePresets]);
+          setIsSynced(true);
+        } catch (e) {
+          setPresets(homePresets);
+        }
+        setIsSyncing(false);
+      }
+    };
+
+    loadPresetsFromCloud();
+  }, []);
+
+  // 同步预设模块
+  const handleSyncPresets = async () => {
+    setIsSyncing(true);
+    setSyncProgress(0);
+
+    await cloudSyncService.syncModule('presets', (progress) => {
+      setSyncProgress(progress);
+    });
+
+    // 刷新预设列表
+    const cloudPresets = await cloudSyncService.fetchPresets();
+    setPresets([...cloudPresets, ...homePresets]);
+    setIsSynced(true);
+    setIsSyncing(false);
+  };
 
   const toggleFavorite = (id: string) => {
     setFavorites(prev => 
@@ -28,7 +69,7 @@ const PresetManagerPage: React.FC = () => {
     setActionMode(false);
   };
 
-  const filteredPresets = homePresets.filter(preset => 
+  const filteredPresets = presets.filter(preset => 
     preset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     preset.author.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -44,6 +85,12 @@ const PresetManagerPage: React.FC = () => {
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white flex-1">预设管理</h1>
+        {isSynced && (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#4CAF50]/20">
+            <Cloud size={12} className="text-[#4CAF50]" />
+            <span className="text-[#4CAF50] text-xs">已同步</span>
+          </div>
+        )}
         <button
           onClick={() => setActionMode(!actionMode)}
           className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -51,6 +98,25 @@ const PresetManagerPage: React.FC = () => {
           <Check size={20} className={actionMode ? 'text-[#FF6B35]' : 'text-white'} />
         </button>
       </div>
+
+      {/* Sync Progress */}
+      {isSyncing && (
+        <div className="px-4 py-3">
+          <div className="p-3 rounded-xl bg-[#FF6B35]/20 border border-[#FF6B35]/30">
+            <div className="flex items-center gap-3 mb-2">
+              <RefreshCw size={16} className="text-[#FF6B35] animate-spin" />
+              <span className="text-white text-sm">正在同步预设...</span>
+            </div>
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] transition-all duration-200"
+                style={{ width: `${syncProgress}%` }}
+              />
+            </div>
+            <p className="text-white/50 text-xs mt-2">{syncProgress}% 完成</p>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="px-4 py-3">
@@ -70,6 +136,13 @@ const PresetManagerPage: React.FC = () => {
       <div className="px-4 pb-3 flex items-center justify-between">
         <span className="text-white/50 text-xs">{filteredPresets.length} 个预设</span>
         <div className="flex gap-2">
+          <button
+            onClick={handleSyncPresets}
+            disabled={isSyncing}
+            className={`p-2 rounded-lg transition-colors ${isSyncing ? 'bg-white/5 text-white/30' : 'bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20'}`}
+          >
+            <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
+          </button>
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/40'}`}
@@ -107,6 +180,13 @@ const PresetManagerPage: React.FC = () => {
                       isSelected ? 'bg-[#FF6B35] border-[#FF6B35]' : 'border-white/50 bg-black/30'
                     }`}>
                       {isSelected && <Check size={14} className="text-white" />}
+                    </div>
+                  )}
+                  
+                  {/* Cloud Badge */}
+                  {preset.isNew && (
+                    <div className="absolute top-2 left-2 ml-8 px-1.5 py-0.5 bg-[#4CAF50]/80 backdrop-blur-sm rounded text-[8px] font-bold text-white z-20">
+                      云端
                     </div>
                   )}
                   
@@ -162,6 +242,9 @@ const PresetManagerPage: React.FC = () => {
                   <div className="flex-1">
                     <h3 className="text-white text-sm font-medium">{preset.name}</h3>
                     <p className="text-white/50 text-xs">{preset.author}</p>
+                    {preset.isNew && (
+                      <span className="text-[#4CAF50] text-xs">云端同步</span>
+                    )}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleFavorite(preset.id); }}

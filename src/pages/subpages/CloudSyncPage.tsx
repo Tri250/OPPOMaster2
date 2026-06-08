@@ -1,49 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Cloud, CloudOff, RefreshCw, Check, Link, Unlink, Smartphone } from 'lucide-react';
+import { cloudSyncService, syncModules, cdnSources, SyncModule } from '../../services/cloudSyncService';
+import { ArrowLeft, Cloud, CloudOff, RefreshCw, Check, Link, Unlink, Smartphone, Database, Palette, Heart, Settings } from 'lucide-react';
 
-const brands = [
-  { id: 'oppo', name: 'OPPO', color: '#1BAA52', icon: 'O' },
-  { id: 'realme', name: 'realme', color: '#FFC107', icon: 'R' },
-  { id: 'vivo', name: 'vivo', color: '#415FFF', icon: 'V' },
-  { id: 'honor', name: '荣耀', color: '#00BFFF', icon: 'H' },
-  { id: 'xiaomi', name: '小米', color: '#FF6900', icon: 'M' },
-];
+const moduleIcons: Record<string, React.ElementType> = {
+  presets: Database,
+  watermarks: Palette,
+  favorites: Heart,
+  settings: Settings,
+};
 
 const CloudSyncPage: React.FC = () => {
   const { goBack } = useAppStore();
   const [isConnected, setIsConnected] = useState(true);
   const [selectedBrand, setSelectedBrand] = useState<string>('oppo');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(0);
+  const [modules, setModules] = useState<SyncModule[]>([]);
+  const [isFullSyncing, setIsFullSyncing] = useState(false);
+
+  useEffect(() => {
+    // 初始化时从服务获取状态
+    const state = cloudSyncService.getState();
+    setIsConnected(state.isConnected);
+    setSelectedBrand(state.connectedBrand || 'oppo');
+    setModules(state.modules);
+  }, []);
 
   const handleConnect = (brandId: string) => {
     setSelectedBrand(brandId);
     setIsConnected(true);
+    cloudSyncService.connect(brandId);
   };
 
   const handleDisconnect = () => {
     setIsConnected(false);
-    setSelectedBrand(null);
+    setSelectedBrand('');
+    cloudSyncService.disconnect();
   };
 
-  const handleSync = () => {
-    setIsSyncing(true);
-    setSyncProgress(0);
+  // 同步单个模块
+  const handleSyncModule = async (moduleId: string) => {
+    setModules(prev => prev.map(m => 
+      m.id === moduleId ? { ...m, status: 'syncing', progress: 0 } : m
+    ));
+
+    await cloudSyncService.syncModule(moduleId, (progress) => {
+      setModules(prev => prev.map(m => 
+        m.id === moduleId ? { ...m, progress } : m
+      ));
+    });
+
+    setModules(prev => prev.map(m => 
+      m.id === moduleId ? { ...m, status: 'completed', progress: 100 } : m
+    ));
+  };
+
+  // 同步所有模块
+  const handleSyncAll = async () => {
+    setIsFullSyncing(true);
     
-    const interval = setInterval(() => {
-      setSyncProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsSyncing(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
+    await cloudSyncService.syncAllModules((moduleId, progress) => {
+      setModules(prev => prev.map(m => 
+        m.id === moduleId ? { ...m, status: 'syncing', progress } : m
+      ));
+    });
+
+    // 更新所有模块为完成状态
+    setModules(prev => prev.map(m => ({ ...m, status: 'completed', progress: 100 })));
+    setIsFullSyncing(false);
   };
 
-  const selectedBrandInfo = brands.find(b => b.id === selectedBrand);
+  const selectedBrandInfo = cdnSources[selectedBrand];
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a]">
@@ -56,6 +82,11 @@ const CloudSyncPage: React.FC = () => {
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">云同步</h1>
+        {isConnected && (
+          <div className="ml-auto px-2 py-1 rounded-full bg-[#4CAF50]/20 border border-[#4CAF50]/30">
+            <span className="text-[#4CAF50] text-xs font-medium">已连接</span>
+          </div>
+        )}
       </div>
 
       {/* Connection Status */}
@@ -91,35 +122,76 @@ const CloudSyncPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Sync Progress */}
-      {isSyncing && (
+      {/* Sync Modules */}
+      {isConnected && (
         <div className="px-4 pb-4">
-          <div className="p-4 rounded-2xl bg-white/5">
-            <div className="flex items-center gap-3 mb-3">
-              <RefreshCw size={18} className="text-[#FF6B35] animate-spin" />
-              <span className="text-white text-sm">正在同步...</span>
-            </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] transition-all duration-300"
-                style={{ width: `${syncProgress}%` }}
-              />
-            </div>
-            <p className="text-white/50 text-xs mt-2">{syncProgress}% 完成</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-white/50 text-xs">同步模块</p>
+            <button
+              onClick={handleSyncAll}
+              disabled={isFullSyncing}
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all ${
+                isFullSyncing 
+                  ? 'bg-white/5 text-white/50' 
+                  : 'bg-[#FF6B35]/20 text-[#FF6B35] hover:bg-[#FF6B35]/30'
+              }`}
+            >
+              <RefreshCw size={14} className={isFullSyncing ? 'animate-spin' : ''} />
+              <span>{isFullSyncing ? '同步中...' : '全部同步'}</span>
+            </button>
           </div>
-        </div>
-      )}
 
-      {/* Sync Button */}
-      {isConnected && !isSyncing && (
-        <div className="px-4 pb-4">
-          <button
-            onClick={handleSync}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 active:scale-98"
-          >
-            <RefreshCw size={18} />
-            <span>立即同步</span>
-          </button>
+          <div className="space-y-2">
+            {modules.map((module) => {
+              const Icon = moduleIcons[module.id] || Database;
+              const isSyncing = module.status === 'syncing';
+              
+              return (
+                <div 
+                  key={module.id}
+                  className="p-3 rounded-xl bg-white/5 flex items-center gap-3"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center">
+                    <Icon size={18} className="text-[#FF6B35]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-medium">{module.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {isSyncing ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-24 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-[#FF6B35] transition-all duration-200"
+                              style={{ width: `${module.progress}%` }}
+                            />
+                          </div>
+                          <span className="text-white/50 text-xs">{module.progress}%</span>
+                        </div>
+                      ) : module.status === 'completed' ? (
+                        <div className="flex items-center gap-1">
+                          <Check size={12} className="text-[#4CAF50]" />
+                          <span className="text-white/50 text-xs">已同步</span>
+                        </div>
+                      ) : (
+                        <span className="text-white/30 text-xs">待同步</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleSyncModule(module.id)}
+                    disabled={isSyncing || isFullSyncing}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isSyncing || isFullSyncing
+                        ? 'bg-white/5 text-white/30'
+                        : 'bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20'
+                    }`}
+                  >
+                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -127,16 +199,16 @@ const CloudSyncPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <p className="text-white/50 text-xs mb-3">选择品牌 CDN</p>
         
-        <div className="space-y-3">
-          {brands.map((brand) => {
-            const isSelected = selectedBrand === brand.id;
+        <div className="space-y-2">
+          {Object.entries(cdnSources).map(([id, source]) => {
+            const isSelected = selectedBrand === id;
             
             return (
               <button
-                key={brand.id}
-                onClick={() => !isConnected && handleConnect(brand.id)}
+                key={id}
+                onClick={() => !isConnected && handleConnect(id)}
                 disabled={isConnected && !isSelected}
-                className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
+                className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all ${
                   isSelected
                     ? 'bg-gradient-to-r from-[#FF6B35]/20 to-transparent border border-[#FF6B35]/30'
                     : isConnected
@@ -145,18 +217,18 @@ const CloudSyncPage: React.FC = () => {
                 }`}
               >
                 <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white"
-                  style={{ backgroundColor: `${brand.color}20`, color: brand.color }}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white"
+                  style={{ backgroundColor: `${source.color}20`, color: source.color }}
                 >
-                  {brand.icon}
+                  {source.name.charAt(0)}
                 </div>
                 <div className="flex-1">
-                  <p className="text-white font-medium">{brand.name}</p>
+                  <p className="text-white text-sm font-medium">{source.name}</p>
                   <p className="text-white/50 text-xs">CDN 数据同步服务</p>
                 </div>
-                {isSelected && (
-                  <div className="w-6 h-6 rounded-full bg-[#FF6B35] flex items-center justify-center">
-                    <Check size={14} className="text-white" />
+                {isSelected && isConnected && (
+                  <div className="w-5 h-5 rounded-full bg-[#FF6B35] flex items-center justify-center">
+                    <Check size={12} className="text-white" />
                   </div>
                 )}
               </button>
@@ -165,9 +237,9 @@ const CloudSyncPage: React.FC = () => {
         </div>
 
         {/* Sync Info */}
-        <div className="mt-6 p-4 rounded-2xl bg-white/5">
+        <div className="mt-4 p-3 rounded-xl bg-white/5">
           <div className="flex items-start gap-3">
-            <Smartphone size={20} className="text-[#FF6B35] mt-0.5" />
+            <Smartphone size={18} className="text-[#FF6B35] mt-0.5" />
             <div>
               <p className="text-white text-sm font-medium">同步内容</p>
               <ul className="text-white/50 text-xs mt-2 space-y-1">
@@ -181,7 +253,7 @@ const CloudSyncPage: React.FC = () => {
         </div>
 
         {/* Tips */}
-        <div className="mt-4 p-4 rounded-2xl bg-white/5">
+        <div className="mt-3 p-3 rounded-xl bg-white/5">
           <p className="text-white/50 text-xs">
             提示：云同步功能需要品牌手机系统支持。连接后可跨设备同步您的影像参数配置。
           </p>
