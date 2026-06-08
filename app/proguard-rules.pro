@@ -162,6 +162,11 @@
 -keepclassmembers class com.umeng.** { *; }
 -dontwarn com.umeng.**
 
+# CameraX 相机库
+-keep class androidx.camera.** { *; }
+-keepclassmembers class androidx.camera.** { *; }
+-dontwarn androidx.camera.**
+
 # ===========================================
 # 优化配置
 # ===========================================

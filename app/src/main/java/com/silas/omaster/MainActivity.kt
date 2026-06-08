@@ -56,6 +56,7 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
+import com.silas.omaster.ui.features.CameraSceneRecognitionScreen
 import com.silas.omaster.ui.featured.FeaturedPresetsScreen
 
 
@@ -521,9 +522,9 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            // AI场景识别页面（复用AIFineTuneScreen）
+            // AI场景识别页面 - 真实CameraX相机实时预览
             composable<Screen.SceneRecognition> {
-                AIFineTuneScreen(
+                CameraSceneRecognitionScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
