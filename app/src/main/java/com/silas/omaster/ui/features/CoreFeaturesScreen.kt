@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhotoFilter
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsSuggest
@@ -87,6 +88,7 @@ fun CoreFeaturesScreen(
     onNavigateToSmartOptimize: () -> Unit,
     onNavigateToPresetManager: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
+    onNavigateToLUTShare: () -> Unit,
     onNavigateToHasselbladColor: () -> Unit,
     onNavigateToCloudSync: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {}
@@ -247,6 +249,21 @@ fun CoreFeaturesScreen(
                 isEnabled = true,
                 showToggle = false,
                 onClick = onNavigateToPresetManager
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // LUT资源分享
+        item {
+            FeatureCard(
+                title = "LUT 资源分享",
+                subtitle = "20+专业 LUT 滤镜，一键下载使用",
+                icon = Icons.Default.Palette,
+                iconColor = Color(0xFF9C27B0),
+                gradientColors = listOf(Color(0xFF6A1B9A), Color(0xFF8E24AA)),
+                isEnabled = true,
+                showToggle = false,
+                onClick = onNavigateToLUTShare
             )
             Spacer(modifier = Modifier.height(24.dp))
         }

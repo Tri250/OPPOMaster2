@@ -55,6 +55,10 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
+import com.silas.omaster.ui.features.AISceneRecognitionScreen
+import com.silas.omaster.ui.features.LUTShareScreen
+import com.silas.omaster.ui.features.HasselbladScreen
+import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.featured.FeaturedPresetsScreen
 
 
@@ -102,6 +106,15 @@ sealed class Screen {
 
     @Serializable
     data object ParamAdjustment : Screen()
+
+    @Serializable
+    data object LUTShare : Screen()
+
+    @Serializable
+    data object HasselbladColor : Screen()
+
+    @Serializable
+    data object CloudSync : Screen()
 
     @Serializable
     data object PrivacyPolicy : Screen()
@@ -508,8 +521,9 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
-                    onNavigateToHasselbladColor = { navController.navigate(Screen.Settings) },
-                    onNavigateToCloudSync = { navController.navigate(Screen.Settings) },
+                    onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
+                    onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
+                    onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     }
@@ -522,9 +536,9 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            // AI场景识别页面（复用AIFineTuneScreen）
+            // AI场景识别页面
             composable<Screen.SceneRecognition> {
-                AIFineTuneScreen(
+                AISceneRecognitionScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -546,6 +560,27 @@ fun MainApp(navController: NavHostController) {
             // 参数调节页面（复用AIFineTuneScreen）
             composable<Screen.ParamAdjustment> {
                 AIFineTuneScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // LUT资源分享页面
+            composable<Screen.LUTShare> {
+                LUTShareScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 哈苏色彩科学页面
+            composable<Screen.HasselbladColor> {
+                HasselbladScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 云同步页面
+            composable<Screen.CloudSync> {
+                CloudSyncScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
