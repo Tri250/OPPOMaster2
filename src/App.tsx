@@ -13,6 +13,7 @@ import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
 import WatermarkPage from './pages/subpages/WatermarkPage';
 import PresetManagerPage from './pages/subpages/PresetManagerPage';
 import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
+import CloudSyncPage from './pages/subpages/CloudSyncPage';
 import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
 import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
@@ -35,6 +36,8 @@ const App: React.FC = () => {
         return <PresetManagerPage />;
       case 'param-adjust':
         return <ParamAdjustPage />;
+      case 'cloud-sync':
+        return <CloudSyncPage />;
       case 'theme-settings':
         return <ThemeSettingsPage />;
       case 'dark-mode':

@@ -9,6 +9,8 @@ import {
   FileText,
   ChevronRight,
   Camera,
+  Images,
+  Cloud,
 } from 'lucide-react';
 
 const AboutScreen: React.FC = () => {
@@ -29,7 +31,25 @@ const AboutScreen: React.FC = () => {
     dark: '深色模式',
   };
 
-  const settingsItems = [
+  // 设置项分为两组：功能设置和系统设置
+  const functionSettings = [
+    { 
+      icon: Images, 
+      label: '预设管理', 
+      value: '',
+      desc: '云端预设库，收藏、创建、分享',
+      route: 'preset-manager' as const
+    },
+    { 
+      icon: Cloud, 
+      label: '云同步', 
+      value: '未连接',
+      desc: 'OPPO/realme/vivo/荣耀 CDN数据同步',
+      route: 'cloud-sync' as const
+    },
+  ];
+
+  const systemSettings = [
     { 
       icon: Palette, 
       label: '主题设置', 
@@ -78,7 +98,7 @@ const AboutScreen: React.FC = () => {
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-2 pb-3">
-        <h1 className="text-xl font-bold text-white">关于</h1>
+        <h1 className="text-xl font-bold text-white">设置</h1>
       </div>
 
       {/* App Info Card */}
@@ -110,29 +130,67 @@ const AboutScreen: React.FC = () => {
 
       {/* Settings List */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
-        <div className="rounded-2xl overflow-hidden bg-white/5 backdrop-blur-sm">
-          {settingsItems.map((item, index) => (
-            <button
-              key={item.label}
-              onClick={() => handleItemClick(item.route)}
-              className={`w-full flex items-center justify-between p-4 transition-all duration-200 hover:bg-white/10 ${
-                index !== settingsItems.length - 1 ? 'border-b border-white/5' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/10 flex items-center justify-center">
-                  <item.icon size={18} className="text-[#FF6B35]" />
+        {/* 功能设置 */}
+        <div className="mb-4">
+          <p className="text-white/50 text-xs mb-2 px-1">功能设置</p>
+          <div className="rounded-2xl overflow-hidden bg-white/5 backdrop-blur-sm">
+            {functionSettings.map((item, index) => (
+              <button
+                key={item.label}
+                onClick={() => handleItemClick(item.route)}
+                className={`w-full flex items-center justify-between p-4 transition-all duration-200 hover:bg-white/10 ${
+                  index !== functionSettings.length - 1 ? 'border-b border-white/5' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/10 flex items-center justify-center">
+                    <item.icon size={18} className="text-[#FF6B35]" />
+                  </div>
+                  <div>
+                    <span className="text-white text-sm font-medium">{item.label}</span>
+                    {item.desc && (
+                      <p className="text-white/40 text-xs">{item.desc}</p>
+                    )}
+                  </div>
                 </div>
-                <span className="text-white text-sm font-medium">{item.label}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {item.value && (
-                  <span className="text-white/50 text-xs">{item.value}</span>
-                )}
-                <ChevronRight size={16} className="text-white/30" />
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center gap-2">
+                  {item.value && (
+                    <span className="text-white/50 text-xs">{item.value}</span>
+                  )}
+                  <ChevronRight size={16} className="text-white/30" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 系统设置 */}
+        <div className="mb-4">
+          <p className="text-white/50 text-xs mb-2 px-1">系统设置</p>
+          <div className="rounded-2xl overflow-hidden bg-white/5 backdrop-blur-sm">
+            {systemSettings.map((item, index) => (
+              <button
+                key={item.label}
+                onClick={() => handleItemClick(item.route)}
+                className={`w-full flex items-center justify-between p-4 transition-all duration-200 hover:bg-white/10 ${
+                  index !== systemSettings.length - 1 ? 'border-b border-white/5' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                    <item.icon size={18} className="text-white/60" />
+                  </div>
+                  <span className="text-white text-sm font-medium">{item.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {item.value && (
+                    <span className="text-white/50 text-xs">{item.value}</span>
+                  )}
+                  <ChevronRight size={16} className="text-white/30" />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Developer Info */}

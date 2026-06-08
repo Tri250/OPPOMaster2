@@ -6,9 +6,7 @@ import {
   Cpu,
   Droplets,
   SlidersHorizontal,
-  Images,
   Aperture,
-  Cloud,
   Sparkles,
   Settings,
   Brush,
@@ -21,9 +19,7 @@ const iconMap: Record<string, React.ElementType> = {
   Cpu,
   Droplets,
   SlidersHorizontal,
-  Images,
   Aperture,
-  Cloud,
 };
 
 const featureRouteMap: Record<string, string> = {
@@ -31,7 +27,6 @@ const featureRouteMap: Record<string, string> = {
   'ai-fine-tune': 'ai-fine-tune',
   'watermark': 'watermark',
   'smart-optimize': 'smart-optimize',
-  'preset-manager': 'preset-manager',
   'param-adjust': 'param-adjust',
 };
 
@@ -56,18 +51,18 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
     desc: 'ISO、快门、光圈、白平衡精确控制',
     tips: ['ISO 50-12800', '快门 1/1000s-30s', '光圈 f/1.4-f/22'],
   },
-  'preset-manager': {
-    desc: '云端预设库，收藏、创建、分享',
-    tips: ['云端同步', '本地管理', '批量操作'],
-  },
 };
 
 const FeaturesScreen: React.FC = () => {
   const { features, navigateToSubPage } = useAppStore();
 
-  const aiFeatures = features.slice(0, 4);
-  const toolFeatures = features.slice(4, 6);
-  const brandFeatures = features.slice(6, 8);
+  // 只保留核心功能：AI场景、AI微调、智能优化、水印、参数调节、哈苏色彩
+  // 预设管理和云同步已移到设置页面
+  const aiFeatures = features.filter(f => 
+    ['ai-scene', 'ai-fine-tune', 'smart-optimize', 'watermark'].includes(f.id)
+  );
+  const toolFeatures = features.filter(f => f.id === 'param-adjust');
+  const brandFeatures = features.filter(f => f.id === 'hasselblad');
 
   const handleFeatureClick = (featureId: string) => {
     if (featureRouteMap[featureId]) {
@@ -77,10 +72,8 @@ const FeaturesScreen: React.FC = () => {
 
   const FeatureCard: React.FC<{ 
     feature: (typeof features)[0]; 
-    index: number;
-  }> = ({ feature, index }) => {
+  }> = ({ feature }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
-    const route = featureRouteMap[feature.id];
     const info = featureDescriptions[feature.id];
 
     return (
@@ -172,8 +165,8 @@ const FeaturesScreen: React.FC = () => {
             count={aiFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {aiFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
+            {aiFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>
@@ -187,8 +180,8 @@ const FeaturesScreen: React.FC = () => {
             count={toolFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {toolFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
+            {toolFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>
@@ -202,8 +195,8 @@ const FeaturesScreen: React.FC = () => {
             count={brandFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {brandFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
+            {brandFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>
