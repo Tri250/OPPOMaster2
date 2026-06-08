@@ -4,13 +4,13 @@
 
 /* ============================================
    小O帮帮 设计系统 - ColorOS 16 规范
-   2026 企业级设计标准 - 全面优化版
+   2026 企业级设计标准 - 参考OMaster优化版
    ============================================ */
 
 :root {
-  /* 字体系统 */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "OPPO Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  line-height: 1.5;
+  /* 字体系统 - OPPO Sans优先 */
+  font-family: "OPPO Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -18,504 +18,559 @@
   -moz-osx-font-smoothing: grayscale;
 
   /* ============================================
-     颜色系统 - CSS变量定义 (增强版)
+     颜色系统 - 精细化层级
      ============================================ */
 
-  /* 主背景色 */
-  --color-bg-primary: #0a0a0a;
-  --color-bg-secondary: #1a1a1a;
-  --color-bg-tertiary: #252525;
-  --color-bg-elevated: #2d2d2d;
+  /* 主背景色 - 三级层级 */
+  --color-bg-primary: #050505;         /* 最深背景 - 页面主背景 */
+  --color-bg-secondary: #0f0f0f;       /* 二级背景 - 卡片背景 */
+  --color-bg-tertiary: #1a1a1a;        /* 三级背景 - 提升元素 */
+  --color-bg-elevated: #252525;        /* 提升背景 - 弹出层 */
+  --color-bg-overlay: rgba(0, 0, 0, 0.6); /* 遮罩背景 */
 
-  /* 主强调色 - 哈苏橙 (渐变系列) */
+  /* 主强调色 - 哈苏橙 (完整渐变系列) */
   --color-accent-primary: #FF6B35;
   --color-accent-primary-light: #FF8C5A;
   --color-accent-primary-dark: #E55A25;
-  --color-accent-primary-muted: rgba(255, 107, 53, 0.15);
-  --color-accent-gradient-start: #FF6B35;
-  --color-accent-gradient-mid: #FF9F6B;
-  --color-accent-gradient-end: #FFD93D;
+  --color-accent-primary-muted: rgba(255, 107, 53, 0.12);
+  --color-accent-primary-subtle: rgba(255, 107, 53, 0.06);
+  
+  /* 哈苏橙渐变 */
+  --gradient-accent: linear-gradient(135deg, #FF6B35 0%, #FF8C5A 50%, #FFD93D 100%);
+  --gradient-accent-subtle: linear-gradient(135deg, rgba(255, 107, 53, 0.3) 0%, rgba(255, 140, 90, 0.2) 100%);
+  --gradient-accent-glow: linear-gradient(135deg, rgba(255, 107, 53, 0.15) 0%, rgba(255, 217, 61, 0.08) 100%);
 
   /* OPPO品牌色 */
   --color-oppo-green: #00A95C;
   --color-oppo-green-light: #00C96B;
   --color-oppo-green-dark: #008A4D;
 
-  /* 功能模块统一哈苏橙色系 */
-  --color-feature-primary: #FF6B35;
-  --color-feature-primary-light: #FF8C5A;
-  --color-feature-primary-dark: #E55A25;
+  /* 文字颜色 - 四级层级 */
+  --color-text-primary: #FFFFFF;                    /* 主要文字 - 标题 */
+  --color-text-secondary: rgba(255, 255, 255, 0.85); /* 次级文字 - 正文 */
+  --color-text-tertiary: rgba(255, 255, 255, 0.55);  /* 三级文字 - 辅助 */
+  --color-text-muted: rgba(255, 255, 255, 0.35);     /* 最弱文字 - 提示 */
+  --color-text-accent: #FF6B35;                      /* 强调文字 */
+  --color-text-accent-light: #FF8C5A;                /* 浅强调文字 */
 
-  /* 文字颜色 - 简化三级 */
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: rgba(255, 255, 255, 0.7);
-  --color-text-tertiary: rgba(255, 255, 255, 0.4);
-  --color-text-accent: #FF6B35;
-
-  /* 边框颜色 */
-  --color-border-light: rgba(255, 255, 255, 0.08);
-  --color-border-medium: rgba(255, 255, 255, 0.12);
-  --color-border-strong: rgba(255, 255, 255, 0.2);
-  --color-border-accent: rgba(255, 107, 53, 0.3);
+  /* 边框颜色 - 四级层级 */
+  --color-border-subtle: rgba(255, 255, 255, 0.04);  /* 最弱边框 */
+  --color-border-light: rgba(255, 255, 255, 0.08);   /* 轻边框 */
+  --color-border-medium: rgba(255, 255, 255, 0.12);  /* 中边框 */
+  --color-border-strong: rgba(255, 255, 255, 0.18);  /* 强边框 */
+  --color-border-accent: rgba(255, 107, 53, 0.25);   /* 强调边框 */
 
   /* 状态颜色 */
   --color-success: #4CAF50;
   --color-success-light: #66BB6A;
+  --color-success-muted: rgba(76, 175, 80, 0.12);
   --color-warning: #FF9800;
   --color-warning-light: #FFB74D;
+  --color-warning-muted: rgba(255, 152, 0, 0.12);
   --color-error: #F44336;
   --color-error-light: #EF5350;
+  --color-error-muted: rgba(244, 67, 54, 0.12);
   --color-info: #2196F3;
   --color-info-light: #42A5F5;
+  --color-info-muted: rgba(33, 150, 243, 0.12);
 
   /* ============================================
-     液态玻璃效果 - ColorOS 16 Fluid Glass (增强版)
+     液态玻璃效果 - ColorOS 16 Fluid Glass
      ============================================ */
   --glass-blur: 40px;
-  --glass-blur-light: 20px;
+  --glass-blur-light: 24px;
   --glass-blur-heavy: 60px;
-  --glass-saturation: 200%;
-  --glass-brightness: 110%;
-  --glass-bg: rgba(26, 26, 26, 0.7);
-  --glass-bg-light: rgba(45, 45, 45, 0.6);
-  --glass-bg-heavy: rgba(10, 10, 10, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-border-accent: rgba(255, 107, 53, 0.2);
-  --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-  --glass-shadow-subtle: 0 6px 20px rgba(0, 0, 0, 0.3);
-  --glass-shadow-glow: 0 0 30px rgba(255, 107, 53, 0.15);
-  --glass-refraction: 1.02;
+  --glass-bg: rgba(15, 15, 15, 0.75);
+  --glass-bg-light: rgba(25, 25, 25, 0.65);
+  --glass-bg-heavy: rgba(5, 5, 5, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-accent: rgba(255, 107, 53, 0.18);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-shadow-subtle: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --glass-shadow-glow: 0 0 24px rgba(255, 107, 53, 0.12);
 
   /* ============================================
      间距系统 - 统一规范
      ============================================ */
-  --spacing-page: 16px;
-  --spacing-card: 16px;
-  --spacing-element: 8px;
-  --spacing-tight: 4px;
-  --spacing-loose: 24px;
-  --spacing-section: 32px;
-  --spacing-wide: 48px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 48px;
 
   /* ============================================
-     圆角系统 (增强版)
+     圆角系统 - 统一规范
      ============================================ */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
-  --radius-3xl: 24px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
   --radius-full: 9999px;
 
   /* ============================================
-     动画系统 - ColorOS 16 规范 (增强版)
+     字体系统 - 统一规范
      ============================================ */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 28px;
+  --font-size-4xl: 32px;
 
-  /* 动画时长 */
-  --duration-instant: 50ms;
-  --duration-fast: 100ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
-  --duration-slower: 400ms;
-  --duration-slowest: 500ms;
-  --duration-page: 800ms;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
-  /* 动画曲线 - ColorOS 16 弹性曲线 */
-  --ease-linear: linear;
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-spring-soft: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-spring-bouncy: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ease-liquid: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.02em;
 
   /* ============================================
-     阴影系统 (增强版)
+     动画系统 - ColorOS 16弹性曲线
      ============================================ */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.25);
-  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.3);
-  --shadow-2xl: 0 16px 32px rgba(0, 0, 0, 0.35);
-  --shadow-3xl: 0 24px 48px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px rgba(255, 107, 53, 0.3);
-  --shadow-glow-strong: 0 0 30px rgba(255, 107, 53, 0.5);
-  --shadow-glow-soft: 0 0 40px rgba(255, 107, 53, 0.2);
-  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-liquid: 500ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* ============================================
-   液态玻璃组件 - ColorOS 16 风格 (增强版)
+   字体类 - 统一规范
    ============================================ */
 
-/* 基础液态玻璃 */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) brightness(var(--glass-brightness));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) brightness(var(--glass-brightness));
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-subtle), var(--glass-shadow-glow);
+.text-display {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
-/* 轻量液态玻璃 */
-.glass-light {
-  background: var(--glass-bg-light);
-  backdrop-filter: blur(var(--glass-blur-light)) saturate(150%) brightness(105%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-light)) saturate(150%) brightness(105%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.text-title-large {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.text-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.text-subtitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+.text-body {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-relaxed);
+}
+
+.text-caption {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-tertiary);
+}
+
+.text-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+/* ============================================
+   间距类 - 统一规范
+   ============================================ */
+
+.p-page { padding: var(--spacing-lg); }
+.p-card { padding: var(--spacing-md); }
+.p-element { padding: var(--spacing-sm); }
+
+.gap-section { gap: var(--spacing-3xl); }
+.gap-card { gap: var(--spacing-lg); }
+.gap-element { gap: var(--spacing-md); }
+.gap-tight { gap: var(--spacing-sm); }
+
+/* ============================================
+   卡片样式 - 精致设计
+   ============================================ */
+
+.card-base {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  transition: var(--transition-normal);
+}
+
+.card-elevated {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-xl);
   box-shadow: var(--glass-shadow-subtle);
+  transition: var(--transition-normal);
 }
 
-/* 重度液态玻璃 */
-.glass-heavy {
-  background: var(--glass-bg-heavy);
-  backdrop-filter: blur(var(--glass-blur-heavy)) saturate(220%) brightness(115%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy)) saturate(220%) brightness(115%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: var(--glass-shadow);
-}
-
-/* ============================================
-   ColorOS 16 动画效果 (增强版)
-   ============================================ */
-
-/* 液态流动动画 */
-@keyframes liquid-flow {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-  25% {
-    transform: translateY(-4px) scale(1.01);
-    opacity: 0.98;
-  }
-  50% {
-    transform: translateY(-8px) scale(1.02);
-    opacity: 0.95;
-  }
-  75% {
-    transform: translateY(-4px) scale(1.01);
-    opacity: 0.98;
-  }
-}
-
-/* 弹性进入动画 (增强版) */
-@keyframes spring-in {
-  0% {
-    transform: scale(0.7);
-    opacity: 0;
-  }
-  40% {
-    transform: scale(1.08);
-    opacity: 0.8;
-  }
-  60% {
-    transform: scale(0.98);
-    opacity: 0.9;
-  }
-  80% {
-    transform: scale(1.02);
-    opacity: 0.95;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* 弹性退出动画 */
-@keyframes spring-out {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-}
-
-/* 液态滑动动画 (增强版) */
-@keyframes liquid-slide-up {
-  0% {
-    transform: translateY(30px) scale(0.95);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes liquid-slide-down {
-  0% {
-    transform: translateY(-30px) scale(0.95);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes liquid-slide-left {
-  0% {
-    transform: translateX(30px) scale(0.95);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes liquid-slide-right {
-  0% {
-    transform: translateX(-30px) scale(0.95);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
-}
-
-/* 液态淡入动画 */
-@keyframes liquid-fade {
-  0% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 液态涟漪动画 (增强版) */
-@keyframes liquid-ripple {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0.6;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(2.5);
-    opacity: 0;
-  }
-}
-
-/* 液态脉冲动画 (增强版) */
-@keyframes liquid-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.85;
-    box-shadow: 0 0 20px 10px rgba(255, 107, 53, 0.1);
-  }
-}
-
-/* 液态呼吸动画 (增强版) */
-@keyframes liquid-breathe {
-  0%, 100% {
-    transform: scale(1);
-    filter: brightness(1);
-    box-shadow: 0 0 0 rgba(255, 107, 53, 0);
-  }
-  50% {
-    transform: scale(1.03);
-    filter: brightness(1.15);
-    box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
-  }
-}
-
-/* 液态旋转动画 */
-@keyframes liquid-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* 液态浮动动画 */
-@keyframes liquid-float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-/* 呼吸光效动画 */
-@keyframes glow-breathe {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(255, 107, 53, 0.2), 0 0 20px rgba(255, 107, 53, 0.1);
-    opacity: 0.8;
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(255, 107, 53, 0.4), 0 0 40px rgba(255, 107, 53, 0.2);
-    opacity: 1;
-  }
-}
-
-/* 动态粒子背景 */
-@keyframes particle-float {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0.3;
-  }
-  25% {
-    transform: translateY(-20px) translateX(10px);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translateY(-40px) translateX(-10px);
-    opacity: 0.4;
-  }
-  75% {
-    transform: translateY(-20px) translateX(5px);
-    opacity: 0.6;
-  }
-}
-
-/* 页面切换动画 */
-@keyframes page-transition {
-  0% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* 智能推荐闪烁 */
-@keyframes recommend-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+.card-accent {
+  background: var(--color-accent-primary-subtle);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-xl);
+  transition: var(--transition-normal);
 }
 
 /* ============================================
-   动画类 - ColorOS 16 风格 (增强版)
+   按钮样式 - 统一规范
    ============================================ */
 
-.animate-liquid-flow {
-  animation: liquid-flow 3s var(--ease-liquid) infinite;
+.btn-primary {
+  background: var(--color-accent-primary);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-semibold);
+  transition: var(--transition-fast);
 }
 
-.animate-spring-in {
-  animation: spring-in var(--duration-slower) var(--ease-spring) forwards;
+.btn-primary:hover {
+  background: var(--color-accent-primary-light);
 }
 
-.animate-spring-out {
-  animation: spring-out var(--duration-fast) var(--ease-in) forwards;
+.btn-primary:active {
+  background: var(--color-accent-primary-dark);
+  transform: scale(0.98);
 }
 
-.animate-liquid-slide-up {
-  animation: liquid-slide-up var(--duration-slow) var(--ease-liquid) forwards;
+.btn-secondary {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-fast);
 }
 
-.animate-liquid-slide-down {
-  animation: liquid-slide-down var(--duration-slow) var(--ease-liquid) forwards;
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-border-strong);
 }
 
-.animate-liquid-slide-left {
-  animation: liquid-slide-left var(--duration-slow) var(--ease-liquid) forwards;
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-fast);
 }
 
-.animate-liquid-slide-right {
-  animation: liquid-slide-right var(--duration-slow) var(--ease-liquid) forwards;
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary);
 }
 
-.animate-liquid-fade {
-  animation: liquid-fade var(--duration-normal) var(--ease-smooth) forwards;
+/* ============================================
+   徽章样式 - 简洁设计
+   ============================================ */
+
+.badge-hncs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-accent-primary);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
 }
 
-.animate-liquid-pulse {
-  animation: liquid-pulse 2s var(--ease-liquid) infinite;
+.badge-new {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
 }
 
-.animate-liquid-breathe {
-  animation: liquid-breathe 4s var(--ease-smooth) infinite;
+.badge-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-tertiary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
-.animate-liquid-spin {
-  animation: liquid-spin 1s var(--ease-linear) infinite;
+/* ============================================
+   分割线样式
+   ============================================ */
+
+.divider-subtle {
+  height: 1px;
+  background: var(--color-border-subtle);
 }
 
-.animate-liquid-float {
-  animation: liquid-float 3s var(--ease-liquid) infinite;
+.divider-light {
+  height: 1px;
+  background: var(--color-border-light);
 }
 
-.animate-glow-breathe {
-  animation: glow-breathe 3s var(--ease-smooth) infinite;
+.divider-accent {
+  height: 2px;
+  background: var(--gradient-accent-subtle);
+  border-radius: 1px;
 }
 
-.animate-particle {
-  animation: particle-float 8s var(--ease-liquid) infinite;
+/* ============================================
+   动画关键帧
+   ============================================ */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.animate-page-transition {
-  animation: page-transition var(--duration-page) var(--ease-liquid) forwards;
+@keyframes slide-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slide-down {
+  from { 
+    opacity: 0; 
+    transform: translateY(-16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scale-in {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ============================================
+   动画类
+   ============================================ */
+
+.animate-fade-in {
+  animation: fade-in var(--transition-normal) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up var(--transition-liquid) forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down var(--transition-liquid) forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in var(--transition-spring) forwards;
 }
 
 .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 107, 53, 0.1) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
   background-size: 200% 100%;
-  animation: recommend-shimmer 2s var(--ease-linear) infinite;
+  animation: shimmer 1.5s infinite;
 }
 
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* 延迟类 */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
 /* ============================================
-   过渡效果 - ColorOS 16 风格 (增强版)
+   过渡类
    ============================================ */
 
-.transition-liquid {
-  transition: all var(--duration-slow) var(--ease-liquid);
+.transition-fast { transition: var(--transition-fast); }
+.transition-normal { transition: var(--transition-normal); }
+.transition-slow { transition: var(--transition-slow); }
+.transition-spring { transition: var(--transition-spring); }
+.transition-liquid { transition: var(--transition-liquid); }
+
+/* ============================================
+   液态玻璃效果类
+   ============================================ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
 }
 
-.transition-spring {
-  transition: all var(--duration-slower) var(--ease-spring);
+.glass-light {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
 }
 
-.transition-spring-soft {
-  transition: all var(--duration-slow) var(--ease-spring-soft);
-}
-
-.transition-smooth {
-  transition: all var(--duration-normal) var(--ease-smooth);
-}
-
-.transition-fast {
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.transition-page {
-  transition: all var(--duration-page) var(--ease-liquid);
+.glass-heavy {
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
 }
 
 /* ============================================
-   涟漪效果 - ColorOS 16 风格 (增强版)
+   沉浸式标题栏
+   ============================================ */
+
+.immersive-header {
+  padding: var(--spacing-2xl) var(--spacing-lg) var(--spacing-lg);
+  background: linear-gradient(to bottom, var(--color-bg-primary) 0%, transparent 100%);
+}
+
+.immersive-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+/* ============================================
+   智能Tab栏
+   ============================================ */
+
+.smart-tab-bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-lg);
+}
+
+.smart-tab-item {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  transition: var(--transition-fast);
+}
+
+.smart-tab-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary);
+}
+
+.smart-tab-item-active {
+  background: var(--color-accent-primary-muted);
+  color: var(--color-accent-primary);
+}
+
+/* ============================================
+   加载状态
+   ============================================ */
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border-medium);
+  border-top-color: var(--color-accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   滚动条样式
+   ============================================ */
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* ============================================
+   无障碍焦点样式
+   ============================================ */
+
+.focus-visible:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   涟漪效果容器
    ============================================ */
 
 .ripple-container {
@@ -526,319 +581,89 @@
 .ripple-container::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.35) 0%, transparent 70%);
-  transform: translate(-50%, -50%) scale(0);
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
   opacity: 0;
-  pointer-events: none;
+  transition: var(--transition-fast);
 }
 
 .ripple-container:active::after {
-  animation: liquid-ripple 0.8s var(--ease-out) forwards;
+  opacity: 1;
 }
 
 /* ============================================
-   动态壁纸效果
+   动态背景
    ============================================ */
 
 .dynamic-bg {
+  background: var(--color-bg-primary);
   position: relative;
-  overflow: hidden;
 }
 
 .dynamic-bg::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(circle at 20% 30%, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(255, 107, 53, 0.06) 0%, transparent 50%);
-  animation: particle-float 10s var(--ease-liquid) infinite;
+  inset: 0;
+  background: var(--gradient-accent-glow);
+  opacity: 0.3;
   pointer-events: none;
 }
 
 /* ============================================
-   沉浸式标题栏
+   页面过渡动画
    ============================================ */
 
-.immersive-header {
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 10, 0.95) 0%,
-    rgba(10, 10, 10, 0.8) 50%,
-    transparent 100%
-  );
-  padding: var(--spacing-loose) var(--spacing-page);
-  position: relative;
+.animate-page-transition {
+  animation: slide-up var(--transition-liquid) forwards;
 }
 
-.immersive-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 107, 53, 0.3) 50%,
-    transparent 100%
-  );
+.animate-liquid-fade {
+  animation: fade-in var(--transition-normal) forwards;
 }
 
-.immersive-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  letter-spacing: 0.5px;
-  position: relative;
+.animate-liquid-slide-up {
+  animation: slide-up var(--transition-liquid) forwards;
 }
 
-.immersive-title::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--color-accent-primary) 0%,
-    transparent 100%
-  );
-  border-radius: var(--radius-full);
+.animate-liquid-slide-down {
+  animation: slide-down var(--transition-liquid) forwards;
+}
+
+.animate-liquid-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-liquid-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 /* ============================================
-   智能Tab栏
+   响应式调整
    ============================================ */
 
-.smart-tab-bar {
-  background: rgba(10, 10, 10, 0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--color-border-light);
-  position: relative;
-}
-
-.smart-tab-indicator {
-  position: absolute;
-  bottom: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--color-accent-primary) 0%,
-    var(--color-accent-gradient-mid) 100%
-  );
-  border-radius: var(--radius-full) var(--radius-full) 0 0;
-  box-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
-  transition: all var(--duration-slow) var(--ease-liquid);
-}
-
-.smart-tab-item {
-  padding: var(--spacing-element) var(--spacing-card);
-  color: var(--color-text-tertiary);
-  transition: all var(--duration-normal) var(--ease-smooth);
-  position: relative;
-}
-
-.smart-tab-item-active {
-  color: var(--color-accent-primary);
-  font-weight: 600;
-}
-
-.smart-tab-item-active::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -4px;
-  width: 6px;
-  height: 6px;
-  background: var(--color-accent-primary);
-  border-radius: 50%;
-  transform: translateY(-50%);
-}
-
-/* ============================================
-   功能图标渐变
-   ============================================ */
-
-.feature-icon-gradient {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent-primary) 0%,
-    var(--color-accent-gradient-mid) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   功能模块特色色应用 (增强版)
-   ============================================ */
-
-.feature-hasselblad { --feature-color: var(--color-feature-primary); }
-
-/* ============================================
-   无障碍支持
-   ============================================ */
-
-.focus-visible:focus-visible {
-  outline: 2px solid var(--color-accent-primary);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgba(255, 107, 53, 0.15);
-}
-
-/* 高对比度模式支持 */
-@media (prefers-contrast: high) {
+@media (max-width: 375px) {
   :root {
-    --color-border-light: rgba(255, 255, 255, 0.3);
-    --color-border-medium: rgba(255, 255, 255, 0.5);
-    --glass-border: rgba(255, 255, 255, 0.25);
+    --spacing-lg: 14px;
+    --font-size-base: 14px;
   }
 }
 
-/* 减少动画模式支持 */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+@media (min-width: 768px) {
+  :root {
+    --spacing-lg: 20px;
+    --font-size-base: 16px;
   }
 }
 
 /* ============================================
-   滚动条隐藏
+   深色模式适配（已默认深色）
    ============================================ */
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-full);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-/* ============================================
-   徽章样式 (增强版)
-   ============================================ */
-
-.badge-hncs {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent-primary) 0%,
-    var(--color-accent-gradient-mid) 100%
-  );
-  color: white;
-  padding: 3px 10px;
-  border-radius: var(--radius-md);
-  font-size: 10px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
-}
-
-.badge-new {
-  background: transparent;
-  color: white;
-  padding: 3px 10px;
-  border-radius: var(--radius-md);
-  font-size: 10px;
-  font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-/* ============================================
-   加载状态样式
-   ============================================ */
-
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--color-accent-primary);
-  border-radius: 50%;
-  animation: liquid-spin 0.8s var(--ease-linear) infinite;
-}
-
-/* ============================================
-   统一字体规范
-   ============================================ */
-
-.text-page-title {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.text-card-title {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.text-body {
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 1.7;
-}
-
-.text-caption {
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.6;
-}
-
-.text-label {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* ============================================
-   统一间距规范
-   ============================================ */
-
-.px-page {
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
-.py-section {
-  padding-top: 24px;
-  padding-bottom: 24px;
-}
-
-.gap-card {
-  gap: 16px;
-}
-
-.gap-element {
-  gap: 8px;
+@media (prefers-color-scheme: light) {
+  /* 保持深色主题，不切换 */
 }
