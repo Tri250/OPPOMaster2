@@ -77,7 +77,7 @@ const HasselbladPage: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold">哈苏色彩科学</h1>
+            <h1 className="text-lg font-bold">哈苏HNCS</h1>
             <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Hasselblad Natural Colour Solution</p>
           </div>
         </div>

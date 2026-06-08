@@ -43,7 +43,7 @@ const WatermarkPage: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold">水印编辑器</h1>
+            <h1 className="text-lg font-bold">水印创作</h1>
             <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>专业水印模板与自定义</p>
           </div>
         </div>

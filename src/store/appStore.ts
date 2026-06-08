@@ -145,13 +145,23 @@ interface AppState {
   setSelectedTab: (tab: number) => void;
   features: Feature[];
   toggleFeature: (id: string) => void;
-  // AI 微调参数
+  // AI 精调参数
   aiParams: {
     saturation: number;
     contrast: number;
     brightness: number;
     warmth: number;
     sharpness: number;
+    exposure: number;
+    highlights: number;
+    shadows: number;
+    whites: number;
+    blacks: number;
+    vibrance: number;
+    clarity: number;
+    dehaze: number;
+    vignette: number;
+    grain: number;
   };
   setAiParam: (key: keyof AppState['aiParams'], value: number) => void;
   // 参数调节
@@ -238,7 +248,7 @@ export const useAppStore = create<AppState>((set) => ({
   features: [
     {
       id: 'ai-scene',
-      title: 'AI 场景识别',
+      title: 'AI场景识别',
       subtitle: '智能识别36+拍摄场景，自动推荐最佳参数',
       icon: 'Camera',
       enabled: true,
@@ -246,8 +256,8 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'ai-fine-tune',
-      title: 'AI 微调',
-      subtitle: '一键智能微调，色彩风格精准控制',
+      title: 'AI精调',
+      subtitle: '智能影像精调系统，色彩风格精准控制',
       icon: 'Palette',
       enabled: true,
       showToggle: true,
@@ -262,7 +272,7 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'watermark',
-      title: '水印编辑器',
+      title: '水印创作',
       subtitle: '14+专业水印模板，品牌认证水印',
       icon: 'Droplets',
       enabled: true,
@@ -270,7 +280,7 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'param-adjust',
-      title: '参数精细调节',
+      title: '专业模式',
       subtitle: 'ISO、快门、光圈、白平衡精确控制',
       icon: 'SlidersHorizontal',
       enabled: true,
@@ -286,7 +296,7 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'lut-share',
-      title: 'LUT 资源分享',
+      title: 'LUT分享',
       subtitle: '20+专业 LUT 滤镜，一键下载使用',
       icon: 'Palette',
       enabled: true,
@@ -294,7 +304,7 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'hasselblad',
-      title: '哈苏色彩科学',
+      title: '哈苏HNCS',
       subtitle: 'HNCS 3.0 自然色彩解决方案',
       icon: 'Aperture',
       enabled: true,
@@ -321,6 +331,16 @@ export const useAppStore = create<AppState>((set) => ({
     brightness: 0,
     warmth: 8,
     sharpness: 15,
+    exposure: 0,
+    highlights: 0,
+    shadows: 0,
+    whites: 0,
+    blacks: 0,
+    vibrance: 0,
+    clarity: 0,
+    dehaze: 0,
+    vignette: 0,
+    grain: 0,
   },
   setAiParam: (key, value) =>
     set((state) => ({
