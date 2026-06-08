@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Download, Star, Heart, Search, Filter, Check, ExternalLink, FileText, Sparkles, Crown } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '../../store/appStore';
 import { 
   LUT_RESOURCES, 
   LUT_CATEGORIES, 
@@ -9,7 +9,7 @@ import {
   formatDownloads,
   getLUTResources,
   searchLUTResources
-} from '../services/lutResourceService';
+} from '../../services/lutResourceService';
 
 const LUTSharePage: React.FC = () => {
   const { navigateToSubPage } = useAppStore();
@@ -23,9 +23,10 @@ const LUTSharePage: React.FC = () => {
 
   // 过滤和排序
   const getFilteredLUTs = useCallback(() => {
-    let result = searchQuery 
+    const baseResult = searchQuery 
       ? searchLUTResources(searchQuery)
       : getLUTResources(selectedCategory);
+    const result = [...baseResult];
 
     // 排序
     result.sort((a, b) => {
