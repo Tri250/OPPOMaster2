@@ -238,6 +238,29 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Function Settings Section
+        SettingsSectionCard {
+            SettingsSectionTitle(title = "功能设置")
+
+            SettingsClickableItem(
+                icon = Icons.Default.PhotoFilter,
+                title = "预设管理",
+                subtitle = "云端预设库，收藏、创建、分享",
+                onClick = { /* 导航到预设管理页面 */ }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Cloud,
+                title = "云同步",
+                subtitle = "已连接",
+                onClick = { /* 导航到云同步页面 */ }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Floating Window Section
         SettingsSectionCard {
             SettingsSectionTitle(title = stringResource(R.string.settings_section_floating_window))
