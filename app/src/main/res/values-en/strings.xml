@@ -1,6 +1,6 @@
 <resources>
     <!-- App Name -->
-    <string name="app_name">OMaster</string>
+    <string name="app_name">小O帮帮</string>
     <string name="app_slogan">Master Mode Color Grading Library</string>
 
     <!-- Common Buttons -->
@@ -293,7 +293,7 @@
 
     <!-- Feature Intro -->
     <string name="feature_title">Features</string>
-    <string name="feature_desc_1">OMaster is a color grading parameter management tool designed for OPPO/OnePlus/Realme mobile photography enthusiasts.</string>
+    <string name="feature_desc_1">小O帮帮 is a color grading parameter management tool designed for OPPO/OnePlus/Realme mobile photography enthusiasts.</string>
     <string name="feature_desc_2">You can view, favorite, and reproduce Master Mode photography color grading parameters, including exposure, contrast, saturation, color temperature, and more.</string>
 
     <!-- Credits -->
@@ -308,8 +308,8 @@
 
     <!-- Privacy Policy Page -->
     <string name="privacy_title">User Agreement &amp; Privacy Policy</string>
-    <string name="welcome_title">Welcome to OMaster</string>
-    <string name="welcome_desc">OMaster is a color grading parameter management tool designed for OPPO/OnePlus/Realme mobile photography enthusiasts. Here, you can view, favorite, and reproduce Master Mode photography color grading parameters.</string>
+    <string name="welcome_title">Welcome to 小O帮帮</string>
+    <string name="welcome_desc">小O帮帮 is a color grading parameter management tool designed for OPPO/OnePlus/Realme mobile photography enthusiasts. Here, you can view, favorite, and reproduce Master Mode photography color grading parameters.</string>
     <string name="features_title">Features</string>
     <string name="features_list">• View Master Mode color grading parameters\n• Support multiple preset styles\n• Pure local operation, data stored locally\n• No internet required</string>
     <string name="data_collection_title">Data Collection</string>
@@ -327,13 +327,13 @@
 
     <!-- Floating Window Guide -->
     <string name="guide_title">Open Floating Window Permission</string>
-    <string name="guide_desc">To conveniently view parameters while shooting, OMaster needs floating window permission</string>
+    <string name="guide_desc">To conveniently view parameters while shooting, 小O帮帮 needs floating window permission</string>
     <string name="guide_step_1">1. Find "Allow display over other apps" or similar option in settings page</string>
     <string name="guide_step_2">2. Turn on the switch</string>
-    <string name="guide_step_3">3. Return to OMaster</string>
+    <string name="guide_step_3">3. Return to 小O帮帮</string>
     <string name="guide_fail_title">If you encounter permission activation failure:</string>
     <string name="guide_fail_step_1">Go to "Settings -> App Management"</string>
-    <string name="guide_fail_step_2">Find OMaster app</string>
+    <string name="guide_fail_step_2">Find 小O帮帮 app</string>
     <string name="guide_fail_step_3">Tap the ⋮ menu in the top right</string>
     <string name="guide_fail_step_4">Select "Remove all permission restrictions"</string>
     <string name="guide_tip">Tip: After removing restrictions, please ensure only "Floating Window" permission is granted</string>
@@ -345,7 +345,7 @@
     <string name="no_release_notes">No release notes available</string>
 
     <!-- Welcome Dialog -->
-    <string name="welcome_dialog_title">Welcome to OMaster</string>
+    <string name="welcome_dialog_title">Welcome to 小O帮帮</string>
     <string name="welcome_version">Master Mode Color Grading Library v1.0</string>
     <string name="feature_1_title">Pro Parameters</string>
     <string name="feature_1_desc">View professional photography color grading parameters for Master Mode</string>
@@ -361,10 +361,10 @@
 
     <!-- Floating Window Guide Dialog -->
     <string name="floating_guide_title">Enable Floating Window</string>
-    <string name="floating_guide_desc">To conveniently view parameters while shooting, OMaster needs floating window permission</string>
+    <string name="floating_guide_desc">To conveniently view parameters while shooting, 小O帮帮 needs floating window permission</string>
     <string name="permission_trouble">If you encounter permission issues:</string>
     <string name="permission_step_1">Go to Settings → Apps</string>
-    <string name="permission_step_2">Find OMaster app</string>
+    <string name="permission_step_2">Find 小O帮帮 app</string>
     <string name="permission_step_3">Tap ⋮ menu in top right</string>
     <string name="permission_step_4">Select "Remove all authorization restrictions"</string>
     <string name="permission_tip">Tip: After removing restrictions, ensure only "Floating Window" permission is granted</string>

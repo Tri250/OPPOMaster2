@@ -18,7 +18,7 @@ const WATERMARK_TEMPLATES = [
     category: 'brand',
     elements: [
       { type: 'text', content: 'Shot on', style: { fontSize: 12, opacity: 0.6 } },
-      { type: 'brand', content: 'OMaster', style: { fontSize: 16, fontWeight: 'bold', opacity: 0.8 } },
+      { type: 'brand', content: '小O帮帮', style: { fontSize: 16, fontWeight: 'bold', opacity: 0.8 } },
     ],
     preset: { position: 'bottom-left', padding: 20 }
   },
@@ -114,7 +114,7 @@ const WATERMARK_TEMPLATES = [
     category: 'legal',
     elements: [
       { type: 'text', content: '©', style: { fontSize: 14 } },
-      { type: 'text', content: '2024 OMaster', style: { fontSize: 12 } },
+      { type: 'text', content: '© 2024 小O帮帮', style: { fontSize: 12 } },
     ],
     preset: { position: 'bottom-center', padding: 16 }
   },
@@ -219,7 +219,7 @@ const WatermarkPage: React.FC = () => {
   const [enabled, setEnabled] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
-  const [customText, setCustomText] = useState('Shot on OMaster');
+  const [customText, setCustomText] = useState('Shot on 小O帮帮');
   const [position, setPosition] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center' | 'bottom-center' | 'center'>('bottom-left');
   const [fontFamily, setFontFamily] = useState('default');
   const [fontSize, setFontSize] = useState(14);
@@ -273,7 +273,7 @@ const WatermarkPage: React.FC = () => {
       setPadding(template.preset.padding);
       
       if (templateId === 'classic') {
-        setCustomText('Shot on OMaster');
+        setCustomText('Shot on 小O帮帮');
       } else if (templateId === 'hasselblad') {
         setCustomText('HASSELBLAD HNCS');
         setLetterSpacing(2);
@@ -294,7 +294,7 @@ const WatermarkPage: React.FC = () => {
       } else if (templateId === 'location') {
         setCustomText('📍 Location');
       } else if (templateId === 'copyright') {
-        setCustomText('© 2024 OMaster');
+        setCustomText('© 2024 小O帮帮');
       }
     }
   }, []);
@@ -840,7 +840,7 @@ const WatermarkPage: React.FC = () => {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              setCustomText('Shot on OMaster');
+              setCustomText('Shot on 小O帮帮');
               setPosition('bottom-left');
               setFontSize(14);
               setOpacity(0.8);

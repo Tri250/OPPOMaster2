@@ -165,7 +165,7 @@ const AISceneRecognitionPage: React.FC = () => {
     // 创建下载链接
     const link = document.createElement('a');
     link.href = capturedImage;
-    link.download = `OMaster_${recognizedScene?.name || 'photo'}_${Date.now()}.jpg`;
+    link.download = `XiaoOBang_${recognizedScene?.name || 'photo'}_${Date.now()}.jpg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

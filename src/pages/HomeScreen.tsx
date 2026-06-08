@@ -183,7 +183,7 @@ const HomeScreen: React.FC = () => {
       <div className="px-4 pt-2 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-white">OMaster</h1>
+            <h1 className="text-xl font-bold text-white">小O帮帮</h1>
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-[9px] font-bold text-white">
               <Crown size={10} />
               <span>哈苏大师</span>

@@ -257,7 +257,7 @@ export const useAppStore = create<AppState>((set) => ({
   watermarkSettings: {
     enabled: true,
     template: 'default',
-    customText: 'Shot on OMaster',
+    customText: 'Shot on 小O帮帮',
     position: 'bottom-right',
   },
   setWatermarkSetting: (key, value) =>

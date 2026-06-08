@@ -1,6 +1,6 @@
 <resources>
     <!-- 应用名称 -->
-    <string name="app_name">OMaster</string>
+    <string name="app_name">小O帮帮</string>
     <string name="app_slogan">大师模式调色参数库</string>
 
     <!-- 通用按钮 -->
@@ -302,7 +302,7 @@
 
     <!-- 功能介绍 -->
     <string name="feature_title">功能介绍</string>
-    <string name="feature_desc_1">OMaster 是一款专为OPPO/一加/Realme手机摄影爱好者设计的调色参数管理工具。</string>
+    <string name="feature_desc_1">小O帮帮 是一款专为OPPO/一加/Realme手机摄影爱好者设计的调色参数管理工具。</string>
     <string name="feature_desc_2">您可以在这里查看、收藏和复现大师模式的摄影调色参数，包括曝光、对比度、饱和度、色温等专业参数。</string>
 
     <!-- 制作信息 -->
@@ -317,8 +317,8 @@
 
     <!-- 隐私政策页 -->
     <string name="privacy_title">用户协议和隐私政策</string>
-    <string name="welcome_title">欢迎使用 OMaster</string>
-    <string name="welcome_desc">OMaster 是一款专为 OPPO/一加/Realme 手机摄影爱好者设计的调色参数管理工具。在这里，您可以查看、收藏和复现大师模式的摄影调色参数。</string>
+    <string name="welcome_title">欢迎使用 小O帮帮</string>
+    <string name="welcome_desc">小O帮帮 是一款专为 OPPO/一加/Realme 手机摄影爱好者设计的调色参数管理工具。在这里，您可以查看、收藏和复现大师模式的摄影调色参数。</string>
     <string name="features_title">功能介绍</string>
     <string name="features_list">• 查看大师模式调色参数\n• 支持多种预设风格\n• 无需联网即可使用</string>
     <string name="data_collection_title">数据收集说明</string>
@@ -336,13 +336,13 @@
 
     <!-- 悬浮窗引导 -->
     <string name="guide_title">开启悬浮窗权限</string>
-    <string name="guide_desc">为了在拍摄时方便查看参数，OMaster 需要悬浮窗权限</string>
+    <string name="guide_desc">为了在拍摄时方便查看参数，小O帮帮 需要悬浮窗权限</string>
     <string name="guide_step_1">1. 在设置页面找到“允许显示在其他应用上层”或类似选项</string>
     <string name="guide_step_2">2. 开启开关</string>
-    <string name="guide_step_3">3. 返回 OMaster</string>
+    <string name="guide_step_3">3. 返回 小O帮帮</string>
     <string name="guide_fail_title">如果遇到权限开启失败：</string>
     <string name="guide_fail_step_1">前往「设置 → 应用管理」</string>
-    <string name="guide_fail_step_2">找到 OMaster 应用</string>
+    <string name="guide_fail_step_2">找到 小O帮帮 应用</string>
     <string name="guide_fail_step_3">点击右上角 ⋮ 菜单</string>
     <string name="guide_fail_step_4">选择「解除所有授权限制」</string>
     <string name="guide_tip">提示：解除限制后，请确保只授予「悬浮窗」权限</string>
@@ -354,7 +354,7 @@
     <string name="no_release_notes">暂无更新说明</string>
 
     <!-- 欢迎对话框 -->
-    <string name="welcome_dialog_title">欢迎使用 OMaster</string>
+    <string name="welcome_dialog_title">欢迎使用 小O帮帮</string>
     <string name="welcome_version">大师模式调色参数库 v1.0</string>
     <string name="feature_1_title">专业参数</string>
     <string name="feature_1_desc">查看大师模式的专业摄影调色参数</string>
@@ -370,10 +370,10 @@
 
     <!-- 悬浮窗引导对话框 -->
     <string name="floating_guide_title">开启悬浮窗权限</string>
-    <string name="floating_guide_desc">为了在拍摄时方便查看参数，OMaster 需要悬浮窗权限</string>
+    <string name="floating_guide_desc">为了在拍摄时方便查看参数，小O帮帮 需要悬浮窗权限</string>
     <string name="permission_trouble">如果遇到权限开启失败：</string>
     <string name="permission_step_1">前往「设置 → 应用管理」</string>
-    <string name="permission_step_2">找到 OMaster 应用</string>
+    <string name="permission_step_2">找到 小O帮帮 应用</string>
     <string name="permission_step_3">点击右上角 ⋮ 菜单</string>
     <string name="permission_step_4">选择「解除所有授权限制」</string>
     <string name="permission_tip">提示：解除限制后，请确保只授予「悬浮窗」权限</string>

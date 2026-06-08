@@ -102,7 +102,7 @@ const AboutScreen: React.FC = () => {
             </div>
 
             {/* App Name */}
-            <h2 className="text-2xl font-bold text-white mb-1">OMaster</h2>
+            <h2 className="text-2xl font-bold text-white mb-1">小O帮帮</h2>
             <p className="text-white/50 text-sm mb-4">专业影像参数管理工具</p>
 
             {/* Version */}
@@ -145,7 +145,7 @@ const AboutScreen: React.FC = () => {
         {/* Developer Info */}
         <div className="mt-6 text-center">
           <p className="text-white/30 text-xs">Developed by Silas</p>
-          <p className="text-white/20 text-xs mt-1">© 2024 OMaster. All rights reserved.</p>
+          <p className="text-white/20 text-xs mt-1">© 2024 小O帮帮. All rights reserved.</p>
         </div>
 
         {/* Bottom Spacing */}
