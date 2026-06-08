@@ -55,6 +55,7 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
+import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.AISceneRecognitionScreen
@@ -126,6 +127,9 @@ sealed class Screen {
 
     @Serializable
     data object PrivacyPolicy : Screen()
+    
+    @Serializable
+    data object PresetSourceManager : Screen()
 }
 
 class MainActivity : ComponentActivity() {
@@ -478,7 +482,8 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.Settings> {
                 SettingsScreen(
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
-                    onNavigateToTerms = { navController.navigate(Screen.Terms) }
+                    onNavigateToTerms = { navController.navigate(Screen.Terms) },
+                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) }
                 )
             }
 
@@ -606,6 +611,13 @@ fun MainApp(navController: NavHostController) {
             // 用户协议页面
             composable<Screen.Terms> {
                 TermsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            
+            // 预设源管理页面
+            composable<Screen.PresetSourceManager> {
+                PresetSourceManagerScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

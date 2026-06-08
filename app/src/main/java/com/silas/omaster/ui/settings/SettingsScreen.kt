@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -85,7 +86,8 @@ import com.silas.omaster.util.perform
 @Composable
 fun SettingsScreen(
     onNavigateToNotificationSettings: (() -> Unit)? = null,
-    onNavigateToTerms: (() -> Unit)? = null
+    onNavigateToTerms: (() -> Unit)? = null,
+    onNavigateToPresetSourceManager: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -412,6 +414,15 @@ fun SettingsScreen(
                 title = "通知设置",
                 subtitle = "管理推送通知和提醒",
                 onClick = { onNavigateToNotificationSettings?.invoke() }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Storage,
+                title = "预设源管理",
+                subtitle = "管理云端预设源",
+                onClick = { onNavigateToPresetSourceManager?.invoke() }
             )
 
             HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
