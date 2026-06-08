@@ -12,8 +12,8 @@ const brands = [
 
 const CloudSyncPage: React.FC = () => {
   const { goBack } = useAppStore();
-  const [isConnected, setIsConnected] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(true);
+  const [selectedBrand, setSelectedBrand] = useState<string>('oppo');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
 

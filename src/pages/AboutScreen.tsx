@@ -37,7 +37,7 @@ const AboutScreen: React.FC = () => {
       icon: Images, 
       label: '预设管理', 
       value: '',
-      route: 'preset-manager' as const
+      route: 'cloud-sync' as const
     },
     { 
       icon: Cloud, 

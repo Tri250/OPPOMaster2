@@ -316,7 +316,7 @@ fun SettingsScreen() {
                 icon = Icons.Default.PhotoFilter,
                 title = "预设管理",
                 subtitle = "云端预设库，收藏、创建、分享",
-                onClick = { /* 导航到预设管理页面 */ }
+                onClick = { /* 导航到云同步页面 */ }
             )
         }
 
