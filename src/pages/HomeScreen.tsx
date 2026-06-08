@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore, homePresets } from '../store/appStore';
-import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, TrendingUp, Zap } from 'lucide-react';
+import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, Zap } from 'lucide-react';
 
 const tabs = [
   { key: 'all', label: '发现' },
@@ -183,34 +183,42 @@ const HomeScreen: React.FC = () => {
             <h1 className="immersive-title">
               小O帮帮
             </h1>
-            {/* 哈苏大师徽章 - 增强版 */}
-            <div className="badge-hncs flex items-center gap-1">
-              <Crown size={12} />
-              <span>哈苏大师</span>
+            {/* 哈苏大师徽章 - 静态 */}
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-md"
+              style={{ background: 'rgba(255, 107, 53, 0.15)' }}
+            >
+              <Crown size={12} style={{ color: '#FF6B35' }} />
+              <span className="text-xs font-medium" style={{ color: '#FF6B35' }}>哈苏大师</span>
             </div>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
             aria-label="刷新预设列表"
-            className="glass-button flex items-center gap-2"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl"
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
           >
             <RefreshCw 
               size={16} 
               className={refreshing ? 'animate-liquid-spin' : ''}
+              style={{ color: 'var(--color-text-secondary)' }}
             />
-            <span className="text-xs font-medium">刷新</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>刷新</span>
           </button>
         </div>
       </div>
 
-      {/* 搜索栏 - 增强版液态玻璃 */}
+      {/* 搜索栏 - 简化 */}
       <div className="px-4 pb-3">
         <div className="relative">
           <Search 
             size={16} 
             className="absolute left-4 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--color-text-muted)' }}
+            style={{ color: 'var(--color-text-tertiary)' }}
           />
           <input
             type="text"
@@ -218,7 +226,12 @@ const HomeScreen: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索预设 / 作者 / 标签"
             aria-label="搜索预设"
-            className="w-full pl-11 pr-4 py-3 glass-input text-sm"
+            className="w-full pl-11 pr-4 py-3 text-sm rounded-xl outline-none transition-all"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: 'var(--color-text-primary)'
+            }}
           />
           {searchQuery && (
             <button
@@ -226,7 +239,7 @@ const HomeScreen: React.FC = () => {
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-fast"
               aria-label="清除搜索"
             >
-              <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">✕</span>
+              <span style={{ color: 'var(--color-text-tertiary)' }} className="text-xs">✕</span>
             </button>
           )}
         </div>
@@ -253,7 +266,7 @@ const HomeScreen: React.FC = () => {
                       className="text-[10px] px-1.5 py-0.5 rounded-full"
                       style={{
                         background: isSelected ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                        color: isSelected ? 'var(--color-accent-primary)' : 'var(--color-text-muted)'
+                        color: isSelected ? 'var(--color-accent-primary)' : 'var(--color-text-tertiary)'
                       }}
                     >
                       {count}
@@ -266,7 +279,7 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 品牌筛选芯片 - 增强版 */}
+      {/* 品牌筛选芯片 - 简化 */}
       <div className="px-4 py-3 flex items-center gap-2 overflow-x-auto scrollbar-hide animate-liquid-fade">
         {brands.map((brand) => (
           <button
@@ -274,15 +287,20 @@ const HomeScreen: React.FC = () => {
             onClick={() => setActiveBrand(brand.key)}
             aria-label={`筛选${brand.label}品牌`}
             aria-pressed={activeBrand === brand.key}
-            className={`glass-chip ${activeBrand === brand.key ? 'glass-chip-active' : ''} ripple-container whitespace-nowrap`}
+            className="ripple-container whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+            style={{
+              background: activeBrand === brand.key ? '#FFFFFF' : 'rgba(255, 255, 255, 0.08)',
+              color: activeBrand === brand.key ? '#0a0a0a' : 'var(--color-text-secondary)',
+              border: activeBrand === brand.key ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+            }}
           >
-            <span className="text-xs font-medium">{brand.label}</span>
+            {brand.label}
           </button>
         ))}
 
         {/* 排序下拉 */}
         <div className="flex items-center gap-1 ml-auto">
-          <Filter size={12} style={{ color: 'var(--color-text-muted)' }} />
+          <Filter size={12} style={{ color: 'var(--color-text-tertiary)' }} />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'newest' | 'popular' | 'rating')}
@@ -313,13 +331,13 @@ const HomeScreen: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-20 animate-liquid-fade">
             <Sparkles 
               size={40} 
-              style={{ color: 'var(--color-text-muted)' }}
+              style={{ color: 'var(--color-text-tertiary)' }}
               className="mb-4 animate-liquid-float"
             />
             <p style={{ color: 'var(--color-text-tertiary)' }} className="text-base mb-2">
               未找到匹配的预设
             </p>
-            <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
+            <p style={{ color: 'var(--color-text-tertiary)' }} className="text-sm">
               请调整筛选条件
             </p>
           </div>
@@ -328,10 +346,14 @@ const HomeScreen: React.FC = () => {
             {filteredPresets.map((preset, index) => (
               <div
                 key={preset.id}
-                className={`group relative glass-card ${getImageHeight(index)} animate-liquid-slide-up`}
+                className={`group relative ${getImageHeight(index)} animate-liquid-slide-up`}
                 style={{
                   animationDelay: `${index * 60}ms`,
-                  animationFillMode: 'both'
+                  animationFillMode: 'both',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '20px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
                 }}
                 role="article"
               >
@@ -343,31 +365,40 @@ const HomeScreen: React.FC = () => {
                   loading="lazy"
                 />
 
-                {/* 渐变遮罩 */}
+                {/* 渐变遮罩 - 简化 */}
                 <div 
                   className="absolute inset-0"
                   style={{
-                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%)'
+                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 100%)'
                   }}
                 />
 
-                {/* HNCS徽章 - 增强版 */}
+                {/* HNCS徽章 - 简化 */}
                 {preset.isHncs && (
-                  <div className="badge-hncs absolute top-3 left-3 flex items-center gap-1">
-                    <Crown size={12} />
-                    <span>HNCS</span>
+                  <div 
+                    className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-md"
+                    style={{ background: 'rgba(255, 107, 53, 0.9)' }}
+                  >
+                    <Crown size={12} style={{ color: '#FFFFFF' }} />
+                    <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>HNCS</span>
                   </div>
                 )}
 
-                {/* NEW徽章 - 增强版 */}
+                {/* NEW徽章 - 改为白色边框 */}
                 {preset.isNew && !preset.isHncs && (
-                  <div className="badge-new absolute top-3 left-3 flex items-center gap-1">
-                    <Sparkles size={12} />
-                    <span>NEW</span>
+                  <div 
+                    className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-md"
+                    style={{ 
+                      background: 'transparent',
+                      border: '1px solid rgba(255, 255, 255, 0.5)'
+                    }}
+                  >
+                    <Sparkles size={12} style={{ color: '#FFFFFF' }} />
+                    <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>NEW</span>
                   </div>
                 )}
 
-                {/* 收藏按钮 - 增强版 */}
+                {/* 收藏按钮 - 改为白色 */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -380,40 +411,34 @@ const HomeScreen: React.FC = () => {
                     background: favorites.has(preset.id) 
                       ? 'rgba(244, 67, 54, 0.2)' 
                       : 'rgba(0, 0, 0, 0.4)',
-                    backdropFilter: 'blur(12px)',
-                    boxShadow: favorites.has(preset.id) 
-                      ? '0 0 15px rgba(244, 67, 54, 0.3)' 
-                      : 'none'
+                    backdropFilter: 'blur(12px)'
                   }}
                 >
                   <Heart
                     size={18}
                     style={{
-                      color: favorites.has(preset.id) ? '#F44336' : 'var(--color-text-secondary)',
+                      color: favorites.has(preset.id) ? '#F44336' : '#FFFFFF',
                       fill: favorites.has(preset.id) ? '#F44336' : 'transparent',
                       transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}
                   />
                 </button>
 
-                {/* 内容区 - 液态玻璃遮罩 */}
+                {/* 内容区 - 简化 */}
                 <div 
                   className="absolute bottom-0 left-0 right-0 p-4"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%)'
-                  }}
                 >
                   <h3 
                     className="font-bold text-base mb-1 truncate"
-                    style={{ color: 'var(--color-text-primary)' }}
+                    style={{ color: '#FFFFFF' }}
                   >
                     {preset.name}
                   </h3>
-                  <p className="text-xs truncate mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                  <p className="text-xs truncate mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                     {preset.author}
                   </p>
 
-                  {/* 统计信息 */}
+                  {/* 统计信息 - 简化 */}
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
                       <Star 
@@ -421,20 +446,20 @@ const HomeScreen: React.FC = () => {
                         style={{ color: '#FFD700' }}
                         className="fill-yellow-400"
                       />
-                      <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+                      <span style={{ color: 'rgba(255, 255, 255, 0.5)' }} className="text-xs">
                         4.{index + 6}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Download size={12} style={{ color: 'var(--color-text-muted)' }} />
-                      <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+                      <Download size={12} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                      <span style={{ color: 'rgba(255, 255, 255, 0.5)' }} className="text-xs">
                         {(index + 1) * 2.3}w
                       </span>
                     </div>
                     {preset.brand && (
                       <div className="flex items-center gap-1 ml-auto">
-                        <Zap size={10} style={{ color: 'var(--color-accent-primary)' }} />
-                        <span style={{ color: 'var(--color-accent-primary)' }} className="text-xs font-medium">
+                        <Zap size={10} style={{ color: '#FF6B35' }} />
+                        <span style={{ color: '#FF6B35' }} className="text-xs font-medium">
                           {preset.brand}
                         </span>
                       </div>
@@ -446,29 +471,19 @@ const HomeScreen: React.FC = () => {
           </div>
         )}
 
-        {/* 底部提示 - 增强版 */}
+        {/* 底部提示 - 简化 */}
         {filteredPresets.length > 0 && (
           <div className="py-10 text-center animate-liquid-fade">
             <div 
-              className="w-20 h-0.5 mx-auto mb-4"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, var(--color-accent-primary) 50%, transparent 100%)',
-                boxShadow: '0 0 8px rgba(255, 107, 53, 0.3)'
-              }}
+              className="w-16 h-px mx-auto mb-4"
+              style={{ background: 'rgba(255, 255, 255, 0.2)' }}
             />
             <p 
-              className="text-sm font-semibold tracking-wider animate-glow-breathe"
-              style={{ color: 'var(--color-accent-primary)' }}
+              className="text-sm tracking-wider"
+              style={{ color: 'var(--color-text-tertiary)' }}
             >
               持续更新 敬请期待
             </p>
-            <div 
-              className="w-20 h-0.5 mx-auto mt-4"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, var(--color-accent-primary) 50%, transparent 100%)',
-                boxShadow: '0 0 8px rgba(255, 107, 53, 0.3)'
-              }}
-            />
           </div>
         )}
       </div>

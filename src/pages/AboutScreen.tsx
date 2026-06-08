@@ -7,7 +7,6 @@ import {
   Bell,
   Shield,
   FileText,
-  ChevronRight,
   ChevronLeft,
 } from 'lucide-react';
 
@@ -140,7 +139,7 @@ const AboutScreen: React.FC = () => {
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon size={20} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                  <item.icon size={20} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
                   <span 
                     className="text-base"
                     style={{ color: '#FFFFFF' }}
@@ -157,9 +156,9 @@ const AboutScreen: React.FC = () => {
                       {item.value}
                     </span>
                   )}
-                  <ChevronRight 
-                    size={18} 
-                    style={{ color: 'rgba(255, 255, 255, 0.25)' }}
+                  <div 
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: 'rgba(255, 255, 255, 0.2)' }}
                   />
                 </div>
               </button>

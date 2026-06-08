@@ -79,18 +79,10 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   },
 };
 
-// 哈苏橙渐变色系
-const HASSELBLAD_GRADIENTS = {
-  primary: ['#FF6B35', '#FF8C5A'],      // 主哈苏橙
-  light: ['#FF8C5A', '#FFD93D'],        // 浅哈苏橙
-  dark: ['#E55A25', '#FF6B35'],         // 深哈苏橙
-  accent: ['#FF6B35', '#FF9800'],       // 强调橙
-};
-
 /**
  * ============================================
  * 功能页 - ColorOS 16 优化版
- * 统一哈苏橙风格配色
+ * 统一哈苏橙单色系
  * ============================================
  */
 const FeaturesScreen: React.FC = () => {
@@ -107,61 +99,60 @@ const FeaturesScreen: React.FC = () => {
   };
 
   /**
-   * 增强版功能卡片 - 哈苏橙风格
+   * 功能卡片 - 统一哈苏橙风格
    */
   const FeatureCard: React.FC<{ 
     feature: (typeof features)[0]; 
     index: number;
-    gradientKey: keyof typeof HASSELBLAD_GRADIENTS;
     showUsage?: boolean;
-  }> = ({ feature, index, gradientKey, showUsage = false }) => {
+  }> = ({ feature, index, showUsage = false }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
     const info = featureDescriptions[feature.id];
-    const gradientColors = HASSELBLAD_GRADIENTS[gradientKey];
 
     return (
       <button
         onClick={() => handleFeatureClick(feature.id)}
         aria-label={`打开${feature.title}功能`}
-        className="w-full text-left feature-card-enhanced animate-liquid-slide-up ripple-container"
+        className="w-full text-left animate-liquid-slide-up ripple-container"
         style={{
           animationDelay: `${index * 80}ms`,
-          animationFillMode: 'both'
+          animationFillMode: 'both',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '20px',
+          padding: '16px',
+          transition: 'all 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
         <div className="flex items-start justify-between mb-4">
-          {/* 哈苏橙渐变图标容器 */}
+          {/* 统一哈苏橙图标容器 */}
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden"
             style={{
-              background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
-              boxShadow: `0 8px 20px ${gradientColors[0]}40`
+              background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C5A 100%)',
+              boxShadow: '0 8px 20px rgba(255, 107, 53, 0.3)'
             }}
           >
-            {/* 光效层 */}
-            <div 
-              className="absolute inset-0 animate-glow-breathe"
-              style={{
-                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%)'
-              }}
-            />
-            <Icon size={32} style={{ color: 'var(--color-text-primary)' }} />
+            <Icon size={28} style={{ color: '#FFFFFF' }} />
           </div>
           
           {/* 箭头按钮 */}
           <div 
-            className="w-12 h-12 rounded-full flex items-center justify-center transition-liquid group-hover:scale-110 glass-light"
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ background: 'rgba(255, 255, 255, 0.08)' }}
           >
-            <ChevronRight size={20} style={{ color: 'var(--color-text-secondary)' }} />
+            <ChevronRight size={20} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
           </div>
         </div>
 
         {/* 标题和描述 */}
         <div className="mb-3">
-          <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--color-text-primary)' }}>
+          <h3 className="font-bold text-lg mb-1" style={{ color: '#FFFFFF' }}>
             {feature.title}
           </h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+          <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             {feature.subtitle}
           </p>
         </div>
@@ -170,16 +161,21 @@ const FeaturesScreen: React.FC = () => {
         {info && (
           <div 
             className="pt-3 mb-3"
-            style={{ borderTop: '1px solid var(--color-border-light)' }}
+            style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}
           >
-            <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>
+            <p className="text-xs mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               {info.desc}
             </p>
             <div className="flex flex-wrap gap-2">
               {info.tips?.slice(0, 4).map((tip, i) => (
                 <span
                   key={i}
-                  className="glass-chip text-xs"
+                  className="text-xs px-2 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
                 >
                   {tip}
                 </span>
@@ -191,11 +187,11 @@ const FeaturesScreen: React.FC = () => {
         {/* 使用频率统计 */}
         {showUsage && (
           <div className="flex items-center gap-2 mt-3">
-            <Clock size={12} style={{ color: 'var(--color-text-muted)' }} />
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            <Clock size={12} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+            <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               最近使用: {Math.floor(Math.random() * 30 + 1)}次
             </span>
-            <Zap size={12} style={{ color: 'var(--color-accent-primary)' }} className="ml-auto" />
+            <Zap size={12} style={{ color: '#FF6B35' }} className="ml-auto" />
           </div>
         )}
       </button>
@@ -203,7 +199,7 @@ const FeaturesScreen: React.FC = () => {
   };
 
   /**
-   * 增强版Section Header - 哈苏橙风格
+   * Section Header - 统一哈苏橙风格
    */
   const SectionHeader: React.FC<{
     title: string;
@@ -212,28 +208,28 @@ const FeaturesScreen: React.FC = () => {
     count?: number;
   }> = ({ title, description, icon: Icon, count }) => (
     <div 
-      className="flex items-center justify-between py-3 mb-3 animate-liquid-fade relative"
+      className="flex items-center justify-between py-3 mb-3 animate-liquid-fade"
       style={{
         paddingLeft: '16px',
-        borderLeft: '3px solid var(--color-accent-primary)'
+        borderLeft: '3px solid #FF6B35'
       }}
     >
       <div className="flex items-center gap-3">
-        {/* 哈苏橙渐变图标 */}
+        {/* 统一哈苏橙图标 */}
         <div 
-          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-primary-light) 100%)',
+            background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C5A 100%)',
             boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)'
           }}
         >
-          <Icon size={22} style={{ color: 'var(--color-text-primary)' }} />
+          <Icon size={20} style={{ color: '#FFFFFF' }} />
         </div>
         <div>
-          <h2 className="font-bold text-base" style={{ color: 'var(--color-text-primary)' }}>
+          <h2 className="font-bold text-base" style={{ color: '#FFFFFF' }}>
             {title}
           </h2>
-          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
             {description}
           </p>
         </div>
@@ -243,7 +239,7 @@ const FeaturesScreen: React.FC = () => {
           className="px-3 py-1 rounded-full text-xs font-semibold"
           style={{
             background: 'rgba(255, 107, 53, 0.15)',
-            color: 'var(--color-accent-primary)'
+            color: '#FF6B35'
           }}
         >
           {count} 项
@@ -281,7 +277,6 @@ const FeaturesScreen: React.FC = () => {
                 key={feature.id} 
                 feature={feature} 
                 index={index}
-                gradientKey={index % 2 === 0 ? 'primary' : 'light'}
                 showUsage={index < 2}
               />
             ))}
@@ -302,7 +297,6 @@ const FeaturesScreen: React.FC = () => {
                 key={feature.id} 
                 feature={feature} 
                 index={index + 4}
-                gradientKey={index % 2 === 0 ? 'accent' : 'primary'}
               />
             ))}
           </div>
@@ -322,7 +316,6 @@ const FeaturesScreen: React.FC = () => {
                 key={feature.id} 
                 feature={feature} 
                 index={index + 6}
-                gradientKey="primary"
               />
             ))}
           </div>

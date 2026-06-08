@@ -41,27 +41,15 @@
   --color-oppo-green-light: #00C96B;
   --color-oppo-green-dark: #008A4D;
 
-  /* 功能模块特色色 (增强版) */
-  --color-feature-ai: #9C27B0;           /* AI智能 - 紫色 */
-  --color-feature-ai-light: #BA68C8;
-  --color-feature-watermark: #00BCD4;    /* 水印编辑 - 青色 */
-  --color-feature-watermark-light: #26C6DA;
-  --color-feature-scene: #4CAF50;        /* 场景识别 - 绿色 */
-  --color-feature-scene-light: #66BB6A;
-  --color-feature-sync: #2196F3;         /* 云同步 - 蓝色 */
-  --color-feature-sync-light: #42A5F5;
-  --color-feature-preset: #FF9800;       /* 预设管理 - 橙色 */
-  --color-feature-preset-light: #FFB74D;
-  --color-feature-theme: #E91E63;        /* 主题设置 - 粉色 */
-  --color-feature-theme-light: #F06292;
-  --color-feature-hasselblad: #FF6B35;   /* 哈苏特色 - 品牌橙 */
+  /* 功能模块统一哈苏橙色系 */
+  --color-feature-primary: #FF6B35;
+  --color-feature-primary-light: #FF8C5A;
+  --color-feature-primary-dark: #E55A25;
 
-  /* 文字颜色 (增强版) */
+  /* 文字颜色 - 简化三级 */
   --color-text-primary: #FFFFFF;
-  --color-text-secondary: rgba(255, 255, 255, 0.85);
-  --color-text-tertiary: rgba(255, 255, 255, 0.6);
-  --color-text-muted: rgba(255, 255, 255, 0.4);
-  --color-text-disabled: rgba(255, 255, 255, 0.25);
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-tertiary: rgba(255, 255, 255, 0.4);
   --color-text-accent: #FF6B35;
 
   /* 边框颜色 */
@@ -1174,13 +1162,7 @@
    功能模块特色色应用 (增强版)
    ============================================ */
 
-.feature-ai { --feature-color: var(--color-feature-ai); }
-.feature-watermark { --feature-color: var(--color-feature-watermark); }
-.feature-scene { --feature-color: var(--color-feature-scene); }
-.feature-sync { --feature-color: var(--color-feature-sync); }
-.feature-preset { --feature-color: var(--color-feature-preset); }
-.feature-theme { --feature-color: var(--color-feature-theme); }
-.feature-hasselblad { --feature-color: var(--color-feature-hasselblad); }
+.feature-hasselblad { --feature-color: var(--color-feature-primary); }
 
 /* 功能卡片带特色色 (增强版) */
 .feature-card-colored {
