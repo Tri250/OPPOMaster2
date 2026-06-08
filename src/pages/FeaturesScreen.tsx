@@ -92,44 +92,64 @@ const FeaturesScreen: React.FC = () => {
 
   const FeatureCard: React.FC<{ 
     feature: (typeof features)[0]; 
-  }> = ({ feature }) => {
+    index: number;
+  }> = ({ feature, index }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
     const info = featureDescriptions[feature.id];
 
     return (
       <button
         onClick={() => handleFeatureClick(feature.id)}
-        className="w-full text-left rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group"
+        aria-label={`打开${feature.title}功能`}
+        className="w-full text-left rounded-2xl overflow-hidden transition-spring group animate-liquid-slide-up"
         style={{
           background: `linear-gradient(135deg, ${feature.gradientColors[0]}, ${feature.gradientColors[1]})`,
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+          animationDelay: `${index * 80}ms`,
+          animationFillMode: 'both'
         }}
       >
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-sm"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center glass-light"
             >
-              <Icon size={28} className="text-white" />
+              <Icon size={28} style={{ color: 'var(--color-text-primary)' }} />
             </div>
-            <div className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <ChevronRight size={18} className="text-white/70" />
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-liquid group-hover:scale-110"
+              style={{
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                background: 'rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <ChevronRight size={18} style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
             </div>
           </div>
 
           <div className="mb-2">
-            <h3 className="text-white font-bold text-lg">{feature.title}</h3>
-            <p className="text-white/70 text-xs mt-1">{feature.subtitle}</p>
+            <h3 style={{ color: 'var(--color-text-primary)' }} className="font-bold text-lg">
+              {feature.title}
+            </h3>
+            <p style={{ color: 'rgba(255, 255, 255, 0.7)' }} className="text-xs mt-1">
+              {feature.subtitle}
+            </p>
           </div>
 
           {info && (
-            <div className="mt-3 pt-3 border-t border-white/10">
-              <p className="text-white/50 text-[10px] mb-2">{info.desc}</p>
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <p style={{ color: 'rgba(255, 255, 255, 0.5)' }} className="text-[10px] mb-2">
+                {info.desc}
+              </p>
               <div className="flex flex-wrap gap-1">
                 {info.tips?.slice(0, 4).map((tip, i) => (
                   <span
                     key={i}
-                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-[10px]"
+                    className="px-2 py-0.5 rounded-full text-[10px]"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.7)'
+                    }}
                   >
                     {tip}
                   </span>
@@ -148,18 +168,31 @@ const FeaturesScreen: React.FC = () => {
     icon: React.ElementType;
     count?: number;
   }> = ({ title, description, icon: Icon, count }) => (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-2 animate-liquid-fade">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/20 flex items-center justify-center backdrop-blur-sm">
-          <Icon size={20} className="text-[#FF6B35]" />
+        <div 
+          className="w-10 h-10 rounded-xl flex items-center justify-center glass-light"
+          style={{ boxShadow: '0 0 12px rgba(255, 107, 53, 0.2)' }}
+        >
+          <Icon size={20} style={{ color: 'var(--color-accent-primary)' }} />
         </div>
         <div>
-          <h2 className="text-white font-semibold">{title}</h2>
-          <p className="text-white/50 text-xs">{description}</p>
+          <h2 style={{ color: 'var(--color-text-primary)' }} className="font-semibold">
+            {title}
+          </h2>
+          <p style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+            {description}
+          </p>
         </div>
       </div>
       {count && (
-        <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
+        <span 
+          className="px-2 py-1 rounded-full text-xs"
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            color: 'var(--color-text-muted)'
+          }}
+        >
           {count}
         </span>
       )}
@@ -167,15 +200,22 @@ const FeaturesScreen: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
+    <div 
+      className="h-full flex flex-col overflow-hidden animate-liquid-fade"
+      style={{ background: 'var(--color-bg-primary)' }}
+    >
       {/* Header */}
-      <div className="px-4 pt-2 pb-3">
-        <h1 className="text-xl font-bold text-white">核心功能</h1>
-        <p className="text-white/50 text-xs">点击进入功能操作界面</p>
+      <div className="px-4 pt-3 pb-3">
+        <h1 style={{ color: 'var(--color-text-primary)' }} className="text-xl font-bold">
+          核心功能
+        </h1>
+        <p style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+          点击进入功能操作界面
+        </p>
       </div>
 
       {/* Features List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 scrollbar-hide custom-scrollbar">
         {/* AI Features */}
         <div>
           <SectionHeader
@@ -185,8 +225,8 @@ const FeaturesScreen: React.FC = () => {
             count={aiFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {aiFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+            {aiFeatures.map((feature, index) => (
+              <FeatureCard key={feature.id} feature={feature} index={index} />
             ))}
           </div>
         </div>
@@ -200,8 +240,8 @@ const FeaturesScreen: React.FC = () => {
             count={toolFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {toolFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+            {toolFeatures.map((feature, index) => (
+              <FeatureCard key={feature.id} feature={feature} index={index + 4} />
             ))}
           </div>
         </div>
@@ -215,8 +255,8 @@ const FeaturesScreen: React.FC = () => {
             count={brandFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {brandFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+            {brandFeatures.map((feature, index) => (
+              <FeatureCard key={feature.id} feature={feature} index={index + 6} />
             ))}
           </div>
         </div>

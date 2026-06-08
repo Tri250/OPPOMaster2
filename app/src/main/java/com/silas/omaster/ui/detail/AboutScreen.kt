@@ -310,16 +310,10 @@ private fun AppTitleSection(currentVersionName: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                    append("O")
-                }
-                withStyle(style = SpanStyle(color = Color.White)) {
-                    append("Master")
-                }
-            },
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = Color.White
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -860,7 +854,7 @@ private fun FooterSection(context: android.content.Context) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "© 2026 OMaster",
+            text = "© 2026 小O帮帮",
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.4f)
         )
