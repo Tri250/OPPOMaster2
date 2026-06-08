@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Heart, Sparkles, Crown, Download, Star, Zap } from 'lucide-react';
 import { useAppStore, Preset } from '../store/appStore';
+import QuickActionMenu from './QuickActionMenu';
 
 interface PresetCardProps {
   preset: Preset;
@@ -18,12 +19,55 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
     toggleFavorite, 
     setSelectedPreset, 
     navigateToSubPage,
-    applyPreset
+    applyPreset,
+    addToRecent
   } = useAppStore();
 
   const isFavorite = favoritePresetIds.includes(preset.id);
 
+  // 长按快捷菜单状态
+  const [showQuickMenu, setShowQuickMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isLongPressTriggered = useRef(false);
+
+  // 长按开始
+  const handleLongPressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    isLongPressTriggered.current = false;
+    
+    // 获取触点位置
+    let clientX = 0, clientY = 0;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    longPressTimer.current = setTimeout(() => {
+      isLongPressTriggered.current = true;
+      setMenuPosition({ x: clientX, y: clientY });
+      setShowQuickMenu(true);
+    }, 500); // 500ms 长按触发
+  }, []);
+
+  // 长按结束
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
   const handleCardClick = () => {
+    // 如果是长按触发，不执行点击
+    if (isLongPressTriggered.current) {
+      isLongPressTriggered.current = false;
+      return;
+    }
+    addToRecent(preset);
     setSelectedPreset(preset);
     navigateToSubPage('preset-detail');
   };
@@ -35,7 +79,15 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
 
   const handleApplyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    addToRecent(preset);
     applyPreset(preset.id);
+  };
+
+  // 右键菜单（桌面端）
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuPosition({ x: e.clientX, y: e.clientY });
+    setShowQuickMenu(true);
   };
 
   const getImageHeight = (idx: number) => {
@@ -51,19 +103,25 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
 
   if (variant === 'full') {
     return (
-      <div
-        onClick={handleCardClick}
-        className="group relative animate-liquid-slide-up cursor-pointer"
-        style={{
-          animationDelay: `${index * 60}ms`,
-          animationFillMode: 'both',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '20px',
-          overflow: 'hidden',
-          border: '1px solid rgba(255, 255, 255, 0.08)'
-        }}
-        role="article"
-      >
+      <>
+        <div
+          ref={cardRef}
+          onClick={handleCardClick}
+          onContextMenu={handleContextMenu}
+          onTouchStart={handleLongPressStart}
+          onTouchEnd={handleLongPressEnd}
+          onTouchMove={handleLongPressEnd}
+          className="group relative animate-liquid-slide-up cursor-pointer"
+          style={{
+            animationDelay: `${index * 60}ms`,
+            animationFillMode: 'both',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.08)'
+          }}
+          role="article"
+        >
         {/* 图片 */}
         <div className="aspect-[4/3] overflow-hidden rounded-t-2xl">
           <img
@@ -176,24 +234,52 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
           </button>
         </div>
       </div>
+
+      {/* 快捷菜单 */}
+      {showQuickMenu && (
+        <QuickActionMenu
+          preset={preset}
+          position={menuPosition}
+          isFavorite={isFavorite}
+          onClose={() => setShowQuickMenu(false)}
+          onFavorite={() => toggleFavorite(preset.id)}
+          onShare={() => console.log('分享预设:', preset.id)}
+          onApply={() => {
+            addToRecent(preset);
+            applyPreset(preset.id);
+          }}
+          onViewDetails={() => {
+            addToRecent(preset);
+            setSelectedPreset(preset);
+            navigateToSubPage('preset-detail');
+          }}
+        />
+      )}
+    </>
     );
   }
 
   // compact variant - 首页风格
   return (
-    <div
-      onClick={handleCardClick}
-      className={`group relative ${getImageHeight(index)} animate-liquid-slide-up cursor-pointer`}
-      style={{
-        animationDelay: `${index * 60}ms`,
-        animationFillMode: 'both',
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        border: '1px solid rgba(255, 255, 255, 0.08)'
-      }}
-      role="article"
-    >
+    <>
+      <div
+        ref={cardRef}
+        onClick={handleCardClick}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleLongPressStart}
+        onTouchEnd={handleLongPressEnd}
+        onTouchMove={handleLongPressEnd}
+        className={`group relative ${getImageHeight(index)} animate-liquid-slide-up cursor-pointer`}
+        style={{
+          animationDelay: `${index * 60}ms`,
+          animationFillMode: 'both',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.08)'
+        }}
+        role="article"
+      >
       {/* 图片 */}
       <img
         src={preset.coverPath}
@@ -305,6 +391,28 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
         </div>
       </div>
     </div>
+
+    {/* 快捷菜单 */}
+    {showQuickMenu && (
+      <QuickActionMenu
+        preset={preset}
+        position={menuPosition}
+        isFavorite={isFavorite}
+        onClose={() => setShowQuickMenu(false)}
+        onFavorite={() => toggleFavorite(preset.id)}
+        onShare={() => console.log('分享预设:', preset.id)}
+        onApply={() => {
+          addToRecent(preset);
+          applyPreset(preset.id);
+        }}
+        onViewDetails={() => {
+          addToRecent(preset);
+          setSelectedPreset(preset);
+          navigateToSubPage('preset-detail');
+        }}
+      />
+    )}
+  </>
   );
 });
 

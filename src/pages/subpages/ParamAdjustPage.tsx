@@ -76,8 +76,8 @@ const ParamAdjustPage: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold">参数精细调节</h1>
-            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>ISO、快门、光圈、白平衡精确控制</p>
+            <h1 className="text-lg font-bold">专业模式</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>专业摄影参数控制</p>
           </div>
         </div>
       </div>

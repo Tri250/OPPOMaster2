@@ -53,8 +53,8 @@ const SmartOptimizePage: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold">智能优化</h1>
-            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>一键 HDR、降噪、锐化优化</p>
+            <h1 className="text-lg font-bold">AI优化</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>智能影像优化引擎</p>
           </div>
         </div>
       </div>

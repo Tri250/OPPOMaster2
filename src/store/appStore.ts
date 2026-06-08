@@ -36,6 +36,78 @@ export interface Preset {
   sharpness: number;
   clarity?: number;
   brightness?: number;
+  // 专业参数
+  exposure: number;       // 曝光 (-100 to +100)
+  highlights: number;     // 高光 (-100 to +100)
+  shadows: number;        // 阴影 (-100 to +100)
+  whites: number;         // 白色 (-100 to +100)
+  blacks: number;         // 黑色 (-100 to +100)
+  vibrance: number;       // 自然饱和度 (-100 to +100)
+  dehaze: number;         // 去雾 (0 to 100)
+  vignette: number;       // 暗角 (0 to 100)
+  grain: number;          // 颗粒 (0 to 100)
+  // HSL参数
+  hsl: {
+    hueRed: number;       // 红色色相 (-180 to +180)
+    satRed: number;       // 红色饱和度 (-100 to +100)
+    lumRed: number;       // 红色亮度 (-100 to +100)
+    hueOrange: number;
+    satOrange: number;
+    lumOrange: number;
+    hueYellow: number;
+    satYellow: number;
+    lumYellow: number;
+    hueGreen: number;
+    satGreen: number;
+    lumGreen: number;
+    hueCyan: number;
+    satCyan: number;
+    lumCyan: number;
+    hueBlue: number;
+    satBlue: number;
+    lumBlue: number;
+    huePurple: number;
+    satPurple: number;
+    lumPurple: number;
+    hueMagenta: number;
+    satMagenta: number;
+    lumMagenta: number;
+  };
+  // 分离色调
+  splitToning: {
+    highlightHue: number;
+    highlightSat: number;
+    shadowHue: number;
+    shadowSat: number;
+    balance: number;
+  };
+  // EXIF信息
+  exif?: {
+    camera?: string;       // 拍摄设备
+    lens?: string;         // 镜头
+    focalLength?: string;  // 焦距
+    aperture?: string;     // 光圈
+    shutter?: string;      // 快门
+    iso?: number;          // ISO
+    dateTime?: string;     // 拍摄时间
+    location?: string;     // 拍摄地点
+  };
+}
+
+/** 最近调节参数记录 */
+export interface RecentAdjustment {
+  id: string;
+  presetId: string;
+  presetName: string;
+  timestamp: number;
+  params: {
+    saturation?: number;
+    contrast?: number;
+    warmth?: number;
+    sharpness?: number;
+    clarity?: number;
+    brightness?: number;
+  };
 }
 
 export interface PresetSource {
@@ -128,6 +200,13 @@ interface AppState {
   isPresetFavorite: (id: string) => boolean;
   // 应用预设
   applyPreset: (id: string) => void;
+  // 最近使用的预设（最多20个）
+  recentPresets: Preset[];
+  addToRecent: (preset: Preset) => void;
+  clearRecent: () => void;
+  // 最近调节的参数
+  recentAdjustments: RecentAdjustment[];
+  addRecentAdjustment: (adjustment: Omit<RecentAdjustment, 'id' | 'timestamp'>) => void;
   // 错误状态
   lastError: string | null;
   setLastError: (error: string | null) => void;
@@ -350,11 +429,55 @@ export const useAppStore = create<AppState>((set) => ({
     // 实际应用预设的逻辑
     console.log(`应用预设: ${id}`);
   },
+  // 最近使用的预设
+  recentPresets: [],
+  addToRecent: (preset) => set((state) => {
+    // 移除已存在的相同预设
+    const filtered = state.recentPresets.filter(p => p.id !== preset.id);
+    // 添加到最前面，最多保留20个
+    return {
+      recentPresets: [preset, ...filtered].slice(0, 20)
+    };
+  }),
+  clearRecent: () => set({ recentPresets: [] }),
+  // 最近调节的参数
+  recentAdjustments: [],
+  addRecentAdjustment: (adjustment) => set((state) => ({
+    recentAdjustments: [
+      {
+        ...adjustment,
+        id: `adj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now()
+      },
+      ...state.recentAdjustments
+    ].slice(0, 50) // 最多保留50条
+  })),
   lastError: null,
   setLastError: (error) => set({ lastError: error }),
   isLoading: false,
   setIsLoading: (loading) => set({ isLoading: loading }),
 }));
+
+// 默认HSL参数
+const defaultHsl = {
+  hueRed: 0, satRed: 0, lumRed: 0,
+  hueOrange: 0, satOrange: 0, lumOrange: 0,
+  hueYellow: 0, satYellow: 0, lumYellow: 0,
+  hueGreen: 0, satGreen: 0, lumGreen: 0,
+  hueCyan: 0, satCyan: 0, lumCyan: 0,
+  hueBlue: 0, satBlue: 0, lumBlue: 0,
+  huePurple: 0, satPurple: 0, lumPurple: 0,
+  hueMagenta: 0, satMagenta: 0, lumMagenta: 0,
+};
+
+// 默认分离色调参数
+const defaultSplitToning = {
+  highlightHue: 0,
+  highlightSat: 0,
+  shadowHue: 0,
+  shadowSat: 0,
+  balance: 0,
+};
 
 export const featuredPresets: Preset[] = [
   {
@@ -370,6 +493,17 @@ export const featuredPresets: Preset[] = [
     contrast: 5,
     warmth: 8,
     sharpness: 15,
+    exposure: 5,
+    highlights: -15,
+    shadows: 10,
+    whites: 5,
+    blacks: -5,
+    vibrance: 8,
+    dehaze: 0,
+    vignette: 10,
+    grain: 0,
+    hsl: { ...defaultHsl, satOrange: 5, lumOrange: 5, satYellow: -5 },
+    splitToning: { ...defaultSplitToning },
   },
   {
     id: 'featured_2',
@@ -384,6 +518,17 @@ export const featuredPresets: Preset[] = [
     contrast: 20,
     warmth: -10,
     sharpness: 25,
+    exposure: -5,
+    highlights: -30,
+    shadows: 20,
+    whites: -10,
+    blacks: 10,
+    vibrance: 15,
+    dehaze: 20,
+    vignette: 15,
+    grain: 5,
+    hsl: { ...defaultHsl, satBlue: 20, satPurple: 15, hueCyan: 10 },
+    splitToning: { highlightHue: 270, highlightSat: 15, shadowHue: 220, shadowSat: 10, balance: 10 },
   },
   {
     id: 'featured_3',
@@ -398,6 +543,17 @@ export const featuredPresets: Preset[] = [
     contrast: 10,
     warmth: 20,
     sharpness: 12,
+    exposure: 10,
+    highlights: -20,
+    shadows: 15,
+    whites: 10,
+    blacks: 0,
+    vibrance: 12,
+    dehaze: 5,
+    vignette: 5,
+    grain: 0,
+    hsl: { ...defaultHsl, satOrange: 10, satYellow: 8, satRed: 5 },
+    splitToning: { highlightHue: 45, highlightSat: 10, shadowHue: 30, shadowSat: 5, balance: 15 },
   },
   {
     id: 'featured_4',
@@ -412,6 +568,17 @@ export const featuredPresets: Preset[] = [
     contrast: 25,
     warmth: 0,
     sharpness: 20,
+    exposure: 5,
+    highlights: -25,
+    shadows: 20,
+    whites: 15,
+    blacks: -10,
+    vibrance: 0,
+    dehaze: 0,
+    vignette: 25,
+    grain: 15,
+    hsl: { ...defaultHsl },
+    splitToning: { ...defaultSplitToning },
   },
   {
     id: 'featured_5',
@@ -426,6 +593,17 @@ export const featuredPresets: Preset[] = [
     contrast: 10,
     warmth: -10,
     sharpness: 25,
+    exposure: 0,
+    highlights: -20,
+    shadows: 25,
+    whites: 10,
+    blacks: 5,
+    vibrance: 15,
+    dehaze: 15,
+    vignette: 8,
+    grain: 0,
+    hsl: { ...defaultHsl, satGreen: 10, satCyan: 10, satBlue: 10, lumGreen: 5 },
+    splitToning: { highlightHue: 200, highlightSat: 5, shadowHue: 30, shadowSat: 8, balance: 5 },
   },
   {
     id: 'featured_6',
@@ -440,6 +618,17 @@ export const featuredPresets: Preset[] = [
     contrast: 15,
     warmth: 0,
     sharpness: 30,
+    exposure: 0,
+    highlights: -15,
+    shadows: 10,
+    whites: 5,
+    blacks: -5,
+    vibrance: 5,
+    dehaze: 10,
+    vignette: 12,
+    grain: 0,
+    hsl: { ...defaultHsl, satBlue: 8, lumBlue: -5 },
+    splitToning: { ...defaultSplitToning },
   },
 ];
 
@@ -457,6 +646,17 @@ export const homePresets: Preset[] = [
     contrast: 8,
     warmth: 3,
     sharpness: 10,
+    exposure: 5,
+    highlights: -10,
+    shadows: 8,
+    whites: 3,
+    blacks: -3,
+    vibrance: 5,
+    dehaze: 0,
+    vignette: 15,
+    grain: 20,
+    hsl: { ...defaultHsl, satRed: -5, satOrange: 5, lumYellow: 5 },
+    splitToning: { highlightHue: 45, highlightSat: 8, shadowHue: 220, shadowSat: 5, balance: 10 },
   },
   {
     id: 'home_2',
@@ -471,6 +671,17 @@ export const homePresets: Preset[] = [
     contrast: 20,
     warmth: -5,
     sharpness: 18,
+    exposure: -8,
+    highlights: -35,
+    shadows: 25,
+    whites: -15,
+    blacks: 15,
+    vibrance: 10,
+    dehaze: 25,
+    vignette: 20,
+    grain: 8,
+    hsl: { ...defaultHsl, satBlue: 15, satCyan: 10, hueBlue: -5 },
+    splitToning: { highlightHue: 280, highlightSat: 12, shadowHue: 200, shadowSat: 8, balance: 15 },
   },
   {
     id: 'home_3',
@@ -485,6 +696,17 @@ export const homePresets: Preset[] = [
     contrast: -5,
     warmth: 8,
     sharpness: 12,
+    exposure: 8,
+    highlights: -25,
+    shadows: 15,
+    whites: 8,
+    blacks: 3,
+    vibrance: 10,
+    dehaze: 0,
+    vignette: 5,
+    grain: 0,
+    hsl: { ...defaultHsl, satOrange: 8, lumOrange: 10, satRed: 5, lumRed: 5 },
+    splitToning: { highlightHue: 35, highlightSat: 5, shadowHue: 0, shadowSat: 0, balance: 5 },
   },
   {
     id: 'home_4',
@@ -499,6 +721,17 @@ export const homePresets: Preset[] = [
     contrast: 15,
     warmth: 5,
     sharpness: 22,
+    exposure: 0,
+    highlights: -20,
+    shadows: 20,
+    whites: 12,
+    blacks: 5,
+    vibrance: 18,
+    dehaze: 12,
+    vignette: 8,
+    grain: 0,
+    hsl: { ...defaultHsl, satGreen: 15, satCyan: 12, satBlue: 10, lumGreen: 8 },
+    splitToning: { ...defaultSplitToning },
   },
   {
     id: 'home_5',
@@ -513,6 +746,17 @@ export const homePresets: Preset[] = [
     contrast: 12,
     warmth: 22,
     sharpness: 15,
+    exposure: 12,
+    highlights: -18,
+    shadows: 12,
+    whites: 10,
+    blacks: 2,
+    vibrance: 15,
+    dehaze: 8,
+    vignette: 3,
+    grain: 0,
+    hsl: { ...defaultHsl, satOrange: 12, satYellow: 10, satRed: 8, lumOrange: 5 },
+    splitToning: { highlightHue: 50, highlightSat: 12, shadowHue: 35, shadowSat: 8, balance: 20 },
   },
   {
     id: 'home_6',
@@ -527,5 +771,16 @@ export const homePresets: Preset[] = [
     contrast: 18,
     warmth: 2,
     sharpness: 20,
+    exposure: 3,
+    highlights: -12,
+    shadows: 8,
+    whites: 5,
+    blacks: -3,
+    vibrance: 8,
+    dehaze: 5,
+    vignette: 10,
+    grain: 5,
+    hsl: { ...defaultHsl, satYellow: -8, satGreen: -5 },
+    splitToning: { ...defaultSplitToning },
   },
 ];
