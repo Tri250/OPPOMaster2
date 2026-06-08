@@ -79,10 +79,18 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   },
 };
 
+// 哈苏橙渐变色系
+const HASSELBLAD_GRADIENTS = {
+  primary: ['#FF6B35', '#FF8C5A'],      // 主哈苏橙
+  light: ['#FF8C5A', '#FFD93D'],        // 浅哈苏橙
+  dark: ['#E55A25', '#FF6B35'],         // 深哈苏橙
+  accent: ['#FF6B35', '#FF9800'],       // 强调橙
+};
+
 /**
  * ============================================
- * 功能页 - ColorOS 16 全面优化版
- * 智能分组 + 使用频率统计 + 渐变图标
+ * 功能页 - ColorOS 16 优化版
+ * 统一哈苏橙风格配色
  * ============================================
  */
 const FeaturesScreen: React.FC = () => {
@@ -99,15 +107,17 @@ const FeaturesScreen: React.FC = () => {
   };
 
   /**
-   * 增强版功能卡片
+   * 增强版功能卡片 - 哈苏橙风格
    */
   const FeatureCard: React.FC<{ 
     feature: (typeof features)[0]; 
     index: number;
+    gradientKey: keyof typeof HASSELBLAD_GRADIENTS;
     showUsage?: boolean;
-  }> = ({ feature, index, showUsage = false }) => {
+  }> = ({ feature, index, gradientKey, showUsage = false }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
     const info = featureDescriptions[feature.id];
+    const gradientColors = HASSELBLAD_GRADIENTS[gradientKey];
 
     return (
       <button
@@ -120,12 +130,12 @@ const FeaturesScreen: React.FC = () => {
         }}
       >
         <div className="flex items-start justify-between mb-4">
-          {/* 渐变图标容器 */}
+          {/* 哈苏橙渐变图标容器 */}
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
             style={{
-              background: `linear-gradient(135deg, ${feature.gradientColors[0]} 0%, ${feature.gradientColors[1]} 100%)`,
-              boxShadow: `0 8px 20px ${feature.gradientColors[0]}40`
+              background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
+              boxShadow: `0 8px 20px ${gradientColors[0]}40`
             }}
           >
             {/* 光效层 */}
@@ -193,29 +203,28 @@ const FeaturesScreen: React.FC = () => {
   };
 
   /**
-   * 增强版Section Header
+   * 增强版Section Header - 哈苏橙风格
    */
   const SectionHeader: React.FC<{
     title: string;
     description: string;
     icon: React.ElementType;
     count?: number;
-    gradientColor?: string;
-  }> = ({ title, description, icon: Icon, count, gradientColor = 'var(--color-accent-primary)' }) => (
+  }> = ({ title, description, icon: Icon, count }) => (
     <div 
       className="flex items-center justify-between py-3 mb-3 animate-liquid-fade relative"
       style={{
         paddingLeft: '16px',
-        borderLeft: `3px solid ${gradientColor}`
+        borderLeft: '3px solid var(--color-accent-primary)'
       }}
     >
       <div className="flex items-center gap-3">
-        {/* 渐变图标 */}
+        {/* 哈苏橙渐变图标 */}
         <div 
           className="w-12 h-12 rounded-xl flex items-center justify-center"
           style={{
-            background: `linear-gradient(135deg, ${gradientColor} 0%, ${gradientColor}80 100%)`,
-            boxShadow: `0 4px 12px ${gradientColor}30`
+            background: 'linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-primary-light) 100%)',
+            boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)'
           }}
         >
           <Icon size={22} style={{ color: 'var(--color-text-primary)' }} />
@@ -233,8 +242,8 @@ const FeaturesScreen: React.FC = () => {
         <div 
           className="px-3 py-1 rounded-full text-xs font-semibold"
           style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            color: gradientColor
+            background: 'rgba(255, 107, 53, 0.15)',
+            color: 'var(--color-accent-primary)'
           }}
         >
           {count} 项
@@ -265,7 +274,6 @@ const FeaturesScreen: React.FC = () => {
             description="智能识别与自动优化"
             icon={Sparkles}
             count={aiFeatures.length}
-            gradientColor="var(--color-feature-ai)"
           />
           <div className="space-y-4">
             {aiFeatures.map((feature, index) => (
@@ -273,6 +281,7 @@ const FeaturesScreen: React.FC = () => {
                 key={feature.id} 
                 feature={feature} 
                 index={index}
+                gradientKey={index % 2 === 0 ? 'primary' : 'light'}
                 showUsage={index < 2}
               />
             ))}
@@ -286,7 +295,6 @@ const FeaturesScreen: React.FC = () => {
             description="精细调节与创作工具"
             icon={Settings}
             count={toolFeatures.length}
-            gradientColor="var(--color-feature-sync)"
           />
           <div className="space-y-4">
             {toolFeatures.map((feature, index) => (
@@ -294,6 +302,7 @@ const FeaturesScreen: React.FC = () => {
                 key={feature.id} 
                 feature={feature} 
                 index={index + 4}
+                gradientKey={index % 2 === 0 ? 'accent' : 'primary'}
               />
             ))}
           </div>
@@ -306,7 +315,6 @@ const FeaturesScreen: React.FC = () => {
             description="哈苏影像系统专属功能"
             icon={Brush}
             count={brandFeatures.length}
-            gradientColor="var(--color-feature-hasselblad)"
           />
           <div className="space-y-4">
             {brandFeatures.map((feature, index) => (
@@ -314,6 +322,7 @@ const FeaturesScreen: React.FC = () => {
                 key={feature.id} 
                 feature={feature} 
                 index={index + 6}
+                gradientKey="primary"
               />
             ))}
           </div>

@@ -1,14 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { useAppStore, featuredPresets } from '../store/appStore';
-import { Search, Filter, Heart, Sparkles, Check, RefreshCw, Download, Star, Crown, TrendingUp, Flame } from 'lucide-react';
-
-const brands = ['OPPO', 'realme', 'vivo', '荣耀', '小米'];
-const scenes = ['人像', '风景', '夜景', '美食', '街拍', '建筑'];
+import { Search, Heart, Sparkles, Check, RefreshCw, Download, Star, Crown } from 'lucide-react';
 
 /**
  * ============================================
- * 精选页 - ColorOS 16 全面优化版
- * 智能分组筛选 + 可视化场景图标
+ * 精选页 - ColorOS 16 优化版
+ * 简洁设计 + 哈苏橙风格
  * ============================================
  */
 const FeaturedScreen: React.FC = () => {
@@ -16,8 +13,6 @@ const FeaturedScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [expandedBrandGroup, setExpandedBrandGroup] = useState(true);
-  const [expandedSceneGroup, setExpandedSceneGroup] = useState(true);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -37,16 +32,11 @@ const FeaturedScreen: React.FC = () => {
   }, []);
 
   const filteredPresets = featuredPresets.filter((preset) => {
-    const brandMatch = !selectedBrand || preset.brand === selectedBrand;
-    const sceneMatch = !selectedScene || preset.tags.includes(selectedScene);
     const searchMatch = !searchQuery || 
       preset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       preset.author.toLowerCase().includes(searchQuery.toLowerCase());
-    return brandMatch && sceneMatch && searchMatch;
+    return searchMatch;
   });
-
-  // 热门预设（前3个）
-  const hotPresets = filteredPresets.slice(0, 3);
 
   return (
     <div 
@@ -100,115 +90,25 @@ const FeaturedScreen: React.FC = () => {
             aria-label="搜索精选预设"
             className="w-full pl-11 pr-4 py-3 glass-input text-sm"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-fast"
+              aria-label="清除搜索"
+            >
+              <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">✕</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 智能分组筛选 - 品牌组 */}
-      <div className="px-4 pb-2 animate-liquid-fade">
-        <button
-          onClick={() => setExpandedBrandGroup(!expandedBrandGroup)}
-          className="flex items-center gap-2 w-full py-2"
-          aria-expanded={expandedBrandGroup}
-        >
-          <TrendingUp size={14} style={{ color: 'var(--color-accent-primary)' }} />
-          <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            品牌筛选
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-muted)' }}>
-            {brands.length}
-          </span>
-          <span className="ml-auto text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {expandedBrandGroup ? '收起' : '展开'}
-          </span>
-        </button>
-        
-        {expandedBrandGroup && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pt-2 animate-liquid-slide-down" role="group">
-            <button
-              onClick={() => setSelectedBrand(null)}
-              aria-label="全部品牌"
-              aria-pressed={!selectedBrand}
-              className={`glass-chip ${!selectedBrand ? 'glass-chip-active' : ''} ripple-container whitespace-nowrap`}
-            >
-              <span className="text-xs font-medium">全部品牌</span>
-            </button>
-            {brands.map((brand) => (
-              <button
-                key={brand}
-                onClick={() => setSelectedBrand(brand)}
-                aria-label={brand}
-                aria-pressed={selectedBrand === brand}
-                className={`glass-chip ${selectedBrand === brand ? 'glass-chip-active' : ''} ripple-container whitespace-nowrap`}
-              >
-                <span className="text-xs font-medium">{brand}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 智能分组筛选 - 场景组 */}
-      <div className="px-4 pb-3 animate-liquid-fade">
-        <button
-          onClick={() => setExpandedSceneGroup(!expandedSceneGroup)}
-          className="flex items-center gap-2 w-full py-2"
-          aria-expanded={expandedSceneGroup}
-        >
-          <Flame size={14} style={{ color: 'var(--color-feature-scene)' }} />
-          <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            场景筛选
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-muted)' }}>
-            {scenes.length}
-          </span>
-          <span className="ml-auto text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {expandedSceneGroup ? '收起' : '展开'}
-          </span>
-        </button>
-        
-        {expandedSceneGroup && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pt-2 animate-liquid-slide-down" role="group">
-            <button
-              onClick={() => setSelectedScene(null)}
-              aria-label="全部场景"
-              aria-pressed={!selectedScene}
-              className={`glass-chip ${!selectedScene ? 'glass-chip-active' : ''} ripple-container whitespace-nowrap`}
-            >
-              <span className="text-xs font-medium">全部场景</span>
-            </button>
-            {scenes.map((scene) => (
-              <button
-                key={scene}
-                onClick={() => setSelectedScene(scene)}
-                aria-label={scene}
-                aria-pressed={selectedScene === scene}
-                className={`glass-chip ${selectedScene === scene ? 'glass-chip-active' : ''} ripple-container whitespace-nowrap`}
-              >
-                <span className="text-xs font-medium">{scene}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 筛选结果统计 */}
-      {(selectedBrand || selectedScene || searchQuery) && (
+      {/* 搜索结果统计 */}
+      {searchQuery && (
         <div className="px-4 pb-2 flex items-center gap-3 animate-liquid-fade">
-          <span className="smart-recommend-badge">已筛选</span>
+          <span className="badge-hncs text-xs">搜索结果</span>
           <span className="text-sm font-semibold" style={{ color: 'var(--color-accent-primary)' }}>
             {filteredPresets.length} 条
           </span>
-          <button
-            onClick={() => {
-              setSelectedBrand(null);
-              setSelectedScene(null);
-              setSearchQuery('');
-            }}
-            aria-label="清空筛选"
-            className="glass-button text-xs px-3 py-1"
-          >
-            清空筛选
-          </button>
         </div>
       )}
 
@@ -219,52 +119,7 @@ const FeaturedScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 热门推荐区块 */}
-      {hotPresets.length > 0 && !selectedBrand && !selectedScene && (
-        <div className="px-4 pb-4 animate-liquid-fade">
-          <div className="smart-recommend p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame size={16} style={{ color: 'var(--color-error)' }} />
-              <span className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                热门精选
-              </span>
-              <div className="badge-hot">HOT</div>
-            </div>
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-              {hotPresets.map((preset, index) => (
-                <div
-                  key={`hot-${preset.id}`}
-                  className="flex-shrink-0 w-32 h-40 rounded-2xl overflow-hidden relative animate-liquid-slide-left"
-                  style={{
-                    animationDelay: `${index * 100}ms`,
-                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)'
-                  }}
-                >
-                  <img
-                    src={preset.coverPath}
-                    alt={preset.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div 
-                    className="absolute inset-0"
-                    style={{
-                      background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 60%)'
-                    }}
-                  />
-                  <div className="absolute bottom-2 left-2 right-2">
-                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                      {preset.name}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 预设网格 - 增强版 */}
+      {/* 预设网格 */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide custom-scrollbar">
         <div className="grid grid-cols-2 gap-4">
           {filteredPresets.map((preset, index) => (
@@ -373,7 +228,7 @@ const FeaturedScreen: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 应用按钮 - 增强版 */}
+                {/* 应用按钮 */}
                 <button 
                   aria-label="应用参数"
                   className="w-full glass-button flex items-center justify-center gap-2 py-3 ripple-container"
@@ -394,13 +249,13 @@ const FeaturedScreen: React.FC = () => {
             <div 
               className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 glass-card"
             >
-              <Filter size={32} style={{ color: 'var(--color-text-muted)' }} />
+              <Search size={32} style={{ color: 'var(--color-text-muted)' }} />
             </div>
             <p className="text-base mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
               暂无精选预设
             </p>
             <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              请调整筛选条件
+              请尝试其他关键词
             </p>
           </div>
         )}

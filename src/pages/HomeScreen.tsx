@@ -202,20 +202,6 @@ const HomeScreen: React.FC = () => {
             <span className="text-xs font-medium">刷新</span>
           </button>
         </div>
-        
-        {/* 智能推荐区块 */}
-        <div className="smart-recommend mt-4 p-4 animate-liquid-fade">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={14} style={{ color: 'var(--color-accent-primary)' }} />
-            <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              为你推荐
-            </span>
-            <span className="smart-recommend-badge">智能</span>
-          </div>
-          <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            根据你的使用习惯，推荐最适合的影像参数
-          </p>
-        </div>
       </div>
 
       {/* 搜索栏 - 增强版液态玻璃 */}
