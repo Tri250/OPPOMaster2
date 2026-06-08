@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Sparkles, RefreshCw, Check, Wand2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Check, Wand2 } from 'lucide-react';
 
 const AIFineTunePage: React.FC = () => {
   const { aiParams, setAiParam, goBack } = useAppStore();

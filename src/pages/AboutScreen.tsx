@@ -70,7 +70,7 @@ const AboutScreen: React.FC = () => {
 
   const handleItemClick = (route: string | null) => {
     if (route) {
-      navigateToSubPage(route as any);
+      navigateToSubPage(route as Parameters<typeof navigateToSubPage>[0]);
     }
   };
 

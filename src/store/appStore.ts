@@ -100,7 +100,7 @@ interface AppState {
   setNotification: (key: string, value: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>((set) => ({
   currentPage: 'home',
   setCurrentPage: (page) => set({ currentPage: page }),
   currentSubPage: null,

@@ -71,16 +71,14 @@ const FeaturesScreen: React.FC = () => {
 
   const handleFeatureClick = (featureId: string) => {
     if (featureRouteMap[featureId]) {
-      navigateToSubPage(featureRouteMap[featureId] as any);
+      navigateToSubPage(featureRouteMap[featureId] as Parameters<typeof navigateToSubPage>[0]);
     }
   };
 
   const FeatureCard: React.FC<{ 
     feature: (typeof features)[0]; 
-    index: number;
-  }> = ({ feature, index }) => {
+  }> = ({ feature }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
-    const route = featureRouteMap[feature.id];
     const info = featureDescriptions[feature.id];
 
     return (
@@ -172,8 +170,8 @@ const FeaturesScreen: React.FC = () => {
             count={aiFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {aiFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
+            {aiFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>
@@ -187,8 +185,8 @@ const FeaturesScreen: React.FC = () => {
             count={toolFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {toolFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
+            {toolFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>
@@ -202,8 +200,8 @@ const FeaturesScreen: React.FC = () => {
             count={brandFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {brandFeatures.map((feature, index) => (
-              <FeatureCard key={feature.id} feature={feature} index={index} />
+            {brandFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>

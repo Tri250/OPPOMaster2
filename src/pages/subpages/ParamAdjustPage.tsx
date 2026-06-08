@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Aperture, Timer, Sun, Thermometer } from 'lucide-react';
+import { ArrowLeft, Aperture, Timer, Thermometer } from 'lucide-react';
 
 const ParamAdjustPage: React.FC = () => {
   const { cameraParams, setCameraParam, goBack } = useAppStore();

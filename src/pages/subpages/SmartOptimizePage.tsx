@@ -87,7 +87,7 @@ const SmartOptimizePage: React.FC = () => {
               <div className="w-16 h-16 rounded-full border-4 border-[#2196F3] border-t-transparent animate-spin mb-4" />
               <span className="text-white text-sm">智能优化中...</span>
               <div className="flex gap-2 mt-3">
-                {selectedOptions.map((opt, idx) => (
+                {selectedOptions.map((opt) => (
                   <div 
                     key={opt}
                     className={`px-2 py-1 rounded-full text-xs ${

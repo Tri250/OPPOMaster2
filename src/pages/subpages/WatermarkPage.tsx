@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Type, Image, AlignLeft, AlignCenter, AlignRight, Check } from 'lucide-react';
+import { ArrowLeft, Type, AlignLeft, AlignCenter, AlignRight, Check } from 'lucide-react';
 
 const WatermarkPage: React.FC = () => {
   const { watermarkSettings, setWatermarkSetting, goBack } = useAppStore();
