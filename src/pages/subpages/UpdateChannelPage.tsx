@@ -1,148 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import {
-  ArrowLeft, Download, Check, Bell, Settings, Zap,
-  Clock, Shield, RotateCcw
-} from 'lucide-react';
+import { ArrowLeft, Shield, Zap, FlaskConical, RefreshCw, Check } from 'lucide-react';
 
-const UPDATE_CHANNELS = [
-  { id: 'stable', name: '稳定版', desc: '最稳定的版本，推荐日常使用', icon: Shield, color: '#10B981' },
-  { id: 'beta', name: '测试版', desc: '提前体验新功能，可能存在小问题', icon: Zap, color: '#F59E0B' },
-  { id: 'dev', name: '开发版', desc: '最新功能，适合尝鲜用户', icon: RotateCcw, color: '#3B82F6' },
+const CHANNELS = [
+  { id: 'stable', name: '稳定版', desc: '经过充分测试，推荐所有用户使用', icon: Shield, color: 'var(--color-success)' },
+  { id: 'beta', name: 'Beta 版', desc: '提前体验新功能，可能存在不稳定', icon: Zap, color: 'var(--color-accent-primary)' },
+  { id: 'dev', name: '开发版', desc: '最新功能尝鲜，仅供开发者测试', icon: FlaskConical, color: '#7C6EF6' },
 ];
 
-const UPDATE_SETTINGS = [
-  { id: 'auto-check', name: '自动检查更新', enabled: true },
-  { id: 'wifi-only', name: '仅 Wi-Fi 下下载', enabled: true },
-  { id: 'auto-install', name: '夜间自动安装', enabled: false },
-];
+const CURRENT_VERSION = 'v2.4.1';
 
 const UpdateChannelPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { goBack } = useAppStore();
   const [selectedChannel, setSelectedChannel] = useState('stable');
+  const [isChecking, setIsChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<string | null>(null);
+
+  const handleCheckUpdate = useCallback(() => {
+    setIsChecking(true);
+    setCheckResult(null);
+    setTimeout(() => {
+      setCheckResult('已是最新版本');
+      setIsChecking(false);
+    }, 2000);
+  }, []);
 
   return (
-    <div className="h-full w-full bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-700" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Download size={20} className="text-green-500" />
-          <h1 className="text-lg font-semibold text-gray-900">更新设置</h1>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">更新渠道</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>选择更新频率与渠道</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Current Version */}
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <Check size={32} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1">已是最新版本</h2>
-              <p className="text-green-100 text-sm">v3.2.0 (20260608)</p>
-              <div className="flex items-center gap-2 mt-3">
-                <Clock size={14} className="text-green-200" />
-                <span className="text-green-200 text-xs">最后检查：刚刚</span>
-              </div>
-            </div>
-          </div>
-          <button className="w-full mt-4 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition-colors">
-            检查更新
-          </button>
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* 当前版本 */}
+        <div
+          className="rounded-2xl p-4 mb-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)' }}
+        >
+          <p className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>当前版本</p>
+          <p className="text-lg font-bold mt-1">{CURRENT_VERSION}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+            渠道：{CHANNELS.find((c) => c.id === selectedChannel)?.name}
+          </p>
         </div>
 
-        {/* Update Channels */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">更新渠道</h3>
-          <div className="space-y-2">
-            {UPDATE_CHANNELS.map(channel => {
-              const Icon = channel.icon;
-              const isSelected = selectedChannel === channel.id;
-              return (
-                <button
-                  key={channel.id}
-                  onClick={() => setSelectedChannel(channel.id)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${channel.color}20` }}>
-                      <Icon size={20} style={{ color: channel.color }} />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">{channel.name}</span>
-                      <p className="text-xs text-gray-500">{channel.desc}</p>
-                    </div>
-                  </div>
-                  {isSelected && <Check size={20} className="text-green-500" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Update Settings */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">更新选项</h3>
-          <div className="space-y-2">
-            {UPDATE_SETTINGS.map(setting => (
-              <div
-                key={setting.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+        {/* 渠道选择 */}
+        <div className="space-y-3">
+          {CHANNELS.map((channel, index) => {
+            const Icon = channel.icon;
+            const isActive = selectedChannel === channel.id;
+            return (
+              <button
+                key={channel.id}
+                onClick={() => setSelectedChannel(channel.id)}
+                aria-label={`选择${channel.name}渠道`}
+                className="w-full rounded-2xl p-4 text-left transition-liquid animate-liquid-slide-up"
+                style={{
+                  background: isActive ? 'var(--color-accent-primary-muted)' : 'var(--color-bg-secondary)',
+                  border: `1px solid ${isActive ? 'var(--color-accent-primary)' : 'var(--color-border-light)'}`,
+                  animationDelay: `${index * 60}ms`,
+                }}
               >
-                <span className="text-sm text-gray-700">{setting.name}</span>
-                <div
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    setting.enabled ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                >
+                <div className="flex items-center gap-3">
                   <div
-                    className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      setting.enabled ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                    style={{ marginTop: 2 }}
-                  />
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: isActive ? 'var(--color-accent-primary)' : 'var(--color-bg-tertiary)' }}
+                  >
+                    <Icon size={20} style={{ color: isActive ? '#fff' : channel.color }} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold">{channel.name}</p>
+                      {isActive && <Check size={14} style={{ color: 'var(--color-accent-primary)' }} />}
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                      {channel.desc}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Release Notes */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">v3.2.0 更新内容</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start gap-2">
-              <span className="text-green-500 font-bold mt-0.5">•</span>
-              <span className="text-gray-600">全新 LUT 资源下载功能，20+ 专业滤镜</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-green-500 font-bold mt-0.5">•</span>
-              <span className="text-gray-600">哈苏色彩科学升级，HNCS 3.0 自然色彩</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-green-500 font-bold mt-0.5">•</span>
-              <span className="text-gray-600">AI 场景识别增强，支持 50+ 精细场景</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-green-500 font-bold mt-0.5">•</span>
-              <span className="text-gray-600">优化性能，启动速度提升 30%</span>
-            </div>
+        {/* 检查更新 */}
+        <button
+          onClick={handleCheckUpdate}
+          disabled={isChecking}
+          aria-label="检查更新"
+          className="w-full mt-6 py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-liquid mb-6"
+          style={{ background: 'var(--color-accent-primary)', color: '#fff', opacity: isChecking ? 0.6 : 1 }}
+        >
+          {isChecking ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <RefreshCw size={18} />
+          )}
+          {isChecking ? '检查中...' : '检查更新'}
+        </button>
+
+        {/* 检查结果 */}
+        {checkResult && (
+          <div
+            className="p-4 rounded-2xl text-center animate-liquid-fade"
+            style={{ background: 'var(--color-success-muted)', border: '1px solid var(--color-success)', color: 'var(--color-success)' }}
+          >
+            <Check size={20} className="mx-auto mb-1" />
+            <p className="text-sm font-medium">{checkResult}</p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default UpdateChannelPage;
+export default React.memo(UpdateChannelPage);

@@ -25,7 +25,7 @@ import PrivacyPage from './pages/subpages/PrivacyPage';
 import PresetSourceManager from './pages/subpages/PresetSourceManager';
 
 const App: React.FC = () => {
-  const { currentPage, currentSubPage } = useAppStore();
+  const { currentPage, currentSubPage, goBack } = useAppStore();
 
   const renderSubPage = () => {
     switch (currentSubPage) {
@@ -84,7 +84,12 @@ const App: React.FC = () => {
   return (
     <PhoneMockup>
       <div className="h-full w-full relative">
-        {currentSubPage ? renderSubPage() : renderMainPage()}
+        <div
+          key={currentSubPage || currentPage}
+          className={currentSubPage ? 'animate-page-transition' : ''}
+        >
+          {currentSubPage ? renderSubPage() : renderMainPage()}
+        </div>
       </div>
     </PhoneMockup>
   );

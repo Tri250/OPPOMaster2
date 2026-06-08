@@ -50,11 +50,14 @@ export interface Feature {
   title: string;
   subtitle: string;
   icon: string;
-  color: string;
-  gradientColors: [string, string];
   enabled: boolean;
   showToggle: boolean;
 }
+
+/** 哈苏橙渐变常量 */
+export const HASSelBLAD_ORANGE = '#FF6B35';
+export const HASSelBLAD_ORANGE_LIGHT = '#FF8C5A';
+export const HASSelBLAD_ORANGE_DARK = '#E55A25';
 
 interface AppState {
   currentPage: PageType;
@@ -63,12 +66,10 @@ interface AppState {
   setCurrentSubPage: (page: SubPageType) => void;
   navigateToSubPage: (page: SubPageType) => void;
   goBack: () => void;
+  /** 导航栈 - 支持多级返回 */
+  navigationStack: SubPageType[];
   selectedTab: number;
   setSelectedTab: (tab: number) => void;
-  selectedBrand: string | null;
-  setSelectedBrand: (brand: string | null) => void;
-  selectedScene: string | null;
-  setSelectedScene: (scene: string | null) => void;
   features: Feature[];
   toggleFeature: (id: string) => void;
   // AI 微调参数
@@ -79,7 +80,7 @@ interface AppState {
     warmth: number;
     sharpness: number;
   };
-  setAiParam: (key: string, value: number) => void;
+  setAiParam: (key: keyof AppState['aiParams'], value: number) => void;
   // 参数调节
   cameraParams: {
     iso: number;
@@ -87,7 +88,7 @@ interface AppState {
     aperture: number;
     wb: number;
   };
-  setCameraParam: (key: string, value: number) => void;
+  setCameraParam: (key: keyof AppState['cameraParams'], value: number) => void;
   // 水印设置
   watermarkSettings: {
     enabled: boolean;
@@ -95,7 +96,7 @@ interface AppState {
     customText: string;
     position: string;
   };
-  setWatermarkSetting: (key: string, value: string | boolean) => void;
+  setWatermarkSetting: (key: keyof AppState['watermarkSettings'], value: string | boolean) => void;
   // 主题设置
   theme: 'hasselblad' | 'oppo' | 'vivo' | 'realme' | 'honor' | 'xiaomi';
   setTheme: (theme: AppState['theme']) => void;
@@ -107,7 +108,7 @@ interface AppState {
     updates: boolean;
     promotions: boolean;
   };
-  setNotification: (key: string, value: boolean) => void;
+  setNotification: (key: keyof AppState['notifications'], value: boolean) => void;
   // 预设源管理
   presetSources: PresetSource[];
   addPresetSource: (source: Omit<PresetSource, 'id' | 'lastUpdated'>) => void;
@@ -117,29 +118,40 @@ interface AppState {
   // 从源获取的预设
   fetchedPresets: Preset[];
   setFetchedPresets: (presets: Preset[]) => void;
+  // 错误状态
+  lastError: string | null;
+  setLastError: (error: string | null) => void;
+  // 加载状态
+  isLoading: boolean;
+  setIsLoading: (loading: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   currentPage: 'home',
-  setCurrentPage: (page) => set({ currentPage: page }),
+  setCurrentPage: (page) => set({ currentPage: page, currentSubPage: null, navigationStack: [] }),
   currentSubPage: null,
   setCurrentSubPage: (page) => set({ currentSubPage: page }),
-  navigateToSubPage: (page) => set({ currentSubPage: page }),
-  goBack: () => set({ currentSubPage: null }),
+  navigateToSubPage: (page) => set((state) => ({
+    currentSubPage: page,
+    navigationStack: [...state.navigationStack, state.currentSubPage],
+  })),
+  goBack: () => set((state) => {
+    const stack = [...state.navigationStack];
+    const previousPage = stack.pop() || null;
+    return {
+      currentSubPage: previousPage,
+      navigationStack: stack,
+    };
+  }),
+  navigationStack: [],
   selectedTab: 0,
   setSelectedTab: (tab) => set({ selectedTab: tab }),
-  selectedBrand: null,
-  setSelectedBrand: (brand) => set({ selectedBrand: brand }),
-  selectedScene: null,
-  setSelectedScene: (scene) => set({ selectedScene: scene }),
   features: [
     {
       id: 'ai-scene',
       title: 'AI 场景识别',
       subtitle: '智能识别36+拍摄场景，自动推荐最佳参数',
       icon: 'Camera',
-      color: '#4CAF50',
-      gradientColors: ['#1B5E20', '#2E7D32'],
       enabled: true,
       showToggle: true,
     },
@@ -148,8 +160,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: 'AI 微调',
       subtitle: '一键智能微调，色彩风格精准控制',
       icon: 'Palette',
-      color: '#9C27B0',
-      gradientColors: ['#4A148C', '#6A1B9A'],
       enabled: true,
       showToggle: true,
     },
@@ -158,8 +168,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: '智能优化',
       subtitle: '一键HDR增强、降噪、锐化优化',
       icon: 'Cpu',
-      color: '#2196F3',
-      gradientColors: ['#0D47A1', '#1565C0'],
       enabled: true,
       showToggle: true,
     },
@@ -168,8 +176,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: '水印编辑器',
       subtitle: '14+专业水印模板，品牌认证水印',
       icon: 'Droplets',
-      color: '#00BCD4',
-      gradientColors: ['#006064', '#00838F'],
       enabled: true,
       showToggle: true,
     },
@@ -178,8 +184,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: '参数精细调节',
       subtitle: 'ISO、快门、光圈、白平衡精确控制',
       icon: 'SlidersHorizontal',
-      color: '#E91E63',
-      gradientColors: ['#880E4F', '#AD1457'],
       enabled: true,
       showToggle: false,
     },
@@ -188,8 +192,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: '预设管理',
       subtitle: '云端预设库，收藏、创建、分享',
       icon: 'Images',
-      color: '#FF9800',
-      gradientColors: ['#E65100', '#F57C00'],
       enabled: true,
       showToggle: false,
     },
@@ -198,8 +200,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: 'LUT 资源分享',
       subtitle: '20+专业 LUT 滤镜，一键下载使用',
       icon: 'Palette',
-      color: '#9C27B0',
-      gradientColors: ['#6A1B9A', '#8E24AA'],
       enabled: true,
       showToggle: false,
     },
@@ -208,8 +208,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: '哈苏色彩科学',
       subtitle: 'HNCS 3.0 自然色彩解决方案',
       icon: 'Aperture',
-      color: '#FF6B35',
-      gradientColors: ['#CC5500', '#E86A17'],
       enabled: true,
       showToggle: true,
     },
@@ -218,8 +216,6 @@ export const useAppStore = create<AppState>((set) => ({
       title: '云同步',
       subtitle: 'OPPO/realme/vivo/荣耀 CDN数据同步',
       icon: 'Cloud',
-      color: '#3F51B5',
-      gradientColors: ['#1A237E', '#303F9F'],
       enabled: false,
       showToggle: true,
     },
@@ -230,7 +226,6 @@ export const useAppStore = create<AppState>((set) => ({
         f.id === id ? { ...f, enabled: !f.enabled } : f
       ),
     })),
-  // AI 微调参数
   aiParams: {
     saturation: 10,
     contrast: 5,
@@ -242,7 +237,6 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       aiParams: { ...state.aiParams, [key]: value },
     })),
-  // 参数调节
   cameraParams: {
     iso: 100,
     shutter: 125,
@@ -253,7 +247,6 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       cameraParams: { ...state.cameraParams, [key]: value },
     })),
-  // 水印设置
   watermarkSettings: {
     enabled: true,
     template: 'default',
@@ -264,12 +257,10 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       watermarkSettings: { ...state.watermarkSettings, [key]: value },
     })),
-  // 主题设置
   theme: 'hasselblad',
   setTheme: (theme) => set({ theme }),
   darkMode: 'system',
   setDarkMode: (mode) => set({ darkMode: mode }),
-  // 通知设置
   notifications: {
     enabled: true,
     updates: true,
@@ -279,7 +270,6 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       notifications: { ...state.notifications, [key]: value },
     })),
-  // 默认预设源
   presetSources: [
     {
       id: 'oppo',
@@ -308,7 +298,7 @@ export const useAppStore = create<AppState>((set) => ({
   ],
   addPresetSource: (source) =>
     set((state) => ({
-      presetSources: [...state.presetSources, { ...source, id: Date.now().toString() }],
+      presetSources: [...state.presetSources, { ...source, id: `source_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` }],
     })),
   updatePresetSource: (id, source) =>
     set((state) => ({
@@ -328,6 +318,10 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   fetchedPresets: [],
   setFetchedPresets: (presets) => set({ fetchedPresets: presets }),
+  lastError: null,
+  setLastError: (error) => set({ lastError: error }),
+  isLoading: false,
+  setIsLoading: (loading) => set({ isLoading: loading }),
 }));
 
 export const featuredPresets: Preset[] = [

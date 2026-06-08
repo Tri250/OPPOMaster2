@@ -1,98 +1,135 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Shield, Lock, Eye, FileText, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Shield } from 'lucide-react';
+
+const PRIVACY_TEXT = `哈苏相机助手隐私政策
+
+生效日期：2025年1月1日
+最后更新：2025年6月1日
+
+一、信息收集
+
+我们收集以下类型的信息以提供和改善服务：
+
+1. 账户信息：当您注册账户时，我们会收集您的用户名、电子邮件地址和密码。
+2. 设备信息：我们会收集设备型号、操作系统版本和唯一设备标识符，以优化应用性能。
+3. 使用数据：我们收集关于您如何使用应用的信息，包括功能使用频率、崩溃报告和性能指标。
+4. 照片元数据：当您使用相机功能时，我们会处理照片的 EXIF 数据（如 ISO、快门速度、光圈等），以提供参数优化建议。
+
+二、信息使用
+
+我们使用收集的信息用于：
+- 提供和维护我们的服务
+- 改善用户体验和应用性能
+- 发送技术通知和更新信息
+- 响应客户服务请求
+- 监控和分析使用趋势
+
+三、信息共享
+
+我们不会出售您的个人信息。我们仅在以下情况下共享信息：
+- 获得您的明确同意
+- 遵守法律义务
+- 保护我们的权利和安全
+
+四、数据安全
+
+我们采用行业标准的安全措施保护您的信息：
+- SSL/TLS 加密传输
+- AES-256 加密存储
+- 定期安全审计
+- 访问权限控制
+
+五、您的权利
+
+您有权：
+- 访问您的个人数据
+- 更正不准确的信息
+- 删除您的账户和数据
+- 撤回数据使用同意
+- 导出您的数据
+
+六、Cookie 政策
+
+我们使用 Cookie 和类似技术来：
+- 记住您的偏好设置
+- 分析应用使用情况
+- 提供个性化内容
+
+七、第三方服务
+
+本应用可能包含第三方服务链接，这些服务有各自的隐私政策。我们建议您阅读这些政策。
+
+八、儿童隐私
+
+我们的服务不面向 13 岁以下儿童。我们不会故意收集儿童的个人信息。
+
+九、政策更新
+
+我们可能会不时更新本隐私政策。重大变更将通过应用内通知或电子邮件告知您。
+
+十、联系我们
+
+如果您对本隐私政策有任何疑问，请通过以下方式联系我们：
+- 电子邮件：privacy@hasselblad-assistant.com
+- 客服热线：400-888-8888`;
 
 const PrivacyPage: React.FC = () => {
   const { goBack } = useAppStore();
 
-  const sections = [
-    {
-      icon: Shield,
-      title: '数据保护',
-      content: '我们采用行业标准的加密技术保护您的数据安全。所有预设参数和设置都存储在本地，不会上传到服务器。',
-    },
-    {
-      icon: Lock,
-      title: '权限说明',
-      content: '本应用需要相机权限以提供实时预览功能，存储权限用于保存预设参数。我们不会访问您的个人文件。',
-    },
-    {
-      icon: Eye,
-      title: '隐私政策',
-      content: '我们尊重您的隐私，不会收集、存储或分享您的个人信息。应用分析数据均为匿名化处理。',
-    },
-  ];
-
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-        <button 
-          onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
-        >
-          <ArrowLeft size={20} className="text-white" />
-        </button>
-        <h1 className="text-lg font-bold text-white">隐私政策</h1>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">隐私政策</h1>
+          </div>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FF6B35]/10 to-transparent border border-[#FF6B35]/20 mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Shield size={24} className="text-[#FF6B35]" />
-            <span className="text-white font-medium">您的隐私对我们很重要</span>
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* 标识 */}
+        <div
+          className="rounded-2xl p-4 flex items-center gap-3 mb-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-accent-primary-muted)', border: '1px solid var(--color-border-accent)' }}
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-accent-primary)' }}>
+            <Shield size={20} style={{ color: '#fff' }} />
           </div>
-          <p className="text-white/60 text-sm">
-            我们致力于保护您的隐私和数据安全。请阅读以下内容了解我们如何处理您的信息。
-          </p>
+          <div>
+            <p className="text-sm font-bold" style={{ color: 'var(--color-accent-primary)' }}>隐私保护承诺</p>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>我们重视并保护您的个人隐私</p>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          {sections.map((section, index) => {
-            const Icon = section.icon;
-            return (
-              <div key={index} className="p-4 rounded-2xl bg-white/5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                    <Icon size={20} className="text-white/70" />
-                  </div>
-                  <h3 className="text-white font-medium">{section.title}</h3>
-                </div>
-                <p className="text-white/50 text-sm leading-relaxed">
-                  {section.content}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+        {/* 最后更新日期 */}
+        <p className="text-xs mb-4" style={{ color: 'var(--color-text-tertiary)' }}>
+          最后更新日期：2025年6月1日
+        </p>
 
-        {/* Links */}
-        <div className="mt-6 space-y-2">
-          <button className="w-full p-4 rounded-2xl bg-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText size={20} className="text-white/60" />
-              <span className="text-white text-sm">完整隐私政策</span>
-            </div>
-            <ExternalLink size={16} className="text-white/40" />
-          </button>
-          <button className="w-full p-4 rounded-2xl bg-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText size={20} className="text-white/60" />
-              <span className="text-white text-sm">用户协议</span>
-            </div>
-            <ExternalLink size={16} className="text-white/40" />
-          </button>
-        </div>
-
-        {/* Version */}
-        <div className="mt-8 text-center">
-          <p className="text-white/30 text-xs">最后更新：2024年6月</p>
-          <p className="text-white/20 text-xs mt-1">版本 1.3.1</p>
+        {/* 隐私政策文本 */}
+        <div
+          className="rounded-2xl p-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: '60ms' }}
+        >
+          <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>
+            {PRIVACY_TEXT}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default PrivacyPage;
+export default React.memo(PrivacyPage);

@@ -180,157 +180,6 @@
   box-shadow: var(--glass-shadow);
 }
 
-/* 液态玻璃卡片 (增强版) */
-.glass-card {
-  background: linear-gradient(
-    135deg,
-    rgba(26, 26, 26, 0.75) 0%,
-    rgba(45, 45, 45, 0.55) 50%,
-    rgba(26, 26, 26, 0.65) 100%
-  );
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) brightness(var(--glass-brightness));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)) brightness(var(--glass-brightness));
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--glass-shadow), var(--glass-shadow-glow);
-  transition: all var(--duration-slow) var(--ease-liquid);
-  position: relative;
-  overflow: hidden;
-}
-
-/* 卡片边缘光晕 */
-.glass-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 107, 53, 0.3) 50%,
-    transparent 100%
-  );
-  opacity: 0;
-  transition: opacity var(--duration-normal) var(--ease-smooth);
-}
-
-.glass-card:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(35, 35, 35, 0.8) 0%,
-    rgba(55, 55, 55, 0.6) 50%,
-    rgba(35, 35, 35, 0.7) 100%
-  );
-  border-color: var(--glass-border-accent);
-  box-shadow: var(--glass-shadow), 0 0 30px rgba(255, 107, 53, 0.2);
-  transform: translateY(-4px) scale(1.02);
-}
-
-.glass-card:hover::before {
-  opacity: 1;
-}
-
-/* 液态玻璃按钮 (增强版) */
-.glass-button {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 107, 53, 0.2) 0%,
-    rgba(255, 107, 53, 0.15) 100%
-  );
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 107, 53, 0.35);
-  border-radius: var(--radius-lg);
-  color: var(--color-accent-primary);
-  padding: var(--spacing-element) var(--spacing-card);
-  transition: all var(--duration-fast) var(--ease-spring-soft);
-  position: relative;
-  overflow: hidden;
-}
-
-/* 按钮光效 */
-.glass-button::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.4) 0%, transparent 70%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 0.4s var(--ease-liquid), height 0.4s var(--ease-liquid);
-}
-
-.glass-button:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 107, 53, 0.3) 0%,
-    rgba(255, 107, 53, 0.25) 100%
-  );
-  border-color: rgba(255, 107, 53, 0.5);
-  box-shadow: 0 0 20px rgba(255, 107, 53, 0.25), var(--shadow-glow);
-  transform: scale(1.03);
-}
-
-.glass-button:hover::after {
-  width: 200%;
-  height: 200%;
-}
-
-.glass-button:active {
-  transform: scale(0.97);
-  transition-duration: var(--duration-instant);
-}
-
-/* 液态玻璃输入框 (增强版) */
-.glass-input {
-  background: rgba(26, 26, 26, 0.7);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  color: var(--color-text-primary);
-  padding: var(--spacing-element) var(--spacing-card);
-  transition: all var(--duration-normal) var(--ease-smooth);
-}
-
-.glass-input:focus {
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15), var(--shadow-glow-soft);
-  outline: none;
-  background: rgba(35, 35, 35, 0.8);
-}
-
-/* 液态玻璃芯片 (增强版) */
-.glass-chip {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-full);
-  padding: var(--spacing-tight) var(--spacing-element);
-  transition: all var(--duration-fast) var(--ease-spring-soft);
-}
-
-.glass-chip:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.glass-chip-active {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent-primary) 0%,
-    var(--color-accent-primary-light) 100%
-  );
-  border-color: transparent;
-  color: white;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
-}
-
 /* ============================================
    ColorOS 16 动画效果 (增强版)
    ============================================ */
@@ -666,40 +515,6 @@
 }
 
 /* ============================================
-   交互状态 - ColorOS 16 风格 (增强版)
-   ============================================ */
-
-/* 悬停效果 */
-.hover-liquid:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: var(--shadow-xl), 0 0 20px rgba(255, 107, 53, 0.15);
-}
-
-.hover-spring:hover {
-  transform: scale(1.05);
-  transition: transform var(--duration-slow) var(--ease-spring-soft);
-}
-
-.hover-glow:hover {
-  box-shadow: var(--shadow-glow-strong);
-}
-
-.hover-bounce:hover {
-  animation: spring-in var(--duration-slow) var(--ease-spring-soft);
-}
-
-/* 按压效果 */
-.press-liquid:active {
-  transform: scale(0.97);
-  transition-duration: var(--duration-instant);
-}
-
-.press-spring:active {
-  transform: scale(0.95);
-  transition: transform var(--duration-instant) var(--ease-in);
-}
-
-/* ============================================
    涟漪效果 - ColorOS 16 风格 (增强版)
    ============================================ */
 
@@ -726,79 +541,6 @@
 }
 
 /* ============================================
-   智能推荐样式
-   ============================================ */
-
-.smart-recommend {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 107, 53, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 107, 53, 0.08) 100%
-  );
-  border: 1px solid rgba(255, 107, 53, 0.2);
-  border-radius: var(--radius-2xl);
-  position: relative;
-  overflow: hidden;
-}
-
-.smart-recommend::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 107, 53, 0.05) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: recommend-shimmer 3s var(--ease-linear) infinite;
-}
-
-.smart-recommend-badge {
-  background: linear-gradient(
-    135deg,
-    var(--color-accent-primary) 0%,
-    var(--color-accent-gradient-mid) 100%
-  );
-  color: white;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: 600;
-  animation: glow-breathe 2s var(--ease-smooth) infinite;
-}
-
-/* ============================================
-   场景感知样式
-   ============================================ */
-
-.scene-aware-card {
-  background: linear-gradient(
-    135deg,
-    rgba(76, 175, 80, 0.15) 0%,
-    rgba(26, 26, 26, 0.7) 100%
-  );
-  border: 1px solid rgba(76, 175, 80, 0.2);
-  border-radius: var(--radius-xl);
-  transition: all var(--duration-normal) var(--ease-liquid);
-}
-
-.scene-aware-card:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(76, 175, 80, 0.2) 0%,
-    rgba(35, 35, 35, 0.8) 100%
-  );
-  border-color: rgba(76, 175, 80, 0.3);
-  box-shadow: 0 0 20px rgba(76, 175, 80, 0.15);
-}
-
-/* ============================================
    动态壁纸效果
    ============================================ */
 
@@ -819,15 +561,6 @@
     radial-gradient(circle at 80% 70%, rgba(255, 107, 53, 0.06) 0%, transparent 50%);
   animation: particle-float 10s var(--ease-liquid) infinite;
   pointer-events: none;
-}
-
-.dynamic-bg-particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 107, 53, 0.3);
-  border-radius: 50%;
-  animation: particle-float 6s var(--ease-liquid) infinite;
 }
 
 /* ============================================
@@ -931,48 +664,11 @@
   background: var(--color-accent-primary);
   border-radius: 50%;
   transform: translateY(-50%);
-  animation: glow-breathe 2s var(--ease-smooth) infinite;
 }
 
 /* ============================================
-   功能卡片 (增强版)
+   功能图标渐变
    ============================================ */
-
-.feature-card-enhanced {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(26, 26, 26, 0.7) 100%
-  );
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-2xl);
-  padding: var(--spacing-card);
-  transition: all var(--duration-slow) var(--ease-liquid);
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card-enhanced::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
-.feature-card-enhanced:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: var(--shadow-xl), 0 0 25px rgba(255, 107, 53, 0.15);
-}
 
 .feature-icon-gradient {
   background: linear-gradient(
@@ -986,33 +682,10 @@
 }
 
 /* ============================================
-   组件样式 - 统一间距规范
+   功能模块特色色应用 (增强版)
    ============================================ */
 
-.page-container {
-  padding: var(--spacing-page);
-  background: var(--color-bg-primary);
-}
-
-.card-container {
-  padding: var(--spacing-card);
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border-light);
-}
-
-.section-container {
-  padding: var(--spacing-section);
-  margin-bottom: var(--spacing-loose);
-}
-
-.element-gap {
-  gap: var(--spacing-element);
-}
-
-.card-gap {
-  gap: var(--spacing-card);
-}
+.feature-hasselblad { --feature-color: var(--color-feature-primary); }
 
 /* ============================================
    无障碍支持
@@ -1076,138 +749,6 @@
 }
 
 /* ============================================
-   文字渐变效果 (增强版)
-   ============================================ */
-
-.text-gradient-accent {
-  background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-primary-light) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-gradient-glow {
-  background: linear-gradient(135deg, #FF6B35 0%, #FF9F6B 50%, #FFD93D 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.6));
-}
-
-.text-gradient-brand {
-  background: linear-gradient(135deg, #FF6B35 0%, #00A95C 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   特殊效果 (增强版)
-   ============================================ */
-
-/* 液态玻璃导航栏 */
-.glass-navbar {
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 10, 0.95) 0%,
-    rgba(26, 26, 26, 0.8) 100%
-  );
-  backdrop-filter: blur(var(--glass-blur-heavy)) saturate(200%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy)) saturate(200%);
-  border-bottom: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-subtle);
-}
-
-/* 液态玻璃底部栏 */
-.glass-bottom-bar {
-  background: linear-gradient(
-    0deg,
-    rgba(10, 10, 10, 0.98) 0%,
-    rgba(26, 26, 26, 0.85) 100%
-  );
-  backdrop-filter: blur(var(--glass-blur-heavy)) saturate(200%) brightness(105%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy)) saturate(200%) brightness(105%);
-  border-top: 1px solid var(--glass-border);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* 液态玻璃模态框 */
-.glass-modal {
-  background: linear-gradient(
-    135deg,
-    rgba(26, 26, 26, 0.9) 0%,
-    rgba(45, 45, 45, 0.75) 100%
-  );
-  backdrop-filter: blur(var(--glass-blur-heavy)) saturate(220%);
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy)) saturate(220%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-3xl);
-  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6), var(--glass-shadow-glow);
-}
-
-/* 液态玻璃提示框 */
-.glass-tooltip {
-  background: rgba(45, 45, 45, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-tight) var(--spacing-element);
-  color: var(--color-text-primary);
-  font-size: 12px;
-  box-shadow: var(--shadow-lg);
-}
-
-/* ============================================
-   功能模块特色色应用 (增强版)
-   ============================================ */
-
-.feature-hasselblad { --feature-color: var(--color-feature-primary); }
-
-/* 功能卡片带特色色 (增强版) */
-.feature-card-colored {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(26, 26, 26, 0.7) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-2xl);
-  transition: all var(--duration-slow) var(--ease-liquid);
-  position: relative;
-}
-
-.feature-card-colored::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--feature-color) 50%,
-    transparent 100%
-  );
-  opacity: 0.5;
-}
-
-.feature-card-colored:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(35, 35, 35, 0.8) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
-}
-
-.feature-card-colored:hover::before {
-  opacity: 1;
-}
-
-/* ============================================
    徽章样式 (增强版)
    ============================================ */
 
@@ -1223,52 +764,21 @@
   font-size: 10px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
-  animation: glow-breathe 2.5s var(--ease-smooth) infinite;
 }
 
 .badge-new {
-  background: linear-gradient(
-    135deg,
-    var(--color-success) 0%,
-    var(--color-success-light) 100%
-  );
+  background: transparent;
   color: white;
   padding: 3px 10px;
   border-radius: var(--radius-md);
   font-size: 10px;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
-  animation: liquid-pulse 2s var(--ease-liquid) infinite;
-}
-
-.badge-hot {
-  background: linear-gradient(
-    135deg,
-    var(--color-error) 0%,
-    var(--color-error-light) 100%
-  );
-  color: white;
-  padding: 3px 10px;
-  border-radius: var(--radius-md);
-  font-size: 10px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* ============================================
    加载状态样式
    ============================================ */
-
-.loading-gradient {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 107, 53, 0.15) 50%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  background-size: 200% 100%;
-  animation: recommend-shimmer 1.5s var(--ease-linear) infinite;
-}
 
 .loading-spinner {
   width: 24px;
@@ -1280,24 +790,55 @@
 }
 
 /* ============================================
-   进度条样式
+   统一字体规范
    ============================================ */
 
-.progress-bar {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-full);
-  overflow: hidden;
+.text-page-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.progress-bar-fill {
-  background: linear-gradient(
-    90deg,
-    var(--color-accent-primary) 0%,
-    var(--color-accent-gradient-mid) 50%,
-    var(--color-accent-gradient-end) 100%
-  );
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width var(--duration-slow) var(--ease-liquid);
-  box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+.text-card-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.text-body {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+.text-caption {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.text-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ============================================
+   统一间距规范
+   ============================================ */
+
+.px-page {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.py-section {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.gap-card {
+  gap: 16px;
+}
+
+.gap-element {
+  gap: 8px;
 }

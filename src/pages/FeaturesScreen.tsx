@@ -149,10 +149,10 @@ const FeaturesScreen: React.FC = () => {
 
         {/* 标题和描述 */}
         <div className="mb-3">
-          <h3 className="font-bold text-lg mb-1" style={{ color: '#FFFFFF' }}>
+          <h3 className="text-card-title mb-1" style={{ color: '#FFFFFF' }}>
             {feature.title}
           </h3>
-          <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+          <p className="text-caption" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             {feature.subtitle}
           </p>
         </div>
@@ -163,14 +163,14 @@ const FeaturesScreen: React.FC = () => {
             className="pt-3 mb-3"
             style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}
           >
-            <p className="text-xs mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+            <p className="text-caption mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               {info.desc}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-element">
               {info.tips?.slice(0, 4).map((tip, i) => (
                 <span
                   key={i}
-                  className="text-xs px-2 py-1 rounded-full"
+                  className="text-label px-2 py-1 rounded-full"
                   style={{
                     background: 'rgba(255, 255, 255, 0.08)',
                     color: 'rgba(255, 255, 255, 0.6)',
@@ -188,7 +188,7 @@ const FeaturesScreen: React.FC = () => {
         {showUsage && (
           <div className="flex items-center gap-2 mt-3">
             <Clock size={12} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-            <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+            <span className="text-label" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               最近使用: {Math.floor(Math.random() * 30 + 1)}次
             </span>
             <Zap size={12} style={{ color: '#FF6B35' }} className="ml-auto" />
@@ -226,17 +226,17 @@ const FeaturesScreen: React.FC = () => {
           <Icon size={20} style={{ color: '#FFFFFF' }} />
         </div>
         <div>
-          <h2 className="font-bold text-base" style={{ color: '#FFFFFF' }}>
+          <h2 className="text-card-title" style={{ color: '#FFFFFF' }}>
             {title}
           </h2>
-          <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+          <p className="text-label" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
             {description}
           </p>
         </div>
       </div>
       {count && (
         <div 
-          className="px-3 py-1 rounded-full text-xs font-semibold"
+          className="text-label px-3 py-1 rounded-full font-semibold"
           style={{
             background: 'rgba(255, 107, 53, 0.15)',
             color: '#FF6B35'
@@ -255,14 +255,14 @@ const FeaturesScreen: React.FC = () => {
     >
       {/* 沉浸式标题栏 */}
       <div className="immersive-header animate-liquid-slide-down">
-        <h1 className="immersive-title">核心功能</h1>
-        <p className="text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
+        <h1 className="text-page-title" style={{ color: '#FFFFFF' }}>核心功能</h1>
+        <p className="text-caption mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
           点击进入功能操作界面
         </p>
       </div>
 
       {/* 功能列表 */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-page pb-4 scrollbar-hide custom-scrollbar">
         {/* AI智能功能 */}
         <div className="mb-6 animate-liquid-fade">
           <SectionHeader
@@ -271,7 +271,7 @@ const FeaturesScreen: React.FC = () => {
             icon={Sparkles}
             count={aiFeatures.length}
           />
-          <div className="space-y-4">
+          <div className="flex flex-col gap-card">
             {aiFeatures.map((feature, index) => (
               <FeatureCard 
                 key={feature.id} 
@@ -291,7 +291,7 @@ const FeaturesScreen: React.FC = () => {
             icon={Settings}
             count={toolFeatures.length}
           />
-          <div className="space-y-4">
+          <div className="flex flex-col gap-card">
             {toolFeatures.map((feature, index) => (
               <FeatureCard 
                 key={feature.id} 
@@ -310,7 +310,7 @@ const FeaturesScreen: React.FC = () => {
             icon={Brush}
             count={brandFeatures.length}
           />
-          <div className="space-y-4">
+          <div className="flex flex-col gap-card">
             {brandFeatures.map((feature, index) => (
               <FeatureCard 
                 key={feature.id} 

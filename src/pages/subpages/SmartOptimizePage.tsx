@@ -1,220 +1,146 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus } from 'lucide-react';
-
-const optimizeOptions = [
-  { id: 'hdr', name: 'HDR增强', icon: Sun, color: '#FF9800', desc: '提升动态范围，保留更多细节' },
-  { id: 'denoise', name: '智能降噪', icon: Droplets, color: '#2196F3', desc: 'AI识别并消除噪点' },
-  { id: 'sharpen', name: '锐化增强', icon: Focus, color: '#9C27B0', desc: '提升画面清晰度和质感' },
-  { id: 'enhance', name: '综合优化', icon: Zap, color: '#4CAF50', desc: '一键优化全部参数' },
-];
+import { ArrowLeft, Zap, Droplets, Focus, Wand2, Check } from 'lucide-react';
 
 const SmartOptimizePage: React.FC = () => {
-  const { aiParams, setAiParam, goBack } = useAppStore();
+  const { goBack, setAiParam } = useAppStore();
+  const [hdrEnabled, setHdrEnabled] = useState(false);
+  const [denoiseEnabled, setDenoiseEnabled] = useState(false);
+  const [sharpenEnabled, setSharpenEnabled] = useState(false);
+  const [strength, setStrength] = useState(50);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizedOptions, setOptimizedOptions] = useState<string[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>(['enhance']);
+  const [isDone, setIsDone] = useState(false);
 
-  const toggleOption = (id: string) => {
-    setSelectedOptions(prev => 
-      prev.includes(id) 
-        ? prev.filter(o => o !== id)
-        : [...prev, id]
-    );
-  };
-
-  const handleOptimize = () => {
-    if (selectedOptions.length === 0) return;
-    
+  const handleOneClickOptimize = useCallback(() => {
     setIsOptimizing(true);
-    
-    // 模拟优化过程
-    const processStep = (index: number) => {
-      if (index < selectedOptions.length) {
-        setTimeout(() => {
-          setOptimizedOptions(prev => [...prev, selectedOptions[index]]);
-          processStep(index + 1);
-        }, 500);
-      } else {
-        // 完成优化
-        setTimeout(() => {
-          setIsOptimizing(false);
-          
-          // 应用优化参数
-          if (selectedOptions.includes('enhance')) {
-            setAiParam('contrast', 15);
-            setAiParam('sharpness', 25);
-          }
-          if (selectedOptions.includes('hdr')) {
-            setAiParam('brightness', 10);
-          }
-          if (selectedOptions.includes('sharpen')) {
-            setAiParam('sharpness', 30);
-          }
-        }, 500);
+    setIsDone(false);
+    setTimeout(() => {
+      const factor = strength / 100;
+      if (hdrEnabled) {
+        setAiParam('contrast', Math.round(15 * factor));
+        setAiParam('brightness', Math.round(10 * factor));
       }
-    };
-    
-    setOptimizedOptions([]);
-    processStep(0);
-  };
+      if (denoiseEnabled) {
+        setAiParam('sharpness', Math.round(5 * factor));
+      }
+      if (sharpenEnabled) {
+        setAiParam('sharpness', Math.round(25 * factor));
+      }
+      setIsOptimizing(false);
+      setIsDone(true);
+      setTimeout(() => setIsDone(false), 2000);
+    }, 1500);
+  }, [hdrEnabled, denoiseEnabled, sharpenEnabled, strength, setAiParam]);
+
+  const toggleItems = [
+    { id: 'hdr', label: 'HDR 增强', desc: '扩展动态范围，保留更多细节', icon: Zap, enabled: hdrEnabled, onToggle: () => setHdrEnabled((v) => !v) },
+    { id: 'denoise', label: '智能降噪', desc: 'AI 识别并消除噪点', icon: Droplets, enabled: denoiseEnabled, onToggle: () => setDenoiseEnabled((v) => !v) },
+    { id: 'sharpen', label: '锐化增强', desc: '提升画面清晰度和质感', icon: Focus, enabled: sharpenEnabled, onToggle: () => setSharpenEnabled((v) => !v) },
+  ];
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-        <button 
-          onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
-        >
-          <ArrowLeft size={20} className="text-white" />
-        </button>
-        <h1 className="text-lg font-bold text-white">智能优化</h1>
-      </div>
-
-      {/* Preview */}
-      <div className="px-4 py-4">
-        <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
-          <img 
-            src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop"
-            alt="Preview"
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Processing Overlay */}
-          {isOptimizing && (
-            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 rounded-full border-4 border-[#2196F3] border-t-transparent animate-spin mb-4" />
-              <span className="text-white text-sm">智能优化中...</span>
-              <div className="flex gap-2 mt-3">
-                {selectedOptions.map((opt) => (
-                  <div 
-                    key={opt}
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      optimizedOptions.includes(opt) 
-                        ? 'bg-[#4CAF50] text-white' 
-                        : 'bg-white/20 text-white/70'
-                    }`}
-                  >
-                    {optimizeOptions.find(o => o.id === opt)?.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Optimized Overlay */}
-          {!isOptimizing && optimizedOptions.length > 0 && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-full bg-[#4CAF50] flex items-center justify-center">
-                  <Check size={24} className="text-white" />
-                </div>
-                <span className="text-white text-sm">优化完成</span>
-              </div>
-            </div>
-          )}
-
-          {/* Current Params */}
-          <div className="absolute bottom-3 left-3 right-3">
-            <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                对比度: +{aiParams.contrast}
-              </span>
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                锐度: +{aiParams.sharpness}
-              </span>
-            </div>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">智能优化</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>一键 HDR、降噪、锐化优化</p>
           </div>
         </div>
       </div>
 
-      {/* Optimize Button */}
-      <div className="px-4 pb-4">
-        <button
-          onClick={handleOptimize}
-          disabled={isOptimizing || selectedOptions.length === 0}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 active:scale-98 disabled:opacity-50"
-        >
-          {isOptimizing ? (
-            <>
-              <RefreshCw size={18} className="animate-spin" />
-              <span>优化中...</span>
-            </>
-          ) : (
-            <>
-              <Wand2 size={18} />
-              <span>开始智能优化</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Options */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <p className="text-white/50 text-xs mb-3">选择优化项目</p>
-        
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* 开关项 */}
         <div className="space-y-3">
-          {optimizeOptions.map((option) => {
-            const Icon = option.icon;
-            const isSelected = selectedOptions.includes(option.id);
-            const isOptimized = optimizedOptions.includes(option.id);
-            
+          {toggleItems.map((item, index) => {
+            const Icon = item.icon;
             return (
-              <button
-                key={option.id}
-                onClick={() => toggleOption(option.id)}
-                disabled={isOptimizing}
-                className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
-                  isOptimized
-                    ? 'bg-[#4CAF50]/20 border border-[#4CAF50]/50'
-                    : isSelected
-                      ? 'bg-white/10 border border-white/20'
-                      : 'bg-white/5 hover:bg-white/10'
-                }`}
+              <div
+                key={item.id}
+                className="rounded-2xl p-4 flex items-center gap-4 animate-liquid-slide-up"
+                style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: `${index * 60}ms` }}
               >
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: `${option.color}20` }}
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-accent-primary-muted)' }}>
+                  <Icon size={20} style={{ color: 'var(--color-accent-primary)' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{item.label}</p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{item.desc}</p>
+                </div>
+                <button
+                  onClick={item.onToggle}
+                  aria-label={`${item.enabled ? '关闭' : '开启'}${item.label}`}
+                  className="w-12 h-7 rounded-full relative transition-colors flex-shrink-0"
+                  style={{ background: item.enabled ? 'var(--color-accent-primary)' : 'var(--color-border-medium)' }}
                 >
-                  <Icon size={24} style={{ color: option.color }} />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-white font-medium">{option.name}</p>
-                  <p className="text-white/50 text-xs">{option.desc}</p>
-                </div>
-                {isOptimized && (
-                  <div className="w-6 h-6 rounded-full bg-[#4CAF50] flex items-center justify-center">
-                    <Check size={14} className="text-white" />
-                  </div>
-                )}
-                {!isOptimized && (
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    isSelected ? 'border-[#2196F3] bg-[#2196F3]' : 'border-white/30'
-                  }`}>
-                    {isSelected && <Check size={12} className="text-white" />}
-                  </div>
-                )}
-              </button>
+                  <div
+                    className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-transform"
+                    style={{ left: item.enabled ? '22px' : '2px' }}
+                  />
+                </button>
+              </div>
             );
           })}
         </div>
 
-        {/* Info */}
-        <div className="mt-6 p-4 rounded-2xl bg-white/5">
-          <div className="flex items-start gap-3">
-            <Cpu size={20} className="text-[#2196F3] mt-0.5" />
-            <div>
-              <p className="text-white text-sm font-medium">AI 智能引擎</p>
-              <p className="text-white/50 text-xs mt-1">
-                基于深度学习的图像优化算法，自动识别场景并调整最佳参数
-              </p>
-            </div>
+        {/* 优化强度滑块 */}
+        <div
+          className="mt-4 rounded-2xl p-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: '180ms' }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium">优化强度</span>
+            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--color-accent-primary)' }}>{strength}%</span>
           </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={strength}
+            onChange={(e) => setStrength(parseInt(e.target.value))}
+            aria-label="优化强度调节"
+            className="w-full h-2 rounded-full appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, var(--color-accent-primary) 0%, var(--color-accent-primary) ${strength}%, var(--color-border-light) ${strength}%, var(--color-border-light) 100%)`,
+            }}
+          />
         </div>
+
+        {/* 一键优化按钮 */}
+        <button
+          onClick={handleOneClickOptimize}
+          disabled={isOptimizing || (!hdrEnabled && !denoiseEnabled && !sharpenEnabled)}
+          aria-label="一键优化"
+          className="w-full mt-6 py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-liquid"
+          style={{
+            background: isDone ? 'var(--color-success)' : 'var(--color-accent-primary)',
+            color: '#fff',
+            opacity: isOptimizing || (!hdrEnabled && !denoiseEnabled && !sharpenEnabled) ? 0.5 : 1,
+          }}
+        >
+          {isOptimizing ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : isDone ? (
+            <Check size={18} />
+          ) : (
+            <Wand2 size={18} />
+          )}
+          {isOptimizing ? '优化中...' : isDone ? '优化完成' : '一键优化'}
+        </button>
       </div>
     </div>
   );
 };
 
-export default SmartOptimizePage;
+export default React.memo(SmartOptimizePage);

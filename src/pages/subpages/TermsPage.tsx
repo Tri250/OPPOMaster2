@@ -1,136 +1,145 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
-import {
-  ArrowLeft, FileText, Shield, Users, Globe,
-  Clock, Lock, CheckCircle
-} from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
+
+const TERMS_TEXT = `哈苏相机助手用户协议
+
+生效日期：2025年1月1日
+最后更新：2025年6月1日
+
+欢迎使用哈苏相机助手（以下简称"本应用"）。在使用本应用之前，请仔细阅读以下用户协议。
+
+一、服务条款
+
+1.1 本应用由哈苏相机助手团队开发运营，为用户提供专业相机参数优化、AI 场景识别、LUT 滤镜管理等功能。
+
+1.2 您在使用本应用时，必须遵守本协议的所有条款和条件。
+
+1.3 我们保留随时修改或终止服务的权利，恕不另行通知。
+
+二、用户账户
+
+2.1 您可能需要创建账户才能使用某些功能。
+
+2.2 您有责任保管好您的账户信息，对账户下的所有活动负责。
+
+2.3 如发现未经授权使用您账户的情况，请立即通知我们。
+
+三、使用规范
+
+3.1 您同意不会：
+- 以任何方式滥用或破坏服务
+- 尝试未经授权访问我们的系统
+- 使用自动化工具批量操作
+- 上传恶意代码或有害内容
+- 侵犯他人的知识产权
+
+3.2 您对本应用创建的内容（如自定义预设、水印等）享有所有权。
+
+四、知识产权
+
+4.1 本应用的所有内容，包括但不限于软件、文本、图像、标识和界面设计，均受知识产权法保护。
+
+4.2 哈苏（Hasselblad）及 HNCS 为 Hasselblad Group 的注册商标，经授权使用。
+
+4.3 未经许可，您不得复制、修改、分发或以其他方式使用本应用的任何部分。
+
+五、免责声明
+
+5.1 本应用按"现状"提供，不作任何明示或暗示的保证。
+
+5.2 我们不保证服务将不间断、及时、安全或无错误。
+
+5.3 对于因使用本应用而产生的任何直接、间接、附带或后果性损害，我们不承担责任。
+
+5.4 AI 优化建议仅供参考，实际拍摄效果可能因设备、环境等因素而异。
+
+六、付费服务
+
+6.1 部分高级功能可能需要付费订阅。
+
+6.2 付费订阅按周期自动续费，您可随时取消。
+
+6.3 退款政策遵循相关法律法规。
+
+七、终止
+
+7.1 您可以随时停止使用本应用并删除账户。
+
+7.2 如您违反本协议，我们有权终止您的访问权限。
+
+八、争议解决
+
+8.1 本协议适用中华人民共和国法律。
+
+8.2 因本协议产生的争议，双方应友好协商解决；协商不成的，提交有管辖权的人民法院诉讼解决。
+
+九、其他条款
+
+9.1 本协议构成您与我们之间的完整协议。
+
+9.2 本协议的任何条款如被认定为无效，不影响其他条款的效力。
+
+9.3 我们未行使任何权利不构成对该权利的放弃。
+
+十、联系方式
+
+如有任何问题，请联系：
+- 电子邮件：support@hasselblad-assistant.com
+- 客服热线：400-888-8888
+- 工作时间：周一至周五 9:00 - 18:00`;
 
 const TermsPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { goBack } = useAppStore();
 
   return (
-    <div className="h-full w-full bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-700" />
-        </button>
-        <div className="flex items-center gap-2">
-          <FileText size={20} className="text-purple-500" />
-          <h1 className="text-lg font-semibold text-gray-900">用户协议</h1>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">用户协议</h1>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Last Updated */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Clock size={16} className="text-gray-400" />
-            <span>最后更新：2026年6月1日</span>
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* 标识 */}
+        <div
+          className="rounded-2xl p-4 flex items-center gap-3 mb-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-accent-primary-muted)', border: '1px solid var(--color-border-accent)' }}
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-accent-primary)' }}>
+            <FileText size={20} style={{ color: '#fff' }} />
+          </div>
+          <div>
+            <p className="text-sm font-bold" style={{ color: 'var(--color-accent-primary)' }}>用户协议</p>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>使用本应用即表示您同意本协议</p>
           </div>
         </div>
 
-        {/* Agreement Summary */}
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5 text-white">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <CheckCircle size={32} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-2">欢迎使用我们的服务</h2>
-              <p className="text-purple-100 text-sm">
-                使用我们的应用即表示您同意本用户协议和隐私政策。请仔细阅读以下内容。
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* 最后更新日期 */}
+        <p className="text-xs mb-4" style={{ color: 'var(--color-text-tertiary)' }}>
+          最后更新日期：2025年6月1日
+        </p>
 
-        {/* Key Terms */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">重要条款</h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users size={18} className="text-blue-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">用户责任</h4>
-                <p className="text-xs text-gray-500 mt-1">您需要对自己的账户安全和使用行为负责</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Shield size={18} className="text-green-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">知识产权</h4>
-                <p className="text-xs text-gray-500 mt-1">应用内所有内容均受知识产权法保护</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Globe size={18} className="text-orange-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">服务范围</h4>
-                <p className="text-xs text-gray-500 mt-1">我们致力于提供稳定、高质量的摄影工具服务</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Lock size={18} className="text-purple-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">隐私保护</h4>
-                <p className="text-xs text-gray-500 mt-1">我们严格保护您的个人信息和隐私安全</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Full Terms */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">完整协议</h3>
-          <div className="space-y-4 text-sm text-gray-600">
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">1. 服务条款</h4>
-              <p className="text-xs leading-relaxed">
-                本应用提供专业的摄影后期处理工具，包括但不限于 AI 场景识别、色彩调整、滤镜效果、水印添加等功能。我们将持续更新和优化服务，为用户提供更好的使用体验。
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">2. 用户账户</h4>
-              <p className="text-xs leading-relaxed">
-                用户需要注册账户才能使用部分功能。请妥善保管账户信息，对账户下的所有行为负责。如发现账户异常，请立即联系我们。
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">3. 用户内容</h4>
-              <p className="text-xs leading-relaxed">
-                用户上传和处理的图片内容归用户所有。我们不会在未经许可的情况下使用或分享您的图片内容。
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">4. 禁止行为</h4>
-              <p className="text-xs leading-relaxed">
-                禁止利用本应用从事任何违法活动，禁止传播恶意代码，禁止攻击或干扰服务正常运行。
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">5. 免责声明</h4>
-              <p className="text-xs leading-relaxed">
-                我们尽力保证服务稳定运行，但不对因不可抗力或技术原因导致的服务中断承担责任。
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">6. 协议修改</h4>
-              <p className="text-xs leading-relaxed">
-                我们保留随时修改本协议的权利，修改后的协议将在应用内公布，继续使用即表示您同意修改后的协议。
-              </p>
-            </div>
+        {/* 协议文本 */}
+        <div
+          className="rounded-2xl p-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: '60ms' }}
+        >
+          <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>
+            {TERMS_TEXT}
           </div>
         </div>
       </div>
@@ -138,4 +147,4 @@ const TermsPage: React.FC = () => {
   );
 };
 
-export default TermsPage;
+export default React.memo(TermsPage);

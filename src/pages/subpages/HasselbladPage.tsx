@@ -1,202 +1,170 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import {
-  ArrowLeft, Camera, Aperture, Sun, Palette, Check, Zap,
-  Eye, Layers, Sparkles, Moon, Leaf
-} from 'lucide-react';
+import { ArrowLeft, Palette, Check, Shield } from 'lucide-react';
 
-// 哈苏色彩模式
 const COLOR_MODES = [
-  { id: 'natural', name: '哈苏自然色彩', icon: Eye, color: '#FF6B35', desc: 'HNCS 3.0 自然色彩解决方案', params: { saturation: 0, contrast: 5, warmth: 0, vibrance: 5 } },
-  { id: 'portrait', name: '人像肤色优化', icon: Sun, color: '#FF6B9D', desc: '自然美化肤色，保留细节', params: { saturation: 5, contrast: 8, warmth: 3, skinTone: 10 } },
-  { id: 'landscape', name: '风景色彩增强', icon: Leaf, color: '#4ECDC4', desc: '增强风景色彩层次', params: { saturation: 12, contrast: 10, warmth: 5, clarity: 10 } },
-  { id: 'classic', name: '哈苏经典胶片', icon: Sparkles, color: '#9C27B0', desc: '复古胶片色彩质感', params: { saturation: 8, contrast: 15, warmth: 8, grain: 5 } },
-  { id: 'bw', name: '哈苏黑白', icon: Moon, color: '#808080', desc: '经典黑白摄影风格', params: { saturation: -100, contrast: 20, clarity: 15 } },
-  { id: 'vivid', name: '鲜艳色彩', icon: Palette, color: '#FF9800', desc: '鲜艳饱满的色彩表现', params: { saturation: 20, contrast: 10, vibrance: 15 } },
-];
-
-// 色彩参数调节
-const COLOR_PARAMS = [
-  { id: 'saturation', name: '饱和度', min: -100, max: 100, default: 0 },
-  { id: 'contrast', name: '对比度', min: -100, max: 100, default: 0 },
-  { id: 'warmth', name: '色温', min: -100, max: 100, default: 0 },
-  { id: 'vibrance', name: '鲜艳度', min: -100, max: 100, default: 0 },
-  { id: 'clarity', name: '清晰度', min: -100, max: 100, default: 0 },
+  {
+    id: 'natural',
+    name: '自然色彩',
+    desc: '真实还原，忠于原色，适合日常记录',
+    color: '#8BC34A',
+    params: { saturation: 5, contrast: 5, warmth: 0, sharpness: 10 },
+  },
+  {
+    id: 'portrait',
+    name: '人像优化',
+    desc: '柔美肤色，自然美化，人像首选',
+    color: '#FF6B9D',
+    params: { saturation: 8, contrast: 8, warmth: 3, sharpness: 15 },
+  },
+  {
+    id: 'landscape',
+    name: '风景增强',
+    desc: '色彩鲜明，层次丰富，风光利器',
+    color: '#4ECDC4',
+    params: { saturation: 15, contrast: 12, warmth: 5, sharpness: 20 },
+  },
+  {
+    id: 'classic',
+    name: '经典胶片',
+    desc: '模拟经典胶片质感，怀旧氛围',
+    color: '#D4A574',
+    params: { saturation: -5, contrast: 10, warmth: 8, sharpness: 12 },
+  },
+  {
+    id: 'bw',
+    name: '黑白',
+    desc: '去除色彩干扰，专注光影表达',
+    color: '#9E9E9E',
+    params: { saturation: -100, contrast: 15, warmth: 0, sharpness: 18 },
+  },
+  {
+    id: 'vivid',
+    name: '鲜艳',
+    desc: '高饱和高对比，视觉冲击力强',
+    color: '#FF6B35',
+    params: { saturation: 25, contrast: 15, warmth: 3, sharpness: 22 },
+  },
 ];
 
 const HasselbladPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { goBack, setAiParam } = useAppStore();
   const [selectedMode, setSelectedMode] = useState('natural');
-  const [params, setParams] = useState({
-    saturation: 0,
-    contrast: 5,
-    warmth: 0,
-    vibrance: 5,
-    clarity: 0,
-  });
-  const [isApplied, setIsApplied] = useState(false);
 
-  const handleModeSelect = (modeId: string) => {
-    const mode = COLOR_MODES.find(m => m.id === modeId);
-    if (mode) {
-      setSelectedMode(modeId);
-      setParams(mode.params as any);
-    }
-  };
-
-  const handleParamChange = (id: string, value: number) => {
-    setParams(prev => ({ ...prev, [id]: value }));
-  };
-
-  const handleApply = () => {
-    setIsApplied(true);
-    setTimeout(() => setIsApplied(false), 2000);
-  };
-
-  const handleReset = () => {
-    const mode = COLOR_MODES.find(m => m.id === selectedMode);
-    if (mode) {
-      setParams(mode.params as any);
-    }
-  };
+  const handleSelectMode = useCallback(
+    (mode: (typeof COLOR_MODES)[0]) => {
+      setSelectedMode(mode.id);
+      const entries = Object.entries(mode.params) as [keyof typeof mode.params, number][];
+      entries.forEach(([key, value]) => {
+        setAiParam(key, value);
+      });
+    },
+    [setAiParam],
+  );
 
   return (
-    <div className="h-full w-full bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-700" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Aperture size={20} className="text-orange-500" />
-          <h1 className="text-lg font-semibold text-gray-900">哈苏色彩科学</h1>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">哈苏色彩科学</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Hasselblad Natural Colour Solution</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <Camera size={32} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1">HNCS 3.0</h2>
-              <p className="text-orange-100 text-sm">哈苏自然色彩解决方案</p>
-              <p className="text-orange-100/80 text-xs mt-2">还原真实色彩，呈现自然之美</p>
-            </div>
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* HNCS 认证标识 */}
+        <div
+          className="rounded-2xl p-4 flex items-center gap-3 mb-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-accent-primary-muted)', border: '1px solid var(--color-border-accent)' }}
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-accent-primary)' }}>
+            <Shield size={20} style={{ color: '#fff' }} />
+          </div>
+          <div>
+            <p className="text-sm font-bold" style={{ color: 'var(--color-accent-primary)' }}>HNCS 认证</p>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Hasselblad Natural Colour Solution</p>
           </div>
         </div>
 
-        {/* Color Modes */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">色彩模式</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {COLOR_MODES.map(mode => {
-              const Icon = mode.icon;
-              const isSelected = selectedMode === mode.id;
-              return (
-                <button
-                  key={mode.id}
-                  onClick={() => handleModeSelect(mode.id)}
-                  className={`p-3 rounded-xl border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Icon size={18} style={{ color: mode.color }} />
-                    <span className={`text-sm font-medium ${isSelected ? 'text-orange-700' : 'text-gray-700'}`}>
-                      {mode.name}
-                    </span>
+        {/* 色彩模式列表 */}
+        <div className="space-y-3">
+          {COLOR_MODES.map((mode, index) => {
+            const isSelected = selectedMode === mode.id;
+            return (
+              <button
+                key={mode.id}
+                onClick={() => handleSelectMode(mode)}
+                aria-label={`选择${mode.name}色彩模式`}
+                className="w-full rounded-2xl p-4 text-left transition-liquid animate-liquid-slide-up"
+                style={{
+                  background: isSelected ? 'var(--color-accent-primary-muted)' : 'var(--color-bg-secondary)',
+                  border: `1px solid ${isSelected ? 'var(--color-accent-primary)' : 'var(--color-border-light)'}`,
+                  animationDelay: `${index * 60}ms`,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${mode.color}20` }}
+                  >
+                    <Palette size={20} style={{ color: mode.color }} />
                   </div>
-                  <p className="text-xs text-gray-500">{mode.desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Fine Tuning */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">精细调节</h3>
-          <div className="space-y-4">
-            {COLOR_PARAMS.map(param => (
-              <div key={param.id}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-gray-600">{param.name}</span>
-                  <span className="text-sm font-medium text-gray-900">{params[param.id as keyof typeof params]}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold">{mode.name}</p>
+                      {isSelected && (
+                        <Check size={14} style={{ color: 'var(--color-accent-primary)' }} />
+                      )}
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                      {mode.desc}
+                    </p>
+                  </div>
+                  <div
+                    className="w-6 h-6 rounded-full flex-shrink-0"
+                    style={{ background: mode.color }}
+                  />
                 </div>
-                <input
-                  type="range"
-                  min={param.min}
-                  max={param.max}
-                  value={params[param.id as keyof typeof params]}
-                  onChange={(e) => handleParamChange(param.id, parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                />
-              </div>
-            ))}
-          </div>
+                {/* 推荐参数 */}
+                <div className="flex gap-2 mt-3 ml-13">
+                  {Object.entries(mode.params).map(([key, value]) => (
+                    <span
+                      key={key}
+                      className="text-[10px] px-1.5 py-0.5 rounded"
+                      style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
+                    >
+                      {key === 'saturation'
+                        ? '饱和'
+                        : key === 'contrast'
+                          ? '对比'
+                          : key === 'warmth'
+                            ? '色温'
+                            : '锐度'}
+                      :{value > 0 ? '+' : ''}
+                      {value}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
         </div>
-
-        {/* Features */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">核心特性</h3>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Zap size={18} className="text-orange-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">自然肤色还原</h4>
-                <p className="text-xs text-gray-500 mt-0.5">智能识别肤色区域，自然美化不偏色</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Layers size={18} className="text-blue-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">色彩层次增强</h4>
-                <p className="text-xs text-gray-500 mt-0.5">智能增强色彩过渡，层次更丰富</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Sparkles size={18} className="text-purple-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">16-bit 色彩深度</h4>
-                <p className="text-xs text-gray-500 mt-0.5">超高色彩精度，细节分毫毕现</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="bg-white border-t border-gray-200 p-4 flex gap-3">
-        <button
-          onClick={handleReset}
-          className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-        >
-          重置
-        </button>
-        <button
-          onClick={handleApply}
-          className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2"
-        >
-          {isApplied ? <Check size={20} /> : <Aperture size={20} />}
-          {isApplied ? '已应用' : '应用色彩'}
-        </button>
       </div>
     </div>
   );
 };
 
-export default HasselbladPage;
+export default React.memo(HasselbladPage);

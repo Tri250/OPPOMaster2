@@ -1,489 +1,203 @@
 import React, { useState, useCallback } from 'react';
-import { ArrowLeft, Download, Star, Heart, Search, Filter, Check, ExternalLink, FileText, Sparkles, Crown } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { 
-  LUT_RESOURCES, 
-  LUT_CATEGORIES, 
-  LUTResource, 
-  formatFileSize, 
+import { ArrowLeft, Download, Eye, Heart, Star } from 'lucide-react';
+import {
+  LUT_RESOURCES,
+  LUT_CATEGORIES,
+  formatFileSize,
   formatDownloads,
-  getLUTResources,
-  searchLUTResources
 } from '../../services/lutResourceService';
+import type { LUTResource } from '../../services/lutResourceService';
 
 const LUTSharePage: React.FC = () => {
-  const { navigateToSubPage } = useAppStore();
+  const { goBack } = useAppStore();
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'downloads' | 'rating' | 'newest'>('downloads');
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [selectedLUT, setSelectedLUT] = useState<LUTResource | null>(null);
+  const [previewLUT, setPreviewLUT] = useState<LUTResource | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  // 过滤和排序
-  const getFilteredLUTs = useCallback(() => {
-    const baseResult = searchQuery 
-      ? searchLUTResources(searchQuery)
-      : getLUTResources(selectedCategory);
-    const result = [...baseResult];
+  const filteredLUTs =
+    selectedCategory === 'all'
+      ? LUT_RESOURCES
+      : LUT_RESOURCES.filter((l) => l.category === selectedCategory);
 
-    // 排序
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'downloads':
-          return b.downloads - a.downloads;
-        case 'rating':
-          return b.rating - a.rating;
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [selectedCategory, searchQuery, sortBy]);
-
-  // 下载LUT
-  const handleDownload = useCallback(async (lut: LUTResource) => {
+  const handleDownload = useCallback((lut: LUTResource) => {
     setDownloadingId(lut.id);
-    try {
-      // 创建下载链接
-      const link = document.createElement('a');
-      link.href = lut.downloadUrl;
-      link.download = `${lut.nameEn.replace(/\s+/g, '_')}_${lut.size}x${lut.size}.cube`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // 标记已下载
-      setDownloadedIds(prev => new Set([...prev, lut.id]));
-    } catch (error) {
-      console.error('Download failed:', error);
-    } finally {
+    setTimeout(() => {
+      setDownloadedIds((prev) => new Set([...prev, lut.id]));
       setDownloadingId(null);
-    }
+    }, 1000);
   }, []);
 
-  // 切换喜欢
   const toggleLike = useCallback((id: string) => {
-    setLikedIds(prev => {
+    setLikedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
 
-  const filteredLUTs = getFilteredLUTs();
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigateToSubPage(null)}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft size={20} className="text-white/70" />
-            </button>
-            <div>
-              <h1 className="text-lg font-bold">LUT资源库</h1>
-              <p className="text-xs text-white/50">视频调色LUT下载</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-white/40">{LUT_RESOURCES.length} 个LUT</span>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">LUT 资源分享</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{LUT_RESOURCES.length}+ 专业 LUT 滤镜</p>
           </div>
         </div>
-
-        {/* Search */}
-        <div className="px-4 pb-3">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索LUT名称、风格..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#FF6B35] outline-none transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* Categories */}
+        {/* 分类 */}
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
           {LUT_CATEGORIES.map((cat) => (
             <button
               key={cat.key}
               onClick={() => setSelectedCategory(cat.key)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                selectedCategory === cat.key
-                  ? 'bg-[#FF6B35] text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
+              aria-label={`筛选${cat.label}`}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-liquid"
+              style={{
+                background: selectedCategory === cat.key ? 'var(--color-accent-primary)' : 'var(--color-bg-secondary)',
+                color: selectedCategory === cat.key ? '#fff' : 'var(--color-text-secondary)',
+                border: `1px solid ${selectedCategory === cat.key ? 'var(--color-accent-primary)' : 'var(--color-border-light)'}`,
+              }}
             >
-              <span className="mr-1">{cat.icon}</span>
-              {cat.label}
+              {cat.icon} {cat.label}
             </button>
           ))}
         </div>
-
-        {/* Sort */}
-        <div className="px-4 pb-3 flex items-center gap-2">
-          <Filter size={14} className="text-white/40" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'downloads' | 'rating' | 'newest')}
-            className="bg-transparent text-white/60 text-xs outline-none cursor-pointer"
-          >
-            <option value="downloads" className="bg-[#1a1a1a]">最多下载</option>
-            <option value="rating" className="bg-[#1a1a1a]">最高评分</option>
-            <option value="newest" className="bg-[#1a1a1a]">最新发布</option>
-          </select>
-        </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Hot & New Section */}
-        {selectedCategory === 'all' && !searchQuery && (
-          <div className="mb-6">
-            {/* 2026新品 */}
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <Sparkles size={16} className="text-[#FF6B35]" />
-                2026新品
-              </h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                {LUT_RESOURCES.filter(l => l.isNew).map((lut) => (
-                  <div
-                    key={lut.id}
-                    onClick={() => setSelectedLUT(lut)}
-                    className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-[#1a1a1a] cursor-pointer hover:scale-[1.02] transition-transform"
-                  >
-                    <div className="aspect-square relative">
-                      <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#4CAF50] rounded text-[10px] font-bold">
-                        NEW
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      <h3 className="text-xs font-medium truncate">{lut.name}</h3>
-                      <p className="text-[10px] text-white/50">{formatDownloads(lut.downloads)}下载</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 热门推荐 */}
-            <div>
-              <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <Crown size={16} className="text-yellow-500" />
-                热门推荐
-              </h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                {LUT_RESOURCES.filter(l => l.isHot && !l.isNew).slice(0, 6).map((lut) => (
-                  <div
-                    key={lut.id}
-                    onClick={() => setSelectedLUT(lut)}
-                    className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-[#1a1a1a] cursor-pointer hover:scale-[1.02] transition-transform"
-                  >
-                    <div className="aspect-square relative">
-                      <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#FF6B35] rounded text-[10px] font-bold">
-                        HOT
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      <h3 className="text-xs font-medium truncate">{lut.name}</h3>
-                      <p className="text-[10px] text-white/50">{formatDownloads(lut.downloads)}下载</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* LUT Grid */}
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
         <div className="grid grid-cols-2 gap-3">
-          {filteredLUTs.map((lut) => (
-            <div
-              key={lut.id}
-              className="rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/5"
-            >
-              {/* Preview */}
-              <div 
-                className="aspect-video relative cursor-pointer"
-                onClick={() => setSelectedLUT(lut)}
+          {filteredLUTs.map((lut, index) => {
+            const isDownloaded = downloadedIds.has(lut.id);
+            const isLiked = likedIds.has(lut.id);
+            return (
+              <div
+                key={lut.id}
+                className="rounded-2xl overflow-hidden animate-liquid-slide-up"
+                style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: `${(index % 6) * 60}ms` }}
               >
-                <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                
-                {/* Badges */}
-                <div className="absolute top-2 left-2 flex gap-1">
+                {/* 预览图 */}
+                <div className="aspect-video relative" style={{ background: 'var(--color-bg-tertiary)' }}>
+                  <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                   {lut.isNew && (
-                    <span className="px-1.5 py-0.5 bg-[#4CAF50] rounded text-[9px] font-bold">NEW</span>
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: 'var(--color-success)', color: '#fff' }}>NEW</span>
                   )}
                   {lut.isHot && !lut.isNew && (
-                    <span className="px-1.5 py-0.5 bg-[#FF6B35] rounded text-[9px] font-bold">HOT</span>
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: 'var(--color-accent-primary)', color: '#fff' }}>HOT</span>
                   )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleLike(lut.id); }}
+                    aria-label={`${isLiked ? '取消收藏' : '收藏'}${lut.name}`}
+                    className="absolute top-2 right-2 p-1.5 rounded-full"
+                    style={{ background: 'rgba(0,0,0,0.5)' }}
+                  >
+                    <Heart size={14} fill={isLiked ? 'var(--color-accent-primary)' : 'none'} style={{ color: isLiked ? 'var(--color-accent-primary)' : '#fff' }} />
+                  </button>
                 </div>
-
-                {/* Format Badge */}
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-black/50 backdrop-blur-sm rounded text-[9px]">
-                  .{lut.format}
+                {/* 信息 */}
+                <div className="p-3">
+                  <h3 className="text-sm font-medium truncate">{lut.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Star size={10} style={{ color: '#FFD700' }} />
+                    <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>{lut.rating.toFixed(1)}</span>
+                    <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>{formatDownloads(lut.downloads)}下载</span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setPreviewLUT(lut)}
+                      aria-label={`预览${lut.name}`}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-liquid"
+                      style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}
+                    >
+                      <Eye size={12} /> 预览
+                    </button>
+                    <button
+                      onClick={() => handleDownload(lut)}
+                      disabled={downloadingId === lut.id}
+                      aria-label={`下载${lut.name}`}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-liquid"
+                      style={{
+                        background: isDownloaded ? 'var(--color-success)' : 'var(--color-accent-primary)',
+                        color: '#fff',
+                        opacity: downloadingId === lut.id ? 0.6 : 1,
+                      }}
+                    >
+                      {downloadingId === lut.id ? (
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : isDownloaded ? (
+                        <span>已下载</span>
+                      ) : (
+                        <>
+                          <Download size={12} /> {formatFileSize(lut.fileSize)}
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-
-                {/* Like Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLike(lut.id);
-                  }}
-                  className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-sm"
-                >
-                  <Heart
-                    size={14}
-                    className={likedIds.has(lut.id) ? 'text-red-500 fill-red-500' : 'text-white/70'}
-                  />
-                </button>
               </div>
-
-              {/* Info */}
-              <div className="p-3">
-                <h3 
-                  className="text-sm font-medium truncate cursor-pointer hover:text-[#FF6B35]"
-                  onClick={() => setSelectedLUT(lut)}
-                >
-                  {lut.name}
-                </h3>
-                <p className="text-xs text-white/50 truncate mt-0.5">{lut.description}</p>
-
-                {/* Tags */}
-                <div className="flex gap-1 mt-2 overflow-hidden">
-                  {lut.tags.slice(0, 2).map((tag, idx) => (
-                    <span key={idx} className="text-[10px] text-white/40">#{tag}</span>
-                  ))}
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="flex items-center gap-1">
-                    <Star size={10} className="text-yellow-400 fill-yellow-400" />
-                    <span className="text-[10px] text-white/50">{lut.rating.toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Download size={10} className="text-white/40" />
-                    <span className="text-[10px] text-white/50">{formatDownloads(lut.downloads)}</span>
-                  </div>
-                  <div className="text-[10px] text-white/40 ml-auto">
-                    {lut.size}x{lut.size}
-                  </div>
-                </div>
-
-                {/* Download Button */}
-                <button
-                  onClick={() => handleDownload(lut)}
-                  disabled={downloadingId === lut.id}
-                  className={`w-full mt-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
-                    downloadedIds.has(lut.id)
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-[#FF6B35]/20 text-[#FF6B35] hover:bg-[#FF6B35]/30'
-                  }`}
-                >
-                  {downloadedIds.has(lut.id) ? (
-                    <>
-                      <Check size={14} />
-                      <span>已下载</span>
-                    </>
-                  ) : downloadingId === lut.id ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      <span>下载中...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download size={14} />
-                      <span>下载 ({formatFileSize(lut.fileSize)})</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-
-        {/* Empty State */}
-        {filteredLUTs.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <FileText size={48} className="text-white/20 mb-4" />
-            <p className="text-white/50 text-sm">未找到匹配的LUT</p>
-            <p className="text-white/30 text-xs mt-1">请调整搜索条件</p>
-          </div>
-        )}
       </div>
 
-      {/* LUT Detail Modal */}
-      {selectedLUT && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl overflow-hidden">
-            {/* Preview */}
-            <div className="aspect-video relative">
-              <img src={selectedLUT.previewImage} alt={selectedLUT.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
-              <button
-                onClick={() => setSelectedLUT(null)}
-                className="absolute top-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-sm"
-              >
-                <ArrowLeft size={18} className="text-white" />
-              </button>
+      {/* 预览弹窗 */}
+      {previewLUT && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.8)' }}
+          onClick={() => setPreviewLUT(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl overflow-hidden animate-liquid-fade"
+            style={{ background: 'var(--color-bg-secondary)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="aspect-video">
+              <img src={previewLUT.previewImage} alt={previewLUT.name} className="w-full h-full object-cover" />
             </div>
-
-            {/* Content */}
             <div className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-bold">{selectedLUT.name}</h2>
-                  <p className="text-xs text-white/50">{selectedLUT.nameEn}</p>
-                </div>
-                <div className="flex items-center gap-1 px-2 py-1 bg-[#FF6B35]/20 rounded-lg">
-                  <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                  <span className="text-xs text-white/70">{selectedLUT.rating.toFixed(1)}</span>
-                </div>
+              <h2 className="text-lg font-bold">{previewLUT.name}</h2>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>{previewLUT.description}</p>
+              <div className="flex gap-2 mt-3">
+                <span className="text-xs px-2 py-1 rounded" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                  .{previewLUT.format}
+                </span>
+                <span className="text-xs px-2 py-1 rounded" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                  {previewLUT.size}x{previewLUT.size}
+                </span>
+                <span className="text-xs px-2 py-1 rounded" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                  {formatFileSize(previewLUT.fileSize)}
+                </span>
               </div>
-
-              <p className="text-sm text-white/70 mt-3">{selectedLUT.description}</p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {selectedLUT.tags.map((tag, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-white/5 rounded-full text-xs text-white/60">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-3 mt-4 p-3 bg-white/5 rounded-xl">
-                <div>
-                  <p className="text-[10px] text-white/40">格式</p>
-                  <p className="text-sm font-medium">.{selectedLUT.format.toUpperCase()}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-white/40">尺寸</p>
-                  <p className="text-sm font-medium">{selectedLUT.size}x{selectedLUT.size}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-white/40">文件大小</p>
-                  <p className="text-sm font-medium">{formatFileSize(selectedLUT.fileSize)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-white/40">下载次数</p>
-                  <p className="text-sm font-medium">{formatDownloads(selectedLUT.downloads)}</p>
-                </div>
-              </div>
-
-              {/* Suitable For */}
-              <div className="mt-4">
-                <p className="text-xs text-white/40 mb-2">适用场景</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedLUT.suitableFor.map((scene, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-[#FF6B35]/10 rounded-lg text-xs text-[#FF6B35]">
-                      {scene}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 mt-5">
-                <button
-                  onClick={() => {
-                    toggleLike(selectedLUT.id);
-                  }}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                    likedIds.has(selectedLUT.id)
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'bg-white/5 text-white/70 hover:bg-white/10'
-                  }`}
-                >
-                  <Heart size={16} className={likedIds.has(selectedLUT.id) ? 'fill-current' : ''} />
-                  {likedIds.has(selectedLUT.id) ? '已收藏' : '收藏'}
-                </button>
-                <button
-                  onClick={() => handleDownload(selectedLUT)}
-                  disabled={downloadingId === selectedLUT.id}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                    downloadedIds.has(selectedLUT.id)
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-[#FF6B35] text-white hover:bg-[#FF6B35]/90'
-                  }`}
-                >
-                  {downloadedIds.has(selectedLUT.id) ? (
-                    <>
-                      <Check size={16} />
-                      已下载
-                    </>
-                  ) : downloadingId === selectedLUT.id ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      下载中...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={16} />
-                      下载LUT
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Author */}
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] flex items-center justify-center text-xs font-bold">
-                    O
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">{selectedLUT.author}</p>
-                    <p className="text-[10px] text-white/40">{selectedLUT.createdAt}</p>
-                  </div>
-                </div>
-                {selectedLUT.authorUrl && (
-                  <a
-                    href={selectedLUT.authorUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors"
-                  >
-                    <ExternalLink size={14} className="text-white/40" />
-                  </a>
-                )}
-              </div>
+              <button
+                onClick={() => { handleDownload(previewLUT); setPreviewLUT(null); }}
+                aria-label={`下载${previewLUT.name}`}
+                className="w-full mt-4 py-3 rounded-xl font-medium flex items-center justify-center gap-2"
+                style={{ background: 'var(--color-accent-primary)', color: '#fff' }}
+              >
+                <Download size={16} /> 下载 LUT
+              </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Styles */}
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 };
 
-export default LUTSharePage;
+export default React.memo(LUTSharePage);

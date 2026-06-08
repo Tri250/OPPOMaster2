@@ -16,7 +16,7 @@ import {
  * ============================================
  */
 const AboutScreen: React.FC = () => {
-  const { theme, darkMode, navigateToSubPage, setCurrentPage } = useAppStore();
+  const { theme, darkMode, navigateToSubPage, goBack } = useAppStore();
 
   const themeNames: Record<string, string> = {
     hasselblad: '哈苏橙',
@@ -86,7 +86,7 @@ const AboutScreen: React.FC = () => {
       {/* 简洁标题栏 */}
       <div className="flex items-center justify-center px-4 pt-12 pb-4 relative">
         <button 
-          onClick={() => setCurrentPage('home')}
+          onClick={() => goBack()}
           className="absolute left-4 p-2 -ml-2"
         >
           <ChevronLeft size={24} style={{ color: '#FFFFFF' }} />

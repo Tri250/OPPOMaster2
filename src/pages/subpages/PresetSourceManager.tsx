@@ -1,276 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Edit2,
-  Check,
-  X,
-  RefreshCw,
-  Cloud,
-  Database,
-} from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Server } from 'lucide-react';
+
+const DEFAULT_SOURCES = [
+  { id: 'src_official', name: '官方预设源', url: 'https://presets.hasselblad-assistant.com', enabled: true },
+  { id: 'src_community', name: '社区精选源', url: 'https://community.hasselblad-assistant.com/presets', enabled: true },
+  { id: 'src_premium', name: '高级会员源', url: 'https://premium.hasselblad-assistant.com/presets', enabled: false },
+];
 
 const PresetSourceManager: React.FC = () => {
-  const { 
-    setCurrentSubPage,
-    presetSources,
-    addPresetSource,
-    updatePresetSource,
-    removePresetSource,
-    togglePresetSource,
-    fetchedPresets,
-    setFetchedPresets,
-  } = useAppStore();
+  const { goBack, presetSources, addPresetSource, removePresetSource, togglePresetSource } = useAppStore();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newUrl, setNewUrl] = useState('');
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingSource, setEditingSource] = useState<string | null>(null);
-  const [newSourceName, setNewSourceName] = useState('');
-  const [newSourceUrl, setNewSourceUrl] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const handleAdd = useCallback(() => {
+    if (!newName.trim() || !newUrl.trim()) return;
+    addPresetSource({
+      name: newName.trim(),
+      url: newUrl.trim(),
+      enabled: true,
+    });
+    setNewName('');
+    setNewUrl('');
+    setShowAddForm(false);
+  }, [newName, newUrl, addPresetSource]);
 
-  const fetchPresetsFromSources = async () => {
-    setIsLoading(true);
-    try {
-      const allPresets: any[] = [];
-      
-      for (const source of presetSources) {
-        if (!source.enabled) continue;
-        
-        try {
-          const response = await fetch(source.url);
-          if (response.ok) {
-            const data = await response.json();
-            allPresets.push(...(data.presets || data || []));
-          }
-        } catch (err) {
-          console.error(`Failed to fetch from ${source.name}:`, err);
-        }
-      }
-      
-      setFetchedPresets(allPresets);
-    } catch (err) {
-      console.error('Failed to fetch presets:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPresetsFromSources();
-  }, []);
-
-  const handleAddSource = () => {
-    if (!newSourceName.trim() || !newSourceUrl.trim()) return;
-    addPresetSource({ name: newSourceName.trim(), url: newSourceUrl.trim(), enabled: true });
-    setNewSourceName('');
-    setNewSourceUrl('');
-    setShowAddModal(false);
-  };
-
-  const handleUpdateSource = () => {
-    if (!editingSource) return;
-    updatePresetSource(editingSource, { name: newSourceName, url: newSourceUrl });
-    setEditingSource(null);
-    setNewSourceName('');
-    setNewSourceUrl('');
-  };
-
-  const startEdit = (source: any) => {
-    setEditingSource(source.id);
-    setNewSourceName(source.name);
-    setNewSourceUrl(source.url);
-  };
+  const displaySources = presetSources.length > 0 ? presetSources : DEFAULT_SOURCES;
 
   return (
-    <div className="h-full w-full bg-gray-900 flex flex-col">
-      {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-gray-700 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-300" />
-        </button>
-        <h2 className="text-lg font-semibold text-white">预设源管理</h2>
-        <div className="flex-1" />
-        <button
-          onClick={fetchPresetsFromSources}
-          disabled={isLoading}
-          className="p-2 hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
-        >
-          <RefreshCw size={20} className={`text-gray-300 ${isLoading ? 'animate-spin' : ''}`} />
-        </button>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
-        >
-          <Plus size={18} />
-          <span>添加</span>
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="p-4 bg-gray-800/50 border-b border-gray-700">
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Database size={16} className="text-green-400" />
-            <span className="text-gray-300">
-              已启用: <span className="text-white font-medium">{presetSources.filter(s => s.enabled).length}</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Cloud size={16} className="text-blue-400" />
-            <span className="text-gray-300">
-              已加载预设: <span className="text-white font-medium">{fetchedPresets.length}</span>
-            </span>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">预设源管理</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>管理预设下载源</p>
           </div>
         </div>
       </div>
 
-      {/* Sources List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {presetSources.map((source) => (
-          <div key={source.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                {editingSource === source.id ? (
-                  <div className="space-y-2">
-                    <input
-                      value={newSourceName}
-                      onChange={(e) => setNewSourceName(e.target.value)}
-                      placeholder="名称"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
-                    />
-                    <input
-                      value={newSourceUrl}
-                      onChange={(e) => setNewSourceUrl(e.target.value)}
-                      placeholder="URL"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleUpdateSource}
-                        className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm"
-                      >
-                        保存
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingSource(null);
-                          setNewSourceName('');
-                          setNewSourceUrl('');
-                        }}
-                        className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm"
-                      >
-                        取消
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="font-medium text-white">{source.name}</h3>
-                    <p className="text-xs text-gray-400 mt-1 break-all">{source.url}</p>
-                    {source.lastUpdated && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        上次更新: {source.lastUpdated.toLocaleDateString()}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-              
-              {editingSource !== source.id && (
-                <div className="flex items-center gap-2">
-                  {/* Toggle */}
-                  <button
-                    onClick={() => togglePresetSource(source.id)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${source.enabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                  >
-                    <div
-                      className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${source.enabled ? 'translate-x-6' : 'translate-x-0'}`}
-                    />
-                  </button>
-                  
-                  {/* Edit */}
-                  <button
-                    onClick={() => startEdit(source)}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <Edit2 size={16} className="text-gray-400" />
-                  </button>
-                  
-                  {/* Delete */}
-                  <button
-                    onClick={() => removePresetSource(source.id)}
-                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={16} className="text-red-400" />
-                  </button>
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* 已添加的预设源列表 */}
+        <div className="space-y-3">
+          {displaySources.map((source, index) => (
+            <div
+              key={source.id}
+              className="rounded-2xl p-4 animate-liquid-slide-up"
+              style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: `${index * 60}ms` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-accent-primary-muted)' }}>
+                  <Server size={20} style={{ color: 'var(--color-accent-primary)' }} />
                 </div>
-              )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{source.name}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {source.url}
+                  </p>
+                </div>
+                {/* 启用/禁用开关 */}
+                <button
+                  onClick={() => togglePresetSource(source.id)}
+                  aria-label={`${source.enabled ? '禁用' : '启用'}${source.name}`}
+                  className="w-12 h-7 rounded-full relative transition-colors flex-shrink-0"
+                  style={{ background: source.enabled ? 'var(--color-accent-primary)' : 'var(--color-border-medium)' }}
+                >
+                  <div
+                    className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-transform"
+                    style={{ left: source.enabled ? '22px' : '2px' }}
+                  />
+                </button>
+              </div>
+              {/* 删除按钮 */}
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={() => removePresetSource(source.id)}
+                  aria-label={`删除${source.name}`}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs transition-liquid"
+                  style={{ color: 'var(--color-error)' }}
+                >
+                  <Trash2 size={12} />
+                  删除
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Add Source Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">添加预设源</h3>
+        {/* 添加新源 */}
+        {showAddForm ? (
+          <div
+            className="mt-4 rounded-2xl p-4 animate-liquid-fade"
+            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-accent)' }}
+          >
+            <p className="text-sm font-medium mb-3">添加新预设源</p>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              aria-label="预设源名称"
+              placeholder="源名称"
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none mb-2"
+              style={{ background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+            />
+            <input
+              type="url"
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              aria-label="预设源地址"
+              placeholder="https://example.com/presets"
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none mb-3"
+              style={{ background: 'var(--color-bg-tertiary)', border: '1px solid var(--color-border-light)', color: 'var(--color-text-primary)' }}
+            />
+            <div className="flex gap-2">
               <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1 hover:bg-gray-700 rounded-full"
+                onClick={() => setShowAddForm(false)}
+                aria-label="取消添加"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-liquid"
+                style={{ border: '1px solid var(--color-border-medium)', color: 'var(--color-text-secondary)' }}
               >
-                <X size={20} className="text-gray-400" />
+                取消
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={!newName.trim() || !newUrl.trim()}
+                aria-label="确认添加"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-liquid"
+                style={{
+                  background: 'var(--color-accent-primary)',
+                  color: '#fff',
+                  opacity: !newName.trim() || !newUrl.trim() ? 0.5 : 1,
+                }}
+              >
+                添加
               </button>
             </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm text-gray-300 mb-1">名称</label>
-                <input
-                  value={newSourceName}
-                  onChange={(e) => setNewSourceName(e.target.value)}
-                  placeholder="例如：我的预设库"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm text-gray-300 mb-1">URL</label>
-                <input
-                  value={newSourceUrl}
-                  onChange={(e) => setNewSourceUrl(e.target.value)}
-                  placeholder="https://example.com/presets.json"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-orange-500"
-                />
-              </div>
-              
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleAddSource}
-                  disabled={!newSourceName.trim() || !newSourceUrl.trim()}
-                  className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
-                  添加
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <button
+            onClick={() => setShowAddForm(true)}
+            aria-label="添加新预设源"
+            className="w-full mt-4 py-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 transition-liquid animate-liquid-slide-up"
+            style={{ background: 'var(--color-bg-secondary)', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-secondary)', animationDelay: '180ms' }}
+          >
+            <Plus size={16} />
+            添加新源
+          </button>
+        )}
+      </div>
     </div>
   );
 };
 
-export default PresetSourceManager;
+export default React.memo(PresetSourceManager);

@@ -1,175 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import {
-  ArrowLeft, Cloud, Check, Smartphone, Wifi, RefreshCw,
-  Server, Shield, Clock, Upload, Download
-} from 'lucide-react';
+import { ArrowLeft, Cloud, RefreshCw, Smartphone, Check } from 'lucide-react';
 
-const CLOUD_PROVIDERS = [
-  { id: 'oppo', name: 'OPPO Cloud', icon: Smartphone, color: '#1E90FF', status: 'connected' },
-  { id: 'realme', name: 'realme Cloud', icon: Smartphone, color: '#FFD700', status: 'disconnected' },
-  { id: 'vivo', name: 'vivo Cloud', icon: Smartphone, color: '#4169E1', status: 'disconnected' },
-  { id: 'honor', name: '荣耀 Cloud', icon: Smartphone, color: '#32CD32', status: 'disconnected' },
-];
-
-const SYNC_ITEMS = [
-  { id: 'presets', name: '预设同步', icon: Upload, enabled: true, lastSync: '2分钟前' },
-  { id: 'luts', name: 'LUT 资源同步', icon: Upload, enabled: true, lastSync: '5分钟前' },
-  { id: 'settings', name: '设置同步', icon: RefreshCw, enabled: false, lastSync: '从未同步' },
+const BRANDS = [
+  { id: 'oppo', name: 'OPPO', color: '#1BA784' },
+  { id: 'realme', name: 'realme', color: '#F5C542' },
+  { id: 'vivo', name: 'vivo', color: '#4A90D9' },
+  { id: 'honor', name: '荣耀', color: '#2D6BE6' },
 ];
 
 const CloudSyncPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { goBack } = useAppStore();
+  const [syncEnabled, setSyncEnabled] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState('oppo');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSync = () => {
+  const handleSync = useCallback(() => {
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 2000);
-  };
+    setTimeout(() => {
+      const now = new Date();
+      setLastSyncTime(
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      );
+      setIsSyncing(false);
+    }, 2000);
+  }, []);
 
   return (
-    <div className="h-full w-full bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button
-          onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-700" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Cloud size={20} className="text-blue-500" />
-          <h1 className="text-lg font-semibold text-gray-900">云同步</h1>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{ background: 'rgba(10,10,10,0.92)', borderBottom: '1px solid var(--color-border-light)' }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={goBack} aria-label="返回上一页" className="p-2 -ml-2 rounded-full transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold">云同步</h1>
+            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>跨设备同步预设与设置</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Sync Status */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 text-white">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <Cloud size={32} className="text-white" />
+      {/* 内容区 */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 animate-liquid-fade">
+        {/* 同步开关 */}
+        <div
+          className="rounded-2xl p-4 flex items-center justify-between animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-accent-primary-muted)' }}>
+              <Cloud size={20} style={{ color: 'var(--color-accent-primary)' }} />
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1">同步状态</h2>
-              <p className="text-blue-100 text-sm">自动同步已开启</p>
-              <div className="flex items-center gap-2 mt-3">
-                <span className="text-blue-100 text-xs">最后同步：2分钟前</span>
-              </div>
+            <div>
+              <p className="text-sm font-medium">启用云同步</p>
+              <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                {syncEnabled ? '同步已开启' : '同步已关闭'}
+              </p>
             </div>
           </div>
           <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="w-full mt-4 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            onClick={() => setSyncEnabled((v) => !v)}
+            aria-label={`${syncEnabled ? '关闭' : '开启'}云同步`}
+            className="w-12 h-7 rounded-full relative transition-colors flex-shrink-0"
+            style={{ background: syncEnabled ? 'var(--color-accent-primary)' : 'var(--color-border-medium)' }}
           >
-            <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
-            {isSyncing ? '同步中...' : '立即同步'}
+            <div
+              className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-transform"
+              style={{ left: syncEnabled ? '22px' : '2px' }}
+            />
           </button>
         </div>
 
-        {/* Cloud Providers */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">云服务提供商</h3>
-          <div className="space-y-2">
-            {CLOUD_PROVIDERS.map(provider => {
-              const Icon = provider.icon;
+        {/* 上次同步时间 */}
+        <div
+          className="mt-3 rounded-2xl p-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: '60ms' }}
+        >
+          <p className="text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>上次同步时间</p>
+          <p className="text-sm font-medium">
+            {lastSyncTime ?? '从未同步'}
+          </p>
+        </div>
+
+        {/* 同步品牌选择 */}
+        <div
+          className="mt-3 rounded-2xl p-4 animate-liquid-slide-up"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border-light)', animationDelay: '120ms' }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Smartphone size={14} style={{ color: 'var(--color-accent-primary)' }} />
+            <p className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>同步品牌</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {BRANDS.map((brand) => {
+              const isSelected = selectedBrand === brand.id;
               return (
-                <div
-                  key={provider.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                <button
+                  key={brand.id}
+                  onClick={() => setSelectedBrand(brand.id)}
+                  aria-label={`选择${brand.name}品牌同步`}
+                  className="py-3 rounded-xl flex items-center justify-center gap-2 transition-liquid"
+                  style={{
+                    background: isSelected ? `${brand.color}20` : 'var(--color-bg-tertiary)',
+                    border: `1px solid ${isSelected ? brand.color : 'var(--color-border-light)'}`,
+                  }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${provider.color}20` }}>
-                      <Icon size={20} style={{ color: provider.color }} />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">{provider.name}</span>
-                      <p className="text-xs text-gray-500">
-                        {provider.status === 'connected' ? '已连接' : '未连接'}
-                      </p>
-                    </div>
-                  </div>
-                  {provider.status === 'connected' ? (
-                    <Check size={20} className="text-green-500" />
-                  ) : (
-                    <button className="text-sm text-blue-600 font-medium">连接</button>
-                  )}
-                </div>
+                  <div className="w-3 h-3 rounded-full" style={{ background: brand.color }} />
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: isSelected ? brand.color : 'var(--color-text-secondary)' }}
+                  >
+                    {brand.name}
+                  </span>
+                  {isSelected && <Check size={14} style={{ color: brand.color }} />}
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Sync Items */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">同步内容</h3>
-          <div className="space-y-2">
-            {SYNC_ITEMS.map(item => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Icon size={20} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                      <p className="text-xs text-gray-500">最后同步：{item.lastSync}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      item.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
-                    }`}>
-                      {item.enabled ? '已开启' : '已关闭'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">同步特性</h3>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Shield size={18} className="text-green-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">端到端加密</h4>
-                <p className="text-xs text-gray-500 mt-0.5">您的数据完全加密，安全可靠</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Wifi size={18} className="text-purple-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">Wi-Fi 自动同步</h4>
-                <p className="text-xs text-gray-500 mt-0.5">仅在 Wi-Fi 下自动同步，节省流量</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Clock size={18} className="text-orange-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-900">历史版本</h4>
-                <p className="text-xs text-gray-500 mt-0.5">保留 30 天历史版本，随时回退</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* 立即同步按钮 */}
+        <button
+          onClick={handleSync}
+          disabled={!syncEnabled || isSyncing}
+          aria-label="立即同步"
+          className="w-full mt-6 py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-liquid mb-6"
+          style={{
+            background: 'var(--color-accent-primary)',
+            color: '#fff',
+            opacity: !syncEnabled || isSyncing ? 0.5 : 1,
+          }}
+        >
+          {isSyncing ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <RefreshCw size={18} />
+          )}
+          {isSyncing ? '同步中...' : '立即同步'}
+        </button>
       </div>
     </div>
   );
 };
 
-export default CloudSyncPage;
+export default React.memo(CloudSyncPage);

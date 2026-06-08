@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore, featuredPresets } from '../store/appStore';
-import { Search, Heart, Sparkles, Check, RefreshCw, Download, Star, Crown } from 'lucide-react';
+import { Search, Sparkles, RefreshCw } from 'lucide-react';
+import PresetCard from '../components/PresetCard';
+import { SkeletonPresetCard } from '../components/Skeleton';
 
 /**
  * ============================================
@@ -13,10 +15,20 @@ const FeaturedScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    setIsLoading(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      setIsLoading(false);
+    }, 800);
   }, []);
 
   const toggleFavorite = useCallback((id: string) => {
@@ -32,14 +44,14 @@ const FeaturedScreen: React.FC = () => {
   }, []);
 
   const filteredPresets = featuredPresets.filter((preset) => {
-    const searchMatch = !searchQuery || 
+    const searchMatch = !searchQuery ||
       preset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       preset.author.toLowerCase().includes(searchQuery.toLowerCase());
     return searchMatch;
   });
 
   return (
-    <div 
+    <div
       className="h-full flex flex-col overflow-hidden animate-liquid-fade dynamic-bg"
       style={{ background: 'var(--color-bg-primary)' }}
     >
@@ -53,10 +65,10 @@ const FeaturedScreen: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <button 
+            <button
               aria-label="搜索"
               className="p-2 rounded-xl"
-              style={{ 
+              style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.1)'
               }}
@@ -67,13 +79,13 @@ const FeaturedScreen: React.FC = () => {
               onClick={handleRefresh}
               aria-label="刷新"
               className="p-2 rounded-xl"
-              style={{ 
+              style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.1)'
               }}
             >
-              <RefreshCw 
-                size={16} 
+              <RefreshCw
+                size={16}
                 className={refreshing ? 'animate-liquid-spin' : ''}
                 style={{ color: 'var(--color-text-secondary)' }}
               />
@@ -85,8 +97,8 @@ const FeaturedScreen: React.FC = () => {
       {/* 搜索栏 */}
       <div className="px-4 pb-3">
         <div className="relative">
-          <Search 
-            size={16} 
+          <Search
+            size={16}
             className="absolute left-4 top-1/2 -translate-y-1/2"
             style={{ color: 'var(--color-text-tertiary)' }}
           />
@@ -116,9 +128,9 @@ const FeaturedScreen: React.FC = () => {
       </div>
 
       {/* 搜索结果统计 */}
-      {searchQuery && (
+      {searchQuery && !isLoading && (
         <div className="px-4 pb-2 flex items-center gap-3 animate-liquid-fade">
-          <span 
+          <span
             className="text-xs px-2 py-1 rounded-md font-bold"
             style={{ background: '#FF6B35', color: '#FFFFFF' }}
           >
@@ -139,175 +151,60 @@ const FeaturedScreen: React.FC = () => {
 
       {/* 预设网格 */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide custom-scrollbar">
-        <div className="grid grid-cols-2 gap-4">
-          {filteredPresets.map((preset, index) => (
-            <div
-              key={preset.id}
-              className="group relative animate-liquid-slide-up"
-              style={{
-                animationDelay: `${index * 60}ms`,
-                animationFillMode: 'both',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '20px',
-                overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.08)'
-              }}
-              role="article"
-            >
-              {/* 图片 */}
-              <div className="aspect-[4/3] overflow-hidden rounded-t-2xl">
-                <img
-                  src={preset.coverPath}
-                  alt={preset.name}
-                  className="w-full h-full object-cover transition-liquid group-hover:scale-110"
-                  loading="lazy"
+        {isLoading ? (
+          <SkeletonPresetCard count={6} />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              {filteredPresets.map((preset, index) => (
+                <PresetCard
+                  key={preset.id}
+                  preset={preset}
+                  isFavorite={favorites.has(preset.id)}
+                  onToggleFavorite={toggleFavorite}
+                  variant="full"
+                  index={index}
                 />
-              </div>
+              ))}
+            </div>
 
-              {/* NEW徽章 - 白色边框 */}
-              {preset.isNew && (
-                <div 
-                  className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-md"
-                  style={{ 
-                    background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.5)'
-                  }}
-                >
-                  <Sparkles size={12} style={{ color: '#FFFFFF' }} />
-                  <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>NEW</span>
-                </div>
-              )}
-
-              {/* HNCS徽章 */}
-              {preset.isHncs && (
-                <div 
-                  className="absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-md"
-                  style={{ background: 'rgba(255, 107, 53, 0.9)' }}
-                >
-                  <Crown size={12} style={{ color: '#FFFFFF' }} />
-                  <span className="text-xs font-bold" style={{ color: '#FFFFFF' }}>HNCS</span>
-                </div>
-              )}
-
-              {/* 收藏按钮 - 白色 */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFavorite(preset.id);
-                }}
-                aria-label={favorites.has(preset.id) ? '取消收藏' : '添加收藏'}
-                aria-pressed={favorites.has(preset.id)}
-                className="absolute top-3 right-3 p-2.5 rounded-full z-20 transition-spring-soft ripple-container"
-                style={{
-                  background: favorites.has(preset.id) 
-                    ? 'rgba(244, 67, 54, 0.2)' 
-                    : 'rgba(0, 0, 0, 0.5)',
-                  backdropFilter: 'blur(12px)'
-                }}
-              >
-                <Heart
-                  size={18}
+            {/* 空状态 */}
+            {filteredPresets.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 animate-liquid-fade">
+                <div
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
                   style={{
-                    color: favorites.has(preset.id) ? '#F44336' : '#FFFFFF',
-                    fill: favorites.has(preset.id) ? '#F44336' : 'transparent'
-                  }}
-                />
-              </button>
-
-              {/* 内容区 */}
-              <div className="p-4">
-                <h3 
-                  className="font-bold text-base mb-1 truncate"
-                  style={{ color: '#FFFFFF' }}
-                >
-                  {preset.name}
-                </h3>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                    {preset.author}
-                  </span>
-                  {preset.isHncs && (
-                    <>
-                      <Check size={12} style={{ color: '#FF6B35' }} />
-                      <span className="text-xs font-medium" style={{ color: '#FF6B35' }}>
-                        HNCS认证
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* 统计信息 */}
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="flex items-center gap-1">
-                    <Star 
-                      size={12} 
-                      style={{ color: '#FFD700' }}
-                      className="fill-yellow-400"
-                    />
-                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                      4.{index + 7}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Download size={12} style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
-                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                      {(index + 1) * 3.5}w
-                    </span>
-                  </div>
-                </div>
-
-                {/* 应用按钮 - 橙色实心 */}
-                <button 
-                  aria-label="应用参数"
-                  className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
-                  style={{ 
-                    background: '#FF6B35',
-                    color: '#FFFFFF'
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
                   }}
                 >
-                  <Sparkles size={16} />
-                  应用参数
-                </button>
+                  <Search size={32} style={{ color: 'var(--color-text-tertiary)' }} />
+                </div>
+                <p className="text-base mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                  暂无精选预设
+                </p>
+                <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+                  请尝试其他关键词
+                </p>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
 
-        {/* 空状态 */}
-        {filteredPresets.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 animate-liquid-fade">
-            <div 
-              className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
-              style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.08)'
-              }}
-            >
-              <Search size={32} style={{ color: 'var(--color-text-tertiary)' }} />
-            </div>
-            <p className="text-base mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
-              暂无精选预设
-            </p>
-            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-              请尝试其他关键词
-            </p>
-          </div>
-        )}
-
-        {/* 底部提示 */}
-        {filteredPresets.length > 0 && (
-          <div className="py-10 text-center animate-liquid-fade">
-            <div 
-              className="w-16 h-px mx-auto mb-4"
-              style={{ background: 'rgba(255, 255, 255, 0.2)' }}
-            />
-            <p 
-              className="text-sm tracking-wider"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              持续更新 敬请期待
-            </p>
-          </div>
+            {/* 底部提示 */}
+            {filteredPresets.length > 0 && (
+              <div className="py-10 text-center animate-liquid-fade">
+                <div
+                  className="w-16 h-px mx-auto mb-4"
+                  style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+                />
+                <p
+                  className="text-sm tracking-wider"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  持续更新 敬请期待
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
