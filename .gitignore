@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android 签名敏感文件 - 不要提交到仓库
+*.jks
+*.keystore
+key.properties
+local.properties
+
+# Android 构建输出
+app/build/
+build/
+.gradle/
+*.apk
+*.aab
+
+# Android 本地配置
+captures/
+*.iml

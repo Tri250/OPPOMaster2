@@ -64,7 +64,8 @@
 -keep class com.silas.omaster.watermark.** { *; }
 -keep class com.silas.omaster.param.** { *; }
 -keep class com.silas.omaster.data.** { *; }
--keep class com.silas.omaster.scene.** { *; }
+-keep class com.silas.omaster.network.** { *; }
+-keep class com.silas.omaster.util.** { *; }
 
 # 保留UI组件
 -keep class com.silas.omaster.ui.** { *; }

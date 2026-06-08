@@ -29,15 +29,12 @@ android {
         getByName("debug") {
             // 使用默认debug签名
         }
-        // Release签名需要配置正式密钥库
-        // 发布前请替换为真实签名配置
+        // Release签名配置
         create("release") {
-            // 从环境变量或local.properties读取签名配置
-            // 示例配置（发布时替换）
-            // storeFile = file("omaster-release.jks")
-            // storePassword = "your_store_password"
-            // keyAlias = "omaster"
-            // keyPassword = "your_key_password"
+            storeFile = file("omaster-release.jks")
+            storePassword = "Omaster2026Release"
+            keyAlias = "omaster"
+            keyPassword = "Omaster2026Release"
         }
     }
 
