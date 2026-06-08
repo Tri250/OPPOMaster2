@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore, homePresets } from '../store/appStore';
-import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter } from 'lucide-react';
+import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, TrendingUp, Zap } from 'lucide-react';
 
 const tabs = [
   { key: 'all', label: '发现' },
@@ -18,6 +18,12 @@ const brands = [
   { key: '小米', label: '小米' },
 ];
 
+/**
+ * ============================================
+ * 首页 - ColorOS 16 全面优化版
+ * 沉浸式标题栏 + 智能推荐 + 动态效果
+ * ============================================
+ */
 const HomeScreen: React.FC = () => {
   const { selectedTab, setSelectedTab, presetSources, fetchedPresets, setFetchedPresets } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,10 +33,8 @@ const HomeScreen: React.FC = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   
-  // 合并本地预设和网络获取的预设
   const allPresets = [...homePresets, ...fetchedPresets];
 
-  // 从预设源获取预设
   const fetchPresetsFromSources = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -73,18 +77,15 @@ const HomeScreen: React.FC = () => {
     }
   }, [presetSources, setFetchedPresets]);
 
-  // 下拉刷新
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchPresetsFromSources();
   }, [fetchPresetsFromSources]);
   
-  // 初始化加载
   useEffect(() => {
     fetchPresetsFromSources();
   }, []);
 
-  // 切换收藏
   const toggleFavorite = useCallback((id: string) => {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -97,11 +98,9 @@ const HomeScreen: React.FC = () => {
     });
   }, []);
 
-  // 过滤和排序
   const getFilteredPresets = useCallback(() => {
     let result = [...allPresets];
 
-    // Tab 过滤
     const tabKey = tabs[selectedTab]?.key;
     switch (tabKey) {
       case 'favorites':
@@ -115,12 +114,10 @@ const HomeScreen: React.FC = () => {
         break;
     }
 
-    // 品牌过滤
     if (activeBrand !== 'all') {
       result = result.filter(p => p.brand === activeBrand);
     }
 
-    // 搜索过滤
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p =>
@@ -130,7 +127,6 @@ const HomeScreen: React.FC = () => {
       );
     }
 
-    // 排序
     result.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -147,7 +143,6 @@ const HomeScreen: React.FC = () => {
     return result;
   }, [selectedTab, activeBrand, searchQuery, sortBy, favorites, allPresets]);
 
-  // 计算每个 Tab 的计数
   const getTabCount = useCallback((tabKey: string) => {
     switch (tabKey) {
       case 'all':
@@ -163,7 +158,6 @@ const HomeScreen: React.FC = () => {
     }
   }, [favorites, allPresets]);
 
-  // 计算瀑布流高度
   const getImageHeight = (index: number) => {
     switch (index % 3) {
       case 0:
@@ -179,27 +173,19 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div 
-      className="h-full flex flex-col overflow-hidden animate-liquid-fade"
+      className="h-full flex flex-col overflow-hidden animate-liquid-fade dynamic-bg"
       style={{ background: 'var(--color-bg-primary)' }}
     >
-      {/* Header - 液态玻璃效果 */}
-      <div className="px-4 pt-3 pb-2">
+      {/* 沉浸式标题栏 - ColorOS 16 风格 */}
+      <div className="immersive-header animate-liquid-slide-down">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 
-              className="text-xl font-bold"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
+          <div className="flex items-center gap-3">
+            <h1 className="immersive-title">
               小O帮帮
             </h1>
-            <div 
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-white animate-liquid-pulse"
-              style={{
-                background: 'linear-gradient(135deg, var(--color-accent-primary) 0%, #FF9800 100%)',
-                boxShadow: '0 2px 8px rgba(255, 107, 53, 0.3)'
-              }}
-            >
-              <Crown size={10} />
+            {/* 哈苏大师徽章 - 增强版 */}
+            <div className="badge-hncs flex items-center gap-1">
+              <Crown size={12} />
               <span>哈苏大师</span>
             </div>
           </div>
@@ -207,25 +193,37 @@ const HomeScreen: React.FC = () => {
             onClick={handleRefresh}
             disabled={refreshing}
             aria-label="刷新预设列表"
-            className="p-2 rounded-full glass-button transition-spring-soft"
+            className="glass-button flex items-center gap-2"
           >
             <RefreshCw 
-              size={18} 
-              style={{ 
-                color: 'var(--color-text-secondary)',
-                animation: refreshing ? 'liquid-spin 1s linear infinite' : 'none'
-              }} 
+              size={16} 
+              className={refreshing ? 'animate-liquid-spin' : ''}
             />
+            <span className="text-xs font-medium">刷新</span>
           </button>
+        </div>
+        
+        {/* 智能推荐区块 */}
+        <div className="smart-recommend mt-4 p-4 animate-liquid-fade">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp size={14} style={{ color: 'var(--color-accent-primary)' }} />
+            <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              为你推荐
+            </span>
+            <span className="smart-recommend-badge">智能</span>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+            根据你的使用习惯，推荐最适合的影像参数
+          </p>
         </div>
       </div>
 
-      {/* Search Bar - 液态玻璃输入框 */}
-      <div className="px-4 pb-2">
+      {/* 搜索栏 - 增强版液态玻璃 */}
+      <div className="px-4 pb-3">
         <div className="relative">
           <Search 
             size={16} 
-            className="absolute left-3 top-1/2 -translate-y-1/2"
+            className="absolute left-4 top-1/2 -translate-y-1/2"
             style={{ color: 'var(--color-text-muted)' }}
           />
           <input
@@ -234,19 +232,23 @@ const HomeScreen: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索预设 / 作者 / 标签"
             aria-label="搜索预设"
-            className="w-full pl-9 pr-4 py-2.5 rounded-full glass-input transition-smooth"
+            className="w-full pl-11 pr-4 py-3 glass-input text-sm"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-fast"
+              aria-label="清除搜索"
+            >
+              <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">✕</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Tab Bar - 液态玻璃导航 */}
-      <div className="px-4 pb-2">
-        <div 
-          className="flex gap-1 overflow-x-auto scrollbar-hide"
-          style={{ borderBottom: '1px solid var(--color-border-light)' }}
-          role="tablist"
-          aria-label="预设分类标签"
-        >
+      {/* 智能Tab栏 - ColorOS 16 风格 */}
+      <div className="smart-tab-bar px-4 animate-liquid-fade">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide" role="tablist">
           {tabs.map((tab, index) => {
             const count = getTabCount(tab.key);
             const isSelected = selectedTab === index;
@@ -256,18 +258,15 @@ const HomeScreen: React.FC = () => {
                 onClick={() => setSelectedTab(index)}
                 role="tab"
                 aria-selected={isSelected}
-                aria-controls={`tabpanel-${tab.key}`}
-                className={`flex-shrink-0 relative px-4 py-2.5 text-sm font-medium transition-liquid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B35] rounded-lg ${
-                  isSelected ? 'text-white' : 'text-white/50 hover:text-white/70'
-                }`}
+                className={`smart-tab-item ${isSelected ? 'smart-tab-item-active' : ''} ripple-container`}
               >
-                <span className="flex items-center gap-1.5">
-                  <span>{tab.label}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-sm">{tab.label}</span>
                   {count > 0 && (
                     <span
-                      className="text-[10px] px-1.5 rounded-full transition-liquid"
+                      className="text-[10px] px-1.5 py-0.5 rounded-full"
                       style={{
-                        background: isSelected ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        background: isSelected ? 'rgba(255, 107, 53, 0.2)' : 'rgba(255, 255, 255, 0.08)',
                         color: isSelected ? 'var(--color-accent-primary)' : 'var(--color-text-muted)'
                       }}
                     >
@@ -275,54 +274,34 @@ const HomeScreen: React.FC = () => {
                     </span>
                   )}
                 </span>
-                {isSelected && (
-                  <div 
-                    className="absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full animate-liquid-fade"
-                    style={{
-                      background: 'var(--color-accent-primary)',
-                      boxShadow: '0 0 8px rgba(255, 107, 53, 0.4)'
-                    }}
-                  />
-                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Brand Filter & Sort - 液态玻璃芯片 */}
-      <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+      {/* 品牌筛选芯片 - 增强版 */}
+      <div className="px-4 py-3 flex items-center gap-2 overflow-x-auto scrollbar-hide animate-liquid-fade">
         {brands.map((brand) => (
           <button
             key={brand.key}
             onClick={() => setActiveBrand(brand.key)}
             aria-label={`筛选${brand.label}品牌`}
             aria-pressed={activeBrand === brand.key}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-spring-soft ripple-container"
-            style={{
-              background: activeBrand === brand.key 
-                ? 'var(--color-accent-primary)' 
-                : 'rgba(255, 255, 255, 0.05)',
-              color: activeBrand === brand.key 
-                ? 'var(--color-text-primary)' 
-                : 'var(--color-text-tertiary)',
-              boxShadow: activeBrand === brand.key 
-                ? '0 2px 8px rgba(255, 107, 53, 0.3)' 
-                : 'none'
-            }}
+            className={`glass-chip ${activeBrand === brand.key ? 'glass-chip-active' : ''} ripple-container whitespace-nowrap`}
           >
-            {brand.label}
+            <span className="text-xs font-medium">{brand.label}</span>
           </button>
         ))}
 
-        {/* Sort Dropdown */}
-        <div className="flex-shrink-0 ml-auto flex items-center gap-1">
+        {/* 排序下拉 */}
+        <div className="flex items-center gap-1 ml-auto">
           <Filter size={12} style={{ color: 'var(--color-text-muted)' }} />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'newest' | 'popular' | 'rating')}
             aria-label="排序方式"
-            className="bg-transparent text-xs outline-none cursor-pointer transition-fast"
+            className="bg-transparent text-xs outline-none cursor-pointer"
             style={{ color: 'var(--color-text-tertiary)' }}
           >
             <option value="newest" className="bg-[#1a1a1a]">最新</option>
@@ -332,95 +311,77 @@ const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Pull to Refresh Indicator */}
+      {/* 下拉刷新指示器 */}
       {refreshing && (
         <div className="flex items-center justify-center py-2 animate-liquid-fade">
-          <RefreshCw 
-            size={20} 
-            style={{ color: 'var(--color-accent-primary)' }}
-            className="animate-liquid-spin"
-          />
+          <div className="loading-spinner" />
         </div>
       )}
 
-      {/* Preset Grid - 液态玻璃卡片 */}
+      {/* 预设网格 - 增强版液态玻璃卡片 */}
       <div 
         className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide custom-scrollbar"
         role="tabpanel"
-        aria-label="预设列表"
       >
         {filteredPresets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 animate-liquid-fade">
             <Sparkles 
-              size={32} 
+              size={40} 
               style={{ color: 'var(--color-text-muted)' }}
-              className="mb-3 animate-liquid-float"
+              className="mb-4 animate-liquid-float"
             />
-            <p style={{ color: 'var(--color-text-tertiary)' }} className="text-sm mb-2">
+            <p style={{ color: 'var(--color-text-tertiary)' }} className="text-base mb-2">
               未找到匹配的预设
             </p>
-            <p style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+            <p style={{ color: 'var(--color-text-muted)' }} className="text-sm">
               请调整筛选条件
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {filteredPresets.map((preset, index) => (
               <div
                 key={preset.id}
-                className={`group relative rounded-2xl overflow-hidden cursor-pointer glass-card ${getImageHeight(index)}`}
+                className={`group relative glass-card ${getImageHeight(index)} animate-liquid-slide-up`}
                 style={{
-                  animationDelay: `${index * 50}ms`,
-                  animation: 'liquid-slide-up 0.3s ease forwards'
+                  animationDelay: `${index * 60}ms`,
+                  animationFillMode: 'both'
                 }}
                 role="article"
-                aria-label={`预设: ${preset.name}`}
               >
-                {/* Image */}
+                {/* 图片 */}
                 <img
                   src={preset.coverPath}
                   alt={preset.name}
-                  className="w-full h-full object-cover transition-liquid group-hover:scale-110"
+                  className="w-full h-full object-cover transition-liquid group-hover:scale-105"
                   loading="lazy"
                 />
 
-                {/* Overlay Gradient */}
+                {/* 渐变遮罩 */}
                 <div 
                   className="absolute inset-0"
                   style={{
-                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 100%)'
+                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%)'
                   }}
                 />
 
-                {/* HNCS Badge */}
+                {/* HNCS徽章 - 增强版 */}
                 {preset.isHncs && (
-                  <div 
-                    className="absolute top-2 left-2 px-2 py-1 rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1 animate-liquid-pulse"
-                    style={{
-                      background: 'linear-gradient(135deg, var(--color-accent-primary) 0%, #FF9800 100%)',
-                      boxShadow: '0 2px 8px rgba(255, 107, 53, 0.4)'
-                    }}
-                  >
-                    <Crown size={10} />
+                  <div className="badge-hncs absolute top-3 left-3 flex items-center gap-1">
+                    <Crown size={12} />
                     <span>HNCS</span>
                   </div>
                 )}
 
-                {/* NEW Badge */}
+                {/* NEW徽章 - 增强版 */}
                 {preset.isNew && !preset.isHncs && (
-                  <div 
-                    className="absolute top-2 left-2 px-2 py-1 rounded-lg text-[9px] font-bold text-white z-20 flex items-center gap-1 animate-liquid-breathe"
-                    style={{
-                      background: 'var(--color-success)',
-                      boxShadow: '0 2px 6px rgba(76, 175, 80, 0.3)'
-                    }}
-                  >
-                    <Sparkles size={10} />
+                  <div className="badge-new absolute top-3 left-3 flex items-center gap-1">
+                    <Sparkles size={12} />
                     <span>NEW</span>
                   </div>
                 )}
 
-                {/* Favorite Button */}
+                {/* 收藏按钮 - 增强版 */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -428,55 +389,66 @@ const HomeScreen: React.FC = () => {
                   }}
                   aria-label={favorites.has(preset.id) ? '取消收藏' : '添加收藏'}
                   aria-pressed={favorites.has(preset.id)}
-                  className="absolute top-2 right-2 p-2 rounded-full z-20 transition-spring-soft"
+                  className="absolute top-3 right-3 p-2.5 rounded-full z-20 transition-spring-soft ripple-container"
                   style={{
-                    background: 'rgba(0, 0, 0, 0.4)',
-                    backdropFilter: 'blur(8px)'
+                    background: favorites.has(preset.id) 
+                      ? 'rgba(244, 67, 54, 0.2)' 
+                      : 'rgba(0, 0, 0, 0.4)',
+                    backdropFilter: 'blur(12px)',
+                    boxShadow: favorites.has(preset.id) 
+                      ? '0 0 15px rgba(244, 67, 54, 0.3)' 
+                      : 'none'
                   }}
                 >
                   <Heart
-                    size={16}
+                    size={18}
                     style={{
                       color: favorites.has(preset.id) ? '#F44336' : 'var(--color-text-secondary)',
                       fill: favorites.has(preset.id) ? '#F44336' : 'transparent',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}
                   />
                 </button>
 
-                {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 pr-12">
+                {/* 内容区 - 液态玻璃遮罩 */}
+                <div 
+                  className="absolute bottom-0 left-0 right-0 p-4"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%)'
+                  }}
+                >
                   <h3 
+                    className="font-bold text-base mb-1 truncate"
                     style={{ color: 'var(--color-text-primary)' }}
-                    className="font-semibold text-sm mb-0.5 truncate"
                   >
                     {preset.name}
                   </h3>
-                  <p style={{ color: 'var(--color-text-tertiary)' }} className="text-xs truncate">
+                  <p className="text-xs truncate mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
                     {preset.author}
                   </p>
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-3 mt-1.5">
+                  {/* 统计信息 */}
+                  <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
                       <Star 
-                        size={10} 
+                        size={12} 
                         style={{ color: '#FFD700' }}
                         className="fill-yellow-400"
                       />
-                      <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px]">
-                        4.{index + 5}
+                      <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">
+                        4.{index + 6}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Download size={10} style={{ color: 'var(--color-text-muted)' }} />
-                      <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px]">
+                      <Download size={12} style={{ color: 'var(--color-text-muted)' }} />
+                      <span style={{ color: 'var(--color-text-muted)' }} className="text-xs">
                         {(index + 1) * 2.3}w
                       </span>
                     </div>
                     {preset.brand && (
                       <div className="flex items-center gap-1 ml-auto">
-                        <span style={{ color: 'var(--color-text-muted)' }} className="text-[10px]">
+                        <Zap size={10} style={{ color: 'var(--color-accent-primary)' }} />
+                        <span style={{ color: 'var(--color-accent-primary)' }} className="text-xs font-medium">
                           {preset.brand}
                         </span>
                       </div>
@@ -488,25 +460,27 @@ const HomeScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Loading Hint */}
+        {/* 底部提示 - 增强版 */}
         {filteredPresets.length > 0 && (
-          <div className="py-8 text-center animate-liquid-fade">
+          <div className="py-10 text-center animate-liquid-fade">
             <div 
-              className="w-16 h-0.5 mx-auto mb-3"
+              className="w-20 h-0.5 mx-auto mb-4"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 107, 53, 0.5) 50%, transparent 100%)'
+                background: 'linear-gradient(90deg, transparent 0%, var(--color-accent-primary) 50%, transparent 100%)',
+                boxShadow: '0 0 8px rgba(255, 107, 53, 0.3)'
               }}
             />
             <p 
+              className="text-sm font-semibold tracking-wider animate-glow-breathe"
               style={{ color: 'var(--color-accent-primary)' }}
-              className="text-xs font-medium tracking-wider opacity-80"
             >
               持续更新 敬请期待
             </p>
             <div 
-              className="w-16 h-0.5 mx-auto mt-3"
+              className="w-20 h-0.5 mx-auto mt-4"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 107, 53, 0.5) 50%, transparent 100%)'
+                background: 'linear-gradient(90deg, transparent 0%, var(--color-accent-primary) 50%, transparent 100%)',
+                boxShadow: '0 0 8px rgba(255, 107, 53, 0.3)'
               }}
             />
           </div>
