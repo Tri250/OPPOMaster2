@@ -33,6 +33,9 @@ const featureRouteMap: Record<string, string> = {
   'smart-optimize': 'smart-optimize',
   'preset-manager': 'preset-manager',
   'param-adjust': 'param-adjust',
+  'lut-share': 'lut-share',
+  'hasselblad': 'hasselblad',
+  'cloud-sync': 'cloud-sync',
 };
 
 const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
@@ -59,6 +62,18 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   'preset-manager': {
     desc: '云端预设库，收藏、创建、分享',
     tips: ['云端同步', '本地管理', '批量操作'],
+  },
+  'lut-share': {
+    desc: '20+专业 LUT 滤镜，一键下载使用',
+    tips: ['电影色调', '胶片风格', '日系清新', '欧美复古'],
+  },
+  'hasselblad': {
+    desc: 'HNCS 3.0 自然色彩解决方案',
+    tips: ['自然色彩', '肤色优化', '风景增强', '黑白胶片'],
+  },
+  'cloud-sync': {
+    desc: '多平台云同步，数据永不丢失',
+    tips: ['OPPO', 'realme', 'vivo', '荣耀'],
   },
 };
 

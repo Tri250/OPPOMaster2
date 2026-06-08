@@ -45,8 +45,8 @@ const AboutScreen: React.FC = () => {
     { 
       icon: Globe, 
       label: '更新渠道', 
-      value: 'Gitee',
-      route: null
+      value: '稳定版',
+      route: 'update-channel' as const
     },
     { 
       icon: Bell, 
@@ -64,7 +64,7 @@ const AboutScreen: React.FC = () => {
       icon: FileText, 
       label: '用户协议', 
       value: '',
-      route: 'privacy' as const
+      route: 'terms' as const
     },
   ];
 

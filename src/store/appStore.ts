@@ -8,6 +8,7 @@ export type SubPageType =
   | 'watermark' 
   | 'param-adjust' 
   | 'preset-manager'
+  | 'lut-share'
   | 'hasselblad'
   | 'cloud-sync'
   | 'theme-settings'
@@ -171,6 +172,16 @@ export const useAppStore = create<AppState>((set) => ({
       icon: 'Images',
       color: '#FF9800',
       gradientColors: ['#E65100', '#F57C00'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'lut-share',
+      title: 'LUT 资源分享',
+      subtitle: '20+专业 LUT 滤镜，一键下载使用',
+      icon: 'Palette',
+      color: '#9C27B0',
+      gradientColors: ['#6A1B9A', '#8E24AA'],
       enabled: true,
       showToggle: false,
     },

@@ -13,6 +13,11 @@ import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
 import WatermarkPage from './pages/subpages/WatermarkPage';
 import PresetManagerPage from './pages/subpages/PresetManagerPage';
 import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
+import LUTSharePage from './pages/subpages/LUTSharePage';
+import HasselbladPage from './pages/subpages/HasselbladPage';
+import CloudSyncPage from './pages/subpages/CloudSyncPage';
+import UpdateChannelPage from './pages/subpages/UpdateChannelPage';
+import TermsPage from './pages/subpages/TermsPage';
 import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
 import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
@@ -35,14 +40,24 @@ const App: React.FC = () => {
         return <PresetManagerPage />;
       case 'param-adjust':
         return <ParamAdjustPage />;
+      case 'lut-share':
+        return <LUTSharePage />;
+      case 'hasselblad':
+        return <HasselbladPage />;
+      case 'cloud-sync':
+        return <CloudSyncPage />;
       case 'theme-settings':
         return <ThemeSettingsPage />;
       case 'dark-mode':
         return <DarkModePage />;
+      case 'update-channel':
+        return <UpdateChannelPage />;
       case 'notification':
         return <NotificationPage />;
       case 'privacy':
         return <PrivacyPage />;
+      case 'terms':
+        return <TermsPage />;
       default:
         return null;
     }
