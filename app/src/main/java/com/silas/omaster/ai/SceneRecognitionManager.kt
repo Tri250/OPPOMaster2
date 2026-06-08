@@ -32,6 +32,7 @@ class SceneRecognitionManager private constructor(context: Context) {
         SceneType.SNOW,
         SceneType.BEACH,
         SceneType.SUNSET,
+        SceneType.FOREST,
         SceneType.FIREWORKS,
         SceneType.STAGE,
         SceneType.SPORTS,
@@ -199,6 +200,7 @@ enum class SceneType(val displayName: String, val icon: String) {
     SNOW("雪景", "❄️"),
     BEACH("海滩", "🏖️"),
     SUNSET("日落", "🌅"),
+    FOREST("森林", "🌲"),
     FIREWORKS("烟花", "🎆"),
     STAGE("舞台", "🎭"),
     SPORTS("运动", "⚽"),
@@ -370,6 +372,10 @@ private class SceneDetector {
         // 海滩
         scores[SceneType.BEACH] = (bluePixels.toDouble() / pixelCount) * 100 * 1.5 +
                 (brightPixels.toDouble() / pixelCount) * 20.0
+
+        // 森林
+        scores[SceneType.FOREST] = (greenPixels.toDouble() / pixelCount) * 100 * 2.5 +
+                (if (avgBrightness > 0.3 && avgBrightness < 0.6) 20.0 else 0.0)
 
         // 雪景
         scores[SceneType.SNOW] = (brightPixels.toDouble() / pixelCount) * 50.0 +

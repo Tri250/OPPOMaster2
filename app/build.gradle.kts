@@ -137,6 +137,13 @@ dependencies {
     // Gson（已使用 catalog）
     implementation(libs.gson)
 
+    // CameraX 相机库 - 2026最新版本
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.camerax.extensions)
+
     // Room 数据库已移除，使用 SharedPreferences 替代
 
     // ⚠️ 替换友盟硬编码依赖

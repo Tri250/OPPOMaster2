@@ -18,6 +18,8 @@ ktor = "3.4.0"
 umeng-common = "9.8.9"
 umeng-asms = "1.8.7.2"
 material3 = "1.4.0"
+# CameraX 2026最新版本
+camerax = "1.4.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +56,13 @@ ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serializatio
 umeng-common = { group = "com.umeng.umsdk", name = "common", version.ref = "umeng-common" }
 umeng-asms = { group = "com.umeng.umsdk", name = "asms", version.ref = "umeng-asms" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+
+# CameraX 相机库
+camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+camerax-extensions = { group = "androidx.camera", name = "camera-extensions", version.ref = "camerax" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
