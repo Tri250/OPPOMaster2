@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore, homePresets, Preset } from '../store/appStore';
-import { cloudSyncService } from '../services/cloudSyncService';
+import { cloudSyncService, BrandSyncState } from '../services/cloudSyncService';
 import { Heart, RefreshCw, Cloud } from 'lucide-react';
 
 const tabs = ['全部', '收藏', '我的'];
@@ -10,30 +10,35 @@ const HomeScreen: React.FC = () => {
   const [presets, setPresets] = useState<Preset[]>(homePresets);
   const [isLoading, setIsLoading] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
+  const [brands, setBrands] = useState<BrandSyncState[]>([]);
+  const [connectedCount, setConnectedCount] = useState(0);
 
-  // 自动从云同步加载预设
+  // 初始化品牌状态
+  useEffect(() => {
+    const state = cloudSyncService.getState();
+    setBrands(state.brands);
+    setConnectedCount(state.brands.filter(b => b.isConnected).length);
+  }, []);
+
+  // 自动从云同步加载预设（所有已连接品牌）
   useEffect(() => {
     const loadPresetsFromCloud = async () => {
-      const state = cloudSyncService.getState();
-      if (state.isConnected) {
-        setIsLoading(true);
-        try {
-          const cloudPresets = await cloudSyncService.fetchPresets(state.connectedBrand);
-          // 合并本地预设和云端预设
-          setPresets([...cloudPresets, ...homePresets.slice(0, 3)]);
-          setIsSynced(true);
-        } catch (e) {
-          // 使用本地预设
-          setPresets(homePresets);
-        }
-        setIsLoading(false);
-      } else {
+      setIsLoading(true);
+      try {
+        // 从所有已连接品牌获取预设
+        const cloudPresets = await cloudSyncService.fetchPresets();
+        // 合并本地预设和云端预设
+        setPresets([...cloudPresets, ...homePresets.slice(0, 3)]);
+        setIsSynced(true);
+      } catch (e) {
+        // 使用本地预设
         setPresets(homePresets);
       }
+      setIsLoading(false);
     };
 
     loadPresetsFromCloud();
-  }, []);
+  }, [brands]);
 
   // 手动刷新
   const handleRefresh = async () => {
@@ -57,7 +62,7 @@ const HomeScreen: React.FC = () => {
           {isSynced && (
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-[#4CAF50]/20">
               <Cloud size={12} className="text-[#4CAF50]" />
-              <span className="text-[#4CAF50] text-xs">已同步</span>
+              <span className="text-[#4CAF50] text-xs">{connectedCount}品牌已同步</span>
             </div>
           )}
           <button
@@ -135,6 +140,13 @@ const HomeScreen: React.FC = () => {
                 {preset.isNew && (
                   <div className="absolute top-2 left-2 ml-10 px-1.5 py-0.5 bg-[#4CAF50]/80 backdrop-blur-sm rounded text-[8px] font-bold text-white z-20">
                     云端
+                  </div>
+                )}
+
+                {/* Brand Badge */}
+                {preset.brand && preset.isNew && (
+                  <div className="absolute top-2 right-2 mt-6 px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded text-[8px] text-white/70 z-20">
+                    {preset.brand}
                   </div>
                 )}
 

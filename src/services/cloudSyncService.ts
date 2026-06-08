@@ -7,9 +7,18 @@ export interface SyncModule {
   lastSyncTime?: number;
 }
 
+export interface BrandSyncState {
+  id: string;
+  name: string;
+  color: string;
+  isConnected: boolean;
+  modules: SyncModule[];
+  lastSyncTime: number;
+}
+
 export interface CloudSyncState {
   isConnected: boolean;
-  connectedBrand: string | null;
+  brands: BrandSyncState[];
   modules: SyncModule[];
   lastFullSyncTime: number;
 }
@@ -33,39 +42,96 @@ export const cdnSources: Record<string, { name: string; baseUrl: string; color: 
 
 // 云同步服务类
 export class CloudSyncService {
-  private state: CloudSyncState = {
-    isConnected: true, // 默认已连接
-    connectedBrand: 'oppo', // 默认连接OPPO
-    modules: syncModules.map(m => ({ ...m, status: 'completed', progress: 100 })),
-    lastFullSyncTime: Date.now(),
-  };
+  private state: CloudSyncState;
+
+  constructor() {
+    // 初始化所有品牌默认已连接
+    const brands: BrandSyncState[] = Object.entries(cdnSources).map(([id, source]) => ({
+      id,
+      name: source.name,
+      color: source.color,
+      isConnected: true, // 默认已连接
+      modules: syncModules.map(m => ({ ...m, status: 'completed', progress: 100 })),
+      lastSyncTime: Date.now(),
+    }));
+
+    this.state = {
+      isConnected: true,
+      brands,
+      modules: syncModules.map(m => ({ ...m, status: 'completed', progress: 100 })),
+      lastFullSyncTime: Date.now(),
+    };
+  }
 
   // 获取当前状态
   getState(): CloudSyncState {
     return this.state;
   }
 
-  // 连接到品牌CDN
-  connect(brandId: string): Promise<boolean> {
+  // 获取品牌状态
+  getBrandState(brandId: string): BrandSyncState | undefined {
+    return this.state.brands.find(b => b.id === brandId);
+  }
+
+  // 连接品牌
+  connectBrand(brandId: string): Promise<boolean> {
     return new Promise((resolve) => {
-      setTimeout(() => {
-        this.state.isConnected = true;
-        this.state.connectedBrand = brandId;
-        resolve(true);
-      }, 500);
+      const brand = this.state.brands.find(b => b.id === brandId);
+      if (brand) {
+        brand.isConnected = true;
+        brand.lastSyncTime = Date.now();
+      }
+      resolve(true);
     });
   }
 
-  // 断开连接
-  disconnect(): void {
-    this.state.isConnected = false;
-    this.state.connectedBrand = null;
+  // 断开品牌
+  disconnectBrand(brandId: string): void {
+    const brand = this.state.brands.find(b => b.id === brandId);
+    if (brand) {
+      brand.isConnected = false;
+    }
   }
 
-  // 同步单个模块
-  syncModule(moduleId: string, onProgress?: (progress: number) => void): Promise<boolean> {
+  // 连接所有品牌
+  connectAllBrands(): Promise<boolean> {
     return new Promise((resolve) => {
-      const module = this.state.modules.find(m => m.id === moduleId);
+      this.state.brands.forEach(b => {
+        b.isConnected = true;
+        b.lastSyncTime = Date.now();
+      });
+      this.state.isConnected = true;
+      resolve(true);
+    });
+  }
+
+  // 同步单个品牌的所有模块
+  syncBrandModules(brandId: string, onProgress?: (moduleId: string, progress: number) => void): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const brand = this.state.brands.find(b => b.id === brandId);
+      if (!brand) {
+        resolve(false);
+        return;
+      }
+
+      for (const module of brand.modules) {
+        await this.syncModuleForBrand(brandId, module.id, onProgress);
+      }
+      brand.lastSyncTime = Date.now();
+      resolve(true);
+    });
+  }
+
+  // 同步品牌的单个模块
+  syncModuleForBrand(brandId: string, moduleId: string, onProgress?: (moduleId: string, progress: number) => void): Promise<boolean> {
+    return new Promise((resolve) => {
+      const brand = this.state.brands.find(b => b.id === brandId);
+      if (!brand) {
+        resolve(false);
+        return;
+      }
+
+      const module = brand.modules.find(m => m.id === moduleId);
       if (!module) {
         resolve(false);
         return;
@@ -78,7 +144,7 @@ export class CloudSyncService {
       const interval = setInterval(() => {
         progress += 10;
         module.progress = progress;
-        onProgress?.(progress);
+        onProgress?.(moduleId, progress);
 
         if (progress >= 100) {
           clearInterval(interval);
@@ -87,6 +153,36 @@ export class CloudSyncService {
           resolve(true);
         }
       }, 200);
+    });
+  }
+
+  // 同步所有品牌的所有模块
+  syncAllBrands(onBrandProgress?: (brandId: string, moduleId: string, progress: number) => void): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      for (const brand of this.state.brands) {
+        if (brand.isConnected) {
+          await this.syncBrandModules(brand.id, (moduleId, progress) => {
+            onBrandProgress?.(brand.id, moduleId, progress);
+          });
+        }
+      }
+      this.state.lastFullSyncTime = Date.now();
+      resolve(true);
+    });
+  }
+
+  // 同步单个模块（全局）
+  syncModule(moduleId: string, onProgress?: (progress: number) => void): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      // 同步所有已连接品牌的该模块
+      for (const brand of this.state.brands) {
+        if (brand.isConnected) {
+          await this.syncModuleForBrand(brand.id, moduleId, (mId, progress) => {
+            onProgress?.(progress);
+          });
+        }
+      }
+      resolve(true);
     });
   }
 
@@ -103,58 +199,88 @@ export class CloudSyncService {
     });
   }
 
-  // 获取预设数据（模拟从CDN获取）
+  // 获取预设数据（从所有已连接品牌获取）
   async fetchPresets(brand?: string): Promise<any[]> {
-    const source = brand || this.state.connectedBrand || 'oppo';
-    
     // 模拟网络请求延迟
     await new Promise(r => setTimeout(r, 300));
     
-    // 返回预设数据
-    return [
-      {
-        id: `preset_${source}_1`,
-        name: `${cdnSources[source]?.name || source} 经典人像`,
-        coverPath: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop',
-        author: `@${cdnSources[source]?.name || source}影像`,
-        brand: cdnSources[source]?.name || source,
-        tags: ['人像', '经典'],
-        isNew: true,
-        isHncs: true,
-        saturation: 10,
-        contrast: 5,
-        warmth: 8,
-        sharpness: 15,
-      },
-      {
-        id: `preset_${source}_2`,
-        name: `${cdnSources[source]?.name || source} 夜景大师`,
-        coverPath: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=400&h=350&fit=crop',
-        author: '@夜景专家',
-        brand: cdnSources[source]?.name || source,
-        tags: ['夜景', '大师'],
-        isNew: false,
-        isHncs: true,
-        saturation: 35,
-        contrast: 20,
-        warmth: -10,
-        sharpness: 25,
-      },
-      {
-        id: `preset_${source}_3`,
-        name: `${cdnSources[source]?.name || source} 风景通透`,
-        coverPath: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
-        author: '@风光摄影',
-        brand: cdnSources[source]?.name || source,
-        tags: ['风景', '通透'],
-        isNew: true,
-        isHncs: false,
-        saturation: 20,
-        contrast: 10,
-        warmth: -10,
-        sharpness: 25,
-      },
-    ];
+    const presets: any[] = [];
+    
+    // 如果指定了品牌，只获取该品牌的预设
+    if (brand) {
+      const source = cdnSources[brand];
+      if (source) {
+        presets.push(
+          {
+            id: `preset_${brand}_1`,
+            name: `${source.name} 经典人像`,
+            coverPath: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop',
+            author: `@${source.name}影像`,
+            brand: source.name,
+            tags: ['人像', '经典'],
+            isNew: true,
+            isHncs: true,
+            saturation: 10,
+            contrast: 5,
+            warmth: 8,
+            sharpness: 15,
+          },
+          {
+            id: `preset_${brand}_2`,
+            name: `${source.name} 夜景大师`,
+            coverPath: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=400&h=350&fit=crop',
+            author: '@夜景专家',
+            brand: source.name,
+            tags: ['夜景', '大师'],
+            isNew: false,
+            isHncs: true,
+            saturation: 35,
+            contrast: 20,
+            warmth: -10,
+            sharpness: 25,
+          }
+        );
+      }
+    } else {
+      // 获取所有已连接品牌的预设
+      for (const brandState of this.state.brands) {
+        if (brandState.isConnected) {
+          const source = cdnSources[brandState.id];
+          presets.push(
+            {
+              id: `preset_${brandState.id}_1`,
+              name: `${source.name} 经典人像`,
+              coverPath: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop',
+              author: `@${source.name}影像`,
+              brand: source.name,
+              tags: ['人像', '经典'],
+              isNew: true,
+              isHncs: true,
+              saturation: 10,
+              contrast: 5,
+              warmth: 8,
+              sharpness: 15,
+            },
+            {
+              id: `preset_${brandState.id}_2`,
+              name: `${source.name} 夜景大师`,
+              coverPath: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=400&h=350&fit=crop',
+              author: '@夜景专家',
+              brand: source.name,
+              tags: ['夜景', '大师'],
+              isNew: false,
+              isHncs: true,
+              saturation: 35,
+              contrast: 20,
+              warmth: -10,
+              sharpness: 25,
+            }
+          );
+        }
+      }
+    }
+    
+    return presets;
   }
 }
 
