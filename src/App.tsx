@@ -24,6 +24,7 @@ import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
 import PresetSourceManager from './pages/subpages/PresetSourceManager';
+import PresetDetailPage from './pages/subpages/PresetDetailPage';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage, goBack } = useAppStore();
@@ -62,6 +63,8 @@ const App: React.FC = () => {
         return <TermsPage />;
       case 'preset-sources':
         return <PresetSourceManager />;
+      case 'preset-detail':
+        return <PresetDetailPage />;
       default:
         return null;
     }

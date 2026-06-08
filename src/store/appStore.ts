@@ -328,6 +328,28 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   fetchedPresets: [],
   setFetchedPresets: (presets) => set({ fetchedPresets: presets }),
+  // 选中的预设（用于详情页）
+  selectedPreset: null,
+  setSelectedPreset: (preset) => set({ selectedPreset: preset }),
+  // 收藏的预设ID列表
+  favoritePresetIds: [],
+  toggleFavorite: (id) => set((state) => {
+    const ids = state.favoritePresetIds;
+    if (ids.includes(id)) {
+      return { favoritePresetIds: ids.filter((i) => i !== id) };
+    } else {
+      return { favoritePresetIds: [...ids, id] };
+    }
+  }),
+  isPresetFavorite: (id) => {
+    const state = useAppStore.getState();
+    return state.favoritePresetIds.includes(id);
+  },
+  // 应用预设
+  applyPreset: (id) => {
+    // 实际应用预设的逻辑
+    console.log(`应用预设: ${id}`);
+  },
   lastError: null,
   setLastError: (error) => set({ lastError: error }),
   isLoading: false,

@@ -414,8 +414,6 @@ const HomeScreen: React.FC = () => {
                 <PresetCard
                   key={preset.id}
                   preset={preset}
-                  isFavorite={favorites.has(preset.id)}
-                  onToggleFavorite={toggleFavorite}
                   variant="compact"
                   index={index}
                 />

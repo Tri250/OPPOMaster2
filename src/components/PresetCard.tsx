@@ -1,31 +1,43 @@
 import React from 'react';
-import { Heart, Sparkles, Crown, Download, Star, Zap, Check } from 'lucide-react';
+import { Heart, Sparkles, Crown, Download, Star, Zap } from 'lucide-react';
+import { useAppStore, Preset } from '../store/appStore';
 
 interface PresetCardProps {
-  preset: {
-    id: string;
-    name: string;
-    coverPath: string;
-    author: string;
-    brand?: string;
-    isNew: boolean;
-    isHncs: boolean;
-  };
-  isFavorite: boolean;
-  onToggleFavorite: (id: string) => void;
-  onApply?: () => void;
+  preset: Preset;
   variant?: 'compact' | 'full';
   index: number;
 }
 
 const PresetCard: React.FC<PresetCardProps> = React.memo(({
   preset,
-  isFavorite,
-  onToggleFavorite,
-  onApply,
   variant = 'compact',
   index,
 }) => {
+  const { 
+    favoritePresetIds, 
+    toggleFavorite, 
+    setSelectedPreset, 
+    navigateToSubPage,
+    applyPreset
+  } = useAppStore();
+
+  const isFavorite = favoritePresetIds.includes(preset.id);
+
+  const handleCardClick = () => {
+    setSelectedPreset(preset);
+    navigateToSubPage('preset-detail');
+  };
+
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(preset.id);
+  };
+
+  const handleApplyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    applyPreset(preset.id);
+  };
+
   const getImageHeight = (idx: number) => {
     switch (idx % 3) {
       case 0:
@@ -40,7 +52,8 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
   if (variant === 'full') {
     return (
       <div
-        className="group relative animate-liquid-slide-up"
+        onClick={handleCardClick}
+        className="group relative animate-liquid-slide-up cursor-pointer"
         style={{
           animationDelay: `${index * 60}ms`,
           animationFillMode: 'both',
@@ -94,10 +107,7 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
 
         {/* 收藏按钮 */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(preset.id);
-          }}
+          onClick={handleFavoriteClick}
           aria-label={isFavorite ? '取消收藏' : '添加收藏'}
           aria-pressed={isFavorite}
           className="absolute top-3 right-3 p-2.5 rounded-full z-20 transition-spring-soft ripple-container"
@@ -129,14 +139,6 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
             <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
               {preset.author}
             </span>
-            {preset.isHncs && (
-              <>
-                <Check size={12} style={{ color: '#FF6B35' }} />
-                <span className="text-xs font-medium" style={{ color: '#FF6B35' }}>
-                  HNCS认证
-                </span>
-              </>
-            )}
           </div>
 
           {/* 统计信息 */}
@@ -161,7 +163,7 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
 
           {/* 应用按钮 - 橙色实心 */}
           <button
-            onClick={onApply}
+            onClick={handleApplyClick}
             aria-label="应用参数"
             className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
             style={{
@@ -180,7 +182,8 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
   // compact variant - 首页风格
   return (
     <div
-      className={`group relative ${getImageHeight(index)} animate-liquid-slide-up`}
+      onClick={handleCardClick}
+      className={`group relative ${getImageHeight(index)} animate-liquid-slide-up cursor-pointer`}
       style={{
         animationDelay: `${index * 60}ms`,
         animationFillMode: 'both',
@@ -240,10 +243,7 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
 
       {/* 收藏按钮 */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleFavorite(preset.id);
-        }}
+        onClick={handleFavoriteClick}
         aria-label={isFavorite ? '取消收藏' : '添加收藏'}
         aria-pressed={isFavorite}
         className="absolute top-3 right-3 p-2.5 rounded-full z-20 transition-spring-soft ripple-container"
