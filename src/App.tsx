@@ -18,6 +18,8 @@ import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
 import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
+import PresetDetailPage from './pages/subpages/PresetDetailPage';
+import { cloudSyncService } from './services/cloudSyncService';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -46,6 +48,14 @@ const App: React.FC = () => {
         return <NotificationPage />;
       case 'privacy':
         return <PrivacyPage />;
+      case 'preset-detail':
+        // 获取当前选中的预设详情
+        const presets = cloudSyncService.getPresets();
+        const preset = presets[0]; // 默认显示第一个预设
+        if (preset) {
+          return <PresetDetailPage preset={preset} />;
+        }
+        return null;
       default:
         return null;
     }
