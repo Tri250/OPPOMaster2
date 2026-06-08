@@ -8,17 +8,12 @@ import {
   Shield,
   FileText,
   ChevronRight,
-  Camera,
-  Sparkles,
-  Download,
-  Crown,
   ChevronLeft,
 } from 'lucide-react';
 
 /**
  * ============================================
- * 关于页 - 简洁哈苏品牌风格
- * 参考图片设计：深色背景 + 橙色强调 + 清晰层级
+ * 关于页 - 极简风格
  * ============================================
  */
 const AboutScreen: React.FC = () => {
@@ -89,7 +84,7 @@ const AboutScreen: React.FC = () => {
       className="h-full flex flex-col overflow-hidden"
       style={{ background: '#0a0a0a' }}
     >
-      {/* 简洁标题栏 - 参考图片风格 */}
+      {/* 简洁标题栏 */}
       <div className="flex items-center justify-center px-4 pt-12 pb-4 relative">
         <button 
           onClick={() => setCurrentPage('home')}
@@ -107,109 +102,20 @@ const AboutScreen: React.FC = () => {
 
       {/* 可滚动内容区 */}
       <div className="flex-1 overflow-y-auto">
-        {/* 品牌展示区 - 简洁大气 */}
-        <div className="px-6 pt-4 pb-8">
-          {/* 认证徽章 - 橙色边框风格 */}
-          <div className="flex justify-center mb-8">
-            <div 
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
-              style={{
-                background: 'transparent',
-                border: '1px solid #FF6B35'
-              }}
-            >
-              <Crown size={14} style={{ color: '#FF6B35' }} />
-              <span className="text-sm font-medium" style={{ color: '#FF6B35' }}>
-                哈苏 HNCS 官方认证
-              </span>
-            </div>
-          </div>
-
-          {/* 品牌名称 - 大号橙色 */}
-          <div className="text-center mb-6">
-            <h2 
-              className="text-5xl font-bold mb-4"
-              style={{ color: '#FF6B35' }}
-            >
-              小O帮帮
-            </h2>
-            <p 
-              className="text-2xl font-bold leading-tight"
-              style={{ color: '#FFFFFF' }}
-            >
-              专业摄影参数预设
-            </p>
-          </div>
-
-          {/* 产品描述 - 灰色小字 */}
-          <div className="text-center mb-8">
-            <p 
-              className="text-base mb-1"
-              style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-            >
-              为 <span className="font-semibold" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>OPPO Find 系列</span> 打造的专业级
-            </p>
-            <p 
-              className="text-base mb-3"
-              style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-            >
-              摄影工具
-            </p>
-            <p 
-              className="text-sm"
-              style={{ color: 'rgba(255, 255, 255, 0.4)' }}
-            >
-              哈苏色彩科学 · 智能场景识别 · 一键参数优化
-            </p>
-          </div>
-
-          {/* 操作按钮 */}
-          <div className="space-y-3 mb-8">
-            <button 
-              className="w-full py-3.5 rounded-xl font-medium text-base flex items-center justify-center gap-2"
-              style={{ 
-                background: '#FF6B35',
-                color: '#FFFFFF'
-              }}
-            >
-              <Download size={18} />
-              下载 App
-            </button>
-            <button 
-              className="w-full py-3.5 rounded-xl font-medium text-base"
-              style={{ 
-                background: 'transparent',
-                color: '#FFFFFF',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              了解更多
-            </button>
-          </div>
-
-          {/* 数据统计 - 简洁三列 */}
-          <div 
-            className="flex justify-around py-6"
-            style={{
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
+        {/* 品牌名称 */}
+        <div className="px-6 pt-8 pb-6 text-center">
+          <h2 
+            className="text-4xl font-bold mb-2"
+            style={{ color: '#FF6B35' }}
           >
-            <div className="text-center">
-              <Camera size={22} style={{ color: '#FF6B35' }} className="mx-auto mb-2" />
-              <p className="text-xl font-bold" style={{ color: '#FFFFFF' }}>500+</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>专业预设</p>
-            </div>
-            <div className="text-center">
-              <Sparkles size={22} style={{ color: '#FF6B35' }} className="mx-auto mb-2" />
-              <p className="text-xl font-bold" style={{ color: '#FFFFFF' }}>35+</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>智能场景</p>
-            </div>
-            <div className="text-center">
-              <Download size={22} style={{ color: '#FF6B35' }} className="mx-auto mb-2" />
-              <p className="text-xl font-bold" style={{ color: '#FFFFFF' }}>100万</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>用户下载</p>
-            </div>
-          </div>
+            小O帮帮
+          </h2>
+          <p 
+            className="text-base"
+            style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+          >
+            为 OPPO Find 系列打造
+          </p>
         </div>
 
         {/* 设置列表 */}
