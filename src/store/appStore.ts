@@ -105,18 +105,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedPreset: (preset) => set({ selectedPreset: preset }),
   features: [
     {
-      id: 'ai-scene',
-      title: 'AI 场景识别',
-      subtitle: '智能识别36+拍摄场景，自动推荐最佳参数',
-      icon: 'Camera',
-      color: '#4CAF50',
-      gradientColors: ['#1B5E20', '#2E7D32'],
-      enabled: true,
-      showToggle: true,
-    },
-    {
       id: 'camera-scene',
-      title: '相机场景识别',
+      title: 'AI场景识别',
       subtitle: '打开相机实时识别场景，推荐哈苏大师参数',
       icon: 'Camera',
       color: '#FF6B35',

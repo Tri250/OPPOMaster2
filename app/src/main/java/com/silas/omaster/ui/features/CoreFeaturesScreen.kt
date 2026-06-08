@@ -132,15 +132,16 @@ fun CoreFeaturesScreen(
             )
         }
 
-        // AI场景识别
+        // AI场景识别（相机实时识别）
         item {
             FeatureCard(
-                title = "AI 场景识别",
-                subtitle = "智能识别36+拍摄场景，自动推荐最佳参数",
+                title = "AI场景识别",
+                subtitle = "打开相机实时识别场景，推荐哈苏大师参数",
                 icon = Icons.Default.CameraAlt,
-                iconColor = Color(0xFF4CAF50),
-                gradientColors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32)),
+                iconColor = Color(0xFFFF6B35),
+                gradientColors = listOf(Color(0xFFE65100), Color(0xFFFF6B35)),
                 isEnabled = aiSceneEnabled,
+                showToggle = false,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
                     aiSceneEnabled = enabled
