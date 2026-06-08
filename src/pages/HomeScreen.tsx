@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore, homePresets } from '../store/appStore';
 import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter } from 'lucide-react';
 
@@ -19,17 +19,69 @@ const brands = [
 ];
 
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab } = useAppStore();
+  const { selectedTab, setSelectedTab, presetSources, fetchedPresets, setFetchedPresets } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBrand, setActiveBrand] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // 合并本地预设和网络获取的预设
+  const allPresets = [...homePresets, ...fetchedPresets];
+
+  // 从预设源获取预设
+  const fetchPresetsFromSources = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const allPresets: any[] = [];
+      
+      for (const source of presetSources) {
+        if (!source.enabled) continue;
+        
+        try {
+          const response = await fetch(source.url);
+          if (response.ok) {
+            const data = await response.json();
+            const presets = (data.presets || data || []).map((p: any) => ({
+              id: `${source.id}-${p.id || Date.now() + Math.random()}`,
+              name: p.name || '未命名预设',
+              coverPath: p.coverPath || p.cover || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop',
+              author: p.author || source.name,
+              brand: p.brand || source.name,
+              tags: p.tags || ['预设'],
+              isNew: true,
+              isHncs: p.isHncs || false,
+              saturation: p.saturation || 10,
+              contrast: p.contrast || 5,
+              warmth: p.warmth || 0,
+              sharpness: p.sharpness || 15,
+            }));
+            allPresets.push(...presets);
+          }
+        } catch (err) {
+          console.error(`Failed to fetch from ${source.name}:`, err);
+        }
+      }
+      
+      setFetchedPresets(allPresets);
+    } catch (err) {
+      console.error('Failed to fetch presets:', err);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, [presetSources, setFetchedPresets]);
 
   // 下拉刷新
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    fetchPresetsFromSources();
+  }, [fetchPresetsFromSources]);
+  
+  // 初始化加载
+  useEffect(() => {
+    fetchPresetsFromSources();
   }, []);
 
   // 切换收藏
@@ -47,7 +99,7 @@ const HomeScreen: React.FC = () => {
 
   // 过滤和排序
   const getFilteredPresets = useCallback(() => {
-    let result = [...homePresets];
+    let result = [...allPresets];
 
     // Tab 过滤
     const tabKey = tabs[selectedTab]?.key;
@@ -93,23 +145,23 @@ const HomeScreen: React.FC = () => {
     });
 
     return result;
-  }, [selectedTab, activeBrand, searchQuery, sortBy, favorites]);
+  }, [selectedTab, activeBrand, searchQuery, sortBy, favorites, allPresets]);
 
   // 计算每个 Tab 的计数
   const getTabCount = useCallback((tabKey: string) => {
     switch (tabKey) {
       case 'all':
-        return homePresets.length;
+        return allPresets.length;
       case 'favorites':
         return favorites.size;
       case 'hncs':
-        return homePresets.filter(p => p.isHncs).length;
+        return allPresets.filter(p => p.isHncs).length;
       case 'new':
-        return homePresets.filter(p => p.isNew).length;
+        return allPresets.filter(p => p.isNew).length;
       default:
         return 0;
     }
-  }, [favorites]);
+  }, [favorites, allPresets]);
 
   // 计算瀑布流高度
   const getImageHeight = (index: number) => {

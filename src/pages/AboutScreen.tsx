@@ -9,6 +9,7 @@ import {
   FileText,
   ChevronRight,
   Camera,
+  Database,
 } from 'lucide-react';
 
 const AboutScreen: React.FC = () => {
@@ -53,6 +54,12 @@ const AboutScreen: React.FC = () => {
       label: '通知设置', 
       value: '',
       route: 'notification' as const
+    },
+    { 
+      icon: Database, 
+      label: '预设源管理', 
+      value: '',
+      route: 'preset-sources' as const
     },
     { 
       icon: Shield, 

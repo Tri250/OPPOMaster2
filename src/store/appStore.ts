@@ -17,6 +17,7 @@ export type SubPageType =
   | 'notification'
   | 'privacy'
   | 'terms'
+  | 'preset-sources'
   | null;
 
 export interface Preset {
@@ -34,6 +35,14 @@ export interface Preset {
   sharpness: number;
   clarity?: number;
   brightness?: number;
+}
+
+export interface PresetSource {
+  id: string;
+  name: string;
+  url: string;
+  enabled: boolean;
+  lastUpdated?: Date;
 }
 
 export interface Feature {
@@ -99,6 +108,15 @@ interface AppState {
     promotions: boolean;
   };
   setNotification: (key: string, value: boolean) => void;
+  // 预设源管理
+  presetSources: PresetSource[];
+  addPresetSource: (source: Omit<PresetSource, 'id' | 'lastUpdated'>) => void;
+  updatePresetSource: (id: string, source: Partial<PresetSource>) => void;
+  removePresetSource: (id: string) => void;
+  togglePresetSource: (id: string) => void;
+  // 从源获取的预设
+  fetchedPresets: Preset[];
+  setFetchedPresets: (presets: Preset[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -261,6 +279,55 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       notifications: { ...state.notifications, [key]: value },
     })),
+  // 默认预设源
+  presetSources: [
+    {
+      id: 'oppo',
+      name: 'OPPO 预设库',
+      url: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json',
+      enabled: true,
+    },
+    {
+      id: 'realme',
+      name: 'realme 预设库',
+      url: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json',
+      enabled: true,
+    },
+    {
+      id: 'vivo',
+      name: 'vivo 预设库',
+      url: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json',
+      enabled: true,
+    },
+    {
+      id: 'honor',
+      name: '荣耀 预设库',
+      url: 'https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json',
+      enabled: true,
+    },
+  ],
+  addPresetSource: (source) =>
+    set((state) => ({
+      presetSources: [...state.presetSources, { ...source, id: Date.now().toString() }],
+    })),
+  updatePresetSource: (id, source) =>
+    set((state) => ({
+      presetSources: state.presetSources.map((s) =>
+        s.id === id ? { ...s, ...source } : s
+      ),
+    })),
+  removePresetSource: (id) =>
+    set((state) => ({
+      presetSources: state.presetSources.filter((s) => s.id !== id),
+    })),
+  togglePresetSource: (id) =>
+    set((state) => ({
+      presetSources: state.presetSources.map((s) =>
+        s.id === id ? { ...s, enabled: !s.enabled } : s
+      ),
+    })),
+  fetchedPresets: [],
+  setFetchedPresets: (presets) => set({ fetchedPresets: presets }),
 }));
 
 export const featuredPresets: Preset[] = [
