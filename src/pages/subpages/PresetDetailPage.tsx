@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { Preset } from '../../services/cloudSyncService';
-import { ArrowLeft, Heart, Download, Share2, Star, Eye, Cloud, Settings, Palette, Sun, Contrast, Sparkles, Camera, Circle, Thermometer } from 'lucide-react';
+import { ArrowLeft, Heart, Download, Share2, Star, Eye, Cloud, Settings, Palette, Sun, Contrast, Sparkles, Camera, Circle, Thermometer, ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 
 interface PresetDetailPageProps {
   preset: Preset;
@@ -9,7 +9,15 @@ interface PresetDetailPageProps {
 
 const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
   const { goBack } = useAppStore();
-  const [isFavorite, setIsFavorite] = React.useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  // 获取所有展示图片（封面 + 图库）
+  const allImages = preset.galleryImages && preset.galleryImages.length > 0 
+    ? [preset.coverPath, ...preset.galleryImages] 
+    : [preset.coverPath];
 
   // 格式化下载量
   const formatDownloadCount = (count: number) => {
@@ -22,6 +30,19 @@ const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
   // 格式化参数值（带正负号）
   const formatValue = (value: number) => {
     return value > 0 ? `+${value}` : `${value}`;
+  };
+
+  // 图片导航
+  const handlePrevImage = () => {
+    setCurrentImageIndex(prev => (prev > 0 ? prev - 1 : allImages.length - 1));
+    setImageLoading(true);
+    setImageError(false);
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex(prev => (prev < allImages.length - 1 ? prev + 1 : 0));
+    setImageLoading(true);
+    setImageError(false);
   };
 
   return (
@@ -46,17 +67,80 @@ const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
         </button>
       </div>
 
-      {/* Cover Image */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      {/* Cover Image Gallery */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-[#1a1a1a]">
+        {/* Loading Skeleton */}
+        {imageLoading && !imageError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-white/10 animate-pulse" />
+          </div>
+        )}
+
+        {/* Error State */}
+        {imageError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <ImageOff size={32} className="text-white/30" />
+            <span className="text-white/30 text-xs">图片加载失败</span>
+          </div>
+        )}
+
+        {/* Image */}
         <img
-          src={preset.coverPath}
-          alt={preset.name}
-          className="w-full h-full object-cover"
+          src={allImages[currentImageIndex]}
+          alt={`${preset.name} - 样张 ${currentImageIndex + 1}`}
+          className="w-full h-full object-cover transition-opacity duration-300"
+          style={{ opacity: imageLoading ? 0 : 1 }}
+          onLoad={() => setImageLoading(false)}
+          onError={() => {
+            setImageLoading(false);
+            setImageError(true);
+          }}
         />
+
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
         
+        {/* Image Navigation */}
+        {allImages.length > 1 && (
+          <>
+            <button 
+              onClick={handlePrevImage}
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors z-20"
+            >
+              <ChevronLeft size={20} className="text-white" />
+            </button>
+            <button 
+              onClick={handleNextImage}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors z-20"
+            >
+              <ChevronRight size={20} className="text-white" />
+            </button>
+
+            {/* Image Indicators */}
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+              {allImages.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setCurrentImageIndex(i);
+                    setImageLoading(true);
+                    setImageError(false);
+                  }}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    i === currentImageIndex ? 'bg-white w-4' : 'bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Image Counter */}
+            <div className="absolute bottom-16 right-4 px-2 py-1 rounded-lg bg-black/40 backdrop-blur-sm z-20">
+              <span className="text-white/70 text-xs">{currentImageIndex + 1}/{allImages.length}</span>
+            </div>
+          </>
+        )}
+        
         {/* Badges */}
-        <div className="absolute top-4 left-4 flex gap-2">
+        <div className="absolute top-4 left-4 flex gap-2 z-20">
           {preset.isHncs && (
             <div className="px-2 py-1 bg-[#FF6B35]/80 backdrop-blur-sm rounded-lg text-xs font-bold text-white">
               HNCS
@@ -76,7 +160,7 @@ const PresetDetailPage: React.FC<PresetDetailPageProps> = ({ preset }) => {
         </div>
 
         {/* Brand Tags */}
-        <div className="absolute bottom-4 left-4 flex gap-2">
+        <div className="absolute bottom-4 left-4 flex gap-2 z-20">
           {preset.brand.split(', ').map((b, i) => (
             <div key={i} className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-xs text-white/70">
               {b}

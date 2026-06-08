@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Preset } from './services/cloudSyncService';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
 export type SubPageType = 
@@ -18,23 +19,6 @@ export type SubPageType =
   | 'privacy'
   | 'terms'
   | null;
-
-export interface Preset {
-  id: string;
-  name: string;
-  coverPath: string;
-  author: string;
-  brand: string;
-  tags: string[];
-  isNew: boolean;
-  isHncs: boolean;
-  saturation: number;
-  contrast: number;
-  warmth: number;
-  sharpness: number;
-  clarity?: number;
-  brightness?: number;
-}
 
 export interface Feature {
   id: string;
@@ -60,6 +44,8 @@ interface AppState {
   setSelectedBrand: (brand: string | null) => void;
   selectedScene: string | null;
   setSelectedScene: (scene: string | null) => void;
+  selectedPreset: Preset | null;
+  setSelectedPreset: (preset: Preset | null) => void;
   features: Feature[];
   toggleFeature: (id: string) => void;
   // AI 微调参数
@@ -114,6 +100,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedBrand: (brand) => set({ selectedBrand: brand }),
   selectedScene: null,
   setSelectedScene: (scene) => set({ selectedScene: scene }),
+  selectedPreset: null,
+  setSelectedPreset: (preset) => set({ selectedPreset: preset }),
   features: [
     {
       id: 'ai-scene',

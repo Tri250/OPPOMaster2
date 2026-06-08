@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 import { cloudSyncService, Preset as CloudPreset, BrandSyncState } from '../services/cloudSyncService';
-import { Heart, RefreshCw, Cloud, Star, Download } from 'lucide-react';
+import { Heart, RefreshCw, Cloud, Star, Download, ImageOff } from 'lucide-react';
 
 const tabs = ['全部', '收藏', '我的'];
 
@@ -10,13 +10,55 @@ interface DisplayPreset extends CloudPreset {
   isLocal?: boolean;
 }
 
+// 图片加载状态组件
+const PresetImage: React.FC<{ 
+  src: string; 
+  alt: string; 
+  className?: string;
+}> = ({ src, alt, className }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* Loading Skeleton */}
+      {loading && !error && (
+        <div className="absolute inset-0 bg-[#1a1a1a] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="absolute inset-0 bg-[#1a1a1a] flex flex-col items-center justify-center">
+          <ImageOff size={20} className="text-white/20" />
+        </div>
+      )}
+
+      {/* Image */}
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-full object-cover transition-all duration-500 ${
+          loading ? 'opacity-0 scale-100' : 'opacity-100 scale-100 group-hover:scale-110'
+        }`}
+        onLoad={() => setLoading(false)}
+        onError={() => {
+          setLoading(false);
+          setError(true);
+        }}
+        loading="lazy"
+      />
+    </div>
+  );
+};
+
 const HomeScreen: React.FC = () => {
-  const { selectedTab, setSelectedTab, navigateToSubPage } = useAppStore();
+  const { selectedTab, setSelectedTab, navigateToSubPage, setSelectedPreset } = useAppStore();
   const [presets, setPresets] = useState<DisplayPreset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [brands, setBrands] = useState<BrandSyncState[]>([]);
   const [connectedCount, setConnectedCount] = useState(0);
-  const [selectedPreset, setSelectedPreset] = useState<DisplayPreset | null>(null);
 
   // 订阅服务层状态变化（自动刷新）
   useEffect(() => {
@@ -30,6 +72,10 @@ const HomeScreen: React.FC = () => {
           id: 'local_1',
           name: '清新CC胶片',
           coverPath: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop',
+          galleryImages: [
+            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=300&fit=crop',
+            'https://images.unsplash.com/photo-1534528741773-5394a77d2ac5?w=400&h=350&fit=crop',
+          ],
           author: '@大师预设',
           brand: '本地',
           brandId: 'local',
@@ -37,10 +83,14 @@ const HomeScreen: React.FC = () => {
           isNew: false,
           isHncs: true,
           isLocal: true,
+          filter: '胶片',
+          softLight: 25,
+          tone: 5,
           saturation: 5,
-          contrast: 8,
-          warmth: 3,
+          warmCool: 3,
+          cyanMagenta: 0,
           sharpness: 10,
+          vignette: '关',
           description: '经典胶片风格，清新自然',
           downloadCount: 3200,
           rating: 4.2,
@@ -49,6 +99,9 @@ const HomeScreen: React.FC = () => {
           id: 'local_2',
           name: '夜景氛围',
           coverPath: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=400&h=280&fit=crop',
+          galleryImages: [
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
+          ],
           author: '@夜景专家',
           brand: '本地',
           brandId: 'local',
@@ -56,10 +109,19 @@ const HomeScreen: React.FC = () => {
           isNew: false,
           isHncs: false,
           isLocal: true,
+          mode: 'pro',
+          filter: '原图',
+          softLight: 15,
+          tone: 20,
           saturation: 15,
-          contrast: 20,
-          warmth: -5,
+          warmCool: -5,
+          cyanMagenta: 5,
           sharpness: 18,
+          vignette: '开',
+          iso: '400-800',
+          shutterSpeed: '1/30',
+          exposureCompensation: '-0.3',
+          colorTemperature: 4500,
           description: '夜景氛围感强',
           downloadCount: 1800,
           rating: 4.0,
@@ -169,18 +231,18 @@ const HomeScreen: React.FC = () => {
                 {/* Glass Border Effect */}
                 <div className="absolute inset-0 rounded-2xl border border-white/5 group-hover:border-white/10 transition-colors z-10 pointer-events-none" />
                 
-                {/* Image */}
-                <img
+                {/* Image with Loading State */}
+                <PresetImage 
                   src={preset.coverPath}
                   alt={preset.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-full"
                 />
 
                 {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10" />
 
                 {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-3">
+                <div className="absolute bottom-0 left-0 right-0 p-3 z-20">
                   <h3 className="text-white font-semibold text-sm mb-0.5 truncate">{preset.name}</h3>
                   <p className="text-white/60 text-xs truncate">{preset.author}</p>
                   {/* Stats */}
@@ -214,6 +276,13 @@ const HomeScreen: React.FC = () => {
                 {preset.isLocal && (
                   <div className="absolute top-2 left-2 ml-10 px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded text-[8px] text-white/70 z-20">
                     本地
+                  </div>
+                )}
+
+                {/* Pro Badge */}
+                {preset.mode === 'pro' && (
+                  <div className="absolute top-2 left-2 ml-20 px-1.5 py-0.5 bg-[#FFC107]/80 backdrop-blur-sm rounded text-[8px] font-bold text-white z-20">
+                    Pro
                   </div>
                 )}
 

@@ -19,10 +19,9 @@ import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
 import PresetDetailPage from './pages/subpages/PresetDetailPage';
-import { cloudSyncService } from './services/cloudSyncService';
 
 const App: React.FC = () => {
-  const { currentPage, currentSubPage } = useAppStore();
+  const { currentPage, currentSubPage, selectedPreset } = useAppStore();
 
   const renderSubPage = () => {
     switch (currentSubPage) {
@@ -49,11 +48,9 @@ const App: React.FC = () => {
       case 'privacy':
         return <PrivacyPage />;
       case 'preset-detail':
-        // 获取当前选中的预设详情
-        const presets = cloudSyncService.getPresets();
-        const preset = presets[0]; // 默认显示第一个预设
-        if (preset) {
-          return <PresetDetailPage preset={preset} />;
+        // 使用选中的预设
+        if (selectedPreset) {
+          return <PresetDetailPage preset={selectedPreset} />;
         }
         return null;
       default:
