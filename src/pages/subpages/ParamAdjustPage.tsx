@@ -1,9 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Aperture, Timer, Sun, Thermometer } from 'lucide-react';
+import { ArrowLeft, Aperture, Timer, Sun, Thermometer, Sparkles, Camera, Check, RefreshCw, Wand2 } from 'lucide-react';
+import ImageUploader from '../../components/ImageUploader';
+
+// OPPO哈苏大师风格预设
+const hasselbladPresets = [
+  { 
+    id: 'portrait', 
+    name: '哈苏人像大师', 
+    icon: Camera,
+    color: '#E91E63',
+    desc: '柔美肤色，自然光影',
+    params: { iso: 200, shutter: 125, aperture: 2.8, wb: 5500, saturation: 10, contrast: 5, warmth: 8, sharpness: 15 }
+  },
+  { 
+    id: 'landscape', 
+    name: '哈苏风景大师', 
+    icon: Sun,
+    color: '#4CAF50',
+    desc: '通透质感，色彩饱满',
+    params: { iso: 100, shutter: 60, aperture: 8, wb: 5600, saturation: 20, contrast: 15, warmth: -5, sharpness: 25 }
+  },
+  { 
+    id: 'night', 
+    name: '哈苏夜景大师', 
+    icon: Sparkles,
+    color: '#3F51B5',
+    desc: '降噪增强，氛围感强',
+    params: { iso: 3200, shutter: 30, aperture: 2.8, wb: 4000, saturation: 25, contrast: 20, warmth: -10, sharpness: 30 }
+  },
+  { 
+    id: 'film', 
+    name: '哈苏胶片大师', 
+    icon: Aperture,
+    color: '#FF9800',
+    desc: '复古质感，经典色调',
+    params: { iso: 400, shutter: 125, aperture: 4, wb: 5200, saturation: 5, contrast: 10, warmth: 15, sharpness: 20 }
+  },
+];
+
+const quickPresets = [
+  { name: '人像', iso: 200, shutter: 125, aperture: 2.8, wb: 5500 },
+  { name: '风景', iso: 100, shutter: 60, aperture: 8, wb: 5600 },
+  { name: '夜景', iso: 3200, shutter: 30, aperture: 2.8, wb: 4000 },
+  { name: '运动', iso: 800, shutter: 500, aperture: 4, wb: 5500 },
+];
 
 const ParamAdjustPage: React.FC = () => {
-  const { cameraParams, setCameraParam, goBack } = useAppStore();
+  const { cameraParams, setCameraParam, aiParams, setAiParam, goBack } = useAppStore();
+  const [uploadedImage, setUploadedImage] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recommendedPreset, setRecommendedPreset] = useState<string | null>(null);
+  const [appliedPreset, setAppliedPreset] = useState<string | null>(null);
 
   const params = [
     { 
@@ -44,14 +92,44 @@ const ParamAdjustPage: React.FC = () => {
     },
   ];
 
-  const quickPresets = [
-    { name: '人像', iso: 200, shutter: 125, aperture: 2.8, wb: 5500 },
-    { name: '风景', iso: 100, shutter: 60, aperture: 8, wb: 5600 },
-    { name: '夜景', iso: 3200, shutter: 30, aperture: 2.8, wb: 4000 },
-    { name: '运动', iso: 800, shutter: 500, aperture: 4, wb: 5500 },
+  const aiParamsList = [
+    { key: 'saturation', label: '饱和度', min: -100, max: 100 },
+    { key: 'contrast', label: '对比度', min: -100, max: 100 },
+    { key: 'warmth', label: '色温偏移', min: -100, max: 100 },
+    { key: 'sharpness', label: '锐度', min: 0, max: 100 },
   ];
 
-  const applyPreset = (preset: typeof quickPresets[0]) => {
+  // AI分析图片推荐参数
+  const handleAnalyzeImage = () => {
+    if (!uploadedImage) return;
+    
+    setIsAnalyzing(true);
+    setRecommendedPreset(null);
+    
+    // 模拟AI分析
+    setTimeout(() => {
+      const randomPreset = hasselbladPresets[Math.floor(Math.random() * hasselbladPresets.length)];
+      setRecommendedPreset(randomPreset.id);
+      setIsAnalyzing(false);
+    }, 2000);
+  };
+
+  // 应用哈苏大师预设
+  const applyHasselbladPreset = (preset: typeof hasselbladPresets[0]) => {
+    setCameraParam('iso', preset.params.iso);
+    setCameraParam('shutter', preset.params.shutter);
+    setCameraParam('aperture', preset.params.aperture);
+    setCameraParam('wb', preset.params.wb);
+    setAiParam('saturation', preset.params.saturation);
+    setAiParam('contrast', preset.params.contrast);
+    setAiParam('warmth', preset.params.warmth);
+    setAiParam('sharpness', preset.params.sharpness);
+    setAppliedPreset(preset.id);
+    
+    setTimeout(() => setAppliedPreset(null), 3000);
+  };
+
+  const applyQuickPreset = (preset: typeof quickPresets[0]) => {
     setCameraParam('iso', preset.iso);
     setCameraParam('shutter', preset.shutter);
     setCameraParam('aperture', preset.aperture);
@@ -69,7 +147,100 @@ const ParamAdjustPage: React.FC = () => {
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">参数精细调节</h1>
+        {uploadedImage && (
+          <div className="ml-auto px-2 py-1 rounded-full bg-[#FF6B35]/20">
+            <span className="text-[#FF6B35] text-xs">已上传照片</span>
+          </div>
+        )}
       </div>
+
+      {/* Image Upload Section */}
+      <div className="px-4 py-4">
+        <ImageUploader 
+          onImageSelect={setUploadedImage}
+          currentImage={uploadedImage}
+          title="上传照片分析"
+          description="AI将分析并推荐哈苏大师参数"
+        />
+      </div>
+
+      {/* AI Analyze Button */}
+      {uploadedImage && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={handleAnalyzeImage}
+            disabled={isAnalyzing}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 active:scale-98 disabled:opacity-50"
+          >
+            {isAnalyzing ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" />
+                <span>AI分析中...</span>
+              </>
+            ) : (
+              <>
+                <Wand2 size={18} />
+                <span>AI分析推荐参数</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Hasselblad Presets */}
+      {uploadedImage && (
+        <div className="px-4 pb-4">
+          <p className="text-white/50 text-xs mb-3">OPPO 哈苏大师风格参数</p>
+          <div className="grid grid-cols-2 gap-3">
+            {hasselbladPresets.map((preset) => {
+              const Icon = preset.icon;
+              const isRecommended = recommendedPreset === preset.id;
+              const isApplied = appliedPreset === preset.id;
+              
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => applyHasselbladPreset(preset)}
+                  className={`relative p-4 rounded-2xl transition-all ${
+                    isApplied
+                      ? 'bg-[#FF6B35]/30 border border-[#FF6B35]'
+                      : isRecommended
+                        ? 'bg-[#4CAF50]/20 border border-[#4CAF50]/50'
+                        : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  {isApplied && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#FF6B35]/20 rounded-2xl">
+                      <div className="w-10 h-10 rounded-full bg-[#FF6B35] flex items-center justify-center">
+                        <Check size={20} className="text-white" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${preset.color}20` }}
+                    >
+                      <Icon size={24} style={{ color: preset.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white text-sm font-medium">{preset.name}</p>
+                      <p className="text-white/50 text-xs">{preset.desc}</p>
+                      {isRecommended && (
+                        <span className="text-[#4CAF50] text-xs mt-1 flex items-center gap-1">
+                          <Sparkles size={10} />
+                          AI推荐
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Quick Presets */}
       <div className="px-4 py-4">
@@ -78,7 +249,7 @@ const ParamAdjustPage: React.FC = () => {
           {quickPresets.map((preset) => (
             <button
               key={preset.name}
-              onClick={() => applyPreset(preset)}
+              onClick={() => applyQuickPreset(preset)}
               className="flex-1 py-2 rounded-xl bg-white/5 text-white text-sm font-medium transition-all hover:bg-white/10 active:scale-95"
             >
               {preset.name}
@@ -89,7 +260,9 @@ const ParamAdjustPage: React.FC = () => {
 
       {/* Param Controls */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <div className="space-y-6">
+        {/* Camera Params */}
+        <div className="space-y-4 mb-6">
+          <p className="text-white/50 text-xs">相机参数</p>
           {params.map((param) => {
             const Icon = param.icon;
             const value = cameraParams[param.key as keyof typeof cameraParams];
@@ -107,7 +280,6 @@ const ParamAdjustPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Slider */}
                 <input
                   type="range"
                   min={param.min}
@@ -118,7 +290,6 @@ const ParamAdjustPage: React.FC = () => {
                   className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#E91E63]"
                 />
 
-                {/* Marks */}
                 {param.marks && (
                   <div className="flex justify-between mt-2">
                     {param.marks.map((mark) => (
@@ -137,25 +308,30 @@ const ParamAdjustPage: React.FC = () => {
           })}
         </div>
 
-        {/* Exposure Meter */}
-        <div className="mt-6 p-4 bg-white/5 rounded-2xl">
-          <p className="text-white/50 text-xs mb-3">曝光指示器</p>
-          <div className="relative h-8 bg-gradient-to-r from-blue-900 via-green-900 to-red-900 rounded-full overflow-hidden">
-            <div 
-              className="absolute top-0 bottom-0 w-1 bg-white shadow-lg transition-all duration-300"
-              style={{ 
-                left: `${Math.min(100, Math.max(0, 50 + (cameraParams.iso - 100) / 100))}%`,
-                transform: 'translateX(-50%)'
-              }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white/50 text-xs font-mono">0</span>
-            </div>
-          </div>
-          <div className="flex justify-between mt-1">
-            <span className="text-white/30 text-xs">-3</span>
-            <span className="text-white/30 text-xs">+3</span>
-          </div>
+        {/* AI Params */}
+        <div className="space-y-4">
+          <p className="text-white/50 text-xs">调色参数</p>
+          {aiParamsList.map((param) => {
+            const value = aiParams[param.key as keyof typeof aiParams];
+            return (
+              <div key={param.key} className="bg-white/5 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white text-sm font-medium">{param.label}</span>
+                  <span className="text-[#FF6B35] text-sm font-bold">
+                    {value > 0 ? '+' : ''}{value}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={param.min}
+                  max={param.max}
+                  value={value}
+                  onChange={(e) => setAiParam(param.key, parseInt(e.target.value))}
+                  className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#FF6B35]"
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -8,7 +8,7 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navItems: { id: PageType; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: '首页', icon: <Home size={20} /> },
     { id: 'featured', label: '精选', icon: <Star size={20} /> },
-    { id: 'features', label: '功能', icon: <Grid3X3 size={20} /> },
+    { id: 'features', label: '摄影工具', icon: <Grid3X3 size={20} /> },
     { id: 'about', label: '关于', icon: <Info size={20} /> },
   ];
 

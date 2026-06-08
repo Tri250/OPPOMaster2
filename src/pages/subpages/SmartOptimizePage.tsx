@@ -1,62 +1,53 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus } from 'lucide-react';
+import { ArrowLeft, Wand2, RefreshCw, Check, Sparkles, Sun, Moon, Contrast, Palette, Camera, Zap, Image } from 'lucide-react';
+import ImageUploader from '../../components/ImageUploader';
 
+// 哈苏大师优化风格
+const hasselbladStyles = [
+  { id: 'natural', name: '哈苏自然', desc: '真实还原，细节丰富', color: '#4CAF50', icon: Sun },
+  { id: 'portrait', name: '哈苏人像', desc: '柔美肤色，光影层次', color: '#E91E63', icon: Camera },
+  { id: 'cinematic', name: '哈苏电影', desc: '电影质感，氛围感强', color: '#FF9800', icon: Moon },
+  { id: 'vintage', name: '哈苏复古', desc: '经典胶片，怀旧质感', color: '#795548', icon: Palette },
+];
+
+// 优化选项
 const optimizeOptions = [
-  { id: 'hdr', name: 'HDR增强', icon: Sun, color: '#FF9800', desc: '提升动态范围，保留更多细节' },
-  { id: 'denoise', name: '智能降噪', icon: Droplets, color: '#2196F3', desc: 'AI识别并消除噪点' },
-  { id: 'sharpen', name: '锐化增强', icon: Focus, color: '#9C27B0', desc: '提升画面清晰度和质感' },
-  { id: 'enhance', name: '综合优化', icon: Zap, color: '#4CAF50', desc: '一键优化全部参数' },
+  { id: 'hdr', name: 'HDR增强', desc: '动态范围优化', enabled: true },
+  { id: 'noise', name: '智能降噪', desc: '噪点消除', enabled: true },
+  { id: 'sharp', name: '锐化增强', desc: '细节提升', enabled: true },
+  { id: 'color', name: '色彩优化', desc: '色彩校正', enabled: true },
+  { id: 'exposure', name: '曝光调整', desc: '亮度优化', enabled: false },
+  { id: 'contrast', name: '对比度增强', desc: '层次感提升', enabled: false },
 ];
 
 const SmartOptimizePage: React.FC = () => {
-  const { aiParams, setAiParam, goBack } = useAppStore();
+  const { goBack } = useAppStore();
+  const [uploadedImage, setUploadedImage] = useState<string>('');
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizedOptions, setOptimizedOptions] = useState<string[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>(['enhance']);
+  const [optimizedImage, setOptimizedImage] = useState<string>('');
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [options, setOptions] = useState(optimizeOptions);
+  const [showComparison, setShowComparison] = useState(false);
 
-  const toggleOption = (id: string) => {
-    setSelectedOptions(prev => 
-      prev.includes(id) 
-        ? prev.filter(o => o !== id)
-        : [...prev, id]
-    );
-  };
-
+  // 智能优化处理
   const handleOptimize = () => {
-    if (selectedOptions.length === 0) return;
+    if (!uploadedImage) return;
     
     setIsOptimizing(true);
     
-    // 模拟优化过程
-    const processStep = (index: number) => {
-      if (index < selectedOptions.length) {
-        setTimeout(() => {
-          setOptimizedOptions(prev => [...prev, selectedOptions[index]]);
-          processStep(index + 1);
-        }, 500);
-      } else {
-        // 完成优化
-        setTimeout(() => {
-          setIsOptimizing(false);
-          
-          // 应用优化参数
-          if (selectedOptions.includes('enhance')) {
-            setAiParam('contrast', 15);
-            setAiParam('sharpness', 25);
-          }
-          if (selectedOptions.includes('hdr')) {
-            setAiParam('brightness', 10);
-          }
-          if (selectedOptions.includes('sharpen')) {
-            setAiParam('sharpness', 30);
-          }
-        }, 500);
-      }
-    };
-    
-    setOptimizedOptions([]);
-    processStep(0);
+    // 模拟AI优化处理
+    setTimeout(() => {
+      setOptimizedImage(uploadedImage); // 实际应用中这里应该是优化后的图片
+      setIsOptimizing(false);
+    }, 2500);
+  };
+
+  // 切换优化选项
+  const toggleOption = (id: string) => {
+    setOptions(prev => prev.map(opt => 
+      opt.id === id ? { ...opt, enabled: !opt.enabled } : opt
+    ));
   };
 
   return (
@@ -70,145 +61,185 @@ const SmartOptimizePage: React.FC = () => {
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">智能优化</h1>
+        {uploadedImage && (
+          <div className="ml-auto px-2 py-1 rounded-full bg-[#FF6B35]/20">
+            <span className="text-[#FF6B35] text-xs">已上传照片</span>
+          </div>
+        )}
       </div>
 
-      {/* Preview */}
+      {/* Image Upload */}
       <div className="px-4 py-4">
-        <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
-          <img 
-            src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop"
-            alt="Preview"
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Processing Overlay */}
-          {isOptimizing && (
-            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
-              <div className="w-16 h-16 rounded-full border-4 border-[#2196F3] border-t-transparent animate-spin mb-4" />
-              <span className="text-white text-sm">智能优化中...</span>
-              <div className="flex gap-2 mt-3">
-                {selectedOptions.map((opt, idx) => (
-                  <div 
-                    key={opt}
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      optimizedOptions.includes(opt) 
-                        ? 'bg-[#4CAF50] text-white' 
-                        : 'bg-white/20 text-white/70'
-                    }`}
-                  >
-                    {optimizeOptions.find(o => o.id === opt)?.name}
+        <ImageUploader 
+          onImageSelect={setUploadedImage}
+          currentImage={uploadedImage}
+          title="上传照片智能优化"
+          description="AI分析并优化至哈苏大师出片"
+        />
+      </div>
+
+      {/* Hasselblad Styles */}
+      {uploadedImage && (
+        <div className="px-4 pb-4">
+          <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
+            <Sparkles size={12} />
+            哈苏大师优化风格
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {hasselbladStyles.map((style) => {
+              const Icon = style.icon;
+              const isSelected = selectedStyle === style.id;
+              
+              return (
+                <button
+                  key={style.id}
+                  onClick={() => setSelectedStyle(style.id)}
+                  className={`p-4 rounded-2xl transition-all ${
+                    isSelected 
+                      ? 'bg-[#FF6B35]/20 border border-[#FF6B35]' 
+                      : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${style.color}20` }}
+                    >
+                      <Icon size={24} style={{ color: style.color }} />
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-medium">{style.name}</p>
+                      <p className="text-white/50 text-xs">{style.desc}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="ml-auto w-6 h-6 rounded-full bg-[#FF6B35] flex items-center justify-center">
+                        <Check size={14} className="text-white" />
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Optimized Overlay */}
-          {!isOptimizing && optimizedOptions.length > 0 && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-full bg-[#4CAF50] flex items-center justify-center">
-                  <Check size={24} className="text-white" />
-                </div>
-                <span className="text-white text-sm">优化完成</span>
-              </div>
-            </div>
-          )}
-
-          {/* Current Params */}
-          <div className="absolute bottom-3 left-3 right-3">
-            <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                对比度: +{aiParams.contrast}
-              </span>
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                锐度: +{aiParams.sharpness}
-              </span>
-            </div>
+                </button>
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Optimize Button */}
-      <div className="px-4 pb-4">
-        <button
-          onClick={handleOptimize}
-          disabled={isOptimizing || selectedOptions.length === 0}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 active:scale-98 disabled:opacity-50"
-        >
-          {isOptimizing ? (
-            <>
-              <RefreshCw size={18} className="animate-spin" />
-              <span>优化中...</span>
-            </>
-          ) : (
-            <>
-              <Wand2 size={18} />
-              <span>开始智能优化</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Options */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <p className="text-white/50 text-xs mb-3">选择优化项目</p>
-        
-        <div className="space-y-3">
-          {optimizeOptions.map((option) => {
-            const Icon = option.icon;
-            const isSelected = selectedOptions.includes(option.id);
-            const isOptimized = optimizedOptions.includes(option.id);
-            
-            return (
-              <button
+      {/* Optimize Options */}
+      {uploadedImage && (
+        <div className="px-4 pb-4">
+          <p className="text-white/50 text-xs mb-3">优化选项</p>
+          <div className="space-y-2">
+            {options.map((option) => (
+              <div 
                 key={option.id}
                 onClick={() => toggleOption(option.id)}
-                disabled={isOptimizing}
-                className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
-                  isOptimized
-                    ? 'bg-[#4CAF50]/20 border border-[#4CAF50]/50'
-                    : isSelected
-                      ? 'bg-white/10 border border-white/20'
-                      : 'bg-white/5 hover:bg-white/10'
-                }`}
+                className="p-3 rounded-xl bg-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-all"
               >
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: `${option.color}20` }}
-                >
-                  <Icon size={24} style={{ color: option.color }} />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-white font-medium">{option.name}</p>
+                <div>
+                  <p className="text-white text-sm font-medium">{option.name}</p>
                   <p className="text-white/50 text-xs">{option.desc}</p>
                 </div>
-                {isOptimized && (
-                  <div className="w-6 h-6 rounded-full bg-[#4CAF50] flex items-center justify-center">
-                    <Check size={14} className="text-white" />
-                  </div>
-                )}
-                {!isOptimized && (
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    isSelected ? 'border-[#2196F3] bg-[#2196F3]' : 'border-white/30'
-                  }`}>
-                    {isSelected && <Check size={12} className="text-white" />}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                <div className={`w-10 h-6 rounded-full transition-all ${
+                  option.enabled ? 'bg-[#FF6B35]' : 'bg-white/10'
+                }`}>
+                  <div className={`w-5 h-5 rounded-full bg-white transition-all ${
+                    option.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                  }`} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      )}
 
-        {/* Info */}
-        <div className="mt-6 p-4 rounded-2xl bg-white/5">
+      {/* Optimize Button */}
+      {uploadedImage && selectedStyle && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={handleOptimize}
+            disabled={isOptimizing}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 disabled:opacity-50"
+          >
+            {isOptimizing ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" />
+                <span>AI优化中...</span>
+              </>
+            ) : (
+              <>
+                <Wand2 size={18} />
+                <span>开始智能优化</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Result Preview */}
+      {optimizedImage && (
+        <div className="px-4 pb-4">
+          <p className="text-white/50 text-xs mb-3">优化结果</p>
+          
+          {/* Comparison Toggle */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setShowComparison(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs ${
+                !showComparison ? 'bg-[#FF6B35] text-white' : 'bg-white/10 text-white/50'
+              }`}
+            >
+              优化后
+            </button>
+            <button
+              onClick={() => setShowComparison(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs ${
+                showComparison ? 'bg-[#FF6B35] text-white' : 'bg-white/10 text-white/50'
+              }`}
+            >
+              对比原图
+            </button>
+          </div>
+
+          {/* Image Preview */}
+          {showComparison ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl overflow-hidden">
+                <img src={uploadedImage} alt="Original" className="w-full aspect-video object-cover" />
+                <div className="p-2 bg-white/5">
+                  <span className="text-white/50 text-xs">原图</span>
+                </div>
+              </div>
+              <div className="rounded-xl overflow-hidden">
+                <img src={optimizedImage} alt="Optimized" className="w-full aspect-video object-cover" />
+                <div className="p-2 bg-[#FF6B35]/10">
+                  <span className="text-[#FF6B35] text-xs">哈苏大师优化</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl overflow-hidden">
+              <img src={optimizedImage} alt="Optimized" className="w-full aspect-video object-cover" />
+              <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-[#FF6B35]/80 backdrop-blur-sm">
+                <span className="text-white text-xs font-medium">哈苏大师出片</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tips */}
+      <div className="flex-1 px-4 pb-4">
+        <div className="p-4 rounded-2xl bg-white/5">
           <div className="flex items-start gap-3">
-            <Cpu size={20} className="text-[#2196F3] mt-0.5" />
+            <Zap size={18} className="text-[#FF6B35] mt-0.5" />
             <div>
-              <p className="text-white text-sm font-medium">AI 智能引擎</p>
-              <p className="text-white/50 text-xs mt-1">
-                基于深度学习的图像优化算法，自动识别场景并调整最佳参数
-              </p>
+              <p className="text-white text-sm font-medium">智能优化说明</p>
+              <ul className="text-white/50 text-xs mt-2 space-y-1">
+                <li>• AI分析照片内容，自动选择最佳优化方案</li>
+                <li>• 基于哈苏大师调色经验，呈现专业质感</li>
+                <li>• 支持HDR增强、智能降噪、锐化增强等</li>
+                <li>• 一键优化，轻松获得大师级出片效果</li>
+              </ul>
             </div>
           </div>
         </div>
