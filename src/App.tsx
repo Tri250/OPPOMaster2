@@ -22,6 +22,7 @@ import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
 import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
+import AndroidShowcasePage from './pages/AndroidShowcasePage';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -58,6 +59,8 @@ const App: React.FC = () => {
         return <PrivacyPage />;
       case 'terms':
         return <TermsPage />;
+      case 'android-showcase':
+        return <AndroidShowcasePage />;
       default:
         return null;
     }
@@ -79,11 +82,15 @@ const App: React.FC = () => {
   };
 
   return (
-    <PhoneMockup>
-      <div className="h-full w-full relative">
-        {currentSubPage ? renderSubPage() : renderMainPage()}
-      </div>
-    </PhoneMockup>
+    currentSubPage === 'android-showcase' ? (
+      <AndroidShowcasePage />
+    ) : (
+      <PhoneMockup>
+        <div className="h-full w-full relative">
+          {currentSubPage ? renderSubPage() : renderMainPage()}
+        </div>
+      </PhoneMockup>
+    )
   );
 };
 

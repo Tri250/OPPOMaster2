@@ -221,6 +221,28 @@ const FeaturesScreen: React.FC = () => {
           </div>
         </div>
 
+        {/* Android Showcase Preview */}
+        <div className="mt-6">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 border border-gray-700">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <Sparkles size={28} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-lg">Android APP 预览</h3>
+                <p className="text-white/70 text-xs">以 Web 方式体验 Android 应用界面</p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleFeatureClick('android-showcase')}
+              className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <Sparkles size={18} />
+              预览 Android APP 界面
+            </button>
+          </div>
+        </div>
+
         {/* Bottom Spacing */}
         <div className="h-8" />
       </div>

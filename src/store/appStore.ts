@@ -17,6 +17,7 @@ export type SubPageType =
   | 'notification'
   | 'privacy'
   | 'terms'
+  | 'android-showcase'
   | null;
 
 export interface Preset {
