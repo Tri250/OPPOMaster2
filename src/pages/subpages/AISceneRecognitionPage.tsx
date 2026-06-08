@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Camera, Sparkles, Check, RefreshCw, Wand2, Mountain, User, Moon, UtensilsCrossed, Building2, TreePine, Car, Waves, Flower2, Cat, Sun, Palette, Film, Leaf, Coffee, ShoppingBag, Music, Plane, Train, Ship, Bike, Tent, Campfire, Fish, Wine, Cake, Pizza, Burger, Salad, Sushi } from 'lucide-react';
+import { ArrowLeft, Camera, Sparkles, Check, RefreshCw, Wand2, Mountain, User, Moon, UtensilsCrossed, Building2, TreePine, Car, Waves, Flower2, Cat, Sun, Palette, Film, Coffee, ShoppingBag, Plane, Train, Ship, Bike, Tent, Fish, Wine, Cake, Pizza, Salad } from 'lucide-react';
 import ImageUploader from '../../components/ImageUploader';
 
 // 哈苏大师风格
@@ -43,7 +43,7 @@ const scenes = [
   { id: 'food', name: '美食', icon: UtensilsCrossed, color: '#FF9800', hasselblad: 'natural' },
   { id: 'coffee', name: '咖啡', icon: Coffee, color: '#795548', hasselblad: 'vintage' },
   { id: 'cake', name: '蛋糕', icon: Cake, color: '#E91E63', hasselblad: 'natural' },
-  { id: 'sushi', name: '日料', icon: Sushi, color: '#FF5722', hasselblad: 'natural' },
+  { id: 'sushi', name: '日料', icon: UtensilsCrossed, color: '#FF5722', hasselblad: 'natural' },
   { id: 'pizza', name: '披萨', icon: Pizza, color: '#FF9800', hasselblad: 'natural' },
   { id: 'salad', name: '沙拉', icon: Salad, color: '#4CAF50', hasselblad: 'natural' },
   { id: 'wine', name: '酒饮', icon: Wine, color: '#7B1FA2', hasselblad: 'vintage' },
