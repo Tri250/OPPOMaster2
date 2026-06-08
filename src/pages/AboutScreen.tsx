@@ -177,8 +177,8 @@ const AboutScreen: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                    <item.icon size={18} className="text-white/60" />
+                  <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/10 flex items-center justify-center">
+                    <item.icon size={18} className="text-[#FF6B35]" />
                   </div>
                   <span className="text-white text-sm font-medium">{item.label}</span>
                 </div>
