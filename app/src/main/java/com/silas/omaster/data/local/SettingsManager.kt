@@ -207,6 +207,13 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putBoolean(KEY_HASSELBLAD_COLOR_ENABLED, value).apply()
         }
 
+    // 智能优化开关
+    var isSmartOptimizeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SMART_OPTIMIZE_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_SMART_OPTIMIZE_ENABLED, value).apply()
+        }
+
     // 自定义设备型号（WM-003）
     var customDeviceModel: String
         get() = prefs.getString(KEY_CUSTOM_DEVICE_MODEL, "") ?: ""
@@ -320,6 +327,7 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_AI_FINE_TUNE_ENABLED = "ai_fine_tune_enabled"
         private const val KEY_WATERMARK_EDITOR_ENABLED = "watermark_editor_enabled"
         private const val KEY_HASSELBLAD_COLOR_ENABLED = "hasselblad_color_enabled"
+        private const val KEY_SMART_OPTIMIZE_ENABLED = "smart_optimize_enabled"
         private const val KEY_CUSTOM_DEVICE_MODEL = "custom_device_model"
         private const val KEY_FAVORITE_PRESET_IDS = "favorite_preset_ids"
         private const val KEY_PINNED_PRESET_IDS = "pinned_preset_ids"

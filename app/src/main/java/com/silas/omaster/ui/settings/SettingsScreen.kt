@@ -758,9 +758,9 @@ fun DarkModeDialog(
     onDismiss: () -> Unit
 ) {
     val modes = listOf(
-        DarkMode.SYSTEM to "跟随系统" to "根据系统设置自动切换",
-        DarkMode.LIGHT to "浅色模式" to "始终使用浅色主题",
-        DarkMode.DARK to "深色模式" to "始终使用深色主题"
+        Triple(DarkMode.SYSTEM, "跟随系统", "根据系统设置自动切换"),
+        Triple(DarkMode.LIGHT, "浅色模式", "始终使用浅色主题"),
+        Triple(DarkMode.DARK, "深色模式", "始终使用深色主题")
     )
 
     AlertDialog(
@@ -770,8 +770,7 @@ fun DarkModeDialog(
         },
         text = {
             LazyColumn {
-                items(modes) { (pair, desc) ->
-                    val (mode, name) = pair
+                items(modes) { (mode, name, desc) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

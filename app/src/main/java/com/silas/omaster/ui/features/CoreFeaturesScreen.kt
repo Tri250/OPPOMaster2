@@ -95,6 +95,7 @@ fun CoreFeaturesScreen(
     var aiSceneEnabled by remember { mutableStateOf(settingsManager.isAISceneRecognitionEnabled) }
     var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
+    var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
     var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
 
     LazyColumn(
@@ -177,11 +178,11 @@ fun CoreFeaturesScreen(
                 icon = Icons.Default.Memory,
                 iconColor = Color(0xFF2196F3),
                 gradientColors = listOf(Color(0xFF0D47A1), Color(0xFF1565C0)),
-                isEnabled = aiFineTuneEnabled,
+                isEnabled = smartOptimizeEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
-                    aiFineTuneEnabled = enabled
-                    settingsManager.isAIFineTuneEnabled = enabled
+                    smartOptimizeEnabled = enabled
+                    settingsManager.isSmartOptimizeEnabled = enabled
                 },
                 onClick = onNavigateToSmartOptimize
             )
