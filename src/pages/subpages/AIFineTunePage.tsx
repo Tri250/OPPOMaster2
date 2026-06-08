@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, RotateCcw, Check, Sun, Contrast, SunDim, Thermometer, Focus, Sparkles, Droplets, Circle, Layers, Palette, Grid3X3 } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Check, Sun, Contrast, SunDim, Thermometer, Focus, Sparkles, Droplets, Circle, Layers, Palette, Grid3X3, LucideIcon } from 'lucide-react';
 
 // 基础调整参数配置
 const BASIC_SLIDER_CONFIG = [
@@ -56,7 +56,7 @@ const AIFineTunePage: React.FC = () => {
 
   // 滑块组件
   const SliderItem: React.FC<{
-    config: { key: string; label: string; icon: React.ComponentType<{ size: number; style?: React.CSSProperties }>; min: number; max: number };
+    config: { key: string; label: string; icon: LucideIcon; min: number; max: number };
     index: number;
   }> = ({ config, index }) => {
     const Icon = config.icon;
@@ -113,7 +113,7 @@ const AIFineTunePage: React.FC = () => {
   };
 
   // 参数组标题组件
-  const ParamGroupHeader: React.FC<{ title: string; icon: React.ComponentType<{ size: number; style?: React.CSSProperties }> }> = ({ title, icon: Icon }) => (
+  const ParamGroupHeader: React.FC<{ title: string; icon: LucideIcon }> = ({ title, icon: Icon }) => (
     <div className="flex items-center gap-2 mb-3 mt-4 first:mt-0">
       <Icon size={18} style={{ color: 'var(--color-accent-primary)' }} />
       <h2 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
