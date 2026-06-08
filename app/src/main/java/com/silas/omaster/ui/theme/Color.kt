@@ -25,10 +25,12 @@ val PhaseOneGrey = Color(0xFF5A5A5A)
 /**
  * 纯黑背景系列
  * 用于深色模式的主背景
+ * PureBlack: #0A0A0A - 纯黑背景，符合测试清单规范
+ * NearBlack: #0A0A0A - 与PureBlack一致
  */
-val PureBlack = Color(0xFF000000)
+val PureBlack = Color(0xFF0A0A0A)
 val NearBlack = Color(0xFF0A0A0A)
-val DarkGray = Color(0xFF2D2D2D)  // 从 #1A1A1A 调亮，阳光下更清晰
+val DarkGray = Color(0xFF1A1A1A)  // 卡片背景色，符合测试清单规范
 val MediumGray = Color(0xFF333333)
 val LightGray = Color(0xFF999999)
 val OffWhite = Color(0xFFF5F5F5)

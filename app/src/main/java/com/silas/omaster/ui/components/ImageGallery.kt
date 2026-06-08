@@ -45,6 +45,7 @@ import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
 import com.silas.omaster.util.ImageCacheManager
+import com.silas.omaster.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -137,7 +138,7 @@ fun ImageGallery(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .build(),
-                    contentDescription = null,
+                    contentDescription = context.getString(R.string.preset_image),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -208,6 +209,13 @@ private fun GalleryNavigationButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val description = when (icon) {
+        Icons.AutoMirrored.Filled.KeyboardArrowLeft -> context.getString(R.string.previous_image)
+        Icons.AutoMirrored.Filled.KeyboardArrowRight -> context.getString(R.string.next_image)
+        else -> ""
+    }
+    
     IconButton(
         onClick = onClick,
         modifier = modifier
@@ -220,7 +228,7 @@ private fun GalleryNavigationButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = description,
             modifier = Modifier.size(24.dp)
         )
     }

@@ -118,6 +118,9 @@
     <string name="preset_favorited">已收藏</string>
     <string name="preset_delete">删除</string>
     <string name="preset_new">NEW</string>
+    <string name="preset_image">预设图片</string>
+    <string name="previous_image">上一张图片</string>
+    <string name="next_image">下一张图片</string>
 
     <!-- 详情页 -->
     <string name="detail_title">预设详情</string>
