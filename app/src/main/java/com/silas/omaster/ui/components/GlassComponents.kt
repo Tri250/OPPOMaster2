@@ -153,7 +153,7 @@ fun GlassButton(
             containerColor = HasselbladOrange.copy(alpha = 0.15f),
             contentColor = HasselbladOrange,
             disabledContainerColor = DarkGray.copy(alpha = 0.5f),
-            disabledContentColor = TextMuted
+            disabledContentColor = TextTertiary
         ),
         border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.3f))
     ) {
@@ -233,7 +233,7 @@ fun GlassTextField(
         placeholder = {
             Text(
                 text = placeholder,
-                color = TextMuted,
+                color = TextTertiary,
                 style = MaterialTheme.typography.bodySmall
             )
         },

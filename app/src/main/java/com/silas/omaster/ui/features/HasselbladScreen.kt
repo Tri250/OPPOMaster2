@@ -32,12 +32,12 @@ fun HasselbladScreen(
     val haptic = LocalHapticFeedback.current
 
     val colorModes = listOf(
-        ColorMode("natural", "哈苏自然色彩", "HNCS 3.0 自然色彩解决方案", Color(0xFF4CAF50)),
-        ColorMode("portrait", "人像肤色优化", "自然美化肤色，保留细节", Color(0xFFFF6B9D)),
-        ColorMode("landscape", "风景色彩增强", "增强风景色彩层次", Color(0xFF4ECDC4)),
-        ColorMode("classic", "哈苏经典胶片", "复古胶片色彩质感", Color(0xFF9C27B0)),
+        ColorMode("natural", "哈苏自然色彩", "HNCS 3.0 自然色彩解决方案", HasselbladOrange),
+        ColorMode("portrait", "人像肤色优化", "自然美化肤色，保留细节", HasselbladOrangeLight),
+        ColorMode("landscape", "风景色彩增强", "增强风景色彩层次", HasselbladOrange),
+        ColorMode("classic", "哈苏经典胶片", "复古胶片色彩质感", HasselbladOrangeDark),
         ColorMode("bw", "哈苏黑白", "经典黑白摄影风格", Color(0xFF808080)),
-        ColorMode("vivid", "鲜艳色彩", "鲜艳饱满的色彩表现", Color(0xFFFF9800)),
+        ColorMode("vivid", "鲜艳色彩", "鲜艳饱满的色彩表现", HasselbladOrangeLight),
     )
 
     val selectedMode = remember { mutableStateOf("natural") }

@@ -166,7 +166,7 @@ fun NotificationSettingsScreen(
                                 Icon(
                                     Icons.Default.DoNotDisturb,
                                     null,
-                                    tint = Color(0xFF9C27B0),
+                                    tint = HasselbladOrange,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -181,7 +181,7 @@ fun NotificationSettingsScreen(
                                 onCheckedChange = {},
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = Color(0xFF9C27B0),
+                                    checkedTrackColor = HasselbladOrange,
                                     uncheckedThumbColor = Color.Gray,
                                     uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
                                 )

@@ -89,7 +89,7 @@ fun TermsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF9C27B0).copy(alpha = 0.15f))
+                    colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.15f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -98,7 +98,7 @@ fun TermsScreen(
                         Icon(
                             Icons.Default.CheckCircle,
                             null,
-                            tint = Color(0xFF9C27B0),
+                            tint = HasselbladOrange,
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))

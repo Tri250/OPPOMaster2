@@ -153,7 +153,7 @@ fun PresetSourceManagerScreen(
                         text = if (isLoading) "..." else "$fetchedPresetCount",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50)
+                        color = HasselbladOrange
                     )
                     Text(
                         text = "已加载预设",
@@ -316,7 +316,7 @@ private fun PresetSourceCard(
                         onCheckedChange = onToggle,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF4CAF50),
+                            checkedTrackColor = HasselbladOrange,
                             uncheckedThumbColor = Color.Gray,
                             uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
                         )

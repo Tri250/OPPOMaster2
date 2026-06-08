@@ -313,15 +313,15 @@ private fun AppTitleSection(currentVersionName: String) {
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = HasselbladOrange
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = stringResource(R.string.app_slogan),
+            text = "为热爱生活 热爱摄影的 追求梦想您 用心打造",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = 0.7f)
+            color = Color.White.copy(alpha = 0.5f)
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -329,7 +329,7 @@ private fun AppTitleSection(currentVersionName: String) {
         Box(
             modifier = Modifier
                 .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    color = HasselbladOrangeMuted,
                     shape = RoundedCornerShape(12.dp)
                 )
                 .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -337,7 +337,7 @@ private fun AppTitleSection(currentVersionName: String) {
             Text(
                 text = "v$currentVersionName",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = HasselbladOrange,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -558,7 +558,7 @@ private fun UpdateCard(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = Color(0xFF4CAF50),
+                                    tint = SuccessGreen,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(

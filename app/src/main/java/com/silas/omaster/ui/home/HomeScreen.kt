@@ -465,7 +465,7 @@ private fun GlassTabRow(
                             Text(
                                 text = count.toString(),
                                 fontSize = 10.sp,
-                                color = if (isSelected) HasselbladOrange.copy(alpha = 0.8f) else TextMuted,
+                                color = if (isSelected) HasselbladOrange.copy(alpha = 0.8f) else TextTertiary,
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -575,7 +575,7 @@ private fun FeatureEntryRow(
         GlassFeatureCard(
             title = "AI场景",
             icon = Icons.Default.CameraAlt,
-            color = FeatureSceneGreen,
+            color = HasselbladOrange,
             onClick = {
                 haptic.perform(HapticFeedbackType.Confirm)
                 onNavigateToSceneRecognition()
@@ -589,7 +589,7 @@ private fun FeatureEntryRow(
         GlassFeatureCard(
             title = "AI微调",
             icon = Icons.Default.ColorLens,
-            color = FeatureAIPurple,
+            color = HasselbladOrange,
             onClick = {
                 haptic.perform(HapticFeedbackType.Confirm)
                 onNavigateToAIFineTune()
@@ -603,7 +603,7 @@ private fun FeatureEntryRow(
         GlassFeatureCard(
             title = "水印",
             icon = Icons.Default.WaterDrop,
-            color = FeatureWatermarkCyan,
+            color = HasselbladOrange,
             onClick = {
                 haptic.perform(HapticFeedbackType.Confirm)
                 onNavigateToWatermarkEditor()
@@ -617,7 +617,7 @@ private fun FeatureEntryRow(
         GlassFeatureCard(
             title = "优化",
             icon = Icons.Default.Memory,
-            color = FeatureSyncBlue,
+            color = HasselbladOrange,
             onClick = {
                 haptic.perform(HapticFeedbackType.Confirm)
                 onNavigateToSmartOptimize()
@@ -631,7 +631,7 @@ private fun FeatureEntryRow(
         GlassFeatureCard(
             title = "预设",
             icon = Icons.Default.PhotoFilter,
-            color = FeaturePresetOrange,
+            color = HasselbladOrange,
             onClick = {
                 haptic.perform(HapticFeedbackType.Confirm)
                 onNavigateToPresetManager()
@@ -645,7 +645,7 @@ private fun FeatureEntryRow(
         GlassFeatureCard(
             title = "参数",
             icon = Icons.Default.Tune,
-            color = FeatureThemePink,
+            color = HasselbladOrange,
             onClick = {
                 haptic.perform(HapticFeedbackType.Confirm)
                 onNavigateToParamAdjustment()

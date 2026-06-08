@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * ============================================
  * 小O帮帮 设计系统 - ColorOS 16 规范
- * 2026 企业级设计标准
+ * 2026 企业级设计标准 - 统一哈苏橙风格
  * ============================================
  */
 
@@ -42,26 +42,21 @@ val ElevatedGray = Color(0xFF2D2D2D)        // 提升背景
 
 /**
  * ============================================
- * 功能模块特色色
+ * 功能模块统一哈苏橙色系
  * ============================================
  */
-val FeatureAIPurple = Color(0xFF9C27B0)           // AI智能 - 紫色
-val FeatureWatermarkCyan = Color(0xFF00BCD4)      // 水印编辑 - 青色
-val FeatureSceneGreen = Color(0xFF4CAF50)         // 场景识别 - 绿色
-val FeatureSyncBlue = Color(0xFF2196F3)           // 云同步 - 蓝色
-val FeaturePresetOrange = Color(0xFFFF9800)       // 预设管理 - 橙色
-val FeatureThemePink = Color(0xFFE91E63)          // 主题设置 - 粉色
+val FeaturePrimary = Color(0xFFFF6B35)
+val FeaturePrimaryLight = Color(0xFFFF8C5A)
+val FeaturePrimaryDark = Color(0xFFE55A25)
 
 /**
  * ============================================
- * 文字颜色系统
+ * 文字颜色系统 - 简化三级
  * ============================================
  */
 val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFFFFFFFF).copy(alpha = 0.85f)
-val TextTertiary = Color(0xFFFFFFFF).copy(alpha = 0.60f)
-val TextMuted = Color(0xFFFFFFFF).copy(alpha = 0.40f)
-val TextDisabled = Color(0xFFFFFFFF).copy(alpha = 0.25f)
+val TextSecondary = Color(0xFFFFFFFF).copy(alpha = 0.70f)
+val TextTertiary = Color(0xFFFFFFFF).copy(alpha = 0.40f)
 
 /**
  * ============================================
@@ -71,6 +66,7 @@ val TextDisabled = Color(0xFFFFFFFF).copy(alpha = 0.25f)
 val BorderLight = Color(0xFFFFFFFF).copy(alpha = 0.08f)
 val BorderMedium = Color(0xFFFFFFFF).copy(alpha = 0.12f)
 val BorderStrong = Color(0xFFFFFFFF).copy(alpha = 0.20f)
+val CardBorderLight = Color(0xFFFFFFFF).copy(alpha = 0.08f)
 
 /**
  * ============================================
@@ -102,17 +98,6 @@ val GradientOrangeEnd = Color(0xFFFF9800)
 val GradientOrangeLight = Color(0xFFFF9F6B)
 
 /**
- * 获取功能模块颜色
+ * 获取功能模块颜色 - 统一哈苏橙
  */
-fun getFeatureColor(featureId: String): Color {
-    return when (featureId) {
-        "ai-scene", "ai-fine-tune" -> FeatureAIPurple
-        "watermark" -> FeatureWatermarkCyan
-        "smart-optimize" -> FeatureSceneGreen
-        "cloud-sync" -> FeatureSyncBlue
-        "preset-manager" -> FeaturePresetOrange
-        "theme-settings" -> FeatureThemePink
-        "hasselblad" -> HasselbladOrange
-        else -> HasselbladOrange
-    }
-}
+fun getFeatureColor(featureId: String): Color = HasselbladOrange

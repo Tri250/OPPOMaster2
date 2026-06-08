@@ -145,24 +145,6 @@ fun FeaturedPresetsScreen(
             onFilterClick = { haptic.perform(HapticFeedbackType.Select) }
         )
 
-        // 品牌筛选
-        BrandFilterRow(
-            selectedBrand = selectedBrand,
-            onBrandSelected = { brand ->
-                haptic.perform(HapticFeedbackType.Select)
-                selectedBrand = brand
-            }
-        )
-
-        // 场景筛选
-        SceneFilterRow(
-            selectedScene = selectedScene,
-            onSceneSelected = { scene ->
-                haptic.perform(HapticFeedbackType.Select)
-                selectedScene = scene
-            }
-        )
-
         // 预设数量提示
         if (selectedBrand != null || selectedScene != null || searchQuery.isNotEmpty()) {
             Row(
@@ -395,14 +377,14 @@ private fun FeaturedPresetCard(
                     showDownloadIndicator = true
                 )
 
-                // NEW标签
+                // NEW标签 - 白色边框
                 if (preset.isNew) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(HasselbladOrange)
+                            .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
@@ -471,15 +453,15 @@ private fun FeaturedPresetCard(
                     }
                 }
 
-                // 应用按钮
+                // 应用按钮 - 橙色实心
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onApplyClick,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = HasselbladOrange.copy(alpha = 0.2f)
+                        containerColor = HasselbladOrange
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         Icons.Default.AutoAwesome,

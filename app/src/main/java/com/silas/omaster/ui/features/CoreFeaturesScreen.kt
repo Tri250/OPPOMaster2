@@ -144,8 +144,8 @@ fun CoreFeaturesScreen(
                 title = "AI 场景识别",
                 subtitle = "智能识别36+拍摄场景，自动推荐最佳参数",
                 icon = Icons.Default.CameraAlt,
-                iconColor = Color(0xFF4CAF50),
-                gradientColors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrangeDark, HasselbladOrange),
                 isEnabled = aiSceneEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
@@ -163,8 +163,8 @@ fun CoreFeaturesScreen(
                 title = "AI 微调",
                 subtitle = "一键智能微调，色彩风格精准控制",
                 icon = Icons.Default.ColorLens,
-                iconColor = Color(0xFF9C27B0),
-                gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 isEnabled = aiFineTuneEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
@@ -182,8 +182,8 @@ fun CoreFeaturesScreen(
                 title = "智能优化",
                 subtitle = "一键HDR增强、降噪、锐化优化",
                 icon = Icons.Default.Memory,
-                iconColor = Color(0xFF2196F3),
-                gradientColors = listOf(Color(0xFF0D47A1), Color(0xFF1565C0)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrangeDark, HasselbladOrange),
                 isEnabled = aiFineTuneEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
@@ -210,8 +210,8 @@ fun CoreFeaturesScreen(
                 title = "水印编辑器",
                 subtitle = "14+专业水印模板，品牌认证水印",
                 icon = Icons.Default.WaterDrop,
-                iconColor = Color(0xFF00BCD4),
-                gradientColors = listOf(Color(0xFF006064), Color(0xFF00838F)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 isEnabled = watermarkEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
@@ -229,8 +229,8 @@ fun CoreFeaturesScreen(
                 title = "参数精细调节",
                 subtitle = "ISO、快门、光圈、白平衡精确控制",
                 icon = Icons.Default.Tune,
-                iconColor = Color(0xFFE91E63),
-                gradientColors = listOf(Color(0xFF880E4F), Color(0xFFAD1457)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrangeDark, HasselbladOrange),
                 isEnabled = true,
                 showToggle = false,
                 onClick = onNavigateToParamAdjustment
@@ -244,8 +244,8 @@ fun CoreFeaturesScreen(
                 title = "预设管理",
                 subtitle = "云端预设库，收藏、创建、分享",
                 icon = Icons.Default.PhotoFilter,
-                iconColor = Color(0xFFFF9800),
-                gradientColors = listOf(Color(0xFFE65100), Color(0xFFF57C00)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 isEnabled = true,
                 showToggle = false,
                 onClick = onNavigateToPresetManager
@@ -259,8 +259,8 @@ fun CoreFeaturesScreen(
                 title = "LUT 资源分享",
                 subtitle = "20+专业 LUT 滤镜，一键下载使用",
                 icon = Icons.Default.Palette,
-                iconColor = Color(0xFF9C27B0),
-                gradientColors = listOf(Color(0xFF6A1B9A), Color(0xFF8E24AA)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrangeDark, HasselbladOrange),
                 isEnabled = true,
                 showToggle = false,
                 onClick = onNavigateToLUTShare
@@ -283,8 +283,8 @@ fun CoreFeaturesScreen(
                 title = "哈苏色彩科学",
                 subtitle = "HNCS 3.0 自然色彩解决方案",
                 icon = Icons.Default.Image,
-                iconColor = HasselbladOrange,
-                gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrangeDark, HasselbladOrange),
                 isEnabled = hasselbladEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
@@ -302,8 +302,8 @@ fun CoreFeaturesScreen(
                 title = "云同步",
                 subtitle = "OPPO/realme/vivo/荣耀 CDN数据同步",
                 icon = Icons.Default.Settings,
-                iconColor = Color(0xFF3F51B5),
-                gradientColors = listOf(Color(0xFF1A237E), Color(0xFF303F9F)),
+                iconColor = Color.White,
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 isEnabled = cloudSyncEnabled,
                 onToggle = { enabled ->
                     haptic.perform(HapticType.ToggleOn)
