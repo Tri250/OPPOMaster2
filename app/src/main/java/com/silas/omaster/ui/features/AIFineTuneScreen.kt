@@ -31,7 +31,7 @@ import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
 
 /**
- * AI微调功能页面
+ * AI精调功能页面
  * FT-001/002/003: 一键AI微调、单参数采纳、二次编辑
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,7 +62,16 @@ fun AIFineTuneScreen(
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("AI 微调", fontWeight = FontWeight.Bold) },
+            title = {
+                Column {
+                    Text("AI精调", fontWeight = FontWeight.Bold)
+                    Text(
+                        "智能影像精调系统",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+            },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.ToggleOff)

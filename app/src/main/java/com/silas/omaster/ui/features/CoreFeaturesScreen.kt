@@ -160,7 +160,7 @@ fun CoreFeaturesScreen(
         // AI微调
         item {
             FeatureCard(
-                title = "AI 微调",
+                title = "AI精调",
                 subtitle = "一键智能微调，色彩风格精准控制",
                 icon = Icons.Default.ColorLens,
                 iconColor = Color.White,
@@ -179,7 +179,7 @@ fun CoreFeaturesScreen(
         // 智能优化
         item {
             FeatureCard(
-                title = "智能优化",
+                title = "AI优化",
                 subtitle = "一键HDR增强、降噪、锐化优化",
                 icon = Icons.Default.Memory,
                 iconColor = Color.White,
@@ -207,7 +207,7 @@ fun CoreFeaturesScreen(
         // 水印编辑器
         item {
             FeatureCard(
-                title = "水印编辑器",
+                title = "水印创作",
                 subtitle = "14+专业水印模板，品牌认证水印",
                 icon = Icons.Default.WaterDrop,
                 iconColor = Color.White,
@@ -226,7 +226,7 @@ fun CoreFeaturesScreen(
         // 参数精细调节
         item {
             FeatureCard(
-                title = "参数精细调节",
+                title = "专业模式",
                 subtitle = "ISO、快门、光圈、白平衡精确控制",
                 icon = Icons.Default.Tune,
                 iconColor = Color.White,
@@ -280,7 +280,7 @@ fun CoreFeaturesScreen(
         // 哈苏色彩科学
         item {
             FeatureCard(
-                title = "哈苏色彩科学",
+                title = "哈苏HNCS",
                 subtitle = "HNCS 3.0 自然色彩解决方案",
                 icon = Icons.Default.Image,
                 iconColor = Color.White,

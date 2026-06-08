@@ -21,7 +21,7 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 
 /**
- * 哈苏色彩科学页面
+ * 哈苏HNCS色彩科学页面
  * HNCS 3.0 自然色彩解决方案
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +59,7 @@ fun HasselbladScreen(
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("哈苏色彩科学", fontWeight = FontWeight.Bold) },
+            title = { Text("哈苏HNCS", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.ToggleOff)
