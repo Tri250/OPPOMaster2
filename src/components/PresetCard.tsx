@@ -58,6 +58,12 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
             alt={preset.name}
             className="w-full h-full object-cover transition-liquid group-hover:scale-110"
             loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" fill="%23333"><rect width="400" height="300"/><text x="50%" y="50%" fill="%23666" font-size="14" text-anchor="middle" dy=".3em">图片加载失败</text></svg>');
+              img.style.objectFit = 'contain';
+            }}
           />
         </div>
 
@@ -191,6 +197,12 @@ const PresetCard: React.FC<PresetCardProps> = React.memo(({
         alt={preset.name}
         className="w-full h-full object-cover transition-liquid group-hover:scale-105"
         loading="lazy"
+        decoding="async"
+        onError={(e) => {
+          const img = e.currentTarget;
+          img.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" fill="%23333"><rect width="400" height="300"/><text x="50%" y="50%" fill="%23666" font-size="14" text-anchor="middle" dy=".3em">图片加载失败</text></svg>');
+          img.style.objectFit = 'contain';
+        }}
       />
 
       {/* 渐变遮罩 */}

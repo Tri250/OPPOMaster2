@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppStore } from './store/appStore';
 import PhoneMockup from './components/PhoneMockup';
+import ErrorBoundary from './components/ErrorBoundary';
 import HomeScreen from './pages/HomeScreen';
 import FeaturedScreen from './pages/FeaturedScreen';
 import FeaturesScreen from './pages/FeaturesScreen';
@@ -82,16 +83,18 @@ const App: React.FC = () => {
   };
 
   return (
-    <PhoneMockup>
-      <div className="h-full w-full relative">
-        <div
-          key={currentSubPage || currentPage}
-          className={currentSubPage ? 'animate-page-transition' : ''}
-        >
-          {currentSubPage ? renderSubPage() : renderMainPage()}
+    <ErrorBoundary>
+      <PhoneMockup>
+        <div className="h-full w-full relative">
+          <div
+            key={currentSubPage || currentPage}
+            className={currentSubPage ? 'animate-page-transition' : ''}
+          >
+            {currentSubPage ? renderSubPage() : renderMainPage()}
+          </div>
         </div>
-      </div>
-    </PhoneMockup>
+      </PhoneMockup>
+    </ErrorBoundary>
   );
 };
 

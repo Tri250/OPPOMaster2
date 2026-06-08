@@ -11,7 +11,6 @@ import { SkeletonPresetCard } from '../components/Skeleton';
  * ============================================
  */
 const FeaturedScreen: React.FC = () => {
-  const { selectedBrand, setSelectedBrand, selectedScene, setSelectedScene } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());

@@ -6,10 +6,10 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentPage, setCurrentPage } = useAppStore();
 
   const navItems: { id: PageType; label: string; icon: React.ReactNode; ariaLabel: string }[] = [
-    { id: 'home', label: '首页', icon: <Home size={20} />, ariaLabel: '导航到首页' },
-    { id: 'featured', label: '精选', icon: <Star size={20} />, ariaLabel: '导航到精选页面' },
-    { id: 'features', label: '功能', icon: <Grid3X3 size={20} />, ariaLabel: '导航到功能页面' },
-    { id: 'about', label: '关于', icon: <Info size={20} />, ariaLabel: '导航到关于页面' },
+    { id: 'home', label: '首页', icon: <Home size={20} />, ariaLabel: '首页' },
+    { id: 'featured', label: '精选', icon: <Star size={20} />, ariaLabel: '精选' },
+    { id: 'features', label: '功能', icon: <Grid3X3 size={20} />, ariaLabel: '功能' },
+    { id: 'about', label: '关于', icon: <Info size={20} />, ariaLabel: '关于' },
   ];
 
   return (
@@ -37,7 +37,7 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div 
             className="absolute bottom-0 left-0 right-0 h-20 flex items-center justify-around px-4 z-40 glass-bottom-bar"
             role="navigation"
-            aria-label="主导航栏"
+            aria-label="主导航"
           >
             {navItems.map((item, index) => (
               <button
