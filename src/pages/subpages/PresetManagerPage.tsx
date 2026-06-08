@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAppStore, homePresets, Preset } from '../../store/appStore';
-import { cloudSyncService, cdnSources, BrandSyncState } from '../../services/cloudSyncService';
+import { useAppStore, homePresets } from '../../store/appStore';
+import { cloudSyncService, cdnSources, BrandSyncState, Preset } from '../../services/cloudSyncService';
 import { ArrowLeft, Plus, Search, Grid, List, Heart, Share2, Trash2, Check, Download, Upload, RefreshCw, Cloud, ToggleLeft, ToggleRight } from 'lucide-react';
 
 const PresetManagerPage: React.FC = () => {

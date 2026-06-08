@@ -1,41 +1,46 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Aperture, Timer, Sun, Thermometer, Sparkles, Camera, Check, RefreshCw, Wand2 } from 'lucide-react';
+import { ArrowLeft, Aperture, Timer, Sun, Thermometer, Sparkles, Camera, Check, RefreshCw, Wand2, Download, Image as ImageIcon } from 'lucide-react';
 import ImageUploader from '../../components/ImageUploader';
+import { analyzeImageScene, applyImageAdjustments, downloadImage, ImageAdjustParams } from '../../utils/imageProcessor';
 
 // OPPO哈苏大师风格预设
 const hasselbladPresets = [
-  { 
-    id: 'portrait', 
-    name: '哈苏人像大师', 
+  {
+    id: 'portrait',
+    name: '哈苏人像大师',
     icon: Camera,
     color: '#E91E63',
     desc: '柔美肤色，自然光影',
-    params: { iso: 200, shutter: 125, aperture: 2.8, wb: 5500, saturation: 10, contrast: 5, warmth: 8, sharpness: 15 }
+    params: { iso: 200, shutter: 125, aperture: 2.8, wb: 5500, saturation: 10, contrast: 5, warmth: 8, sharpness: 15 },
+    imgParams: { saturation: 10, contrast: 5, brightness: 8, warmth: 8, cyanMagenta: 0, sharpness: 15, tone: 5, softLight: 35, vignette: false, filter: '原图' }
   },
-  { 
-    id: 'landscape', 
-    name: '哈苏风景大师', 
+  {
+    id: 'landscape',
+    name: '哈苏风景大师',
     icon: Sun,
     color: '#4CAF50',
     desc: '通透质感，色彩饱满',
-    params: { iso: 100, shutter: 60, aperture: 8, wb: 5600, saturation: 20, contrast: 15, warmth: -5, sharpness: 25 }
+    params: { iso: 100, shutter: 60, aperture: 8, wb: 5600, saturation: 20, contrast: 15, warmth: -5, sharpness: 25 },
+    imgParams: { saturation: 20, contrast: 15, brightness: 10, warmth: -5, cyanMagenta: -5, sharpness: 25, tone: 15, softLight: 10, vignette: false, filter: '原图' }
   },
-  { 
-    id: 'night', 
-    name: '哈苏夜景大师', 
+  {
+    id: 'night',
+    name: '哈苏夜景大师',
     icon: Sparkles,
     color: '#3F51B5',
     desc: '降噪增强，氛围感强',
-    params: { iso: 3200, shutter: 30, aperture: 2.8, wb: 4000, saturation: 25, contrast: 20, warmth: -10, sharpness: 30 }
+    params: { iso: 3200, shutter: 30, aperture: 2.8, wb: 4000, saturation: 25, contrast: 20, warmth: -10, sharpness: 30 },
+    imgParams: { saturation: 25, contrast: 20, brightness: 0, warmth: -10, cyanMagenta: 5, sharpness: 30, tone: 20, softLight: 20, vignette: true, filter: '原图' }
   },
-  { 
-    id: 'film', 
-    name: '哈苏胶片大师', 
+  {
+    id: 'film',
+    name: '哈苏胶片大师',
     icon: Aperture,
     color: '#FF9800',
     desc: '复古质感，经典色调',
-    params: { iso: 400, shutter: 125, aperture: 4, wb: 5200, saturation: 5, contrast: 10, warmth: 15, sharpness: 20 }
+    params: { iso: 400, shutter: 125, aperture: 4, wb: 5200, saturation: 5, contrast: 10, warmth: 15, sharpness: 20 },
+    imgParams: { saturation: -5, contrast: 15, brightness: 0, warmth: 25, cyanMagenta: 0, sharpness: 15, tone: 20, softLight: 25, vignette: true, filter: '胶片' }
   },
 ];
 
@@ -52,6 +57,8 @@ const ParamAdjustPage: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [recommendedPreset, setRecommendedPreset] = useState<string | null>(null);
   const [appliedPreset, setAppliedPreset] = useState<string | null>(null);
+  const [processedImage, setProcessedImage] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const params = [
     { 
@@ -99,23 +106,41 @@ const ParamAdjustPage: React.FC = () => {
     { key: 'sharpness', label: '锐度', min: 0, max: 100 },
   ];
 
-  // AI分析图片推荐参数
-  const handleAnalyzeImage = () => {
+  // AI分析图片推荐参数 - 真实像素分析
+  const handleAnalyzeImage = async () => {
     if (!uploadedImage) return;
-    
+
     setIsAnalyzing(true);
     setRecommendedPreset(null);
-    
-    // 模拟AI分析
-    setTimeout(() => {
-      const randomPreset = hasselbladPresets[Math.floor(Math.random() * hasselbladPresets.length)];
-      setRecommendedPreset(randomPreset.id);
+    setProcessedImage('');
+
+    try {
+      // 真实调用像素级场景分析
+      const result = await analyzeImageScene(uploadedImage);
+
+      // 根据分析结果匹配最佳预设
+      let matchedPreset: typeof hasselbladPresets[0] | undefined;
+      if (result.scene === '人像' || result.hasselbladStyle === 'portrait') {
+        matchedPreset = hasselbladPresets.find(p => p.id === 'portrait');
+      } else if (result.scene === '风景' || result.scene === '花卉' || result.scene === '海景水域' || result.scene === '自然' || result.hasselbladStyle === 'natural') {
+        matchedPreset = hasselbladPresets.find(p => p.id === 'landscape');
+      } else if (result.scene === '夜景' || result.hasselbladStyle === 'cinematic') {
+        matchedPreset = hasselbladPresets.find(p => p.id === 'night');
+      } else if (result.scene === '日落黄昏') {
+        matchedPreset = hasselbladPresets.find(p => p.id === 'film');
+      }
+
+      const finalPreset = matchedPreset || hasselbladPresets[0];
+      setRecommendedPreset(finalPreset.id);
+    } catch (e) {
+      console.error('AI分析失败:', e);
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
-  // 应用哈苏大师预设
-  const applyHasselbladPreset = (preset: typeof hasselbladPresets[0]) => {
+  // 应用哈苏大师预设 - 真实处理
+  const applyHasselbladPreset = async (preset: typeof hasselbladPresets[0]) => {
     setCameraParam('iso', preset.params.iso);
     setCameraParam('shutter', preset.params.shutter);
     setCameraParam('aperture', preset.params.aperture);
@@ -125,7 +150,20 @@ const ParamAdjustPage: React.FC = () => {
     setAiParam('warmth', preset.params.warmth);
     setAiParam('sharpness', preset.params.sharpness);
     setAppliedPreset(preset.id);
-    
+
+    // 真实应用参数到图片
+    if (uploadedImage && preset.imgParams) {
+      setIsProcessing(true);
+      try {
+        const result = await applyImageAdjustments(uploadedImage, preset.imgParams);
+        setProcessedImage(result);
+      } catch (e) {
+        console.error('应用参数失败:', e);
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+
     setTimeout(() => setAppliedPreset(null), 3000);
   };
 
@@ -239,6 +277,37 @@ const ParamAdjustPage: React.FC = () => {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Processed Image Preview */}
+      {processedImage && uploadedImage && (
+        <div className="px-4 pb-4">
+          <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
+            <Sparkles size={12} />
+            参数调节出片
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="rounded-xl overflow-hidden">
+              <img src={uploadedImage} alt="原图" className="w-full aspect-video object-cover" />
+              <div className="p-2 bg-white/5 text-center">
+                <span className="text-white/50 text-xs">原图</span>
+              </div>
+            </div>
+            <div className="rounded-xl overflow-hidden">
+              <img src={processedImage} alt="参数调节后" className="w-full aspect-video object-cover" />
+              <div className="p-2 bg-[#E91E63]/20 text-center">
+                <span className="text-[#E91E63] text-xs">哈苏参数出片</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => downloadImage(processedImage, `OMaster_Hasselblad_${Date.now()}.jpg`)}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#E91E63] to-[#C2185B] flex items-center justify-center gap-2 text-white text-sm font-medium"
+          >
+            <Download size={16} />
+            <span>保存参数出片</span>
+          </button>
         </div>
       )}
 

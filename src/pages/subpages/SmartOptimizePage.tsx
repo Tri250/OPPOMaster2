@@ -1,24 +1,53 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Wand2, RefreshCw, Check, Sparkles, Sun, Moon, Contrast, Palette, Camera, Zap, Image } from 'lucide-react';
+import { ArrowLeft, Wand2, RefreshCw, Check, Sparkles, Sun, Moon, Contrast, Palette, Camera, Zap, Image, Download } from 'lucide-react';
 import ImageUploader from '../../components/ImageUploader';
+import { applyImageAdjustments, downloadImage, ImageAdjustParams } from '../../utils/imageProcessor';
 
-// 哈苏大师优化风格
+// 哈苏大师优化风格 - 真实参数
 const hasselbladStyles = [
-  { id: 'natural', name: '哈苏自然', desc: '真实还原，细节丰富', color: '#4CAF50', icon: Sun },
-  { id: 'portrait', name: '哈苏人像', desc: '柔美肤色，光影层次', color: '#E91E63', icon: Camera },
-  { id: 'cinematic', name: '哈苏电影', desc: '电影质感，氛围感强', color: '#FF9800', icon: Moon },
-  { id: 'vintage', name: '哈苏复古', desc: '经典胶片，怀旧质感', color: '#795548', icon: Palette },
+  {
+    id: 'natural',
+    name: '哈苏自然',
+    desc: '真实还原，细节丰富',
+    color: '#4CAF50',
+    icon: Sun,
+    params: { saturation: 12, contrast: 8, brightness: 5, warmth: 0, cyanMagenta: 0, sharpness: 18, tone: 8, softLight: 15, vignette: false, filter: '原图' }
+  },
+  {
+    id: 'portrait',
+    name: '哈苏人像',
+    desc: '柔美肤色，光影层次',
+    color: '#E91E63',
+    icon: Camera,
+    params: { saturation: 8, contrast: 5, brightness: 8, warmth: 12, cyanMagenta: 0, sharpness: 12, tone: 5, softLight: 35, vignette: false, filter: '原图' }
+  },
+  {
+    id: 'cinematic',
+    name: '哈苏电影',
+    desc: '电影质感，氛围感强',
+    color: '#FF9800',
+    icon: Moon,
+    params: { saturation: 18, contrast: 22, brightness: 0, warmth: -5, cyanMagenta: 5, sharpness: 25, tone: 18, softLight: 20, vignette: true, filter: '胶片' }
+  },
+  {
+    id: 'vintage',
+    name: '哈苏复古',
+    desc: '经典胶片，怀旧质感',
+    color: '#795548',
+    icon: Palette,
+    params: { saturation: -5, contrast: 15, brightness: 0, warmth: 25, cyanMagenta: 0, sharpness: 15, tone: 20, softLight: 25, vignette: true, filter: '胶片' }
+  },
 ];
 
-// 优化选项
-const optimizeOptions = [
-  { id: 'hdr', name: 'HDR增强', desc: '动态范围优化', enabled: true },
-  { id: 'noise', name: '智能降噪', desc: '噪点消除', enabled: true },
-  { id: 'sharp', name: '锐化增强', desc: '细节提升', enabled: true },
-  { id: 'color', name: '色彩优化', desc: '色彩校正', enabled: true },
-  { id: 'exposure', name: '曝光调整', desc: '亮度优化', enabled: false },
-  { id: 'contrast', name: '对比度增强', desc: '层次感提升', enabled: false },
+// 优化选项 - 真实调整参数
+const optimizeOptionsInit = [
+  { id: 'hdr', name: 'HDR增强', desc: '动态范围优化', enabled: true, params: { contrast: 15, brightness: 8, softLight: 20 } },
+  { id: 'noise', name: '智能降噪', desc: '噪点消除', enabled: true, params: { softLight: 30, brightness: 5 } },
+  { id: 'sharp', name: '锐化增强', desc: '细节提升', enabled: true, params: { sharpness: 25 } },
+  { id: 'color', name: '色彩优化', desc: '色彩校正', enabled: true, params: { saturation: 15, contrast: 8 } },
+  { id: 'exposure', name: '曝光调整', desc: '亮度优化', enabled: false, params: { brightness: 15 } },
+  { id: 'contrast', name: '对比度增强', desc: '层次感提升', enabled: false, params: { contrast: 25 } },
 ];
 
 const SmartOptimizePage: React.FC = () => {
@@ -27,20 +56,53 @@ const SmartOptimizePage: React.FC = () => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizedImage, setOptimizedImage] = useState<string>('');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
-  const [options, setOptions] = useState(optimizeOptions);
+  const [options, setOptions] = useState(optimizeOptionsInit);
   const [showComparison, setShowComparison] = useState(false);
 
-  // 智能优化处理
-  const handleOptimize = () => {
-    if (!uploadedImage) return;
-    
+  // 智能优化处理 - 真实算法
+  const handleOptimize = async () => {
+    if (!uploadedImage || !selectedStyle) return;
+
     setIsOptimizing(true);
-    
-    // 模拟AI优化处理
-    setTimeout(() => {
-      setOptimizedImage(uploadedImage); // 实际应用中这里应该是优化后的图片
+
+    try {
+      // 合并哈苏风格参数和优化选项参数
+      const style = hasselbladStyles.find(s => s.id === selectedStyle);
+      if (!style) return;
+
+      // 基础参数
+      const mergedParams: ImageAdjustParams = {
+        saturation: style.params.saturation,
+        contrast: style.params.contrast,
+        brightness: style.params.brightness,
+        warmth: style.params.warmth,
+        cyanMagenta: style.params.cyanMagenta,
+        sharpness: style.params.sharpness,
+        tone: style.params.tone,
+        softLight: style.params.softLight,
+        vignette: style.params.vignette,
+        filter: style.params.filter
+      };
+
+      // 叠加启用的优化选项参数
+      options.filter(o => o.enabled).forEach(opt => {
+        Object.entries(opt.params).forEach(([key, value]) => {
+          if (key in mergedParams && typeof value === 'number') {
+            (mergedParams as any)[key] = (mergedParams as any)[key] + (value as number);
+          } else if (key === 'vignette' && value) {
+            (mergedParams as any)[key] = true;
+          }
+        });
+      });
+
+      // 真实调用图片处理算法
+      const result = await applyImageAdjustments(uploadedImage, mergedParams);
+      setOptimizedImage(result);
+    } catch (e) {
+      console.error('优化失败:', e);
+    } finally {
       setIsOptimizing(false);
-    }, 2500);
+    }
   };
 
   // 切换优化选项
@@ -217,13 +279,25 @@ const SmartOptimizePage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl overflow-hidden">
+            <div className="rounded-2xl overflow-hidden relative">
               <img src={optimizedImage} alt="Optimized" className="w-full aspect-video object-cover" />
               <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-[#FF6B35]/80 backdrop-blur-sm">
                 <span className="text-white text-xs font-medium">哈苏大师出片</span>
               </div>
             </div>
           )}
+
+          {/* Download Button */}
+          <button
+            onClick={() => {
+              const style = hasselbladStyles.find(s => s.id === selectedStyle);
+              downloadImage(optimizedImage, `OMaster_${style?.name || 'optimized'}_${Date.now()}.jpg`);
+            }}
+            className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90"
+          >
+            <Download size={18} />
+            <span>保存哈苏大师出片</span>
+          </button>
         </div>
       )}
 

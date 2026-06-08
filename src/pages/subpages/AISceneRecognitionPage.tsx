@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Camera, Sparkles, Check, RefreshCw, Wand2, Mountain, User, Moon, UtensilsCrossed, Building2, TreePine, Car, Waves, Flower2, Cat, Sun, Palette, Film, Coffee, ShoppingBag, Plane, Train, Ship, Bike, Tent, Fish, Wine, Cake, Pizza, Salad } from 'lucide-react';
+import { ArrowLeft, Camera, Sparkles, Check, RefreshCw, Wand2, Mountain, User, Moon, UtensilsCrossed, Building2, TreePine, Car, Waves, Flower2, Cat, Sun, Palette, Film, Coffee, ShoppingBag, Plane, Train, Ship, Bike, Tent, Fish, Wine, Cake, Pizza, Salad, Download, Image as ImageIcon } from 'lucide-react';
 import ImageUploader from '../../components/ImageUploader';
+import { analyzeImageScene, applyImageAdjustments, downloadImage, SceneAnalysisResult } from '../../utils/imageProcessor';
 
 // 哈苏大师风格
 const hasselbladStyles = [
@@ -71,28 +72,32 @@ const AISceneRecognitionPage: React.FC = () => {
   const { goBack, setAiParam } = useAppStore();
   const [uploadedImage, setUploadedImage] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [detectedScene, setDetectedScene] = useState<string | null>(null);
-  const [recommendedStyle, setRecommendedStyle] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<SceneAnalysisResult | null>(null);
   const [appliedScene, setAppliedScene] = useState<string | null>(null);
+  const [processedImage, setProcessedImage] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // AI分析图片识别场景
-  const handleAnalyze = () => {
+  // AI分析图片识别场景 - 真实像素分析
+  const handleAnalyze = async () => {
     if (!uploadedImage) return;
-    
+
     setIsAnalyzing(true);
-    setDetectedScene(null);
-    setRecommendedStyle(null);
-    
-    setTimeout(() => {
-      const randomScene = scenes[Math.floor(Math.random() * scenes.length)];
-      setDetectedScene(randomScene.id);
-      setRecommendedStyle(randomScene.hasselblad);
+    setAnalysisResult(null);
+    setProcessedImage('');
+
+    try {
+      // 真实调用像素级场景分析算法
+      const result = await analyzeImageScene(uploadedImage);
+      setAnalysisResult(result);
+    } catch (e) {
+      console.error('场景识别失败:', e);
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
-  // 应用场景参数
-  const handleApplyScene = (scene: typeof scenes[0]) => {
+  // 应用场景参数 - 真实处理
+  const handleApplyScene = async (scene: typeof scenes[0]) => {
     const style = hasselbladStyles.find(s => s.id === scene.hasselblad);
     if (style) {
       // 根据哈苏风格设置参数
@@ -107,6 +112,25 @@ const AISceneRecognitionPage: React.FC = () => {
       setAiParam('contrast', p.contrast);
       setAiParam('warmth', p.warmth);
       setAiParam('sharpness', p.sharpness);
+
+      // 真实应用哈苏风格到图片
+      if (uploadedImage) {
+        setIsProcessing(true);
+        try {
+          const sceneParams = {
+            natural: { saturation: 12, contrast: 8, brightness: 5, warmth: 0, cyanMagenta: 0, sharpness: 18, tone: 8, softLight: 15, vignette: false, filter: '原图' },
+            portrait: { saturation: 8, contrast: 5, brightness: 8, warmth: 12, cyanMagenta: 0, sharpness: 12, tone: 5, softLight: 35, vignette: false, filter: '原图' },
+            cinematic: { saturation: 18, contrast: 22, brightness: 0, warmth: -5, cyanMagenta: 5, sharpness: 25, tone: 18, softLight: 20, vignette: true, filter: '胶片' },
+            vintage: { saturation: -5, contrast: 15, brightness: 0, warmth: 25, cyanMagenta: 0, sharpness: 15, tone: 20, softLight: 25, vignette: true, filter: '胶片' },
+          }[style.id as 'natural' | 'portrait' | 'cinematic' | 'vintage'];
+          const result = await applyImageAdjustments(uploadedImage, sceneParams);
+          setProcessedImage(result);
+        } catch (e) {
+          console.error('应用参数失败:', e);
+        } finally {
+          setIsProcessing(false);
+        }
+      }
     }
     setAppliedScene(scene.id);
     setTimeout(() => setAppliedScene(null), 3000);
@@ -161,22 +185,65 @@ const AISceneRecognitionPage: React.FC = () => {
       )}
 
       {/* Detected Result */}
-      {detectedScene && !isAnalyzing && (
+      {analysisResult && !isAnalyzing && (
         <div className="px-4 pb-4">
           <div className="p-4 rounded-2xl bg-[#4CAF50]/20 border border-[#4CAF50]/50">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-[#4CAF50]/30 flex items-center justify-center">
-                {scenes.find(s => s.id === detectedScene)?.icon && 
-                  React.createElement(scenes.find(s => s.id === detectedScene)!.icon, { size: 24, className: 'text-[#4CAF50]' })
+                {scenes.find(s => s.name === analysisResult.scene)?.icon &&
+                  React.createElement(scenes.find(s => s.name === analysisResult.scene)!.icon, { size: 24, className: 'text-[#4CAF50]' })
                 }
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-[#4CAF50] text-sm font-bold">已识别场景</p>
-                <p className="text-white text-lg font-bold">{scenes.find(s => s.id === detectedScene)?.name}</p>
-                <p className="text-white/50 text-xs">推荐: {hasselbladStyles.find(s => s.id === recommendedStyle)?.name}</p>
+                <p className="text-white text-lg font-bold">{analysisResult.scene}</p>
+                <p className="text-white/50 text-xs">置信度: {analysisResult.confidence}% | {analysisResult.description}</p>
+              </div>
+            </div>
+            {/* Top 3 Scenes */}
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-white/50 text-xs mb-2">Top 3 候选场景:</p>
+              <div className="flex gap-2 flex-wrap">
+                {analysisResult.topScenes.map((s, i) => (
+                  <div key={i} className="px-2 py-1 rounded-full bg-white/5 text-xs">
+                    <span className="text-white">{s.name}</span>
+                    <span className="text-white/40 ml-1">{s.confidence}%</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Processed Result Preview */}
+      {processedImage && (
+        <div className="px-4 pb-4">
+          <p className="text-white/50 text-xs mb-3 flex items-center gap-2">
+            <Sparkles size={12} />
+            AI 风格应用结果
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="rounded-xl overflow-hidden">
+              <img src={uploadedImage} alt="原图" className="w-full aspect-video object-cover" />
+              <div className="p-2 bg-white/5 text-center">
+                <span className="text-white/50 text-xs">原图</span>
+              </div>
+            </div>
+            <div className="rounded-xl overflow-hidden">
+              <img src={processedImage} alt="AI处理后" className="w-full aspect-video object-cover" />
+              <div className="p-2 bg-[#4CAF50]/20 text-center">
+                <span className="text-[#4CAF50] text-xs">哈苏AI出片</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => downloadImage(processedImage, `OMaster_AI_${analysisResult?.scene || 'scene'}_${Date.now()}.jpg`)}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#4CAF50] to-[#2E7D32] flex items-center justify-center gap-2 text-white text-sm font-medium"
+          >
+            <Download size={16} />
+            <span>保存AI出片</span>
+          </button>
         </div>
       )}
 
@@ -190,8 +257,8 @@ const AISceneRecognitionPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             {hasselbladStyles.map((style) => {
               const Icon = style.icon;
-              const isSelected = recommendedStyle === style.id;
-              
+              const isSelected = analysisResult?.hasselbladStyle === style.id;
+
               return (
                 <button
                   key={style.id}
@@ -223,21 +290,22 @@ const AISceneRecognitionPage: React.FC = () => {
       {/* Scene List */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <p className="text-white/50 text-xs mb-3">支持 36+ 拍摄场景</p>
-        
+
         <div className="grid grid-cols-3 gap-2">
           {scenes.map((scene) => {
             const Icon = scene.icon;
             const isApplied = appliedScene === scene.id;
-            const isDetected = detectedScene === scene.id;
-            
+            const isDetected = analysisResult?.scene === scene.name;
+
             return (
               <button
                 key={scene.id}
                 onClick={() => handleApplyScene(scene)}
+                disabled={isProcessing || !uploadedImage}
                 className={`relative p-3 rounded-xl transition-all ${
                   isDetected ? 'bg-[#4CAF50]/30 border border-[#4CAF50]' :
                   isApplied ? 'bg-[#FF6B35]/30 border border-[#FF6B35]' :
-                  'bg-white/5 hover:bg-white/10'
+                  (!uploadedImage ? 'opacity-50 ' : 'hover:bg-white/10') + 'bg-white/5'
                 }`}
               >
                 {isApplied && (
@@ -247,7 +315,7 @@ const AISceneRecognitionPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="flex flex-col items-center gap-1 relative z-10">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${scene.color}20` }}>
                     <Icon size={20} style={{ color: scene.color }} />

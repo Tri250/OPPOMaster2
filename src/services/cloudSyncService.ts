@@ -33,21 +33,25 @@ export interface Preset {
   galleryImages?: string[];
   author: string;
   brand: string;
-  brandId: string;
+  brandId?: string;
   tags: string[];
   isNew: boolean;
   isHncs: boolean;
   mode?: 'auto' | 'pro';
-  
+
   // 基础调色参数
   filter?: string;           // 滤镜类型：原图、胶片、黑白等
   softLight?: number;        // 柔光强度：0-100
   tone?: number;             // 影调：-100 到 +100，控制整体明暗对比
   saturation?: number;       // 饱和度：-100 到 +100
+  contrast?: number;         // 对比度：-100 到 +100
+  warmth?: number;           // 色温：-100 到 +100（兼容字段，对应 warmCool）
   warmCool?: number;         // 冷暖色调：-100 到 +100，负值偏冷，正值偏暖
   cyanMagenta?: number;      // 青品色调：-100 到 +100，负值偏青，正值偏品红
   sharpness?: number;        // 锐度：0-100
   vignette?: string;         // 暗角：开/关
+  brightness?: number;       // 亮度：-100 到 +100
+
   
   // 专业参数（Pro模式）
   iso?: string;              // ISO感光度：100, 200-400等

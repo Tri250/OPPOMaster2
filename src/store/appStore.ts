@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Preset } from './services/cloudSyncService';
+import { Preset } from '../services/cloudSyncService';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
 export type SubPageType = 
