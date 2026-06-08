@@ -29,6 +29,7 @@ const featureRouteMap: Record<string, string> = {
   'watermark': 'watermark',
   'smart-optimize': 'smart-optimize',
   'param-adjust': 'param-adjust',
+  'hasselblad': 'hasselblad',
 };
 
 const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
@@ -55,6 +56,10 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   'param-adjust': {
     desc: 'ISO、快门、光圈、白平衡精确控制',
     tips: ['ISO 50-12800', '快门 1/1000s-30s', '光圈 f/1.4-f/22'],
+  },
+  'hasselblad': {
+    desc: 'HNCS 3.0 自然色彩解决方案',
+    tips: ['16-bit色深', '宽色域', '色调映射', '肤色优化'],
   },
 };
 

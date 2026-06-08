@@ -12,6 +12,7 @@ import CameraSceneRecognitionPage from './pages/subpages/CameraSceneRecognitionP
 import AIFineTunePage from './pages/subpages/AIFineTunePage';
 import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
 import WatermarkPage from './pages/subpages/WatermarkPage';
+import HasselbladColorPage from './pages/subpages/HasselbladColorPage';
 import PresetManagerPage from './pages/subpages/PresetManagerPage';
 import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
 import CloudSyncPage from './pages/subpages/CloudSyncPage';
@@ -36,6 +37,8 @@ const App: React.FC = () => {
         return <SmartOptimizePage />;
       case 'watermark':
         return <WatermarkPage />;
+      case 'hasselblad':
+        return <HasselbladColorPage />;
       case 'preset-manager':
         return <PresetManagerPage />;
       case 'param-adjust':
