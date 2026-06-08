@@ -18,8 +18,8 @@ android {
         // versionName: 对外显示版本号，格式 主.次.修订
         // 正式版: 1.0, 1.0.1, 1.1.0, 2.0.0
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
-        versionCode = 10
-        versionName = "1.3.1"
+        versionCode = 11
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,15 +29,27 @@ android {
         getByName("debug") {
             // 使用默认debug签名
         }
-        // Release签名需要配置正式密钥库
-        // 发布前请替换为真实签名配置
+        // Release签名配置 - 从环境变量读取
         create("release") {
-            // 从环境变量或local.properties读取签名配置
-            // 示例配置（发布时替换）
-            // storeFile = file("omaster-release.jks")
-            // storePassword = "your_store_password"
-            // keyAlias = "omaster"
-            // keyPassword = "your_key_password"
+            // 从环境变量读取签名配置（推荐方式）
+            // 环境变量: OMASTER_KEYSTORE_PATH, OMASTER_KEYSTORE_PASSWORD, OMASTER_KEY_ALIAS, OMASTER_KEY_PASSWORD
+            val keystorePath = System.getenv("OMASTER_KEYSTORE_PATH")
+            val keystorePassword = System.getenv("OMASTER_KEYSTORE_PASSWORD")
+            val keyAlias = System.getenv("OMASTER_KEY_ALIAS") ?: "omaster"
+            val keyPassword = System.getenv("OMASTER_KEY_PASSWORD")
+
+            if (keystorePath != null && keystorePassword != null && keyPassword != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keyAlias
+                keyPassword = keyPassword
+            } else {
+                // 开发阶段使用debug签名（正式发布前必须配置）
+                storeFile = file("omaster-release.jks")
+                storePassword = "omaster123"
+                keyAlias = "omaster"
+                keyPassword = "omaster123"
+            }
         }
     }
 

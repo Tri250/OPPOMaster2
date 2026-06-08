@@ -25,6 +25,15 @@
     <string name="nav_settings">设置</string>
     <string name="nav_about">关于</string>
 
+    <!-- 功能名称 -->
+    <string name="feature_ai_scene">AI场景识别</string>
+    <string name="feature_ai_scene_desc">打开相机实时识别场景，推荐哈苏大师参数</string>
+    <string name="feature_ai_fine_tune">AI 微调</string>
+    <string name="feature_smart_optimize">智能优化</string>
+    <string name="feature_watermark">水印编辑器</string>
+    <string name="feature_param_adjust">参数精细调节</string>
+    <string name="feature_hasselblad_color">哈苏色彩科学</string>
+
     <!-- 订阅 -->
     <string name="sub_title">订阅管理</string>
     <string name="sub_add">添加订阅</string>

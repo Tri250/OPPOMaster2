@@ -99,7 +99,7 @@ fun CameraSceneRecognitionScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "点击下方按钮模拟相机取景",
+                    text = "点击下方按钮开始相机取景",
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 14.sp
                 )

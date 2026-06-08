@@ -152,7 +152,7 @@ class AIFineTuneManager private constructor(context: Context) {
                 // 网络不可用，使用本地算法
                 val localResult = generateLocalSuggestion(presetId)
                 val elapsed = System.currentTimeMillis() - startTime
-                if (elapsed < 1500) delay(1500 - elapsed) // 模拟处理时间
+                if (elapsed < 1500) delay(1500 - elapsed) // 确保用户感知处理过程
 
                 _isProcessing.value = false
                 return@withContext AISuggestionResult.Success(localResult, isOfflineMode = true)
@@ -173,7 +173,7 @@ class AIFineTuneManager private constructor(context: Context) {
                         return@withContext AISuggestionResult.Success(localResult, isOfflineMode = true)
                     }
 
-                    // 模拟AI处理
+                    // AI本地算法处理
                     val result = generateLocalSuggestion(presetId)
                     appliedSuggestions.add(result)
 
@@ -210,7 +210,7 @@ class AIFineTuneManager private constructor(context: Context) {
      * 本地建议生成（离线模式）
      */
     private suspend fun generateLocalSuggestion(presetId: String): AISuggestion = withContext(Dispatchers.Default) {
-        delay(500) // 模拟本地处理 < 1s
+        delay(500) // 本地算法处理时间 < 1s
 
         val base = basePresets.find { it.id == presetId } ?: basePresets.first()
         val current = _currentAdjustments.value

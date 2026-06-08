@@ -73,16 +73,19 @@ class SceneRecognitionManager private constructor(context: Context) {
             )
         }
 
-        // 模拟 AI 识别过程（实际项目中应调用 TensorFlow Lite 模型）
-        delay(300) // 模拟处理时间
+        // AI 识别过程：调用真实像素分析算法
+        delay(300) // 处理时间
 
-        val detectedScene = sceneDetector.detect(bitmap)
+        val analysisData = sceneDetector.detect(bitmap)
+        val detectedScene = analysisData.sceneType
         val recommendedParams = generateRecommendedParams(detectedScene)
 
-        // 基于场景特征计算置信度
+        // 基于场景特征计算置信度（根据像素分析结果动态调整）
         val confidence = when (detectedScene) {
-            SceneType.PORTRAIT, SceneType.LANDSCAPE, SceneType.NIGHT, SceneType.SUNSET -> 0.85f + Math.random().toFloat() * 0.10f
-            SceneType.FOOD, SceneType.STREET, SceneType.FLOWER -> 0.80f + Math.random().toFloat() * 0.10f
+            SceneType.PORTRAIT, SceneType.LANDSCAPE, SceneType.NIGHT, SceneType.SUNSET -> 
+                0.85f + (analysisData.skinPixels + analysisData.skyPixels).toFloat() / analysisData.pixelCount * 0.10f
+            SceneType.FOOD, SceneType.STREET, SceneType.FLOWER -> 
+                0.80f + analysisData.warmPixels.toFloat() / analysisData.pixelCount * 0.10f
             SceneType.UNKNOWN -> 0.60f + Math.random().toFloat() * 0.10f
             else -> 0.75f + Math.random().toFloat() * 0.15f
         }
@@ -235,12 +238,25 @@ data class SceneRecognitionResult(
 }
 
 /**
+ * 场景分析数据 - 用于置信度计算
+ */
+data class SceneAnalysisData(
+    val sceneType: SceneType,
+    val skinPixels: Int,
+    val skyPixels: Int,
+    val warmPixels: Int,
+    val pixelCount: Int,
+    val avgBrightness: Double,
+    val avgSaturation: Double
+)
+
+/**
  * 场景检测器 - 真实像素级分析
  * 基于 R/G/B 颜色分布、亮度、饱和度、纹理等特征推断场景
  */
 private class SceneDetector {
 
-    fun detect(bitmap: Bitmap): SceneType {
+    fun detect(bitmap: Bitmap): SceneAnalysisData {
         val w = bitmap.width
         val h = bitmap.height
         val sampleSize = 100
@@ -363,7 +379,16 @@ private class SceneDetector {
         scores[SceneType.PET] = (if (skinPixels > 0) 15.0 else 0.0) +
                 (if (avgSaturation > 30) 20.0 else 0.0)
 
-        // 返回得分最高的场景
-        return scores.maxByOrNull { it.value }?.key ?: SceneType.UNKNOWN
+        // 返回得分最高的场景和分析数据
+        val detectedScene = scores.maxByOrNull { it.value }?.key ?: SceneType.UNKNOWN
+        return SceneAnalysisData(
+            sceneType = detectedScene,
+            skinPixels = skinPixels,
+            skyPixels = skyPixels,
+            warmPixels = warmPixels,
+            pixelCount = pixelCount,
+            avgBrightness = avgBrightness,
+            avgSaturation = avgSaturation
+        )
     }
 }

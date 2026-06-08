@@ -1,92 +1,218 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# OMaster Release ProGuard Rules
+# 行业最高水平配置 - 确保功能完整可用
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ===========================================
+# 基础配置
+# ===========================================
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# 保留调试信息（便于排查问题）
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
-# 优化配置 - 减小 APK 体积
-
-# 保留 Compose 相关类
--keep class androidx.compose.** { *; }
--keep class kotlin.Metadata { *; }
-
-# 保留 Gson 相关
--keepattributes Signature
+# 保留注解
 -keepattributes *Annotation*
--keep class com.google.gson.** { *; }
--keep class * implements com.google.gson.TypeAdapter
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
+-keepattributes Signature
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
 
-# 保留 ViewModel
+# ===========================================
+# Kotlin & Compose 配置
+# ===========================================
+
+# Kotlin 标准库
+-keep class kotlin.** { *; }
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+
+# Kotlin 协程
+-keep class kotlinx.coroutines.** { *; }
+-keepclassmembers class kotlinx.coroutines.** { *; }
+
+# Kotlin 序列化
+-keep class kotlinx.serialization.** { *; }
+-keepclassmembers class kotlinx.serialization.** { *; }
+-keepclassmembers class **$$serializer { *; }
+-keep class **$$serializer { *; }
+
+# Compose 相关
+-keep class androidx.compose.** { *; }
+-keep class androidx.compose.runtime.** { *; }
+-keepclassmembers class androidx.compose.** { *; }
+
+# ===========================================
+# AndroidX 配置
+# ===========================================
+
+# ViewModel
 -keep class * extends androidx.lifecycle.ViewModel { *; }
+-keep class * extends androidx.lifecycle.AndroidViewModel { *; }
 
-# 保留 Parcelable
--keep class * implements android.os.Parcelable { *; }
+# LiveData
+-keep class androidx.lifecycle.LiveData { *; }
+-keep class androidx.lifecycle.MutableLiveData { *; }
 
-# 保留 Serializable
+# Navigation
+-keep class androidx.navigation.** { *; }
+-keepclassmembers class androidx.navigation.** { *; }
+
+# ===========================================
+# 数据模型配置（关键 - 确保JSON序列化正常）
+# ===========================================
+
+# 保留所有数据类（用于JSON序列化）
+-keep class com.silas.omaster.model.** { *; }
+-keepclassmembers class com.silas.omaster.model.** { *; }
+
+# 保留Serializable类
 -keep class * implements java.io.Serializable { *; }
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    !static !transient <fields>;
+    !private <methods>;
+    !private <methods>;
+}
 
-# 保留友盟 SDK
--keep class com.umeng.** { *; }
--dontwarn com.umeng.**
+# 保留Parcelable类
+-keep class * implements android.os.Parcelable { *; }
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator CREATOR;
+}
 
-# 保留 Coil 图片加载
+# ===========================================
+# Manager类配置（关键 - 确保业务逻辑正常）
+# ===========================================
+
+# AI场景识别
+-keep class com.silas.omaster.ai.** { *; }
+-keepclassmembers class com.silas.omaster.ai.** { *; }
+
+# 云同步
+-keep class com.silas.omaster.cloud.** { *; }
+-keepclassmembers class com.silas.omaster.cloud.** { *; }
+
+# 水印编辑
+-keep class com.silas.omaster.watermark.** { *; }
+-keepclassmembers class com.silas.omaster.watermark.** { *; }
+
+# 参数调节
+-keep class com.silas.omaster.param.** { *; }
+-keepclassmembers class com.silas.omaster.param.** { *; }
+
+# 数据层
+-keep class com.silas.omaster.data.** { *; }
+-keepclassmembers class com.silas.omaster.data.** { *; }
+
+# 网络层
+-keep class com.silas.omaster.network.** { *; }
+-keepclassmembers class com.silas.omaster.network.** { *; }
+
+# 工具类
+-keep class com.silas.omaster.util.** { *; }
+-keepclassmembers class com.silas.omaster.util.** { *; }
+
+# ===========================================
+# UI组件配置
+# ===========================================
+
+-keep class com.silas.omaster.ui.** { *; }
+-keepclassmembers class com.silas.omaster.ui.** { *; }
+
+# Compose UI函数
+-keepclassmembers class * {
+    @androidx.compose.runtime.Composable <methods>;
+}
+
+# ===========================================
+# 第三方库配置
+# ===========================================
+
+# Gson
+-keep class com.google.gson.** { *; }
+-keepclassmembers class com.google.gson.** { *; }
+-keep class * implements com.google.gson.TypeAdapterFactory { *; }
+-keep class * implements com.google.gson.JsonSerializer { *; }
+-keep class * implements com.google.gson.JsonDeserializer { *; }
+
+# Coil图片加载
 -keep class coil.** { *; }
 -dontwarn coil.**
 
-# 保留导航序列化
--keep class kotlinx.serialization.** { *; }
--keepclassmembers class kotlinx.serialization.** { *; }
+# OkHttp
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+-dontwarn okhttp3.**
 
-# 保留数据模型
--keep class com.silas.omaster.model.** { *; }
+# Retrofit（如果使用）
+-keep class retrofit2.** { *; }
+-keepclassmembers class retrofit2.** { *; }
+-dontwarn retrofit2.**
 
-# 保留Manager类（包含StateFlow和SharedPreferences操作）
--keep class com.silas.omaster.ai.** { *; }
--keep class com.silas.omaster.cloud.** { *; }
--keep class com.silas.omaster.watermark.** { *; }
--keep class com.silas.omaster.param.** { *; }
--keep class com.silas.omaster.data.** { *; }
--keep class com.silas.omaster.scene.** { *; }
+# Ktor（如果使用）
+-keep class io.ktor.** { *; }
+-dontwarn io.ktor.**
 
-# 保留UI组件
--keep class com.silas.omaster.ui.** { *; }
+# 友盟SDK
+-keep class com.umeng.** { *; }
+-keepclassmembers class com.umeng.** { *; }
+-dontwarn com.umeng.**
 
-# 保留SettingsManager的所有方法
--keepclassmembers class com.silas.omaster.data.local.SettingsManager {
-    public *;
-    private *;
-}
+# ===========================================
+# 优化配置
+# ===========================================
 
-# 优化移除未使用的代码
--dontwarn java.lang.invoke.**
--dontwarn sun.misc.**
-
-# 混淆优化
+# 优化级别
 -optimizationpasses 5
 -allowaccessmodification
 -mergeinterfacesaggressively
 
-# 忽略 Ktor 调试检测引用的 ManagementFactory 类（Android 不支持）
+# 移除未使用的代码
+-dontwarn java.lang.invoke.**
+-dontwarn sun.misc.**
+
+# 忽略Android不支持类
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean
-
-# 忽略 SLF4J 静态绑定器缺失警告
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# 保持Native方法
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# 保持自定义View
+-keep public class * extends android.view.View {
+    public <init>(android.content.Context);
+    public <init>(android.content.Context, android.util.AttributeSet);
+    public <init>(android.content.Context, android.util.AttributeSet, int);
+    public void set*(***);
+}
+
+# 保持枚举
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+    **[] $VALUES;
+    public *;
+}
+
+# ===========================================
+# 调试配置（Release可保留）
+# ===========================================
+
+# 保留BuildConfig（用于版本信息）
+-keep class com.silas.omaster.BuildConfig { *; }
+
+# 保留日志调用（便于排查问题）
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+}

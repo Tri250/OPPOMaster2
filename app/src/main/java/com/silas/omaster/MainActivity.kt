@@ -2,6 +2,7 @@ package com.silas.omaster
 
 import android.app.Activity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -492,7 +493,7 @@ fun MainApp(navController: NavHostController) {
                             brightness = preset.brightness
                         )
                         // 显示应用成功提示
-                        // TODO: 添加Toast或Snackbar提示
+                        Toast.makeText(context, "预设参数已应用", Toast.LENGTH_SHORT).show()
                     },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
