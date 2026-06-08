@@ -24,6 +24,7 @@ const iconMap: Record<string, React.ElementType> = {
 
 const featureRouteMap: Record<string, string> = {
   'ai-scene': 'ai-scene',
+  'camera-scene': 'camera-scene',
   'ai-fine-tune': 'ai-fine-tune',
   'watermark': 'watermark',
   'smart-optimize': 'smart-optimize',
@@ -34,6 +35,10 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   'ai-scene': {
     desc: '支持36+拍摄场景智能识别',
     tips: ['人像', '风景', '夜景', '美食', '建筑', '自然'],
+  },
+  'camera-scene': {
+    desc: '相机实时场景识别，推荐哈苏大师参数',
+    tips: ['实时识别', '智能推荐', '大师样张', '拍摄指导'],
   },
   'ai-fine-tune': {
     desc: '一键智能微调，精准控制色彩风格',
@@ -56,10 +61,10 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
 const FeaturesScreen: React.FC = () => {
   const { features, navigateToSubPage } = useAppStore();
 
-  // 只保留核心功能：AI场景、AI微调、智能优化、水印、参数调节、哈苏色彩
+  // 只保留核心功能：AI场景、相机场景、AI微调、智能优化、水印、参数调节、哈苏色彩
   // 预设管理和云同步已移到设置页面
-  const aiFeatures = features.filter(f => 
-    ['ai-scene', 'ai-fine-tune', 'smart-optimize', 'watermark'].includes(f.id)
+  const aiFeatures = features.filter(f =>
+    ['ai-scene', 'camera-scene', 'ai-fine-tune', 'smart-optimize', 'watermark'].includes(f.id)
   );
   const toolFeatures = features.filter(f => f.id === 'param-adjust');
   const brandFeatures = features.filter(f => f.id === 'hasselblad');

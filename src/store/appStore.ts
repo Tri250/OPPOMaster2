@@ -2,16 +2,17 @@ import { create } from 'zustand';
 import { Preset } from '../services/cloudSyncService';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
-export type SubPageType = 
-  | 'ai-scene' 
-  | 'ai-fine-tune' 
-  | 'smart-optimize' 
-  | 'watermark' 
-  | 'param-adjust' 
+export type SubPageType =
+  | 'ai-scene'
+  | 'camera-scene'
+  | 'ai-fine-tune'
+  | 'smart-optimize'
+  | 'watermark'
+  | 'param-adjust'
   | 'preset-manager'
   | 'preset-detail'
   | 'hasselblad'
-  | 'cloud-sync' 
+  | 'cloud-sync'
   | 'theme-settings'
   | 'dark-mode'
   | 'update-channel'
@@ -112,6 +113,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       gradientColors: ['#1B5E20', '#2E7D32'],
       enabled: true,
       showToggle: true,
+    },
+    {
+      id: 'camera-scene',
+      title: '相机场景识别',
+      subtitle: '打开相机实时识别场景，推荐哈苏大师参数',
+      icon: 'Camera',
+      color: '#FF6B35',
+      gradientColors: ['#E65100', '#FF6B35'],
+      enabled: true,
+      showToggle: false,
     },
     {
       id: 'ai-fine-tune',

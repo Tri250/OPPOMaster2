@@ -8,6 +8,7 @@ import AboutScreen from './pages/AboutScreen';
 
 // Sub pages
 import AISceneRecognitionPage from './pages/subpages/AISceneRecognitionPage';
+import CameraSceneRecognitionPage from './pages/subpages/CameraSceneRecognitionPage';
 import AIFineTunePage from './pages/subpages/AIFineTunePage';
 import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
 import WatermarkPage from './pages/subpages/WatermarkPage';
@@ -27,6 +28,8 @@ const App: React.FC = () => {
     switch (currentSubPage) {
       case 'ai-scene':
         return <AISceneRecognitionPage />;
+      case 'camera-scene':
+        return <CameraSceneRecognitionPage />;
       case 'ai-fine-tune':
         return <AIFineTunePage />;
       case 'smart-optimize':
