@@ -3,12 +3,7 @@
 
 import {
   SceneProfile,
-  HasselbladParams,
-  FilmPreset,
   SceneCategory,
-  SoftLightMode,
-  SCENE_PRESETS,
-  ALL_FILM_PRESETS,
   getScenePresetById,
 } from '../store/sceneProfile';
 
@@ -178,7 +173,7 @@ export class HeuristicSceneAnalyzer {
     const sampleH = Math.floor(height * sampleRatio);
 
     let totalR = 0, totalG = 0, totalB = 0;
-    let warmPixels = 0, coldPixels = 0;
+    let warmPixels = 0;
     let skinPixels = 0, darkPixels = 0, highlightPixels = 0;
     let totalPixels = 0;
 
@@ -201,7 +196,7 @@ export class HeuristicSceneAnalyzer {
         if (r > b + 20 && r > g) warmPixels++;
 
         // 冷色调判定：B > R + 20 且 B > G
-        if (b > r + 20 && b > g) coldPixels++;
+        // 用于后续场景推断
 
         // 肤色检测（YCbCr 色彩空间）
         if (this.isSkinTone(r, g, b)) skinPixels++;
@@ -331,12 +326,12 @@ export class HeuristicSceneAnalyzer {
 
   private sobelX(gray: Float32Array, width: number, x: number, y: number): number {
     const p1 = gray[(y - 1) * width + x - 1];
-    const p2 = gray[(y - 1) * width + x];
+    // p2 used in sobelY
     const p3 = gray[(y - 1) * width + x + 1];
     const p4 = gray[y * width + x - 1];
     const p6 = gray[y * width + x + 1];
     const p7 = gray[(y + 1) * width + x - 1];
-    const p8 = gray[(y + 1) * width + x];
+    // p8 used in sobelY
     const p9 = gray[(y + 1) * width + x + 1];
 
     return -p1 + p3 - 2 * p4 + 2 * p6 - p7 + p9;

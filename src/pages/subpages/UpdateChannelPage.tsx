@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import {
-  ArrowLeft, Download, Check, Bell, Settings, Zap,
+  ArrowLeft, Download, Check, Zap,
   Clock, Shield, RotateCcw
 } from 'lucide-react';
 

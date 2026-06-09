@@ -5,6 +5,7 @@
 
 import { HeuristicSceneAnalyzer, AnalysisResult } from '../ai/HeuristicSceneAnalyzer';
 import { getHasselbladParams, getRecommendedFilms } from '../ai/SceneToHasselbladMapping';
+import { fetchWithTimeout, TimeoutError, TIMEOUT_CONFIG } from './networkUtils';
 
 // ============================================
 // 类型定义
@@ -608,7 +609,7 @@ export class AIInferenceService {
     }
     
     try {
-      const response = await fetch(this.apiEndpoint, {
+      const response = await fetchWithTimeout(this.apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -618,7 +619,7 @@ export class AIInferenceService {
           params: request.computedParams,
           optimizations: request.optimizations,
         }),
-      });
+      }, TIMEOUT_CONFIG.long);
       
       if (!response.ok) {
         throw new Error(`API 调用失败: ${response.status}`);
@@ -633,7 +634,12 @@ export class AIInferenceService {
       };
       
     } catch (error) {
-      console.warn('后端 API 调用失败，使用本地计算结果:', error);
+      // 超时错误特殊处理
+      if (error instanceof TimeoutError) {
+        console.warn('后端 API 调用超时，使用本地计算结果:', error.message);
+      } else {
+        console.warn('后端 API 调用失败，使用本地计算结果:', error);
+      }
       return {
         success: true,
         params: request.computedParams,

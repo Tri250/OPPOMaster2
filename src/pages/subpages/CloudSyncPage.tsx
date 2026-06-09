@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import {
   ArrowLeft, Cloud, Check, Smartphone, Wifi, RefreshCw,
-  Server, Shield, Clock, Upload, Download
+  Shield, Clock, Upload
 } from 'lucide-react';
 
 const CLOUD_PROVIDERS = [

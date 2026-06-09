@@ -15,9 +15,12 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -881,6 +884,60 @@ class PresetRepository private constructor(context: Context) {
      */
     suspend fun reloadDefaultPresets(): List<PresetItem> = loadPresets(brand = null)
 
+    // ==================== HomeViewModel 需要的方法 ====================
+
+    /**
+     * 获取所有预设（实时转换为 MasterPreset）
+     * 使用 map 操作符实现响应式更新
+     */
+    fun getAllPresets(): Flow<List<MasterPreset>> {
+        return _presets.map { items ->
+            items.map { it.toMasterPreset() }
+        }
+    }
+
+    /**
+     * 获取收藏的预设
+     * 合并 presets 和 favorites 流
+     */
+    fun getFavoritePresets(): Flow<List<MasterPreset>> {
+        return combine(_presets, _favorites) { items, favIds ->
+            items.filter { favIds.contains(it.id) }
+                .map { it.toMasterPreset() }
+        }
+    }
+
+    /**
+     * 获取自定义预设（非系统预设）
+     */
+    fun getCustomPresets(): Flow<List<MasterPreset>> {
+        return _presets.map { items ->
+            items.filter { !it.isSystem }
+                .map { it.toMasterPreset() }
+        }
+    }
+
+    /**
+     * 切换收藏状态（用于 HomeViewModel）
+     */
+    suspend fun toggleFavorite(presetId: String) {
+        val current = _favorites.value.toMutableSet()
+        if (current.contains(presetId)) {
+            current.remove(presetId)
+        } else {
+            current.add(presetId)
+        }
+        _favorites.value = current
+        saveFavorites(current)
+    }
+
+    /**
+     * 删除自定义预设（简化版本）
+     */
+    suspend fun deleteCustomPreset(presetId: String) {
+        deletePreset(presetId, forceConfirm = true)
+    }
+
     /**
      * 释放 Ktor 资源
      * 真实使用中通常不需要调用，因为 HttpClient 是 lazy 单例
@@ -943,6 +1000,34 @@ data class PresetItem(
         description = description,
         tags = tags
     )
+
+    /**
+     * 转换为 MasterPreset（用于 UI 层）
+     */
+    fun toMasterPreset(): MasterPreset {
+        return MasterPreset(
+            id = id,
+            name = name,
+            coverPath = coverPath ?: "images/placeholder.webp",
+            brand = brand,
+            tags = tags,
+            description = if (description.isNotEmpty()) {
+                com.silas.omaster.model.PresetDescription("Shooting Tips", description)
+            } else null,
+            isNew = isNew,
+            isHncs = isHncs,
+            downloads = downloadCount,
+            rating = rating,
+            createdAt = createdAt,
+            saturation = params["saturation"],
+            tone = params["contrast"],
+            warmCool = params["warmth"],
+            sharpness = params["sharpness"],
+            cyanMagenta = params["cyan_magenta"],
+            colorTemperature = params["color_temperature"],
+            colorHue = params["color_hue"]
+        )
+    }
 }
 
 /**

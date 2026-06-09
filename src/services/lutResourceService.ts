@@ -3,6 +3,8 @@
  * 提供真实的LUT资源下载，符合2026年视频创作者需求
  */
 
+import { fetchBlob, TimeoutError, TIMEOUT_CONFIG } from './networkUtils';
+
 // LUT分类
 export const LUT_CATEGORIES = [
   { key: 'all', label: '全部', icon: '🎬' },
@@ -564,13 +566,16 @@ export function getNewLUTs(): LUTResource[] {
   return LUT_RESOURCES.filter(lut => lut.isNew);
 }
 
-// 下载LUT文件
+// 下载LUT文件（带超时）
 export async function downloadLUT(lut: LUTResource): Promise<Blob> {
-  const response = await fetch(lut.downloadUrl);
-  if (!response.ok) {
-    throw new Error(`下载失败: ${response.statusText}`);
+  try {
+    return await fetchBlob(lut.downloadUrl, TIMEOUT_CONFIG.download);
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      throw new Error(`LUT下载超时: ${lut.name} (${TIMEOUT_CONFIG.download}ms)`);
+    }
+    throw new Error(`LUT下载失败: ${lut.name} - ${error instanceof Error ? error.message : '未知错误'}`);
   }
-  return response.blob();
 }
 
 // 格式化文件大小

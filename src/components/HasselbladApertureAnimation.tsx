@@ -32,7 +32,6 @@ const DEFAULT_STEPS: AnalysisStep[] = [
 
 export const HasselbladApertureAnimation: React.FC<HasselbladApertureAnimationProps> = ({
   steps = DEFAULT_STEPS,
-  progress = 0,
   onComplete,
 }) => {
   const [currentProgress, setCurrentProgress] = useState(0);

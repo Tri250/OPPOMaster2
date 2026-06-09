@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -13,19 +15,19 @@ plugins {
 val keystorePropertiesFile = file("keystore-release.properties")
     .takeIf { it.exists() }
     ?: file("keystore.properties")
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 android {
     namespace = "com.silas.omaster"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.silas.omaster"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         // 版本号规范：
         // versionCode: 内部版本号，每次发布必须递增
         // versionName: 对外显示版本号，格式 主.次.修订

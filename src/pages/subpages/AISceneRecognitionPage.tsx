@@ -1,14 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { 
-  ArrowLeft, Camera, Zap, Check, Target, Wand2, Layers, 
-  Sun, Moon, Mountain, Users, Utensils, Building,
-  Flower, Waves, Sparkles, Leaf, Coffee, Eye,
-  Snowflake, Droplets, ChevronRight, X, Image,
-  Download, Share2, RefreshCw, Aperture, Grid3X3,
-  Timer, Settings, ChevronUp, ChevronDown,
-  Plus, Minus, Sliders, CheckCircle, AlertCircle,
-  Flashlight, FlashlightOff, Circle
+  ArrowLeft, Camera, Zap, Sun, Moon, Mountain, Users, Utensils, Building,
+  Flower, Sparkles, Leaf, Coffee, Eye,
+  Droplets, Image,
+  Download, RefreshCw,
+  Sliders, CheckCircle,
+  Wand2,
+  Circle
 } from 'lucide-react';
 
 // 精细场景类型定义 - 带完整参数
@@ -51,7 +50,6 @@ const AISceneRecognitionPage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // 状态
-  const [isCameraActive, setIsCameraActive] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [recognizedScene, setRecognizedScene] = useState<typeof SCENE_TYPES[0] | null>(null);
@@ -73,7 +71,6 @@ const AISceneRecognitionPage: React.FC = () => {
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setIsCameraActive(true);
       }
     } catch (err) {
       console.error('相机启动失败:', err);
@@ -86,7 +83,6 @@ const AISceneRecognitionPage: React.FC = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
       tracks.forEach(track => track.stop());
-      setIsCameraActive(false);
     }
   }, []);
 
@@ -151,13 +147,6 @@ const AISceneRecognitionPage: React.FC = () => {
     }
   }, [recognizedScene]);
 
-  // 重置参数
-  const resetParams = useCallback(() => {
-    if (recognizedScene) {
-      setAppliedParams(recognizedScene.params);
-    }
-  }, [recognizedScene]);
-
   // 一键出片
   const exportImage = useCallback(() => {
     if (!capturedImage) return;
@@ -215,8 +204,8 @@ const AISceneRecognitionPage: React.FC = () => {
               onClick={toggleFlash}
               className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
             >
-              {flashMode === 'off' && <FlashlightOff size={20} />}
-              {flashMode === 'on' && <Flashlight size={20} className="text-yellow-400" />}
+              {flashMode === 'off' && <Moon size={20} />}
+              {flashMode === 'on' && <Sun size={20} className="text-yellow-400" />}
               {flashMode === 'auto' && <Circle size={20} />}
             </button>
             <button

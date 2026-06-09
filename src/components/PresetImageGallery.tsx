@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
  * 预设图片画廊组件（对齐Android端）

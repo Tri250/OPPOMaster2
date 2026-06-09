@@ -525,12 +525,12 @@ fun MainApp(navController: NavHostController) {
                         // 将预设参数保存到设置中，供相机使用
                         val settingsManager = SettingsManager.getInstance(context)
                         settingsManager.applyPresetParams(
-                            saturation = preset.saturation,
-                            contrast = preset.contrast,
-                            warmth = preset.warmth,
-                            sharpness = preset.sharpness,
-                            clarity = preset.clarity,
-                            brightness = preset.brightness
+                            saturation = preset.saturation ?: 0,
+                            contrast = preset.tone ?: 0,
+                            warmth = preset.warmCool ?: 0,
+                            sharpness = preset.sharpness ?: 0,
+                            clarity = 0,
+                            brightness = 0
                         )
                         // 显示应用成功 Snackbar 提示
                         coroutineScope.launch {

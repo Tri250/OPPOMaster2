@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import {
-  ArrowLeft, Camera, Aperture, Sun, Palette, Check, Zap,
-  Eye, Layers, Sparkles, Moon, Leaf
+  ArrowLeft, Sun, Palette,
+  Eye, Sparkles, Moon, Leaf,
+  Aperture, Camera, Zap, Layers, Check
 } from 'lucide-react';
 
+// 色彩参数类型
+interface ColorParams {
+  saturation: number;
+  contrast: number;
+  warmth: number;
+  vibrance: number;
+  clarity: number;
+  skinTone?: number;
+  grain?: number;
+}
+
 // 哈苏色彩模式
-const COLOR_MODES = [
-  { id: 'natural', name: '哈苏自然色彩', icon: Eye, color: '#FF6B35', desc: 'HNCS 3.0 自然色彩解决方案', params: { saturation: 0, contrast: 5, warmth: 0, vibrance: 5 } },
-  { id: 'portrait', name: '人像肤色优化', icon: Sun, color: '#FF6B9D', desc: '自然美化肤色，保留细节', params: { saturation: 5, contrast: 8, warmth: 3, skinTone: 10 } },
-  { id: 'landscape', name: '风景色彩增强', icon: Leaf, color: '#4ECDC4', desc: '增强风景色彩层次', params: { saturation: 12, contrast: 10, warmth: 5, clarity: 10 } },
-  { id: 'classic', name: '哈苏经典胶片', icon: Sparkles, color: '#9C27B0', desc: '复古胶片色彩质感', params: { saturation: 8, contrast: 15, warmth: 8, grain: 5 } },
-  { id: 'bw', name: '哈苏黑白', icon: Moon, color: '#808080', desc: '经典黑白摄影风格', params: { saturation: -100, contrast: 20, clarity: 15 } },
-  { id: 'vivid', name: '鲜艳色彩', icon: Palette, color: '#FF9800', desc: '鲜艳饱满的色彩表现', params: { saturation: 20, contrast: 10, vibrance: 15 } },
+const COLOR_MODES: Array<{ id: string; name: string; icon: React.ElementType; color: string; desc: string; params: Partial<ColorParams> }> = [
+  { id: 'natural', name: '哈苏自然色彩', icon: Eye, color: '#FF6B35', desc: 'HNCS 3.0 自然色彩解决方案', params: { saturation: 0, contrast: 5, warmth: 0, vibrance: 5, clarity: 0 } },
+  { id: 'portrait', name: '人像肤色优化', icon: Sun, color: '#FF6B9D', desc: '自然美化肤色，保留细节', params: { saturation: 5, contrast: 8, warmth: 3, vibrance: 0, skinTone: 10, clarity: 0 } },
+  { id: 'landscape', name: '风景色彩增强', icon: Leaf, color: '#4ECDC4', desc: '增强风景色彩层次', params: { saturation: 12, contrast: 10, warmth: 5, vibrance: 0, clarity: 10 } },
+  { id: 'classic', name: '哈苏经典胶片', icon: Sparkles, color: '#9C27B0', desc: '复古胶片色彩质感', params: { saturation: 8, contrast: 15, warmth: 8, vibrance: 0, grain: 5, clarity: 0 } },
+  { id: 'bw', name: '哈苏黑白', icon: Moon, color: '#808080', desc: '经典黑白摄影风格', params: { saturation: -100, contrast: 20, vibrance: 0, clarity: 15, warmth: 0 } },
+  { id: 'vivid', name: '鲜艳色彩', icon: Palette, color: '#FF9800', desc: '鲜艳饱满的色彩表现', params: { saturation: 20, contrast: 10, vibrance: 15, warmth: 0, clarity: 0 } },
 ];
 
 // 色彩参数调节
@@ -27,7 +39,7 @@ const COLOR_PARAMS = [
 const HasselbladPage: React.FC = () => {
   const { setCurrentSubPage } = useAppStore();
   const [selectedMode, setSelectedMode] = useState('natural');
-  const [params, setParams] = useState({
+  const [params, setParams] = useState<ColorParams>({
     saturation: 0,
     contrast: 5,
     warmth: 0,
@@ -40,7 +52,15 @@ const HasselbladPage: React.FC = () => {
     const mode = COLOR_MODES.find(m => m.id === modeId);
     if (mode) {
       setSelectedMode(modeId);
-      setParams(mode.params as any);
+      setParams({
+        saturation: mode.params.saturation ?? 0,
+        contrast: mode.params.contrast ?? 0,
+        warmth: mode.params.warmth ?? 0,
+        vibrance: mode.params.vibrance ?? 0,
+        clarity: mode.params.clarity ?? 0,
+        skinTone: mode.params.skinTone,
+        grain: mode.params.grain,
+      });
     }
   };
 
@@ -56,7 +76,15 @@ const HasselbladPage: React.FC = () => {
   const handleReset = () => {
     const mode = COLOR_MODES.find(m => m.id === selectedMode);
     if (mode) {
-      setParams(mode.params as any);
+      setParams({
+        saturation: mode.params.saturation ?? 0,
+        contrast: mode.params.contrast ?? 0,
+        warmth: mode.params.warmth ?? 0,
+        vibrance: mode.params.vibrance ?? 0,
+        clarity: mode.params.clarity ?? 0,
+        skinTone: mode.params.skinTone,
+        grain: mode.params.grain,
+      });
     }
   };
 
