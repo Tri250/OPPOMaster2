@@ -598,4 +598,16 @@ object FilmPresets {
 
     fun getFilmById(id: String): FilmPreset? = allFilms.find { it.id == id }
     fun getFilmsBySeries(series: FilmSeries): List<FilmPreset> = allFilms.filter { it.series == series }
+    
+    /**
+     * 获取所有场景列表
+     */
+    fun getAllScenes(): List<SceneProfile> = allScenes
+    
+    /**
+     * 根据场景ID列表获取场景
+     */
+    fun getScenesByIds(ids: List<String>): List<SceneProfile> {
+        return ids.mapNotNull { getSceneById(it) }
+    }
 }
