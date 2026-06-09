@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useAppStore, homePresets } from '../store/appStore';
-import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter } from 'lucide-react';
+import { useAppStore, homePresets, Preset } from '../store/appStore';
+import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, SlidersHorizontal, Palette, Thermometer, Sun, Droplets } from 'lucide-react';
 
 const tabs = [
   { key: 'all', label: '发现' },
@@ -26,6 +26,7 @@ const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   
   // 合并本地预设和网络获取的预设
   const allPresets = [...homePresets, ...fetchedPresets];
@@ -307,6 +308,7 @@ const HomeScreen: React.FC = () => {
             {filteredPresets.map((preset, index) => (
               <div
                 key={preset.id}
+                onClick={() => setSelectedPreset(preset)}
                 className={`group relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${getImageHeight(
                   index
                 )}`}
@@ -391,6 +393,175 @@ const HomeScreen: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Preset Detail Modal */}
+      {selectedPreset && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setSelectedPreset(null)}
+        >
+          <div
+            className="relative w-full max-w-sm bg-[#1a1a1a] rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedPreset(null)}
+              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-black/50 backdrop-blur-sm transition-colors hover:bg-black/70"
+            >
+              <X size={18} className="text-white" />
+            </button>
+
+            {/* Preset Image */}
+            <div className="relative aspect-[4/3]">
+              <img
+                src={selectedPreset.coverPath}
+                alt={selectedPreset.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
+
+              {/* Badges */}
+              <div className="absolute top-3 left-3 flex gap-2">
+                {selectedPreset.isHncs && (
+                  <div className="px-2 py-1 bg-gradient-to-r from-[#FF6B35] to-[#FF9800] rounded-lg text-[10px] font-bold text-white flex items-center gap-1">
+                    <Crown size={10} />
+                    <span>HNCS</span>
+                  </div>
+                )}
+                {selectedPreset.isNew && !selectedPreset.isHncs && (
+                  <div className="px-2 py-1 bg-[#4CAF50] rounded-lg text-[10px] font-bold text-white flex items-center gap-1">
+                    <Sparkles size={10} />
+                    <span>NEW</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Preset Info Overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <h2 className="text-xl font-bold text-white mb-1">{selectedPreset.name}</h2>
+                <p className="text-white/70 text-sm">{selectedPreset.author}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-white/60">
+                    {selectedPreset.brand}
+                  </span>
+                  {selectedPreset.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-white/60"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Parameters Section */}
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
+                <SlidersHorizontal size={14} className="text-[#FF6B35]" />
+                参数调节
+              </h3>
+
+              <div className="space-y-3">
+                {/* Saturation */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center">
+                    <Palette size={14} className="text-[#FF6B35]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs text-white/60">饱和度</span>
+                      <span className="text-xs text-white/90">{selectedPreset.saturation}</span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] rounded-full transition-all"
+                        style={{ width: `${Math.max(0, Math.min(100, (selectedPreset.saturation + 100) / 2))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contrast */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#2196F3]/10 flex items-center justify-center">
+                    <Sun size={14} className="text-[#2196F3]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs text-white/60">对比度</span>
+                      <span className="text-xs text-white/90">{selectedPreset.contrast}</span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#2196F3] to-[#64B5F6] rounded-full transition-all"
+                        style={{ width: `${Math.max(0, Math.min(100, (selectedPreset.contrast + 100) / 2))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Warmth */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#FF9800]/10 flex items-center justify-center">
+                    <Thermometer size={14} className="text-[#FF9800]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs text-white/60">色温</span>
+                      <span className="text-xs text-white/90">{selectedPreset.warmth}</span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#FF9800] to-[#FFC107] rounded-full transition-all"
+                        style={{ width: `${Math.max(0, Math.min(100, (selectedPreset.warmth + 100) / 2))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sharpness */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#9C27B0]/10 flex items-center justify-center">
+                    <Droplets size={14} className="text-[#9C27B0]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs text-white/60">锐度</span>
+                      <span className="text-xs text-white/90">{selectedPreset.sharpness}</span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#9C27B0] to-[#CE93D8] rounded-full transition-all"
+                        style={{ width: `${Math.max(0, Math.min(100, selectedPreset.sharpness * 2))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => toggleFavorite(selectedPreset.id)}
+                  className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${
+                    favorites.has(selectedPreset.id)
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  {favorites.has(selectedPreset.id) ? '已收藏' : '收藏'}
+                </button>
+                <button className="flex-1 py-3 rounded-xl font-medium text-sm bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-white hover:opacity-90 transition-opacity">
+                  应用预设
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Styles */}
       <style>{`

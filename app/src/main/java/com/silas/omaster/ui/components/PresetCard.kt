@@ -73,8 +73,11 @@ fun PresetCard(
             )
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
+                indication = androidx.compose.foundation.LocalIndication.current,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.Confirm)
+                    onClick()
+                }
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
