@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore, homePresets, Preset } from '../store/appStore';
 import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, SlidersHorizontal, Palette, Thermometer, Sun, Droplets, Zap, Share2, Grid as GridIcon, Edit2 } from 'lucide-react';
 import PresetImageGallery from '../components/PresetImageGallery';
-import PresetParameters, { PresetStats, ShootingTipsCard, RelatedPresets, UserComments } from '../components/PresetParameters';
+import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton } from '../components/PresetParameters';
 
 const tabs = [
   { key: 'all', label: '发现' },
@@ -551,21 +551,13 @@ const HomeScreen: React.FC = () => {
 
             {/* 底部操作栏 */}
             <div className="sticky bottom-0 bg-[#0a0a0a]/95 backdrop-blur-sm px-4 py-3 border-t border-white/5 flex gap-3">
-              <button
-                onClick={() => toggleFavorite(selectedPreset.id)}
-                className={`flex-1 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
-                  favorites.has(selectedPreset.id)
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    : 'bg-white/5 text-white/80 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <Heart size={16} className={favorites.has(selectedPreset.id) ? 'fill-current' : ''} />
-                {favorites.has(selectedPreset.id) ? '已收藏' : '收藏'}
-              </button>
-              <button className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-white flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-                <Sparkles size={16} />
-                一键应用哈苏配方
-              </button>
+              <FavoriteButton
+                isFavorite={favorites.has(selectedPreset.id)}
+                onToggle={() => toggleFavorite(selectedPreset.id)}
+              />
+              <ApplyPresetButton
+                onApply={() => console.log('Apply preset:', selectedPreset.id)}
+              />
             </div>
           </div>
         </div>

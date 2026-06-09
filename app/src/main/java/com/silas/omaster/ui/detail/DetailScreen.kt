@@ -68,6 +68,8 @@ import com.silas.omaster.ui.components.UserCommentsCard
 import com.silas.omaster.ui.components.UserComment
 import com.silas.omaster.ui.components.RelatedPresetsCard
 import com.silas.omaster.ui.components.RelatedPreset
+import com.silas.omaster.ui.components.ApplyPresetButton
+import com.silas.omaster.ui.components.FavoriteButton
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.service.FloatingWindowService
 import androidx.compose.ui.res.stringResource
@@ -363,52 +365,23 @@ fun DetailScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // 底部操作按钮
+                        // 底部操作按钮（对齐用户规范）
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // 收藏按钮
-                            Button(
-                                onClick = { viewModel.toggleFavorite() },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f)
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                                    contentDescription = null,
-                                    tint = if (isFavorite) Color.Red else Color.White.copy(alpha = 0.8f)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (isFavorite) "已收藏" else "收藏",
-                                    color = if (isFavorite) Color.Red else Color.White.copy(alpha = 0.8f)
-                                )
-                            }
+                            FavoriteButton(
+                                isFavorite = isFavorite,
+                                onToggle = { viewModel.toggleFavorite() },
+                                modifier = Modifier.weight(1f)
+                            )
                             
-                            // 应用按钮
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = HasselbladOrange
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Sparkles,
-                                    contentDescription = null,
-                                    tint = Color.White
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "一键应用哈苏配方",
-                                    color = Color.White
-                                )
-                            }
+                            // 应用按钮（带动画反馈）
+                            ApplyPresetButton(
+                                onApply = { },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
