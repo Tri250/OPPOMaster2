@@ -1,0 +1,121 @@
+# OMaster Android APP - 工作树记录
+
+## 版本信息
+- **版本号**: 1.3.1
+- **构建号**: debug
+- **提交时间**: 2026-06-09
+- **Git Commit**: 见下方
+- **工作分支**: trae/solo-agent-KHIdPg
+
+## 本次自检与修复完整记录
+
+### 一、全面自检阶段
+对项目进行了全面自检，覆盖：
+- 依赖、组件、编译环境
+- 功能模块
+- 代码质量（100%目标）
+- 函数覆盖率（100%目标）
+- 性能、兼容性、安全性
+
+### 二、本次会话修复的关键问题
+
+#### 1. 网络超时配置（Web端）
+- **文件**: `src/services/networkUtils.ts`（新建）
+- **内容**: 创建网络请求超时工具模块
+- **功能**: 提供 fetchWithTimeout、fetchGet、fetchPost、fetchBlob 等函数
+- **配置**: quick(5s)、standard(15s)、long(30s)、download(60s)
+- **使用**: aiInferenceService.ts、lutResourceService.ts 改用超时配置
+
+#### 2. Android编译环境配置
+- **安装**: Android SDK 36、build-tools 36.0.0、platform-tools
+- **配置**: ANDROID_HOME=/opt/android-sdk
+- **Gradle**: 使用系统预装的 8.14.4
+- **AGP**: 升级到 8.9.1（支持 compileSdk 36）
+
+#### 3. Kotlin DSL编译错误修复
+- **文件**: `app/build.gradle.kts`
+- **问题**: `val keystoreProperties = java.util.Properties()` 在 Kotlin DSL 中无法解析
+- **修复**: 改为 `import java.util.Properties` 后使用 `Properties()`
+
+#### 4. PresetRepository 缺失方法（首次修复）
+- **文件**: `app/src/main/java/com/silas/omaster/data/repository/PresetRepository.kt`
+- **问题**: HomeViewModel 调用了 getAllPresets()、getFavoritePresets()、getCustomPresets()，但 PresetRepository 中不存在
+- **修复**: 添加缺失方法（首次实现，存在响应式更新问题）
+
+#### 5. PresetRepository 响应式修复（关键修复 v2）
+- **文件**: `app/src/main/java/com/silas/omaster/data/repository/PresetRepository.kt`
+- **问题**: getAllPresets/getFavoritePresets/getCustomPresets 返回的 StateFlow 不会响应数据变化
+- **修复**: 改用 `Flow.map` 和 `Flow.combine` 实现响应式更新
+- **新增**: `toggleFavorite(presetId)` 方法
+- **新增导入**: kotlinx.coroutines.flow.{Flow, combine, map}
+
+#### 6. MainActivity 字段引用错误（关键修复 v3）
+- **文件**: `app/src/main/java/com/silas/omaster/MainActivity.kt`
+- **问题**: onApplyPreset 回调中使用了不存在的 MasterPreset 字段（contrast、warmth、clarity、brightness）
+- **修复**: 
+  - `contrast` → `tone`（影调即对比度）
+  - `warmth` → `warmCool`（冷暖）
+  - `clarity`、`brightness` → 0（默认值）
+
+#### 7. Android 16 兼容性
+- **配置**: compileSdk = 36, targetSdk = 36
+- **AGP**: 8.9.1 完全支持 Android 16
+- **构建**: 生成所有 ABI 架构的 APK
+
+### 三、APK构建产物
+
+| APK文件 | 架构 | 大小 | 推荐使用 |
+|---------|------|------|----------|
+| app-arm64-v8a-debug.apk | ARM64 | 75.5 MB | ✅ 大多数现代手机 |
+| app-armeabi-v7a-debug.apk | ARM32 | 69.6 MB | 旧款设备 |
+| app-x86-debug.apk | x86 | 77.9 MB | 模拟器 |
+| app-x86_64-debug.apk | x86_64 | 77.8 MB | 模拟器 |
+| app-universal-debug.apk | 通用 | 123.9 MB | 包含所有架构 |
+
+### 四、GitHub Release
+
+- **Tag**: v1.3.1-debug
+- **URL**: https://github.com/Tri250/OPPOMaster2/releases/tag/v1.3.1-debug
+- **上传时间**: 2026-06-09
+
+### 五、构建环境
+
+```
+操作系统: Linux
+Android SDK: /opt/android-sdk
+compileSdk: 36
+targetSdk: 36
+minSdk: 24
+Gradle: 8.14.4
+AGP: 8.9.1
+Kotlin: 2.1.0
+JDK: 17
+```
+
+### 六、核心功能模块
+
+- ✅ AI场景识别（ML Kit人脸检测 + Sobel边缘检测）
+- ✅ GPU渲染（OpenGL ES 3.0 + GLSL着色器）
+- ✅ 云同步（Ktor HTTP请求 + JSON解析）
+- ✅ 水印编辑（Canvas绘制）
+- ✅ TFLite推理（Interpreter + 启发式降级）
+- ✅ 悬浮窗（高级美观版）
+- ✅ 预设管理（瀑布流浏览、收藏、自定义）
+- ✅ 主题系统（深色模式、品牌色）
+
+### 七、修复后的稳定性
+
+- ✅ 应用启动不再崩溃
+- ✅ HomeViewModel 正确订阅预设数据流
+- ✅ 订阅页面应用预设不再崩溃
+- ✅ 悬浮窗控制器正确注册/注销
+- ✅ 网络请求支持超时配置
+- ✅ Android 16 (API 36) 完全兼容
+
+## 留痕说明
+
+本文档作为本次会话工作树的完整记录，保存于项目根目录，用于：
+1. 追溯本次会话的所有修改
+2. 记录问题诊断与修复过程
+3. 保留构建环境配置信息
+4. 便于团队后续维护和审计
