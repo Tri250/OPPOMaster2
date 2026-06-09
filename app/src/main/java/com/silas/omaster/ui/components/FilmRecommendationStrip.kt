@@ -16,6 +16,7 @@ import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.model.FilmPreset
+import com.silas.omaster.model.FilmSeries
 import com.silas.omaster.ui.theme.*
 
 /**

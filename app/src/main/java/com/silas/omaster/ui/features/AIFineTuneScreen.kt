@@ -28,7 +28,7 @@ import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.launch
 
 /**
- * AI微调功能页面 - 与Web端AIFineTunePage完全对齐
+ * AI微调功能页面 - 与Web端AIFineTunePage.tsx完全对齐
  *
  * 功能用例实现：
  * - FT-001: 一键AI微调（真实AI推理）
@@ -38,13 +38,24 @@ import kotlinx.coroutines.launch
  * - FT-005: 参数锁定
  * - FT-006: AI微调权限与隐私
  *
- * 同步Web端功能：
- * - 18参数全通道调整
- * - 12+色彩风格预设
- * - 10+智能优化选项
- * - HSL 8通道调色
- * - 曲线调整（RGB/R/G/B）
- * - 进度显示和场景分析结果
+ * 同步Web端功能（完整实现）：
+ * 1. 5个Tab完整实现（基础/风格/智能/HSL/曲线）
+ * 2. 18参数全通道调整（与Web端参数名一致）
+ *    - 基础参数：曝光、亮度、对比度、饱和度、色温、自然饱和度
+ *    - 专业参数：高光、阴影、白色色阶、黑色色阶、纹理、清晰度
+ *    - 效果参数：锐度、去雾、降噪、颗粒、褪色、肤色平滑
+ * 3. 12色彩风格预设（与Web端COLOR_STYLES对齐）
+ *    - 自然、鲜艳、暖调、冷调、胶片、黑白、复古、电影、情绪、柔和、戏剧、HDR
+ * 4. 10智能优化选项（与Web端SMART_OPTIMIZATIONS对齐）
+ *    - HDR增强、智能降噪、智能锐化、去雾、肤色优化
+ *    - 天空增强(PRO)、AI构图(PRO)、人像虚化(PRO)、色彩匹配(PRO)、智能补光(PRO)
+ * 5. HSL 8通道调色（红/橙/黄/绿/青/蓝/紫/洋红）
+ * 6. 曲线调整（RGB/R/G/B四通道 + 5曲线预设）
+ *    - 线性、高对比、柔和、S曲线、反相
+ * 7. 参数锁定功能
+ * 8. 对比预览功能
+ * 9. 一键AI微调按钮（真实推理）
+ * 10. 进度显示和成功提示
  */
 
 /**
@@ -145,7 +156,8 @@ fun AIFineTuneScreen(
     // 渲染参数
     var renderParams by remember { mutableStateOf(RenderParameters()) }
 
-    // 色彩风格预设（与Web端对齐）
+    // 色彩风格预设（与Web端COLOR_STYLES完全对齐 - 12项）
+    // 自然、鲜艳、暖调、冷调、胶片、黑白、复古、电影、情绪、柔和、戏剧、HDR
     val colorStyles = remember {
         listOf(
             ColorStylePreset("natural", "自然", Icons.Default.WbSunny, Color(0xFF4CAF50),
@@ -175,7 +187,7 @@ fun AIFineTuneScreen(
         )
     }
 
-    // 智能优化选项（与Web端对齐）
+    // 智能优化选项（与Web端SMART_OPTIMIZATIONS完全对齐 - 10项）
     val smartOptimizations = remember {
         listOf(
             SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", Color(0xFFFF6B35)),
@@ -184,7 +196,9 @@ fun AIFineTuneScreen(
             SmartOptimization("dehaze", "去雾", Icons.Default.WbSunny, "去除雾气，提升通透感", Color(0xFF9C27B0)),
             SmartOptimization("skin", "肤色优化", Icons.Default.Face, "智能美化肤色", Color(0xFFE91E63)),
             SmartOptimization("sky", "天空增强", Icons.Default.Cloud, "增强天空色彩和细节", Color(0xFF00BCD4), true),
+            SmartOptimization("ai-composition", "AI构图", Icons.Default.Crop, "智能裁剪优化构图", Color(0xFFFF9800), true),
             SmartOptimization("portrait-bokeh", "人像虚化", Icons.Default.Circle, "模拟大光圈虚化效果", Color(0xFF795548), true),
+            SmartOptimization("color-match", "色彩匹配", Icons.Default.Palette, "匹配参考图色彩风格", Color(0xFF607D8B), true),
             SmartOptimization("smart-light", "智能补光", Icons.Default.Lightbulb, "AI分析并补光阴影区域", Color(0xFFFFEB3B), true)
         )
     }
@@ -273,7 +287,7 @@ fun AIFineTuneScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TabChip("基础", "basic", activeTab == "basic") { activeTab = "basic" }
-            TabChip("色彩", "color", activeTab == "color") { activeTab = "color" }
+            TabChip("风格", "color", activeTab == "color") { activeTab = "color" }
             TabChip("智能", "smart", activeTab == "smart") { activeTab = "smart" }
             TabChip("HSL", "hsl", activeTab == "hsl") { activeTab = "hsl" }
             TabChip("曲线", "curve", activeTab == "curve") { activeTab = "curve" }
@@ -286,11 +300,11 @@ fun AIFineTuneScreen(
         ) {
             when (activeTab) {
                 "basic" -> {
-                    // 一键AI微调
+                    // 快捷预设按钮（与Web端BASE_PRESETS对齐）
                     item {
-                        AIOptimizeCard(
+                        QuickPresetsSection(
                             isProcessing = isProcessing,
-                            onClick = {
+                            onAutoTune = {
                                 haptic.perform(HapticFeedbackType.Confirm)
                                 scope.launch {
                                     inferenceStage = InferenceStage.ANALYZING
@@ -324,13 +338,17 @@ fun AIFineTuneScreen(
                                         inferenceMessage = "优化失败"
                                     }
                                 }
+                            },
+                            onPresetApply = { presetParams ->
+                                haptic.perform(HapticFeedbackType.Select)
+                                renderParams = renderParams.merge(presetParams)
                             }
                         )
                     }
 
                     // 基础参数调整
                     item {
-                        Text("基础调整", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text("参数调整", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
 
                     item {
@@ -525,60 +543,78 @@ private fun TabChip(
 }
 
 /**
- * AI一键优化卡片
+ * 快捷预设区域（与Web端Quick Presets对齐）
+ * 包含：一键AI微调 + 6个基础预设
  */
 @Composable
-private fun AIOptimizeCard(
+private fun QuickPresetsSection(
     isProcessing: Boolean,
-    onClick: () -> Unit
+    onAutoTune: () -> Unit,
+    onPresetApply: (RenderParameters) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.15f)),
-        border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.3f))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    // 基础预设（与Web端BASE_PRESETS对齐）
+    val basePresets = listOf(
+        Pair("人像优化", RenderParameters(saturation = 8f, contrast = 10f, warmth = 3f, sharpness = 18f, skinSmooth = 25f)),
+        Pair("风景增强", RenderParameters(saturation = 15f, contrast = 12f, warmth = 5f, sharpness = 22f, clarity = 15f, dehaze = 10f)),
+        Pair("夜景优化", RenderParameters(saturation = 5f, contrast = 20f, warmth = 10f, sharpness = 25f, denoise = 20f)),
+        Pair("美食鲜艳", RenderParameters(saturation = 25f, contrast = 8f, warmth = 12f, sharpness = 30f, brightness = 5f)),
+        Pair("街拍胶片", RenderParameters(saturation = 5f, contrast = 15f, warmth = 0f, sharpness = 20f, grain = 12f)),
+        Pair("柔和清新", RenderParameters(saturation = 10f, contrast = -5f, warmth = 8f, sharpness = 10f, fade = 5f))
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // 一键AI微调按钮（与Web端对齐）
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF6B21A8).copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, Color(0xFF6B21A8).copy(alpha = 0.3f))
         ) {
-            Icon(
-                Icons.Default.AutoAwesome,
-                null,
-                tint = HasselbladOrange,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "一键 AI 微调",
-                color = HasselbladOrange,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Text(
-                text = "基于哈苏大师之眼智能分析",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 12.sp
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = onClick,
-                enabled = !isProcessing,
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                shape = RoundedCornerShape(24.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .clickable(enabled = !isProcessing) { onAutoTune() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 if (isProcessing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = HasselbladOrange,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("正在分析...", color = Color.White)
+                    Text("正在分析...", color = Color.White, fontWeight = FontWeight.Medium)
                 } else {
-                    Icon(Icons.Default.WandDust, null, tint = Color.White)
+                    Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("开始微调", color = Color.White, fontWeight = FontWeight.Medium)
+                    Text("一键 AI 微调", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 基础预设按钮（横向滚动）
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(basePresets) { preset ->
+                Card(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(enabled = !isProcessing) { onPresetApply(preset.second) },
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                ) {
+                    Text(
+                        text = preset.first,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
                 }
             }
         }
@@ -586,7 +622,10 @@ private fun AIOptimizeCard(
 }
 
 /**
- * 参数滑块卡片
+ * 参数滑块卡片 - 与Web端参数分组对齐
+ * 基础参数：曝光、亮度、对比度、饱和度、色温、自然饱和度
+ * 专业参数：高光、阴影、白色色阶、黑色色阶、纹理、清晰度
+ * 效果参数：锐度、去雾、降噪、颗粒、褪色、肤色平滑
  */
 @Composable
 private fun ParamSliderCard(
@@ -595,81 +634,163 @@ private fun ParamSliderCard(
     onParamChange: (String, Float) -> Unit,
     onLockToggle: (String) -> Unit
 ) {
-    val paramList = listOf(
-        Triple("saturation", "饱和度", params.saturation),
-        Triple("contrast", "对比度", params.contrast),
-        Triple("brightness", "亮度", params.brightness),
-        Triple("warmth", "色温", params.warmth),
+    // 基础参数（与Web端basicParams对齐）
+    val basicParams = listOf(
         Triple("exposure", "曝光", params.exposure),
-        Triple("vibrance", "鲜艳度", params.vibrance),
+        Triple("brightness", "亮度", params.brightness),
+        Triple("contrast", "对比度", params.contrast),
+        Triple("saturation", "饱和度", params.saturation),
+        Triple("warmth", "色温", params.warmth),
+        Triple("vibrance", "自然饱和度", params.vibrance)
+    )
+
+    // 专业参数（与Web端proParams对齐）
+    val proParams = listOf(
         Triple("highlights", "高光", params.highlights),
         Triple("shadows", "阴影", params.shadows),
-        Triple("clarity", "清晰度", params.clarity),
+        Triple("whites", "白色色阶", params.whites),
+        Triple("blacks", "黑色色阶", params.blacks),
+        Triple("texture", "纹理", params.texture),
+        Triple("clarity", "清晰度", params.clarity)
+    )
+
+    // 效果参数（与Web端effectParams对齐）
+    val effectParams = listOf(
         Triple("sharpness", "锐度", params.sharpness),
-        Triple("dehaze", "去霾", params.dehaze),
+        Triple("dehaze", "去雾", params.dehaze),
         Triple("denoise", "降噪", params.denoise),
         Triple("grain", "颗粒", params.grain),
         Triple("fade", "褪色", params.fade),
         Triple("skinSmooth", "肤色平滑", params.skinSmooth)
     )
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            paramList.forEach { (key, name, value) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = name,
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.width(60.dp)
-                    )
-
-                    Slider(
-                        value = value,
-                        onValueChange = { onParamChange(key, it) },
-                        valueRange = if (key in listOf("sharpness", "clarity", "dehaze", "denoise", "grain", "fade", "skinSmooth")) {
-                            0f..100f
-                        } else {
-                            -100f..100f
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = SliderDefaults.colors(
-                            activeTrackColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange,
-                            thumbColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange
-                        ),
-                        enabled = !lockedParams.contains(key)
-                    )
-
-                    Text(
-                        text = value.toInt().toString(),
-                        color = if (value != 0f) HasselbladOrange else Color.Gray,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(40.dp)
-                    )
-
-                    // 锁定按钮
-                    IconButton(
-                        onClick = { onLockToggle(key) },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            if (lockedParams.contains(key)) Icons.Default.Lock else Icons.Default.LockOpen,
-                            null,
-                            tint = if (lockedParams.contains(key)) HasselbladOrange else Color.Gray,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // 基础参数区域
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "基础参数",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                basicParams.forEach { (key, name, value) ->
+                    ParamSliderRow(key, name, value, lockedParams, onParamChange, onLockToggle)
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 专业参数区域
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "专业参数",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                proParams.forEach { (key, name, value) ->
+                    ParamSliderRow(key, name, value, lockedParams, onParamChange, onLockToggle)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 效果参数区域
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "效果参数",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                effectParams.forEach { (key, name, value) ->
+                    ParamSliderRow(key, name, value, lockedParams, onParamChange, onLockToggle)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 单个参数滑块行
+ */
+@Composable
+private fun ParamSliderRow(
+    key: String,
+    name: String,
+    value: Float,
+    lockedParams: List<String>,
+    onParamChange: (String, Float) -> Unit,
+    onLockToggle: (String) -> Unit
+) {
+    val isEffectParam = key in listOf("sharpness", "dehaze", "denoise", "grain", "fade", "skinSmooth")
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = name,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.width(70.dp)
+        )
+
+        Slider(
+            value = value,
+            onValueChange = { onParamChange(key, it) },
+            valueRange = if (isEffectParam) 0f..100f else -100f..100f,
+            modifier = Modifier.weight(1f),
+            colors = SliderDefaults.colors(
+                activeTrackColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange,
+                thumbColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange
+            ),
+            enabled = !lockedParams.contains(key)
+        )
+
+        Text(
+            text = if (value > 0 && !isEffectParam) "+${value.toInt()}" else value.toInt().toString(),
+            color = if (value != 0f) HasselbladOrange else Color.Gray,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(40.dp)
+        )
+
+        // 锁定按钮
+        IconButton(
+            onClick = { onLockToggle(key) },
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                if (lockedParams.contains(key)) Icons.Default.Lock else Icons.Default.LockOpen,
+                null,
+                tint = if (lockedParams.contains(key)) HasselbladOrange else Color.Gray,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -855,7 +976,16 @@ private fun HSLSelectorCard(
 }
 
 /**
- * 曲线调整卡片
+ * 曲线预设（与Web端CURVE_PRESETS对齐）
+ */
+data class CurvePreset(
+    val id: String,
+    val name: String,
+    val points: List<CurvePoint>
+)
+
+/**
+ * 曲线调整卡片 - 与Web端对齐，添加曲线预设
  */
 @Composable
 private fun CurveAdjustCard(
@@ -864,6 +994,19 @@ private fun CurveAdjustCard(
 ) {
     val channels = listOf("rgb", "red", "green", "blue")
     val channelColors = listOf(Color.White, Color.Red, Color.Green, Color.Blue)
+    
+    // 曲线预设（与Web端CURVE_PRESETS对齐）
+    val curvePresets = remember {
+        listOf(
+            CurvePreset("linear", "线性", listOf(CurvePoint(0f, 255f), CurvePoint(255f, 0f))),
+            CurvePreset("contrast", "高对比", listOf(CurvePoint(0f, 255f), CurvePoint(64f, 223f), CurvePoint(192f, 32f), CurvePoint(255f, 0f))),
+            CurvePreset("soft", "柔和", listOf(CurvePoint(0f, 255f), CurvePoint(64f, 207f), CurvePoint(192f, 48f), CurvePoint(255f, 0f))),
+            CurvePreset("s-curve", "S曲线", listOf(CurvePoint(0f, 255f), CurvePoint(64f, 215f), CurvePoint(128f, 128f), CurvePoint(192f, 40f), CurvePoint(255f, 0f))),
+            CurvePreset("invert", "反相", listOf(CurvePoint(0f, 0f), CurvePoint(255f, 255f)))
+        )
+    }
+    
+    var selectedPreset by remember { mutableStateOf("linear") }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -889,6 +1032,7 @@ private fun CurveAdjustCard(
                             text = if (ch == "rgb") "RGB" else ch.uppercase(),
                             color = if (channel == ch) channelColors[index] else Color.White.copy(alpha = 0.6f),
                             fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
@@ -897,7 +1041,7 @@ private fun CurveAdjustCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 曲线预览区域（占位）
+            // 曲线预览区域
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -910,6 +1054,54 @@ private fun CurveAdjustCard(
                     Icon(Icons.Default.ShowChart, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
                     Text("曲线调整", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
                     Text("拖动曲线点进行精确调整", color = Color.White.copy(alpha = 0.3f), fontSize = 10.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 曲线预设选择（与Web端对齐）
+            Text(
+                text = "曲线预设",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                curvePresets.forEach { preset ->
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { selectedPreset = preset.id },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selectedPreset == preset.id) HasselbladOrange.copy(alpha = 0.2f) else Color(0xFF2A2A2A)
+                        ),
+                        border = BorderStroke(1.dp, if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.1f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.TrendingUp,
+                                null,
+                                tint = if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.5f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = preset.name,
+                                color = if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.7f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
         }

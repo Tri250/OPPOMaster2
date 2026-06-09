@@ -29,20 +29,207 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
-import com.silas.omaster.util.*
-import com.silas.omaster.watermark.*
 import kotlinx.coroutines.*
 import java.io.*
 import kotlin.math.*
+
+// ========== 模板分类 ==========
+enum class WatermarkCategory(
+    val id: String,
+    val displayName: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    ALL("all", "全部", Icons.Default.Apps),
+    BRAND("brand", "品牌", Icons.Default.Star),
+    MINIMAL("minimal", "极简", Icons.Default.Minimize),
+    TECH("tech", "技术", Icons.Default.Settings),
+    INFO("info", "信息", Icons.Default.Info),
+    PERSONAL("personal", "个人", Icons.Default.Person),
+    SOCIAL("social", "社交", Icons.Default.AlternateEmail),
+    LEGAL("legal", "法律", Icons.Default.Copyright),
+    BADGE("badge", "徽章", Icons.Default.EmojiEvents),
+    PRO("pro", "专业", Icons.Default.AutoAwesome)
+}
+
+// ========== 水印模板 ==========
+data class WatermarkTemplate(
+    val id: String,
+    val name: String,
+    val category: WatermarkCategory,
+    val showBrand: Boolean = true,
+    val showModel: Boolean = true,
+    val showParams: Boolean = true,
+    val showDate: Boolean = true,
+    val showLocation: Boolean = false,
+    val showPhotographer: Boolean = false,
+    val brandText: String = "OMaster",
+    val defaultPosition: WatermarkPlacement = WatermarkPlacement.BOTTOM_LEFT,
+    val defaultFontSize: Float = 14f,
+    val defaultLetterSpacing: Float = 0f,
+    val isBold: Boolean = false
+)
+
+// 模板列表（与Web端同步）
+val WATERMARK_TEMPLATES = listOf(
+    WatermarkTemplate(
+        id = "classic",
+        name = "经典相机",
+        category = WatermarkCategory.BRAND,
+        brandText = "OMaster",
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT
+    ),
+    WatermarkTemplate(
+        id = "hasselblad",
+        name = "哈苏大师",
+        category = WatermarkCategory.BRAND,
+        brandText = "HASSELBLAD",
+        defaultPosition = WatermarkPlacement.BOTTOM_CENTER,
+        defaultLetterSpacing = 2f,
+        isBold = true
+    ),
+    WatermarkTemplate(
+        id = "leica",
+        name = "徕卡风格",
+        category = WatermarkCategory.BRAND,
+        brandText = "Leica",
+        defaultPosition = WatermarkPlacement.BOTTOM_RIGHT,
+        defaultLetterSpacing = 3f,
+        isBold = true
+    ),
+    WatermarkTemplate(
+        id = "minimal",
+        name = "极简风格",
+        category = WatermarkCategory.MINIMAL,
+        showModel = false,
+        showParams = false,
+        showDate = false,
+        brandText = "OM",
+        defaultPosition = WatermarkPlacement.BOTTOM_RIGHT,
+        defaultFontSize = 20f,
+        isBold = true
+    ),
+    WatermarkTemplate(
+        id = "detailed",
+        name = "详细参数",
+        category = WatermarkCategory.TECH,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT
+    ),
+    WatermarkTemplate(
+        id = "location",
+        name = "地理位置",
+        category = WatermarkCategory.INFO,
+        showLocation = true,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT
+    ),
+    WatermarkTemplate(
+        id = "signature",
+        name = "摄影师签名",
+        category = WatermarkCategory.PERSONAL,
+        showPhotographer = true,
+        showBrand = false,
+        showModel = false,
+        showParams = false,
+        defaultPosition = WatermarkPlacement.BOTTOM_RIGHT
+    ),
+    WatermarkTemplate(
+        id = "social",
+        name = "社交媒体",
+        category = WatermarkCategory.SOCIAL,
+        showBrand = false,
+        showModel = false,
+        showParams = false,
+        showDate = false,
+        brandText = "@omaster",
+        defaultPosition = WatermarkPlacement.BOTTOM_CENTER
+    ),
+    WatermarkTemplate(
+        id = "timestamp",
+        name = "时间戳",
+        category = WatermarkCategory.INFO,
+        showBrand = false,
+        showModel = false,
+        showParams = false,
+        defaultPosition = WatermarkPlacement.TOP_RIGHT
+    ),
+    WatermarkTemplate(
+        id = "copyright",
+        name = "版权声明",
+        category = WatermarkCategory.LEGAL,
+        showBrand = false,
+        showModel = false,
+        showParams = false,
+        brandText = "© 2024 OMaster",
+        defaultPosition = WatermarkPlacement.BOTTOM_CENTER
+    ),
+    WatermarkTemplate(
+        id = "award",
+        name = "获奖作品",
+        category = WatermarkCategory.BADGE,
+        showBrand = false,
+        showModel = false,
+        showParams = false,
+        showDate = false,
+        brandText = "Award Winning",
+        defaultPosition = WatermarkPlacement.TOP_LEFT
+    ),
+    WatermarkTemplate(
+        id = "exif",
+        name = "EXIF信息",
+        category = WatermarkCategory.TECH,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT,
+        defaultFontSize = 11f
+    ),
+    WatermarkTemplate(
+        id = "logo",
+        name = "品牌Logo",
+        category = WatermarkCategory.BRAND,
+        showModel = false,
+        showParams = false,
+        showDate = false,
+        defaultPosition = WatermarkPlacement.BOTTOM_RIGHT
+    ),
+    WatermarkTemplate(
+        id = "watermark_pro",
+        name = "专业防伪",
+        category = WatermarkCategory.PRO,
+        showBrand = false,
+        showModel = false,
+        showParams = false,
+        showDate = false,
+        brandText = "PROTECTED",
+        defaultPosition = WatermarkPlacement.CENTER,
+        defaultLetterSpacing = 4f
+    ),
+    WatermarkTemplate(
+        id = "custom",
+        name = "自定义",
+        category = WatermarkCategory.ALL,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT
+    )
+)
+
+// ========== 字体选项 ==========
+enum class FontOption(
+    val id: String,
+    val displayName: String,
+    val fontFamily: androidx.compose.ui.text.font.FontFamily
+) {
+    DEFAULT("default", "默认", FontFamily.Default),
+    SERIF("serif", "衬线", FontFamily.Serif),
+    MONOSPACE("mono", "等宽", FontFamily.Monospace),
+    SANS_SERIF("sans", "无衬线", FontFamily.SansSerif),
+    CURSIVE("cursive", "手写", FontFamily.Cursive)
+}
 
 /**
  * 水印编辑器独立页面
  * 
  * 功能特性：
  * - 实时预览区（Canvas渲染）
- * - 水印模板分类和选择
- * - 水印元素开关和编辑
- * - 位置网格和样式调节
+ * - 水印模板分类和选择（10个分类，15+模板）
+ * - 水印元素开关和编辑（品牌/设备/参数/时间/位置/摄影师）
+ * - 位置网格选择（7宫格）
+ * - 样式调节（字体/字号/颜色/阴影/边距/字间距/背景）
  * - EXIF自动填充
  * - 智能颜色适配
  * - 手势缩放拖拽
@@ -59,7 +246,7 @@ fun WatermarkEditorScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
-    // 图片选择器（使用新版 Photo Picker）
+    // 图片选择器
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -107,8 +294,8 @@ fun WatermarkEditorScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     // 水印配置
-    var selectedCategory by remember { mutableStateOf("全部") }
-    var selectedTemplateId by remember { mutableStateOf("hasselblad_classic") }
+    var selectedCategory by remember { mutableStateOf(WatermarkCategory.ALL) }
+    var selectedTemplate by remember { mutableStateOf(WATERMARK_TEMPLATES[0]) }
     var watermarkConfig by remember { mutableStateOf(WatermarkConfig()) }
 
     // 元素开关
@@ -116,23 +303,31 @@ fun WatermarkEditorScreen(
     var showModel by remember { mutableStateOf(true) }
     var showParams by remember { mutableStateOf(true) }
     var showDate by remember { mutableStateOf(true) }
+    var showLocation by remember { mutableStateOf(false) }
+    var showPhotographer by remember { mutableStateOf(false) }
     var showVignette by remember { mutableStateOf(false) }
 
     // 元素文本
-    var brandText by remember { mutableStateOf("HASSELBLAD") }
+    var brandText by remember { mutableStateOf("OMaster") }
     var modelText by remember { mutableStateOf("OPPO Find X8 Pro") }
     var paramsText by remember { mutableStateOf("f/1.8 1/125 ISO100") }
     var dateText by remember { mutableStateOf("2026-06-09") }
+    var locationText by remember { mutableStateOf("北京市朝阳区") }
+    var photographerText by remember { mutableStateOf("摄影师") }
 
     // 样式参数
-    var selectedPosition by remember { mutableStateOf(WatermarkPosition.BOTTOM_LEFT) }
-    var selectedFont by remember { mutableStateOf("默认") }
+    var selectedPosition by remember { mutableStateOf(WatermarkPlacement.BOTTOM_LEFT) }
+    var selectedFont by remember { mutableStateOf(FontOption.DEFAULT) }
     var selectedColor by remember { mutableStateOf(Color.White) }
     var textSize by remember { mutableFloatStateOf(14f) }
     var opacity by remember { mutableFloatStateOf(0.8f) }
     var rotation by remember { mutableFloatStateOf(0f) }
     var shadowEnabled by remember { mutableStateOf(true) }
     var shadowBlur by remember { mutableFloatStateOf(4f) }
+    var padding by remember { mutableFloatStateOf(20f) }
+    var letterSpacing by remember { mutableFloatStateOf(0f) }
+    var fontWeight by remember { mutableStateOf(FontWeight.Normal) }
+    var bgOpacity by remember { mutableFloatStateOf(0f) }
 
     // 智能颜色推荐
     var recommendedColor by remember { mutableStateOf(Color.White) }
@@ -141,6 +336,9 @@ fun WatermarkEditorScreen(
     var watermarkOffset by remember { mutableStateOf(Offset.Zero) }
     var watermarkScale by remember { mutableFloatStateOf(1f) }
 
+    // 搜索
+    var searchQuery by remember { mutableStateOf("") }
+
     // ========== 初始化加载图片 ==========
     LaunchedEffect(imagePath) {
         isLoading = true
@@ -148,12 +346,10 @@ fun WatermarkEditorScreen(
             val bitmap = if (imagePath != null) {
                 BitmapFactory.decodeFile(imagePath)
             } else {
-                // 使用默认示例图片
                 null
             }
             originalBitmap = bitmap
 
-            // 从EXIF自动填充
             if (imagePath != null) {
                 extractExifData(imagePath).let { exif ->
                     modelText = exif.model ?: modelText
@@ -162,7 +358,6 @@ fun WatermarkEditorScreen(
                 }
             }
 
-            // 智能颜色适配
             if (bitmap != null) {
                 recommendedColor = analyzeDominantColor(bitmap)
             }
@@ -174,10 +369,11 @@ fun WatermarkEditorScreen(
 
     // ========== 实时预览更新 ==========
     LaunchedEffect(
-        isWatermarkEnabled, showBrand, showModel, showParams, showDate, showVignette,
-        brandText, modelText, paramsText, dateText,
+        isWatermarkEnabled, showBrand, showModel, showParams, showDate, showLocation, showPhotographer, showVignette,
+        brandText, modelText, paramsText, dateText, locationText, photographerText,
         selectedPosition, selectedColor, textSize, opacity, rotation,
-        shadowEnabled, shadowBlur, watermarkOffset, watermarkScale
+        shadowEnabled, shadowBlur, padding, letterSpacing, fontWeight, bgOpacity,
+        watermarkOffset, watermarkScale
     ) {
         originalBitmap?.let { bitmap ->
             previewBitmap = renderWatermarkPreview(
@@ -188,11 +384,15 @@ fun WatermarkEditorScreen(
                     showModel = showModel,
                     showParams = showParams,
                     showDate = showDate,
+                    showLocation = showLocation,
+                    showPhotographer = showPhotographer,
                     showVignette = showVignette,
                     brandText = brandText,
                     modelText = modelText,
                     paramsText = paramsText,
                     dateText = dateText,
+                    locationText = locationText,
+                    photographerText = photographerText,
                     position = selectedPosition,
                     textColor = selectedColor,
                     textSize = textSize,
@@ -200,10 +400,23 @@ fun WatermarkEditorScreen(
                     rotation = rotation,
                     shadowEnabled = shadowEnabled,
                     shadowBlur = shadowBlur,
+                    padding = padding,
+                    letterSpacing = letterSpacing,
+                    fontWeight = fontWeight,
+                    bgOpacity = bgOpacity,
                     offset = watermarkOffset,
                     scale = watermarkScale
                 )
             )
+        }
+    }
+
+    // 过滤模板
+    val filteredTemplates = remember(selectedCategory, searchQuery) {
+        WATERMARK_TEMPLATES.filter { template ->
+            val categoryMatch = selectedCategory == WatermarkCategory.ALL || template.category == selectedCategory
+            val searchMatch = searchQuery.isBlank() || template.name.contains(searchQuery, ignoreCase = true)
+            categoryMatch && searchMatch
         }
     }
 
@@ -215,7 +428,16 @@ fun WatermarkEditorScreen(
     ) {
         // TopAppBar
         TopAppBar(
-            title = { Text("哈苏大师印记", fontWeight = FontWeight.Bold) },
+            title = { 
+                Column {
+                    Text("水印编辑器", fontWeight = FontWeight.Bold)
+                    Text(
+                        "${WATERMARK_TEMPLATES.size}+模板",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+            },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.ToggleOff)
@@ -225,6 +447,10 @@ fun WatermarkEditorScreen(
                 }
             },
             actions = {
+                // 图层按钮
+                IconButton(onClick = { /* 图层管理 */ }) {
+                    Icon(Icons.Default.Layers, "图层", tint = Color.White.copy(alpha = 0.5f))
+                }
                 // 预览按钮
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.Select)
@@ -233,15 +459,15 @@ fun WatermarkEditorScreen(
                     Icon(
                         if (showBeforeAfter) Icons.Default.Compare else Icons.Default.Visibility,
                         "预览对比",
-                        tint = if (showBeforeAfter) HasselbladOrange else Color.White
+                        tint = if (showBeforeAfter) CyanAccent else Color.White.copy(alpha = 0.5f)
                     )
                 }
-                // 保存按钮
+                // 导出按钮
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.Confirm)
-                    onSave(watermarkConfig)
+                    previewBitmap?.let { onExport(it, watermarkConfig) }
                 }) {
-                    Icon(Icons.Default.Save, "保存", tint = Color.White)
+                    Icon(Icons.Default.Download, "导出", tint = CyanAccent)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -260,7 +486,7 @@ fun WatermarkEditorScreen(
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = HasselbladOrange
+                    color = CyanAccent
                 )
             } else if (previewBitmap != null) {
                 // 预览Canvas（支持手势操作）
@@ -297,12 +523,12 @@ fun WatermarkEditorScreen(
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = HasselbladOrange
+                            checkedTrackColor = CyanAccent
                         )
                     )
                 }
 
-                // Before/After对比按钮
+                // 对比按钮
                 if (originalBitmap != null && previewBitmap != null) {
                     Button(
                         onClick = {
@@ -313,7 +539,7 @@ fun WatermarkEditorScreen(
                             .align(Alignment.BottomCenter)
                             .padding(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (showBeforeAfter) HasselbladOrange else Color(0xFF2A2A2A)
+                            containerColor = if (showBeforeAfter) CyanAccent else Color(0xFF2A2A2A)
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -350,7 +576,6 @@ fun WatermarkEditorScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
-                            // 打开新版图片选择器（Photo Picker）
                             haptic.perform(HapticFeedbackType.Select)
                             imagePickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
@@ -358,7 +583,7 @@ fun WatermarkEditorScreen(
                                 )
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                     ) {
                         Icon(Icons.Default.Add, null)
                         Spacer(modifier = Modifier.width(4.dp))
@@ -387,23 +612,55 @@ fun WatermarkEditorScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 印记风格模板横滑
-            WatermarkTemplateSlider(
-                selectedTemplateId = selectedTemplateId,
-                onTemplateSelected = { templateId ->
+            // 搜索框
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 模板网格选择
+            WatermarkTemplateGrid(
+                templates = filteredTemplates,
+                selectedTemplate = selectedTemplate,
+                onTemplateSelected = { template ->
                     haptic.perform(HapticFeedbackType.Select)
-                    selectedTemplateId = templateId
-                    // 应用模板预设配置
-                    applyTemplateConfig(templateId).let { config ->
-                        showBrand = config.showBrand
-                        showModel = config.showModel
-                        showParams = config.showParams
-                        showDate = config.showDate
-                        brandText = config.brandText
-                        selectedPosition = config.position
-                        selectedColor = config.textColor
-                    }
+                    selectedTemplate = template
+                    // 应用模板配置
+                    showBrand = template.showBrand
+                    showModel = template.showModel
+                    showParams = template.showParams
+                    showDate = template.showDate
+                    showLocation = template.showLocation
+                    showPhotographer = template.showPhotographer
+                    brandText = template.brandText
+                    selectedPosition = template.defaultPosition
+                    textSize = template.defaultFontSize
+                    letterSpacing = template.defaultLetterSpacing
+                    fontWeight = if (template.isBold) FontWeight.Bold else FontWeight.Normal
                 }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 位置网格（7宫格）
+            WatermarkPositionGrid(
+                selectedPosition = selectedPosition,
+                onPositionSelected = { position ->
+                    haptic.perform(HapticFeedbackType.Select)
+                    selectedPosition = position
+                    watermarkOffset = Offset.Zero
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 自定义文字
+            CustomTextInput(
+                label = "自定义文字",
+                value = brandText,
+                onValueChange = { brandText = it }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -414,34 +671,30 @@ fun WatermarkEditorScreen(
                 showModel = showModel,
                 showParams = showParams,
                 showDate = showDate,
+                showLocation = showLocation,
+                showPhotographer = showPhotographer,
                 showVignette = showVignette,
                 brandText = brandText,
                 modelText = modelText,
                 paramsText = paramsText,
                 dateText = dateText,
+                locationText = locationText,
+                photographerText = photographerText,
                 vignetteStrength = watermarkConfig.vignetteStrength,
                 onToggleBrand = { showBrand = it },
                 onToggleModel = { showModel = it },
                 onToggleParams = { showParams = it },
                 onToggleDate = { showDate = it },
+                onToggleLocation = { showLocation = it },
+                onTogglePhotographer = { showPhotographer = it },
                 onToggleVignette = { showVignette = it },
                 onBrandTextChange = { brandText = it },
                 onModelTextChange = { modelText = it },
                 onParamsTextChange = { paramsText = it },
                 onDateTextChange = { dateText = it },
+                onLocationTextChange = { locationText = it },
+                onPhotographerTextChange = { photographerText = it },
                 onVignetteStrengthChange = { watermarkConfig = watermarkConfig.copy(vignetteStrength = it) }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 位置网格
-            WatermarkPositionGrid(
-                selectedPosition = selectedPosition,
-                onPositionSelected = { position ->
-                    haptic.perform(HapticFeedbackType.Select)
-                    selectedPosition = position
-                    watermarkOffset = Offset.Zero // 重置拖拽偏移
-                }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -456,13 +709,21 @@ fun WatermarkEditorScreen(
                 rotation = rotation,
                 shadowEnabled = shadowEnabled,
                 shadowBlur = shadowBlur,
+                padding = padding,
+                letterSpacing = letterSpacing,
+                fontWeight = fontWeight,
+                bgOpacity = bgOpacity,
                 onFontSelected = { selectedFont = it },
                 onColorSelected = { selectedColor = it },
                 onTextSizeChange = { textSize = it },
                 onOpacityChange = { opacity = it },
                 onRotationChange = { rotation = it },
                 onShadowToggle = { shadowEnabled = it },
-                onShadowBlurChange = { shadowBlur = it }
+                onShadowBlurChange = { shadowBlur = it },
+                onPaddingChange = { padding = it },
+                onLetterSpacingChange = { letterSpacing = it },
+                onFontWeightChange = { fontWeight = it },
+                onBgOpacityChange = { bgOpacity = it }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -472,39 +733,45 @@ fun WatermarkEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 另存为印记
+                // 重置默认
                 OutlinedButton(
                     onClick = {
                         haptic.perform(HapticFeedbackType.Confirm)
-                        onSave(watermarkConfig)
+                        brandText = "Shot on OMaster"
+                        selectedPosition = WatermarkPlacement.BOTTOM_LEFT
+                        textSize = 14f
+                        opacity = 0.8f
+                        rotation = 0f
+                        selectedColor = Color.White
+                        letterSpacing = 0f
+                        fontWeight = FontWeight.Normal
+                        bgOpacity = 0f
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = HasselbladOrange
+                        contentColor = CyanAccent
                     ),
-                    border = BorderStroke(1.dp, HasselbladOrange)
+                    border = BorderStroke(1.dp, CyanAccent)
                 ) {
-                    Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("另存为印记")
+                    Text("重置默认")
                 }
 
-                // 铭刻并导出
+                // 保存图片
                 Button(
                     onClick = {
                         haptic.perform(HapticFeedbackType.Confirm)
-                        previewBitmap?.let { bitmap ->
-                            onExport(bitmap, watermarkConfig)
-                        }
+                        previewBitmap?.let { onExport(it, watermarkConfig) }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                 ) {
-                    Icon(Icons.Default.Output, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("铭刻并导出")
+                    Text("保存图片")
                 }
             }
 
@@ -516,34 +783,40 @@ fun WatermarkEditorScreen(
 // ========== 子组件 ==========
 
 /**
- * 水印分类标签页
+ * 水印分类标签页（10个分类）
  */
 @Composable
 private fun WatermarkCategoryTabs(
-    selectedCategory: String,
-    onCategorySelected: (String) -> Unit
+    selectedCategory: WatermarkCategory,
+    onCategorySelected: (WatermarkCategory) -> Unit
 ) {
-    val categories = listOf("全部", "品牌", "极简", "技术", "个人", "社交")
-
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(categories) { category ->
+        items(WatermarkCategory.entries) { category ->
             val isSelected = category == selectedCategory
             val bgColor by animateColorAsState(
-                targetValue = if (isSelected) HasselbladOrange else Color(0xFF2A2A2A),
+                targetValue = if (isSelected) CyanAccent else Color(0xFF2A2A2A),
                 label = "bg"
             )
 
-            Box(
+            Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(bgColor)
                     .clickable { onCategorySelected(category) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                Icon(
+                    category.icon,
+                    null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
+                )
                 Text(
-                    text = category,
+                    text = category.displayName,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
@@ -554,95 +827,262 @@ private fun WatermarkCategoryTabs(
 }
 
 /**
- * 水印模板横滑选择器
+ * 搜索框
  */
 @Composable
-private fun WatermarkTemplateSlider(
-    selectedTemplateId: String,
-    onTemplateSelected: (String) -> Unit
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit
 ) {
-    val templates = listOf(
-        WatermarkTemplateItem("经典", "classic", "经典水印风格"),
-        WatermarkTemplateItem("哈苏", "hasselblad_classic", "哈苏大师印记"),
-        WatermarkTemplateItem("徕卡", "leica_style", "徕卡红点风格"),
-        WatermarkTemplateItem("极简", "minimal", "简约水印"),
-        WatermarkTemplateItem("详细", "detailed", "完整参数水印"),
-        WatermarkTemplateItem("地理", "geo", "带地理位置水印")
-    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1A1A1A))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Icon(
+            Icons.Default.Search,
+            null,
+            tint = Color.White.copy(alpha = 0.4f),
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            textStyle = TextStyle(
+                color = Color.White,
+                fontSize = 14.sp
+            ),
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp),
+            decorationBox = { innerTextField ->
+                if (query.isEmpty()) {
+                    Text(
+                        "搜索水印模板...",
+                        color = Color.White.copy(alpha = 0.4f),
+                        fontSize = 14.sp
+                    )
+                }
+                innerTextField()
+            }
+        )
+    }
+}
 
+/**
+ * 水印模板网格选择（4列）
+ */
+@Composable
+private fun WatermarkTemplateGrid(
+    templates: List<WatermarkTemplate>,
+    selectedTemplate: WatermarkTemplate,
+    onTemplateSelected: (WatermarkTemplate) -> Unit
+) {
     Column {
         Text(
-            text = "印记风格",
+            text = "水印模板 (${templates.size})",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f)
+            color = Color.White.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(templates) { template ->
-                WatermarkTemplateCard(
-                    template = template,
-                    isSelected = template.id == selectedTemplateId,
-                    onClick = { onTemplateSelected(template.id) }
-                )
+        // 使用普通网格布局避免嵌套滚动问题
+        val rows = templates.chunked(4)
+        rows.forEach { rowTemplates ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowTemplates.forEach { template ->
+                    WatermarkTemplateCard(
+                        template = template,
+                        isSelected = template.id == selectedTemplate.id,
+                        onClick = { onTemplateSelected(template) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // 填充空位
+                repeat(4 - rowTemplates.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
 private fun WatermarkTemplateCard(
-    template: WatermarkTemplateItem,
+    template: WatermarkTemplate,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) HasselbladOrange else Color.Transparent,
+        targetValue = if (isSelected) CyanAccent else Color.Transparent,
         label = "border"
     )
 
-    Card(
-        modifier = Modifier
-            .size(width = 80.dp, height = 100.dp)
-            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.15f) else Color(0xFF2A2A2A)
-        )
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isSelected) CyanAccent.copy(alpha = 0.15f) else Color(0xFF2A2A2A))
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
+        // 模板图标
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isSelected) CyanAccent.copy(alpha = 0.3f) else Color(0xFF3A3A3A))
         ) {
-            // 模板图标/预览
-            Box(
+            Icon(
+                template.category.icon,
+                null,
+                tint = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.5f),
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) HasselbladOrange.copy(alpha = 0.3f) else Color(0xFF3A3A3A))
-            ) {
-                Text(
-                    text = template.name.first().toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) HasselbladOrange else Color.White,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                    .align(Alignment.Center)
+                    .size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = template.name,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.7f),
+            maxLines = 1,
+            fontSize = 10.sp
+        )
+    }
+}
+
+/**
+ * 位置网格（7宫格，与Web端对齐）
+ */
+@Composable
+private fun WatermarkPositionGrid(
+    selectedPosition: WatermarkPlacement,
+    onPositionSelected: (WatermarkPlacement) -> Unit
+) {
+    // Web端7位置布局
+    val positions = listOf(
+        listOf(WatermarkPlacement.TOP_LEFT, WatermarkPlacement.TOP_CENTER, WatermarkPlacement.TOP_RIGHT),
+        listOf(null, WatermarkPlacement.CENTER, null),
+        listOf(WatermarkPlacement.BOTTOM_LEFT, WatermarkPlacement.BOTTOM_CENTER, WatermarkPlacement.BOTTOM_RIGHT)
+    )
+
+    Column {
+        Text(
+            text = "水印位置",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            positions.forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    row.forEach { position ->
+                        if (position != null) {
+                            val isSelected = position == selectedPosition
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(if (isSelected) CyanAccent else Color(0xFF2A2A2A))
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) CyanAccent else Color.Gray.copy(alpha = 0.3f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .clickable { onPositionSelected(position) }
+                            ) {
+                                // 位置指示点
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isSelected) Color.White else Color.Gray)
+                                        .align(
+                                            when (position) {
+                                                WatermarkPlacement.TOP_LEFT -> Alignment.TopStart
+                                                WatermarkPlacement.TOP_CENTER -> Alignment.TopCenter
+                                                WatermarkPlacement.TOP_RIGHT -> Alignment.TopEnd
+                                                WatermarkPlacement.CENTER -> Alignment.Center
+                                                WatermarkPlacement.BOTTOM_LEFT -> Alignment.BottomStart
+                                                WatermarkPlacement.BOTTOM_CENTER -> Alignment.BottomCenter
+                                                WatermarkPlacement.BOTTOM_RIGHT -> Alignment.BottomEnd
+                                                else -> Alignment.Center
+                                            }
+                                        )
+                                        .padding(4.dp)
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = template.name,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) HasselbladOrange else Color.White,
-                maxLines = 1
+        }
+    }
+}
+
+/**
+ * 自定义文字输入
+ */
+@Composable
+private fun CustomTextInput(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF1A1A1A))
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                textStyle = TextStyle(
+                    color = Color.White,
+                    fontSize = 14.sp
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -657,21 +1097,29 @@ private fun WatermarkElementsSection(
     showModel: Boolean,
     showParams: Boolean,
     showDate: Boolean,
+    showLocation: Boolean,
+    showPhotographer: Boolean,
     showVignette: Boolean,
     brandText: String,
     modelText: String,
     paramsText: String,
     dateText: String,
+    locationText: String,
+    photographerText: String,
     vignetteStrength: Float,
     onToggleBrand: (Boolean) -> Unit,
     onToggleModel: (Boolean) -> Unit,
     onToggleParams: (Boolean) -> Unit,
     onToggleDate: (Boolean) -> Unit,
+    onToggleLocation: (Boolean) -> Unit,
+    onTogglePhotographer: (Boolean) -> Unit,
     onToggleVignette: (Boolean) -> Unit,
     onBrandTextChange: (String) -> Unit,
     onModelTextChange: (String) -> Unit,
     onParamsTextChange: (String) -> Unit,
     onDateTextChange: (String) -> Unit,
+    onLocationTextChange: (String) -> Unit,
+    onPhotographerTextChange: (String) -> Unit,
     onVignetteStrengthChange: (Float) -> Unit
 ) {
     Column {
@@ -685,7 +1133,7 @@ private fun WatermarkElementsSection(
 
         // 品牌名
         WatermarkElementRow(
-            name = "品牌名",
+            name = "品牌",
             text = brandText,
             isEnabled = showBrand,
             onToggle = onToggleBrand,
@@ -716,7 +1164,7 @@ private fun WatermarkElementsSection(
 
         // 日期
         WatermarkElementRow(
-            name = "日期",
+            name = "时间",
             text = dateText,
             isEnabled = showDate,
             onToggle = onToggleDate,
@@ -724,7 +1172,27 @@ private fun WatermarkElementsSection(
             canEdit = true
         )
 
-        // 暗角（带滑块）
+        // 位置（新增）
+        WatermarkElementRow(
+            name = "位置",
+            text = locationText,
+            isEnabled = showLocation,
+            onToggle = onToggleLocation,
+            onTextChange = onLocationTextChange,
+            canEdit = true
+        )
+
+        // 摄影师签名（新增）
+        WatermarkElementRow(
+            name = "签名",
+            text = photographerText,
+            isEnabled = showPhotographer,
+            onToggle = onTogglePhotographer,
+            onTextChange = onPhotographerTextChange,
+            canEdit = true
+        )
+
+        // 暗角
         WatermarkVignetteRow(
             isEnabled = showVignette,
             strength = vignetteStrength,
@@ -762,7 +1230,6 @@ private fun WatermarkElementRow(
         )
 
         if (canEdit) {
-            // 可编辑文本框
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -805,7 +1272,7 @@ private fun WatermarkElementRow(
             onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = HasselbladOrange
+                checkedTrackColor = CyanAccent
             )
         )
     }
@@ -842,8 +1309,8 @@ private fun WatermarkVignetteRow(
                 valueRange = 0f..1f,
                 modifier = Modifier.weight(1f),
                 colors = SliderDefaults.colors(
-                    thumbColor = HasselbladOrange,
-                    activeTrackColor = HasselbladOrange
+                    thumbColor = CyanAccent,
+                    activeTrackColor = CyanAccent
                 )
             )
         } else {
@@ -855,84 +1322,9 @@ private fun WatermarkVignetteRow(
             onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = HasselbladOrange
+                checkedTrackColor = CyanAccent
             )
         )
-    }
-}
-
-/**
- * 位置网格（3x3）
- */
-@Composable
-private fun WatermarkPositionGrid(
-    selectedPosition: WatermarkPosition,
-    onPositionSelected: (WatermarkPosition) -> Unit
-) {
-    val positions = listOf(
-        listOf(WatermarkPosition.TOP_LEFT, WatermarkPosition.TOP_CENTER, WatermarkPosition.TOP_RIGHT),
-        listOf(WatermarkPosition.CENTER_LEFT, WatermarkPosition.CENTER, WatermarkPosition.CENTER_RIGHT),
-        listOf(WatermarkPosition.BOTTOM_LEFT, WatermarkPosition.BOTTOM, WatermarkPosition.BOTTOM_RIGHT)
-    )
-
-    Column {
-        Text(
-            text = "位置",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            positions.forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    row.forEach { position ->
-                        val isSelected = position == selectedPosition
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(36.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (isSelected) HasselbladOrange else Color(0xFF2A2A2A))
-                                .border(
-                                    1.dp,
-                                    if (isSelected) HasselbladOrange else Color.Gray.copy(alpha = 0.3f),
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .clickable { onPositionSelected(position) }
-                        ) {
-                            // 位置指示点
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) Color.White else Color.Gray)
-                                    .align(
-                                        when (position) {
-                                            WatermarkPosition.TOP_LEFT -> Alignment.TopStart
-                                            WatermarkPosition.TOP_CENTER -> Alignment.TopCenter
-                                            WatermarkPosition.TOP_RIGHT -> Alignment.TopEnd
-                                            WatermarkPosition.CENTER_LEFT -> Alignment.CenterStart
-                                            WatermarkPosition.CENTER -> Alignment.Center
-                                            WatermarkPosition.CENTER_RIGHT -> Alignment.CenterEnd
-                                            WatermarkPosition.BOTTOM_LEFT -> Alignment.BottomStart
-                                            WatermarkPosition.BOTTOM -> Alignment.BottomCenter
-                                            WatermarkPosition.BOTTOM_RIGHT -> Alignment.BottomEnd
-                                        }
-                                    )
-                                    .padding(4.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -941,7 +1333,7 @@ private fun WatermarkPositionGrid(
  */
 @Composable
 private fun WatermarkStyleSection(
-    selectedFont: String,
+    selectedFont: FontOption,
     selectedColor: Color,
     recommendedColor: Color,
     textSize: Float,
@@ -949,23 +1341,33 @@ private fun WatermarkStyleSection(
     rotation: Float,
     shadowEnabled: Boolean,
     shadowBlur: Float,
-    onFontSelected: (String) -> Unit,
+    padding: Float,
+    letterSpacing: Float,
+    fontWeight: FontWeight,
+    bgOpacity: Float,
+    onFontSelected: (FontOption) -> Unit,
     onColorSelected: (Color) -> Unit,
     onTextSizeChange: (Float) -> Unit,
     onOpacityChange: (Float) -> Unit,
     onRotationChange: (Float) -> Unit,
     onShadowToggle: (Boolean) -> Unit,
-    onShadowBlurChange: (Float) -> Unit
+    onShadowBlurChange: (Float) -> Unit,
+    onPaddingChange: (Float) -> Unit,
+    onLetterSpacingChange: (Float) -> Unit,
+    onFontWeightChange: (FontWeight) -> Unit,
+    onBgOpacityChange: (Float) -> Unit
 ) {
+    // 8种预设颜色（与Web端同步）
     val colors = listOf(
         Color.White to "白色",
-        Color(0xFFFFD700) to "金色",
-        Color(0xFFC0C0C0) to "银色",
         Color.Black to "黑色",
-        Color(0xFF808080) to "灰色"
+        Color(0xFFFFD700) to "金色",
+        Color(0xFFFF6B35) to "橙色",
+        CyanAccent to "青色",
+        Color(0xFFFF6B9D) to "粉色",
+        Color(0xFF4CAF50) to "绿色",
+        Color(0xFF9C27B0) to "紫色"
     )
-
-    val fonts = listOf("默认", "衬线", "无衬线", "手写", "粗体")
 
     Column {
         Text(
@@ -976,47 +1378,103 @@ private fun WatermarkStyleSection(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 字体和颜色选择
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+        // 字体选择
+        Text(
+            text = "字体样式",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 字体下拉
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF2A2A2A))
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Text(
-                    text = "字体: $selectedFont",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White
-                )
-            }
-
-            // 颜色选择
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                colors.forEach { (color, name) ->
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .border(
-                                2.dp,
-                                if (color == selectedColor) HasselbladOrange else Color.Transparent,
-                                CircleShape
-                            )
-                            .clickable { onColorSelected(color) }
+            items(FontOption.entries) { font ->
+                val isSelected = font == selectedFont
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
+                        .border(
+                            1.dp,
+                            if (isSelected) CyanAccent else Color.Transparent,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .clickable { onFontSelected(font) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = font.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) CyanAccent else Color.White,
+                        fontFamily = font.fontFamily
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 字体粗细
+        Text(
+            text = "字体粗细",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(FontWeight.Normal to "常规", FontWeight.Bold to "粗体").forEach { (weight, name) ->
+                val isSelected = fontWeight == weight
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
+                        .border(
+                            1.dp,
+                            if (isSelected) CyanAccent else Color.Transparent,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .clickable { onFontWeightChange(weight) }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) CyanAccent else Color.White,
+                        fontWeight = weight
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 颜色选择（8种）
+        Text(
+            text = "文字颜色",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            colors.forEach { (color, _) ->
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .border(
+                            2.dp,
+                            if (color == selectedColor) CyanAccent else Color.Transparent,
+                            CircleShape
+                        )
+                        .clickable { onColorSelected(color) }
+                )
             }
         }
 
@@ -1026,48 +1484,48 @@ private fun WatermarkStyleSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(HasselbladOrange.copy(alpha = 0.1f))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CyanAccent.copy(alpha = 0.1f))
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Default.Lightbulb,
                     null,
-                    tint = HasselbladOrange,
+                    tint = CyanAccent,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "智能推荐: ${colors.find { it.first == recommendedColor }?.second ?: "白色"}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = HasselbladOrange
+                    color = CyanAccent
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(
                     onClick = { onColorSelected(recommendedColor) }
                 ) {
-                    Text("应用", color = HasselbladOrange, style = MaterialTheme.typography.bodySmall)
+                    Text("应用", color = CyanAccent, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // 大小滑块
         StyleSlider(
-            label = "大小",
+            label = "字体大小",
             value = textSize,
-            valueRange = 8f..24f,
+            valueRange = 8f..48f,
             unit = "px",
             onValueChange = onTextSizeChange
         )
 
         // 透明度滑块
         StyleSlider(
-            label = "透明",
+            label = "透明度",
             value = opacity,
-            valueRange = 0.3f..1f,
+            valueRange = 0f..1f,
             unit = "%",
             displayValue = (opacity * 100).toInt(),
             onValueChange = onOpacityChange
@@ -1075,11 +1533,39 @@ private fun WatermarkStyleSection(
 
         // 旋转滑块
         StyleSlider(
-            label = "旋转",
+            label = "旋转角度",
             value = rotation,
             valueRange = -45f..45f,
             unit = "°",
             onValueChange = onRotationChange
+        )
+
+        // 边距滑块（新增）
+        StyleSlider(
+            label = "边距",
+            value = padding,
+            valueRange = 8f..60f,
+            unit = "px",
+            onValueChange = onPaddingChange
+        )
+
+        // 字间距滑块（新增）
+        StyleSlider(
+            label = "字间距",
+            value = letterSpacing,
+            valueRange = 0f..10f,
+            unit = "px",
+            onValueChange = onLetterSpacingChange
+        )
+
+        // 背景透明度滑块（新增）
+        StyleSlider(
+            label = "背景透明度",
+            value = bgOpacity,
+            valueRange = 0f..0.8f,
+            unit = "%",
+            displayValue = (bgOpacity * 100).toInt(),
+            onValueChange = onBgOpacityChange
         )
 
         // 阴影开关和模糊度
@@ -1090,7 +1576,7 @@ private fun WatermarkStyleSection(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "阴影",
+                    text = "文字阴影",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.7f)
                 )
@@ -1100,7 +1586,7 @@ private fun WatermarkStyleSection(
                     onCheckedChange = onShadowToggle,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = HasselbladOrange
+                        checkedTrackColor = CyanAccent
                     )
                 )
             }
@@ -1119,11 +1605,11 @@ private fun WatermarkStyleSection(
                     Slider(
                         value = shadowBlur,
                         onValueChange = onShadowBlurChange,
-                        valueRange = 0f..12f,
+                        valueRange = 0f..15f,
                         modifier = Modifier.weight(1f),
                         colors = SliderDefaults.colors(
-                            thumbColor = HasselbladOrange,
-                            activeTrackColor = HasselbladOrange
+                            thumbColor = CyanAccent,
+                            activeTrackColor = CyanAccent
                         )
                     )
                     Text(
@@ -1157,7 +1643,7 @@ private fun StyleSlider(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.7f),
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(70.dp)
         )
         Slider(
             value = value,
@@ -1165,14 +1651,15 @@ private fun StyleSlider(
             valueRange = valueRange,
             modifier = Modifier.weight(1f),
             colors = SliderDefaults.colors(
-                thumbColor = HasselbladOrange,
-                activeTrackColor = HasselbladOrange
+                thumbColor = CyanAccent,
+                activeTrackColor = CyanAccent
             )
         )
         Text(
             text = "$displayValue$unit",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
+            color = CyanAccent,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.width(50.dp)
         )
     }
@@ -1222,7 +1709,7 @@ private fun WatermarkPreviewCanvas(
                 dstSize = IntSize(drawWidth.toInt(), drawHeight.toInt())
             )
 
-            // 绘制水印（如果启用）
+            // 绘制水印
             if (watermarkConfig.enabled) {
                 drawWatermarkText(
                     config = watermarkConfig,
@@ -1250,9 +1737,6 @@ private fun WatermarkPreviewCanvas(
 
 // ========== 辅助函数 ==========
 
-/**
- * 从EXIF提取数据
- */
 private fun extractExifData(imagePath: String): ExifData {
     return try {
         val exif = ExifInterface(imagePath)
@@ -1273,13 +1757,8 @@ private fun buildParamsString(exif: ExifInterface): String {
     return "$fNumber $exposure ISO$iso"
 }
 
-/**
- * 分析图片主色调，推荐水印颜色
- */
 private fun analyzeDominantColor(bitmap: Bitmap): Color {
-    // 简化分析：统计亮度
     var totalBrightness = 0L
-    val sampleSize = 1000
     val stepX = bitmap.width / 20
     val stepY = bitmap.height / 20
 
@@ -1294,58 +1773,12 @@ private fun analyzeDominantColor(bitmap: Bitmap): Color {
     }
 
     val avgBrightness = totalBrightness / (20 * 20)
-
-    // 如果图片偏亮，推荐深色水印；偏暗，推荐白色水印
-    return if (avgBrightness > 128) {
-        Color.Black
-    } else {
-        Color.White
-    }
+    return if (avgBrightness > 128) Color.Black else Color.White
 }
 
-/**
- * 渲染水印预览
- */
 private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bitmap {
-    // 创建可变位图
     val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-    // 实际水印绘制逻辑（简化）
     return result
-}
-
-/**
- * 应用模板配置
- */
-private fun applyTemplateConfig(templateId: String): WatermarkConfig {
-    return when (templateId) {
-        "hasselblad_classic" -> WatermarkConfig(
-            showBrand = true,
-            showModel = true,
-            showParams = true,
-            showDate = true,
-            brandText = "HASSELBLAD",
-            position = WatermarkPosition.BOTTOM_LEFT,
-            textColor = Color.White
-        )
-        "leica_style" -> WatermarkConfig(
-            showBrand = true,
-            showModel = false,
-            showParams = false,
-            showDate = true,
-            brandText = "LEICA",
-            position = WatermarkPosition.BOTTOM_RIGHT,
-            textColor = Color(0xFFFF0000) // 红点风格
-        )
-        "minimal" -> WatermarkConfig(
-            showBrand = false,
-            showModel = true,
-            showParams = false,
-            showDate = false,
-            position = WatermarkPosition.BOTTOM_RIGHT,
-            textColor = Color.White
-        )
-        else -> WatermarkConfig()
-    }
 }
 
 // ========== 数据类 ==========
@@ -1356,27 +1789,29 @@ data class WatermarkConfig(
     val showModel: Boolean = true,
     val showParams: Boolean = true,
     val showDate: Boolean = true,
+    val showLocation: Boolean = false,
+    val showPhotographer: Boolean = false,
     val showVignette: Boolean = false,
-    val brandText: String = "HASSELBLAD",
+    val brandText: String = "OMaster",
     val modelText: String = "",
     val paramsText: String = "",
     val dateText: String = "",
-    val position: WatermarkPosition = WatermarkPosition.BOTTOM_LEFT,
+    val locationText: String = "",
+    val photographerText: String = "",
+    val position: WatermarkPlacement = WatermarkPlacement.BOTTOM_LEFT,
     val textColor: Color = Color.White,
     val textSize: Float = 14f,
     val opacity: Float = 0.8f,
     val rotation: Float = 0f,
     val shadowEnabled: Boolean = true,
     val shadowBlur: Float = 4f,
+    val padding: Float = 20f,
+    val letterSpacing: Float = 0f,
+    val fontWeight: FontWeight = FontWeight.Normal,
+    val bgOpacity: Float = 0f,
     val vignetteStrength: Float = 0.5f,
     val offset: Offset = Offset.Zero,
     val scale: Float = 1f
-)
-
-data class WatermarkTemplateItem(
-    val name: String,
-    val id: String,
-    val description: String
 )
 
 data class ExifData(
@@ -1385,10 +1820,10 @@ data class ExifData(
     val date: String? = null
 )
 
-enum class WatermarkPosition {
+enum class WatermarkPlacement {
     TOP_LEFT, TOP_CENTER, TOP_RIGHT,
-    CENTER_LEFT, CENTER, CENTER_RIGHT,
-    BOTTOM_LEFT, BOTTOM, BOTTOM_RIGHT
+    CENTER,
+    BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
 }
 
 /**
@@ -1407,26 +1842,25 @@ private fun DrawScope.drawWatermarkText(
         setShadowLayer(config.shadowBlur, 0f, 0f, Color.Black.toArgb())
     }
 
-    // 计算水印位置
+    val paddingPx = config.padding.dp.toPx()
     val watermarkX = when (config.position) {
-        WatermarkPosition.TOP_LEFT, WatermarkPosition.CENTER_LEFT, WatermarkPosition.BOTTOM_LEFT -> 
-            imageRect.left + 16.dp.toPx() + offset.x
-        WatermarkPosition.TOP_CENTER, WatermarkPosition.CENTER, WatermarkPosition.BOTTOM -> 
+        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.CENTER, WatermarkPlacement.BOTTOM_LEFT -> 
+            imageRect.left + paddingPx + offset.x
+        WatermarkPlacement.TOP_CENTER, WatermarkPlacement.BOTTOM_CENTER -> 
             imageRect.left + imageRect.width / 2 + offset.x
-        WatermarkPosition.TOP_RIGHT, WatermarkPosition.CENTER_RIGHT, WatermarkPosition.BOTTOM_RIGHT -> 
-            imageRect.right - 16.dp.toPx() + offset.x
+        WatermarkPlacement.TOP_RIGHT, WatermarkPlacement.BOTTOM_RIGHT -> 
+            imageRect.right - paddingPx + offset.x
     }
 
     val watermarkY = when (config.position) {
-        WatermarkPosition.TOP_LEFT, WatermarkPosition.TOP_CENTER, WatermarkPosition.TOP_RIGHT -> 
-            imageRect.top + 16.dp.toPx() + offset.y
-        WatermarkPosition.CENTER_LEFT, WatermarkPosition.CENTER, WatermarkPosition.CENTER_RIGHT -> 
+        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.TOP_CENTER, WatermarkPlacement.TOP_RIGHT -> 
+            imageRect.top + paddingPx + offset.y
+        WatermarkPlacement.CENTER -> 
             imageRect.top + imageRect.height / 2 + offset.y
-        WatermarkPosition.BOTTOM_LEFT, WatermarkPosition.BOTTOM, WatermarkPosition.BOTTOM_RIGHT -> 
-            imageRect.bottom - 16.dp.toPx() + offset.y
+        WatermarkPlacement.BOTTOM_LEFT, WatermarkPlacement.BOTTOM_CENTER, WatermarkPlacement.BOTTOM_RIGHT -> 
+            imageRect.bottom - paddingPx + offset.y
     }
 
-    // 绘制各元素
     var currentY = watermarkY
 
     if (config.showBrand) {
@@ -1462,6 +1896,16 @@ private fun DrawScope.drawWatermarkText(
     if (config.showDate) {
         drawContext.canvas.nativeCanvas.drawText(
             config.dateText,
+            watermarkX,
+            currentY,
+            textPaint
+        )
+        currentY += config.textSize * 1.5f * scale
+    }
+
+    if (config.showLocation) {
+        drawContext.canvas.nativeCanvas.drawText(
+            config.locationText,
             watermarkX,
             currentY,
             textPaint
