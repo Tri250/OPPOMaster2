@@ -554,11 +554,3 @@ object HasselbladMasterTemplates {
         return getAll() + SystemWatermarkTemplates.getAll()
     }
 }
-
-/**
- * 偏移数据（用于自定义位置微调）
- */
-data class OffsetData(
-    val x: Float = 0f,
-    val y: Float = 0f
-)

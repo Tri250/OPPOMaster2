@@ -9,6 +9,53 @@ import com.silas.omaster.util.formatSigned
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
+/**
+ * 预设评论
+ * 对应 Web 端的 PresetComment
+ */
+@Serializable
+data class PresetComment(
+    val id: String,
+    val user: String,
+    val avatar: String? = null,
+    val content: String,
+    val rating: Float = 0f,
+    val timestamp: Long = 0,
+    val likes: Int = 0
+) : Parcelable {
+    constructor(parcel: Parcel) : this(
+        parcel.readString() ?: "",
+        parcel.readString() ?: "",
+        parcel.readString(),
+        parcel.readString() ?: "",
+        parcel.readFloat(),
+        parcel.readLong(),
+        parcel.readInt()
+    )
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeString(id)
+        parcel.writeString(user)
+        parcel.writeString(avatar)
+        parcel.writeString(content)
+        parcel.writeFloat(rating)
+        parcel.writeLong(timestamp)
+        parcel.writeInt(likes)
+    }
+
+    override fun describeContents(): Int = 0
+
+    companion object CREATOR : Parcelable.Creator<PresetComment> {
+        override fun createFromParcel(parcel: Parcel): PresetComment {
+            return PresetComment(parcel)
+        }
+
+        override fun newArray(size: Int): Array<PresetComment?> {
+            return arrayOfNulls(size)
+        }
+    }
+}
+
 @Serializable
 data class PresetDescription(
     val title: String,
@@ -166,7 +213,14 @@ data class MasterPreset(
     val build: Int = 1,                    // 构建号，用于增量更新
     val params: Map<String, String>? = null,           // 专业参数 (ISO/快门等)
     val colorGradingParams: Map<String, String>? = null, // 色彩参数 (饱和度/对比度等)
-    val createdAt: Long = 0               // 创建时间戳
+    val createdAt: Long = 0,              // 创建时间戳
+    // ========== 社区数据（对齐 Web 端）==========
+    val downloads: Int? = null,           // 下载量
+    val rating: Float? = null,            // 平均评分 (0-5)
+    val ratingCount: Int? = null,         // 评分数量
+    val comments: List<PresetComment>? = null, // 评论列表
+    // ========== HNCS 认证相关 ==========
+    val isHncs: Boolean = false           // 是否 HNCS 认证预设
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString(),
@@ -202,7 +256,12 @@ data class MasterPreset(
         build = parcel.readInt(),
         params = null, // Map需要特殊处理
         colorGradingParams = null,
-        createdAt = parcel.readLong()
+        createdAt = parcel.readLong(),
+        downloads = parcel.readValue(Int::class.java.classLoader) as? Int,
+        rating = parcel.readValue(Float::class.java.classLoader) as? Float,
+        ratingCount = parcel.readValue(Int::class.java.classLoader) as? Int,
+        comments = parcel.createTypedArrayList(PresetComment.CREATOR),
+        isHncs = parcel.readByte() != 0.toByte()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -239,6 +298,12 @@ data class MasterPreset(
         parcel.writeValue(version)
         parcel.writeInt(build)
         parcel.writeLong(createdAt)
+        // 社区数据
+        parcel.writeValue(downloads)
+        parcel.writeValue(rating)
+        parcel.writeValue(ratingCount)
+        parcel.writeTypedList(comments)
+        parcel.writeByte(if (isHncs) 1 else 0)
     }
 
     fun getDisplaySections(context: Context): List<PresetSection> {

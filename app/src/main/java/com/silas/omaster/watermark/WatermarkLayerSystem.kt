@@ -30,8 +30,16 @@ data class WatermarkLayerDef(
     val isVisible: Boolean = true,                     // 是否可见
     val contentSource: ContentSource = ContentSource.MANUAL,
     val sortOrder: Int = 0,                            // 图层排序（越大越靠上）
-    val offsetX: Float = 0f,                           // 手动偏移X
-    val offsetY: Float = 0f                            // 手动偏移Y
+    val offset: OffsetData = OffsetData()              // 手动偏移
+)
+
+/**
+ * 偏移数据（用于自定义位置微调）
+ */
+@Serializable
+data class OffsetData(
+    val x: Float = 0f,
+    val y: Float = 0f
 )
 
 /**
