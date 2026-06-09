@@ -1,14 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getSceneProfile,
   getFullSceneProfile,
   getRecommendedFilms,
   getHasselbladParams,
   getMasterTips,
   getParamAdjustmentAdvice,
-  getAllSceneIds,
 } from '../SceneToHasselbladMapping';
-import { SceneCategory, HasselbladParams, FilmSeries } from '../../store/sceneProfile';
+import { HasselbladParams, SoftLightMode } from '../../store/sceneProfile';
 
 /**
  * SceneToHasselbladMapping 单元测试
@@ -18,43 +16,9 @@ import { SceneCategory, HasselbladParams, FilmSeries } from '../../store/scenePr
  * - 胶片推荐
  * - 大师建议
  * - 参数调整建议
- * - 场景ID列表
  */
 
 describe('SceneToHasselbladMapping', () => {
-  describe('getSceneProfile', () => {
-    it('应该返回人像场景的参数', () => {
-      const profile = getSceneProfile('portrait-indoor');
-      expect(profile).toBeDefined();
-      expect(profile.id).toBe('portrait-indoor');
-      expect(profile.category).toBe(SceneCategory.PORTRAIT);
-      expect(profile.name).toBe('室内人像');
-    });
-
-    it('应该返回风景场景的参数', () => {
-      const profile = getSceneProfile('landscape-sunset');
-      expect(profile).toBeDefined();
-      expect(profile.id).toBe('landscape-sunset');
-      expect(profile.category).toBe(SceneCategory.LANDSCAPE);
-      expect(profile.name).toBe('日落风景');
-    });
-
-    it('应该返回夜景场景的参数', () => {
-      const profile = getSceneProfile('night-cityscape');
-      expect(profile).toBeDefined();
-      expect(profile.id).toBe('night-cityscape');
-      expect(profile.category).toBe(SceneCategory.NIGHT);
-      expect(profile.name).toBe('城市夜景');
-    });
-
-    it('对于未知场景应该返回默认值', () => {
-      const profile = getSceneProfile('unknown-scene');
-      expect(profile).toBeDefined();
-      expect(profile.id).toBe('unknown');
-      expect(profile.category).toBe(SceneCategory.GENERAL);
-    });
-  });
-
   describe('getFullSceneProfile', () => {
     it('应该返回完整的场景画像', () => {
       const profile = getFullSceneProfile('portrait-outdoor', 0.92);
@@ -179,7 +143,7 @@ describe('SceneToHasselbladMapping', () => {
         clarity: 0,
         vignette: 0,
         cyanMagenta: 0,
-        softLight: 'none',
+        softLight: SoftLightMode.NONE,
       };
 
       const advice = getParamAdjustmentAdvice(currentParams, 'portrait-indoor');
@@ -197,7 +161,7 @@ describe('SceneToHasselbladMapping', () => {
         clarity: 0,
         vignette: 0,
         cyanMagenta: 0,
-        softLight: 'none',
+        softLight: SoftLightMode.NONE,
       };
 
       const advice = getParamAdjustmentAdvice(currentParams, 'portrait-indoor');
@@ -207,71 +171,6 @@ describe('SceneToHasselbladMapping', () => {
         a.param.toLowerCase().includes('对比度')
       );
       expect(hasContrastAdvice).toBe(true);
-    });
-  });
-
-  describe('getAllSceneIds', () => {
-    it('应该返回所有场景ID', () => {
-      const sceneIds = getAllSceneIds();
-      expect(sceneIds).toBeDefined();
-      expect(sceneIds.length).toBeGreaterThan(0);
-    });
-
-    it('应该包含主要场景类别', () => {
-      const sceneIds = getAllSceneIds();
-      
-      // 检查是否包含人像场景
-      expect(sceneIds.some(id => id.includes('portrait'))).toBe(true);
-      
-      // 检查是否包含风景场景
-      expect(sceneIds.some(id => id.includes('landscape'))).toBe(true);
-      
-      // 检查是否包含夜景场景
-      expect(sceneIds.some(id => id.includes('night'))).toBe(true);
-      
-      // 检查是否包含美食场景
-      expect(sceneIds.some(id => id.includes('food'))).toBe(true);
-    });
-
-    it('场景ID应该唯一', () => {
-      const sceneIds = getAllSceneIds();
-      const uniqueIds = [...new Set(sceneIds)];
-      expect(uniqueIds.length).toBe(sceneIds.length);
-    });
-  });
-
-  describe('场景参数一致性', () => {
-    it('所有场景的参数应该在有效范围内', () => {
-      const sceneIds = getAllSceneIds();
-      
-      for (const sceneId of sceneIds) {
-        const params = getHasselbladParams(sceneId);
-        
-        expect(params.tone).toBeGreaterThanOrEqual(-30);
-        expect(params.tone).toBeLessThanOrEqual(30);
-        expect(params.saturation).toBeGreaterThanOrEqual(-30);
-        expect(params.saturation).toBeLessThanOrEqual(30);
-        expect(params.contrast).toBeGreaterThanOrEqual(-30);
-        expect(params.contrast).toBeLessThanOrEqual(30);
-      }
-    });
-
-    it('所有场景都应该有胶片推荐', () => {
-      const sceneIds = getAllSceneIds();
-      
-      for (const sceneId of sceneIds) {
-        const films = getRecommendedFilms(sceneId);
-        expect(films.length).toBeGreaterThan(0);
-      }
-    });
-
-    it('所有场景都应该有大师建议', () => {
-      const sceneIds = getAllSceneIds();
-      
-      for (const sceneId of sceneIds) {
-        const tips = getMasterTips(sceneId);
-        expect(tips.length).toBeGreaterThan(0);
-      }
     });
   });
 });

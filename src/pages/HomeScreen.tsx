@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAppStore, homePresets, Preset } from '../store/appStore';
-import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, SlidersHorizontal, Palette, Thermometer, Sun, Droplets, Zap, Share2, Grid as GridIcon, Edit2 } from 'lucide-react';
+import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, Zap, Grid as GridIcon, Edit2 } from 'lucide-react';
 import PresetImageGallery from '../components/PresetImageGallery';
 import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton, SimpleRelatedPresets } from '../components/PresetParameters';
 
@@ -27,17 +27,15 @@ const HomeScreen: React.FC = () => {
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'rating'>('newest');
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   
   // 合并本地预设和网络获取的预设
-  const allPresets = [...homePresets, ...fetchedPresets];
+  const allPresets = useMemo(() => [...homePresets, ...fetchedPresets], [fetchedPresets]);
 
   // 从预设源获取预设
   const fetchPresetsFromSources = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const allPresets: any[] = [];
+      const allPresets: Preset[] = [];
       
       for (const source of presetSources) {
         if (!source.enabled) continue;
@@ -46,7 +44,7 @@ const HomeScreen: React.FC = () => {
           const response = await fetch(source.url);
           if (response.ok) {
             const data = await response.json();
-            const presets = (data.presets || data || []).map((p: any) => ({
+            const presets = (data.presets || data || []).map((p): Preset => ({
               id: `${source.id}-${p.id || Date.now() + Math.random()}`,
               name: p.name || '未命名预设',
               coverPath: p.coverPath || p.cover || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop',
@@ -55,6 +53,7 @@ const HomeScreen: React.FC = () => {
               tags: p.tags || ['预设'],
               isNew: true,
               isHncs: p.isHncs || false,
+              sections: p.sections || [],
               saturation: p.saturation || 10,
               contrast: p.contrast || 5,
               warmth: p.warmth || 0,
@@ -71,7 +70,6 @@ const HomeScreen: React.FC = () => {
     } catch (err) {
       console.error('Failed to fetch presets:', err);
     } finally {
-      setIsLoading(false);
       setRefreshing(false);
     }
   }, [presetSources, setFetchedPresets]);
@@ -85,7 +83,7 @@ const HomeScreen: React.FC = () => {
   // 初始化加载
   useEffect(() => {
     fetchPresetsFromSources();
-  }, []);
+  }, [fetchPresetsFromSources]);
 
   // 切换收藏
   const toggleFavorite = useCallback((id: string) => {

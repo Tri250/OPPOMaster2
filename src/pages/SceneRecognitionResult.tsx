@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { HasselbladCompareSlider } from '../components/HasselbladCompareSlider';
 import { FilmRecommendationStrip } from '../components/FilmRecommendationStrip';
 import { HasselbladParamsDisplay } from '../components/HasselbladParamsDisplay';
-import { SceneProfile, FilmPreset, HasselbladParams } from '../store/sceneProfile';
+import { SceneProfile, HasselbladParams } from '../store/sceneProfile';
 import { getFullSceneProfile } from '../ai/SceneToHasselbladMapping';
 import { AnalysisResult, getAnalyzer } from '../ai/HeuristicSceneAnalyzer';
 

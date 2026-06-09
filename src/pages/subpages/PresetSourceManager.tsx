@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useAppStore } from '../../store/appStore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAppStore, Preset, PresetSource } from '../../store/appStore';
 import {
   ArrowLeft,
   Plus,
   Trash2,
   Edit2,
-  Check,
   X,
   RefreshCw,
   Cloud,
@@ -30,10 +29,10 @@ const PresetSourceManager: React.FC = () => {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchPresetsFromSources = async () => {
+  const fetchPresetsFromSources = useCallback(async () => {
     setIsLoading(true);
     try {
-      const allPresets: any[] = [];
+      const allPresets: Preset[] = [];
       
       for (const source of presetSources) {
         if (!source.enabled) continue;
@@ -55,11 +54,11 @@ const PresetSourceManager: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [presetSources, setFetchedPresets]);
 
   useEffect(() => {
     fetchPresetsFromSources();
-  }, []);
+  }, [fetchPresetsFromSources]);
 
   const handleAddSource = () => {
     if (!newSourceName.trim() || !newSourceUrl.trim()) return;
@@ -77,7 +76,7 @@ const PresetSourceManager: React.FC = () => {
     setNewSourceUrl('');
   };
 
-  const startEdit = (source: any) => {
+  const startEdit = (source: PresetSource) => {
     setEditingSource(source.id);
     setNewSourceName(source.name);
     setNewSourceUrl(source.url);

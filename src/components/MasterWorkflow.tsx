@@ -81,7 +81,6 @@ export const MasterWorkflow: React.FC<MasterWorkflowProps> = ({
   onComplete,
 }) => {
   const [steps, setSteps] = useState<WorkflowStep[]>(DEFAULT_WORKFLOW_STEPS);
-  const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [isComplete, setIsComplete] = useState(false);
   const [workflowResult, setWorkflowResult] = useState<WorkflowResult | null>(null);
 
@@ -89,7 +88,6 @@ export const MasterWorkflow: React.FC<MasterWorkflowProps> = ({
   useEffect(() => {
     const runWorkflow = async () => {
       for (let i = 0; i < steps.length; i++) {
-        setCurrentStepIndex(i);
 
         // 更新当前步骤为处理中
         setSteps(prev => prev.map((step, idx) => {
@@ -109,7 +107,6 @@ export const MasterWorkflow: React.FC<MasterWorkflowProps> = ({
       }
 
       // 工作流完成
-      setCurrentStepIndex(-1);
       setIsComplete(true);
 
       // 构建最终结果

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Share2, Download, Eye, Camera, Image as ImageIcon, Film, TrendingUp, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, Share2, Download, Eye, Camera, Image as ImageIcon, Film, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { SceneProfile } from '../store/sceneProfile';
 
 /**
  * Layer 4: 大师洞察层 - 场景分析报告
@@ -35,6 +34,14 @@ interface FilmUsage {
   percentage: number;
 }
 
+interface SavedRecipe {
+  sceneId: string;
+  sceneName: string;
+  filmId?: string;
+  confidence?: number;
+  timestamp: string;
+}
+
 interface ShootingHabit {
   totalPhotos: number;
   totalRecipes: number;
@@ -43,12 +50,6 @@ interface ShootingHabit {
   avgConfidence: number;
   streakDays: number;
   lastShootDate: string;
-}
-
-interface LocationData {
-  location: string;
-  count: number;
-  coordinates?: { lat: number; lng: number };
 }
 
 export const SceneAnalysisReport: React.FC = () => {
@@ -60,25 +61,19 @@ export const SceneAnalysisReport: React.FC = () => {
   const [sceneStats, setSceneStats] = useState<SceneStats[]>([]);
   const [filmUsage, setFilmUsage] = useState<FilmUsage[]>([]);
   const [habits, setHabits] = useState<ShootingHabit | null>(null);
-  const [locations, setLocations] = useState<LocationData[]>([]);
   const [masterTips, setMasterTips] = useState<string[]>([]);
 
   // 加载真实数据
-  useEffect(() => {
-    loadRealData();
-  }, [timeRange]);
-
-  const loadRealData = () => {
+  const loadRealData = useCallback(() => {
     setIsLoading(true);
     
     try {
       // 从本地存储获取保存的配方
       const savedRecipes = JSON.parse(localStorage.getItem('hasselblad_recipes') || '[]');
-      const sceneHistory = JSON.parse(localStorage.getItem('hasselblad_scene_history') || '[]');
       
       // 计算场景统计
       const sceneCounts: Record<string, { name: string; count: number }> = {};
-      savedRecipes.forEach((recipe: any) => {
+      savedRecipes.forEach((recipe: SavedRecipe) => {
         if (!sceneCounts[recipe.sceneId]) {
           sceneCounts[recipe.sceneId] = { name: recipe.sceneName, count: 0 };
         }
@@ -101,7 +96,7 @@ export const SceneAnalysisReport: React.FC = () => {
       
       // 计算胶片使用统计
       const filmCounts: Record<string, { name: string; count: number }> = {};
-      savedRecipes.forEach((recipe: any) => {
+      savedRecipes.forEach((recipe: SavedRecipe) => {
         const filmId = recipe.filmId || 'unknown';
         const filmName = getFilmNameById(filmId);
         if (!filmCounts[filmId]) {
@@ -125,15 +120,15 @@ export const SceneAnalysisReport: React.FC = () => {
       
       // 计算拍摄习惯
       const totalPhotos = savedRecipes.length;
-      const uniqueScenes = new Set(savedRecipes.map((r: any) => r.sceneId)).size;
+      const uniqueScenes = new Set(savedRecipes.map((r: SavedRecipe) => r.sceneId)).size;
       const avgConf = savedRecipes.length > 0
-        ? savedRecipes.reduce((sum: number, r: any) => sum + (r.confidence || 0.85), 0) / savedRecipes.length
+        ? savedRecipes.reduce((sum: number, r: SavedRecipe) => sum + (r.confidence || 0.85), 0) / savedRecipes.length
         : 0;
       
       // 计算连续拍摄天数
-      const dates = savedRecipes.map((r: any) => new Date(r.timestamp).toDateString());
+      const dates = savedRecipes.map((r: SavedRecipe) => new Date(r.timestamp).toDateString());
       const uniqueDates = [...new Set(dates)];
-      const sortedDates = uniqueDates.map(d => new Date(d)).sort((a, b) => b.getTime() - a.getTime());
+      const sortedDates = uniqueDates.map(d => new Date(d as string)).sort((a, b) => b.getTime() - a.getTime());
       
       let streakDays = 0;
       const today = new Date();
@@ -168,7 +163,12 @@ export const SceneAnalysisReport: React.FC = () => {
     }
     
     setIsLoading(false);
-  };
+  }, []);
+
+  // 加载真实数据
+  useEffect(() => {
+    loadRealData();
+  }, [loadRealData]);
 
   const getFilmNameById = (filmId: string): string => {
     const filmNames: Record<string, string> = {
