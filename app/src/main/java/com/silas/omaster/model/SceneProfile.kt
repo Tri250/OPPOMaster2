@@ -7,41 +7,61 @@ import kotlinx.serialization.Serializable
 /**
  * Layer 1: 大师数据 (Master Data)
  * 统一 SceneProfile 模型 - 场景画像
- * 用于端到端的大师工作流
+ * 对齐 Android 和 React 两端的数据结构
  */
 @Serializable
 data class SceneProfile(
-    val id: String,
-    val sceneHierarchy: SceneHierarchy, // 三级场景体系
-    val hasselbladParams: HasselbladParams, // 哈苏参数体系
-    val filmRecipe: FilmRecipe?, // 胶片配方
-    val exifData: ExifData?, // EXIF元数据
-    val histogramData: HistogramData?, // 直方图数据
-    val faceData: FaceData?, // 人脸检测数据
-    val confidence: Float = 0f, // 置信度
+    val id: String,                        // "portrait-backlit"
+    val name: String,                      // "逆光人像"
+    val category: SceneCategory,           // PORTRAIT
+    val description: String,               // "侧逆光环境下的柔美人像..."
+    val color: Long,                       // 主题色 0xFFFF6B35 (哈苏橙)
+    val confidence: Float = 0f,            // 识别置信度
+    // 🔑 哈苏大师参数（对齐 OPPO 大师模式参数体系）
+    val hasselbladParams: HasselbladParams,
+    // 🔑 推荐胶片风格
+    val recommendedFilm: List<FilmPreset>,
+    // 🔑 拍摄建议（哈苏大师风格）
+    val masterTips: List<String>,
+    // 关联的相机参数
+    val cameraParams: CameraParams? = null,
+    // 扩展数据
+    val exifData: ExifData? = null,
+    val histogramData: HistogramData? = null,
+    val faceData: FaceData? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
-        sceneHierarchy = parcel.readParcelable(SceneHierarchy::class.java.classLoader)!!,
+        name = parcel.readString() ?: "",
+        category = SceneCategory.valueOf(parcel.readString() ?: SceneCategory.PORTRAIT.name),
+        description = parcel.readString() ?: "",
+        color = parcel.readLong(),
+        confidence = parcel.readFloat(),
         hasselbladParams = parcel.readParcelable(HasselbladParams::class.java.classLoader)!!,
-        filmRecipe = parcel.readParcelable(FilmRecipe::class.java.classLoader),
+        recommendedFilm = parcel.createTypedArrayList(FilmPreset.CREATOR) ?: emptyList(),
+        masterTips = parcel.createStringArrayList() ?: emptyList(),
+        cameraParams = parcel.readParcelable(CameraParams::class.java.classLoader),
         exifData = parcel.readParcelable(ExifData::class.java.classLoader),
         histogramData = parcel.readParcelable(HistogramData::class.java.classLoader),
         faceData = parcel.readParcelable(FaceData::class.java.classLoader),
-        confidence = parcel.readFloat(),
         timestamp = parcel.readLong()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeString(id)
-        parcel.writeParcelable(sceneHierarchy, flags)
+        parcel.writeString(name)
+        parcel.writeString(category.name)
+        parcel.writeString(description)
+        parcel.writeLong(color)
+        parcel.writeFloat(confidence)
         parcel.writeParcelable(hasselbladParams, flags)
-        parcel.writeParcelable(filmRecipe, flags)
+        parcel.writeTypedList(recommendedFilm)
+        parcel.writeStringList(masterTips)
+        parcel.writeParcelable(cameraParams, flags)
         parcel.writeParcelable(exifData, flags)
         parcel.writeParcelable(histogramData, flags)
         parcel.writeParcelable(faceData, flags)
-        parcel.writeFloat(confidence)
         parcel.writeLong(timestamp)
     }
 
@@ -59,178 +79,64 @@ data class SceneProfile(
 }
 
 /**
- * 三级场景体系
- * 大类 -> 细分 -> 精细
+ * 场景大类（一级分类）
  */
-@Serializable
-data class SceneHierarchy(
-    val primary: PrimaryScene, // 大类：人像/风景/静物/街拍
-    val secondary: SecondaryScene, // 细分：室内人像/户外人像/夜景人像
-    val fine: FineScene // 精细：咖啡馆人像/逆光人像/黄金时刻人像
-) : Parcelable {
-    constructor(parcel: Parcel) : this(
-        primary = PrimaryScene.valueOf(parcel.readString() ?: PrimaryScene.PORTRAIT.name),
-        secondary = SecondaryScene.valueOf(parcel.readString() ?: SecondaryScene.OUTDOOR_PORTRAIT.name),
-        fine = FineScene.valueOf(parcel.readString() ?: FineScene.GOLDEN_HOUR.name)
-    )
-
-    override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeString(primary.name)
-        parcel.writeString(secondary.name)
-        parcel.writeString(fine.name)
-    }
-
-    override fun describeContents(): Int = 0
-
-    companion object CREATOR : Parcelable.Creator<SceneHierarchy> {
-        override fun createFromParcel(parcel: Parcel): SceneHierarchy {
-            return SceneHierarchy(parcel)
-        }
-
-        override fun newArray(size: Int): Array<SceneHierarchy?> {
-            return arrayOfNulls(size)
-        }
-    }
+enum class SceneCategory(val displayName: String, val icon: String, val color: Long) {
+    PORTRAIT("人像", "👤", 0xFFFF6B35),      // 哈苏橙
+    LANDSCAPE("风景", "🏔️", 0xFF4CAF50),    // 自然绿
+    NIGHT("夜景", "🌃", 0xFF2196F3),        // 夜空蓝
+    FOOD("美食", "🍜", 0xFFFF9800),         // 美食橙
+    URBAN("城市", "🏢", 0xFF9C27B0),        // 城市紫
+    STILL_LIFE("静物", "🍃", 0xFF00BCD4),   // 静物青
+    MACRO("微距", "🔍", 0xFFE91E63),        // 微距粉
+    EVENT("活动", "🎉", 0xFFFF5722)         // 活动红
 }
 
 /**
- * 一级场景：大类
- */
-enum class PrimaryScene(val displayName: String, val icon: String) {
-    PORTRAIT("人像", "👤"),
-    LANDSCAPE("风景", "🏔️"),
-    STILL_LIFE("静物", "🍃"),
-    STREET("街拍", "🚶"),
-    NIGHT("夜景", "🌃"),
-    ARCHITECTURE("建筑", "🏢"),
-    MACRO("微距", "🔍"),
-    EVENT("活动", "🎉")
-}
-
-/**
- * 二级场景：细分
- */
-enum class SecondaryScene(val displayName: String, val primary: PrimaryScene) {
-    // 人像细分
-    INDOOR_PORTRAIT("室内人像", PrimaryScene.PORTRAIT),
-    OUTDOOR_PORTRAIT("户外人像", PrimaryScene.PORTRAIT),
-    NIGHT_PORTRAIT("夜景人像", PrimaryScene.PORTRAIT),
-    ENVIRONMENTAL_PORTRAIT("环境人像", PrimaryScene.PORTRAIT),
-    
-    // 风景细分
-    NATURAL_LANDSCAPE("自然风光", PrimaryScene.LANDSCAPE),
-    URBAN_LANDSCAPE("城市风光", PrimaryScene.LANDSCAPE),
-    SEASCAPE("海景", PrimaryScene.LANDSCAPE),
-    MOUNTAIN("山景", PrimaryScene.LANDSCAPE),
-    
-    // 静物细分
-    FOOD("美食", PrimaryScene.STILL_LIFE),
-    PRODUCT("产品", PrimaryScene.STILL_LIFE),
-    FLORA("花卉植物", PrimaryScene.STILL_LIFE),
-    
-    // 街拍细分
-    URBAN_STREET("城市街拍", PrimaryScene.STREET),
-    DOCUMENTARY("纪实", PrimaryScene.STREET),
-    CANDID("抓拍", PrimaryScene.STREET)
-}
-
-/**
- * 三级场景：精细
- */
-enum class FineScene(val displayName: String, val secondary: SecondaryScene) {
-    // 室内人像精细
-    CAFE_PORTRAIT("咖啡馆人像", SecondaryScene.INDOOR_PORTRAIT),
-    STUDIO_PORTRAIT("影棚人像", SecondaryScene.INDOOR_PORTRAIT),
-    HOME_PORTRAIT("居家人像", SecondaryScene.INDOOR_PORTRAIT),
-    
-    // 户外人像精细
-    GOLDEN_HOUR("黄金时刻", SecondaryScene.OUTDOOR_PORTRAIT),
-    BACKLIGHT_PORTRAIT("逆光人像", SecondaryScene.OUTDOOR_PORTRAIT),
-    OVERCAST_PORTRAIT("阴天人像", SecondaryScene.OUTDOOR_PORTRAIT),
-    
-    // 夜景人像精细
-    NEON_PORTRAIT("霓虹人像", SecondaryScene.NIGHT_PORTRAIT),
-    BOKEH_PORTRAIT("光斑人像", SecondaryScene.NIGHT_PORTRAIT),
-    
-    // 自然风光精细
-    SUNRISE_SUNSET("日出日落", SecondaryScene.NATURAL_LANDSCAPE),
-    BLUE_HOUR("蓝调时刻", SecondaryScene.NATURAL_LANDSCAPE),
-    MISTY("雾气朦胧", SecondaryScene.NATURAL_LANDSCAPE),
-    
-    // 城市风光精细
-    CITY_NIGHT("城市夜景", SecondaryScene.URBAN_LANDSCAPE),
-    ROOFTOP("天台视角", SecondaryScene.URBAN_LANDSCAPE),
-    STREET_VIEW("街景", SecondaryScene.URBAN_LANDSCAPE)
-}
-
-/**
- * 哈苏参数体系 (HNCS - Hasselblad Natural Color Solution)
- * 与一加/OPPO/Realme 大师模式参数对齐
+ * 哈苏大师参数（对齐 OPPO 大师模式真实参数范围）
+ * 所有参数范围：-30 ~ +30
  */
 @Serializable
 data class HasselbladParams(
-    // 曝光三要素
-    val iso: Int = 100,
-    val shutterSpeed: String = "1/125",
-    val aperture: Float = 2.8f,
-    
-    // 白平衡与色温
-    val whiteBalance: WhiteBalanceMode = WhiteBalanceMode.AUTO,
-    val colorTemperature: Int = 5500, // Kelvin
-    val tint: Int = 0, // -150 to +150
-    
-    // HNCS 色彩参数
-    val saturation: Int = 0, // -100 to +100
-    val contrast: Int = 0, // -100 to +100
-    val brightness: Int = 0, // -100 to +100
-    val highlights: Int = 0, // -100 to +100
-    val shadows: Int = 0, // -100 to +100
-    val clarity: Int = 0, // 0 to 100 (结构/清晰度)
-    
-    // 哈苏特色参数
-    val toneCurve: ToneCurve = ToneCurve.LINEAR,
-    val colorProfile: HasselbladColorProfile = HasselbladColorProfile.HNCS,
-    
-    // 胶片模拟参数
-    val filmGrain: Int = 0, // 0 to 100
-    val vignette: VignetteStyle = VignetteStyle.NONE
+    val tone: Int = 0,           // 影调 -30 ~ +30，负值=暗调/电影感，正值=明亮/通透
+    val saturation: Int = 0,     // 饱和度 -30 ~ +30，HNCS理念：克制使用，±15为舒适区
+    val contrast: Int = 0,       // 对比度 -30 ~ +30，哈苏风格偏柔和，不建议极端值
+    val colorTemp: Int = 0,      // 色温 -30 ~ +30，负=冷调，正=暖调
+    val sharpness: Int = 0,      // 锐度 -30 ~ +30，哈苏风格偏自然锐度，不建议过度锐化
+    val vignette: Int = 0,       // 暗角 -30 ~ +30，正=暗角加深，增加胶片感
+    val cyanMagenta: Int = 0,    // 青品调 -30 ~ +30，负=偏青/电影感，正=偏品/复古感
+    val softLight: SoftLightMode = SoftLightMode.NONE,  // 柔光模式：无/柔/梦幻
+    // 扩展参数（用于高级调节）
+    val highlights: Int = 0,     // 高光 -30 ~ +30
+    val shadows: Int = 0,        // 阴影 -30 ~ +30
+    val clarity: Int = 0         // 清晰度 0 ~ +30
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        iso = parcel.readInt(),
-        shutterSpeed = parcel.readString() ?: "1/125",
-        aperture = parcel.readFloat(),
-        whiteBalance = WhiteBalanceMode.valueOf(parcel.readString() ?: WhiteBalanceMode.AUTO.name),
-        colorTemperature = parcel.readInt(),
-        tint = parcel.readInt(),
+        tone = parcel.readInt(),
         saturation = parcel.readInt(),
         contrast = parcel.readInt(),
-        brightness = parcel.readInt(),
+        colorTemp = parcel.readInt(),
+        sharpness = parcel.readInt(),
+        vignette = parcel.readInt(),
+        cyanMagenta = parcel.readInt(),
+        softLight = SoftLightMode.valueOf(parcel.readString() ?: SoftLightMode.NONE.name),
         highlights = parcel.readInt(),
         shadows = parcel.readInt(),
-        clarity = parcel.readInt(),
-        toneCurve = ToneCurve.valueOf(parcel.readString() ?: ToneCurve.LINEAR.name),
-        colorProfile = HasselbladColorProfile.valueOf(parcel.readString() ?: HasselbladColorProfile.HNCS.name),
-        filmGrain = parcel.readInt(),
-        vignette = VignetteStyle.valueOf(parcel.readString() ?: VignetteStyle.NONE.name)
+        clarity = parcel.readInt()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeInt(iso)
-        parcel.writeString(shutterSpeed)
-        parcel.writeFloat(aperture)
-        parcel.writeString(whiteBalance.name)
-        parcel.writeInt(colorTemperature)
-        parcel.writeInt(tint)
+        parcel.writeInt(tone)
         parcel.writeInt(saturation)
         parcel.writeInt(contrast)
-        parcel.writeInt(brightness)
+        parcel.writeInt(colorTemp)
+        parcel.writeInt(sharpness)
+        parcel.writeInt(vignette)
+        parcel.writeInt(cyanMagenta)
+        parcel.writeString(softLight.name)
         parcel.writeInt(highlights)
         parcel.writeInt(shadows)
         parcel.writeInt(clarity)
-        parcel.writeString(toneCurve.name)
-        parcel.writeString(colorProfile.name)
-        parcel.writeInt(filmGrain)
-        parcel.writeString(vignette.name)
     }
 
     override fun describeContents(): Int = 0
@@ -244,98 +150,115 @@ data class HasselbladParams(
             return arrayOfNulls(size)
         }
     }
-}
 
-enum class WhiteBalanceMode(val displayName: String, val kelvin: Int?) {
-    AUTO("自动", null),
-    DAYLIGHT("日光", 5500),
-    CLOUDY("阴天", 6500),
-    SHADE("阴影", 7500),
-    TUNGSTEN("钨丝灯", 3200),
-    FLUORESCENT("荧光灯", 4000),
-    CUSTOM("自定义", null)
-}
-
-enum class ToneCurve(val displayName: String) {
-    LINEAR("线性"),
-    SOFT("柔和"),
-    HARD("硬朗"),
-    HIGH_CONTRAST("高对比"),
-    FILM_LIKE("胶片感")
-}
-
-enum class HasselbladColorProfile(val displayName: String, val description: String) {
-    HNCS("HNCS", "哈苏自然色彩解决方案"),
-    VIVID("鲜艳", "高饱和度色彩"),
-    PORTRAIT("人像", "肤色优化"),
-    LANDSCAPE("风景", "自然风景优化"),
-    MONOCHROME("黑白", "经典黑白"),
-    SEPIA(" sepia", "复古 sepia")
-}
-
-enum class VignetteStyle(val displayName: String) {
-    NONE("无"),
-    LIGHT("轻微"),
-    MEDIUM("中等"),
-    HEAVY("强烈"),
-    FILM_LIKE("胶片感")
+    /**
+     * 格式化参数显示
+     */
+    fun formatParamValue(value: Int): String {
+        return if (value >= 0) "+$value" else "$value"
+    }
 }
 
 /**
- * 胶片配方 (Film Recipe)
- * 9款经典胶片风格映射
+ * 柔光模式
+ */
+enum class SoftLightMode(val displayName: String, val description: String) {
+    NONE("无", "标准效果"),
+    SOFT("柔", "柔和光线效果"),
+    DREAMY("梦幻", "梦幻柔光效果")
+}
+
+/**
+ * 胶片预设（对齐 OPPO 9 款原生胶片）
  */
 @Serializable
-data class FilmRecipe(
-    val filmStock: FilmStock,
-    val pushPull: Int = 0, // -2 to +2 stops
-    val customAdjustments: Map<String, Float> = emptyMap()
+data class FilmPreset(
+    val id: String,              // "portra", "cc", "nc", "nh", "rdp3", "800t", "tx400", "ccd_cool", "ccd_warm"
+    val name: String,            // "Portra 400", "CC 经典负片"
+    val series: FilmSeries,      // 原生经典 / 情绪与表达 / 结构与时间 / 数字记忆
+    val matchScore: Float,       // 场景匹配度 0-1
+    val description: String = "" // 胶片特性描述
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        filmStock = FilmStock.valueOf(parcel.readString() ?: FilmStock.KODAK_PORTRA_400.name),
-        pushPull = parcel.readInt(),
-        customAdjustments = emptyMap() // Map需要特殊处理
+        id = parcel.readString() ?: "",
+        name = parcel.readString() ?: "",
+        series = FilmSeries.valueOf(parcel.readString() ?: FilmSeries.CLASSIC.name),
+        matchScore = parcel.readFloat(),
+        description = parcel.readString() ?: ""
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeString(filmStock.name)
-        parcel.writeInt(pushPull)
+        parcel.writeString(id)
+        parcel.writeString(name)
+        parcel.writeString(series.name)
+        parcel.writeFloat(matchScore)
+        parcel.writeString(description)
     }
 
     override fun describeContents(): Int = 0
 
-    companion object CREATOR : Parcelable.Creator<FilmRecipe> {
-        override fun createFromParcel(parcel: Parcel): FilmRecipe {
-            return FilmRecipe(parcel)
+    companion object CREATOR : Parcelable.Creator<FilmPreset> {
+        override fun createFromParcel(parcel: Parcel): FilmPreset {
+            return FilmPreset(parcel)
         }
 
-        override fun newArray(size: Int): Array<FilmRecipe?> {
+        override fun newArray(size: Int): Array<FilmPreset?> {
             return arrayOfNulls(size)
         }
     }
 }
 
 /**
- * 9款经典胶片风格
+ * 胶片系列分类
  */
-enum class FilmStock(
-    val displayName: String,
-    val brand: String,
-    val iso: Int,
-    val characteristics: String
-) {
-    // Kodak 系列
-    KODAK_PORTRA_400("Portra 400", "Kodak", 400, "柔和肤色，自然色彩"),
-    KODAK_PORTRA_160("Portra 160", "Kodak", 160, "细腻颗粒，婚礼人像首选"),
-    KODAK_EKTAR_100("Ektar 100", "Kodak", 100, "鲜艳饱和，风景专用"),
-    KODAK_GOLD_200("Gold 200", "Kodak", 200, "暖调复古，日常记录"),
-    KODAK_TRI_X_400("Tri-X 400", "Kodak", 400, "经典黑白，颗粒粗犷"),
-    
-    // Fujifilm 系列
-    FUJI_PRO_400H("Pro 400H", "Fujifilm", 400, "柔和对比，日系清新"),
-    FUJI_VELVIA_50("Velvia 50", "Fujifilm", 50, "极高饱和，反转片质感"),
-    FUJI_ACROS_100("Acros 100", "Fujifilm", 100, "细腻黑白，丰富层次"),
-    FUJI_C200("C200", "Fujifilm", 200, "平价入门，清新色调")
+enum class FilmSeries(val displayName: String, val films: List<String>) {
+    CLASSIC("原生经典", listOf("cc", "nc", "nh")),        // CC经典负片, NC自然, NH浓郁
+    EMOTION("情绪与表达", listOf("portra", "rdp3")),      // Portra 400, RDP3
+    STRUCTURE("结构与时间", listOf("800t", "tx400")),     // 800T, TX400黑白
+    DIGITAL("数字记忆", listOf("ccd_cool", "ccd_warm"))   // 冷CCD, 暖CCD
+}
+
+/**
+ * 相机参数
+ */
+@Serializable
+data class CameraParams(
+    val iso: Int? = null,
+    val shutterSpeed: String? = null,
+    val aperture: Float? = null,
+    val focalLength: Float? = null,
+    val whiteBalance: String? = null,
+    val focusMode: String? = null
+) : Parcelable {
+    constructor(parcel: Parcel) : this(
+        iso = parcel.readValue(Int::class.java.classLoader) as? Int,
+        shutterSpeed = parcel.readString(),
+        aperture = parcel.readValue(Float::class.java.classLoader) as? Float,
+        focalLength = parcel.readValue(Float::class.java.classLoader) as? Float,
+        whiteBalance = parcel.readString(),
+        focusMode = parcel.readString()
+    )
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeValue(iso)
+        parcel.writeString(shutterSpeed)
+        parcel.writeValue(aperture)
+        parcel.writeValue(focalLength)
+        parcel.writeString(whiteBalance)
+        parcel.writeString(focusMode)
+    }
+
+    override fun describeContents(): Int = 0
+
+    companion object CREATOR : Parcelable.Creator<CameraParams> {
+        override fun createFromParcel(parcel: Parcel): CameraParams {
+            return CameraParams(parcel)
+        }
+
+        override fun newArray(size: Int): Array<CameraParams?> {
+            return arrayOfNulls(size)
+        }
+    }
 }
 
 /**
@@ -428,17 +351,11 @@ data class HistogramData(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-
         other as HistogramData
-
         if (!luminance.contentEquals(other.luminance)) return false
         if (!red.contentEquals(other.red)) return false
         if (!green.contentEquals(other.green)) return false
         if (!blue.contentEquals(other.blue)) return false
-        if (meanLuminance != other.meanLuminance) return false
-        if (shadowClipping != other.shadowClipping) return false
-        if (highlightClipping != other.highlightClipping) return false
-
         return true
     }
 
@@ -447,9 +364,6 @@ data class HistogramData(
         result = 31 * result + red.contentHashCode()
         result = 31 * result + green.contentHashCode()
         result = 31 * result + blue.contentHashCode()
-        result = 31 * result + meanLuminance.hashCode()
-        result = 31 * result + shadowClipping.hashCode()
-        result = 31 * result + highlightClipping.hashCode()
         return result
     }
 
@@ -495,24 +409,18 @@ data class FaceData(
 
 @Serializable
 data class FaceInfo(
-    val bounds: RectData, // 人脸位置
+    val bounds: RectData,
     val confidence: Float,
     val hasSmile: Boolean,
     val leftEyeOpen: Boolean,
-    val rightEyeOpen: Boolean,
-    val yawAngle: Float, // 头部左右转动
-    val rollAngle: Float, // 头部倾斜
-    val pitchAngle: Float // 头部上下转动
+    val rightEyeOpen: Boolean
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         bounds = parcel.readParcelable(RectData::class.java.classLoader)!!,
         confidence = parcel.readFloat(),
         hasSmile = parcel.readByte() != 0.toByte(),
         leftEyeOpen = parcel.readByte() != 0.toByte(),
-        rightEyeOpen = parcel.readByte() != 0.toByte(),
-        yawAngle = parcel.readFloat(),
-        rollAngle = parcel.readFloat(),
-        pitchAngle = parcel.readFloat()
+        rightEyeOpen = parcel.readByte() != 0.toByte()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -521,9 +429,6 @@ data class FaceInfo(
         parcel.writeByte(if (hasSmile) 1 else 0)
         parcel.writeByte(if (leftEyeOpen) 1 else 0)
         parcel.writeByte(if (rightEyeOpen) 1 else 0)
-        parcel.writeFloat(yawAngle)
-        parcel.writeFloat(rollAngle)
-        parcel.writeFloat(pitchAngle)
     }
 
     override fun describeContents(): Int = 0
