@@ -179,6 +179,13 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putString(KEY_USER_ID, value).apply()
         }
 
+    // 云端API密钥（用于云端AI推理）
+    var cloudApiKey: String?
+        get() = prefs.getString(KEY_CLOUD_API_KEY, null)
+        set(value) {
+            prefs.edit().putString(KEY_CLOUD_API_KEY, value).apply()
+        }
+
     // 哈苏之眼开关
     var isAISceneRecognitionEnabled: Boolean
         get() = prefs.getBoolean(KEY_AI_SCENE_ENABLED, true)
@@ -315,6 +322,7 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_CLOUD_SYNC_STATUS = "cloud_sync_status"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
         private const val KEY_USER_ID = "user_id"
+        private const val KEY_CLOUD_API_KEY = "cloud_api_key"
         private const val KEY_AI_SCENE_ENABLED = "ai_scene_enabled"
         private const val KEY_LAST_WATERMARK_TEMPLATE = "last_watermark_template"
         private const val KEY_AI_FINE_TUNE_ENABLED = "ai_fine_tune_enabled"

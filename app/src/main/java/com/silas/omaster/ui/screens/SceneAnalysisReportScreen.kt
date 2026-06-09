@@ -15,9 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.data.local.RecipeHistoryManager
+import com.silas.omaster.data.local.RecipeRecord
 import com.silas.omaster.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -93,20 +96,6 @@ data class ShootingHabits(
 )
 
 /**
- * 保存的配方数据
- */
-data class SavedRecipe(
-    val id: String,
-    val sceneId: String,
-    val sceneName: String,
-    val filmId: String?,
-    val filmName: String?,
-    val timestamp: Long,
-    val confidence: Float = 0.85f,
-    val thumbnail: String? = null
-)
-
-/**
  * 场景分析报告页面
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,6 +104,9 @@ fun SceneAnalysisReportScreen(
     onBack: () -> Unit = {},
     onViewDetails: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val recipeHistoryManager = remember { RecipeHistoryManager.getInstance(context) }
+    
     // 时间范围选择
     var timeRange by remember { mutableStateOf("month") }
     var isLoading by remember { mutableStateOf(true) }
@@ -125,13 +117,13 @@ fun SceneAnalysisReportScreen(
     var habits by remember { mutableStateOf<ShootingHabits?>(null) }
     var masterTips by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // 模拟从本地存储加载真实数据
+    // 从本地存储加载真实数据
     LaunchedEffect(timeRange) {
         isLoading = true
-        kotlinx.coroutines.delay(500)
+        kotlinx.coroutines.delay(300)
 
-        // 模拟从本地存储获取保存的配方
-        val savedRecipes = generateMockRecipes()
+        // 获取指定时间范围的配方记录
+        val savedRecipes = recipeHistoryManager.getRecipesByTimeRange(timeRange)
 
         // 计算场景统计
         val sceneCounts = mutableMapOf<String, MutablePair<String, Int>>()
@@ -668,53 +660,6 @@ private fun MasterTipsCard(tips: List<String>) {
  * 辅助类：可变Pair
  */
 class MutablePair<T1, T2>(var first: T1, var second: T2)
-
-/**
- * 生成模拟配方数据
- */
-private fun generateMockRecipes(): List<SavedRecipe> {
-    val scenes = listOf(
-        "portrait" to "人像",
-        "landscape" to "风景",
-        "food" to "美食",
-        "night" to "夜景",
-        "urban" to "城市",
-        "macro" to "微距",
-        "other" to "其他"
-    )
-
-    val films = listOf(
-        "portra-400" to "Portra 400",
-        "cc-classic" to "CC 经典负片",
-        "nh-rich" to "NH 浓郁",
-        "rdp3" to "RDP3 正片",
-        "tx400" to "TX400 黑白"
-    )
-
-    val now = System.currentTimeMillis()
-    val recipes = mutableListOf<SavedRecipe>()
-
-    // 生成30条模拟数据
-    repeat(30) { index ->
-        val sceneIndex = (index % scenes.size)
-        val filmIndex = (index % films.size)
-        val daysAgo = index % 15
-
-        recipes.add(
-            SavedRecipe(
-                id = "recipe-$index",
-                sceneId = scenes[sceneIndex].first,
-                sceneName = scenes[sceneIndex].second,
-                filmId = films[filmIndex].first,
-                filmName = films[filmIndex].second,
-                timestamp = now - daysAgo * 24 * 60 * 60 * 1000L,
-                confidence = 0.75f + (index % 20) * 0.01f
-            )
-        )
-    }
-
-    return recipes.sortedByDescending { it.timestamp }
-}
 
 /**
  * 格式化日期

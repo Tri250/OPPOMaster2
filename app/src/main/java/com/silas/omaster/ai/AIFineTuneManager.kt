@@ -537,51 +537,343 @@ class AIFineTuneManager private constructor(context: Context) {
         }
     }
 
-    // ==================== 云端AI推理（占位实现） ====================
+    // ==================== 云端AI推理 ====================
 
     /**
-     * 云端AI推理（占位实现）
+     * 云端AI推理
      * 
-     * TODO: 实现真实云端API调用
-     * - 使用OkHttp/Retrofit进行网络请求
-     * - 添加认证和签名机制
-     * - 实现请求/响应数据模型
+     * 实现真实云端API调用框架：
+     * - 图像压缩和Base64编码
+     * - HTTP请求构建和发送
+     * - 响应解析和结果转换
+     * - 错误处理和降级策略
      * 
      * @param bitmap 待分析的图像
      * @param currentParams 当前调整参数
-     * @return AI建议（当前返回null，降级到本地推理）
+     * @return AI建议（失败时返回null，触发降级到本地推理）
      */
     private suspend fun generateCloudSuggestion(
         bitmap: Bitmap,
         currentParams: Map<String, Int>
     ): AISuggestion? = withContext(Dispatchers.Default) {
-        // 云端AI推理占位实现
-        // 当前版本：返回null，触发降级到本地推理
-        // 未来版本：调用云端API获取高质量推理结果
+        try {
+            Log.d(TAG, "开始云端AI推理")
+            
+            // Step 1: 检查网络连接质量
+            if (!isNetworkAvailable() || !isNetworkQualityGood()) {
+                Log.w(TAG, "网络不可用或质量不佳，跳过云端推理")
+                return@withContext null
+            }
+            
+            // Step 2: 压缩图像并转换为Base64
+            val compressedBitmap = compressBitmapForUpload(bitmap)
+            val imageBase64 = bitmapToBase64(compressedBitmap)
+            
+            if (imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
+                Log.w(TAG, "图像数据过大(${imageBase64.length}字节)，跳过云端推理")
+                return@withContext null
+            }
+            
+            // Step 3: 构建请求参数
+            val requestParams = buildCloudRequestParams(imageBase64, currentParams)
+            
+            // Step 4: 发送HTTP请求（带超时控制）
+            val responseJson = sendCloudRequestWithTimeout(requestParams, CLOUD_API_TIMEOUT_MS)
+            
+            // Step 5: 解析响应并转换为AI建议
+            if (responseJson != null) {
+                val suggestion = parseCloudResponse(responseJson)
+                Log.d(TAG, "云端AI推理成功: 场景=${suggestion?.basePresetName}, 置信度=${suggestion?.confidence}")
+                return@withContext suggestion
+            }
+            
+            Log.w(TAG, "云端API响应无效，降级到本地推理")
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "云端AI推理失败: ${e.message}, 降级到本地推理")
+            null
+        }
+    }
+
+    /**
+     * 检查网络连接质量
+     * 验证网络是否稳定且带宽足够进行API调用
+     */
+    private fun isNetworkQualityGood(): Boolean {
+        val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork
         
-        Log.d(TAG, "云端AI推理占位实现，降级到本地推理")
+        if (network == null) {
+            Log.d(TAG, "无活跃网络连接")
+            return false
+        }
         
-        // 模拟网络请求延迟（占位）
-        delay(100)
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+        if (capabilities == null) {
+            Log.d(TAG, "无法获取网络能力信息")
+            return false
+        }
         
-        // 返回null触发降级
-        null
+        // 检查是否有有效的互联网连接
+        val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        val hasValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         
-        // TODO: 真实云端API实现
-        // try {
-        //     val requestBody = CloudAIRequest(
-        //         imageData = bitmapToBase64(bitmap),
-        //         currentParams = currentParams,
-        //         userId = settingsManager.userId
-        //     )
-        //     val response = cloudAIService.analyzeImage(requestBody)
-        //     if (response.isSuccessful && response.body()?.success == true) {
-        //         return@withContext convertCloudResponseToSuggestion(response.body()!!)
-        //     }
-        // } catch (e: Exception) {
-        //     Log.w(TAG, "云端API调用失败: ${e.message}")
-        // }
-        // null
+        if (!hasInternet || !hasValidated) {
+            Log.d(TAG, "网络连接未验证或无互联网访问")
+            return false
+        }
+        
+        // 检查网络类型（WiFi或高质量移动网络更适合云端推理）
+        val isWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val isCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        
+        // WiFi总是适合；移动网络需要检查带宽
+        if (isWifi) {
+            Log.d(TAG, "WiFi网络，适合云端推理")
+            return true
+        }
+        
+        if (isCellular) {
+            // 检查预估下行带宽（至少1Mbps）
+            val downlinkBandwidth = capabilities.linkDownstreamBandwidthKbps
+            if (downlinkBandwidth >= 1000) {
+                Log.d(TAG, "移动网络带宽充足(${downlinkBandwidth}Kbps)，适合云端推理")
+                return true
+            }
+            Log.d(TAG, "移动网络带宽不足(${downlinkBandwidth}Kbps)，跳过云端推理")
+            return false
+        }
+        
+        // 其他网络类型（以太网等）默认允许
+        Log.d(TAG, "其他网络类型，允许云端推理")
+        return true
+    }
+
+    /**
+     * 压缩图像用于上传
+     * 保持合理质量的同时减少数据大小
+     */
+    private fun compressBitmapForUpload(bitmap: Bitmap): Bitmap {
+        val maxDimension = 512 // 云端推理使用较小尺寸
+        
+        val width = bitmap.width
+        val height = bitmap.height
+        
+        if (width <= maxDimension && height <= maxDimension) {
+            return bitmap
+        }
+        
+        val scale = maxDimension.toFloat() / maxOf(width, height)
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+        
+        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+    }
+
+    /**
+     * 将Bitmap转换为Base64字符串
+     */
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        val outputStream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+        val byteArray = outputStream.toByteArray()
+        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
+    }
+
+    /**
+     * 构建云端请求参数
+     */
+    private fun buildCloudRequestParams(imageBase64: String, currentParams: Map<String, Int>): Map<String, Any> {
+        return mapOf(
+            "image_data" to imageBase64,
+            "image_format" to "jpeg",
+            "current_params" to currentParams,
+            "request_type" to "scene_analysis",
+            "user_id" to (settingsManager.userId ?: "anonymous"),
+            "device_model" to android.os.Build.MODEL,
+            "app_version" to getAppVersion(),
+            "timestamp" to System.currentTimeMillis()
+        )
+    }
+
+    /**
+     * 发送云端请求（带超时控制）
+     */
+    private suspend fun sendCloudRequestWithTimeout(
+        params: Map<String, Any>,
+        timeoutMs: Long
+    ): String? = withContext(Dispatchers.IO) {
+        try {
+            withTimeout(timeoutMs) {
+                // 使用OkHttp发送请求
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                
+                val requestBody = okhttp3.MediaType.parse("application/json; charset=utf-8")
+                    .let { mediaType ->
+                        okhttp3.RequestBody.create(
+                            mediaType,
+                            toJsonString(params)
+                        )
+                    }
+                
+                val request = okhttp3.Request.Builder()
+                    .url(CLOUD_API_ENDPOINT)
+                    .post(requestBody)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("X-Api-Key", getApiKey())
+                    .addHeader("X-Device-Id", getDeviceId())
+                    .build()
+                
+                val response = client.newCall(request).execute()
+                
+                if (response.isSuccessful) {
+                    response.body()?.string()
+                } else {
+                    Log.w(TAG, "云端API响应失败: ${response.code()}")
+                    null
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w(TAG, "云端API请求超时")
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "云端API请求异常: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * 解析云端响应并转换为AI建议
+     */
+    private fun parseCloudResponse(responseJson: String): AISuggestion? {
+        try {
+            // 解析JSON响应
+            val jsonObject = org.json.JSONObject(responseJson)
+            
+            // 检查响应状态
+            val success = jsonObject.optBoolean("success", false)
+            if (!success) {
+                Log.w(TAG, "云端API返回失败状态")
+                return null
+            }
+            
+            val data = jsonObject.optJSONObject("data")
+            if (data == null) {
+                Log.w(TAG, "云端API响应缺少data字段")
+                return null
+            }
+            
+            // 提取场景信息
+            val sceneId = data.optString("scene_id", "unknown")
+            val sceneName = data.optString("scene_name", "通用")
+            val confidence = data.optDouble("confidence", 0.85).toFloat()
+            val sceneCategory = data.optString("scene_category", "通用")
+            
+            // 提取参数建议
+            val suggestionsJson = data.optJSONArray("suggestions")
+            val suggestions = mutableListOf<ParamSuggestion>()
+            
+            if (suggestionsJson != null) {
+                for (i in 0 until suggestionsJson.length()) {
+                    val item = suggestionsJson.getJSONObject(i)
+                    suggestions.add(
+                        ParamSuggestion(
+                            field = item.optString("field", ""),
+                            currentValue = item.optInt("current_value", 0),
+                            suggestedValue = item.optInt("suggested_value", 0),
+                            displayName = item.optString("display_name", ""),
+                            isSelected = item.optBoolean("is_selected", true)
+                        )
+                    )
+                }
+            }
+            
+            // 提取分析描述
+            val colorAnalysis = data.optString("color_analysis", "")
+            val lightAnalysis = data.optString("light_analysis", "")
+            val recommendedFilm = data.optString("recommended_film", "CC 经典负片")
+            
+            // 提取大师建议
+            val tipsJson = data.optJSONArray("master_tips")
+            val masterTips = mutableListOf<String>()
+            if (tipsJson != null) {
+                for (i in 0 until tipsJson.length()) {
+                    masterTips.add(tipsJson.getString(i))
+                }
+            }
+            
+            return AISuggestion(
+                basePresetId = sceneId,
+                basePresetName = sceneName,
+                suggestions = suggestions,
+                generatedAt = System.currentTimeMillis(),
+                isOfflineMode = false,
+                confidence = confidence,
+                sceneCategory = sceneCategory,
+                colorAnalysis = colorAnalysis,
+                lightAnalysis = lightAnalysis,
+                recommendedFilm = recommendedFilm,
+                masterTips = masterTips
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "解析云端响应失败: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * 将Map转换为JSON字符串
+     */
+    private fun toJsonString(params: Map<String, Any>): String {
+        val jsonObject = org.json.JSONObject()
+        for ((key, value) in params) {
+            when (value) {
+                is String -> jsonObject.put(key, value)
+                is Int -> jsonObject.put(key, value)
+                is Long -> jsonObject.put(key, value)
+                is Boolean -> jsonObject.put(key, value)
+                is Map<*, *> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    jsonObject.put(key, org.json.JSONObject(value as Map<String, Any>))
+                }
+                else -> jsonObject.put(key, value.toString())
+            }
+        }
+        return jsonObject.toString()
+    }
+
+    /**
+     * 获取API密钥
+     */
+    private fun getApiKey(): String {
+        // 从安全存储或配置中获取API密钥
+        return settingsManager.cloudApiKey ?: "demo_key"
+    }
+
+    /**
+     * 获取设备ID
+     */
+    private fun getDeviceId(): String {
+        return android.provider.Settings.Secure.getString(
+            appContext.contentResolver,
+            android.provider.Settings.Secure.ANDROID_ID
+        ) ?: "unknown_device"
+    }
+
+    /**
+     * 获取应用版本
+     */
+    private fun getAppVersion(): String {
+        return try {
+            val packageInfo = appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+            packageInfo.versionName ?: "1.0.0"
+        } catch (e: Exception) {
+            "1.0.0"
+        }
     }
 
     // ==================== 降级策略：规则引擎 ====================
@@ -926,6 +1218,11 @@ class AIFineTuneManager private constructor(context: Context) {
 
     companion object {
         private const val TAG = "AIFineTuneManager"
+        
+        // 云端API配置
+        private const val CLOUD_API_ENDPOINT = "https://api.omaster.ai/v1/scene/analyze"
+        private const val CLOUD_API_TIMEOUT_MS = 5000L // 5秒超时
+        private const val MAX_IMAGE_SIZE_BYTES = 500000 // 最大500KB图像数据
 
         @Volatile
         private var instance: AIFineTuneManager? = null

@@ -31,15 +31,16 @@ android {
         getByName("debug") {
             // 使用默认debug签名
         }
-        // Release签名需要配置正式密钥库
-        // 发布前请替换为真实签名配置
+        // Release签名配置（临时使用调试签名，便于测试）
+        // ⚠️ 正式发布前请替换为真实的release签名密钥库
         create("release") {
-            // 从环境变量或local.properties读取签名配置
-            // 示例配置（发布时替换）
-            // storeFile = file("omaster-release.jks")
-            // storePassword = "your_store_password"
-            // keyAlias = "omaster"
-            // keyPassword = "your_key_password"
+            // 临时方案：使用调试签名便于开发测试
+            // 正式发布时请创建专用签名密钥库并替换以下配置
+            // 使用Android SDK默认的debug keystore
+            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
