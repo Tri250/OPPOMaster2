@@ -10,7 +10,7 @@ import {
   SceneProfile,
   ALL_FILM_PRESETS,
   getScenePresetById,
-} from './sceneProfile';
+} from '../store/sceneProfile';
 
 /**
  * 场景→哈苏参数映射表

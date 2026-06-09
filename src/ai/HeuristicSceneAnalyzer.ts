@@ -10,7 +10,7 @@ import {
   SCENE_PRESETS,
   ALL_FILM_PRESETS,
   getScenePresetById,
-} from './sceneProfile';
+} from '../store/sceneProfile';
 
 /**
  * 颜色画像
