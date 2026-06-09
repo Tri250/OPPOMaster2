@@ -311,11 +311,11 @@ fun DetailScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // 统计数据
+                        // 统计数据（使用预设真实数据）
                         PresetStatsCard(
-                            downloads = 12580,
-                            rating = 4.9f,
-                            ratingCount = 856,
+                            downloads = it.downloads ?: 0,
+                            rating = it.rating ?: 4.5f,
+                            ratingCount = it.ratingCount ?: 0,
                             modifier = Modifier.fillMaxWidth()
                         )
                         
