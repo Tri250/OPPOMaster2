@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     // 添加 Kotlin Serialization 插件，用于类型安全的导航
     alias(libs.plugins.kotlin.serialization)
+    // 添加 Kotlin Parcelize 插件，用于Parcelable实现
+    id("kotlin-parcelize")
 }
 
 android {
@@ -135,6 +137,11 @@ dependencies {
 
     // ML Kit 人脸检测
     implementation(libs.mlkit.face.detection)
+
+    // TensorFlow Lite 推理引擎
+    implementation(libs.tensorflow.lite)
+    implementation(libs.tensorflow.lite.gpu)
+    implementation(libs.tensorflow.lite.support)
 
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)

@@ -1,10 +1,28 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, RefreshCw, Check, Wand2, Sparkles, Sun, Moon, Palette, 
   Camera, Aperture, Zap, Eye, Contrast, Droplets, Layers, Sliders,
   Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search
 } from 'lucide-react';
+
+// 导入状态管理和 AI 推理服务
+import {
+  FineTuneState,
+  FineTuneActionType,
+  fineTuneReducer,
+  createInitialState,
+  canUndo,
+} from '../../services/fineTuneState';
+import {
+  performAutoTune,
+  AIInferenceRequest,
+} from '../../services/aiInferenceService';
+import { AIFineTuneParams } from '../../services/aiInferenceService';
+
+// ============================================
+// 常量配置
+// ============================================
 
 // 12+ 色彩风格预设
 const COLOR_STYLES = [
@@ -15,7 +33,7 @@ const COLOR_STYLES = [
   { id: 'film', name: '胶片', icon: Camera, color: '#795548', params: { saturation: -10, contrast: 15, warmth: 5, grain: 15, fade: 10 }, desc: '经典胶片质感' },
   { id: 'bw', name: '黑白', icon: Contrast, color: '#9E9E9E', params: { saturation: -100, contrast: 20, warmth: 0, clarity: 15 }, desc: '经典黑白摄影' },
   { id: 'vintage', name: '复古', icon: Layers, color: '#8D6E63', params: { saturation: -15, contrast: 5, warmth: 15, fade: 20, grain: 10 }, desc: '怀旧复古风格' },
-  { id: 'cinematic', name: '电影', icon: Aperture, color: '#607D8B', params: { saturation: 5, contrast: 25, warmth: 10, teal: 15, orange: 10 }, desc: '电影大片感' },
+  { id: 'cinematic', name: '电影', icon: Aperture, color: '#607D8B', params: { saturation: 5, contrast: 25, warmth: 10 }, desc: '电影大片感' },
   { id: 'moody', name: '情绪', icon: Moon, color: '#3F51B5', params: { saturation: -5, contrast: 30, warmth: -10, shadows: 20, highlights: -15 }, desc: '情绪氛围感' },
   { id: 'pastel', name: '柔和', icon: Brush, color: '#E1BEE7', params: { saturation: -10, contrast: -10, warmth: 5, brightness: 10, fade: 15 }, desc: '柔和粉彩风' },
   { id: 'dramatic', name: '戏剧', icon: Zap, color: '#FF5722', params: { saturation: 15, contrast: 35, warmth: 5, clarity: 20, highlights: -20 }, desc: '戏剧性光影' },
@@ -46,18 +64,6 @@ const BASE_PRESETS = [
   { id: 'soft', name: '柔和清新', params: { saturation: 10, contrast: -5, warmth: 8, sharpness: 10, fade: 5 }, icon: Brush },
 ];
 
-// HSL调节配置
-const HSL_CONFIG = [
-  { id: 'red', name: '红色', color: '#FF0000', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'orange', name: '橙色', color: '#FF8000', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'yellow', name: '黄色', color: '#FFFF00', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'green', name: '绿色', color: '#00FF00', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'cyan', name: '青色', color: '#00FFFF', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'blue', name: '蓝色', color: '#0000FF', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'purple', name: '紫色', color: '#8000FF', hue: 0, saturation: 0, luminance: 0 },
-  { id: 'magenta', name: '洋红', color: '#FF00FF', hue: 0, saturation: 0, luminance: 0 },
-];
-
 // 曲线预设
 const CURVE_PRESETS = [
   { id: 'linear', name: '线性', points: [[0, 0], [255, 255]] },
@@ -67,179 +73,217 @@ const CURVE_PRESETS = [
   { id: 'invert', name: '反相', points: [[0, 255], [255, 0]] },
 ];
 
+// 默认图像源
+const DEFAULT_IMAGE_SOURCE = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600';
+
+// ============================================
+// 主组件
+// ============================================
+
 const AIFineTunePage: React.FC = () => {
   const { goBack } = useAppStore();
-  const [params, setParams] = useState({
-    saturation: 10,
-    contrast: 5,
-    brightness: 0,
-    warmth: 8,
-    sharpness: 15,
-    clarity: 0,
-    vibrance: 0,
-    highlights: 0,
-    shadows: 0,
-    whites: 0,
-    blacks: 0,
-    grain: 0,
-    fade: 0,
-    dehaze: 0,
-    denoise: 0,
-    skinSmooth: 0,
-    exposure: 0,
-    texture: 0,
-  });
   
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processStage, setProcessStage] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'basic' | 'color' | 'smart' | 'hsl' | 'curve'>('basic');
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
-  const [selectedOptimizations, setSelectedOptimizations] = useState<string[]>([]);
-  const [showCompare, setShowCompare] = useState(false);
-  const [lockedParams, setLockedParams] = useState<string[]>([]);
-  const [history, setHistory] = useState<typeof params[]>([]);
-  const [favorites, setFavorites] = useState<string[]>(['cinematic', 'moody']);
-  const [selectedImage] = useState<string>('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600');
-  const [hslValues, setHslValues] = useState(HSL_CONFIG);
-  const [selectedHsl, setSelectedHsl] = useState('red');
-  const [searchQuery, setSearchQuery] = useState('');
-
+  // 使用 useReducer 管理所有状态
+  const [state, dispatch] = useReducer(
+    fineTuneReducer,
+    createInitialState(DEFAULT_IMAGE_SOURCE)
+  );
+  
+  // 成功提示自动隐藏定时器
+  const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 成功提示自动隐藏
+  useEffect(() => {
+    if (state.showSuccess) {
+      successTimerRef.current = setTimeout(() => {
+        dispatch({ type: FineTuneActionType.SET_SHOW_SUCCESS, show: false });
+      }, 2000);
+    }
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, [state.showSuccess]);
+  
+  // ========== 计算属性 ==========
+  
   // 过滤色彩风格
   const filteredStyles = useMemo(() => {
-    if (!searchQuery) return COLOR_STYLES;
-    const q = searchQuery.toLowerCase();
+    if (!state.searchQuery) return COLOR_STYLES;
+    const q = state.searchQuery.toLowerCase();
     return COLOR_STYLES.filter(s => 
       s.name.toLowerCase().includes(q) || 
       s.desc.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
-
-  // 更新参数
-  const updateParam = useCallback((key: string, value: number) => {
-    if (lockedParams.includes(key)) return;
-    setParams(prev => ({ ...prev, [key]: value }));
-  }, [lockedParams]);
-
+  }, [state.searchQuery]);
+  
+  // ========== 操作函数 ==========
+  
+  // 更新单个参数
+  const updateParam = useCallback((key: keyof AIFineTuneParams, value: number) => {
+    dispatch({ type: FineTuneActionType.SET_PARAM, key, value });
+  }, []);
+  
   // 切换参数锁定
   const toggleLock = useCallback((key: string) => {
-    setLockedParams(prev => 
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
+    dispatch({ type: FineTuneActionType.TOGGLE_LOCK_PARAM, paramKey: key });
   }, []);
-
+  
   // 应用色彩风格
   const applyColorStyle = useCallback((style: typeof COLOR_STYLES[0]) => {
-    setSelectedStyle(style.id);
-    setParams(prev => ({ ...prev, ...style.params }));
-    setHistory(prev => [params, ...prev].slice(0, 15));
-  }, [params]);
-
+    // 先保存当前参数到历史
+    dispatch({ type: FineTuneActionType.PUSH_HISTORY, params: state.params });
+    // 应用风格参数
+    dispatch({ type: FineTuneActionType.SET_PARAMS, params: style.params });
+    // 设置选中风格
+    dispatch({ type: FineTuneActionType.SET_SELECTED_STYLE, styleId: style.id });
+  }, [state.params]);
+  
   // 切换智能优化
   const toggleOptimization = useCallback((id: string) => {
-    setSelectedOptimizations(prev => 
-      prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]
-    );
+    dispatch({ type: FineTuneActionType.TOGGLE_OPTIMIZATION, optimizationId: id });
   }, []);
-
-  // AI 一键微调（企业级）
-  const handleAutoTune = useCallback(() => {
-    setIsProcessing(true);
+  
+  // AI 一键微调（真实 AI 推理）
+  const handleAutoTune = useCallback(async () => {
+    // 开始处理
+    dispatch({ type: FineTuneActionType.START_PROCESSING });
     
-    const stages = [
-      '分析图像特征...',
-      '检测主体对象...',
-      '分析光照条件...',
-      '计算最佳参数...',
-      '应用AI优化...',
-    ];
-    
-    let stageIndex = 0;
-    const stageInterval = setInterval(() => {
-      if (stageIndex < stages.length) {
-        setProcessStage(stages[stageIndex]);
-        stageIndex++;
-      }
-    }, 400);
-    
-    setTimeout(() => {
-      clearInterval(stageInterval);
-      setHistory(prev => [params, ...prev].slice(0, 15));
+    try {
+      // 构建推理请求
+      const request: AIInferenceRequest = {
+        imageSource: state.imageSource || DEFAULT_IMAGE_SOURCE,
+        currentParams: state.params,
+        optimizations: state.selectedOptimizations,
+        styleId: state.selectedStyle,
+      };
       
-      setParams({
-        saturation: 15,
-        contrast: 12,
-        brightness: 5,
-        warmth: 10,
-        sharpness: 22,
-        clarity: 8,
-        vibrance: 12,
-        highlights: -10,
-        shadows: 8,
-        whites: 0,
-        blacks: 0,
-        grain: 0,
-        fade: 0,
-        dehaze: 8,
-        denoise: 5,
-        skinSmooth: 15,
-        exposure: 2,
-        texture: 10,
+      // 执行真实 AI 推理
+      const response = await performAutoTune(request, (stage, progress, message) => {
+        // 更新处理进度
+        dispatch({
+          type: FineTuneActionType.UPDATE_PROCESSING,
+          stage,
+          progress,
+          message,
+        });
       });
-      setIsProcessing(false);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
-    }, 2200);
-  }, [params]);
-
+      
+      if (response.success) {
+        // 完成处理，应用 AI 计算的参数
+        dispatch({
+          type: FineTuneActionType.COMPLETE_PROCESSING,
+          params: response.params,
+          sceneAnalysis: response.sceneAnalysis,
+          recommendations: response.recommendations,
+        });
+      } else {
+        // 处理失败
+        dispatch({
+          type: FineTuneActionType.ERROR_PROCESSING,
+          error: response.error || 'AI 推理失败',
+        });
+      }
+      
+    } catch (error) {
+      // 异常处理
+      dispatch({
+        type: FineTuneActionType.ERROR_PROCESSING,
+        error: error instanceof Error ? error.message : '未知错误',
+      });
+    }
+  }, [state.imageSource, state.params, state.selectedOptimizations, state.selectedStyle]);
+  
   // 应用基础预设
   const applyPreset = useCallback((preset: typeof BASE_PRESETS[0]) => {
-    setHistory(prev => [params, ...prev].slice(0, 15));
-    setParams(prev => ({ ...prev, ...preset.params }));
-  }, [params]);
-
-  // 重置参数
+    // 保存当前参数到历史
+    dispatch({ type: FineTuneActionType.PUSH_HISTORY, params: state.params });
+    // 应用预设参数
+    dispatch({ type: FineTuneActionType.SET_PARAMS, params: preset.params });
+  }, [state.params]);
+  
+  // 重置所有参数
   const handleReset = useCallback(() => {
-    setParams({
-      saturation: 0,
-      contrast: 0,
-      brightness: 0,
-      warmth: 0,
-      sharpness: 0,
-      clarity: 0,
-      vibrance: 0,
-      highlights: 0,
-      shadows: 0,
-      whites: 0,
-      blacks: 0,
-      grain: 0,
-      fade: 0,
-      dehaze: 0,
-      denoise: 0,
-      skinSmooth: 0,
-      exposure: 0,
-      texture: 0,
-    });
-    setSelectedStyle(null);
-    setSelectedOptimizations([]);
-    setHslValues(HSL_CONFIG);
+    dispatch({ type: FineTuneActionType.RESET_PARAMS });
   }, []);
-
-  // 撤销
+  
+  // 撤销操作
   const handleUndo = useCallback(() => {
-    if (history.length > 0) {
-      setParams(history[0]);
-      setHistory(prev => prev.slice(1));
-    }
-  }, [history]);
-
+    dispatch({ type: FineTuneActionType.UNDO });
+  }, []);
+  
   // 切换收藏
   const toggleFavorite = useCallback((id: string) => {
-    setFavorites(prev => 
-      prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-    );
+    dispatch({ type: FineTuneActionType.TOGGLE_FAVORITE, styleId: id });
   }, []);
-
+  
+  // 切换对比模式
+  const toggleCompare = useCallback(() => {
+    dispatch({ type: FineTuneActionType.SET_SHOW_COMPARE, show: !state.showCompare });
+  }, [state.showCompare]);
+  
+  // 切换 Tab
+  const setActiveTab = useCallback((tab: FineTuneState['activeTab']) => {
+    dispatch({ type: FineTuneActionType.SET_ACTIVE_TAB, tab });
+  }, []);
+  
+  // 更新搜索查询
+  const setSearchQuery = useCallback((query: string) => {
+    dispatch({ type: FineTuneActionType.SET_SEARCH_QUERY, query });
+  }, []);
+  
+  // 更新 HSL 值
+  const updateHslValue = useCallback((hslId: string, field: 'hue' | 'saturation' | 'luminance', value: number) => {
+    dispatch({ type: FineTuneActionType.SET_HSL_VALUE, hslId, field, value });
+  }, []);
+  
+  // 设置选中的 HSL 颜色
+  const setSelectedHsl = useCallback((hslId: string) => {
+    dispatch({ type: FineTuneActionType.SET_SELECTED_HSL, hslId });
+  }, []);
+  
+  // 重置 HSL
+  const resetHsl = useCallback(() => {
+    dispatch({ type: FineTuneActionType.RESET_HSL });
+  }, []);
+  
+  // 应用智能优化
+  const applySmartOptimizations = useCallback(() => {
+    // 保存当前参数到历史
+    dispatch({ type: FineTuneActionType.PUSH_HISTORY, params: state.params });
+    
+    // 根据选中的优化项计算新参数
+    const newParams: Partial<AIFineTuneParams> = {};
+    
+    if (state.selectedOptimizations.includes('hdr')) {
+      newParams.highlights = -15;
+      newParams.shadows = 20;
+      newParams.clarity = 20;
+    }
+    if (state.selectedOptimizations.includes('denoise')) {
+      newParams.denoise = 25;
+    }
+    if (state.selectedOptimizations.includes('sharpen')) {
+      newParams.sharpness = 30;
+    }
+    if (state.selectedOptimizations.includes('dehaze')) {
+      newParams.dehaze = 20;
+    }
+    if (state.selectedOptimizations.includes('skin')) {
+      newParams.skinSmooth = 30;
+    }
+    if (state.selectedOptimizations.includes('sky')) {
+      newParams.saturation = 20;
+      newParams.vibrance = 15;
+    }
+    
+    // 应用新参数
+    dispatch({ type: FineTuneActionType.SET_PARAMS, params: newParams });
+  }, [state.selectedOptimizations, state.params]);
+  
+  // ========== 参数配置 ==========
+  
   // 基础参数配置
   const basicParams = [
     { key: 'exposure', label: '曝光', min: -100, max: 100 },
@@ -249,7 +293,7 @@ const AIFineTunePage: React.FC = () => {
     { key: 'warmth', label: '色温', min: -100, max: 100 },
     { key: 'vibrance', label: '自然饱和度', min: -100, max: 100 },
   ];
-
+  
   // 专业参数配置
   const proParams = [
     { key: 'highlights', label: '高光', min: -100, max: 100 },
@@ -259,7 +303,7 @@ const AIFineTunePage: React.FC = () => {
     { key: 'texture', label: '纹理', min: -100, max: 100 },
     { key: 'clarity', label: '清晰度', min: -100, max: 100 },
   ];
-
+  
   // 效果参数配置
   const effectParams = [
     { key: 'sharpness', label: '锐度', min: 0, max: 100 },
@@ -269,7 +313,9 @@ const AIFineTunePage: React.FC = () => {
     { key: 'fade', label: '褪色', min: 0, max: 100 },
     { key: 'skinSmooth', label: '肤色平滑', min: 0, max: 100 },
   ];
-
+  
+  // ========== 渲染 ==========
+  
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Header */}
@@ -281,22 +327,25 @@ const AIFineTunePage: React.FC = () => {
             </button>
             <div>
               <h1 className="text-lg font-bold">AI 微调</h1>
-              <p className="text-xs text-white/50">专业色彩优化引擎</p>
+              <p className="text-xs text-white/50">专业色彩优化引擎 v4.0</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {history.length > 0 && (
+            {/* 撤销按钮 */}
+            {canUndo(state) && (
               <button onClick={handleUndo} className="p-2 rounded-full hover:bg-white/10" title="撤销">
                 <RefreshCw size={18} className="text-white/50" />
               </button>
             )}
+            {/* 对比按钮 */}
             <button 
-              onClick={() => setShowCompare(!showCompare)}
-              className={`p-2 rounded-full ${showCompare ? 'bg-[#9C27B0]/20' : 'hover:bg-white/10'}`}
+              onClick={toggleCompare}
+              className={`p-2 rounded-full ${state.showCompare ? 'bg-[#9C27B0]/20' : 'hover:bg-white/10'}`}
               title="对比"
             >
-              <Eye size={18} className={showCompare ? 'text-[#9C27B0]' : 'text-white/50'} />
+              <Eye size={18} className={state.showCompare ? 'text-[#9C27B0]' : 'text-white/50'} />
             </button>
+            {/* 版本徽章 */}
             <div className="px-2 py-1 rounded-full bg-gradient-to-r from-[#9C27B0] to-[#673AB7] text-white text-xs font-bold">
               v4.0 Pro
             </div>
@@ -307,28 +356,30 @@ const AIFineTunePage: React.FC = () => {
       {/* Preview Area */}
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
+          {/* 预览图像 */}
           <img 
-            src={selectedImage}
+            src={state.imageSource || DEFAULT_IMAGE_SOURCE}
             alt="Preview"
             className="w-full h-full object-cover"
             style={{
               filter: `
-                saturate(${100 + params.saturation}%) 
-                contrast(${100 + params.contrast}%) 
-                brightness(${100 + params.brightness}%)
-                sepia(${params.warmth > 0 ? params.warmth * 0.5 : 0}%)
-                hue-rotate(${params.warmth < 0 ? params.warmth * 0.5 : 0}deg)
+                saturate(${100 + state.params.saturation}%) 
+                contrast(${100 + state.params.contrast}%) 
+                brightness(${100 + state.params.brightness}%)
+                sepia(${state.params.warmth > 0 ? state.params.warmth * 0.5 : 0}%)
+                hue-rotate(${state.params.warmth < 0 ? state.params.warmth * 0.5 : 0}deg)
               `,
             }}
           />
+          {/* 渐变遮罩 */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
           {/* Compare Mode */}
-          {showCompare && (
+          {state.showCompare && (
             <div className="absolute inset-0 flex">
               <div className="w-1/2 border-r-2 border-white overflow-hidden">
                 <img 
-                  src={selectedImage}
+                  src={state.imageSource || DEFAULT_IMAGE_SOURCE}
                   alt="Original"
                   className="w-full h-full object-cover"
                 />
@@ -341,17 +392,20 @@ const AIFineTunePage: React.FC = () => {
           )}
           
           {/* Processing Overlay */}
-          {isProcessing && (
+          {state.isProcessing && (
             <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
+                {/* 动画圆环 */}
                 <div className="relative w-20 h-20">
                   <div className="absolute inset-0 rounded-full border-4 border-white/20" />
                   <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#9C27B0] animate-spin" />
                   <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-[#673AB7] animate-spin" style={{ animationDirection: 'reverse' }} />
                   <Wand2 size={28} className="absolute inset-0 m-auto text-[#9C27B0]" />
                 </div>
+                {/* 处理信息 */}
                 <div className="text-center">
-                  <span className="text-white text-sm font-medium">{processStage}</span>
+                  <span className="text-white text-sm font-medium">{state.processMessage}</span>
+                  {/* 进度指示器 */}
                   <div className="mt-2 flex gap-1">
                     {[...Array(5)].map((_, i) => (
                       <div 
@@ -361,19 +415,32 @@ const AIFineTunePage: React.FC = () => {
                       />
                     ))}
                   </div>
+                  {/* 进度条 */}
+                  <div className="mt-3 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#9C27B0] to-[#673AB7] transition-all duration-300"
+                      style={{ width: `${state.processProgress * 100}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {/* Success Overlay */}
-          {showSuccess && (
+          {state.showSuccess && (
             <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-green-500 flex items-center justify-center">
                   <Check size={28} className="text-white" />
                 </div>
                 <span className="text-white text-sm font-medium">优化完成</span>
+                {/* 显示置信度 */}
+                {state.confidence > 0 && (
+                  <span className="text-white/50 text-xs">
+                    置信度: {Math.round(state.confidence * 100)}%
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -382,13 +449,13 @@ const AIFineTunePage: React.FC = () => {
           <div className="absolute bottom-3 left-3 right-3">
             <div className="flex flex-wrap gap-1.5">
               {basicParams.slice(0, 4).map((param) => (
-                params[param.key as keyof typeof params] !== 0 && (
+                state.params[param.key as keyof AIFineTuneParams] !== 0 && (
                   <span 
                     key={param.key}
                     className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px]"
                   >
-                    {param.label}: {params[param.key as keyof typeof params] > 0 ? '+' : ''}
-                    {params[param.key as keyof typeof params]}
+                    {param.label}: {state.params[param.key as keyof AIFineTuneParams] > 0 ? '+' : ''}
+                    {state.params[param.key as keyof AIFineTuneParams]}
                   </span>
                 )
               ))}
@@ -396,12 +463,24 @@ const AIFineTunePage: React.FC = () => {
           </div>
           
           {/* Style Badge */}
-          {selectedStyle && (
+          {state.selectedStyle && (
             <div className="absolute top-3 left-3">
               <div className="px-3 py-1.5 rounded-full bg-[#9C27B0]/80 backdrop-blur-sm flex items-center gap-2">
                 <Palette size={14} className="text-white" />
                 <span className="text-white text-xs font-medium">
-                  {COLOR_STYLES.find(s => s.id === selectedStyle)?.name}
+                  {COLOR_STYLES.find(s => s.id === state.selectedStyle)?.name}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {/* AI 分析结果徽章 */}
+          {state.sceneAnalysis && (
+            <div className="absolute top-3 right-3">
+              <div className="px-3 py-1.5 rounded-full bg-green-500/80 backdrop-blur-sm flex items-center gap-2">
+                <Sparkles size={14} className="text-white" />
+                <span className="text-white text-xs font-medium">
+                  {state.sceneAnalysis.primaryScene.name}
                 </span>
               </div>
             </div>
@@ -412,21 +491,24 @@ const AIFineTunePage: React.FC = () => {
       {/* Quick Presets */}
       <div className="px-4 pb-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {/* AI 一键微调按钮 */}
           <button
             onClick={handleAutoTune}
-            disabled={isProcessing}
-            className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 flex items-center gap-2 text-white font-medium shadow-lg shadow-purple-500/20"
+            disabled={state.isProcessing}
+            className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 flex items-center gap-2 text-white font-medium shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Wand2 size={16} />
             <span>一键 AI 微调</span>
           </button>
+          {/* 基础预设按钮 */}
           {BASE_PRESETS.map((preset) => {
             const Icon = preset.icon;
             return (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset)}
-                className="flex-shrink-0 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 flex items-center gap-1.5"
+                disabled={state.isProcessing}
+                className="flex-shrink-0 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 flex items-center gap-1.5 disabled:opacity-50"
               >
                 <Icon size={14} />
                 {preset.name}
@@ -448,9 +530,9 @@ const AIFineTunePage: React.FC = () => {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as typeof activeTab)}
+              onClick={() => setActiveTab(tab.key as FineTuneState['activeTab'])}
               className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                activeTab === tab.key
+                state.activeTab === tab.key
                   ? 'bg-white/10 text-white'
                   : 'text-white/50 hover:bg-white/5'
               }`}
@@ -465,7 +547,7 @@ const AIFineTunePage: React.FC = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-6">
         {/* Basic Tab */}
-        {activeTab === 'basic' && (
+        {state.activeTab === 'basic' && (
           <div className="px-4 py-4 space-y-6">
             {/* Basic Params */}
             <div>
@@ -480,23 +562,26 @@ const AIFineTunePage: React.FC = () => {
                       <span className="text-white text-sm font-medium">{param.label}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[#9C27B0] text-sm font-bold">
-                          {params[param.key as keyof typeof params] > 0 ? '+' : ''}
-                          {params[param.key as keyof typeof params]}
+                          {state.params[param.key as keyof AIFineTuneParams] > 0 ? '+' : ''}
+                          {state.params[param.key as keyof AIFineTuneParams]}
                         </span>
+                        {/* 锁定按钮 */}
                         <button
                           onClick={() => toggleLock(param.key)}
-                          className={`p-1 rounded text-xs ${lockedParams.includes(param.key) ? 'text-yellow-500' : 'text-white/30'}`}
+                          className={`p-1 rounded text-xs ${state.lockedParams.includes(param.key) ? 'text-yellow-500' : 'text-white/30'}`}
+                          title={state.lockedParams.includes(param.key) ? '已锁定' : '锁定参数'}
                         >
                           <RefreshCw size={12} />
                         </button>
                       </div>
                     </div>
+                    {/* 滑块 */}
                     <input
                       type="range"
                       min={param.min}
                       max={param.max}
-                      value={params[param.key as keyof typeof params]}
-                      onChange={(e) => updateParam(param.key, parseInt(e.target.value))}
+                      value={state.params[param.key as keyof AIFineTuneParams]}
+                      onChange={(e) => updateParam(param.key as keyof AIFineTuneParams, parseInt(e.target.value))}
                       className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
                     />
                   </div>
@@ -516,16 +601,16 @@ const AIFineTunePage: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white text-sm font-medium">{param.label}</span>
                       <span className="text-[#9C27B0] text-sm font-bold">
-                        {params[param.key as keyof typeof params] > 0 ? '+' : ''}
-                        {params[param.key as keyof typeof params]}
+                        {state.params[param.key as keyof AIFineTuneParams] > 0 ? '+' : ''}
+                        {state.params[param.key as keyof AIFineTuneParams]}
                       </span>
                     </div>
                     <input
                       type="range"
                       min={param.min}
                       max={param.max}
-                      value={params[param.key as keyof typeof params]}
-                      onChange={(e) => updateParam(param.key, parseInt(e.target.value))}
+                      value={state.params[param.key as keyof AIFineTuneParams]}
+                      onChange={(e) => updateParam(param.key as keyof AIFineTuneParams, parseInt(e.target.value))}
                       className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
                     />
                   </div>
@@ -545,15 +630,15 @@ const AIFineTunePage: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white text-sm font-medium">{param.label}</span>
                       <span className="text-[#9C27B0] text-sm font-bold">
-                        {params[param.key as keyof typeof params]}
+                        {state.params[param.key as keyof AIFineTuneParams]}
                       </span>
                     </div>
                     <input
                       type="range"
                       min={param.min}
                       max={param.max}
-                      value={params[param.key as keyof typeof params]}
-                      onChange={(e) => updateParam(param.key, parseInt(e.target.value))}
+                      value={state.params[param.key as keyof AIFineTuneParams]}
+                      onChange={(e) => updateParam(param.key as keyof AIFineTuneParams, parseInt(e.target.value))}
                       className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
                     />
                   </div>
@@ -573,14 +658,14 @@ const AIFineTunePage: React.FC = () => {
         )}
 
         {/* Color Tab */}
-        {activeTab === 'color' && (
+        {state.activeTab === 'color' && (
           <div className="px-4 py-4">
             {/* Search */}
             <div className="relative mb-4">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
               <input
                 type="text"
-                value={searchQuery}
+                value={state.searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索色彩风格..."
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#9C27B0] outline-none"
@@ -590,16 +675,17 @@ const AIFineTunePage: React.FC = () => {
             <h3 className="text-white/50 text-xs mb-3">色彩风格预设 ({filteredStyles.length})</h3>
             <div className="grid grid-cols-2 gap-3">
               {filteredStyles.map((style) => {
-                const isFavorite = favorites.includes(style.id);
+                const isFavorite = state.favorites.includes(style.id);
                 return (
                   <button
                     key={style.id}
                     onClick={() => applyColorStyle(style)}
+                    disabled={state.isProcessing}
                     className={`relative p-4 rounded-xl text-left transition-all ${
-                      selectedStyle === style.id
+                      state.selectedStyle === style.id
                         ? 'bg-white/10 border border-white/20'
                         : 'bg-white/5 hover:bg-white/10'
-                    }`}
+                    } disabled:opacity-50`}
                   >
                     {/* Favorite Button */}
                     <button
@@ -634,7 +720,7 @@ const AIFineTunePage: React.FC = () => {
         )}
 
         {/* Smart Tab */}
-        {activeTab === 'smart' && (
+        {state.activeTab === 'smart' && (
           <div className="px-4 py-4">
             <h3 className="text-white/50 text-xs mb-3">智能优化选项</h3>
             <div className="space-y-3">
@@ -642,11 +728,12 @@ const AIFineTunePage: React.FC = () => {
                 <button
                   key={opt.id}
                   onClick={() => toggleOptimization(opt.id)}
+                  disabled={state.isProcessing}
                   className={`w-full p-4 rounded-xl text-left transition-all flex items-center gap-4 ${
-                    selectedOptimizations.includes(opt.id)
+                    state.selectedOptimizations.includes(opt.id)
                       ? 'bg-white/10 border border-white/20'
                       : 'bg-white/5 hover:bg-white/10'
-                  }`}
+                  } disabled:opacity-50`}
                 >
                   <div 
                     className="w-12 h-12 rounded-xl flex items-center justify-center relative"
@@ -667,111 +754,89 @@ const AIFineTunePage: React.FC = () => {
                     <p className="text-white/50 text-xs">{opt.desc}</p>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    selectedOptimizations.includes(opt.id)
+                    state.selectedOptimizations.includes(opt.id)
                       ? 'bg-[#9C27B0] border-[#9C27B0]'
                       : 'border-white/30'
                   }`}>
-                    {selectedOptimizations.includes(opt.id) && <Check size={14} className="text-white" />}
+                    {state.selectedOptimizations.includes(opt.id) && <Check size={14} className="text-white" />}
                   </div>
                 </button>
               ))}
             </div>
 
             {/* Apply Smart Optimizations */}
-            {selectedOptimizations.length > 0 && (
+            {state.selectedOptimizations.length > 0 && (
               <button
-                onClick={() => {
-                  const newParams = { ...params };
-                  if (selectedOptimizations.includes('hdr')) {
-                    newParams.highlights = -15;
-                    newParams.shadows = 20;
-                    newParams.clarity = 20;
-                  }
-                  if (selectedOptimizations.includes('denoise')) {
-                    newParams.denoise = 25;
-                  }
-                  if (selectedOptimizations.includes('sharpen')) {
-                    newParams.sharpness = 30;
-                  }
-                  if (selectedOptimizations.includes('dehaze')) {
-                    newParams.dehaze = 20;
-                  }
-                  if (selectedOptimizations.includes('skin')) {
-                    newParams.skinSmooth = 30;
-                  }
-                  if (selectedOptimizations.includes('sky')) {
-                    newParams.saturation = 20;
-                    newParams.vibrance = 15;
-                  }
-                  setParams(newParams);
-                  setHistory(prev => [params, ...prev].slice(0, 15));
-                }}
-                className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-[#9C27B0] to-[#673AB7] text-white font-medium flex items-center justify-center gap-2"
+                onClick={applySmartOptimizations}
+                disabled={state.isProcessing}
+                className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-[#9C27B0] to-[#673AB7] text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Sparkles size={18} />
-                应用 {selectedOptimizations.length} 项优化
+                应用 {state.selectedOptimizations.length} 项优化
               </button>
             )}
           </div>
         )}
 
         {/* HSL Tab */}
-        {activeTab === 'hsl' && (
+        {state.activeTab === 'hsl' && (
           <div className="px-4 py-4">
             <h3 className="text-white/50 text-xs mb-3">HSL 色彩调节</h3>
             
             {/* Color Selector */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
-              {HSL_CONFIG.map((color) => (
+              {state.hslValues.map((color) => (
                 <button
                   key={color.id}
                   onClick={() => setSelectedHsl(color.id)}
+                  disabled={state.isProcessing}
                   className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                    selectedHsl === color.id 
+                    state.selectedHsl === color.id 
                       ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0a0a0a]' 
                       : ''
-                  }`}
+                  } disabled:opacity-50`}
                   style={{ backgroundColor: color.color }}
                 >
-                  {selectedHsl === color.id && <Check size={16} className="text-white" />}
+                  {state.selectedHsl === color.id && <Check size={16} className="text-white" />}
                 </button>
               ))}
             </div>
             
             {/* HSL Sliders */}
             <div className="space-y-4">
-              {['hue', 'saturation', 'luminance'].map((type) => (
-                <div key={type} className="bg-white/5 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-white text-sm font-medium capitalize">
-                      {type === 'hue' ? '色相' : type === 'saturation' ? '饱和度' : '明度'}
-                    </span>
-                    <span className="text-[#9C27B0] text-sm font-bold">
-                      {hslValues.find(h => h.id === selectedHsl)?.[type as keyof typeof hslValues[0]] || 0}
-                    </span>
+              {(['hue', 'saturation', 'luminance'] as const).map((type) => {
+                const currentHsl = state.hslValues.find(h => h.id === state.selectedHsl);
+                const value = currentHsl ? currentHsl[type] : 0;
+                
+                return (
+                  <div key={type} className="bg-white/5 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white text-sm font-medium">
+                        {type === 'hue' ? '色相' : type === 'saturation' ? '饱和度' : '明度'}
+                      </span>
+                      <span className="text-[#9C27B0] text-sm font-bold">
+                        {value}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={type === 'hue' ? -180 : -100}
+                      max={type === 'hue' ? 180 : 100}
+                      value={value}
+                      onChange={(e) => updateHslValue(state.selectedHsl, type, parseInt(e.target.value))}
+                      disabled={state.isProcessing}
+                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0] disabled:opacity-50"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min={type === 'hue' ? -180 : -100}
-                    max={type === 'hue' ? 180 : 100}
-                    value={hslValues.find(h => h.id === selectedHsl)?.[type as keyof typeof hslValues[0]] as number || 0}
-                    onChange={(e) => {
-                      setHslValues(prev => prev.map(h => 
-                        h.id === selectedHsl 
-                          ? { ...h, [type]: parseInt(e.target.value) }
-                          : h
-                      ));
-                    }}
-                    className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Reset HSL */}
             <button
-              onClick={() => setHslValues(HSL_CONFIG)}
-              className="w-full mt-4 py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5"
+              onClick={resetHsl}
+              disabled={state.isProcessing}
+              className="w-full mt-4 py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
             >
               重置 HSL
             </button>
@@ -779,7 +844,7 @@ const AIFineTunePage: React.FC = () => {
         )}
 
         {/* Curve Tab */}
-        {activeTab === 'curve' && (
+        {state.activeTab === 'curve' && (
           <div className="px-4 py-4">
             <h3 className="text-white/50 text-xs mb-3">曲线调节</h3>
             
@@ -810,7 +875,8 @@ const AIFineTunePage: React.FC = () => {
               {CURVE_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
-                  className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-center"
+                  disabled={state.isProcessing}
+                  className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-center disabled:opacity-50"
                 >
                   <TrendingUp size={20} className="mx-auto mb-1 text-white/50" />
                   <span className="text-xs text-white/70">{preset.name}</span>
@@ -823,11 +889,12 @@ const AIFineTunePage: React.FC = () => {
               {['RGB', 'R', 'G', 'B'].map((channel) => (
                 <button
                   key={channel}
+                  disabled={state.isProcessing}
                   className={`flex-1 py-2 rounded-lg text-xs font-medium ${
-                    channel === 'RGB' 
+                    state.selectedCurveChannel === channel.toLowerCase() 
                       ? 'bg-white/10 text-white' 
                       : 'bg-white/5 text-white/50'
-                  }`}
+                  } disabled:opacity-50`}
                 >
                   {channel}
                 </button>
@@ -835,8 +902,39 @@ const AIFineTunePage: React.FC = () => {
             </div>
           </div>
         )}
+        
+        {/* AI 推荐区域 */}
+        {state.recommendations.length > 0 && (
+          <div className="px-4 py-4 mt-4">
+            <h3 className="text-white/50 text-xs mb-3 flex items-center gap-2">
+              <Sparkles size={12} />
+              AI 推荐风格
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {state.recommendations.slice(0, 4).map((rec) => (
+                <button
+                  key={rec.id}
+                  onClick={() => {
+                    if (rec.type === 'style') {
+                      const style = COLOR_STYLES.find(s => s.id === rec.id);
+                      if (style) applyColorStyle(style);
+                    }
+                  }}
+                  disabled={state.isProcessing}
+                  className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm flex items-center gap-2 disabled:opacity-50"
+                >
+                  {rec.type === 'film' && <Camera size={14} />}
+                  {rec.type === 'style' && <Palette size={14} />}
+                  {rec.name}
+                  <span className="text-white/30 text-xs">{Math.round(rec.matchScore * 100)}%</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* 自定义样式 */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
