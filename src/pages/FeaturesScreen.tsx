@@ -64,7 +64,7 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
     tips: ['云端同步', '本地管理', '批量操作'],
   },
   'lut-share': {
-    desc: '9款哈苏胶片预设：原生经典/情绪表达/结构时间',
+    desc: '9款哈苏胶片LUT：原生经典/情绪表达/结构时间',
     tips: ['Portra 400', '800T夜景', 'TX400黑白', 'CC经典'],
   },
   'hasselblad': {

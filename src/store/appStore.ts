@@ -196,8 +196,8 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'lut-share',
-      title: '胶片预设',
-      subtitle: '9款哈苏胶片：Portra/800T/TX400',
+      title: 'LUT资源库',
+      subtitle: '9款哈苏胶片LUT：Portra/800T/TX400',
       icon: 'Palette',
       color: '#9C27B0',
       gradientColors: ['#6A1B9A', '#8E24AA'],
