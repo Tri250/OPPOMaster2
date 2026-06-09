@@ -225,6 +225,54 @@ export const RelatedPresets: React.FC<RelatedPresetsProps> = ({
 };
 
 /**
+ * 简化版关联推荐组件（直接传入预设列表）
+ */
+interface SimpleRelatedPresetsProps {
+  presets: Array<{
+    id: string;
+    name: string;
+    coverPath: string;
+  }>;
+  onSelect: (id: string) => void;
+}
+
+export const SimpleRelatedPresets: React.FC<SimpleRelatedPresetsProps> = ({
+  presets,
+  onSelect,
+}) => {
+  if (presets.length === 0) return null;
+
+  return (
+    <div className="bg-white/5 rounded-xl p-4">
+      <h3 className="text-white/70 text-sm font-medium mb-3 flex items-center gap-2">
+        <span className="text-lg">🎞️</span>
+        关联推荐
+      </h3>
+      <p className="text-white/40 text-xs mb-3">看了这个的人也看了：</p>
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+        {presets.map((preset) => (
+          <button
+            key={preset.id}
+            onClick={() => onSelect(preset.id)}
+            className="flex-shrink-0 w-20 cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <div className="aspect-square rounded-lg overflow-hidden bg-[#1a1a1a]">
+              <img
+                src={preset.coverPath}
+                alt={preset.name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <p className="text-white/60 text-[10px] mt-1 truncate">{preset.name}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/**
  * 一键应用动画反馈按钮（对齐用户规范）
  */
 interface ApplyPresetButtonProps {

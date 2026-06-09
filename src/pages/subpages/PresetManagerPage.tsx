@@ -8,7 +8,7 @@ import {
   TrendingUp, Award, Archive, Zap
 } from 'lucide-react';
 import PresetImageGallery from '../../components/PresetImageGallery';
-import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton } from '../../components/PresetParameters';
+import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton, SimpleRelatedPresets } from '../../components/PresetParameters';
 
 // 排序选项
 const SORT_OPTIONS = [
@@ -785,10 +785,9 @@ const PresetManagerPage: React.FC = () => {
                   {/* 拍摄建议 */}
                   <div className="px-4 pb-4">
                     <ShootingTipsCard
-                      tips={{
-                        environment: '日间户外或充足自然光',
-                        scenes: '街拍、人像、风景、建筑',
-                        points: '适合追求经典胶片质感，建议使用黄金时刻拍摄'
+                      description={{
+                        title: '拍摄建议',
+                        content: '【环境建议】日间户外或充足自然光【场景推荐】街拍、人像、风景、建筑【拍摄要点】适合追求经典胶片质感，建议使用黄金时刻拍摄'
                       }}
                     />
                   </div>
@@ -823,7 +822,7 @@ const PresetManagerPage: React.FC = () => {
 
                   {/* 关联推荐 */}
                   <div className="px-4 pb-4">
-                    <RelatedPresets
+                    <SimpleRelatedPresets
                       presets={[
                         { id: 'r1', name: '电影胶片', coverPath: preset.coverPath + '?r=1' },
                         { id: 'r2', name: '复古人像', coverPath: preset.coverPath + '?r=2' },
