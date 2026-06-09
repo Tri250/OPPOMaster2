@@ -694,7 +694,7 @@ const PresetManagerPage: React.FC = () => {
           onClick={() => setShowPresetDetail(null)}
         >
           <div 
-            className="w-full max-w-md bg-[#0a0a0a] rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-md bg-[#0a0a0a] rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
