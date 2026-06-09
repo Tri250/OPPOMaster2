@@ -27,17 +27,15 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 const featureRouteMap: Record<string, string> = {
-  'ai-scene': 'ai-scene',
+  'ai-scene': 'hasselblad-master',
   'ai-fine-tune': 'ai-fine-tune',
   'watermark': 'watermark',
   'smart-optimize': 'smart-optimize',
-  'preset-manager': 'preset-manager',
+  'preset-manager': 'recipe-manager',
   'param-adjust': 'param-adjust',
   'lut-share': 'lut-share',
-  'hasselblad': 'hasselblad-master',
+  'hasselblad': 'hasselblad',
   'cloud-sync': 'cloud-sync',
-  'hasselblad-master': 'hasselblad-master',
-  'recipe-manager': 'recipe-manager',
 };
 
 const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {

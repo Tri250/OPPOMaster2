@@ -32,16 +32,12 @@ const App: React.FC = () => {
 
   const renderSubPage = () => {
     switch (currentSubPage) {
-      case 'ai-scene':
-        return <AISceneRecognitionPage />;
       case 'ai-fine-tune':
         return <AIFineTunePage />;
       case 'smart-optimize':
         return <SmartOptimizePage />;
       case 'watermark':
         return <WatermarkPage />;
-      case 'preset-manager':
-        return <RecipeManagementPage />;
       case 'preset-detail':
         return <PresetDetailPage />;
       case 'param-adjust':

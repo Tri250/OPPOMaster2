@@ -2,12 +2,10 @@ import { create } from 'zustand';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
 export type SubPageType = 
-  | 'ai-scene' 
   | 'ai-fine-tune' 
   | 'smart-optimize' 
   | 'watermark' 
   | 'param-adjust' 
-  | 'preset-manager'
   | 'preset-detail'
   | 'lut-share'
   | 'hasselblad'
