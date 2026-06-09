@@ -2,9 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Download, Star, Heart, Search, Filter, Check, ExternalLink, FileText, Sparkles, Crown } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { 
-  LUT_RESOURCES, 
+  MASTER_LUT_RESOURCES, 
   LUT_CATEGORIES, 
-  LUTResource, 
+  MasterLUT,
   formatFileSize, 
   formatDownloads,
   getLUTResources,
@@ -19,7 +19,7 @@ const LUTSharePage: React.FC = () => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [selectedLUT, setSelectedLUT] = useState<LUTResource | null>(null);
+  const [selectedLUT, setSelectedLUT] = useState<MasterLUT | null>(null);
 
   // 过滤和排序
   const getFilteredLUTs = useCallback(() => {
@@ -32,9 +32,9 @@ const LUTSharePage: React.FC = () => {
     result.sort((a, b) => {
       switch (sortBy) {
         case 'downloads':
-          return b.downloads - a.downloads;
+          return (b.downloads || 0) - (a.downloads || 0);
         case 'rating':
-          return b.rating - a.rating;
+          return (b.rating || 0) - (a.rating || 0);
         case 'newest':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         default:
@@ -46,7 +46,7 @@ const LUTSharePage: React.FC = () => {
   }, [selectedCategory, searchQuery, sortBy]);
 
   // 下载LUT
-  const handleDownload = useCallback(async (lut: LUTResource) => {
+  const handleDownload = useCallback(async (lut: MasterLUT) => {
     setDownloadingId(lut.id);
     try {
       // 创建下载链接
@@ -100,7 +100,7 @@ const LUTSharePage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/40">{LUT_RESOURCES.length} 个LUT</span>
+            <span className="text-xs text-white/40">{MASTER_LUT_RESOURCES.length} 个LUT</span>
           </div>
         </div>
 
@@ -163,14 +163,14 @@ const LUTSharePage: React.FC = () => {
                 2026新品
               </h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                {LUT_RESOURCES.filter(l => l.isNew).map((lut) => (
+                {MASTER_LUT_RESOURCES.filter(l => l.isNew).map((lut) => (
                   <div
                     key={lut.id}
                     onClick={() => setSelectedLUT(lut)}
                     className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-[#1a1a1a] cursor-pointer hover:scale-[1.02] transition-transform"
                   >
                     <div className="aspect-square relative">
-                      <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
+                      <img src={lut.coverImage} alt={lut.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#4CAF50] rounded text-[10px] font-bold">
                         NEW
@@ -192,14 +192,14 @@ const LUTSharePage: React.FC = () => {
                 热门推荐
               </h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                {LUT_RESOURCES.filter(l => l.isHot && !l.isNew).slice(0, 6).map((lut) => (
+                {MASTER_LUT_RESOURCES.filter(l => l.isHot && !l.isNew).slice(0, 6).map((lut) => (
                   <div
                     key={lut.id}
                     onClick={() => setSelectedLUT(lut)}
                     className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-[#1a1a1a] cursor-pointer hover:scale-[1.02] transition-transform"
                   >
                     <div className="aspect-square relative">
-                      <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
+                      <img src={lut.coverImage} alt={lut.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#FF6B35] rounded text-[10px] font-bold">
                         HOT
@@ -228,7 +228,7 @@ const LUTSharePage: React.FC = () => {
                 className="aspect-video relative cursor-pointer"
                 onClick={() => setSelectedLUT(lut)}
               >
-                <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
+                <img src={lut.coverImage} alt={lut.name} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 
                 {/* Badges */}
@@ -341,7 +341,7 @@ const LUTSharePage: React.FC = () => {
           <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl overflow-hidden">
             {/* Preview */}
             <div className="aspect-video relative">
-              <img src={selectedLUT.previewImage} alt={selectedLUT.name} className="w-full h-full object-cover" />
+              <img src={selectedLUT.coverImage} alt={selectedLUT.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
               <button
                 onClick={() => setSelectedLUT(null)}
