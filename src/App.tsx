@@ -15,6 +15,8 @@ import PresetManagerPage from './pages/subpages/PresetManagerPage';
 import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
 import LUTSharePage from './pages/subpages/LUTSharePage';
 import HasselbladPage from './pages/subpages/HasselbladPage';
+import HasselbladMasterPage from './pages/subpages/HasselbladMasterPage';
+import RecipeManagementPage from './pages/subpages/RecipeManagementPage';
 import CloudSyncPage from './pages/subpages/CloudSyncPage';
 import UpdateChannelPage from './pages/subpages/UpdateChannelPage';
 import TermsPage from './pages/subpages/TermsPage';
@@ -38,13 +40,17 @@ const App: React.FC = () => {
       case 'watermark':
         return <WatermarkPage />;
       case 'preset-manager':
-        return <PresetManagerPage />;
+        return <RecipeManagementPage />;
       case 'param-adjust':
         return <ParamAdjustPage />;
       case 'lut-share':
         return <LUTSharePage />;
       case 'hasselblad':
         return <HasselbladPage />;
+      case 'hasselblad-master':
+        return <HasselbladMasterPage />;
+      case 'recipe-manager':
+        return <RecipeManagementPage />;
       case 'cloud-sync':
         return <CloudSyncPage />;
       case 'theme-settings':

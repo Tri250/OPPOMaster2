@@ -34,14 +34,16 @@ const featureRouteMap: Record<string, string> = {
   'preset-manager': 'preset-manager',
   'param-adjust': 'param-adjust',
   'lut-share': 'lut-share',
-  'hasselblad': 'hasselblad',
+  'hasselblad': 'hasselblad-master',
   'cloud-sync': 'cloud-sync',
+  'hasselblad-master': 'hasselblad-master',
+  'recipe-manager': 'recipe-manager',
 };
 
 const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   'ai-scene': {
-    desc: '支持36+拍摄场景智能识别',
-    tips: ['人像', '风景', '夜景', '美食', '建筑', '自然'],
+    desc: '哈苏大师识别：50+场景智能识别',
+    tips: ['混合推理', 'TFLite+启发式', 'HNCS优化', '80%+准确率'],
   },
   'ai-fine-tune': {
     desc: '一键智能微调，精准控制色彩风格',
@@ -53,23 +55,31 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   },
   'watermark': {
     desc: '14+专业水印模板，品牌认证水印',
-    tips: ['标准', '极简', '详细', '品牌'],
+    tips: ['标准', '极简', '详细', 'HNCS水印'],
   },
   'param-adjust': {
-    desc: 'ISO、快门、光圈、白平衡精确控制',
-    tips: ['ISO 50-12800', '快门 1/1000s-30s', '光圈 f/1.4-f/22'],
+    desc: '哈苏大师参数：影调/饱和度/对比度精确控制',
+    tips: ['影调-30~+30', '柔光模式', '青品调', '暗角'],
   },
   'preset-manager': {
     desc: '云端预设库，收藏、创建、分享',
     tips: ['云端同步', '本地管理', '批量操作'],
   },
   'lut-share': {
-    desc: '20+专业 LUT 滤镜，一键下载使用',
-    tips: ['电影色调', '胶片风格', '日系清新', '欧美复古'],
+    desc: '9款哈苏胶片预设：原生经典/情绪表达/结构时间',
+    tips: ['Portra 400', '800T夜景', 'TX400黑白', 'CC经典'],
   },
   'hasselblad': {
     desc: 'HNCS 3.0 自然色彩解决方案',
     tips: ['自然色彩', '肤色优化', '风景增强', '黑白胶片'],
+  },
+  'hasselblad-master': {
+    desc: '哈苏大师之眼：场景识别+胶片推荐+大师参数',
+    tips: ['50+场景', '9款胶片', '大师建议', '配方保存'],
+  },
+  'recipe-manager': {
+    desc: '哈苏配方库：保存/分享/导入/复刻',
+    tips: ['配方分享', '二维码导入', '收藏管理', '使用统计'],
   },
   'cloud-sync': {
     desc: '多平台云同步，数据永不丢失',

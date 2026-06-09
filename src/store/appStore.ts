@@ -10,6 +10,8 @@ export type SubPageType =
   | 'preset-manager'
   | 'lut-share'
   | 'hasselblad'
+  | 'hasselblad-master'
+  | 'recipe-manager'
   | 'cloud-sync'
   | 'theme-settings'
   | 'dark-mode'
@@ -135,8 +137,8 @@ export const useAppStore = create<AppState>((set) => ({
   features: [
     {
       id: 'ai-scene',
-      title: 'AI 场景识别',
-      subtitle: '智能识别36+拍摄场景，自动推荐最佳参数',
+      title: '哈苏大师识别',
+      subtitle: '50+场景智能识别，混合推理策略',
       icon: 'Camera',
       color: '#4CAF50',
       gradientColors: ['#1B5E20', '#2E7D32'],
@@ -165,8 +167,8 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'watermark',
-      title: '水印编辑器',
-      subtitle: '14+专业水印模板，品牌认证水印',
+      title: 'HNCS水印',
+      subtitle: '哈苏品牌水印，自然色彩认证',
       icon: 'Droplets',
       color: '#00BCD4',
       gradientColors: ['#006064', '#00838F'],
@@ -175,8 +177,8 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'param-adjust',
-      title: '参数精细调节',
-      subtitle: 'ISO、快门、光圈、白平衡精确控制',
+      title: '哈苏大师参数',
+      subtitle: '影调/饱和度/对比度/柔光模式',
       icon: 'SlidersHorizontal',
       color: '#E91E63',
       gradientColors: ['#880E4F', '#AD1457'],
@@ -185,8 +187,8 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'preset-manager',
-      title: '预设管理',
-      subtitle: '云端预设库，收藏、创建、分享',
+      title: '配方管理',
+      subtitle: '哈苏配方保存/分享/导入/复刻',
       icon: 'Images',
       color: '#FF9800',
       gradientColors: ['#E65100', '#F57C00'],
@@ -195,8 +197,8 @@ export const useAppStore = create<AppState>((set) => ({
     },
     {
       id: 'lut-share',
-      title: 'LUT 资源分享',
-      subtitle: '20+专业 LUT 滤镜，一键下载使用',
+      title: '胶片预设',
+      subtitle: '9款哈苏胶片：Portra/800T/TX400',
       icon: 'Palette',
       color: '#9C27B0',
       gradientColors: ['#6A1B9A', '#8E24AA'],
