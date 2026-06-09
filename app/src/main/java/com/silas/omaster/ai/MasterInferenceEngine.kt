@@ -2,29 +2,36 @@ package com.silas.omaster.ai
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
+import android.graphics.Rect
 import android.media.ExifInterface
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.Face
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetector
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Layer 2: 大师推理 (Master Inference)
  * 图像分析与参数推理引擎
- * 
+ *
  * 功能：
  * - 颜色直方图分析
  * - EXIF 元数据提取
  * - 亮度分布分析
- * - 人脸检测
+ * - 人脸检测（基于 Google ML Kit FaceDetection）
  * - 多策略融合置信度
  * - 场景→哈苏参数映射
- * 
+ *
  * 已修复：使用新版 SceneProfile 数据模型，与 ScenePresets 对齐
+ * 已修复：人脸检测改用 ML Kit 真实检测结果，不再使用模拟数据
  */
 class MasterInferenceEngine private constructor(context: Context) {
 
@@ -32,11 +39,23 @@ class MasterInferenceEngine private constructor(context: Context) {
     private val sceneAnalyzer = HeuristicSceneAnalyzer.getInstance(context)
     private val sceneMapping = SceneToHasselbladMapping()
 
+    // ML Kit 人脸检测器（全局单例，使用 ACCURATE 模式以获得人脸详细分类）
+    private val faceDetector: FaceDetector by lazy {
+        val options = FaceDetectorOptions.Builder()
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+            .setMinFaceSize(0.15f)
+            .build()
+        FaceDetection.getClient(options)
+    }
+
     /**
      * 分析图片并生成 SceneProfile
      * 端到端的大师工作流入口
-     * 
+     *
      * 修复：使用 HeuristicSceneAnalyzer 获取真实场景识别结果
+     * 修复：人脸数据改用 ML Kit FaceDetection 真实检测
      */
     suspend fun analyzeImage(
         bitmap: Bitmap,
@@ -55,25 +74,76 @@ class MasterInferenceEngine private constructor(context: Context) {
         // 获取主场景的完整画像
         val sceneProfile = analysisResult.primaryScene
 
+        // 调用 ML Kit 真实人脸检测
+        val faceData = runCatching {
+            detectFaces(bitmap)
+        }.getOrElse {
+            // 真实检测失败时使用空人脸数据，不构造模拟人脸
+            FaceData(faces = emptyList())
+        }
+
         // 更新扩展数据
         sceneProfile.copy(
             exifData = exifData,
             histogramData = convertToHistogramData(analysisResult.colorProfile),
-            faceData = FaceData(
-                faces = if (analysisResult.faceCount > 0) {
-                    // 创建模拟人脸数据（实际应使用ML Kit检测结果）
-                    List(analysisResult.faceCount) { index ->
-                        FaceInfo(
-                            bounds = RectData(0.3f, 0.3f, 0.7f, 0.7f),
-                            confidence = 0.85f,
-                            hasSmile = false,
-                            leftEyeOpen = true,
-                            rightEyeOpen = true
-                        )
-                    }
-                } else emptyList()
-            ),
+            faceData = faceData,
             confidence = analysisResult.confidence
+        )
+    }
+
+    /**
+     * 使用 ML Kit 真实人脸检测
+     *
+     * 将 Google Play Services Task 桥接到 suspend 函数，
+     * 把每个 ML Kit Face 转换为项目内的 FaceInfo。
+     */
+    private suspend fun detectFaces(bitmap: Bitmap): FaceData =
+        suspendCancellableCoroutine { continuation ->
+            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            val task = faceDetector.process(inputImage)
+            task.addOnSuccessListener { faces: List<Face> ->
+                if (continuation.isActive) {
+                    val faceInfos = faces.map { face -> face.toFaceInfo(bitmap) }
+                    continuation.resume(FaceData(faces = faceInfos))
+                }
+            }
+            task.addOnFailureListener { e ->
+                if (continuation.isActive) {
+                    continuation.resumeWithException(e)
+                }
+            }
+            continuation.invokeOnCancellation {
+                // 协程被取消时尝试关闭 task（ML Kit 任务本身不支持取消，仅取消监听）
+            }
+        }
+
+    /**
+     * 将 ML Kit Face 转为项目内的 FaceInfo
+     *
+     * 坐标归一化：ML Kit 返回的是像素坐标 Rect，除以图片宽高即可。
+     */
+    private fun Face.toFaceInfo(bitmap: Bitmap): FaceInfo {
+        val w = bitmap.width.coerceAtLeast(1).toFloat()
+        val h = bitmap.height.coerceAtLeast(1).toFloat()
+        val pixelBounds: Rect = boundingBox
+        val normalized = RectData(
+            left = (pixelBounds.left / w).coerceIn(0f, 1f),
+            top = (pixelBounds.top / h).coerceIn(0f, 1f),
+            right = (pixelBounds.right / w).coerceIn(0f, 1f),
+            bottom = (pixelBounds.bottom / h).coerceIn(0f, 1f)
+        )
+        // ML Kit 自身对每张人脸都返回 1.0 置信度；
+        // 若有右眼开闭概率，使用 0.4 + 0.6*平均开眼概率作为可读性更好的置信度
+        val leftProb = leftEyeOpenProbability ?: 0.5f
+        val rightProb = rightEyeOpenProbability ?: 0.5f
+        val smileProb = smilingProbability ?: 0f
+        val confidence = 0.4f + 0.3f * leftProb + 0.3f * rightProb
+        return FaceInfo(
+            bounds = normalized,
+            confidence = confidence,
+            hasSmile = smileProb > 0.5f,
+            leftEyeOpen = leftProb > 0.5f,
+            rightEyeOpen = rightProb > 0.5f
         )
     }
 
@@ -122,10 +192,10 @@ class MasterInferenceEngine private constructor(context: Context) {
     private fun extractExifData(imagePath: String): ExifData? {
         return try {
             val exif = ExifInterface(imagePath)
-            
+
             ExifData(
-                cameraModel = exif.getAttribute(ExifInterface.TAG_MAKE)?.let { 
-                    "$it ${exif.getAttribute(ExifInterface.TAG_MODEL)}" 
+                cameraModel = exif.getAttribute(ExifInterface.TAG_MAKE)?.let {
+                    "$it ${exif.getAttribute(ExifInterface.TAG_MODEL)}"
                 },
                 lensModel = exif.getAttribute("LensModel"),
                 focalLength = exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH)?.let {
@@ -160,10 +230,10 @@ class MasterInferenceEngine private constructor(context: Context) {
         val blue = IntArray(256)
 
         // 根据平均颜色值填充直方图中心区域
-        val avgLuma = ((0.2126 * colorProfile.avgRed + 
-                       0.7152 * colorProfile.avgGreen + 
+        val avgLuma = ((0.2126 * colorProfile.avgRed +
+                       0.7152 * colorProfile.avgGreen +
                        0.0722 * colorProfile.avgBlue)).toInt().coerceIn(0, 255)
-        
+
         luminance[avgLuma] = 1000
         red[colorProfile.avgRed] = 1000
         green[colorProfile.avgGreen] = 1000
@@ -219,14 +289,25 @@ class MasterInferenceEngine private constructor(context: Context) {
         }
     }
 
+    /**
+     * 释放 ML Kit 资源
+     */
+    fun release() {
+        try {
+            faceDetector.close()
+        } catch (_: Exception) {
+            // 关闭异常忽略
+        }
+    }
+
     companion object {
         @Volatile
         private var instance: MasterInferenceEngine? = null
 
         fun getInstance(context: Context): MasterInferenceEngine {
             return instance ?: synchronized(this) {
-                instance ?: MasterInferenceEngine(context.applicationContext).also { 
-                    instance = it 
+                instance ?: MasterInferenceEngine(context.applicationContext).also {
+                    instance = it
                 }
             }
         }

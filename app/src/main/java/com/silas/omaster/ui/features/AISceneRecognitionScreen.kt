@@ -1,5 +1,9 @@
 package com.silas.omaster.ui.features
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -14,13 +18,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ShareCompat
 import com.silas.omaster.model.FilmPreset
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.ShareExportUtils
 import kotlinx.coroutines.launch
 
 /**
@@ -70,6 +77,7 @@ fun AISceneRecognitionScreen(
     onBack: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     // 状态
@@ -152,10 +160,34 @@ fun AISceneRecognitionScreen(
                 }
             },
             actions = {
-                IconButton(onClick = { /* 导出 */ }) {
+                IconButton(onClick = {
+                    // 导出：将分析结果生成配方卡片图片并保存到相册
+                    val result = analysisResult
+                    if (result != null) {
+                        scope.launch {
+                            try {
+                                val bitmap = buildRecipeCardBitmap(result, context)
+                                ShareExportUtils.exportImageToGallery(context, bitmap, "hasselblad_recipe_${System.currentTimeMillis()}.jpg")
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }) {
                     Icon(Icons.Default.Download, "导出", tint = Color.White.copy(alpha = 0.6f))
                 }
-                IconButton(onClick = { /* 分享 */ }) {
+                IconButton(onClick = {
+                    // 分享配方：将分析结果作为文本分享
+                    val result = analysisResult
+                    if (result != null) {
+                        val shareText = buildRecipeShareText(result)
+                        ShareCompat.IntentBuilder(context)
+                            .setType("text/plain")
+                            .setSubject("哈苏大师配方 - ${result.primaryScene.name}")
+                            .setText(shareText)
+                            .startChooser()
+                    }
+                }) {
                     Icon(Icons.Default.Share, "分享配方", tint = HasselbladOrange)
                 }
             },
@@ -734,4 +766,129 @@ private fun getSceneEmoji(sceneId: String): String {
         sceneId.contains("golden") -> "☀️"
         else -> "📷"
     }
+}
+
+/**
+ * 构建配方卡片图片（用于导出到相册）
+ */
+private fun buildRecipeCardBitmap(
+    result: SceneAnalysisResult,
+    context: android.content.Context
+): Bitmap {
+    val width = 1080
+    val height = 1440
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // 背景
+    canvas.drawColor(AndroidColor.parseColor("#0A0A0A"))
+
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        textSize = 64f
+        isFakeBoldText = true
+    }
+    val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#80FFFFFF")
+        textSize = 36f
+    }
+    val valuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#FF6B35")
+        textSize = 44f
+        isFakeBoldText = true
+    }
+    val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#FF6B35")
+        textSize = 52f
+        isFakeBoldText = true
+    }
+
+    var y = 140f
+    canvas.drawText("哈苏大师配方", 80f, y, titlePaint)
+    y += 100f
+    canvas.drawText("场景：${result.primaryScene.name}", 80f, y, valuePaint)
+    y += 80f
+    canvas.drawText("置信度：${(result.confidence * 100).toInt()}%", 80f, y, labelPaint)
+    y += 80f
+
+    if (result.recommendedFilms.isNotEmpty()) {
+        canvas.drawText("推荐胶片：", 80f, y, labelPaint)
+        y += 60f
+        result.recommendedFilms.take(3).forEach { film ->
+            canvas.drawText("• ${film.name} (${film.matchScore.toInt()}%)", 100f, y, valuePaint)
+            y += 60f
+        }
+        y += 40f
+    }
+
+    canvas.drawText("哈苏参数：", 80f, y, accentPaint)
+    y += 70f
+    val params = result.hasselbladParams
+    listOf(
+        "影调" to params.tone,
+        "饱和度" to params.saturation,
+        "对比度" to params.contrast,
+        "色温" to params.colorTemp,
+        "清晰度" to params.clarity,
+        "锐度" to params.sharpness
+    ).forEach { (name, value) ->
+        canvas.drawText(name, 100f, y, labelPaint)
+        canvas.drawText(value.toString(), 320f, y, valuePaint)
+        y += 56f
+    }
+
+    y += 40f
+    if (result.masterTips.isNotEmpty()) {
+        canvas.drawText("大师建议：", 80f, y, accentPaint)
+        y += 70f
+        result.masterTips.take(3).forEach { tip ->
+            val text = if (tip.length > 30) tip.substring(0, 30) + "..." else tip
+            canvas.drawText("• $text", 100f, y, labelPaint)
+            y += 56f
+        }
+    }
+
+    canvas.drawText("用哈苏之眼，记录每一刻的光影。", 80f, (height - 80f), labelPaint)
+
+    return bitmap
+}
+
+/**
+ * 构建配方分享文本
+ */
+private fun buildRecipeShareText(result: SceneAnalysisResult): String {
+    val builder = StringBuilder()
+    builder.appendLine("哈苏大师配方 - ${result.primaryScene.name}")
+    builder.appendLine()
+    builder.appendLine("置信度：${(result.confidence * 100).toInt()}%")
+    builder.appendLine()
+    if (result.recommendedFilms.isNotEmpty()) {
+        builder.appendLine("推荐胶片：")
+        result.recommendedFilms.take(3).forEach { film ->
+            builder.appendLine("• ${film.name} (${film.matchScore.toInt()}% 匹配)")
+        }
+        builder.appendLine()
+    }
+    val params = result.hasselbladParams
+    builder.appendLine("哈苏参数：")
+    listOf(
+        "影调" to params.tone,
+        "饱和度" to params.saturation,
+        "对比度" to params.contrast,
+        "色温" to params.colorTemp,
+        "清晰度" to params.clarity,
+        "锐度" to params.sharpness
+    ).forEach { (name, value) ->
+        builder.appendLine("• $name: $value")
+    }
+    builder.appendLine()
+    if (result.masterTips.isNotEmpty()) {
+        builder.appendLine("大师建议：")
+        result.masterTips.take(3).forEach { tip ->
+            builder.appendLine("• $tip")
+        }
+    }
+    builder.appendLine()
+    builder.appendLine("—— 用哈苏之眼，记录每一刻的光影 ——")
+    return builder.toString()
 }

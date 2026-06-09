@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.sqrt

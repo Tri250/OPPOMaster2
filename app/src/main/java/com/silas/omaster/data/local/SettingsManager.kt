@@ -221,6 +221,13 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putString(KEY_CUSTOM_DEVICE_MODEL, value).apply()
         }
 
+    // 预设版本映射（JSON 字符串），用于云端增量更新对比
+    var presetVersionMapJson: String
+        get() = prefs.getString(KEY_PRESET_VERSION_MAP, "") ?: ""
+        set(value) {
+            prefs.edit().putString(KEY_PRESET_VERSION_MAP, value).apply()
+        }
+
     // 收藏的预设ID列表（PM-003）
     var favoritePresetIds: List<String>
         get() = prefs.getStringSet(KEY_FAVORITE_PRESET_IDS, emptySet())?.toList() ?: emptyList()
@@ -329,6 +336,7 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_WATERMARK_EDITOR_ENABLED = "watermark_editor_enabled"
         private const val KEY_HASSELBLAD_COLOR_ENABLED = "hasselblad_color_enabled"
         private const val KEY_CUSTOM_DEVICE_MODEL = "custom_device_model"
+        private const val KEY_PRESET_VERSION_MAP = "preset_version_map"
         private const val KEY_FAVORITE_PRESET_IDS = "favorite_preset_ids"
         private const val KEY_PINNED_PRESET_IDS = "pinned_preset_ids"
         private const val KEY_MANUALLY_MODIFIED_PARAMS = "manually_modified_params"

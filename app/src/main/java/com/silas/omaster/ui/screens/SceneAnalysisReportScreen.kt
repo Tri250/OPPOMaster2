@@ -19,9 +19,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ShareCompat
 import com.silas.omaster.data.local.RecipeHistoryManager
 import com.silas.omaster.data.local.RecipeRecord
 import com.silas.omaster.ui.theme.*
+import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -106,6 +109,7 @@ fun SceneAnalysisReportScreen(
 ) {
     val context = LocalContext.current
     val recipeHistoryManager = remember { RecipeHistoryManager.getInstance(context) }
+    val scope = rememberCoroutineScope()
     
     // 时间范围选择
     var timeRange by remember { mutableStateOf("month") }
@@ -220,10 +224,47 @@ fun SceneAnalysisReportScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* 导出报告 */ }) {
+                    IconButton(onClick = {
+                        // 导出报告：将报告保存到外部文件并通过系统分享触发保存
+                        val reportText = buildReportText(habits, sceneStats, filmUsage, masterTips)
+                        scope.launch {
+                            try {
+                                val file = File(
+                                    context.getExternalFilesDir(null),
+                                    "scene_report_${System.currentTimeMillis()}.txt"
+                                )
+                                file.writeText(reportText)
+                                ShareCompat.IntentBuilder(context)
+                                    .setType("text/plain")
+                                    .setSubject("哈苏大师之眼 - 拍摄分析报告")
+                                    .setText(reportText)
+                                    .setStream(androidx.core.content.FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        file
+                                    ))
+                                    .startChooser()
+                            } catch (e: Exception) {
+                                // 失败时回退为分享文本
+                                ShareCompat.IntentBuilder(context)
+                                    .setType("text/plain")
+                                    .setSubject("哈苏大师之眼 - 拍摄分析报告")
+                                    .setText(reportText)
+                                    .startChooser()
+                            }
+                        }
+                    }) {
                         Icon(Icons.Default.Download, "导出", tint = Color.White.copy(alpha = 0.6f))
                     }
-                    IconButton(onClick = { /* 分享 */ }) {
+                    IconButton(onClick = {
+                        // 分享报告文本
+                        val reportText = buildReportText(habits, sceneStats, filmUsage, masterTips)
+                        ShareCompat.IntentBuilder(context)
+                            .setType("text/plain")
+                            .setSubject("哈苏大师之眼 - 拍摄分析报告")
+                            .setText(reportText)
+                            .startChooser()
+                    }) {
                         Icon(Icons.Default.Share, "分享", tint = HasselbladOrange)
                     }
                 },
@@ -667,6 +708,53 @@ class MutablePair<T1, T2>(var first: T1, var second: T2)
 private fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+/**
+ * 构建报告文本（用于导出/分享）
+ */
+private fun buildReportText(
+    habits: ShootingHabits?,
+    scenes: List<SceneDistribution>,
+    films: List<FilmUsage>,
+    tips: List<String>
+): String {
+    val builder = StringBuilder()
+    builder.appendLine("===== 哈苏大师之眼 · 拍摄分析报告 =====")
+    builder.appendLine()
+    habits?.let {
+        builder.appendLine("总照片数: ${it.totalPhotos}")
+        builder.appendLine("配方数: ${it.totalRecipes}")
+        builder.appendLine("最爱场景: ${it.favoriteScene}")
+        builder.appendLine("最爱胶片: ${it.favoriteFilm}")
+        builder.appendLine("平均置信度: ${(it.avgConfidence * 100).toInt()}%")
+        builder.appendLine("连续拍摄: ${it.streakDays}天")
+        builder.appendLine("最后拍摄: ${it.lastShootDate}")
+    }
+    builder.appendLine()
+    builder.appendLine("--- 场景分布 ---")
+    if (scenes.isEmpty()) {
+        builder.appendLine("（暂无数据）")
+    } else {
+        scenes.forEach { builder.appendLine("${it.name}: ${it.count} (${it.percentage}%)") }
+    }
+    builder.appendLine()
+    builder.appendLine("--- 胶片使用排行 ---")
+    if (films.isEmpty()) {
+        builder.appendLine("（暂无数据）")
+    } else {
+        films.forEach { builder.appendLine("${it.name}: ${it.count} (${it.percentage}%)") }
+    }
+    builder.appendLine()
+    builder.appendLine("--- 大师建议 ---")
+    if (tips.isEmpty()) {
+        builder.appendLine("（暂无建议）")
+    } else {
+        tips.forEach { builder.appendLine("• $it") }
+    }
+    builder.appendLine()
+    builder.appendLine("—— 用哈苏之眼，记录每一刻的光影 ——")
+    return builder.toString()
 }
 
 /**

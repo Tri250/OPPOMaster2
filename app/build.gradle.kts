@@ -144,6 +144,9 @@ dependencies {
     implementation(libs.tensorflow.lite.gpu)
     implementation(libs.tensorflow.lite.support)
 
+    // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
+    implementation(libs.kotlinx.coroutines.play.services)
+
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

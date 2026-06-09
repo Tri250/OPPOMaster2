@@ -3,6 +3,9 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.*
@@ -55,6 +58,46 @@ fun WatermarkEditorScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+
+    // 图片选择器（使用新版 Photo Picker）
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                isLoading = true
+                try {
+                    val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)
+                    }
+                    originalBitmap = bitmap
+
+                    // 从 URI 读取 EXIF
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val exif = ExifInterface(stream)
+                            modelText = exif.getAttribute(ExifInterface.TAG_MODEL) ?: modelText
+                            val params = buildParamsString(exif)
+                            if (params.isNotBlank()) paramsText = params
+                            val date = exif.getAttribute(ExifInterface.TAG_DATETIME)
+                                ?.substring(0, 10)
+                                ?.replace(':', '-')
+                            if (!date.isNullOrBlank()) dateText = date
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+
+                    if (bitmap != null) {
+                        recommendedColor = analyzeDominantColor(bitmap)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                isLoading = false
+            }
+        }
+    }
 
     // ========== 状态管理 ==========
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -306,7 +349,15 @@ fun WatermarkEditorScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { /* TODO: 打开图片选择器 */ },
+                        onClick = {
+                            // 打开新版图片选择器（Photo Picker）
+                            haptic.perform(HapticFeedbackType.Select)
+                            imagePickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                     ) {
                         Icon(Icons.Default.Add, null)

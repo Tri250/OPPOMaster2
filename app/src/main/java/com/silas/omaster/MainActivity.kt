@@ -13,19 +13,26 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -52,6 +59,7 @@ import com.silas.omaster.data.repository.PresetRepository
 
 import androidx.compose.runtime.collectAsState
 import com.silas.omaster.data.local.SettingsManager
+import kotlinx.coroutines.launch
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
@@ -230,6 +238,9 @@ fun MainApp(navController: NavHostController) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     var showMigrationDialog by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         if (JsonUtil.currentPresetsVersion != 2) {
@@ -521,8 +532,14 @@ fun MainApp(navController: NavHostController) {
                             clarity = preset.clarity,
                             brightness = preset.brightness
                         )
-                        // 显示应用成功提示
-                        // TODO: 添加Toast或Snackbar提示
+                        // 显示应用成功 Snackbar 提示
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "已应用预设：${preset.name}",
+                                actionLabel = "确定",
+                                duration = androidx.compose.material3.SnackbarDuration.Short
+                            )
+                        }
                     },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
@@ -686,6 +703,20 @@ fun MainApp(navController: NavHostController) {
                     }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+
+        // 全局 Snackbar Host（用于应用预设等全局提示）
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

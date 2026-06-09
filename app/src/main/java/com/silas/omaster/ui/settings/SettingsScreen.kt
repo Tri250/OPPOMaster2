@@ -59,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,7 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.ui.theme.DarkGray
@@ -82,6 +84,8 @@ import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
+import kotlinx.coroutines.launch
+import android.widget.Toast
 
 @Composable
 fun SettingsScreen(
@@ -109,6 +113,10 @@ fun SettingsScreen(
     var showDarkModeDialog by remember { mutableStateOf(false) }
     var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
     var lastSyncTime by remember { mutableStateOf(settingsManager.lastSyncTime) }
+    var showDataSourceDialog by remember { mutableStateOf(false) }
+    var isSyncing by remember { mutableStateOf(false) }
+    val presetRepository = remember { PresetRepository.getInstance(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -159,6 +167,10 @@ fun SettingsScreen(
             },
             onDismiss = { showDarkModeDialog = false }
         )
+    }
+
+    if (showDataSourceDialog) {
+        DataSourceDetailsDialog(onDismiss = { showDataSourceDialog = false })
     }
 
     val scrollState = rememberScrollState()
@@ -344,7 +356,11 @@ fun SettingsScreen(
                     icon = Icons.Default.Cloud,
                     title = "同步数据源",
                     subtitle = "OPPO、realme、vivo、honor",
-                    onClick = { /* 显示数据源详情 */ }
+                    onClick = {
+                        // 显示数据源详情对话框
+                        haptic.perform(HapticFeedbackType.Select)
+                        showDataSourceDialog = true
+                    }
                 )
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
@@ -363,7 +379,24 @@ fun SettingsScreen(
                     icon = Icons.Default.Update,
                     title = "上次同步",
                     subtitle = lastSyncText,
-                    onClick = { /* 手动触发同步 */ }
+                    onClick = {
+                        // 手动触发同步
+                        if (!isSyncing) {
+                            haptic.perform(HapticFeedbackType.Confirm)
+                            isSyncing = true
+                            coroutineScope.launch {
+                                val result = presetRepository.syncFromCloud()
+                                isSyncing = false
+                                result.onSuccess {
+                                    lastSyncTime = System.currentTimeMillis()
+                                    settingsManager.lastSyncTime = lastSyncTime
+                                    Toast.makeText(context, "同步成功", Toast.LENGTH_SHORT).show()
+                                }.onFailure { e ->
+                                    Toast.makeText(context, "同步失败：${e.message ?: "未知错误"}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -696,6 +729,61 @@ fun ThemeSelectionDialog(
         textContentColor = Color.White
     )
 }
+
+/**
+ * 同步数据源详情对话框
+ */
+@Composable
+private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
+    val dataSources = listOf(
+        DataSourceInfo("OPPO", "一加/OPPO 大师模式官方预设", "https://gitee.com/silas/omaster-presets/opporealme"),
+        DataSourceInfo("realme", "realme GT 大师模式官方预设", "https://gitee.com/silas/omaster-presets/realme"),
+        DataSourceInfo("vivo", "vivo 蔡司自然色彩官方预设", "https://gitee.com/silas/omaster-presets/vivo"),
+        DataSourceInfo("honor", "荣耀 Magic 影像官方预设", "https://gitee.com/silas/omaster-presets/honor")
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("同步数据源") },
+        text = {
+            LazyColumn {
+                items(dataSources) { source ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = source.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = source.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        },
+        containerColor = DarkGray,
+        textContentColor = Color.White
+    )
+}
+
+private data class DataSourceInfo(
+    val name: String,
+    val description: String,
+    val url: String
+)
 
 @Composable
 fun TabSelectionDialog(

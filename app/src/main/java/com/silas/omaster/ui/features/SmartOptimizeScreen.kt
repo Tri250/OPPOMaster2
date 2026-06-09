@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.features
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -12,10 +14,12 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.layout.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.model.*
+import java.io.IOException
 
 /**
  * 智能优化页面
@@ -36,6 +40,10 @@ fun SmartOptimizeScreen(
     onApply: (OptimizeParams) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    
+    // 预览图片状态
+    var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     
     // 优化参数状态
     var hdrEnabled by remember { mutableStateOf(false) }
@@ -55,6 +63,17 @@ fun SmartOptimizeScreen(
     
     // 预览模式
     var previewMode by remember { mutableStateOf("before") }
+    
+    // 从 assets 加载示例预览图
+    LaunchedEffect(Unit) {
+        try {
+            context.assets.open("images/placeholder.webp").use { stream ->
+                previewBitmap = BitmapFactory.decodeStream(stream)
+            }
+        } catch (e: IOException) {
+            // 资源不存在时保持空，将显示占位提示
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -115,23 +134,65 @@ fun SmartOptimizeScreen(
                 .height(200.dp)
                 .background(Color(0xFF1A1A1A))
         ) {
-            // TODO: 显示预览图片
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.Image,
-                    null,
-                    tint = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.size(48.dp)
+            if (previewBitmap != null) {
+                // 显示预览图片（带优化后效果模拟滤镜）
+                Image(
+                    bitmap = previewBitmap!!.asImageBitmap(),
+                    contentDescription = if (previewMode == "after") "优化后预览" else "原图预览",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    colorFilter = if (previewMode == "after") {
+                        // 模拟优化后效果：轻微提亮+暖色调
+                        ColorFilter.colorMatrix(
+                            androidx.compose.ui.graphics.ColorMatrix(
+                                floatArrayOf(
+                                    1.05f, 0f, 0f, 0f, 10f,
+                                    0f, 1.02f, 0f, 0f, 6f,
+                                    0f, 0f, 0.98f, 0f, -2f,
+                                    0f, 0f, 0f, 1f, 0f
+                                )
+                            )
+                        )
+                    } else null
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (previewMode == "after") "优化后预览" else "原图预览",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.5f)
-                )
+
+                // 顶部状态徽标
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.5f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (previewMode == "after") "优化后" else "原图",
+                        color = if (previewMode == "after") HasselbladOrange else Color.White,
+                        fontSize = 11.sp
+                    )
+                }
+            } else {
+                // 图片未加载时显示占位提示
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Image,
+                        null,
+                        tint = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (previewMode == "after") "优化后预览" else "原图预览",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
 

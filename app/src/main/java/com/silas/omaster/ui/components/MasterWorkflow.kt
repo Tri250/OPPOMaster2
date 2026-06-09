@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.components
 
+import android.graphics.Bitmap
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -14,22 +15,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * Layer 4: 大师洞察层 - 端到端大师工作流
- * 
+ *
  * 场景→胶片→参数的端到端工作流
  * 这是「哈苏大师之眼」区别于普通场景识别的最核心差异
- * 
- * 流程：
- * 1. 哈苏之眼（颜色直方图 + EXIF + 人脸检测）
- * 2. 智能胶片推荐（场景→胶片映射表）
+ *
+ * 流程（全部基于真实分析，不再使用模拟数据）：
+ * 1. 哈苏之眼（颜色直方图 + EXIF + 人脸检测）— 调用 HeuristicSceneAnalyzer
+ * 2. 智能胶片推荐（场景→胶片映射表）— 调用 SceneToHasselbladMapping
  * 3. 哈苏参数优化（HasselbladParams 映射）
  * 4. 大师拍摄建议（构图、光线、焦段建议）
  * 5. 配方保存/分享（场景+胶片+参数 = 可分享配方）
@@ -44,7 +49,8 @@ data class WorkflowStep(
     val title: String,
     val description: String,
     val status: WorkflowStatus = WorkflowStatus.PENDING,
-    val result: String? = null
+    val result: String? = null,
+    val durationMs: Long? = null
 )
 
 enum class WorkflowStatus {
@@ -60,7 +66,8 @@ data class WorkflowResult(
     val confidence: Float,
     val recommendedFilm: String,
     val hasselbladParams: Map<String, Int>,
-    val masterTips: List<String>
+    val masterTips: List<String>,
+    val totalDurationMs: Long
 )
 
 /**
@@ -69,8 +76,12 @@ data class WorkflowResult(
 @Composable
 fun MasterWorkflow(
     imageUrl: String? = null,
+    bitmap: Bitmap? = null,
     onComplete: (WorkflowResult) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
+
     val defaultSteps = remember {
         listOf(
             WorkflowStep(
@@ -111,55 +122,127 @@ fun MasterWorkflow(
     var isComplete by remember { mutableStateOf(false) }
     var workflowResult by remember { mutableStateOf<WorkflowResult?>(null) }
 
-    val scope = rememberCoroutineScope()
-
     // 启动工作流
-    LaunchedEffect(imageUrl) {
-        for (i in steps.indices) {
-            currentStepIndex = i
-
-            // 更新当前步骤为处理中
-            steps = steps.mapIndexed { idx, step ->
-                if (idx == i) step.copy(status = WorkflowStatus.PROCESSING)
-                else step
-            }
-
-            // 模拟处理时间
-            delay(800 + (Math.random() * 400).toLong())
-
-            // 更新步骤结果
-            val result = getStepResult(i)
-            steps = steps.mapIndexed { idx, step ->
-                if (idx == i) step.copy(status = WorkflowStatus.COMPLETED, result = result)
-                else step
-            }
+    LaunchedEffect(imageUrl, bitmap) {
+        val sourceBitmap = bitmap
+        if (sourceBitmap == null) {
+            // 没有图片数据时不做任何处理
+            return@LaunchedEffect
         }
+
+        val totalStart = System.nanoTime()
+
+        // Step 1: 哈苏之眼（颜色 + EXIF + 人脸检测）— 真实调用 MasterInferenceEngine
+        val eyeStart = System.nanoTime()
+        currentStepIndex = 0
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 0) step.copy(status = WorkflowStatus.PROCESSING) else step
+        }
+        val profile: SceneProfile = try {
+            withContext(Dispatchers.Default) {
+                inferenceEngine.analyzeImage(sourceBitmap, imagePath = null)
+            }
+        } catch (e: Exception) {
+            return@LaunchedEffect
+        }
+        val eyeDuration = (System.nanoTime() - eyeStart) / 1_000_000
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 0) step.copy(
+                status = WorkflowStatus.COMPLETED,
+                result = "${profile.name} · 置信度 ${(profile.confidence * 100).roundToInt()}%",
+                durationMs = eyeDuration
+            ) else step
+        }
+
+        // Step 2: 智能胶片推荐（真实映射）
+        val filmStart = System.nanoTime()
+        currentStepIndex = 1
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 1) step.copy(status = WorkflowStatus.PROCESSING) else step
+        }
+        val recommendedFilms = inferenceEngine.getRecommendedFilms(profile.id)
+        val primaryFilm = recommendedFilms.firstOrNull() ?: profile.recommendedFilm.firstOrNull()
+        val filmName = primaryFilm?.name ?: "CC 经典负片"
+        val matchScore = primaryFilm?.matchScore ?: 0f
+        val filmDuration = (System.nanoTime() - filmStart) / 1_000_000
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 1) step.copy(
+                status = WorkflowStatus.COMPLETED,
+                result = "$filmName (${(matchScore * 100).roundToInt()}%匹配)",
+                durationMs = filmDuration
+            ) else step
+        }
+
+        // Step 3: 哈苏参数优化
+        val paramsStart = System.nanoTime()
+        currentStepIndex = 2
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 2) step.copy(status = WorkflowStatus.PROCESSING) else step
+        }
+        val hasselbladParams = profile.hasselbladParams
+        val paramsDuration = (System.nanoTime() - paramsStart) / 1_000_000
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 2) step.copy(
+                status = WorkflowStatus.COMPLETED,
+                result = "影调${hasselbladParams.tone} 饱和度${hasselbladParams.saturation} 色温${hasselbladParams.colorTemp}",
+                durationMs = paramsDuration
+            ) else step
+        }
+
+        // Step 4: 大师拍摄建议（使用真实 masterTips）
+        val tipsStart = System.nanoTime()
+        currentStepIndex = 3
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 3) step.copy(status = WorkflowStatus.PROCESSING) else step
+        }
+        val tips = inferenceEngine.getMasterTips(profile.id).ifEmpty { profile.masterTips }
+        val tipsDuration = (System.nanoTime() - tipsStart) / 1_000_000
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 3) step.copy(
+                status = WorkflowStatus.COMPLETED,
+                result = "${tips.size} 条大师建议",
+                durationMs = tipsDuration
+            ) else step
+        }
+
+        // Step 5: 配方保存/分享（组装可分享配方）
+        val saveStart = System.nanoTime()
+        currentStepIndex = 4
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 4) step.copy(status = WorkflowStatus.PROCESSING) else step
+        }
+        val saveDuration = (System.nanoTime() - saveStart) / 1_000_000
+        steps = steps.mapIndexed { idx, step ->
+            if (idx == 4) step.copy(
+                status = WorkflowStatus.COMPLETED,
+                result = "配方已生成",
+                durationMs = saveDuration
+            ) else step
+        }
+
+        val totalDuration = (System.nanoTime() - totalStart) / 1_000_000
 
         // 工作流完成
         currentStepIndex = -1
         isComplete = true
 
-        // 构建最终结果
+        // 构建最终结果（全部来自真实分析）
         workflowResult = WorkflowResult(
-            sceneId = "landscape-sunset",
-            sceneName = "日落",
-            confidence = 0.92f,
-            recommendedFilm = "RDP3 正片",
+            sceneId = profile.id,
+            sceneName = profile.name,
+            confidence = profile.confidence,
+            recommendedFilm = filmName,
             hasselbladParams = mapOf(
-                "tone" to -5,
-                "saturation" to 25,
-                "contrast" to 10,
-                "colorTemp" to 20,
-                "sharpness" to 12,
-                "vignette" to 0,
-                "cyanMagenta" to 5
+                "tone" to hasselbladParams.tone,
+                "saturation" to hasselbladParams.saturation,
+                "contrast" to hasselbladParams.contrast,
+                "colorTemp" to hasselbladParams.colorTemp,
+                "sharpness" to hasselbladParams.sharpness,
+                "vignette" to hasselbladParams.vignette,
+                "cyanMagenta" to hasselbladParams.cyanMagenta
             ),
-            masterTips = listOf(
-                "黄金时刻出片率最高",
-                "利用前景增加层次感",
-                "试试 XPAN 宽幅模式",
-                "浓郁胶片让色彩更鲜活"
-            )
+            masterTips = tips,
+            totalDurationMs = totalDuration
         )
 
         onComplete(workflowResult!!)
@@ -462,29 +545,25 @@ private fun WorkflowStepItem(
                     // 步骤结果
                     step.result?.let { result ->
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = result,
-                            color = HasselbladOrange,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = result,
+                                color = HasselbladOrange,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            step.durationMs?.let { duration ->
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "· ${duration}ms",
+                                    color = Color.White.copy(alpha = 0.4f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-/**
- * 获取步骤结果
- */
-private fun getStepResult(stepIndex: Int): String {
-    return when (stepIndex) {
-        0 -> "日落 · 置信度 92%"
-        1 -> "RDP3 正片 (93%匹配)"
-        2 -> "影调-5 饱和度+25 色温+20"
-        3 -> "4 条大师建议"
-        4 -> "配方已生成"
-        else -> ""
     }
 }
