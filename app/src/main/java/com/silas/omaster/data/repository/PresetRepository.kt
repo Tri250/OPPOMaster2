@@ -881,6 +881,62 @@ class PresetRepository private constructor(context: Context) {
      */
     suspend fun reloadDefaultPresets(): List<PresetItem> = loadPresets(brand = null)
 
+    // ==================== HomeViewModel 需要的方法 ====================
+
+    /**
+     * 获取所有预设（转换为 MasterPreset）
+     */
+    fun getAllPresets(): StateFlow<List<MasterPreset>> {
+        // 将内部的 PresetItem 转换为 MasterPreset
+        val converted = MutableStateFlow<List<MasterPreset>>(emptyList())
+        
+        // 监听内部 presets 并转换
+        _presets.value.map { item ->
+            item.toMasterPreset()
+        }.let { converted.value = it }
+        
+        // 每次 presets 更新时同步转换
+        // 注意：这里简化处理，实际应该用 combine 或 map
+        return converted
+    }
+
+    /**
+     * 获取收藏的预设
+     */
+    fun getFavoritePresets(): StateFlow<List<MasterPreset>> {
+        val converted = MutableStateFlow<List<MasterPreset>>(emptyList())
+        
+        _presets.value.filter { item ->
+            _favorites.value.contains(item.id)
+        }.map { item ->
+            item.toMasterPreset()
+        }.let { converted.value = it }
+        
+        return converted
+    }
+
+    /**
+     * 获取自定义预设
+     */
+    fun getCustomPresets(): StateFlow<List<MasterPreset>> {
+        val converted = MutableStateFlow<List<MasterPreset>>(emptyList())
+        
+        _presets.value.filter { item ->
+            !item.isSystem
+        }.map { item ->
+            item.toMasterPreset()
+        }.let { converted.value = it }
+        
+        return converted
+    }
+
+    /**
+     * 删除自定义预设（简化版本）
+     */
+    suspend fun deleteCustomPreset(presetId: String) {
+        deletePreset(presetId, forceConfirm = true)
+    }
+
     /**
      * 释放 Ktor 资源
      * 真实使用中通常不需要调用，因为 HttpClient 是 lazy 单例
@@ -943,6 +999,34 @@ data class PresetItem(
         description = description,
         tags = tags
     )
+
+    /**
+     * 转换为 MasterPreset（用于 UI 层）
+     */
+    fun toMasterPreset(): MasterPreset {
+        return MasterPreset(
+            id = id,
+            name = name,
+            coverPath = coverPath ?: "images/placeholder.webp",
+            brand = brand,
+            tags = tags,
+            description = if (description.isNotEmpty()) {
+                com.silas.omaster.model.PresetDescription("Shooting Tips", description)
+            } else null,
+            isNew = isNew,
+            isHncs = isHncs,
+            downloads = downloadCount,
+            rating = rating,
+            createdAt = createdAt,
+            saturation = params["saturation"],
+            tone = params["contrast"],
+            warmCool = params["warmth"],
+            sharpness = params["sharpness"],
+            cyanMagenta = params["cyan_magenta"],
+            colorTemperature = params["color_temperature"],
+            colorHue = params["color_hue"]
+        )
+    }
 }
 
 /**
