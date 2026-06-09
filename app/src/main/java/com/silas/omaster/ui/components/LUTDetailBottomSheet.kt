@@ -318,14 +318,12 @@ fun LUTDetailBottomSheet(
             if (lut.tags.isNotEmpty()) {
                 item {
                     SectionTitle("风格标签", Icons.Default.Tag)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 8.dp)
                     ) {
-                        items(lut.tags.size) { index ->
-                            TagChip(lut.tags[index])
+                        items(lut.tags) { tag ->
+                            TagChip(tag)
                         }
                     }
                 }
@@ -335,14 +333,12 @@ fun LUTDetailBottomSheet(
             if (lut.compatibleSoftware.isNotEmpty()) {
                 item {
                     SectionTitle("兼容软件", Icons.Default.Computer)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 8.dp)
                     ) {
-                        items(lut.compatibleSoftware.size) { index ->
-                            SoftwareChip(lut.compatibleSoftware[index])
+                        items(lut.compatibleSoftware) { software ->
+                            SoftwareChip(software)
                         }
                     }
                 }
