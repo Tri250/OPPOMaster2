@@ -4,6 +4,53 @@
  */
 
 /**
+ * LUT排序方式枚举
+ */
+export enum LUTSortBy {
+  DOWNLOADS = 'downloads',
+  RATING = 'rating',
+  NEWEST = 'newest',
+  NAME = 'name',
+}
+
+export const LUT_SORTBY_META: Record<LUTSortBy, { key: string; displayName: string }> = {
+  [LUTSortBy.DOWNLOADS]: { key: 'downloads', displayName: '下载量' },
+  [LUTSortBy.RATING]: { key: 'rating', displayName: '评分' },
+  [LUTSortBy.NEWEST]: { key: 'newest', displayName: '最新' },
+  [LUTSortBy.NAME]: { key: 'name', displayName: '名称' },
+};
+
+/**
+ * 资源加载状态
+ */
+export interface Resource<T> {
+  data: T | null;
+  message: string | null;
+}
+
+/**
+ * 下载进度状态
+ */
+export type DownloadProgress =
+  | { type: 'starting'; lutId: string }
+  | { type: 'downloading'; lutId: string; progress: number; bytesDownloaded: number; totalBytes: number }
+  | { type: 'completed'; lutId: string; filePath: string }
+  | { type: 'error'; lutId: string; message: string };
+
+/**
+ * 下载状态记录
+ */
+export interface DownloadState {
+  lutId: string;
+  isDownloading?: boolean;
+  progress?: number;
+  isCompleted?: boolean;
+  filePath?: string;
+  error?: string;
+  downloadedAt?: number;
+}
+
+/**
  * LUT分类枚举
  */
 export enum LUTCategory {
