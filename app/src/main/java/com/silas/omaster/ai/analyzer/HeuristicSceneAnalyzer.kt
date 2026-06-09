@@ -262,19 +262,45 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
     /**
      * 人脸检测（使用 ML Kit Face Detection）
-     * 当前为简化实现，实际应集成 ML Kit
+     * 已集成 ML Kit，支持实时人脸检测
      */
-    private fun detectFaces(bitmap: Bitmap): Int {
-        // TODO: 集成 ML Kit Face Detection
-        // 当前返回模拟值，实际项目中应使用：
-        // val faceDetector = FaceDetection.getClient()
-        // val inputImage = InputImage.fromBitmap(bitmap, 0)
-        // val faces = faceDetector.process(inputImage).await()
-        // return faces.size
+    private suspend fun detectFaces(bitmap: Bitmap): Int = withContext(Dispatchers.Default) {
+        try {
+            // 创建 ML Kit 人脸检测器配置
+            val options = com.google.mlkit.vision.face.FaceDetectorOptions.Builder()
+                .setPerformanceMode(com.google.mlkit.vision.face.FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .setLandmarkMode(com.google.mlkit.vision.face.FaceDetectorOptions.LANDMARK_MODE_NONE)
+                .setClassificationMode(com.google.mlkit.vision.face.FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
+                .build()
 
-        // 基于肤色占比的简化推断
-        // 如果肤色占比 > 5%，可能存在人脸
-        return 0  // 暂时返回0，等待ML Kit集成
+            val faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(options)
+            val inputImage = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
+
+            // 异步检测人脸
+            val faces = faceDetector.process(inputImage).await()
+            
+            // 关闭检测器释放资源
+            faceDetector.close()
+            
+            faces.size
+        } catch (e: Exception) {
+            // 检测失败时回退到肤色推断
+            android.util.Log.w("HeuristicSceneAnalyzer", "ML Kit人脸检测失败，回退到肤色推断: ${e.message}")
+            inferFaceCountBySkinTone(bitmap)
+        }
+    }
+
+    /**
+     * 基于肤色占比推断人脸数量（备用方案）
+     */
+    private fun inferFaceCountBySkinTone(bitmap: Bitmap): Int {
+        val colorProfile = sampleColorProfile(bitmap, sampleRatio = 0.6f)
+        return when {
+            colorProfile.skinToneRatio > 0.15 -> 2
+            colorProfile.skinToneRatio > 0.08 -> 1
+            colorProfile.skinToneRatio > 0.03 -> 1
+            else -> 0
+        }
     }
 
     /**

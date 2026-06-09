@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Share2, RefreshCw, Save, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, Share2, RefreshCw, Save, Sparkles, Download, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { HasselbladCompareSlider } from '../components/HasselbladCompareSlider';
 import { FilmRecommendationStrip } from '../components/FilmRecommendationStrip';
@@ -20,6 +20,11 @@ import { AnalysisResult, getAnalyzer } from '../ai/HeuristicSceneAnalyzer';
  * - 胶片推荐卡片
  * - 哈苏大师参数展示
  * - 大师拍摄建议
+ * 
+ * 已修复：
+ * - 实现分享、保存、导出、一键优化功能
+ * - Before/After对比使用实际处理效果
+ * - 使用真实分析结果替代模拟数据
  */
 
 interface SceneRecognitionResultProps {
@@ -36,62 +41,174 @@ export const SceneRecognitionResult: React.FC<SceneRecognitionResultProps> = ({
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(true);
+  const [processedImageUrl, setProcessedImageUrl] = useState<string>(imageUrl);
+  const [isOptimized, setIsOptimized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // 模拟分析过程
+  // 真实分析过程
   useEffect(() => {
     const analyze = async () => {
       setIsAnalyzing(true);
 
-      // 模拟延迟
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      try {
+        // 加载图片
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imageUrl;
+        
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('图片加载失败'));
+        });
 
-      // 获取场景画像
-      const profile = getFullSceneProfile(sceneId, 0.92);
-      setSceneProfile(profile);
-      setSelectedFilmId(profile.recommendedFilm[0]?.id || null);
-
-      // 模拟分析结果
-      setAnalysisResult({
-        primaryScene: profile,
-        confidence: 0.92,
-        alternativeScenes: [
-          { ...profile, id: 'landscape', name: '风景', confidence: 0.18 },
-          { ...profile, id: 'portrait-backlit', name: '逆光人像', confidence: 0.08 },
-        ] as SceneProfile[],
-        colorProfile: {
-          avgRed: 180, avgGreen: 120, avgBlue: 80,
-          warmthRatio: 0.65, greenDominance: 0.9, blueDominance: 0.7, redDominance: 1.2,
-          skinToneRatio: 0.02, darkPixelRatio: 0.15, highlightRatio: 0.25,
-        },
-        brightnessLevel: 'BRIGHT' as const,
-        faceCount: 0,
-        edgeDensity: 0.22,
-        analysisDetails: {},
-      });
+        // 使用启发式分析器进行真实场景识别
+        const analyzer = getAnalyzer();
+        const result = await analyzer.analyze(img);
+        
+        setAnalysisResult(result);
+        setSceneProfile(result.primaryScene);
+        setSelectedFilmId(result.primaryScene.recommendedFilm[0]?.id || null);
+        
+        // 生成处理后的图片（应用哈苏参数）
+        const processed = await applyHasselbladEffect(img, result.primaryScene.hasselbladParams);
+        setProcessedImageUrl(processed);
+      } catch (error) {
+        console.error('分析失败:', error);
+        // 回退到默认场景
+        const profile = getFullSceneProfile(sceneId, 0.92);
+        setSceneProfile(profile);
+        setSelectedFilmId(profile.recommendedFilm[0]?.id || null);
+      }
 
       setIsAnalyzing(false);
     };
 
     analyze();
-  }, [sceneId]);
+  }, [imageUrl, sceneId]);
 
   const handleBack = () => navigate(-1);
-  const handleShare = () => {
-    // TODO: 实现分享功能
-    console.log('分享配方');
-  };
-  const handleRetake = () => {
-    // TODO: 实现重拍功能
-    console.log('重拍');
-  };
-  const handleOptimize = () => {
-    // TODO: 实现一键优化
-    console.log('一键哈苏优化');
-  };
-  const handleSave = () => {
-    // TODO: 实现保存配方
-    console.log('保存配方');
-  };
+
+  /**
+   * 分享配方功能
+   */
+  const handleShare = useCallback(async () => {
+    if (!sceneProfile) return;
+
+    const shareData = {
+      title: `哈苏大师配方 - ${sceneProfile.name}`,
+      text: `我在哈苏之眼发现了一套绝妙的${sceneProfile.name}配方！\n\n推荐胶片：${sceneProfile.recommendedFilm.map(f => f.name).join('、')}\n\n快来试试吧！`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // 降级方案：复制到剪贴板
+        const text = `${shareData.title}\n${shareData.text}\n${shareData.url}`;
+        await navigator.clipboard.writeText(text);
+        alert('配方已复制到剪贴板！');
+      }
+    } catch (error) {
+      console.error('分享失败:', error);
+    }
+  }, [sceneProfile]);
+
+  /**
+   * 重拍功能
+   */
+  const handleRetake = useCallback(() => {
+    // 清除当前结果，返回相机页面
+    navigate('/camera');
+  }, [navigate]);
+
+  /**
+   * 一键哈苏优化
+   */
+  const handleOptimize = useCallback(async () => {
+    if (!sceneProfile || !analysisResult) return;
+
+    setIsOptimized(true);
+    
+    try {
+      // 重新加载原图
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = imageUrl;
+      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+
+      // 应用优化后的参数（增强版）
+      const optimizedParams: HasselbladParams = {
+        ...sceneProfile.hasselbladParams,
+        clarity: Math.min(sceneProfile.hasselbladParams.clarity + 10, 30),
+        sharpness: Math.min(sceneProfile.hasselbladParams.sharpness + 5, 30),
+      };
+
+      const processed = await applyHasselbladEffect(img, optimizedParams);
+      setProcessedImageUrl(processed);
+      
+      // 3秒后重置状态
+      setTimeout(() => setIsOptimized(false), 3000);
+    } catch (error) {
+      console.error('优化失败:', error);
+      setIsOptimized(false);
+    }
+  }, [sceneProfile, analysisResult, imageUrl]);
+
+  /**
+   * 保存配方功能
+   */
+  const handleSave = useCallback(async () => {
+    if (!sceneProfile) return;
+
+    setIsSaving(true);
+    
+    try {
+      // 保存到本地存储
+      const savedRecipes = JSON.parse(localStorage.getItem('hasselblad_recipes') || '[]');
+      const newRecipe = {
+        id: Date.now().toString(),
+        sceneId: sceneProfile.id,
+        sceneName: sceneProfile.name,
+        filmId: selectedFilmId,
+        params: sceneProfile.hasselbladParams,
+        timestamp: Date.now(),
+        thumbnail: processedImageUrl,
+      };
+      
+      savedRecipes.unshift(newRecipe);
+      // 最多保存50个
+      if (savedRecipes.length > 50) savedRecipes.pop();
+      
+      localStorage.setItem('hasselblad_recipes', JSON.stringify(savedRecipes));
+      
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setIsSaving(false);
+      }, 2000);
+    } catch (error) {
+      console.error('保存失败:', error);
+      setIsSaving(false);
+    }
+  }, [sceneProfile, selectedFilmId, processedImageUrl]);
+
+  /**
+   * 导出图片功能
+   */
+  const handleExport = useCallback(async () => {
+    try {
+      const link = document.createElement('a');
+      link.href = processedImageUrl;
+      link.download = `hasselblad_${sceneProfile?.id || 'photo'}_${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('导出失败:', error);
+    }
+  }, [processedImageUrl, sceneProfile]);
 
   if (isAnalyzing) {
     return (
@@ -128,22 +245,31 @@ export const SceneRecognitionResult: React.FC<SceneRecognitionResultProps> = ({
             <ArrowLeft size={20} />
             <span className="text-sm">AI 出片</span>
           </button>
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-          >
-            <Share2 size={14} className="text-[#FF6B35]" />
-            <span className="text-white/80 text-xs">分享配方</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+            >
+              <Download size={14} className="text-white/60" />
+              <span className="text-white/80 text-xs">导出</span>
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+            >
+              <Share2 size={14} className="text-[#FF6B35]" />
+              <span className="text-white/80 text-xs">分享配方</span>
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="px-4 py-4 space-y-4">
-        {/* Before/After 对比 */}
+        {/* Before/After 对比 - 使用实际处理效果 */}
         <section>
           <HasselbladCompareSlider
             original={imageUrl}
-            processed={imageUrl} // 实际应用中应该是处理后的图片
+            processed={processedImageUrl}
             aspectRatio="4/3"
           />
         </section>
@@ -178,7 +304,7 @@ export const SceneRecognitionResult: React.FC<SceneRecognitionResultProps> = ({
           {analysisResult.alternativeScenes.length > 0 && (
             <div className="space-y-2 pt-3 border-t border-white/5">
               <p className="text-white/40 text-xs">备选场景：</p>
-              {analysisResult.alternativeScenes.map((scene) => (
+              {analysisResult.alternativeScenes.slice(0, 3).map((scene) => (
                 <div key={scene.id} className="flex items-center gap-3">
                   <span className="text-white/60 text-xs w-20">{scene.name}</span>
                   <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -244,24 +370,159 @@ export const SceneRecognitionResult: React.FC<SceneRecognitionResultProps> = ({
 
           <button
             onClick={handleOptimize}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF8A50] shadow-lg shadow-[#FF6B35]/20"
+            disabled={isOptimized}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full shadow-lg transition-all ${
+              isOptimized
+                ? 'bg-green-500 shadow-green-500/20'
+                : 'bg-gradient-to-r from-[#FF6B35] to-[#FF8A50] shadow-[#FF6B35]/20'
+            }`}
           >
-            <Sparkles size={18} className="text-white" />
-            <span className="text-white font-medium text-sm">一键哈苏优化</span>
+            {isOptimized ? (
+              <>
+                <CheckCircle size={18} className="text-white" />
+                <span className="text-white font-medium text-sm">已优化</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={18} className="text-white" />
+                <span className="text-white font-medium text-sm">一键哈苏优化</span>
+              </>
+            )}
           </button>
 
           <button
             onClick={handleSave}
+            disabled={isSaving}
             className="flex flex-col items-center gap-1 px-4"
           >
-            <Save size={20} className="text-white/60" />
-            <span className="text-white/60 text-[10px]">保存配方</span>
+            {saveSuccess ? (
+              <CheckCircle size={20} className="text-green-500" />
+            ) : (
+              <Save size={20} className={isSaving ? 'text-white/30' : 'text-white/60'} />
+            )}
+            <span className={`text-[10px] ${saveSuccess ? 'text-green-500' : 'text-white/60'}`}>
+              {saveSuccess ? '已保存' : '保存配方'}
+            </span>
           </button>
         </div>
       </footer>
     </div>
   );
 };
+
+/**
+ * 应用哈苏效果到图片
+ * 使用Canvas进行图像处理
+ */
+async function applyHasselbladEffect(
+  image: HTMLImageElement,
+  params: HasselbladParams
+): Promise<string> {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+  
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+  
+  // 绘制原图
+  ctx.drawImage(image, 0, 0);
+  
+  // 获取图像数据
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  
+  // 应用哈苏参数调整
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i];
+    let g = data[i + 1];
+    let b = data[i + 2];
+    
+    // 转换为灰度（用于影调调整）
+    const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    
+    // 影调调整 (tone: -30 ~ +30)
+    const toneFactor = 1 + (params.tone / 100);
+    r = Math.min(255, Math.max(0, r * toneFactor));
+    g = Math.min(255, Math.max(0, g * toneFactor));
+    b = Math.min(255, Math.max(0, b * toneFactor));
+    
+    // 饱和度调整 (saturation: -30 ~ +30)
+    const saturationFactor = 1 + (params.saturation / 100);
+    r = gray + (r - gray) * saturationFactor;
+    g = gray + (g - gray) * saturationFactor;
+    b = gray + (b - gray) * saturationFactor;
+    
+    // 对比度调整 (contrast: -30 ~ +30)
+    const contrastFactor = (259 * (params.contrast + 255)) / (255 * (259 - params.contrast));
+    r = contrastFactor * (r - 128) + 128;
+    g = contrastFactor * (g - 128) + 128;
+    b = contrastFactor * (b - 128) + 128;
+    
+    // 色温调整 (colorTemp: -30 ~ +30)
+    const tempFactor = params.colorTemp / 2;
+    r += tempFactor;  // 暖调增加红色
+    b -= tempFactor;  // 暖调减少蓝色
+    
+    // 锐度调整（简化版：增强边缘对比）
+    if (params.sharpness > 0) {
+      const sharpnessBoost = params.sharpness / 100;
+      // 简单的锐化效果
+      const avg = (r + g + b) / 3;
+      r = r + (r - avg) * sharpnessBoost;
+      g = g + (g - avg) * sharpnessBoost;
+      b = b + (b - avg) * sharpnessBoost;
+    }
+    
+    // 青品调调整 (cyanMagenta: -30 ~ +30)
+    const cmFactor = params.cyanMagenta / 2;
+    g += cmFactor;  // 品红增加绿色
+    b -= cmFactor;  // 青色增加蓝色
+    
+    // 确保值在有效范围内
+    data[i] = Math.min(255, Math.max(0, r));
+    data[i + 1] = Math.min(255, Math.max(0, g));
+    data[i + 2] = Math.min(255, Math.max(0, b));
+  }
+  
+  // 应用暗角效果 (vignette: -30 ~ +30)
+  if (params.vignette > 0) {
+    applyVignette(data, canvas.width, canvas.height, params.vignette);
+  }
+  
+  // 将处理后的数据写回canvas
+  ctx.putImageData(imageData, 0, 0);
+  
+  return canvas.toDataURL('image/jpeg', 0.95);
+}
+
+/**
+ * 应用暗角效果
+ */
+function applyVignette(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  vignetteStrength: number
+): void {
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+  const strength = vignetteStrength / 30; // 归一化到 0-1
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const factor = 1 - (distance / maxDistance) * strength * 0.5;
+      
+      const idx = (y * width + x) * 4;
+      data[idx] *= factor;
+      data[idx + 1] *= factor;
+      data[idx + 2] *= factor;
+    }
+  }
+}
 
 /**
  * 根据场景ID获取对应的emoji

@@ -128,9 +128,13 @@ dependencies {
     // Room 数据库已移除，使用 SharedPreferences 替代
 
     // ⚠️ 替换友盟硬编码依赖
+// 友盟
     implementation(libs.umeng.common)
     implementation(libs.umeng.asms)
     implementation(libs.androidx.material3)
+
+    // ML Kit 人脸检测
+    implementation(libs.mlkit.face.detection)
 
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
