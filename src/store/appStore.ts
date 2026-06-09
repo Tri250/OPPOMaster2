@@ -135,7 +135,7 @@ export const useAppStore = create<AppState>((set) => ({
   features: [
     {
       id: 'ai-scene',
-      title: 'AI 场景识别',
+      title: '哈苏之眼',
       subtitle: '智能识别36+拍摄场景，自动推荐最佳参数',
       icon: 'Camera',
       color: '#4CAF50',

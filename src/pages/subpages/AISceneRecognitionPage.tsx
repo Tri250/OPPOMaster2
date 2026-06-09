@@ -117,7 +117,7 @@ const AISceneRecognitionPage: React.FC = () => {
     const imageData = canvas.toDataURL('image/jpeg');
     setCapturedImage(imageData);
     
-    // 模拟 AI 场景识别
+    // 模拟哈苏之眼识别
     setIsAnalyzing(true);
     
     setTimeout(() => {

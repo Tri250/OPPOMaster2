@@ -8,7 +8,7 @@ import { Camera, Film, SlidersHorizontal, Lightbulb, Share2, Sparkles, CheckCirc
  * 这是「哈苏大师之眼」区别于普通场景识别的最核心差异
  * 
  * 流程：
- * 1. AI 场景识别（颜色直方图 + EXIF + 人脸检测）
+ * 1. 哈苏之眼（颜色直方图 + EXIF + 人脸检测）
  * 2. 智能胶片推荐（场景→胶片映射表）
  * 3. 哈苏参数优化（HasselbladParams 映射）
  * 4. 大师拍摄建议（构图、光线、焦段建议）
@@ -42,7 +42,7 @@ const DEFAULT_WORKFLOW_STEPS: WorkflowStep[] = [
   {
     id: 'scene',
     icon: <Camera size={20} />,
-    title: 'AI 场景识别',
+    title: '哈苏之眼',
     description: '颜色直方图 + EXIF + 人脸检测',
     status: 'pending',
   },

@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 /**
- * AI 场景识别管理器
+ * 哈苏之眼管理器
  * 支持 35+ 拍摄场景智能识别
  */
 class SceneRecognitionManager private constructor(context: Context) {
@@ -153,7 +153,7 @@ class SceneRecognitionManager private constructor(context: Context) {
     }
 
     /**
-     * 切换 AI 场景识别开关
+     * 切换哈苏之眼开关
      */
     fun toggleSceneRecognition(enabled: Boolean) {
         settingsManager.isAISceneRecognitionEnabled = enabled

@@ -552,7 +552,7 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            // AI场景识别页面
+            // 哈苏之眼页面
             composable<Screen.SceneRecognition> {
                 AISceneRecognitionScreen(
                     onBack = { navController.popBackStack() }

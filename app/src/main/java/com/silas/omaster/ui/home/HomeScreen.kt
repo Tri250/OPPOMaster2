@@ -734,9 +734,9 @@ private fun FeatureEntryRow(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // AI场景识别
+        // 哈苏之眼
         FeatureEntryCard(
-            title = "AI场景",
+            title = "哈苏之眼",
             icon = Icons.Default.CameraAlt,
             color = Color(0xFF4CAF50),
             onClick = {

@@ -132,7 +132,7 @@ const UpdateChannelPage: React.FC = () => {
             </div>
             <div className="flex items-start gap-2">
               <span className="text-green-500 font-bold mt-0.5">•</span>
-              <span className="text-gray-600">AI 场景识别增强，支持 50+ 精细场景</span>
+              <span className="text-gray-600">哈苏之眼增强，支持 50+ 精细场景</span>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-green-500 font-bold mt-0.5">•</span>

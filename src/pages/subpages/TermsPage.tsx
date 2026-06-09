@@ -98,7 +98,7 @@ const TermsPage: React.FC = () => {
             <div>
               <h4 className="font-medium text-gray-900 mb-2">1. 服务条款</h4>
               <p className="text-xs leading-relaxed">
-                本应用提供专业的摄影后期处理工具，包括但不限于 AI 场景识别、色彩调整、滤镜效果、水印添加等功能。我们将持续更新和优化服务，为用户提供更好的使用体验。
+                本应用提供专业的摄影后期处理工具，包括但不限于 哈苏之眼、色彩调整、滤镜效果、水印添加等功能。我们将持续更新和优化服务，为用户提供更好的使用体验。
               </p>
             </div>
             <div>

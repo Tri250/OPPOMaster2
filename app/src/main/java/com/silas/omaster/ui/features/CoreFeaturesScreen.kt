@@ -138,10 +138,10 @@ fun CoreFeaturesScreen(
             )
         }
 
-        // AI场景识别
+        // 哈苏之眼
         item {
             FeatureCard(
-                title = "AI 场景识别",
+                title = "哈苏之眼",
                 subtitle = "智能识别36+拍摄场景，自动推荐最佳参数",
                 icon = Icons.Default.CameraAlt,
                 iconColor = Color(0xFF4CAF50),

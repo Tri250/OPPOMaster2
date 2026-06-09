@@ -25,7 +25,7 @@ import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.launch
 
 /**
- * AI场景识别功能页面
+ * 哈苏之眼功能页面
  * 支持50+精细场景类型识别
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +52,7 @@ fun AISceneRecognitionScreen(
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("AI 场景识别", fontWeight = FontWeight.Bold) },
+            title = { Text("哈苏之眼", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.ToggleOff)

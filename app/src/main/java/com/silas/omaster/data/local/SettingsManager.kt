@@ -179,7 +179,7 @@ class SettingsManager private constructor(context: Context) {
             prefs.edit().putString(KEY_USER_ID, value).apply()
         }
 
-    // AI 场景识别开关
+    // 哈苏之眼开关
     var isAISceneRecognitionEnabled: Boolean
         get() = prefs.getBoolean(KEY_AI_SCENE_ENABLED, true)
         set(value) {
