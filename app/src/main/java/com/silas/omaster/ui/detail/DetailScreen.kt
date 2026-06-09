@@ -22,7 +22,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Grid
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Sparkles
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,10 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
 import com.silas.omaster.data.repository.PresetRepository
@@ -53,7 +62,12 @@ import com.silas.omaster.ui.components.ModeBadge
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.ParameterCard
 import com.silas.omaster.ui.components.SectionTitle
-import com.silas.omaster.ui.components.ShootingTipsCard
+import com.silas.omaster.ui.components.ShootingTipsDetailCard
+import com.silas.omaster.ui.components.PresetStatsCard
+import com.silas.omaster.ui.components.UserCommentsCard
+import com.silas.omaster.ui.components.UserComment
+import com.silas.omaster.ui.components.RelatedPresetsCard
+import com.silas.omaster.ui.components.RelatedPreset
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.service.FloatingWindowService
 import androidx.compose.ui.res.stringResource
@@ -64,6 +78,8 @@ import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
+import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
 
 import com.silas.omaster.model.PresetSection
 
@@ -240,37 +256,160 @@ fun DetailScreen(
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        // 模式标签
-                        ModeBadge(tags = it.tags)
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // 描述信息
-                        it.description?.let { desc ->
-                            val title = PresetI18n.resolveStringComposable(desc.title)
-                            val isShootingTips = title == stringResource(R.string.shooting_tips) || 
-                                               desc.title == "Shooting Tips" || 
-                                               desc.title == "@string/shooting_tips"
-                            
-                            val content = if (isShootingTips) {
-                                PresetI18n.getLocalizedShootingTips(it.name, desc.content)
-                            } else {
-                                desc.content
-                            }
-                            
-                            DescriptionCard(
-                                title = title,
-                                content = content,
-                                modifier = Modifier.fillMaxWidth()
+                        
+                        // 预设信息
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = PresetI18n.getLocalizedPresetName(it.name),
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            if (it.isHncs) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "👑 HNCS",
+                                    color = HasselbladOrange,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Text(
+                            text = "@${it.author}",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 14.sp
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // 标签
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            it.tags.forEach { tag ->
+                                Text(
+                                    text = "#$tag",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier
+                                        .background(
+                                            color = Color.White.copy(alpha = 0.05f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 统计数据
+                        PresetStatsCard(
+                            downloads = 12580,
+                            rating = 4.9f,
+                            ratingCount = 856,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 拍摄建议
+                        ShootingTipsDetailCard(
+                            environment = "日间户外或充足自然光",
+                            scenes = "街拍、人像、风景、建筑",
+                            points = "适合追求经典胶片质感，建议使用黄金时刻拍摄",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
                         
                         // 动态参数展示
                         DynamicParameters(
                             sections = it.getDisplaySections(context),
                             presetName = it.name
                         )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 关联推荐
+                        RelatedPresetsCard(
+                            presets = listOf(
+                                RelatedPreset("r1", "电影胶片", ""),
+                                RelatedPreset("r2", "复古人像", ""),
+                                RelatedPreset("r3", "清新风景", ""),
+                                RelatedPreset("r4", "黑白经典", "")
+                            ),
+                            onSelect = { id -> },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 用户评价
+                        UserCommentsCard(
+                            comments = listOf(
+                                UserComment("c1", "摄影爱好者", "非常好用的预设！色彩还原很准确", 5),
+                                UserComment("c2", "专业摄影师", "配合哈苏大师模式使用效果绝佳", 5)
+                            ),
+                            onViewAll = { },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 底部操作按钮
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // 收藏按钮
+                            Button(
+                                onClick = { viewModel.toggleFavorite() },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (isFavorite) Color.Red else Color.White.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isFavorite) "已收藏" else "收藏",
+                                    color = if (isFavorite) Color.Red else Color.White.copy(alpha = 0.8f)
+                                )
+                            }
+                            
+                            // 应用按钮
+                            Button(
+                                onClick = { },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = HasselbladOrange
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sparkles,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "一键应用哈苏配方",
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
                 }
             }

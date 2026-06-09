@@ -1,0 +1,384 @@
+package com.silas.omaster.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.silas.omaster.ui.theme.HasselbladOrange
+
+/**
+ * 预设统计数据卡片
+ * 显示下载量、评分、评价数
+ */
+@Composable
+fun PresetStatsCard(
+    downloads: Int,
+    rating: Float,
+    ratingCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            // 下载量
+            StatItem(
+                value = if (downloads >= 1000) "${(downloads / 1000)}k" else downloads.toString(),
+                label = "下载"
+            )
+            
+            // 评分
+            StatItem(
+                value = rating.toFixed(1),
+                label = "评分"
+            )
+            
+            // 评价数
+            StatItem(
+                value = ratingCount.toString(),
+                label = "评价"
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatItem(
+    value: String,
+    label: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 10.sp
+        )
+    }
+}
+
+/**
+ * 拍摄建议详情卡片
+ * 显示环境建议、场景推荐、拍摄要点
+ */
+@Composable
+fun ShootingTipsDetailCard(
+    environment: String,
+    scenes: String,
+    points: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // 标题
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "📷",
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "拍摄建议",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 环境建议
+            TipRow(label = "【环境建议】", content = environment)
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 场景推荐
+            TipRow(label = "【场景推荐】", content = scenes)
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 拍摄要点
+            TipRow(label = "【拍摄要点】", content = points)
+        }
+    }
+}
+
+@Composable
+private fun TipRow(
+    label: String,
+    content: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = label,
+            color = HasselbladOrange,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = content,
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 12.sp
+        )
+    }
+}
+
+/**
+ * 用户评价卡片
+ */
+data class UserComment(
+    val id: String,
+    val user: String,
+    val content: String,
+    val rating: Int
+)
+
+@Composable
+fun UserCommentsCard(
+    comments: List<UserComment>,
+    onViewAll: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    if (comments.isEmpty()) return
+    
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // 标题
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "💬",
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "用户评价",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 评价列表（最多显示2条）
+            comments.take(2).forEach { comment ->
+                CommentItem(comment = comment)
+                if (comment != comments.take(2).last()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color.White.copy(alpha = 0.05f))
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            // 查看全部按钮
+            if (comments.size > 2) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "查看全部评价",
+                    color = HasselbladOrange,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentItem(
+    comment: UserComment
+) {
+    Column {
+        // 用户名和评分
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 星级
+            repeat(5) { index ->
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    tint = if (index < comment.rating) Color(0xFFFFC107) else Color.White.copy(alpha = 0.2f),
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = comment.user,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        // 评价内容
+        Text(
+            text = comment.content,
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 12.sp
+        )
+    }
+}
+
+/**
+ * 关联推荐卡片
+ */
+data class RelatedPreset(
+    val id: String,
+    val name: String,
+    val coverPath: String
+)
+
+@Composable
+fun RelatedPresetsCard(
+    presets: List<RelatedPreset>,
+    onSelect: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    if (presets.isEmpty()) return
+    
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // 标题
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "🎞️",
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "关联推荐",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "看了这个的人也看了：",
+                color = Color.White.copy(alpha = 0.4f),
+                fontSize = 12.sp
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 推荐列表
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                presets.forEach { preset ->
+                    RelatedPresetItem(
+                        preset = preset,
+                        onClick = { onSelect(preset.id) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RelatedPresetItem(
+    preset: RelatedPreset,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 封面图
+        Card(
+            modifier = Modifier.size(80.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+            onClick = onClick
+        ) {
+            // 这里可以加载图片，暂时用占位
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF1A1A1A))
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        // 名称
+        Text(
+            text = preset.name,
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 10.sp,
+            maxLines = 1
+        )
+    }
+}
