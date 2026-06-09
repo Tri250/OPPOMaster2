@@ -177,14 +177,23 @@ data class FilmPreset(
     val name: String,            // "Portra 400", "CC 经典负片"
     val series: FilmSeries,      // 原生经典 / 情绪与表达 / 结构与时间 / 数字记忆
     val matchScore: Float,       // 场景匹配度 0-1
-    val description: String = "" // 胶片特性描述
+    val description: String = "", // 胶片特性描述
+    // 扩展字段（对齐 Web 端）
+    val colorStyle: String = "自然",      // 色彩风格
+    val grainLevel: String = "中等",      // 颗粒感
+    val contrastLevel: String = "标准",   // 对比度
+    val bestFor: String = "通用场景"      // 适用场景
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
         name = parcel.readString() ?: "",
         series = FilmSeries.valueOf(parcel.readString() ?: FilmSeries.CLASSIC.name),
         matchScore = parcel.readFloat(),
-        description = parcel.readString() ?: ""
+        description = parcel.readString() ?: "",
+        colorStyle = parcel.readString() ?: "自然",
+        grainLevel = parcel.readString() ?: "中等",
+        contrastLevel = parcel.readString() ?: "标准",
+        bestFor = parcel.readString() ?: "通用场景"
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -193,6 +202,10 @@ data class FilmPreset(
         parcel.writeString(series.name)
         parcel.writeFloat(matchScore)
         parcel.writeString(description)
+        parcel.writeString(colorStyle)
+        parcel.writeString(grainLevel)
+        parcel.writeString(contrastLevel)
+        parcel.writeString(bestFor)
     }
 
     override fun describeContents(): Int = 0
