@@ -23,8 +23,8 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 
 /**
- * LUT资源分享功能页面
- * 提供20+专业LUT滤镜下载
+ * LUT资源库功能页面
+ * 提供9款哈苏胶片LUT滤镜
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,24 +33,28 @@ fun LUTShareScreen(
 ) {
     val haptic = LocalHapticFeedback.current
 
-    val categories = listOf("全部", "电影色调", "胶片风格", "日系清新", "欧美复古", "自然风景", "人像肤色", "创意特效")
+    val categories = listOf("全部", "原生经典", "情绪表达", "结构时间", "数字记忆")
     val selectedCategory = remember { mutableStateOf("全部") }
     val searchQuery = remember { mutableStateOf("") }
     var selectedLUT by remember { mutableStateOf<LUTResource?>(null) }
     var showDetailDialog by remember { mutableStateOf(false) }
 
+    // 9款哈苏胶片LUT
     val lutResources = remember {
         listOf(
-            LUTResource("oxygen-2026", "氧气感2026", "清新通透，适合人像", "日系清新", "https://example.com/lut/oxygen.cube", 5000, 4.9),
-            LUTResource("morandi-2026", "莫兰迪2026", "温柔低饱和", "电影色调", "https://example.com/lut/morandi.cube", 4200, 4.8),
-            LUTResource("hasselblad-nature", "哈苏自然色彩", "HNCS自然色彩还原", "自然风景", "https://example.com/lut/hasselblad.cube", 8500, 4.9),
-            LUTResource("cinematic-cold", "电影冷调", "好莱坞大片风格", "电影色调", "https://example.com/lut/cinematic.cube", 6800, 4.7),
-            LUTResource("classic-film", "经典胶片", "复古胶片质感", "胶片风格", "https://example.com/lut/film.cube", 5600, 4.8),
-            LUTResource("warm-sunset", "温暖日落", "金色时刻氛围", "自然风景", "https://example.com/lut/sunset.cube", 4100, 4.6),
-            LUTResource("soft-cream", "奶油肌", "人像肤色优化", "人像肤色", "https://example.com/lut/cream.cube", 7200, 4.9),
-            LUTResource("dramatic-contrast", "戏剧性对比", "高反差艺术", "创意特效", "https://example.com/lut/dramatic.cube", 3200, 4.5),
-            LUTResource("vintage-america", "美式复古", "怀旧美式风格", "欧美复古", "https://example.com/lut/vintage.cube", 4900, 4.7),
-            LUTResource("japanese-mood", "日系情绪", "清新日系风", "日系清新", "https://example.com/lut/japanese.cube", 5800, 4.8),
+            // 原生经典系列
+            LUTResource("classic-chrome", "Classic Chrome (CC)", "经典铬色，低饱和高对比", "原生经典", "https://cdn.hasselblad.com/lut/cc.cube", 12500, 4.9),
+            LUTResource("neutral-color", "Neutral Color (NC)", "中性色彩，自然还原", "原生经典", "https://cdn.hasselblad.com/lut/nc.cube", 9800, 4.8),
+            LUTResource("natural-hue", "Natural Hue (NH)", "自然色调，肤色优化", "原生经典", "https://cdn.hasselblad.com/lut/nh.cube", 8500, 4.9),
+            // 情绪表达系列
+            LUTResource("portra-400", "Portra 400", "专业人像胶片，温暖肤色", "情绪表达", "https://cdn.hasselblad.com/lut/portra.cube", 15600, 4.9),
+            LUTResource("rdp3-fujifilm", "RDP3 Fujifilm", "富士反转片，鲜艳通透", "情绪表达", "https://cdn.hasselblad.com/lut/rdp3.cube", 7200, 4.7),
+            // 结构时间系列
+            LUTResource("cinestill-800t", "CineStill 800T", "电影夜景，钨丝灯暖调", "结构时间", "https://cdn.hasselblad.com/lut/800t.cube", 11300, 4.8),
+            LUTResource("trix-400", "Tri-X 400 (TX400)", "经典黑白，颗粒质感", "结构时间", "https://cdn.hasselblad.com/lut/tx400.cube", 9500, 4.9),
+            // 数字记忆系列
+            LUTResource("ccd-warm", "CCD Warm", "数码暖调，复古质感", "数字记忆", "https://cdn.hasselblad.com/lut/ccd-warm.cube", 6800, 4.6),
+            LUTResource("ccd-cool", "CCD Cool", "数码冷调，清透风格", "数字记忆", "https://cdn.hasselblad.com/lut/ccd-cool.cube", 5400, 4.7),
         )
     }
 
@@ -68,7 +72,7 @@ fun LUTShareScreen(
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("LUT 资源分享", fontWeight = FontWeight.Bold) },
+            title = { Text("LUT 资源库", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.ToggleOff)

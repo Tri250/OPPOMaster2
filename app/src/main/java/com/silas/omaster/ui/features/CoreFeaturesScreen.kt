@@ -253,11 +253,11 @@ fun CoreFeaturesScreen(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // LUT资源分享
+        // LUT资源库
         item {
             FeatureCard(
-                title = "LUT 资源分享",
-                subtitle = "20+专业 LUT 滤镜，一键下载使用",
+                title = "LUT 资源库",
+                subtitle = "9款哈苏胶片LUT：Portra/800T/TX400",
                 icon = Icons.Default.Palette,
                 iconColor = Color(0xFF9C27B0),
                 gradientColors = listOf(Color(0xFF6A1B9A), Color(0xFF8E24AA)),
