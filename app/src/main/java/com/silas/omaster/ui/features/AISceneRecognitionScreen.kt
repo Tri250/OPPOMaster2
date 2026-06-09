@@ -1,11 +1,13 @@
 package com.silas.omaster.ui.features
 
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,18 +16,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.silas.omaster.ai.SceneRecognitionManager
-import com.silas.omaster.ai.SceneType
-import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ai.analyzer.AnalysisResult
+import com.silas.omaster.ai.model.SceneCategory
+import com.silas.omaster.ai.model.SceneProfile
+import com.silas.omaster.ui.hasselblad.*
+import com.silas.omaster.ui.theme.HasselbladTheme
 import kotlinx.coroutines.launch
 
 /**
- * AI场景识别功能页面
+ * AI场景识别功能页面 - 哈苏大师版
+ * 使用新的哈苏大师识别系统
  * 支持50+精细场景类型识别
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,35 +42,48 @@ fun AISceneRecognitionScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val sceneManager = remember { SceneRecognitionManager.getInstance() }
+    val context = LocalContext.current
+    val sceneManager = remember { SceneRecognitionManager.getInstance(context) }
 
-    val sceneTypes by sceneManager.sceneTypes.collectAsState()
-    val recognizedScenes by sceneManager.recognizedScenes.collectAsState()
-    val isRecognizing by sceneManager.isRecognizing.collectAsState()
-    var selectedSceneId by remember { mutableStateOf<String?>(null) }
+    // 使用新的 SceneProfile 系统
+    val supportedProfiles = sceneManager.supportedProfiles
+    val profilesByCategory = sceneManager.profilesByCategory
+
+    // 分析结果状态
+    var analysisResult by remember { mutableStateOf<AnalysisResult?>(null) }
+    var isAnalyzing by remember { mutableStateOf(false) }
+    var selectedProfile by remember { mutableStateOf<SceneProfile?>(null) }
     var showDetailDialog by remember { mutableStateOf(false) }
-
-    val groupedScenes = sceneTypes.groupBy { it.category }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(HasselbladTheme.PureBlack)
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("AI 场景识别", fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    "哈苏大师识别",
+                    fontWeight = FontWeight.Bold,
+                    color = HasselbladTheme.TextPrimary
+                )
+            },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回")
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        "返回",
+                        tint = HasselbladTheme.TextPrimary
+                    )
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = HasselbladTheme.PureBlack,
+                titleContentColor = HasselbladTheme.TextPrimary
             )
         )
 
@@ -76,90 +96,152 @@ fun AISceneRecognitionScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.15f))
+                    shape = RoundedCornerShape(HasselbladTheme.CardCornerRadius.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = HasselbladTheme.HasselbladOrange.copy(alpha = 0.15f)
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "智能场景识别",
+                            text = "哈苏大师之眼",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = HasselbladOrange
+                            color = HasselbladTheme.HasselbladOrange
                         )
                         Text(
-                            text = "识别50+拍摄场景，自动推荐最佳参数",
+                            text = "识别50+拍摄场景，自动推荐哈苏大师参数",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = HasselbladTheme.TextSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Confirm)
+                                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                                 scope.launch {
-                                    sceneManager.performRecognition()
+                                    isAnalyzing = true
+                                    // 模拟分析（实际应从相机获取图片）
+                                    // val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.sample)
+                                    // analysisResult = sceneManager.analyzeSceneDetailed(bitmap)
+                                    
+                                    // 模拟分析结果
+                                    val randomProfile = supportedProfiles.random()
+                                    analysisResult = AnalysisResult(
+                                        primaryScene = randomProfile.copy(confidence = 0.85f),
+                                        confidence = 0.85f,
+                                        alternativeScenes = supportedProfiles
+                                            .filter { it.category == randomProfile.category && it.id != randomProfile.id }
+                                            .take(2)
+                                            .map { it.copy(confidence = 0.15f) },
+                                        colorProfile = com.silas.omaster.ai.analyzer.ColorProfile(
+                                            avgRed = 180, avgGreen = 120, avgBlue = 100,
+                                            warmthRatio = 0.55f, coolRatio = 0.15f,
+                                            greenDominance = 0.8f, blueDominance = 0.6f, redDominance = 1.2f,
+                                            colorVariance = 0.3f,
+                                            dominantTone = com.silas.omaster.ai.analyzer.DominantTone.WARM
+                                        ),
+                                        brightnessLevel = com.silas.omaster.ai.analyzer.BrightnessLevel.NORMAL,
+                                        faceCount = 0,
+                                        analysisTimeMs = 150
+                                    )
+                                    isAnalyzing = false
                                 }
                             },
-                            enabled = !isRecognizing,
-                            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                            enabled = !isAnalyzing,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = HasselbladTheme.HasselbladOrange
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            if (isRecognizing) {
+                            if (isAnalyzing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = Color.White,
+                                    color = HasselbladTheme.TextPrimary,
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Icon(Icons.Default.Search, null)
+                                Icon(Icons.Default.CameraAlt, null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("开始识别")
+                                Text("开始识别", fontWeight = FontWeight.Medium)
                             }
                         }
                     }
                 }
             }
 
-            // 已识别场景
-            if (recognizedScenes.isNotEmpty()) {
+            // 分析结果展示（使用新的哈苏大师呈现层）
+            if (analysisResult != null) {
                 item {
                     Text(
-                        text = "识别结果",
+                        text = "哈苏大师分析结果",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = HasselbladTheme.TextPrimary
                     )
                 }
-                items(recognizedScenes) { scene ->
-                    RecognizedSceneCard(
-                        scene = scene,
-                        onClick = {
-                            selectedSceneId = scene.id
-                            showDetailDialog = true
-                        }
+
+                // 识别结果卡片
+                item {
+                    HasselbladRecognitionCard(
+                        profile = analysisResult!!.primaryScene,
+                        confidence = analysisResult!!.confidence,
+                        alternativeScenes = analysisResult!!.alternativeScenes
                     )
+                }
+
+                // 胶片推荐卡片
+                item {
+                    HasselbladFilmRecommendationCard(
+                        films = analysisResult!!.primaryScene.recommendedFilm
+                    )
+                }
+
+                // 参数显示
+                item {
+                    HasselbladParamsDisplaySimple(
+                        params = analysisResult!!.primaryScene.hasselbladParams
+                    )
+                }
+
+                // 大师建议
+                item {
+                    HasselbladMasterTipsCard(
+                        tips = analysisResult!!.primaryScene.masterTips
+                    )
+                }
+
+                // HNCS水印
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HasselbladHNCSWatermark()
+                    }
                 }
             }
 
             // 场景分类列表
-            groupedScenes.forEach { (category, scenes) ->
+            profilesByCategory.forEach { (category, profiles) ->
                 item {
                     Text(
-                        text = getCategoryName(category),
+                        text = "${category.icon} ${category.displayName}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = HasselbladTheme.TextPrimary
                     )
                 }
-                items(scenes) { scene ->
-                    SceneTypeCard(
-                        scene = scene,
-                        isRecognized = recognizedScenes.any { it.id == scene.id },
+
+                items(profiles) { profile ->
+                    HasselbladSceneProfileCard(
+                        profile = profile,
+                        isSelected = selectedProfile?.id == profile.id,
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
-                            selectedSceneId = scene.id
+                            haptic.performHapticFeedback(HapticFeedbackType.Select)
+                            selectedProfile = profile
                             showDetailDialog = true
                         }
                     )
@@ -173,209 +255,259 @@ fun AISceneRecognitionScreen(
         }
     }
 
-    // 场景详情弹窗
-    if (showDetailDialog && selectedSceneId != null) {
-        val scene = sceneTypes.find { it.id == selectedSceneId }
-        if (scene != null) {
-            SceneDetailDialog(
-                scene = scene,
-                onApply = {
-                    haptic.perform(HapticFeedbackType.Confirm)
-                    scope.launch {
-                        sceneManager.applySceneParams(scene.id)
-                    }
-                    showDetailDialog = false
-                },
-                onDismiss = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
-                    showDetailDialog = false
-                }
-            )
-        }
+    // 场景详情弹窗（使用新的哈苏大师设计）
+    if (showDetailDialog && selectedProfile != null) {
+        HasselbladSceneDetailDialog(
+            profile = selectedProfile!!,
+            onApply = {
+                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                // 应用参数逻辑
+                showDetailDialog = false
+            },
+            onDismiss = {
+                haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
+                showDetailDialog = false
+            }
+        )
     }
 }
 
-private fun getCategoryName(category: String): String {
-    return when (category) {
-        "portrait" -> "人像系列"
-        "landscape" -> "风景系列"
-        "food" -> "美食系列"
-        "night" -> "夜景系列"
-        "macro" -> "微距系列"
-        "action" -> "运动系列"
-        else -> category
-    }
-}
-
+/**
+ * 哈苏场景卡片
+ */
 @Composable
-private fun RecognizedSceneCard(
-    scene: SceneType,
+private fun HasselbladSceneProfileCard(
+    profile: SceneProfile,
+    isSelected: Boolean,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(HasselbladOrange.copy(alpha = 0.1f)),
+            .clip(RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                HasselbladTheme.HasselbladOrange.copy(alpha = 0.15f)
+            } else {
+                HasselbladTheme.CardBackground
+            }
+        ),
         onClick = onClick
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.CheckCircle,
-                null,
-                tint = HasselbladOrange,
-                modifier = Modifier.size(24.dp)
+            // 场景图标
+            Text(
+                text = profile.category.icon,
+                fontSize = 24.sp
             )
+
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = scene.name,
+                    text = profile.name,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = HasselbladOrange
+                    color = if (isSelected) HasselbladTheme.HasselbladOrange else HasselbladTheme.TextPrimary
                 )
                 Text(
-                    text = "${scene.confidence}% 匹配度",
+                    text = profile.subCategory,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = HasselbladTheme.TextTertiary
                 )
             }
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
+
+            // 推荐胶片标签
+            if (profile.recommendedFilm.isNotEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = HasselbladTheme.CardBackgroundHighlight
+                ) {
+                    Text(
+                        text = profile.recommendedFilm.first().displayName,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = HasselbladTheme.HasselbladOrange,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                Icons.Default.ChevronRight,
+                null,
+                tint = HasselbladTheme.TextTertiary
+            )
         }
     }
 }
 
+/**
+ * 哈苏场景详情弹窗
+ */
 @Composable
-private fun SceneTypeCard(
-    scene: SceneType,
-    isRecognized: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1A1A1A)),
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isRecognized) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    null,
-                    tint = HasselbladOrange,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            Column {
-                Text(
-                    text = scene.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-                Text(
-                    text = scene.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
-        }
-    }
-}
-
-@Composable
-private fun SceneDetailDialog(
-    scene: SceneType,
+private fun HasselbladSceneDetailDialog(
+    profile: SceneProfile,
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+            shape = RoundedCornerShape(HasselbladTheme.CardCornerRadius.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = HasselbladTheme.PureBlack
+            )
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+                // 标题
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = profile.category.icon,
+                        fontSize = 28.sp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = profile.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = HasselbladTheme.TextPrimary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
-                    text = scene.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = scene.description,
+                    text = profile.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(top = 4.dp)
+                    color = HasselbladTheme.TextSecondary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // 哈苏参数显示
                 Text(
-                    text = "推荐参数",
+                    text = "哈苏大师参数",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = HasselbladTheme.HasselbladOrange
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val params = listOf(
-                    "饱和度" to scene.params.saturation,
-                    "对比度" to scene.params.contrast,
-                    "色温" to scene.params.warmth,
-                    "锐度" to scene.params.sharpness
-                )
-
-                params.forEach { (name, value) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Text(
-                            text = value.toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = HasselbladOrange
-                        )
-                    }
-                }
+                HasselbladParamsDisplaySimple(params = profile.hasselbladParams)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // 推荐胶片
+                if (profile.recommendedFilm.isNotEmpty()) {
+                    Text(
+                        text = "推荐胶片",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HasselbladTheme.HasselbladOrange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        profile.recommendedFilm.take(3).forEach { film ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = HasselbladTheme.CardBackgroundHighlight
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = film.displayName,
+                                        color = HasselbladTheme.TextPrimary,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "${film.matchPercent}%",
+                                        color = HasselbladTheme.HasselbladOrange,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 大师建议
+                if (profile.masterTips.isNotEmpty()) {
+                    Text(
+                        text = "大师建议",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HasselbladTheme.HasselbladOrange
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    profile.masterTips.forEach { tip ->
+                        Row(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "💡",
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = tip,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HasselbladTheme.TextSecondary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 操作按钮
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = HasselbladTheme.TextSecondary
+                        )
                     ) {
                         Text("取消")
                     }
+
                     Button(
                         onClick = onApply,
-                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = HasselbladTheme.HasselbladOrange
+                        )
                     ) {
-                        Text("应用参数")
+                        Text("应用哈苏参数", fontWeight = FontWeight.Medium)
                     }
                 }
             }
