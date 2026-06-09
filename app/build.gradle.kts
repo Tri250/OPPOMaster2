@@ -1,10 +1,11 @@
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     // 添加 Kotlin Serialization 插件，用于类型安全的导航
-    alias(libs.plugins.kotlin.serialization)
+    id("org.jetbrains.kotlin.plugin.serialization")
     // 添加 Kotlin Parcelize 插件，用于Parcelable实现
     id("kotlin-parcelize")
 }
@@ -22,12 +23,12 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.silas.omaster"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.silas.omaster"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         // 版本号规范：
         // versionCode: 内部版本号，每次发布必须递增
         // versionName: 对外显示版本号，格式 主.次.修订
