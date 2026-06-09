@@ -2,6 +2,9 @@ package com.silas.omaster.ai
 
 import android.content.Context
 import android.graphics.Bitmap
+import com.silas.omaster.ai.analyzer.AnalysisResult
+import com.silas.omaster.ai.analyzer.ExifData
+import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.model.SceneCategory
 import com.silas.omaster.ai.model.SceneProfile
 import com.silas.omaster.ai.model.SceneProfileRepository
@@ -16,11 +19,11 @@ import kotlinx.coroutines.withContext
 /**
  * AI 场景识别管理器
  * 支持 50+ 拍摄场景智能识别
- * 使用统一 SceneProfile 模型
+ * 使用统一 SceneProfile 模型 + 启发式分析器
  */
 class SceneRecognitionManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
-    private val sceneDetector = SceneDetector()
+    private val heuristicAnalyzer = HeuristicSceneAnalyzer()
 
     /**
      * 获取所有支持的场景配置
@@ -46,16 +49,47 @@ class SceneRecognitionManager private constructor(context: Context) {
             )
         }
 
-        // 模拟 AI 识别过程（实际项目中应调用 TensorFlow Lite 模型）
-        delay(300) // 模拟处理时间
-        
-        val detectedProfile = sceneDetector.detect(bitmap)
-        
+        // 使用启发式分析器进行真实分析
+        val analysisResult = heuristicAnalyzer.analyze(bitmap)
+
         SceneRecognitionResult(
-            profile = detectedProfile,
-            confidence = detectedProfile?.confidence ?: (0.75f + Math.random() * 0.24f).toFloat(),
-            isEnabled = true
+            profile = analysisResult.primaryScene,
+            confidence = analysisResult.confidence,
+            isEnabled = true,
+            analysisResult = analysisResult
         )
+    }
+
+    /**
+     * 详细分析图片场景
+     * 包含颜色、亮度、纹理、人脸检测等完整分析结果
+     *
+     * @param bitmap 待分析图片
+     * @param exif EXIF 元数据（可选）
+     * @return 综合分析结果
+     */
+    suspend fun analyzeSceneDetailed(bitmap: Bitmap, exif: ExifData? = null): AnalysisResult = withContext(Dispatchers.Default) {
+        if (!settingsManager.isAISceneRecognitionEnabled) {
+            // 返回默认结果
+            val defaultProfile = SceneProfileRepository.allProfiles.first()
+            return@withContext AnalysisResult(
+                primaryScene = defaultProfile,
+                confidence = 0f,
+                alternativeScenes = emptyList(),
+                colorProfile = com.silas.omaster.ai.analyzer.ColorProfile(
+                    avgRed = 128, avgGreen = 128, avgBlue = 128,
+                    warmthRatio = 0f, coolRatio = 0f,
+                    greenDominance = 1f, blueDominance = 1f, redDominance = 1f,
+                    colorVariance = 0f,
+                    dominantTone = com.silas.omaster.ai.analyzer.DominantTone.NEUTRAL
+                ),
+                brightnessLevel = com.silas.omaster.ai.analyzer.BrightnessLevel.NORMAL,
+                faceCount = 0,
+                analysisTimeMs = 0
+            )
+        }
+
+        heuristicAnalyzer.analyze(bitmap, exif)
     }
 
     /**
@@ -116,7 +150,8 @@ class SceneRecognitionManager private constructor(context: Context) {
 data class SceneRecognitionResult(
     val profile: SceneProfile?,
     val confidence: Float,
-    val isEnabled: Boolean
+    val isEnabled: Boolean,
+    val analysisResult: AnalysisResult? = null
 ) {
     val confidencePercent: Int get() = (confidence * 100).toInt()
     
@@ -134,21 +169,24 @@ data class SceneRecognitionResult(
      * 获取拍摄建议
      */
     val masterTips get() = profile?.masterTips
-}
-
-/**
- * 场景检测器（模拟实现）
- * 实际项目中应使用 TensorFlow Lite 模型
- */
-private class SceneDetector {
-    fun detect(bitmap: Bitmap): SceneProfile? {
-        // 模拟检测逻辑
-        // 实际项目中应调用 ML 模型进行推理
-        val profiles = SceneProfileRepository.allProfiles
-        val randomIndex = (Math.random() * profiles.size).toInt()
-        val profile = profiles[randomIndex]
-        
-        // 模拟填充置信度
-        return profile.copy(confidence = (0.75f + Math.random() * 0.24f).toFloat())
-    }
+    
+    /**
+     * 获取颜色分析结果
+     */
+    val colorProfile get() = analysisResult?.colorProfile
+    
+    /**
+     * 获取亮度等级
+     */
+    val brightnessLevel get() = analysisResult?.brightnessLevel
+    
+    /**
+     * 获取人脸数量
+     */
+    val faceCount get() = analysisResult?.faceCount
+    
+    /**
+     * 获取备选场景
+     */
+    val alternativeScenes get() = analysisResult?.alternativeScenes
 }
