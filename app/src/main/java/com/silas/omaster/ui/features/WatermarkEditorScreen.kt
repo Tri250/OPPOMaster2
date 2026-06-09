@@ -2,7 +2,7 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

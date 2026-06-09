@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.silas.omaster.model.MasterPreset
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,11 +38,12 @@ class FloatingWindowController private constructor(private val context: Context)
     fun register() {
         val filter = IntentFilter(FloatingWindowService.ACTION_SWITCH_PRESET)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(broadcastReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.RECEIVER_NOT_EXPORTED
             } else {
-                context.registerReceiver(broadcastReceiver, filter)
+                0
             }
+            ContextCompat.registerReceiver(context, broadcastReceiver, filter, flags)
         } catch (e: Exception) {
             e.printStackTrace()
         }

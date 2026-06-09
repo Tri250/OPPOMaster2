@@ -3,7 +3,7 @@ package com.silas.omaster.ai
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Rect
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection

@@ -6,9 +6,9 @@ import androidx.compose.ui.graphics.Color
  * 哈苏品牌色系
  * 哈苏橙是品牌的标志性颜色 (#FF6B35 对齐 Web 端)
  */
-val HasselbladOrange = Color(0xFF6B35)
-val HasselbladOrangeDark = Color(0xFF5A25)
-val HasselbladOrangeLight = Color(0xFF8A50)
+val HasselbladOrange = Color(0xFFFF6B35)
+val HasselbladOrangeDark = Color(0xFFFF5A25)
+val HasselbladOrangeLight = Color(0xFFFF8A50)
 
 /**
  * 品牌主题色
