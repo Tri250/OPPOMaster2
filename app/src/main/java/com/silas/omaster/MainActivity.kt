@@ -58,6 +58,7 @@ import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
+import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.features.AISceneRecognitionScreen
 import com.silas.omaster.ui.features.LUTShareScreen
 import com.silas.omaster.ui.features.HasselbladScreen
@@ -559,10 +560,19 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            // 水印编辑器页面（复用AIFineTuneScreen）
+            // 水印编辑器页面
             composable<Screen.WatermarkEditor> {
-                AIFineTuneScreen(
-                    onBack = { navController.popBackStack() }
+                WatermarkEditorScreen(
+                    imagePath = null,
+                    onBack = { navController.popBackStack() },
+                    onSave = { config ->
+                        // 保存水印配置
+                        navController.popBackStack()
+                    },
+                    onExport = { bitmap, config ->
+                        // 导出带水印图片
+                        navController.popBackStack()
+                    }
                 )
             }
 
