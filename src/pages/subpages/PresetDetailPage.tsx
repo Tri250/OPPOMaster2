@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Expand, Edit2, Heart, Crown, Zap, Star, Download, MessageCircle, Camera, Sun, Mountain, User, Building, Settings, Share2, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Expand, Edit2, Heart, Crown, Zap, Star, Download, MessageCircle, Camera, Sun, Mountain, User, Building, Settings, Share2, ChevronRight, ChevronLeft, RefreshCw, Aperture } from 'lucide-react';
 import { useFadeInUp, animationKeyframes } from '../../hooks/useAnimations';
+
+// 参数Section数据模型
+interface PresetSection {
+  title: string;
+  items: PresetParamItem[];
+}
+
+interface PresetParamItem {
+  label: string;
+  value: string;
+  span: 1 | 2; // 1=半宽, 2=全宽
+}
 
 // 预设详情数据模型
 interface PresetDetail {
@@ -15,25 +27,11 @@ interface PresetDetail {
   rating: number;
   reviewCount: number;
   coverImages: string[];
-  shootingTips: {
-    environment: string;
-    scenes: string[];
-    tips: string;
+  description: {
+    title: string;
+    content: string; // 结构化文本：【环境建议】...【场景推荐】...【拍摄要点】...
   };
-  proParams: {
-    iso: number;
-    shutter: string;
-    exposure: number;
-    colorTemp: number;
-    softLight: string;
-  };
-  colorParams: {
-    filter: string;
-    saturation: number;
-    contrast: number;
-    sharpness: number;
-    vignette: boolean;
-  };
+  sections: PresetSection[];
   relatedPresets: RelatedPreset[];
   reviewList: UserReview[];
 }
@@ -42,6 +40,7 @@ interface RelatedPreset {
   id: string;
   name: string;
   cover: string;
+  similarity?: number; // 标签相似度
 }
 
 interface UserReview {
@@ -51,6 +50,29 @@ interface UserReview {
   rating: number;
   content: string;
 }
+
+// 解析结构化文本
+const parseStructuredContent = (content: string): { label: string; content: string }[] => {
+  const tips: { label: string; content: string }[] = [];
+  
+  // 匹配【xxx】模式
+  const regex = /【([^】]+)】([^【]*)/g;
+  let match;
+  
+  while ((match = regex.exec(content)) !== null) {
+    tips.push({
+      label: match[1],
+      content: match[2].trim(),
+    });
+  }
+  
+  // 如果没有匹配到结构化格式，返回原始内容
+  if (tips.length === 0) {
+    tips.push({ label: '说明', content: content });
+  }
+  
+  return tips;
+};
 
 // 模拟预设详情数据
 const mockPresetDetail: PresetDetail = {
@@ -69,30 +91,45 @@ const mockPresetDetail: PresetDetail = {
     'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&h=600&fit=crop',
   ],
-  shootingTips: {
-    environment: '日间户外或充足自然光',
-    scenes: ['街拍', '人像', '风景', '建筑'],
-    tips: '适合追求经典胶片质感，建议配合哈苏大师模式使用，可获得更自然的肤色表现和层次丰富的影调。',
+  description: {
+    title: '拍摄建议',
+    content: '【环境建议】日间户外或充足自然光，避免强逆光场景。【场景推荐】街拍、人像、风景、建筑等日常拍摄场景。【拍摄要点】适合追求经典胶片质感，建议配合哈苏大师模式使用，可获得更自然的肤色表现和层次丰富的影调。',
   },
-  proParams: {
-    iso: 100,
-    shutter: '1/125',
-    exposure: 0.3,
-    colorTemp: 5500,
-    softLight: '梦幻柔光',
-  },
-  colorParams: {
-    filter: '复古100%',
-    saturation: 19,
-    contrast: 10,
-    sharpness: 25,
-    vignette: true,
-  },
+  sections: [
+    {
+      title: '📷 专业参数',
+      items: [
+        { label: 'ISO', value: '100', span: 1 },
+        { label: '快门', value: '1/125', span: 1 },
+        { label: '曝光补偿', value: '+0.3', span: 1 },
+        { label: '色温', value: '5500K', span: 1 },
+        { label: '柔光模式', value: '梦幻柔光', span: 2 },
+      ],
+    },
+    {
+      title: '🎨 调色参数',
+      items: [
+        { label: '滤镜', value: '复古100%', span: 1 },
+        { label: '饱和度', value: '+19', span: 1 },
+        { label: '对比度', value: '+10', span: 1 },
+        { label: '锐度', value: '+25', span: 1 },
+        { label: '暗角', value: '开', span: 2 },
+      ],
+    },
+    {
+      title: '🎞️ 胶片特性',
+      items: [
+        { label: '胶片类型', value: 'Portra 400', span: 1 },
+        { label: '颗粒感', value: '轻微', span: 1 },
+        { label: '色调倾向', value: '暖调偏移', span: 2 },
+      ],
+    },
+  ],
   relatedPresets: [
-    { id: 'r1', name: '胶片人像', cover: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=250&fit=crop' },
-    { id: 'r2', name: '日系清新', cover: 'https://images.unsplash.com/photo-1488426862026-c5e5a0a0a8e1?w=200&h=250&fit=crop' },
-    { id: 'r3', name: '复古胶片', cover: 'https://images.unsplash.com/photo-1507003211169-0a70dd7d80ad?w=200&h=250&fit=crop' },
-    { id: 'r4', name: '电影色调', cover: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=250&fit=crop' },
+    { id: 'r1', name: '胶片人像', cover: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=250&fit=crop', similarity: 85 },
+    { id: 'r2', name: '日系清新', cover: 'https://images.unsplash.com/photo-1488426862026-c5e5a0a0a8e1?w=200&h=250&fit=crop', similarity: 72 },
+    { id: 'r3', name: '复古胶片', cover: 'https://images.unsplash.com/photo-1507003211169-0a70dd7d80ad?w=200&h=250&fit=crop', similarity: 68 },
+    { id: 'r4', name: '电影色调', cover: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=250&fit=crop', similarity: 55 },
   ],
   reviewList: [
     { id: 'rev1', user: '摄影爱好者', avatar: 'https://images.unsplash.com/photo-1507003211169-0a70dd7d80ad?w=100&h=100&fit=crop', rating: 5, content: '非常好用的预设！色彩还原很准确，配合哈苏大师模式效果更佳。' },
@@ -100,56 +137,102 @@ const mockPresetDetail: PresetDetail = {
   ],
 };
 
-// 图片轮播组件
-const ImageCarousel: React.FC<{ images: string[] }> = ({ images }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+// A. 图片画廊组件 - 对齐Android端
+const PresetImageGallery: React.FC<{ images: string[]; isPro: boolean }> = ({ images, isPro }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
+  
+  const allImages = images.length > 0 ? images : [images[0] || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&h=600&fit=crop'];
+  
   useEffect(() => {
-    if (isAutoPlaying) {
-      timerRef.current = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % images.length);
-      }, 3000);
-    }
+    if (allImages.length <= 1 || !isAutoPlaying) return;
+    timerRef.current = setInterval(() => {
+      setActiveIndex(prev => (prev + 1) % allImages.length);
+    }, 3000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isAutoPlaying, images.length]);
-
+  }, [allImages.length, isAutoPlaying]);
+  
+  const prev = useCallback(() => {
+    setIsAutoPlaying(false);
+    setActiveIndex(prev => (prev - 1 + allImages.length) % allImages.length);
+  }, [allImages.length]);
+  
+  const next = useCallback(() => {
+    setIsAutoPlaying(false);
+    setActiveIndex(prev => (prev + 1) % allImages.length);
+  }, [allImages.length]);
+  
   return (
-    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-[#1a1a1a]">
-      {/* 图片 */}
-      {images.map((img, idx) => (
+    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-[#1a1a1a]">
+      {/* 当前图片 */}
+      {allImages.map((img, idx) => (
         <div
           key={idx}
           className={`absolute inset-0 transition-opacity duration-500 ${
-            idx === currentIndex ? 'opacity-100' : 'opacity-0'
+            idx === activeIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
           }`}
         >
           <img src={img} alt={`样张${idx + 1}`} className="w-full h-full object-cover" />
         </div>
       ))}
       
-      {/* 指示器 */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-        {images.map((_, idx) => (
+      {/* 左右切换箭头 */}
+      {allImages.length > 1 && (
+        <>
           <button
-            key={idx}
+            onClick={prev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+          >
+            <ChevronLeft size={16} className="text-white" />
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+          >
+            <ChevronRight size={16} className="text-white" />
+          </button>
+        </>
+      )}
+      
+      {/* 指示器 */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+        {allImages.map((_, i) => (
+          <button
+            key={i}
             onClick={() => {
-              setCurrentIndex(idx);
+              setActiveIndex(i);
               setIsAutoPlaying(false);
             }}
-            className={`w-2 h-2 rounded-full transition-all ${
-              idx === currentIndex ? 'bg-[#FF6B35] w-6' : 'bg-white/40'
+            className={`h-1.5 rounded-full transition-all ${
+              i === activeIndex ? 'bg-[#FF6B35] w-4' : 'bg-white/40 w-1.5'
             }`}
           />
         ))}
       </div>
       
-      {/* 图片标签 */}
-      <div className="absolute top-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-lg text-xs text-white/80">
-        {currentIndex === 0 ? '封面' : `样张${currentIndex}`}
+      {/* 模式标签 */}
+      <div className="absolute top-3 left-3 z-20">
+        <span className="px-2 py-1 rounded-md bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium flex items-center gap-1">
+          {isPro ? (
+            <>
+              <Zap size={12} className="text-[#FF6B35]" />
+              <span>PRO</span>
+            </>
+          ) : (
+            <>
+              <Aperture size={12} className="text-white/60" />
+              <span>AUTO</span>
+            </>
+          )}
+        </span>
+      </div>
+      
+      {/* 图片计数 */}
+      <div className="absolute top-3 right-3 z-20 px-2 py-1 rounded-md bg-black/50 backdrop-blur-sm text-white text-[10px]">
+        {activeIndex + 1}/{allImages.length}
       </div>
     </div>
   );
@@ -209,130 +292,71 @@ const PresetInfoCard: React.FC<{ preset: PresetDetail }> = ({ preset }) => {
   );
 };
 
-// 拍摄建议卡片
-const ShootingTipsCard: React.FC<{ tips: PresetDetail['shootingTips'] }> = ({ tips }) => {
+// C. 拍摄建议卡片 - 解析结构化文本
+const ShootingTipsCard: React.FC<{ description: PresetDetail['description'] }> = ({ description }) => {
   const { style } = useFadeInUp(200, 400);
+  const tips = parseStructuredContent(description.content);
   
   return (
-    <div style={style} className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5">
+    <div style={style} className="bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1a] rounded-2xl p-4 border border-white/5">
       <div className="flex items-center gap-2 mb-3">
-        <Camera size={18} className="text-[#FF6B35]" />
-        <h3 className="text-sm font-semibold text-white">拍摄建议</h3>
+        <Camera size={16} className="text-[#FF6B35]" />
+        <h3 className="text-white font-medium text-sm">{description.title}</h3>
       </div>
       
-      {/* 环境建议 */}
-      <div className="mb-3">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Sun size={14} className="text-yellow-400" />
-          <span className="text-xs text-white/60">环境建议</span>
-        </div>
-        <p className="text-sm text-white/80 pl-5">{tips.environment}</p>
-      </div>
-      
-      {/* 场景推荐 */}
-      <div className="mb-3">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Mountain size={14} className="text-green-400" />
-          <span className="text-xs text-white/60">场景推荐</span>
-        </div>
-        <div className="flex gap-2 pl-5">
-          {tips.scenes.map((scene) => (
-            <span key={scene} className="px-2 py-1 bg-[#FF6B35]/10 rounded text-xs text-[#FF6B35]">
-              {scene}
-            </span>
-          ))}
-        </div>
-      </div>
-      
-      {/* 拍摄要点 */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-1">
-          <User size={14} className="text-blue-400" />
-          <span className="text-xs text-white/60">拍摄要点</span>
-        </div>
-        <p className="text-sm text-white/80 pl-5">{tips.tips}</p>
+      <div className="space-y-3">
+        {tips.map((tip, i) => (
+          <div key={i} className="flex gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B35] mt-1.5 flex-shrink-0" />
+            <div>
+              <span className="text-[#FF6B35] text-xs font-medium">{tip.label}</span>
+              <p className="text-white/60 text-xs mt-0.5">{tip.content}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-// 专业参数卡片
-const ProParamsCard: React.FC<{ params: PresetDetail['proParams'] }> = ({ params }) => {
+// B. 完整参数展示组件 - sections体系
+const PresetParameters: React.FC<{ sections: PresetSection[] }> = ({ sections }) => {
   const { style } = useFadeInUp(300, 400);
   
-  const paramItems = [
-    { label: 'ISO', value: params.iso.toString() },
-    { label: '快门', value: params.shutter },
-    { label: '曝光补偿', value: `+${params.exposure}` },
-    { label: '色温', value: `${params.colorTemp}K` },
-  ];
-  
   return (
-    <div style={style} className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5">
-      <div className="flex items-center gap-2 mb-3">
-        <Settings size={18} className="text-[#FF6B35]" />
-        <h3 className="text-sm font-semibold text-white">专业参数 (Pro模式)</h3>
-      </div>
-      
-      {/* 参数网格 */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {paramItems.map((item) => (
-          <div key={item.label} className="bg-[#0a0a0a] rounded-lg p-3">
-            <div className="text-xs text-white/40 mb-1">{item.label}</div>
-            <div className="text-sm font-semibold text-white">{item.value}</div>
+    <div style={style} className="space-y-4">
+      {sections.map((section, si) => (
+        <div key={si} className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5">
+          <h3 className="text-white/60 text-xs font-medium mb-3 flex items-center gap-2">
+            <div className="w-1 h-3 rounded-full bg-[#FF6B35]" />
+            {section.title}
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {section.items.map((item, ii) => (
+              <div
+                key={ii}
+                className={`${item.span === 2 ? 'col-span-2' : ''} bg-white/5 rounded-xl p-3 flex justify-between items-center`}
+              >
+                <span className="text-white/50 text-xs">{item.label}</span>
+                <span className="text-[#FF6B35] text-sm font-bold">{item.value}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      
-      {/* 柔光模式 */}
-      <div className="bg-[#0a0a0a] rounded-lg p-3">
-        <div className="text-xs text-white/40 mb-1">柔光</div>
-        <div className="text-sm font-semibold text-[#FF6B35]">{params.softLight}</div>
-      </div>
+        </div>
+      ))}
     </div>
   );
 };
 
-// 调色参数卡片
-const ColorParamsCard: React.FC<{ params: PresetDetail['colorParams'] }> = ({ params }) => {
+// D. 关联推荐卡片 - 基于标签相似度
+const RelatedPresetsCard: React.FC<{ presets: RelatedPreset[]; currentTags: string[] }> = ({ presets, currentTags }) => {
   const { style } = useFadeInUp(400, 400);
   
-  const paramItems = [
-    { label: '滤镜', value: params.filter },
-    { label: '饱和度', value: `+${params.saturation}` },
-    { label: '对比度', value: `+${params.contrast}` },
-    { label: '锐度', value: `+${params.sharpness}` },
-  ];
-  
-  return (
-    <div style={style} className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-4 h-4 rounded-full bg-gradient-to-r from-[#FF6B35] to-purple-500" />
-        <h3 className="text-sm font-semibold text-white">调色参数</h3>
-      </div>
-      
-      {/* 参数网格 */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {paramItems.map((item) => (
-          <div key={item.label} className="bg-[#0a0a0a] rounded-lg p-3">
-            <div className="text-xs text-white/40 mb-1">{item.label}</div>
-            <div className="text-sm font-semibold text-white">{item.value}</div>
-          </div>
-        ))}
-      </div>
-      
-      {/* 暗角 */}
-      <div className="bg-[#0a0a0a] rounded-lg p-3">
-        <div className="text-xs text-white/40 mb-1">暗角</div>
-        <div className="text-sm font-semibold text-[#FF6B35]">{params.vignette ? '开' : '关'}</div>
-      </div>
-    </div>
-  );
-};
-
-// 关联推荐卡片
-const RelatedPresetsCard: React.FC<{ presets: RelatedPreset[] }> = ({ presets }) => {
-  const { style } = useFadeInUp(500, 400);
+  // 计算标签相似度（如果预设没有similarity则计算）
+  const presetsWithSimilarity = presets.map(p => ({
+    ...p,
+    similarity: p.similarity || Math.floor(Math.random() * 30 + 50), // 模拟相似度
+  })).sort((a, b) => b.similarity - a.similarity);
   
   return (
     <div style={style} className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5">
@@ -341,18 +365,39 @@ const RelatedPresetsCard: React.FC<{ presets: RelatedPreset[] }> = ({ presets })
           <div className="text-sm">🎞️</div>
           <h3 className="text-sm font-semibold text-white">关联推荐</h3>
         </div>
-        <span className="text-xs text-white/40">看了这个的人也看了：</span>
+        <span className="text-xs text-white/40">基于标签相似度</span>
       </div>
       
       {/* 预设列表 */}
       <div className="grid grid-cols-4 gap-2">
-        {presets.map((preset) => (
-          <div key={preset.id} className="relative aspect-[3/4] rounded-lg overflow-hidden bg-[#0a0a0a] cursor-pointer hover:scale-105 transition-transform">
+        {presetsWithSimilarity.map((preset) => (
+          <div
+            key={preset.id}
+            className="relative aspect-[3/4] rounded-lg overflow-hidden bg-[#0a0a0a] cursor-pointer hover:scale-105 transition-transform group"
+          >
             <img src={preset.cover} alt={preset.name} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            
+            {/* 相似度标签 */}
+            <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[#FF6B35]/80 rounded text-[8px] text-white font-medium">
+              {preset.similarity}%
+            </div>
+            
             <div className="absolute bottom-1 left-1 right-1 text-xs text-white truncate">{preset.name}</div>
           </div>
         ))}
+      </div>
+      
+      {/* 当前标签提示 */}
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-xs text-white/40">当前标签：</span>
+        <div className="flex gap-1">
+          {currentTags.slice(0, 3).map((tag) => (
+            <span key={tag} className="px-1.5 py-0.5 bg-[#FF6B35]/10 rounded text-[10px] text-[#FF6B35]">
+              #{tag}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -360,7 +405,7 @@ const RelatedPresetsCard: React.FC<{ presets: RelatedPreset[] }> = ({ presets })
 
 // 用户评价卡片
 const ReviewsCard: React.FC<{ reviews: UserReview[] }> = ({ reviews }) => {
-  const { style } = useFadeInUp(600, 400);
+  const { style } = useFadeInUp(500, 400);
   
   return (
     <div style={style} className="bg-[#1a1a1a] rounded-xl p-4 border border-white/5">
@@ -424,7 +469,7 @@ const BottomActionBar: React.FC<{
       {/* 收藏按钮 */}
       <button
         onClick={handleFavorite}
-        className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+        className={`relative flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
           isFavorite ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-white/60'
         }`}
         style={{
@@ -442,7 +487,7 @@ const BottomActionBar: React.FC<{
       {/* 一键应用按钮 */}
       <button
         onClick={onApply}
-        className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-white font-semibold"
+        className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] text-white font-semibold shadow-lg shadow-[#FF6B35]/20"
       >
         <Zap size={18} />
         <span className="text-sm">一键应用哈苏配方</span>
@@ -455,7 +500,6 @@ const BottomActionBar: React.FC<{
 const PresetDetailPage: React.FC<{ presetId?: string }> = ({ presetId }) => {
   const preset = mockPresetDetail; // 实际应根据presetId获取
   const [isFavorite, setIsFavorite] = useState(false);
-  const [showFullReviews, setShowFullReviews] = useState(false);
   
   const handleToggleFavorite = useCallback(() => {
     setIsFavorite((prev) => !prev);
@@ -466,11 +510,16 @@ const PresetDetailPage: React.FC<{ presetId?: string }> = ({ presetId }) => {
     console.log('Apply preset:', preset.id);
   }, [preset.id]);
   
+  const handleBack = useCallback(() => {
+    // 返回逻辑
+    console.log('Go back');
+  }, []);
+  
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* 顶栏 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-        <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
+        <button onClick={handleBack} className="p-2 rounded-full hover:bg-white/10 transition-colors">
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-base font-semibold text-white">预设详情</h1>
@@ -489,9 +538,9 @@ const PresetDetailPage: React.FC<{ presetId?: string }> = ({ presetId }) => {
       
       {/* 内容区域 */}
       <div className="flex-1 overflow-y-auto px-4 pb-20 scrollbar-hide">
-        {/* 图片轮播 */}
+        {/* A. 图片画廊 */}
         <div className="mt-4 mb-4">
-          <ImageCarousel images={preset.coverImages} />
+          <PresetImageGallery images={preset.coverImages} isPro={preset.isPro} />
         </div>
         
         {/* 预设信息 */}
@@ -499,24 +548,19 @@ const PresetDetailPage: React.FC<{ presetId?: string }> = ({ presetId }) => {
           <PresetInfoCard preset={preset} />
         </div>
         
-        {/* 拍摄建议 */}
+        {/* C. 拍摄建议 */}
         <div className="mb-4">
-          <ShootingTipsCard tips={preset.shootingTips} />
+          <ShootingTipsCard description={preset.description} />
         </div>
         
-        {/* 专业参数 */}
+        {/* B. 完整参数展示 */}
         <div className="mb-4">
-          <ProParamsCard params={preset.proParams} />
+          <PresetParameters sections={preset.sections} />
         </div>
         
-        {/* 调色参数 */}
+        {/* D. 关联推荐 */}
         <div className="mb-4">
-          <ColorParamsCard params={preset.colorParams} />
-        </div>
-        
-        {/* 关联推荐 */}
-        <div className="mb-4">
-          <RelatedPresetsCard presets={preset.relatedPresets} />
+          <RelatedPresetsCard presets={preset.relatedPresets} currentTags={preset.tags} />
         </div>
         
         {/* 用户评价 */}
