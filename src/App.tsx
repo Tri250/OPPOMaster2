@@ -25,6 +25,7 @@ import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
 import PresetSourceManager from './pages/subpages/PresetSourceManager';
+import PresetDetailPage from './pages/subpages/PresetDetailPage';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -41,6 +42,8 @@ const App: React.FC = () => {
         return <WatermarkPage />;
       case 'preset-manager':
         return <RecipeManagementPage />;
+      case 'preset-detail':
+        return <PresetDetailPage />;
       case 'param-adjust':
         return <ParamAdjustPage />;
       case 'lut-share':

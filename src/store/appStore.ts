@@ -8,6 +8,7 @@ export type SubPageType =
   | 'watermark' 
   | 'param-adjust' 
   | 'preset-manager'
+  | 'preset-detail'
   | 'lut-share'
   | 'hasselblad'
   | 'hasselblad-master'
