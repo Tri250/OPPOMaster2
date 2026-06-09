@@ -409,7 +409,7 @@ fun SettingsScreen(
 
             SettingsClickableItem(
                 icon = Icons.Default.Update,
-                title = "更新渠道",
+                title = "更新方式",
                 subtitle = when (updateChannel) {
                     UpdateChannel.GITEE -> "Gitee（国内推荐）"
                     UpdateChannel.GITHUB -> "GitHub（国际）"
@@ -850,7 +850,7 @@ fun UpdateChannelDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "选择更新渠道")
+            Text(text = "选择更新方式")
         },
         text = {
             LazyColumn {

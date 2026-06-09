@@ -62,7 +62,7 @@ data class WatermarkTemplate(
     val showDate: Boolean = true,
     val showLocation: Boolean = false,
     val showPhotographer: Boolean = false,
-    val brandText: String = "OMaster",
+    val brandText: String = "Ophto",
     val defaultPosition: WatermarkPlacement = WatermarkPlacement.BOTTOM_LEFT,
     val defaultFontSize: Float = 14f,
     val defaultLetterSpacing: Float = 0f,
@@ -75,7 +75,7 @@ val WATERMARK_TEMPLATES = listOf(
         id = "classic",
         name = "经典相机",
         category = WatermarkCategory.BRAND,
-        brandText = "OMaster",
+        brandText = "Ophto",
         defaultPosition = WatermarkPlacement.BOTTOM_LEFT
     ),
     WatermarkTemplate(
@@ -139,7 +139,7 @@ val WATERMARK_TEMPLATES = listOf(
         showModel = false,
         showParams = false,
         showDate = false,
-        brandText = "@omaster",
+        brandText = "@ophto",
         defaultPosition = WatermarkPlacement.BOTTOM_CENTER
     ),
     WatermarkTemplate(
@@ -158,7 +158,7 @@ val WATERMARK_TEMPLATES = listOf(
         showBrand = false,
         showModel = false,
         showParams = false,
-        brandText = "© 2024 OMaster",
+        brandText = "© 2026 Ophto",
         defaultPosition = WatermarkPlacement.BOTTOM_CENTER
     ),
     WatermarkTemplate(
@@ -308,7 +308,7 @@ fun WatermarkEditorScreen(
     var showVignette by remember { mutableStateOf(false) }
 
     // 元素文本
-    var brandText by remember { mutableStateOf("OMaster") }
+    var brandText by remember { mutableStateOf("Ophto") }
     var modelText by remember { mutableStateOf("OPPO Find X8 Pro") }
     var paramsText by remember { mutableStateOf("f/1.8 1/125 ISO100") }
     var dateText by remember { mutableStateOf("2026-06-09") }
@@ -737,7 +737,7 @@ fun WatermarkEditorScreen(
                 OutlinedButton(
                     onClick = {
                         haptic.perform(HapticFeedbackType.Confirm)
-                        brandText = "Shot on OMaster"
+                        brandText = "Shot on Ophto"
                         selectedPosition = WatermarkPlacement.BOTTOM_LEFT
                         textSize = 14f
                         opacity = 0.8f
@@ -1792,7 +1792,7 @@ data class WatermarkConfig(
     val showLocation: Boolean = false,
     val showPhotographer: Boolean = false,
     val showVignette: Boolean = false,
-    val brandText: String = "OMaster",
+    val brandText: String = "Ophto",
     val modelText: String = "",
     val paramsText: String = "",
     val dateText: String = "",

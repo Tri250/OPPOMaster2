@@ -742,8 +742,7 @@ private fun CreditsCard(context: android.content.Context) {
 
             // 开发者标签
             val developers = listOf(
-                "Silas" to "https://xhslink.com/m/2gh56F1blnO",
-                "Luminary" to "https://github.com/fengyec2"
+                "带娃的小工" to "https://github.com/silas"
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -860,7 +859,7 @@ private fun FooterSection(context: android.content.Context) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "© 2026 OMaster",
+            text = "© 2026 Ophto",
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.4f)
         )
