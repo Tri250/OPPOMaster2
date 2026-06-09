@@ -792,20 +792,10 @@ const PresetManagerPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* 专业参数 */}
+                  {/* 调色参数 */}
                   <div className="px-4 pb-4">
                     <PresetParameters
                       sections={[
-                        {
-                          title: '🎛 专业参数 (Pro模式)',
-                          items: [
-                            { label: 'ISO', value: '100', span: 1 },
-                            { label: '快门', value: '1/125', span: 1 },
-                            { label: '曝光补偿', value: '+0.3', span: 1 },
-                            { label: '色温', value: '5500K', span: 1 },
-                            { label: '柔光', value: '梦幻柔光', span: 2 },
-                          ]
-                        },
                         {
                           title: '🎨 调色参数',
                           items: [
