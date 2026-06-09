@@ -106,14 +106,6 @@ const mockPresetDetail: PresetDetail = {
         { label: '暗角', value: '开', span: 2 },
       ],
     },
-    {
-      title: '🎞️ 胶片特性',
-      items: [
-        { label: '胶片类型', value: 'Portra 400', span: 1 },
-        { label: '颗粒感', value: '轻微', span: 1 },
-        { label: '色调倾向', value: '暖调偏移', span: 2 },
-      ],
-    },
   ],
   relatedPresets: [
     { id: 'r1', name: '胶片人像', cover: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=250&fit=crop', similarity: 85 },
