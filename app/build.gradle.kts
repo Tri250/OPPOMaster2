@@ -7,6 +7,17 @@ plugins {
     id("kotlin-parcelize")
 }
 
+// 读取签名配置
+// 优先读取 keystore-release.properties（真实签名配置，不应提交到版本控制）
+// 如果不存在则读取 keystore.properties（模板文件）
+val keystorePropertiesFile = file("keystore-release.properties")
+    .takeIf { it.exists() }
+    ?: file("keystore.properties")
+val keystoreProperties = java.util.Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "com.silas.omaster"
     compileSdk = 35
@@ -31,16 +42,26 @@ android {
         getByName("debug") {
             // 使用默认debug签名
         }
-        // Release签名配置（临时使用调试签名，便于测试）
-        // ⚠️ 正式发布前请替换为真实的release签名密钥库
+        // Release签名配置
         create("release") {
-            // 临时方案：使用调试签名便于开发测试
-            // 正式发布时请创建专用签名密钥库并替换以下配置
-            // 使用Android SDK默认的debug keystore
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            // 检查是否有有效的签名配置
+            val hasValidKeystore = keystoreProperties.containsKey("storePassword") &&
+                keystoreProperties.getProperty("storePassword") != "YOUR_STORE_PASSWORD"
+
+            if (hasValidKeystore) {
+                // 使用 keystore.properties 中的配置
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            } else {
+                // 回退到 debug 签名（便于开发测试）
+                // ⚠️ 正式发布前请配置真实的 release 签名
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 

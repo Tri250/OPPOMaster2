@@ -22,3 +22,88 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# =====================
+# Android 项目忽略规则
+# =====================
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Android Studio
+*.iml
+.idea/
+captures/
+output.json
+
+# APK/AAB
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# 本地配置
+local.properties
+
+# =====================
+# 签名密钥（敏感文件）
+# =====================
+# ⚠️ 这些文件包含密码和密钥，绝对不能提交到版本控制！
+
+# Release签名密钥库
+*.keystore
+*.jks
+app/release.keystore
+app/release.jks
+
+# Release签名配置（包含密码）
+app/keystore-release.properties
+keystore-release.properties
+
+# 其他签名相关文件
+*.pem
+*.pk8
+*.pk12
+
+# =====================
+# API密钥和敏感配置
+# =====================
+# ⚠️ 包含API密钥的配置文件不应提交
+
+app/src/main/assets/api_config_release.json
+api_keys.properties
+
+# =====================
+# 模型文件（大型二进制）
+# =====================
+# TFLite模型文件较大，建议使用CDN分发
+# 仅保留README和规格文档
+
+app/src/main/assets/models/*.tflite
+app/src/main/assets/models/*.pb
+app/src/main/assets/models/*.h5
+
+# =====================
+# 其他
+# =====================
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# 测试输出
+*.test
+*.spec.ts.snap
+
+# 环境变量
+.env
+.env.local
+.env.*.local

@@ -6,6 +6,8 @@ import com.silas.omaster.ui.theme.BrandTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /**
  * 更新渠道枚举
@@ -34,8 +36,41 @@ enum class CloudSyncStatus {
     ERROR         // 同步出错
 }
 
-class SettingsManager private constructor(context: Context) {
+/**
+ * API配置数据类
+ */
+@Serializable
+data class ApiConfig(
+    val aiApiEndpoint: String = "",
+    val presetApiEndpoint: String = "",
+    val authApiEndpoint: String = "",
+    val apiVersion: String = "v1"
+)
+
+class SettingsManager private constructor(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+    
+    // ==================== 云端API配置 ====================
+    
+    // 云端AI推理API端点
+    val aiApiEndpoint: String
+        get() = prefs.getString(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT) ?: DEFAULT_AI_API_ENDPOINT
+    
+    // 预设同步API端点
+    val presetApiEndpoint: String
+        get() = prefs.getString(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT) ?: DEFAULT_PRESET_API_ENDPOINT
+    
+    // 用户认证API端点
+    val authApiEndpoint: String
+        get() = prefs.getString(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT) ?: DEFAULT_AUTH_API_ENDPOINT
+    
+    // API版本
+    val apiVersion: String
+        get() = prefs.getString(KEY_API_VERSION, "v1") ?: "v1"
+    
+    // 是否已加载API配置
+    val isApiConfigLoaded: Boolean
+        get() = prefs.getBoolean(KEY_API_CONFIG_LOADED, false)
 
     var isVibrationEnabled: Boolean
         get() = prefs.getBoolean(KEY_VIBRATION_ENABLED, true)
@@ -314,8 +349,110 @@ class SettingsManager private constructor(context: Context) {
             putBoolean(KEY_HAS_APPLIED_PRESET, false)
         }.apply()
     }
+    
+    // ==================== 云端API配置方法 ====================
+    
+    /**
+     * 从 assets 加载 API 配置
+     * @return ApiConfig 配置对象
+     */
+    fun loadApiConfig(): ApiConfig {
+        return try {
+            val jsonStr = context.assets.open("api_config.json").bufferedReader().use { it.readText() }
+            val config = Json { ignoreUnknownKeys = true }.decodeFromString<ApiConfig>(jsonStr)
+            
+            // 保存到 SharedPreferences
+            prefs.edit().apply {
+                putString(KEY_AI_API_ENDPOINT, config.aiApiEndpoint)
+                putString(KEY_PRESET_API_ENDPOINT, config.presetApiEndpoint)
+                putString(KEY_AUTH_API_ENDPOINT, config.authApiEndpoint)
+                putString(KEY_API_VERSION, config.apiVersion)
+                putBoolean(KEY_API_CONFIG_LOADED, true)
+            }.apply()
+            
+            config
+        } catch (e: Exception) {
+            // 返回默认配置
+            ApiConfig(
+                aiApiEndpoint = DEFAULT_AI_API_ENDPOINT,
+                presetApiEndpoint = DEFAULT_PRESET_API_ENDPOINT,
+                authApiEndpoint = DEFAULT_AUTH_API_ENDPOINT,
+                apiVersion = "v1"
+            )
+        }
+    }
+    
+    /**
+     * 验证 API 密钥是否有效
+     * @return Boolean 密钥是否有效
+     */
+    fun validateApiKey(): Boolean {
+        val apiKey = cloudApiKey ?: return false
+        // 基本验证：密钥非空且长度合理
+        return apiKey.isNotBlank() && apiKey.length >= 16
+    }
+    
+    /**
+     * 验证 API 密钥格式
+     * @param key 要验证的密钥
+     * @return Boolean 密钥格式是否有效
+     */
+    fun validateApiKeyFormat(key: String?): Boolean {
+        if (key.isNullOrBlank()) return false
+        // 基本格式验证：长度至少16字符，只包含字母、数字、连字符和下划线
+        return key.length >= 16 && key.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+    }
+    
+    /**
+     * 获取完整的 API URL
+     * @param endpoint 端点路径
+     * @param type API类型 (ai, preset, auth)
+     * @return 完整的URL
+     */
+    fun getFullApiUrl(endpoint: String, type: String = "ai"): String {
+        val baseUrl = when (type) {
+            "preset" -> presetApiEndpoint
+            "auth" -> authApiEndpoint
+            else -> aiApiEndpoint
+        }
+        return "${baseUrl.trimEnd('/')}/${apiVersion}/${endpoint.trimStart('/')}"
+    }
+    
+    /**
+     * 设置自定义 API 端点
+     * @param aiEndpoint AI API端点
+     * @param presetEndpoint 预设API端点
+     * @param authEndpoint 认证API端点
+     */
+    fun setCustomApiEndpoints(
+        aiEndpoint: String? = null,
+        presetEndpoint: String? = null,
+        authEndpoint: String? = null
+    ) {
+        prefs.edit().apply {
+            aiEndpoint?.let { putString(KEY_AI_API_ENDPOINT, it) }
+            presetEndpoint?.let { putString(KEY_PRESET_API_ENDPOINT, it) }
+            authEndpoint?.let { putString(KEY_AUTH_API_ENDPOINT, it) }
+        }.apply()
+    }
+    
+    /**
+     * 重置 API 端点为默认值
+     */
+    fun resetApiEndpoints() {
+        prefs.edit().apply {
+            putString(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT)
+            putString(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT)
+            putString(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT)
+        }.apply()
+    }
 
     companion object {
+        // 云端API默认端点
+        private const val DEFAULT_AI_API_ENDPOINT = "https://api.omaster.app/ai"
+        private const val DEFAULT_PRESET_API_ENDPOINT = "https://api.omaster.app/presets"
+        private const val DEFAULT_AUTH_API_ENDPOINT = "https://api.omaster.app/auth"
+        
         private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
         private const val KEY_THEME_ID = "theme_id"
         private const val KEY_FLOATING_WINDOW_OPACITY = "floating_window_opacity"
@@ -341,6 +478,13 @@ class SettingsManager private constructor(context: Context) {
         private const val KEY_PINNED_PRESET_IDS = "pinned_preset_ids"
         private const val KEY_MANUALLY_MODIFIED_PARAMS = "manually_modified_params"
         private const val KEY_CUSTOM_QUICK_PRESETS = "custom_quick_presets"
+        
+        // 云端API配置 Key
+        private const val KEY_API_CONFIG_LOADED = "api_config_loaded"
+        private const val KEY_AI_API_ENDPOINT = "ai_api_endpoint"
+        private const val KEY_PRESET_API_ENDPOINT = "preset_api_endpoint"
+        private const val KEY_AUTH_API_ENDPOINT = "auth_api_endpoint"
+        private const val KEY_API_VERSION = "api_version"
 
         // 应用预设参数 Key
         private const val KEY_APPLIED_SATURATION = "applied_saturation"
