@@ -15,9 +15,12 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -884,50 +887,48 @@ class PresetRepository private constructor(context: Context) {
     // ==================== HomeViewModel 需要的方法 ====================
 
     /**
-     * 获取所有预设（转换为 MasterPreset）
+     * 获取所有预设（实时转换为 MasterPreset）
+     * 使用 map 操作符实现响应式更新
      */
-    fun getAllPresets(): StateFlow<List<MasterPreset>> {
-        // 将内部的 PresetItem 转换为 MasterPreset
-        val converted = MutableStateFlow<List<MasterPreset>>(emptyList())
-        
-        // 监听内部 presets 并转换
-        _presets.value.map { item ->
-            item.toMasterPreset()
-        }.let { converted.value = it }
-        
-        // 每次 presets 更新时同步转换
-        // 注意：这里简化处理，实际应该用 combine 或 map
-        return converted
+    fun getAllPresets(): Flow<List<MasterPreset>> {
+        return _presets.map { items ->
+            items.map { it.toMasterPreset() }
+        }
     }
 
     /**
      * 获取收藏的预设
+     * 合并 presets 和 favorites 流
      */
-    fun getFavoritePresets(): StateFlow<List<MasterPreset>> {
-        val converted = MutableStateFlow<List<MasterPreset>>(emptyList())
-        
-        _presets.value.filter { item ->
-            _favorites.value.contains(item.id)
-        }.map { item ->
-            item.toMasterPreset()
-        }.let { converted.value = it }
-        
-        return converted
+    fun getFavoritePresets(): Flow<List<MasterPreset>> {
+        return combine(_presets, _favorites) { items, favIds ->
+            items.filter { favIds.contains(it.id) }
+                .map { it.toMasterPreset() }
+        }
     }
 
     /**
-     * 获取自定义预设
+     * 获取自定义预设（非系统预设）
      */
-    fun getCustomPresets(): StateFlow<List<MasterPreset>> {
-        val converted = MutableStateFlow<List<MasterPreset>>(emptyList())
-        
-        _presets.value.filter { item ->
-            !item.isSystem
-        }.map { item ->
-            item.toMasterPreset()
-        }.let { converted.value = it }
-        
-        return converted
+    fun getCustomPresets(): Flow<List<MasterPreset>> {
+        return _presets.map { items ->
+            items.filter { !it.isSystem }
+                .map { it.toMasterPreset() }
+        }
+    }
+
+    /**
+     * 切换收藏状态（用于 HomeViewModel）
+     */
+    suspend fun toggleFavorite(presetId: String) {
+        val current = _favorites.value.toMutableSet()
+        if (current.contains(presetId)) {
+            current.remove(presetId)
+        } else {
+            current.add(presetId)
+        }
+        _favorites.value = current
+        saveFavorites(current)
     }
 
     /**
