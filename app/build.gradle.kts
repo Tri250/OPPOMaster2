@@ -186,6 +186,9 @@ dependencies {
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // ExifInterface (for RAW decoder)
+    implementation(libs.androidx.exifinterface)
+
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

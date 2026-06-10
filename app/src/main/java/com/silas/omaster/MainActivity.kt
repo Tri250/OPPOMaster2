@@ -129,6 +129,12 @@ sealed class Screen {
     data object CloudSync : Screen()
 
     @Serializable
+    data object MaskEditor : Screen()
+
+    @Serializable
+    data object RawEditor : Screen()
+
+    @Serializable
     data object NotificationSettings : Screen()
 
     @Serializable
@@ -641,10 +647,24 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() }
                 )
             }
-            
+
             // 预设源管理页面
             composable<Screen.PresetSourceManager> {
                 PresetSourceManagerScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 蒙版编辑器
+            composable<Screen.MaskEditor> {
+                com.silas.omaster.ui.features.MaskEditorScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // RAW 编辑器
+            composable<Screen.RawEditor> {
+                com.silas.omaster.ui.features.RawEditorScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
