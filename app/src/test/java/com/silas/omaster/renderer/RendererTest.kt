@@ -25,9 +25,13 @@ class RenderParametersTest {
         assertEquals(0f, params.clarity)
         assertEquals(0f, params.vibrance)
         assertEquals(0f, params.grain)
-        assertEquals(0f, params.vignette)
+        assertEquals(0f, params.fade)
         assertEquals(0f, params.dehaze)
-        assertEquals(0f, params.noiseReduction)
+        assertEquals(0f, params.denoise)
+        assertEquals(0f, params.skinSmooth)
+        assertEquals(0f, params.texture)
+        assertEquals(0f, params.whites)
+        assertEquals(0f, params.blacks)
     }
 
     @Test
@@ -116,10 +120,10 @@ class RenderParametersTest {
     }
 
     @Test
-    fun testVignetteRange() {
-        // 测试暗角范围 -100 到 100
-        val params = RenderParameters(vignette = -30f)
-        assertEquals(-30f, params.vignette)
+    fun testFadeRange() {
+        // 测试褪色范围 0 到 100
+        val params = RenderParameters(fade = 20f)
+        assertEquals(20f, params.fade)
     }
 
     @Test
@@ -130,10 +134,17 @@ class RenderParametersTest {
     }
 
     @Test
-    fun testNoiseReductionRange() {
+    fun testDenoiseRange() {
         // 测试降噪范围 0 到 100
-        val params = RenderParameters(noiseReduction = 50f)
-        assertEquals(50f, params.noiseReduction)
+        val params = RenderParameters(denoise = 50f)
+        assertEquals(50f, params.denoise)
+    }
+
+    @Test
+    fun testSkinSmoothRange() {
+        // 测试肤色平滑范围 0 到 100
+        val params = RenderParameters(skinSmooth = 30f)
+        assertEquals(30f, params.skinSmooth)
     }
 
     @Test
@@ -151,9 +162,13 @@ class RenderParametersTest {
             clarity = 15f,
             vibrance = 10f,
             grain = 5f,
-            vignette = -15f,
+            fade = 10f,
             dehaze = 10f,
-            noiseReduction = 20f
+            denoise = 20f,
+            skinSmooth = 15f,
+            texture = 5f,
+            whites = 10f,
+            blacks = -5f
         )
         
         assertEquals(10f, params.brightness)
@@ -167,9 +182,13 @@ class RenderParametersTest {
         assertEquals(15f, params.clarity)
         assertEquals(10f, params.vibrance)
         assertEquals(5f, params.grain)
-        assertEquals(-15f, params.vignette)
+        assertEquals(10f, params.fade)
         assertEquals(10f, params.dehaze)
-        assertEquals(20f, params.noiseReduction)
+        assertEquals(20f, params.denoise)
+        assertEquals(15f, params.skinSmooth)
+        assertEquals(5f, params.texture)
+        assertEquals(10f, params.whites)
+        assertEquals(-5f, params.blacks)
     }
 
     @Test
