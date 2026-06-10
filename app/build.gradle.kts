@@ -66,24 +66,6 @@ android {
         }
     }
 
-    buildTypes {
-        debug {
-            isDebuggable = true
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
-        }
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            // 使用release签名配置
-            signingConfig = signingConfigs.getByName("release")
-        }
-    }
-
     // 添加 splits 配置，按 ABI 拆分 APK
     splits {
         abi {
@@ -108,6 +90,41 @@ android {
         buildConfig = true
     }
 
+    // 测试覆盖率配置
+    buildTypes {
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    // 测试选项配置
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                it.testLogging {
+                    events("passed", "skipped", "failed", "standardOut", "standardError")
+                    outputs.upToDateWhen { false }
+                    showStandardStreams = true
+                }
+            }
+        }
+    }
+
+    // 打包配置
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
