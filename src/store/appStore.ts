@@ -18,6 +18,11 @@ export type SubPageType =
   | 'privacy'
   | 'terms'
   | 'preset-sources'
+  // New feature pages
+  | 'selective-paste'
+  | 'param-sync'
+  | 'lut-vignette'
+  | 'edit-session'
   | null;
 
 // ============================================
@@ -474,6 +479,47 @@ export const useAppStore = create<AppState>((set) => ({
       gradientColors: ['#1A237E', '#303F9F'],
       enabled: false,
       showToggle: true,
+    },
+    // New features
+    {
+      id: 'selective-paste',
+      title: '选择性粘贴',
+      subtitle: '选择性粘贴参数，精准控制',
+      icon: 'Palette',
+      color: '#FF9800',
+      gradientColors: ['#E65100', '#F57C00'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'param-sync',
+      title: '跨设备同步',
+      subtitle: '跨设备参数同步，无缝切换',
+      icon: 'Cloud',
+      color: '#00BCD4',
+      gradientColors: ['#006064', '#0097A7'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'lut-vignette',
+      title: 'LUT & 暗角',
+      subtitle: 'LUT精细调节，暗角与畸变控制',
+      icon: 'Palette',
+      color: '#9C27B0',
+      gradientColors: ['#4A148C', '#7B1FA2'],
+      enabled: true,
+      showToggle: false,
+    },
+    {
+      id: 'edit-session',
+      title: '编辑历史',
+      subtitle: '编辑会话持久化，跨会话恢复',
+      icon: 'Images',
+      color: '#607D8B',
+      gradientColors: ['#37474F', '#455A64'],
+      enabled: true,
+      showToggle: false,
     },
   ],
   toggleFeature: (id) =>

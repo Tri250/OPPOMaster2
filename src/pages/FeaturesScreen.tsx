@@ -36,6 +36,11 @@ const featureRouteMap: Record<string, string> = {
   'lut-share': 'lut-share',
   'hasselblad': 'hasselblad',
   'cloud-sync': 'cloud-sync',
+  // New features
+  'selective-paste': 'selective-paste',
+  'param-sync': 'param-sync',
+  'lut-vignette': 'lut-vignette',
+  'edit-session': 'edit-session',
 };
 
 const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
@@ -74,6 +79,23 @@ const featureDescriptions: Record<string, { desc: string; tips: string[] }> = {
   'cloud-sync': {
     desc: '多平台云同步，数据永不丢失',
     tips: ['OPPO', 'realme', 'vivo', '荣耀'],
+  },
+  // New features
+  'selective-paste': {
+    desc: '选择性粘贴参数，精准控制',
+    tips: ['饱和度+对比度', '色彩相关', '细节相关'],
+  },
+  'param-sync': {
+    desc: '跨设备参数同步，无缝切换',
+    tips: ['上传', '下载', '自动同步'],
+  },
+  'lut-vignette': {
+    desc: 'LUT精细调节，暗角与畸变控制',
+    tips: ['LUT强度', '暗角形状', '畸变校正'],
+  },
+  'edit-session': {
+    desc: '编辑会话持久化，跨会话恢复',
+    tips: ['自动保存', '历史记录', '一键恢复'],
   },
 };
 

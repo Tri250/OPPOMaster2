@@ -23,6 +23,11 @@ import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
 import PresetSourceManager from './pages/subpages/PresetSourceManager';
+// New feature pages
+import SelectivePastePage from './pages/subpages/SelectivePastePage';
+import ParamSyncPage from './pages/subpages/ParamSyncPage';
+import LUTAndVignettePage from './pages/subpages/LUTAndVignettePage';
+import EditSessionPage from './pages/subpages/EditSessionPage';
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -61,6 +66,15 @@ const App: React.FC = () => {
         return <TermsPage />;
       case 'preset-sources':
         return <PresetSourceManager />;
+      // New feature pages
+      case 'selective-paste':
+        return <SelectivePastePage />;
+      case 'param-sync':
+        return <ParamSyncPage />;
+      case 'lut-vignette':
+        return <LUTAndVignettePage />;
+      case 'edit-session':
+        return <EditSessionPage />;
       default:
         return null;
     }
