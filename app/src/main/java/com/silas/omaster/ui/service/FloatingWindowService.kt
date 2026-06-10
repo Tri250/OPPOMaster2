@@ -25,6 +25,7 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.util.LogUtil
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
 
@@ -231,7 +232,7 @@ class FloatingWindowService : Service() {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("FloatingService", e, "更新展开窗口失败")
             // 如果更新失败，重新创建窗口
             showExpandedWindow(
                 name, sections, params?.x ?: 50, params?.y ?: 300,
@@ -277,12 +278,11 @@ class FloatingWindowService : Service() {
             floatingView = rootLayout
             wm.addView(floatingView, params)
             setupDrag(wm)
-            
             // 初始显示时自动贴边
             floatingView?.post { snapToEdge(wm) }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("FloatingService", e, "显示展开窗口失败")
             stopSelf()
         }
     }
@@ -332,7 +332,7 @@ class FloatingWindowService : Service() {
             floatingView?.post { snapToEdge(wm) }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("FloatingService", e, "显示折叠窗口失败")
         }
     }
 
@@ -809,7 +809,7 @@ class FloatingWindowService : Service() {
             startService(intent)
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("FloatingService", e, "启动服务失败")
         }
     }
 
@@ -917,7 +917,7 @@ class FloatingWindowService : Service() {
                 windowManager?.removeView(view)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("FloatingService", e, "移除悬浮窗失败")
         }
         floatingView = null
     }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.LogUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,7 +44,7 @@ class FloatingWindowController private constructor(private val context: Context)
                 context.registerReceiver(broadcastReceiver, filter)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Floating", e, "注册广播接收器失败")
         }
     }
 
@@ -54,7 +55,7 @@ class FloatingWindowController private constructor(private val context: Context)
         try {
             context.unregisterReceiver(broadcastReceiver)
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Floating", e, "注销广播接收器失败")
         }
     }
 

@@ -3,6 +3,7 @@ package com.silas.omaster.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.util.SecurityCrypto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,7 +49,8 @@ data class ApiConfig(
 )
 
 class SettingsManager private constructor(private val context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
     // ==================== 云端API配置 ====================
     
@@ -215,10 +217,19 @@ class SettingsManager private constructor(private val context: Context) {
         }
 
     // 云端API密钥（用于云端AI推理）
+    // 行业最严标准：API Key 必须加密存储
     var cloudApiKey: String?
-        get() = prefs.getString(KEY_CLOUD_API_KEY, null)
+        get() {
+            // 优先读取加密数据，兼容旧版明文数据
+            return SecurityCrypto.readSecure(context, PREFS_NAME, KEY_CLOUD_API_KEY)
+                ?: prefs.getString(KEY_CLOUD_API_KEY, null)
+        }
         set(value) {
-            prefs.edit().putString(KEY_CLOUD_API_KEY, value).apply()
+            if (value.isNullOrBlank()) {
+                prefs.edit().remove(KEY_CLOUD_API_KEY).apply()
+            } else {
+                SecurityCrypto.saveSecure(context, PREFS_NAME, KEY_CLOUD_API_KEY, value)
+            }
         }
 
     // 哈苏之眼开关
@@ -448,6 +459,9 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     companion object {
+        // SharedPreferences 名称
+        private const val PREFS_NAME = "app_settings"
+
         // 云端API默认端点
         private const val DEFAULT_AI_API_ENDPOINT = "https://api.omaster.app/ai"
         private const val DEFAULT_PRESET_API_ENDPOINT = "https://api.omaster.app/presets"

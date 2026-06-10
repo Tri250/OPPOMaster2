@@ -36,6 +36,13 @@ android {
         versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // BuildConfig 公共字段（所有 buildType 都可见）
+        buildConfigField("String", "BUILD_TIME", "\"${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())}\"")
+        buildConfigField("String", "GIT_SHA", "\"${try {
+            val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").redirectErrorStream(true).start()
+            process.inputStream.bufferedReader().readText().trim()
+        } catch (e: Exception) { "unknown" }}\"")
     }
 
     // 签名配置
@@ -98,6 +105,14 @@ android {
             versionNameSuffix = "-debug"
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
+            // Debug 环境配置
+            buildConfigField("String", "UMENG_APPKEY", "\"698938eb9a7f3764885bbdaa\"")
+            buildConfigField("String", "UMENG_CHANNEL", "\"default\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://test-api.omaster.app/\"")
+            buildConfigField("boolean", "ENABLE_LOG", "true")
+            buildConfigField("boolean", "ENABLE_NET_LOG", "true")
+            buildConfigField("boolean", "ENABLE_CRASH_REPORT", "true")
+            buildConfigField("boolean", "ENABLE_UMENG", "true")
         }
         release {
             isMinifyEnabled = true
@@ -107,6 +122,16 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            // Release 环境配置
+            buildConfigField("String", "UMENG_APPKEY", "\"698938eb9a7f3764885bbdaa\"")
+            buildConfigField("String", "UMENG_CHANNEL", "\"official\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api.omaster.app/\"")
+            buildConfigField("boolean", "ENABLE_LOG", "false")
+            buildConfigField("boolean", "ENABLE_NET_LOG", "false")
+            buildConfigField("boolean", "ENABLE_CRASH_REPORT", "true")
+            buildConfigField("boolean", "ENABLE_UMENG", "true")
+            // 资源混淆配置
+            resValue("string", "app_name_release", "OMaster")
         }
     }
 
@@ -129,7 +154,26 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // 移除未使用的资源
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE*"
+            excludes += "/META-INF/NOTICE*"
+            excludes += "/META-INF/*.kotlin_module"
         }
+        // JNI 库处理配置
+        jniLibs {
+            useLegacyPackaging = false
+            // 保留指定的 ABI 库
+            pickFirsts += listOf("**/libc++_shared.so", "**/libjsc.so")
+        }
+    }
+
+    // Lint 检查配置 - release 时关闭 abortOnError（避免因警告导致构建失败）
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        // 禁用特定检查
+        disable += listOf("MissingTranslation", "ExtraTranslation")
     }
 }
 

@@ -7,6 +7,7 @@ import android.location.Geocoder
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
+import com.silas.omaster.util.LogUtil
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
@@ -111,7 +112,7 @@ class ExifWatermarkProvider(private val context: Context) {
                 extractFromInputStream(inputStream)
             } ?: getFallbackData()
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Exif", e, "从 URI 提取 EXIF 失败")
             getFallbackData()
         }
     }
@@ -124,7 +125,7 @@ class ExifWatermarkProvider(private val context: Context) {
             val exif = ExifInterface(path)
             parseExifData(exif)
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Exif", e, "从路径提取 EXIF 失败: $path")
             getFallbackData()
         }
     }
@@ -137,7 +138,7 @@ class ExifWatermarkProvider(private val context: Context) {
             val exif = ExifInterface(inputStream)
             parseExifData(exif)
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Exif", e, "从 InputStream 提取 EXIF 失败")
             getFallbackData()
         }
     }
@@ -422,7 +423,7 @@ class ExifWatermarkProvider(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Exif", e, "获取地址失败")
             null
         }
     }

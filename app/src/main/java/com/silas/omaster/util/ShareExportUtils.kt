@@ -120,10 +120,10 @@ object ShareExportUtils {
             editor.putString(key, json)
             editor.putLong("last_updated", timestamp)
             editor.apply()
-            
+
             return true
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Share", e, "保存分享状态失败")
             return false
         }
     }
@@ -155,7 +155,7 @@ object ShareExportUtils {
             
             savedUri?.toString()
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Share", e, "导出图片到相册失败")
             null
         }
     }
@@ -221,7 +221,7 @@ object ShareExportUtils {
             FileOutputStream(file).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
             }
-            
+
             // 使用 FileProvider 而非 file:// URI 触发 FileUriExposedException
             FileProvider.getUriForFile(
                 context,
@@ -229,7 +229,7 @@ object ShareExportUtils {
                 file
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Share", e, "旧版保存图片失败")
             null
         }
     }
@@ -254,7 +254,7 @@ object ShareExportUtils {
             // 导出到相册
             exportImageToGallery(context, watermarkedBitmap)
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Share", e, "导出带水印图片失败")
             null
         }
     }
@@ -295,7 +295,7 @@ object ShareExportUtils {
                 }
                 .sortedByDescending { it.createdAt }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Share", e, "获取收藏预设列表失败")
             return emptyList()
         }
     }
@@ -310,7 +310,7 @@ object ShareExportUtils {
             editor.remove("preset_$presetId")
             editor.apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("Share", e, "移除收藏预设失败: $presetId")
         }
     }
 

@@ -33,6 +33,7 @@ import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.LogUtil
 import com.silas.omaster.util.ShareExportUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -357,7 +358,7 @@ fun AISceneRecognitionScreen(
                                 val bitmap = buildRecipeCardBitmap(analysisResult, context)
                                 ShareExportUtils.exportImageToGallery(context, bitmap, "hasselblad_recipe_${System.currentTimeMillis()}.jpg")
                             } catch (e: Exception) {
-                                e.printStackTrace()
+                                LogUtil.logThrowable("AIScene", e, "导出配方卡片失败")
                             }
                         }
                     }) {

@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  网络安全配置 - 行业最严标准
+  1. 默认仅允许 HTTPS，禁用明文流量
+  2. 仅信任系统证书，禁止用户安装的 CA
+  3. 生产域名白名单
+  4. Debug 模式允许本地网络用于开发
+-->
 <network-security-config>
-    <!-- 默认仅允许 HTTPS，禁用明文流量 -->
+    <!-- 默认配置：仅 HTTPS，禁用明文流量，仅信任系统 CA -->
     <base-config cleartextTrafficPermitted="false">
-        <!-- TLS 1.2 及以上版本 -->
+        <!-- 禁用明文流量 -->
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
@@ -12,9 +19,10 @@
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">silas-omaster.com</domain>
         <domain includeSubdomains="true">cdn.silas-omaster.com</domain>
+        <domain includeSubdomains="true">api.omaster.app</domain>
     </domain-config>
 
-    <!-- Debug 模式允许本地网络和友盟统计（仅在 debug build 中生效） -->
+    <!-- Debug 模式允许本地网络（仅在 debug build 中生效） -->
     <debug-overrides>
         <trust-anchors>
             <certificates src="system" />

@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
    Backup rules for Android 6.0 - 11
-   注意：敏感数据（订阅URL、令牌）应排除备份
+   注意：敏感数据（订阅URL、令牌、API Key、收藏）应排除备份
 -->
 <full-backup-content>
-    <!-- 排除订阅凭证和认证信息 -->
+    <!-- 排除订阅凭证和加密数据 -->
     <exclude domain="sharedpref" path="omaster_subscription.xml" />
     <exclude domain="sharedpref" path="omaster_auth.xml" />
+    <!-- 排除 API Key 加密存储 -->
+    <exclude domain="sharedpref" path="app_settings.xml" />
+    <!-- 排除用户认证信息 -->
+    <exclude domain="sharedpref" path="omaster_prefs.xml" />
+    <!-- 排除收藏预设数据 -->
+    <exclude domain="sharedpref" path="hasselblad_favorites.xml" />
     <!-- 排除临时缓存 -->
     <exclude domain="file" path="cache/" />
+    <!-- 排除下载缓存 -->
+    <exclude domain="file" path="downloads/" />
+    <!-- 排除 ML 模型缓存 -->
+    <exclude domain="file" path="models/" />
 </full-backup-content>

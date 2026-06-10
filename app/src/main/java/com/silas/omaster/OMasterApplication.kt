@@ -27,10 +27,16 @@ class OMasterApplication : Application() {
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         // 安装全局异常处理器（在友盟初始化前）
-        CrashHandler.getInstance().install()
+        // Release 模式下仅在启用崩溃上报时才安装
+        if (BuildConfig.ENABLE_CRASH_REPORT) {
+            CrashHandler.getInstance().install()
+        }
 
         // 初始化震动设置
         HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled
+
+        // Release 模式下关闭友盟日志，Debug 模式开启日志
+        UMConfigure.setLogEnabled(BuildConfig.ENABLE_LOG)
 
         // 每次冷启动都调用预初始化（不采集数据）
         preInitUMeng()
@@ -47,8 +53,8 @@ class OMasterApplication : Application() {
      * 必须在 Application.onCreate 中调用
      */
     private fun preInitUMeng() {
-        UMConfigure.setLogEnabled(false)
-        UMConfigure.preInit(this, "698938eb9a7f3764885bbdaa", "default")
+        if (!BuildConfig.ENABLE_UMENG) return
+        UMConfigure.preInit(this, BuildConfig.UMENG_APPKEY, BuildConfig.UMENG_CHANNEL)
     }
 
     /**
@@ -57,7 +63,14 @@ class OMasterApplication : Application() {
      * 此时才会采集设备信息并上报数据
      */
     fun initUMeng() {
-        UMConfigure.init(this, "698938eb9a7f3764885bbdaa", "default", UMConfigure.DEVICE_TYPE_PHONE, null)
+        if (!BuildConfig.ENABLE_UMENG) return
+        UMConfigure.init(
+            this,
+            BuildConfig.UMENG_APPKEY,
+            BuildConfig.UMENG_CHANNEL,
+            UMConfigure.DEVICE_TYPE_PHONE,
+            null
+        )
     }
 
     fun hasUserAgreed(): Boolean {
@@ -72,7 +85,8 @@ class OMasterApplication : Application() {
      * 检查统计开关是否开启
      */
     private fun isAnalyticsEnabled(): Boolean {
-        return SettingsManager.getInstance(this).isAnalyticsEnabled
+        return BuildConfig.ENABLE_UMENG &&
+            SettingsManager.getInstance(this).isAnalyticsEnabled
     }
 
     /**

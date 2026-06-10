@@ -2,19 +2,26 @@
 <!--
    Data extraction rules for Android 12+
    控制云备份和设备传输时的数据范围
+   行业最严标准：敏感数据（订阅、API Key、令牌）应排除
 -->
 <data-extraction-rules>
     <cloud-backup>
         <!-- 排除敏感数据 -->
         <exclude domain="sharedpref" path="omaster_subscription.xml" />
         <exclude domain="sharedpref" path="omaster_auth.xml" />
-        <!-- 排除缓存 -->
+        <exclude domain="sharedpref" path="app_settings.xml" />
+        <exclude domain="sharedpref" path="omaster_prefs.xml" />
+        <!-- 排除缓存和临时文件 -->
         <exclude domain="file" path="cache/" />
+        <exclude domain="file" path="downloads/" />
+        <exclude domain="file" path="models/" />
     </cloud-backup>
     <device-transfer>
-        <!-- 设备传输时包含用户偏好但排除凭证 -->
+        <!-- 设备传输时包含用户偏好但排除凭证和 API Key -->
         <include domain="sharedpref" path="omaster_settings.xml" />
         <exclude domain="sharedpref" path="omaster_subscription.xml" />
         <exclude domain="sharedpref" path="omaster_auth.xml" />
+        <exclude domain="sharedpref" path="app_settings.xml" />
+        <exclude domain="sharedpref" path="hasselblad_favorites.xml" />
     </device-transfer>
 </data-extraction-rules>

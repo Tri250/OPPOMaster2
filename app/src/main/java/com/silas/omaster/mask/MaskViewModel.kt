@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.silas.omaster.util.LogUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,7 +113,7 @@ class MaskViewModel(
                 )
                 maskManager.addMask(mask)
             } catch (e: Exception) {
-                e.printStackTrace()
+                LogUtil.logThrowable("Mask", e, "添加蒙版失败")
             }
         }
     }

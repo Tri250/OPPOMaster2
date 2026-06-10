@@ -9,6 +9,7 @@ import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.util.LogUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -184,7 +185,7 @@ class UniversalCreatePresetViewModel(
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("CreatePreset", e, "保存预设失败")
             false
         }
     }

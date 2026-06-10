@@ -29,6 +29,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.LogUtil
 import kotlinx.coroutines.*
 import java.io.*
 import kotlin.math.*
@@ -272,14 +273,14 @@ fun WatermarkEditorScreen(
                             if (!date.isNullOrBlank()) dateText = date
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        LogUtil.logThrowable("WatermarkEditor", e, "读取 EXIF 信息失败")
                     }
 
                     if (bitmap != null) {
                         recommendedColor = analyzeDominantColor(bitmap)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    LogUtil.logThrowable("WatermarkEditor", e, "加载图片失败")
                 }
                 isLoading = false
             }
@@ -363,7 +364,7 @@ fun WatermarkEditorScreen(
                 recommendedColor = analyzeDominantColor(bitmap)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            LogUtil.logThrowable("WatermarkEditor", e, "初始化加载图片失败")
         }
         isLoading = false
     }
