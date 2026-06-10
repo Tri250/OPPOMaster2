@@ -45,19 +45,37 @@ class ParamAdjustmentManager private constructor(context: Context) {
         )
     }
 
-    // 可调参数定义
+    // 可调参数定义（扩展到14个，包含暗角和LUT强度）
     val adjustableParams = listOf(
+        // 基础色彩参数
         AdjustableParam("saturation", "饱和度", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
         AdjustableParam("contrast", "对比度", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
         AdjustableParam("brightness", "亮度", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
         AdjustableParam("warmth", "冷暖", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
+        // 细节参数
         AdjustableParam("sharpness", "锐度", 0, 100, 1, ParamUnit.NONE),
         AdjustableParam("clarity", "清晰度", 0, 100, 1, ParamUnit.NONE),
+        AdjustableParam("detail", "细节", 0, 100, 1, ParamUnit.NONE),
+        // 光影参数
         AdjustableParam("highlights", "高光", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
         AdjustableParam("shadows", "阴影", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
+        // 降噪与人像
         AdjustableParam("noiseReduction", "降噪", 0, 100, 1, ParamUnit.NONE),
         AdjustableParam("skinSmooth", "美肤", 0, 100, 1, ParamUnit.NONE),
-        AdjustableParam("detail", "细节", 0, 100, 1, ParamUnit.NONE)
+        // P2-14: 暗角与畸变
+        AdjustableParam("vignette", "暗角", 0, 100, 1, ParamUnit.PERCENT),
+        AdjustableParam("distortion", "畸变", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
+        // P2-13: LUT 强度
+        AdjustableParam("lutIntensity", "LUT强度", 0, 100, 1, ParamUnit.PERCENT)
+    )
+
+    // 参数分组（用于 UI 分组展示）
+    val paramGroups = listOf(
+        ParamGroup("色彩", "color", listOf("saturation", "contrast", "brightness", "warmth")),
+        ParamGroup("细节", "detail", listOf("sharpness", "clarity", "detail")),
+        ParamGroup("光影", "light", listOf("highlights", "shadows")),
+        ParamGroup("降噪", "noise", listOf("noiseReduction", "skinSmooth")),
+        ParamGroup("效果", "effect", listOf("vignette", "distortion", "lutIntensity"))
     )
 
     // 互斥参数组（切换时需要重置）
@@ -407,3 +425,13 @@ sealed class InputResult {
     data class Success(val value: Int) : InputResult()
     data class Error(val message: String) : InputResult()
 }
+
+/**
+ * 参数分组
+ */
+data class ParamGroup(
+    val displayName: String,
+    val id: String,
+    val params: List<String>,
+    val icon: String? = null
+)
