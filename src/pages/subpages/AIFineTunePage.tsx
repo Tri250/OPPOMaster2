@@ -3,7 +3,8 @@ import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, RefreshCw, Check, Wand2, Sparkles, Sun, Moon, Palette, 
   Camera, Aperture, Zap, Eye, Contrast, Droplets, Layers, Sliders,
-  Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search
+  Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search,
+  Download, Upload
 } from 'lucide-react';
 
 // 导入状态管理和 AI 推理服务
@@ -77,6 +78,50 @@ const CURVE_PRESETS = [
 const DEFAULT_IMAGE_SOURCE = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600';
 
 // ============================================
+// 导入导出功能
+// ============================================
+
+// 导出参数为JSON
+const exportParams = (params: AIFineTuneParams, styleId?: string) => {
+  const exportData = {
+    version: '2.0',
+    timestamp: new Date().toISOString(),
+    params,
+    styleId,
+    app: 'OMaster',
+  };
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `omaster-params-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// 导入参数文件
+const importParams = (file: File): Promise<{ params: Partial<AIFineTuneParams>; styleId?: string }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.params) {
+          resolve({ params: data.params, styleId: data.styleId });
+        } else {
+          reject(new Error('无效的参数文件'));
+        }
+      } catch {
+        reject(new Error('解析文件失败'));
+      }
+    };
+    reader.onerror = () => reject(new Error('读取文件失败'));
+    reader.readAsText(file);
+  });
+};
+
+// ============================================
 // 主组件
 // ============================================
 
@@ -91,6 +136,9 @@ const AIFineTunePage: React.FC = () => {
   
   // 成功提示自动隐藏定时器
   const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 文件输入引用
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 成功提示自动隐藏
   useEffect(() => {
@@ -248,6 +296,33 @@ const AIFineTunePage: React.FC = () => {
     dispatch({ type: FineTuneActionType.RESET_HSL });
   }, []);
   
+  // 导出参数
+  const handleExport = useCallback(() => {
+    exportParams(state.params, state.selectedStyle);
+  }, [state.params, state.selectedStyle]);
+  
+  // 导入参数
+  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const { params, styleId } = await importParams(file);
+      dispatch({ type: FineTuneActionType.PUSH_HISTORY, params: state.params });
+      dispatch({ type: FineTuneActionType.SET_PARAMS, params });
+      if (styleId) {
+        dispatch({ type: FineTuneActionType.SET_SELECTED_STYLE, styleId });
+      }
+    } catch (error) {
+      console.error('导入失败:', error);
+    }
+    
+    // 清空文件输入
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [state.params]);
+  
   // 应用智能优化
   const applySmartOptimizations = useCallback(() => {
     // 保存当前参数到历史
@@ -318,6 +393,15 @@ const AIFineTunePage: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* 隐藏的文件输入 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleImport}
+        className="hidden"
+      />
+      
       {/* Header */}
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
         <div className="flex items-center justify-between px-4 py-3">
@@ -331,6 +415,22 @@ const AIFineTunePage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* 导入按钮 */}
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="导入参数"
+            >
+              <Upload size={18} className="text-white/50" />
+            </button>
+            {/* 导出按钮 */}
+            <button 
+              onClick={handleExport}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="导出参数"
+            >
+              <Download size={18} className="text-white/50" />
+            </button>
             {/* 撤销按钮 */}
             {canUndo(state) && (
               <button onClick={handleUndo} className="p-2 rounded-full hover:bg-white/10" title="撤销">

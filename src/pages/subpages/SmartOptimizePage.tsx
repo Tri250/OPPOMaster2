@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus } from 'lucide-react';
+import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus, Download, Upload } from 'lucide-react';
 
 const optimizeOptions = [
   { id: 'hdr', name: 'HDR增强', icon: Sun, color: '#FF9800', desc: '提升动态范围，保留更多细节' },
@@ -9,11 +9,55 @@ const optimizeOptions = [
   { id: 'enhance', name: '综合优化', icon: Zap, color: '#4CAF50', desc: '一键优化全部参数' },
 ];
 
+// 导出优化配置
+const exportOptimizeConfig = (options: string[], params: Record<string, number>) => {
+  const exportData = {
+    version: '2.0',
+    timestamp: new Date().toISOString(),
+    type: 'smart-optimize',
+    selectedOptions: options,
+    params,
+    app: 'OMaster',
+  };
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `omaster-optimize-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// 导入优化配置
+const importOptimizeConfig = (file: File): Promise<{ selectedOptions: string[]; params: Record<string, number> }> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.selectedOptions) {
+          resolve({ selectedOptions: data.selectedOptions, params: data.params || {} });
+        } else {
+          reject(new Error('无效的配置文件'));
+        }
+      } catch {
+        reject(new Error('解析文件失败'));
+      }
+    };
+    reader.onerror = () => reject(new Error('读取文件失败'));
+    reader.readAsText(file);
+  });
+};
+
 const SmartOptimizePage: React.FC = () => {
   const { aiParams, setAiParam, goBack } = useAppStore();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizedOptions, setOptimizedOptions] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>(['enhance']);
+  
+  // 文件输入引用
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleOption = (id: string) => {
     setSelectedOptions(prev => 
@@ -21,6 +65,36 @@ const SmartOptimizePage: React.FC = () => {
         ? prev.filter(o => o !== id)
         : [...prev, id]
     );
+  };
+  
+  // 导出配置
+  const handleExport = () => {
+    exportOptimizeConfig(selectedOptions, {
+      contrast: aiParams.contrast,
+      sharpness: aiParams.sharpness,
+      brightness: aiParams.brightness,
+    });
+  };
+  
+  // 导入配置
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const { selectedOptions: options, params } = await importOptimizeConfig(file);
+      setSelectedOptions(options);
+      if (params.contrast !== undefined) setAiParam('contrast', params.contrast);
+      if (params.sharpness !== undefined) setAiParam('sharpness', params.sharpness);
+      if (params.brightness !== undefined) setAiParam('brightness', params.brightness);
+    } catch (error) {
+      console.error('导入失败:', error);
+    }
+    
+    // 清空文件输入
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleOptimize = () => {
@@ -61,6 +135,15 @@ const SmartOptimizePage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a]">
+      {/* 隐藏的文件输入 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleImport}
+        className="hidden"
+      />
+      
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
         <button 
@@ -70,6 +153,23 @@ const SmartOptimizePage: React.FC = () => {
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">智能优化</h1>
+        <div className="flex-1" />
+        {/* 导入按钮 */}
+        <button 
+          onClick={() => fileInputRef.current?.click()}
+          className="p-2 rounded-full hover:bg-white/10"
+          title="导入配置"
+        >
+          <Upload size={18} className="text-white/50" />
+        </button>
+        {/* 导出按钮 */}
+        <button 
+          onClick={handleExport}
+          className="p-2 rounded-full hover:bg-white/10"
+          title="导出配置"
+        >
+          <Download size={18} className="text-white/50" />
+        </button>
       </div>
 
       {/* Preview */}
