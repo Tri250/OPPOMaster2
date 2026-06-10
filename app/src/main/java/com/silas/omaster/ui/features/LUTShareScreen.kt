@@ -24,6 +24,7 @@ import com.silas.omaster.data.remote.LUTRemoteDataSource
 import com.silas.omaster.data.repository.DownloadProgress
 import com.silas.omaster.data.repository.LUTRepository
 import com.silas.omaster.data.repository.Resource
+import com.silas.omaster.lut.LUTIntensityManager
 import com.silas.omaster.ui.theme.*
 
 /**
@@ -39,6 +40,8 @@ import com.silas.omaster.ui.theme.*
  * - LUT 分类浏览（含 HASSELBLAD 哈苏专属）
  * - LUT 下载/收藏/评分
  * - LUT 搜索 + 多种排序
+ * - LUT 精细调节（强度、局部应用）
+ * - LUT 混合叠加
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +62,15 @@ fun LUTShareScreen(
     val newLUTs by viewModel.newLUTs.collectAsState()
     val downloadStates by viewModel.downloadStates.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
+
+    // 新增状态：LUT 精细调节和混合
+    var showAdjustPanel by remember { mutableStateOf(false) }
+    var adjustingLUT by remember { mutableStateOf<MasterLUT?>(null) }
+    var lutIntensity by remember { mutableStateOf(100f) }
+    var maskType by remember { mutableStateOf("full") }
+    var showBlendPanel by remember { mutableStateOf(false) }
+    var blendConfigs by remember { mutableStateOf<List<LUTBlendConfig>>(emptyList()) }
+    var selectedLUT by remember { mutableStateOf<MasterLUT?>(null) }
 
     // 分类列表 - 使用 MasterLUT 中的 LUTCategory
     val categories = remember { LUTCategory.entries.toList() }
@@ -457,4 +469,231 @@ class LUTViewModelFactory(private val repository: LUTRepository) : androidx.life
             return LUTViewModelFactory(repository)
         }
     }
+}
+
+/**
+ * LUT 混合配置
+ */
+data class LUTBlendConfig(
+    val lut: MasterLUT,
+    val weight: Float = 0.5f,
+    val enabled: Boolean = true
+)
+
+/**
+ * LUT 精细调节面板
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LUTAdjustPanel(
+    lut: MasterLUT,
+    intensity: Float,
+    maskType: String,
+    onIntensityChange: (Float) -> Unit,
+    onMaskTypeChange: (String) -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("LUT 精细调节", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                // 当前 LUT 信息
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(HasselbladOrange.copy(alpha = 0.2f))
+                    ) {
+                        Text(
+                            text = lut.nameEn.firstOrNull()?.toString() ?: "",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = HasselbladOrange,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(lut.name, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                        Text(lut.category.displayName, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 强度滑块
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("LUT 强度", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                    Text("${intensity.toInt()}%", style = MaterialTheme.typography.bodyMedium, color = HasselbladOrange, fontWeight = FontWeight.Bold)
+                }
+                Slider(
+                    value = intensity,
+                    onValueChange = onIntensityChange,
+                    valueRange = 0f..100f,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = HasselbladOrange,
+                        activeTrackColor = HasselbladOrange
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 局部应用
+                Text("局部应用", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("全图" to "full", "天空" to "sky", "人物" to "person", "自定义" to "custom").forEach { (name, type) ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (maskType == type) HasselbladOrange else Color.White.copy(alpha = 0.1f))
+                                .clickable { onMaskTypeChange(type) }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (maskType == type) Color.White else Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onApply,
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("应用调节")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消", color = Color.White.copy(alpha = 0.6f))
+            }
+        },
+        containerColor = Color(0xFF1A1A1A)
+    )
+}
+
+/**
+ * LUT 混合面板
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LUTBlendPanel(
+    configs: List<LUTBlendConfig>,
+    onWeightChange: (Int, Float) -> Unit,
+    onRemove: (Int) -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("LUT 混合叠加", fontWeight = FontWeight.Bold) },
+        text = {
+            if (configs.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Layers, contentDescription = null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(32.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("暂无混合 LUT", color = Color.White.copy(alpha = 0.5f))
+                        Text("从 LUT 详情添加到混合", color = Color.White.copy(alpha = 0.3f), fontSize = 12.sp)
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    configs.forEachIndexed { index, config ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(HasselbladOrange.copy(alpha = 0.2f))
+                                        ) {
+                                            Text(
+                                                config.lut.nameEn.firstOrNull()?.toString() ?: "",
+                                                color = HasselbladOrange,
+                                                modifier = Modifier.align(Alignment.Center)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(config.lut.name, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                                            Text("权重: ${(config.weight * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                                        }
+                                    }
+                                    IconButton(onClick = { onRemove(index) }) {
+                                        Icon(Icons.Default.Close, contentDescription = "移除", tint = Color.White.copy(alpha = 0.5f))
+                                    }
+                                }
+                                Slider(
+                                    value = config.weight,
+                                    onValueChange = { onWeightChange(index, it) },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = HasselbladOrange,
+                                        activeTrackColor = HasselbladOrange
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onApply,
+                enabled = configs.isNotEmpty(),
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("应用混合")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消", color = Color.White.copy(alpha = 0.6f))
+            }
+        },
+        containerColor = Color(0xFF1A1A1A)
+    )
 }
