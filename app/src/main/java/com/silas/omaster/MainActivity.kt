@@ -135,6 +135,9 @@ sealed class Screen {
     data object RawEditor : Screen()
 
     @Serializable
+    data object LUTAndVignette : Screen()
+
+    @Serializable
     data object NotificationSettings : Screen()
 
     @Serializable
@@ -665,6 +668,13 @@ fun MainApp(navController: NavHostController) {
             // RAW 编辑器
             composable<Screen.RawEditor> {
                 com.silas.omaster.ui.features.RawEditorScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // LUT 精细调节 + 暗角与畸变
+            composable<Screen.LUTAndVignette> {
+                com.silas.omaster.ui.features.LUTAndVignetteScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
