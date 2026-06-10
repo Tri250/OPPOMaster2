@@ -50,14 +50,14 @@ class MasterInsightEngine private constructor(context: Context) {
         sceneProfile: SceneProfile,
         preferences: FilmPreferences = FilmPreferences()
     ): FilmMatchResult = withContext(Dispatchers.Default) {
-        val candidates = profile.recommendedFilm.map { film ->
+        val candidates = sceneProfile.recommendedFilm.map { film ->
             val score = calculateFilmMatchScore(film, sceneProfile, preferences)
             FilmCandidate(film, score)
         }.sortedByDescending { it.score }
 
         FilmMatchResult(
             primaryRecommendation = candidates.firstOrNull() 
-                ?: FilmCandidate(profile.recommendedFilm.firstOrNull() ?: FilmPreset(
+                ?: FilmCandidate(sceneProfile.recommendedFilm.firstOrNull() ?: FilmPreset(
                     id = "cc", name = "CC 经典负片", series = FilmSeries.CLASSIC, matchScore = 0.85f
                 ), 0.85f),
             alternatives = candidates.take(3),

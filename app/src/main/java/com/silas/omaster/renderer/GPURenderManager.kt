@@ -418,9 +418,14 @@ class GPURenderManager private constructor(private val context: Context) {
         return suspendCancellableCoroutine { continuation ->
             renderHandler?.post {
                 try {
-                    continuation.resume(block()) {}
+                    val result = block()
+                    if (continuation.isActive) {
+                        continuation.resume(result) {}
+                    }
                 } catch (e: Exception) {
-                    continuation.resumeWithException(e)
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(e)
+                    }
                 }
             }
             
