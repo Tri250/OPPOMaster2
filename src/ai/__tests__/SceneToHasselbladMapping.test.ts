@@ -102,12 +102,12 @@ describe('SceneToHasselbladMapping', () => {
 
     it('风景场景应该有较高的清晰度', () => {
       const params = getHasselbladParams('landscape-sunset');
-      expect(params.clarity).toBeGreaterThanOrEqual(15);
+      expect(params.sharpness).toBeGreaterThanOrEqual(12);
     });
 
     it('夜景场景应该有较高的对比度', () => {
-      const params = getHasselbladParams('night-cityscape');
-      expect(params.contrast).toBeGreaterThanOrEqual(10);
+      const params = getHasselbladParams('night-city');
+      expect(params.contrast).toBeGreaterThanOrEqual(20);
     });
   });
 
@@ -140,13 +140,12 @@ describe('SceneToHasselbladMapping', () => {
         contrast: 0,
         colorTemp: 0,
         sharpness: 0,
-        clarity: 0,
         vignette: 0,
         cyanMagenta: 0,
         softLight: SoftLightMode.NONE,
       };
 
-      const advice = getParamAdjustmentAdvice(currentParams, 'portrait-indoor');
+      const advice = getParamAdjustmentAdvice(currentParams, 'portrait-standard');
       expect(advice).toBeDefined();
       expect(advice.length).toBeGreaterThan(0);
     });
@@ -158,13 +157,12 @@ describe('SceneToHasselbladMapping', () => {
         contrast: 15,  // 较高的对比度
         colorTemp: 0,
         sharpness: 0,
-        clarity: 0,
         vignette: 0,
         cyanMagenta: 0,
         softLight: SoftLightMode.NONE,
       };
 
-      const advice = getParamAdjustmentAdvice(currentParams, 'portrait-indoor');
+      const advice = getParamAdjustmentAdvice(currentParams, 'portrait-standard');
       // 对于人像场景，高对比度应该被建议调整
       const hasContrastAdvice = advice.some(a => 
         a.param.toLowerCase().includes('contrast') || 

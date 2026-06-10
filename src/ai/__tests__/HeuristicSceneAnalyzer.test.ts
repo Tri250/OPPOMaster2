@@ -1,5 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HeuristicSceneAnalyzer, getAnalyzer } from '../HeuristicSceneAnalyzer';
+
+// Mock ImageData for Node.js environment
+class MockImageData {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+
+  constructor(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+    this.data = new Uint8ClampedArray(width * height * 4);
+  }
+}
+
+// Setup global mock
+vi.stubGlobal('ImageData', MockImageData);
 
 /**
  * HeuristicSceneAnalyzer 单元测试
@@ -20,7 +36,7 @@ describe('HeuristicSceneAnalyzer', () => {
   describe('analyze', () => {
     it('应该返回分析结果', async () => {
       // 创建测试图像数据
-      const mockImageData = new ImageData(100, 100);
+      const mockImageData = new MockImageData(100, 100);
       
       // 填充橙色像素（暖色调）
       for (let i = 0; i < mockImageData.data.length; i += 4) {
@@ -40,7 +56,7 @@ describe('HeuristicSceneAnalyzer', () => {
     });
 
     it('应该正确识别暖色调图像', async () => {
-      const mockImageData = new ImageData(100, 100);
+      const mockImageData = new MockImageData(100, 100);
       
       // 填充橙色像素（暖色调）
       for (let i = 0; i < mockImageData.data.length; i += 4) {
@@ -57,7 +73,7 @@ describe('HeuristicSceneAnalyzer', () => {
     });
 
     it('应该正确识别冷色调图像', async () => {
-      const mockImageData = new ImageData(100, 100);
+      const mockImageData = new MockImageData(100, 100);
       
       // 填充蓝色像素（冷色调）
       for (let i = 0; i < mockImageData.data.length; i += 4) {
@@ -74,7 +90,7 @@ describe('HeuristicSceneAnalyzer', () => {
     });
 
     it('应该正确识别暗色调图像', async () => {
-      const mockImageData = new ImageData(100, 100);
+      const mockImageData = new MockImageData(100, 100);
       
       // 填充暗色像素
       for (let i = 0; i < mockImageData.data.length; i += 4) {
