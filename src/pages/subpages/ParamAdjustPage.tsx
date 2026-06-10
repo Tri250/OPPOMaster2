@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
 import {
   ArrowLeft,
@@ -16,6 +16,13 @@ import {
   History,
   ClipboardCopy,
   Cloud,
+  Upload,
+  Download,
+  Image as ImageIcon,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Move,
 } from 'lucide-react';
 
 /**
@@ -24,6 +31,12 @@ import {
  */
 const ParamAdjustPage: React.FC = () => {
   const { goBack } = useAppStore();
+
+  // 图片状态
+  const [image, setImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 参数状态
   const [params, setParams] = useState<Record<string, number>>({
@@ -45,6 +58,64 @@ const ParamAdjustPage: React.FC = () => {
 
   // 当前展开的分组
   const [expandedGroup, setExpandedGroup] = useState<string>('color');
+
+  // 导出选项状态
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // 拖拽上传处理
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setImage(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setImage(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, []);
+
+  const handleExport = useCallback((format: string) => {
+    if (!image) return;
+    
+    // 创建下载链接
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = `omaster_export_${Date.now()}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowExportMenu(false);
+  }, [image]);
 
   // 快捷预设
   const quickPresets = [
@@ -144,6 +215,15 @@ const ParamAdjustPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a]">
+      {/* 隐藏的文件输入 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -159,6 +239,53 @@ const ParamAdjustPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* 上传按钮 */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+            title="上传图片"
+          >
+            <Upload size={16} className="text-white" />
+          </button>
+          {/* 导出按钮 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={!image}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                image ? 'bg-white/10 hover:bg-white/20' : 'bg-white/5'
+              }`}
+              title="导出图片"
+            >
+              <Download size={16} className={image ? 'text-white' : 'text-white/30'} />
+            </button>
+            {/* 导出菜单 */}
+            {showExportMenu && image && (
+              <div className="absolute right-0 top-10 z-50 w-40 rounded-xl bg-[#1a1a1a] border border-white/10 shadow-xl overflow-hidden">
+                <button
+                  onClick={() => handleExport('png')}
+                  className="w-full px-4 py-2.5 text-left text-white/70 text-sm hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
+                  <ImageIcon size={14} />
+                  导出 PNG
+                </button>
+                <button
+                  onClick={() => handleExport('jpg')}
+                  className="w-full px-4 py-2.5 text-left text-white/70 text-sm hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
+                  <ImageIcon size={14} />
+                  导出 JPG
+                </button>
+                <button
+                  onClick={() => handleExport('webp')}
+                  className="w-full px-4 py-2.5 text-left text-white/70 text-sm hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
+                  <ImageIcon size={14} />
+                  导出 WebP
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={resetAll}
             className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
@@ -169,6 +296,75 @@ const ParamAdjustPage: React.FC = () => {
             <Check size={16} className="text-white" />
           </button>
         </div>
+      </div>
+
+      {/* 图片预览区（拖拽上传） */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative h-48 mx-4 mt-3 rounded-2xl overflow-hidden transition-all ${
+          isDragging
+            ? 'bg-[#FF6B35]/20 border-2 border-dashed border-[#FF6B35]'
+            : 'bg-white/5 border border-white/10'
+        }`}
+      >
+        {image ? (
+          <>
+            {/* 图片显示 */}
+            <img
+              src={showOriginal ? image : image}
+              alt="预览"
+              className="w-full h-full object-cover"
+            />
+            {/* 对比提示 */}
+            <div className="absolute bottom-2 right-2 flex gap-2">
+              <button
+                onMouseDown={() => setShowOriginal(true)}
+                onMouseUp={() => setShowOriginal(false)}
+                onMouseLeave={() => setShowOriginal(false)}
+                className="px-3 py-1.5 rounded-lg bg-black/60 text-white/70 text-xs backdrop-blur-sm"
+              >
+                长按对比原图
+              </button>
+              <button
+                onClick={() => setImage(null)}
+                className="px-2 py-1.5 rounded-lg bg-black/60 text-white/70 backdrop-blur-sm"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {/* 参数效果指示 */}
+            {nonZeroCount > 0 && (
+              <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-[#FF6B35]/80 text-white text-xs font-medium backdrop-blur-sm">
+                {nonZeroCount} 个参数已应用
+              </div>
+            )}
+          </>
+        ) : (
+          /* 空状态 / 拖拽提示 */
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {isDragging ? (
+              <>
+                <Upload size={40} className="text-[#FF6B35] mb-2" />
+                <p className="text-[#FF6B35] font-medium">松开以上传图片</p>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-3">
+                  <ImageIcon size={32} className="text-white/30" />
+                </div>
+                <p className="text-white/50 text-sm mb-1">拖拽图片到此处</p>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 rounded-xl bg-[#FF6B35]/20 text-[#FF6B35] text-sm font-medium hover:bg-[#FF6B35]/30 transition-colors"
+                >
+                  或点击上传
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}
