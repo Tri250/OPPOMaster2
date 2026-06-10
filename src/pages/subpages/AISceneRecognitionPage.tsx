@@ -10,38 +10,60 @@ import {
   Circle
 } from 'lucide-react';
 
-// 精细场景类型定义 - 带完整参数
+// 精细场景类型定义 - 扩展到35+场景
 const SCENE_TYPES = [
-  // 人像系列
-  { id: 'portrait', name: '人像', icon: Users, color: '#FF6B9D', params: { exposure: 0.3, contrast: 10, highlights: -10, shadows: 15, saturation: 5, vibrance: 10, warmth: 3, sharpness: 15, skinSmooth: 25 } },
-  { id: 'portrait-backlit', name: '逆光人像', icon: Sun, color: '#FFB347', params: { exposure: 0.8, contrast: 12, highlights: -30, shadows: 40, saturation: 10, vibrance: 15, warmth: -5 } },
-  { id: 'portrait-studio', name: '棚拍人像', icon: Camera, color: '#C9A0DC', params: { exposure: 0, contrast: 15, highlights: -5, shadows: 10, saturation: 0, vibrance: 5, warmth: 0, sharpness: 30 } },
-  { id: 'portrait-bw', name: '黑白人像', icon: Eye, color: '#808080', params: { exposure: 0.2, contrast: 20, saturation: -100, vibrance: 0, warmth: 0, sharpness: 25, grain: 8 } },
+  // 人像系列 (6种)
+  { id: 'portrait', name: '人像', icon: Users, color: '#FF6B9D', category: '人像', params: { exposure: 0.3, contrast: 10, highlights: -10, shadows: 15, saturation: 5, vibrance: 10, warmth: 3, sharpness: 15, skinSmooth: 25 } },
+  { id: 'portrait-backlit', name: '逆光人像', icon: Sun, color: '#FFB347', category: '人像', params: { exposure: 0.8, contrast: 12, highlights: -30, shadows: 40, saturation: 10, vibrance: 15, warmth: -5 } },
+  { id: 'portrait-studio', name: '棚拍人像', icon: Camera, color: '#C9A0DC', category: '人像', params: { exposure: 0, contrast: 15, highlights: -5, shadows: 10, saturation: 0, vibrance: 5, warmth: 0, sharpness: 30 } },
+  { id: 'portrait-bw', name: '黑白人像', icon: Eye, color: '#808080', category: '人像', params: { exposure: 0.2, contrast: 20, saturation: -100, vibrance: 0, warmth: 0, sharpness: 25, grain: 8 } },
+  { id: 'portrait-couple', name: '情侣', icon: Users, color: '#FF69B4', category: '人像', params: { exposure: 0.3, contrast: 8, highlights: -8, shadows: 12, saturation: 8, vibrance: 12, warmth: 5, sharpness: 18, skinSmooth: 20 } },
+  { id: 'portrait-group', name: '合影', icon: Users, color: '#DDA0DD', category: '人像', params: { exposure: 0.2, contrast: 10, highlights: -5, shadows: 10, saturation: 5, vibrance: 8, warmth: 0, sharpness: 20 } },
   
-  // 风景系列
-  { id: 'landscape', name: '风景', icon: Mountain, color: '#4ECDC4', params: { exposure: 0.2, contrast: 12, highlights: -10, shadows: 15, saturation: 18, vibrance: 15, warmth: 5, sharpness: 20, clarity: 15 } },
-  { id: 'landscape-sunset', name: '日落', icon: Sun, color: '#FF7F50', params: { exposure: 0.3, contrast: 15, highlights: -15, shadows: 10, saturation: 28, vibrance: 20, warmth: 25, sharpness: 15 } },
-  { id: 'landscape-blue-sky', name: '蓝天白云', icon: Mountain, color: '#87CEEB', params: { exposure: 0.1, contrast: 10, highlights: -15, shadows: 20, saturation: 15, vibrance: 12, warmth: -10, dehaze: 20 } },
-  { id: 'landscape-forest', name: '森林', icon: Leaf, color: '#228B22', params: { exposure: 0.2, contrast: 12, highlights: -10, shadows: 15, saturation: 22, vibrance: 18, warmth: 5, sharpness: 22 } },
-  { id: 'landscape-autumn', name: '秋景', icon: Leaf, color: '#D2691E', params: { exposure: 0.2, contrast: 15, highlights: -10, shadows: 12, saturation: 32, vibrance: 25, warmth: 18, sharpness: 20 } },
+  // 风景系列 (7种)
+  { id: 'landscape', name: '风景', icon: Mountain, color: '#4ECDC4', category: '风景', params: { exposure: 0.2, contrast: 12, highlights: -10, shadows: 15, saturation: 18, vibrance: 15, warmth: 5, sharpness: 20, clarity: 15 } },
+  { id: 'landscape-sunset', name: '日落', icon: Sun, color: '#FF7F50', category: '风景', params: { exposure: 0.3, contrast: 15, highlights: -15, shadows: 10, saturation: 28, vibrance: 20, warmth: 25, sharpness: 15 } },
+  { id: 'landscape-blue-sky', name: '蓝天白云', icon: Mountain, color: '#87CEEB', category: '风景', params: { exposure: 0.1, contrast: 10, highlights: -15, shadows: 20, saturation: 15, vibrance: 12, warmth: -10, dehaze: 20 } },
+  { id: 'landscape-forest', name: '森林', icon: Leaf, color: '#228B22', category: '风景', params: { exposure: 0.2, contrast: 12, highlights: -10, shadows: 15, saturation: 22, vibrance: 18, warmth: 5, sharpness: 22 } },
+  { id: 'landscape-autumn', name: '秋景', icon: Leaf, color: '#D2691E', category: '风景', params: { exposure: 0.2, contrast: 15, highlights: -10, shadows: 12, saturation: 32, vibrance: 25, warmth: 18, sharpness: 20 } },
+  { id: 'landscape-beach', name: '海滩', icon: Sun, color: '#20B2AA', category: '风景', params: { exposure: 0.3, contrast: 8, highlights: -20, shadows: 15, saturation: 20, vibrance: 18, warmth: 10, sharpness: 15 } },
+  { id: 'landscape-snow', name: '雪景', icon: Sparkles, color: '#B0E0E6', category: '风景', params: { exposure: 0.1, contrast: 15, highlights: -25, shadows: 20, saturation: -5, vibrance: 5, warmth: -15, sharpness: 18 } },
   
-  // 夜景系列
-  { id: 'night', name: '夜景', icon: Moon, color: '#483D8B', params: { exposure: 0.5, contrast: 18, highlights: -20, shadows: 30, saturation: -5, vibrance: 5, warmth: 8, noiseReduction: 30 } },
-  { id: 'night-city', name: '城市夜景', icon: Building, color: '#9370DB', params: { exposure: 0.6, contrast: 22, highlights: -25, shadows: 35, saturation: 12, vibrance: 15, warmth: 12, sharpness: 20 } },
-  { id: 'night-starry', name: '星空', icon: Sparkles, color: '#191970', params: { exposure: 1.0, contrast: 25, highlights: -30, shadows: 40, saturation: 15, vibrance: 20, warmth: -5, noiseReduction: 40 } },
+  // 夜景系列 (5种)
+  { id: 'night', name: '夜景', icon: Moon, color: '#483D8B', category: '夜景', params: { exposure: 0.5, contrast: 18, highlights: -20, shadows: 30, saturation: -5, vibrance: 5, warmth: 8, noiseReduction: 30 } },
+  { id: 'night-city', name: '城市夜景', icon: Building, color: '#9370DB', category: '夜景', params: { exposure: 0.6, contrast: 22, highlights: -25, shadows: 35, saturation: 12, vibrance: 15, warmth: 12, sharpness: 20 } },
+  { id: 'night-starry', name: '星空', icon: Sparkles, color: '#191970', category: '夜景', params: { exposure: 1.0, contrast: 25, highlights: -30, shadows: 40, saturation: 15, vibrance: 20, warmth: -5, noiseReduction: 40 } },
+  { id: 'night-neon', name: '霓虹', icon: Zap, color: '#FF00FF', category: '夜景', params: { exposure: 0.4, contrast: 30, highlights: -15, shadows: 25, saturation: 35, vibrance: 30, warmth: 0, sharpness: 25 } },
+  { id: 'night-candle', name: '烛光', icon: Sun, color: '#FFA500', category: '夜景', params: { exposure: 0.6, contrast: 12, highlights: -10, shadows: 30, saturation: 10, vibrance: 8, warmth: 25, noiseReduction: 20 } },
   
-  // 美食系列
-  { id: 'food', name: '美食', icon: Utensils, color: '#FF6347', params: { exposure: 0.3, contrast: 8, highlights: -5, shadows: 10, saturation: 25, vibrance: 20, warmth: 12, sharpness: 30, brightness: 5 } },
-  { id: 'food-restaurant', name: '餐厅美食', icon: Coffee, color: '#CD853F', params: { exposure: 0.2, contrast: 10, highlights: -8, shadows: 12, saturation: 18, vibrance: 15, warmth: 18, sharpness: 25, vignette: -15 } },
-  { id: 'food-dessert', name: '甜点', icon: Coffee, color: '#FFB6C1', params: { exposure: 0.4, contrast: 5, highlights: -5, shadows: 8, saturation: 28, vibrance: 22, warmth: 8, sharpness: 20, brightness: 10 } },
+  // 美食系列 (4种)
+  { id: 'food', name: '美食', icon: Utensils, color: '#FF6347', category: '美食', params: { exposure: 0.3, contrast: 8, highlights: -5, shadows: 10, saturation: 25, vibrance: 20, warmth: 12, sharpness: 30, brightness: 5 } },
+  { id: 'food-restaurant', name: '餐厅美食', icon: Coffee, color: '#CD853F', category: '美食', params: { exposure: 0.2, contrast: 10, highlights: -8, shadows: 12, saturation: 18, vibrance: 15, warmth: 18, sharpness: 25, vignette: -15 } },
+  { id: 'food-dessert', name: '甜点', icon: Coffee, color: '#FFB6C1', category: '美食', params: { exposure: 0.4, contrast: 5, highlights: -5, shadows: 8, saturation: 28, vibrance: 22, warmth: 8, sharpness: 20, brightness: 10 } },
+  { id: 'food-drink', name: '饮品', icon: Coffee, color: '#8B4513', category: '美食', params: { exposure: 0.3, contrast: 12, highlights: -10, shadows: 15, saturation: 15, vibrance: 12, warmth: 5, sharpness: 25, clarity: 10 } },
   
-  // 微距系列
-  { id: 'macro-flower', name: '花卉', icon: Flower, color: '#FF69B4', params: { exposure: 0.2, contrast: 15, highlights: -10, shadows: 12, saturation: 30, vibrance: 25, warmth: 5, sharpness: 35, clarity: 20 } },
-  { id: 'macro-detail', name: '细节特写', icon: Droplets, color: '#00CED1', params: { exposure: 0.1, contrast: 18, highlights: -15, shadows: 15, saturation: 12, vibrance: 10, warmth: 0, sharpness: 40, clarity: 25 } },
+  // 街拍系列 (4种)
+  { id: 'street', name: '街拍', icon: Camera, color: '#708090', category: '街拍', params: { exposure: 0.2, contrast: 18, highlights: -8, shadows: 12, saturation: 5, vibrance: 10, warmth: 0, sharpness: 25, grain: 5 } },
+  { id: 'street-cafe', name: '咖啡馆', icon: Coffee, color: '#A0522D', category: '街拍', params: { exposure: 0.3, contrast: 10, highlights: -10, shadows: 15, saturation: 12, vibrance: 15, warmth: 15, sharpness: 20 } },
+  { id: 'street-architecture', name: '建筑', icon: Building, color: '#4682B4', category: '街拍', params: { exposure: 0.1, contrast: 20, highlights: -15, shadows: 10, saturation: 8, vibrance: 10, warmth: 0, sharpness: 30, clarity: 20 } },
+  { id: 'street-museum', name: '博物馆', icon: Building, color: '#BC8F8F', category: '街拍', params: { exposure: 0.2, contrast: 12, highlights: -12, shadows: 15, saturation: -5, vibrance: 5, warmth: 5, sharpness: 22 } },
   
-  // 运动系列
-  { id: 'sports', name: '运动', icon: Zap, color: '#FF4500', params: { exposure: 0.5, contrast: 20, highlights: -5, shadows: 15, saturation: 8, vibrance: 10, warmth: 0, sharpness: 35, motionBlur: -20 } },
-  { id: 'action', name: '动作', icon: Zap, color: '#FFD700', params: { exposure: 0.4, contrast: 22, highlights: -8, shadows: 12, saturation: 5, vibrance: 8, warmth: 0, sharpness: 40, motionBlur: -30 } },
+  // 微距系列 (4种)
+  { id: 'macro-flower', name: '花卉', icon: Flower, color: '#FF69B4', category: '微距', params: { exposure: 0.2, contrast: 15, highlights: -10, shadows: 12, saturation: 30, vibrance: 25, warmth: 5, sharpness: 35, clarity: 20 } },
+  { id: 'macro-detail', name: '细节特写', icon: Droplets, color: '#00CED1', category: '微距', params: { exposure: 0.1, contrast: 18, highlights: -15, shadows: 15, saturation: 12, vibrance: 10, warmth: 0, sharpness: 40, clarity: 25 } },
+  { id: 'macro-insect', name: '昆虫', icon: Eye, color: '#32CD32', category: '微距', params: { exposure: 0.2, contrast: 20, highlights: -8, shadows: 10, saturation: 18, vibrance: 15, warmth: 3, sharpness: 45, clarity: 30 } },
+  { id: 'macro-product', name: '产品', icon: Camera, color: '#696969', category: '微距', params: { exposure: 0.3, contrast: 15, highlights: -5, shadows: 8, saturation: 10, vibrance: 8, warmth: 0, sharpness: 35, clarity: 25 } },
+  
+  // 运动/活动系列 (4种)
+  { id: 'sports', name: '运动', icon: Zap, color: '#FF4500', category: '运动', params: { exposure: 0.5, contrast: 20, highlights: -5, shadows: 15, saturation: 8, vibrance: 10, warmth: 0, sharpness: 35, motionBlur: -20 } },
+  { id: 'action', name: '动作', icon: Zap, color: '#FFD700', category: '运动', params: { exposure: 0.4, contrast: 22, highlights: -8, shadows: 12, saturation: 5, vibrance: 8, warmth: 0, sharpness: 40, motionBlur: -30 } },
+  { id: 'concert', name: '演唱会', icon: Sparkles, color: '#9400D3', category: '运动', params: { exposure: 0.6, contrast: 25, highlights: -20, shadows: 30, saturation: 20, vibrance: 25, warmth: 5, sharpness: 20, noiseReduction: 25 } },
+  { id: 'party', name: '派对', icon: Sparkles, color: '#FF1493', category: '运动', params: { exposure: 0.4, contrast: 18, highlights: -15, shadows: 25, saturation: 15, vibrance: 20, warmth: 10, sharpness: 22 } },
+  
+  // 其他场景 (3种)
+  { id: 'pet', name: '宠物', icon: Eye, color: '#DAA520', category: '其他', params: { exposure: 0.2, contrast: 12, highlights: -8, shadows: 12, saturation: 15, vibrance: 12, warmth: 5, sharpness: 25, clarity: 10 } },
+  { id: 'document', name: '文档', icon: Camera, color: '#708090', category: '其他', params: { exposure: 0.3, contrast: 25, highlights: -5, shadows: 5, saturation: -100, vibrance: 0, warmth: 0, sharpness: 40, clarity: 30 } },
+  { id: 'wedding', name: '婚礼', icon: Flower, color: '#FFF0F5', category: '其他', params: { exposure: 0.2, contrast: 8, highlights: -10, shadows: 15, saturation: 10, vibrance: 15, warmth: 8, sharpness: 20, skinSmooth: 15 } },
 ];
 
 const AISceneRecognitionPage: React.FC = () => {
@@ -58,6 +80,20 @@ const AISceneRecognitionPage: React.FC = () => {
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [recognitionHistory, setRecognitionHistory] = useState<typeof SCENE_TYPES[0][]>([]);
+  
+  // 新增状态
+  const [confidence, setConfidence] = useState(0);
+  const [alternativeScenes, setAlternativeScenes] = useState<typeof SCENE_TYPES[0][]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState({ color: 0, brightness: 0, face: 0, texture: 0 });
+
+  // 场景分类
+  const categories = ['人像', '风景', '夜景', '美食', '街拍', '微距', '运动', '其他'];
+  
+  // 根据分类筛选场景
+  const filteredScenes = selectedCategory 
+    ? SCENE_TYPES.filter(s => s.category === selectedCategory)
+    : SCENE_TYPES;
 
   // 启动相机
   const startCamera = useCallback(async () => {
@@ -113,14 +149,42 @@ const AISceneRecognitionPage: React.FC = () => {
     const imageData = canvas.toDataURL('image/jpeg');
     setCapturedImage(imageData);
     
-    // 模拟哈苏之眼识别
+    // 模拟哈苏之眼识别（带进度）
     setIsAnalyzing(true);
+    setAnalysisProgress({ color: 0, brightness: 0, face: 0, texture: 0 });
+    
+    // 模拟分析进度
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => ({
+        color: Math.min(prev.color + 10, 100),
+        brightness: prev.color > 30 ? Math.min(prev.brightness + 12, 100) : prev.brightness,
+        face: prev.brightness > 50 ? Math.min(prev.face + 15, 100) : prev.face,
+        texture: prev.face > 70 ? Math.min(prev.texture + 20, 100) : prev.texture,
+      }));
+    }, 200);
     
     setTimeout(() => {
+      clearInterval(progressInterval);
+      setAnalysisProgress({ color: 100, brightness: 100, face: 100, texture: 100 });
+      
       // 随机选择一个场景进行模拟
-      const randomScene = SCENE_TYPES[Math.floor(Math.random() * SCENE_TYPES.length)];
+      const randomIndex = Math.floor(Math.random() * SCENE_TYPES.length);
+      const randomScene = SCENE_TYPES[randomIndex];
       setRecognizedScene(randomScene);
       setAppliedParams(randomScene.params);
+      
+      // 生成置信度 (70-98%)
+      const randomConfidence = 70 + Math.floor(Math.random() * 28);
+      setConfidence(randomConfidence);
+      
+      // 生成备选场景（同分类的其他场景）
+      const sameCategoryScenes = SCENE_TYPES.filter(
+        s => s.category === randomScene.category && s.id !== randomScene.id
+      );
+      const alternatives = sameCategoryScenes
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      setAlternativeScenes(alternatives);
       
       // 添加到历史记录
       setRecognitionHistory(prev => [randomScene, ...prev.slice(0, 4)]);
@@ -279,41 +343,65 @@ const AISceneRecognitionPage: React.FC = () => {
           </div>
         )}
         
-        {/* 识别进度 */}
+        {/* 识别进度 - 使用真实进度数据 */}
         <div className="space-y-4">
           <div className="bg-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Eye size={16} className="text-blue-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Eye size={16} className="text-blue-400" />
+                </div>
+                <span className="text-white text-sm">颜色分析</span>
               </div>
-              <span className="text-white text-sm">场景检测</span>
+              <span className="text-white/50 text-xs">{analysisProgress.color}%</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full animate-pulse" style={{ width: '100%' }} />
+              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-300" style={{ width: `${analysisProgress.color}%` }} />
             </div>
           </div>
           
           <div className="bg-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                <Sliders size={16} className="text-orange-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                  <Sun size={16} className="text-yellow-400" />
+                </div>
+                <span className="text-white text-sm">亮度检测</span>
               </div>
-              <span className="text-white text-sm">参数匹配</span>
+              <span className="text-white/50 text-xs">{analysisProgress.brightness}%</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full animate-pulse" style={{ width: '0%', animation: 'progress 2s ease-out forwards', animationDelay: '1s' }} />
+              <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-full transition-all duration-300" style={{ width: `${analysisProgress.brightness}%` }} />
             </div>
           </div>
           
           <div className="bg-white/10 rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <Sparkles size={16} className="text-green-400" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                  <Users size={16} className="text-pink-400" />
+                </div>
+                <span className="text-white text-sm">人脸检测</span>
               </div>
-              <span className="text-white text-sm">效果优化</span>
+              <span className="text-white/50 text-xs">{analysisProgress.face}%</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full animate-pulse" style={{ width: '0%', animation: 'progress 2s ease-out forwards', animationDelay: '2s' }} />
+              <div className="h-full bg-gradient-to-r from-pink-500 to-pink-400 rounded-full transition-all duration-300" style={{ width: `${analysisProgress.face}%` }} />
+            </div>
+          </div>
+          
+          <div className="bg-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <Sliders size={16} className="text-green-400" />
+                </div>
+                <span className="text-white text-sm">纹理分析</span>
+              </div>
+              <span className="text-white/50 text-xs">{analysisProgress.texture}%</span>
+            </div>
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-300" style={{ width: `${analysisProgress.texture}%` }} />
             </div>
           </div>
         </div>
@@ -379,19 +467,26 @@ const AISceneRecognitionPage: React.FC = () => {
               <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${recognizedScene.color}20` }}>
                 {React.createElement(recognizedScene.icon, { size: 24, style: { color: recognizedScene.color } })}
               </div>
-              <div>
-                <h3 className="text-white font-bold">{recognizedScene.name}</h3>
-                <p className="text-white/60 text-sm">已自动匹配最佳参数</p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white font-bold">{recognizedScene.name}</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
+                    {confidence}% 置信度
+                  </span>
+                </div>
+                <p className="text-white/60 text-sm">{recognizedScene.category} · 已自动匹配最佳参数</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            
+            {/* 参数展示 */}
+            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
               <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
                 <span className="text-white/60">对比度</span>
-                <span className="text-white font-medium">+{appliedParams.contrast || 0}</span>
+                <span className="text-white font-medium">{(appliedParams.contrast || 0) >= 0 ? '+' : ''}{appliedParams.contrast || 0}</span>
               </div>
               <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
                 <span className="text-white/60">饱和度</span>
-                <span className="text-white font-medium">+{appliedParams.saturation || 0}</span>
+                <span className="text-white font-medium">{(appliedParams.saturation || 0) >= 0 ? '+' : ''}{appliedParams.saturation || 0}</span>
               </div>
               <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
                 <span className="text-white/60">锐度</span>
@@ -402,6 +497,29 @@ const AISceneRecognitionPage: React.FC = () => {
                 <span className="text-white font-medium">+{appliedParams.clarity || 0}</span>
               </div>
             </div>
+            
+            {/* 备选场景 */}
+            {alternativeScenes.length > 0 && (
+              <div>
+                <p className="text-white/40 text-xs mb-2">备选场景</p>
+                <div className="flex gap-2">
+                  {alternativeScenes.map((scene) => (
+                    <button
+                      key={scene.id}
+                      onClick={() => {
+                        setRecognizedScene(scene);
+                        setAppliedParams(scene.params);
+                      }}
+                      className="flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                      style={{ backgroundColor: `${scene.color}15` }}
+                    >
+                      {React.createElement(scene.icon, { size: 14, style: { color: scene.color } })}
+                      <span className="text-white/70 text-xs">{scene.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         
