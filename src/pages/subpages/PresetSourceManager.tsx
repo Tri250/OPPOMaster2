@@ -92,7 +92,7 @@ const PresetSourceManager: React.FC = () => {
         >
           <ArrowLeft size={20} className="text-gray-300" />
         </button>
-        <h2 className="text-lg font-semibold text-white">预设源管理</h2>
+        <h2 className="text-lg font-semibold text-white">订阅资源管理</h2>
         <div className="flex-1" />
         <button
           onClick={fetchPresetsFromSources}

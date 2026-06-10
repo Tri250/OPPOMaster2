@@ -57,7 +57,7 @@ const AboutScreen: React.FC = () => {
     },
     { 
       icon: Database, 
-      label: '预设源管理', 
+      label: '订阅资源管理', 
       value: '',
       route: 'preset-sources' as const
     },
