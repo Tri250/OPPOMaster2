@@ -537,6 +537,10 @@ data class RenderRequest(
 /**
  * CPU降级渲染器
  * 当GPU不可用时的备用渲染方案
+ * 
+ * 支持：
+ * - 18参数基础调整
+ * - LUT 应用（三线性插值）
  */
 class CPURenderer {
     
@@ -546,15 +550,21 @@ class CPURenderer {
      */
     fun render(inputBitmap: Bitmap, params: RenderParameters): Bitmap? {
         try {
-            val outputBitmap = inputBitmap.copy(Bitmap.Config.ARGB_8888, true)
-            val width = outputBitmap.width
-            val height = outputBitmap.height
+            // 1. 如果有 LUT，先应用 LUT
+            var processedBitmap = if (params.lutData != null) {
+                applyLUT(inputBitmap, params.lutData!!, params.lutCubeSize, params.lutIntensity / 100f)
+            } else {
+                inputBitmap.copy(Bitmap.Config.ARGB_8888, true)
+            }
+            
+            val width = processedBitmap.width
+            val height = processedBitmap.height
             
             // 获取像素数组
             val pixels = IntArray(width * height)
-            outputBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+            processedBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
             
-            // 应用参数调整
+            // 2. 应用参数调整
             for (i in pixels.indices) {
                 var pixel = pixels[i]
                 
@@ -615,12 +625,116 @@ class CPURenderer {
             }
             
             // 设置输出像素
-            outputBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+            processedBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
             
-            return outputBitmap
+            return processedBitmap
             
         } catch (e: Exception) {
             return null
         }
+    }
+    
+    /**
+     * 应用 LUT 到 Bitmap（三线性插值）
+     * 
+     * @param bitmap 原始图片
+     * @param lutData LUT 数据（RGB 值数组）
+     * @param cubeSize LUT 立方体尺寸
+     * @param intensity 应用强度 [0.0, 1.0]
+     * @return 处理后的图片
+     */
+    private fun applyLUT(
+        bitmap: Bitmap,
+        lutData: FloatArray,
+        cubeSize: Int,
+        intensity: Float
+    ): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        
+        val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            
+            val r = ((pixel shr 16) and 0xFF) / 255.0f
+            val g = ((pixel shr 8) and 0xFF) / 255.0f
+            val b = (pixel and 0xFF) / 255.0f
+            
+            // 三线性插值查找
+            val lutColor = lookupLUT(lutData, cubeSize, r, g, b)
+            
+            // 混合原始颜色和 LUT 颜色
+            val finalR = (r * (1 - intensity) + lutColor[0] * intensity) * 255
+            val finalG = (g * (1 - intensity) + lutColor[1] * intensity) * 255
+            val finalB = (b * (1 - intensity) + lutColor[2] * intensity) * 255
+            
+            val outputR = finalR.toInt().coerceIn(0, 255)
+            val outputG = finalG.toInt().coerceIn(0, 255)
+            val outputB = finalB.toInt().coerceIn(0, 255)
+            
+            val alpha = (pixel shr 24) and 0xFF
+            pixels[i] = (alpha shl 24) or (outputR shl 16) or (outputG shl 8) or outputB
+        }
+        
+        output.setPixels(pixels, 0, width, 0, 0, width, height)
+        return output
+    }
+    
+    /**
+     * 在 3D LUT 中查找颜色值（三线性插值）
+     */
+    private fun lookupLUT(
+        lutData: FloatArray,
+        cubeSize: Int,
+        r: Float,
+        g: Float,
+        b: Float
+    ): FloatArray {
+        val x = r * (cubeSize - 1)
+        val y = g * (cubeSize - 1)
+        val z = b * (cubeSize - 1)
+        
+        val x0 = x.toInt().coerceIn(0, cubeSize - 2)
+        val y0 = y.toInt().coerceIn(0, cubeSize - 2)
+        val z0 = z.toInt().coerceIn(0, cubeSize - 2)
+        
+        val x1 = x0 + 1
+        val y1 = y0 + 1
+        val z1 = z0 + 1
+        
+        val dx = x - x0
+        val dy = y - y0
+        val dz = z - z0
+        
+        val c000 = getLUTValue(lutData, cubeSize, x0, y0, z0)
+        val c001 = getLUTValue(lutData, cubeSize, x0, y0, z1)
+        val c010 = getLUTValue(lutData, cubeSize, x0, y1, z0)
+        val c011 = getLUTValue(lutData, cubeSize, x0, y1, z1)
+        val c100 = getLUTValue(lutData, cubeSize, x1, y0, z0)
+        val c101 = getLUTValue(lutData, cubeSize, x1, y0, z1)
+        val c110 = getLUTValue(lutData, cubeSize, x1, y1, z0)
+        val c111 = getLUTValue(lutData, cubeSize, x1, y1, z1)
+        
+        val c00 = interpolate(c000, c100, dx)
+        val c01 = interpolate(c001, c101, dx)
+        val c10 = interpolate(c010, c110, dx)
+        val c11 = interpolate(c011, c111, dx)
+        
+        val c0 = interpolate(c00, c10, dy)
+        val c1 = interpolate(c01, c11, dy)
+        
+        return interpolate(c0, c1, dz)
+    }
+    
+    private fun getLUTValue(lutData: FloatArray, cubeSize: Int, x: Int, y: Int, z: Int): FloatArray {
+        val index = (z * cubeSize * cubeSize + y * cubeSize + x) * 3
+        return FloatArray(3) { lutData[index + it] }
+    }
+    
+    private fun interpolate(a: FloatArray, b: FloatArray, t: Float): FloatArray {
+        return FloatArray(3) { a[it] + (b[it] - a[it]) * t }
     }
 }

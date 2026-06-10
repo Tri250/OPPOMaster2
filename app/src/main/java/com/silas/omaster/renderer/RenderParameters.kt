@@ -65,6 +65,23 @@ data class RenderParameters(
     val skinSmooth: Float = 0f        // 肤色平滑 [0, 100]
 ) : Parcelable {
     
+    // ========== LUT 扩展参数（非序列化，运行时使用） ==========
+    // LUT ID（用于查找已下载的 LUT 文件）
+    @kotlinx.parcelize.IgnoredOnParcel
+    var lutId: String? = null
+    
+    // LUT 强度 [0, 100]，100 表示完全应用
+    @kotlinx.parcelize.IgnoredOnParcel
+    var lutIntensity: Float = 100f
+    
+    // LUT 数据（运行时加载，不序列化）
+    @kotlinx.parcelize.IgnoredOnParcel
+    var lutData: FloatArray? = null
+    
+    // LUT 立方体尺寸
+    @kotlinx.parcelize.IgnoredOnParcel
+    var lutCubeSize: Int = 33
+    
     companion object {
         // 参数范围常量
         const val RANGE_MIN = -100f
