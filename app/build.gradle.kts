@@ -21,12 +21,12 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.silas.omaster"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.silas.omaster"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         // 版本号规范：
         // versionCode: 内部版本号，每次发布必须递增
         // versionName: 对外显示版本号，格式 主.次.修订
