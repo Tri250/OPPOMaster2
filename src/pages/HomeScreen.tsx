@@ -3,6 +3,7 @@ import { useAppStore, homePresets, Preset } from '../store/appStore';
 import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, Zap, Grid as GridIcon, Edit2 } from 'lucide-react';
 import PresetImageGallery from '../components/PresetImageGallery';
 import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton, SimpleRelatedPresets } from '../components/PresetParameters';
+import PresetDetailModal from '../components/PresetDetailModal';
 
 const tabs = [
   { key: 'all', label: '发现' },
@@ -394,160 +395,20 @@ const HomeScreen: React.FC = () => {
         )}
       </div>
 
-      {/* Preset Detail Modal - 哈苏大师配方卡 */}
+      {/* Preset Detail Modal - 哈苏大师配方卡（真实图像处理） */}
       {selectedPreset && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setSelectedPreset(null)}
-        >
-          <div
-            className="relative w-full max-w-md bg-[#0a0a0a] rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 顶栏 */}
-            <div className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b border-white/5">
-              <span className="text-white/50 text-sm">← 预设详情</span>
-              <div className="flex items-center gap-2">
-                <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <GridIcon size={16} className="text-white/50" />
-                </button>
-                <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <Edit2 size={16} className="text-white/50" />
-                </button>
-                <button
-                  onClick={() => toggleFavorite(selectedPreset.id)}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    favorites.has(selectedPreset.id)
-                      ? 'bg-red-500/20'
-                      : 'bg-white/5 hover:bg-white/10'
-                  }`}
-                >
-                  <Heart size={16} className={favorites.has(selectedPreset.id) ? 'text-red-400 fill-red-400' : 'text-white/50'} />
-                </button>
-                <button
-                  onClick={() => setSelectedPreset(null)}
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <X size={16} className="text-white/50" />
-                </button>
-              </div>
-            </div>
-
-            {/* 图片轮播画廊 */}
-            <div className="px-4 pt-4">
-              <PresetImageGallery
-                images={[
-                  selectedPreset.coverPath,
-                  selectedPreset.coverPath + '?v=2',
-                  selectedPreset.coverPath + '?v=3'
-                ]}
-                isPro={selectedPreset.isHncs}
-              />
-            </div>
-
-            {/* 预设信息 */}
-            <div className="px-4 py-4">
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-lg font-bold text-white">{selectedPreset.name}</h2>
-                {selectedPreset.isHncs && (
-                  <span className="px-1.5 py-0.5 rounded bg-[#FF6B35] text-[9px] font-bold text-white flex items-center gap-0.5">
-                    <Crown size={10} />
-                    HNCS
-                  </span>
-                )}
-                {selectedPreset.isHncs && (
-                  <span className="px-1.5 py-0.5 rounded bg-yellow-500/80 text-[9px] font-bold text-white flex items-center gap-0.5">
-                    <Zap size={10} />
-                    PRO
-                  </span>
-                )}
-              </div>
-              <p className="text-white/50 text-sm mb-2">@{selectedPreset.author}</p>
-              
-              {/* 标签 */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {selectedPreset.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-0.5 bg-white/5 rounded-full text-[10px] text-white/60"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* 统计数据 */}
-              <PresetStats
-                downloads={12580}
-                rating={4.9}
-                ratingCount={856}
-              />
-            </div>
-
-            {/* 拍摄建议 */}
-            <div className="px-4 pb-4">
-              <ShootingTipsCard
-                description={{
-                  title: '拍摄建议',
-                  content: '【环境建议】日间户外或充足自然光【场景推荐】街拍、人像、风景、建筑【拍摄要点】适合追求经典胶片质感，建议使用黄金时刻拍摄'
-                }}
-              />
-            </div>
-
-            {/* 调色参数 */}
-            <div className="px-4 pb-4">
-              <PresetParameters
-                sections={[
-                  {
-                    title: '🎨 调色参数',
-                    items: [
-                      { label: '滤镜', value: '复古100%', span: 1 },
-                      { label: '饱和度', value: `+${selectedPreset.saturation}`, span: 1 },
-                      { label: '对比度', value: `+${selectedPreset.contrast}`, span: 1 },
-                      { label: '锐度', value: `+${selectedPreset.sharpness}`, span: 1 },
-                      { label: '暗角', value: '开', span: 2 },
-                    ]
-                  }
-                ]}
-              />
-            </div>
-
-            {/* 关联推荐 */}
-            <div className="px-4 pb-4">
-              <SimpleRelatedPresets
-                presets={[
-                  { id: 'r1', name: '电影胶片', coverPath: selectedPreset.coverPath + '?r=1' },
-                  { id: 'r2', name: '复古人像', coverPath: selectedPreset.coverPath + '?r=2' },
-                  { id: 'r3', name: '清新风景', coverPath: selectedPreset.coverPath + '?r=3' },
-                  { id: 'r4', name: '黑白经典', coverPath: selectedPreset.coverPath + '?r=4' },
-                ]}
-                onSelect={(id) => console.log('Selected:', id)}
-              />
-            </div>
-
-            {/* 用户评价 */}
-            <div className="px-4 pb-4">
-              <UserComments
-                comments={[
-                  { id: 'c1', user: '摄影爱好者', content: '非常好用的预设！色彩还原很准确', rating: 5 },
-                  { id: 'c2', user: '专业摄影师', content: '配合哈苏大师模式使用效果绝佳', rating: 5 },
-                ]}
-                onViewAll={() => console.log('View all comments')}
-              />
-            </div>
-
-            {/* 底部操作栏 */}
-            <div className="sticky bottom-0 bg-[#0a0a0a]/95 backdrop-blur-sm px-4 py-3 border-t border-white/5 flex gap-3">
-              <FavoriteButton
-                isFavorite={favorites.has(selectedPreset.id)}
-                onToggle={() => toggleFavorite(selectedPreset.id)}
-              />
-              <ApplyPresetButton
-                onApply={() => console.log('Apply preset:', selectedPreset.id)}
-              />
-            </div>
-          </div>
-        </div>
+        <PresetDetailModal
+          preset={selectedPreset}
+          isFavorite={favorites.has(selectedPreset.id)}
+          onToggleFavorite={() => toggleFavorite(selectedPreset.id)}
+          onClose={() => setSelectedPreset(null)}
+          relatedPresets={[
+            { id: 'r1', name: '电影胶片', coverPath: selectedPreset.coverPath + '?r=1' },
+            { id: 'r2', name: '复古人像', coverPath: selectedPreset.coverPath + '?r=2' },
+            { id: 'r3', name: '清新风景', coverPath: selectedPreset.coverPath + '?r=3' },
+            { id: 'r4', name: '黑白经典', coverPath: selectedPreset.coverPath + '?r=4' },
+          ]}
+        />
       )}
 
       {/* Styles */}
