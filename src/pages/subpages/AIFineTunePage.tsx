@@ -4,7 +4,7 @@ import {
   ArrowLeft, RefreshCw, Check, Wand2, Sparkles, Sun, Moon, Palette, 
   Camera, Aperture, Zap, Eye, Contrast, Droplets, Layers, Sliders,
   Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search,
-  Download, Upload
+  Download, Upload, ImagePlus
 } from 'lucide-react';
 
 // 导入状态管理和 AI 推理服务
@@ -139,6 +139,8 @@ const AIFineTunePage: React.FC = () => {
   
   // 文件输入引用
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 图片上传输入引用
+  const imageInputRef = useRef<HTMLInputElement>(null);
   
   // 成功提示自动隐藏
   useEffect(() => {
@@ -323,6 +325,27 @@ const AIFineTunePage: React.FC = () => {
     }
   }, [state.params]);
   
+  // 上传图片
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      console.error('请选择图片文件');
+      return;
+    }
+    
+    // 创建本地URL预览
+    const imageUrl = URL.createObjectURL(file);
+    dispatch({ type: FineTuneActionType.SET_IMAGE_SOURCE, imageSource: imageUrl });
+    
+    // 清空文件输入
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  }, []);
+  
   // 应用智能优化
   const applySmartOptimizations = useCallback(() => {
     // 保存当前参数到历史
@@ -401,6 +424,14 @@ const AIFineTunePage: React.FC = () => {
         onChange={handleImport}
         className="hidden"
       />
+      {/* 隐藏的图片上传输入 */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
       
       {/* Header */}
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
@@ -415,22 +446,22 @@ const AIFineTunePage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* 导入按钮 */}
-            <button 
+            {/* 导入按钮 - 暂时隐藏 */}
+            {/* <button 
               onClick={() => fileInputRef.current?.click()}
               className="p-2 rounded-full hover:bg-white/10"
               title="导入参数"
             >
               <Upload size={18} className="text-white/50" />
-            </button>
-            {/* 导出按钮 */}
-            <button 
+            </button> */}
+            {/* 导出按钮 - 暂时隐藏 */}
+            {/* <button 
               onClick={handleExport}
               className="p-2 rounded-full hover:bg-white/10"
               title="导出参数"
             >
               <Download size={18} className="text-white/50" />
-            </button>
+            </button> */}
             {/* 撤销按钮 */}
             {canUndo(state) && (
               <button onClick={handleUndo} className="p-2 rounded-full hover:bg-white/10" title="撤销">
@@ -561,6 +592,15 @@ const AIFineTunePage: React.FC = () => {
               ))}
             </div>
           </div>
+          
+          {/* 上传图片按钮 */}
+          <button
+            onClick={() => imageInputRef.current?.click()}
+            className="absolute bottom-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+            title="上传图片"
+          >
+            <ImagePlus size={20} className="text-white" />
+          </button>
           
           {/* Style Badge */}
           {state.selectedStyle && (

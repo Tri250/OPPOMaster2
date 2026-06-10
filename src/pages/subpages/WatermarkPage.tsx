@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, Type, AlignLeft, AlignCenter, AlignRight, Check, 
@@ -6,7 +6,7 @@ import {
   Minimize, Eye, Download, ChevronRight, Crown, Sparkles,
   Plus, Trash2, Copy, Layers, RotateCcw,
   Grid, Square, Shield, Award,
-  Image, Sliders
+  Image, Sliders, ImagePlus
 } from 'lucide-react';
 
 // 15+ 专业水印模板
@@ -230,9 +230,33 @@ const WatermarkPage: React.FC = () => {
   const [shadowBlur, setShadowBlur] = useState(4);
   const [padding, setPadding] = useState(20);
   const [showPreview, setShowPreview] = useState(true);
-  const [selectedImage] = useState('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600');
+  const [selectedImage, setSelectedImage] = useState('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600');
   const [fontWeight, setFontWeight] = useState<'normal' | 'bold'>('normal');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // 图片上传输入引用
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  
+  // 上传图片
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      console.error('请选择图片文件');
+      return;
+    }
+    
+    // 创建本地URL预览
+    const imageUrl = URL.createObjectURL(file);
+    setSelectedImage(imageUrl);
+    
+    // 清空文件输入
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [layers, setLayers] = useState<WatermarkLayer[]>([]);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
@@ -380,6 +404,15 @@ const WatermarkPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* 隐藏的图片上传输入 */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      
       {/* Header */}
       <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
         <div className="flex items-center justify-between px-4 py-3">
@@ -491,6 +524,15 @@ const WatermarkPage: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* 上传图片按钮 */}
+          <button
+            onClick={() => imageInputRef.current?.click()}
+            className="absolute bottom-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors z-10"
+            title="上传图片"
+          >
+            <ImagePlus size={20} className="text-white" />
+          </button>
 
           {/* Grid Overlay for positioning */}
           {showAdvanced && (

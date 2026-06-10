@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus, Download, Upload, ImagePlus } from 'lucide-react';
 
 const optimizeOptions = [
   { id: 'hdr', name: 'HDR增强', icon: Sun, color: '#FF9800', desc: '提升动态范围，保留更多细节' },
@@ -58,6 +58,10 @@ const SmartOptimizePage: React.FC = () => {
   
   // 文件输入引用
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 图片上传输入引用
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  // 图片源状态
+  const [imageSource, setImageSource] = useState<string>('https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop');
 
   const toggleOption = (id: string) => {
     setSelectedOptions(prev => 
@@ -94,6 +98,27 @@ const SmartOptimizePage: React.FC = () => {
     // 清空文件输入
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+  
+  // 上传图片
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      console.error('请选择图片文件');
+      return;
+    }
+    
+    // 创建本地URL预览
+    const imageUrl = URL.createObjectURL(file);
+    setImageSource(imageUrl);
+    
+    // 清空文件输入
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
     }
   };
 
@@ -143,6 +168,14 @@ const SmartOptimizePage: React.FC = () => {
         onChange={handleImport}
         className="hidden"
       />
+      {/* 隐藏的图片上传输入 */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
       
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
@@ -154,29 +187,29 @@ const SmartOptimizePage: React.FC = () => {
         </button>
         <h1 className="text-lg font-bold text-white">智能优化</h1>
         <div className="flex-1" />
-        {/* 导入按钮 */}
-        <button 
+        {/* 导入按钮 - 暂时隐藏 */}
+        {/* <button 
           onClick={() => fileInputRef.current?.click()}
           className="p-2 rounded-full hover:bg-white/10"
           title="导入配置"
         >
           <Upload size={18} className="text-white/50" />
-        </button>
-        {/* 导出按钮 */}
-        <button 
+        </button> */}
+        {/* 导出按钮 - 暂时隐藏 */}
+        {/* <button 
           onClick={handleExport}
           className="p-2 rounded-full hover:bg-white/10"
           title="导出配置"
         >
           <Download size={18} className="text-white/50" />
-        </button>
+        </button> */}
       </div>
 
       {/* Preview */}
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
           <img 
-            src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop"
+            src={imageSource}
             alt="Preview"
             className="w-full h-full object-cover"
           />
@@ -226,6 +259,15 @@ const SmartOptimizePage: React.FC = () => {
               </span>
             </div>
           </div>
+          
+          {/* 上传图片按钮 */}
+          <button
+            onClick={() => imageInputRef.current?.click()}
+            className="absolute bottom-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+            title="上传图片"
+          >
+            <ImagePlus size={20} className="text-white" />
+          </button>
         </div>
       </div>
 
