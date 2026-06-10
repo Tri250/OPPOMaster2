@@ -3,10 +3,6 @@ pluginManagement {
         google()
         gradlePluginPortal()
         mavenCentral()
-        // 备用镜像
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
     }
 }
 dependencyResolutionManagement {
@@ -14,10 +10,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // 备用镜像
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
     }
 }
 
