@@ -224,7 +224,7 @@ fun FeaturedPresetsScreen(
                         },
                         onFavoriteClick = {
                             haptic.perform(HapticFeedbackType.ToggleOn)
-                            favoriteManager.toggleFavorite(preset.id!!)
+                            preset.id?.let { favoriteManager.toggleFavorite(it) }
                         },
                         onApplyClick = {
                             haptic.perform(HapticFeedbackType.Confirm)

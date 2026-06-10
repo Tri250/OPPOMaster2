@@ -165,7 +165,7 @@ class UniversalCreatePresetViewModel(
             val coverPath = if (state.imageUri != null) {
                 saveImageToInternalStorage(state.imageUri)
             } else {
-                state.originalCoverPath!!
+                state.originalCoverPath ?: return false
             }
             
             val preset = MasterPreset(

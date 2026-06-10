@@ -606,8 +606,8 @@ private fun PresetCardItem(
         PresetCard(
             preset = preset,
             onClick = { onNavigateToDetail(preset) },
-            onFavoriteClick = { onToggleFavorite(preset.id!!) },
-            onDeleteClick = { onDeletePreset(preset.id!!) },
+            onFavoriteClick = { preset.id?.let { onToggleFavorite(it) } },
+            onDeleteClick = { preset.id?.let { onDeletePreset(it) } },
             showFavoriteButton = true,
             showDeleteButton = tabIndex == 2,
             imageHeight = imageHeight

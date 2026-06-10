@@ -34,11 +34,16 @@ data class SceneProfile(
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
         name = parcel.readString() ?: "",
-        category = SceneCategory.valueOf(parcel.readString() ?: SceneCategory.PORTRAIT.name),
+        category = try {
+            SceneCategory.valueOf(parcel.readString() ?: SceneCategory.PORTRAIT.name)
+        } catch (e: IllegalArgumentException) {
+            SceneCategory.PORTRAIT
+        },
         description = parcel.readString() ?: "",
         color = parcel.readLong(),
         confidence = parcel.readFloat(),
-        hasselbladParams = parcel.readParcelable(HasselbladParams::class.java.classLoader)!!,
+        hasselbladParams = parcel.readParcelable(HasselbladParams::class.java.classLoader)
+            ?: HasselbladParams.DEFAULT,
         recommendedFilm = parcel.createTypedArrayList(FilmPreset.CREATOR) ?: emptyList(),
         masterTips = parcel.createStringArrayList() ?: emptyList(),
         cameraParams = parcel.readParcelable(CameraParams::class.java.classLoader),
@@ -119,7 +124,7 @@ data class HasselbladParams(
         sharpness = parcel.readInt(),
         vignette = parcel.readInt(),
         cyanMagenta = parcel.readInt(),
-        softLight = SoftLightMode.valueOf(parcel.readString() ?: SoftLightMode.NONE.name),
+        softLight = try { SoftLightMode.valueOf(parcel.readString() ?: SoftLightMode.NONE.name) } catch (_: IllegalArgumentException) { SoftLightMode.NONE },
         highlights = parcel.readInt(),
         shadows = parcel.readInt(),
         clarity = parcel.readInt()
@@ -187,7 +192,7 @@ data class FilmPreset(
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
         name = parcel.readString() ?: "",
-        series = FilmSeries.valueOf(parcel.readString() ?: FilmSeries.CLASSIC.name),
+        series = try { FilmSeries.valueOf(parcel.readString() ?: FilmSeries.CLASSIC.name) } catch (_: IllegalArgumentException) { FilmSeries.CLASSIC },
         matchScore = parcel.readFloat(),
         description = parcel.readString() ?: "",
         colorStyle = parcel.readString() ?: "自然",
@@ -429,7 +434,8 @@ data class FaceInfo(
     val rightEyeOpen: Boolean
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        bounds = parcel.readParcelable(RectData::class.java.classLoader)!!,
+        bounds = parcel.readParcelable(RectData::class.java.classLoader)
+            ?: RectData(0f, 0f, 0f, 0f),
         confidence = parcel.readFloat(),
         hasSmile = parcel.readByte() != 0.toByte(),
         leftEyeOpen = parcel.readByte() != 0.toByte(),

@@ -229,12 +229,16 @@ class TFLiteEngine private constructor(private val context: Context) {
                 setNumThreads(currentConfig.numThreads)
                 
                 // 添加硬件加速委托
-                if (currentConfig.useNnapi && nnapiDelegate != null) {
-                    addDelegate(nnapiDelegate!!)
-                    Log.d(TAG, "使用 NNAPI Delegate: $modelName")
-                } else if (currentConfig.useGpu && gpuDelegate != null) {
-                    addDelegate(gpuDelegate!!)
-                    Log.d(TAG, "使用 GPU Delegate: $modelName")
+                if (currentConfig.useNnapi) {
+                    nnapiDelegate?.let { delegate ->
+                        addDelegate(delegate)
+                        Log.d(TAG, "使用 NNAPI Delegate: $modelName")
+                    }
+                } else if (currentConfig.useGpu) {
+                    gpuDelegate?.let { delegate ->
+                        addDelegate(delegate)
+                        Log.d(TAG, "使用 GPU Delegate: $modelName")
+                    }
                 } else if (currentConfig.useXnnpack) {
                     setUseXNNPACK(true)
                     Log.d(TAG, "使用 XNNPACK: $modelName")

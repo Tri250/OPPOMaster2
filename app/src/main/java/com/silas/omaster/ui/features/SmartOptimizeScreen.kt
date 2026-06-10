@@ -137,7 +137,7 @@ fun SmartOptimizeScreen(
             if (previewBitmap != null) {
                 // 显示预览图片（带优化后效果模拟滤镜）
                 Image(
-                    bitmap = previewBitmap!!.asImageBitmap(),
+                    bitmap = previewBitmap.asImageBitmap(),
                     contentDescription = if (previewMode == "after") "优化后预览" else "原图预览",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,

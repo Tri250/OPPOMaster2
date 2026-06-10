@@ -317,12 +317,12 @@ fun SceneAnalysisReportScreen(
 
                 // 概览卡片
                 if (habits != null) {
-                    OverviewCards(habits!!)
+                    OverviewCards(habits)
                 }
 
                 // 拍摄偏好
                 if (habits != null) {
-                    ShootingPreferenceCard(habits!!)
+                    ShootingPreferenceCard(habits)
                 }
 
                 // 场景分布

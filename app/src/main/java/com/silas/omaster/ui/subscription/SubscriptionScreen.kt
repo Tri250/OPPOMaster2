@@ -151,19 +151,22 @@ fun SubscriptionScreen(
         }
 
         if (showBottomSheet && selectedSubscription != null) {
-            SubscriptionDetailBottomSheet(
-                sub = selectedSubscription!!,
-                onDismiss = { showBottomSheet = false },
-                sheetState = sheetState,
-                onEdit = {
-                    showEditDialog = selectedSubscription
-                    showBottomSheet = false
-                },
-                onDelete = {
-                    subManager.removeSubscription(selectedSubscription!!.url)
-                    showBottomSheet = false
-                }
-            )
+            val currentSub = selectedSubscription
+            if (currentSub != null) {
+                SubscriptionDetailBottomSheet(
+                    sub = currentSub,
+                    onDismiss = { showBottomSheet = false },
+                    sheetState = sheetState,
+                    onEdit = {
+                        showEditDialog = selectedSubscription
+                        showBottomSheet = false
+                    },
+                    onDelete = {
+                        subManager.removeSubscription(currentSub.url)
+                        showBottomSheet = false
+                    }
+                )
+            }
         }
 
         if (showAddDialog) {
@@ -201,32 +204,35 @@ fun SubscriptionScreen(
         }
 
         if (showEditDialog != null) {
-            EditSubscriptionDialog(
-                sub = showEditDialog!!,
-                onDismiss = { showEditDialog = null },
-                onConfirm = { oldUrl, newUrl ->
-                    showEditDialog = null
-                    scope.launch {
-                        subManager.updateSubscriptionUrl(oldUrl, newUrl)
-                        // 更新 URL 后需要重新拉取
-                        val result = PresetRemoteManager.fetchAndSave(context, newUrl, forceUpdate = true)
-                        result.onSuccess { presetList ->
-                            subManager.updateSubscriptionStatus(
-                                url = newUrl,
-                                presetCount = presetList.presets.size,
-                                lastUpdateTime = System.currentTimeMillis(),
-                                name = presetList.name,
-                                author = presetList.author,
-                                build = presetList.build
-                            )
-                            PresetRepository.getInstance(context).reloadDefaultPresets()
-                            Toast.makeText(context, "订阅更新成功", Toast.LENGTH_SHORT).show()
-                        }.onFailure { error ->
-                            errorMsg = error.message ?: "更新失败"
+            val editSub = showEditDialog
+            if (editSub != null) {
+                EditSubscriptionDialog(
+                    sub = editSub,
+                    onDismiss = { showEditDialog = null },
+                    onConfirm = { oldUrl, newUrl ->
+                        showEditDialog = null
+                        scope.launch {
+                            subManager.updateSubscriptionUrl(oldUrl, newUrl)
+                            // 更新 URL 后需要重新拉取
+                            val result = PresetRemoteManager.fetchAndSave(context, newUrl, forceUpdate = true)
+                            result.onSuccess { presetList ->
+                                subManager.updateSubscriptionStatus(
+                                    url = newUrl,
+                                    presetCount = presetList.presets.size,
+                                    lastUpdateTime = System.currentTimeMillis(),
+                                    name = presetList.name,
+                                    author = presetList.author,
+                                    build = presetList.build
+                                )
+                                PresetRepository.getInstance(context).reloadDefaultPresets()
+                                Toast.makeText(context, "订阅更新成功", Toast.LENGTH_SHORT).show()
+                            }.onFailure { error ->
+                                errorMsg = error.message ?: "更新失败"
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
 
         if (errorMsg != null) {

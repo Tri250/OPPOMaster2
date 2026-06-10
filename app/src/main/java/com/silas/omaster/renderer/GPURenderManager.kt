@@ -482,26 +482,30 @@ class GPURenderManager private constructor(private val context: Context) {
                 imageRenderer = null
                 
                 // 销毁EGL上下文
-                if (eglContext != null) {
+                val currentDisplay = eglDisplay
+                val currentContext = eglContext
+                val currentSurface = eglSurface
+                
+                if (currentDisplay != null && currentContext != null) {
                     EGL14.eglMakeCurrent(
-                        eglDisplay!!,
+                        currentDisplay,
                         EGL14.EGL_NO_SURFACE,
                         EGL14.EGL_NO_SURFACE,
                         EGL14.EGL_NO_CONTEXT
                     )
-                    EGL14.eglDestroyContext(eglDisplay!!, eglContext!!)
+                    EGL14.eglDestroyContext(currentDisplay, currentContext)
                     eglContext = null
                 }
                 
                 // 销毁EGL表面
-                if (eglSurface != null) {
-                    EGL14.eglDestroySurface(eglDisplay!!, eglSurface!!)
+                if (currentDisplay != null && currentSurface != null) {
+                    EGL14.eglDestroySurface(currentDisplay, currentSurface)
                     eglSurface = null
                 }
                 
                 // 终止EGL显示
-                if (eglDisplay != null) {
-                    EGL14.eglTerminate(eglDisplay!!)
+                if (currentDisplay != null) {
+                    EGL14.eglTerminate(currentDisplay)
                     eglDisplay = null
                 }
             }

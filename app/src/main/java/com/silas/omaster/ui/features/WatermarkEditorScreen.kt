@@ -491,7 +491,7 @@ fun WatermarkEditorScreen(
             } else if (previewBitmap != null) {
                 // 预览Canvas（支持手势操作）
                 WatermarkPreviewCanvas(
-                    bitmap = if (showBeforeAfter) originalBitmap!! else previewBitmap!!,
+                    bitmap = if (showBeforeAfter && originalBitmap != null) originalBitmap else previewBitmap,
                     watermarkConfig = watermarkConfig.copy(
                         enabled = isWatermarkEnabled,
                         offset = watermarkOffset,

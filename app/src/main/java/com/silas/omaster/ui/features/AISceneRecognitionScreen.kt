@@ -219,7 +219,7 @@ fun AISceneRecognitionScreen(
 
             // 添加到历史记录
             if (analysisResult != null) {
-                recognitionHistory = listOf(analysisResult!!) + recognitionHistory.take(4)
+                recognitionHistory = listOf(analysisResult) + recognitionHistory.take(4)
             }
 
             isAnalyzing = false
@@ -263,7 +263,7 @@ fun AISceneRecognitionScreen(
                     IconButton(onClick = {
                         scope.launch {
                             try {
-                                val bitmap = buildRecipeCardBitmap(analysisResult!!, context)
+                                val bitmap = buildRecipeCardBitmap(analysisResult, context)
                                 ShareExportUtils.exportImageToGallery(context, bitmap, "hasselblad_recipe_${System.currentTimeMillis()}.jpg")
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -320,7 +320,7 @@ fun AISceneRecognitionScreen(
                 // 分析完成，显示结果
                 if (analysisResult != null) {
                     ResultDisplayScreen(
-                        result = analysisResult!!,
+                        result = analysisResult,
                         sliderPosition = sliderPosition,
                         onSliderPositionChange = { sliderPosition = it },
                         selectedFilmId = selectedFilmId,

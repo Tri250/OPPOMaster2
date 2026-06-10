@@ -181,7 +181,7 @@ private fun LUTCard(
                         .background(HasselbladOrange.copy(alpha = 0.2f))
                 ) {
                     Text(
-                        text = lut.name.first().toString(),
+                        text = lut.name.firstOrNull()?.toString() ?: "",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = HasselbladOrange,

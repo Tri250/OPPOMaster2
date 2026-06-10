@@ -138,7 +138,7 @@ private fun FilmCard(
             ) {
                 // 胶片名称首字母
                 Text(
-                    text = film.name.first().toString(),
+                    text = film.name.firstOrNull()?.toString() ?: "",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = when (film.series) {
@@ -228,7 +228,7 @@ fun FilmDetailDialog(
                         .background(HasselbladOrange.copy(alpha = 0.2f))
                 ) {
                     Text(
-                        text = film.name.first().toString(),
+                        text = film.name.firstOrNull()?.toString() ?: "",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = HasselbladOrange,

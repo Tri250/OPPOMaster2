@@ -637,14 +637,14 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 用户上下文加成
         userContext?.let { ctx ->
             ctx.recentScenes.forEach { recentScene ->
-                if (scoreMap.containsKey(recentScene)) {
-                    scoreMap[recentScene] = scoreMap[recentScene]!! + 0.15f
+                scoreMap[recentScene]?.let { currentScore ->
+                    scoreMap[recentScene] = currentScore + 0.15f
                 }
             }
             ctx.preferredCategories.forEach { category ->
                 ScenePresets.getScenesByCategory(category).forEach { scene ->
-                    if (scoreMap.containsKey(scene.id)) {
-                        scoreMap[scene.id] = scoreMap[scene.id]!! + 0.10f
+                    scoreMap[scene.id]?.let { currentScore ->
+                        scoreMap[scene.id] = currentScore + 0.10f
                     }
                 }
             }
@@ -654,7 +654,21 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val sorted = scoreMap.entries.sortedByDescending { it.value }
         val topScenes = sorted.take(4)
 
-        // 获取场景预设
+        // 获取场景预设（安全处理空列表）
+        if (topScenes.isEmpty()) {
+            val defaultScene = ScenePresets.allScenes.firstOrNull()
+            return FusedResult(
+                primary = defaultScene ?: return@fuseResults null,
+                confidence = 0f,
+                alternatives = emptyList(),
+                colorProfile = colorProfile,
+                brightnessLevel = brightnessLevel,
+                faceCount = faceCount,
+                edgeDensity = edgeDensity,
+                sourceBreakdown = emptyMap()
+            )
+        }
+
         val primaryScene = ScenePresets.getSceneById(topScenes.first().key)
             ?: ScenePresets.allScenes.first()
 

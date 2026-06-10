@@ -273,7 +273,7 @@ private fun FilmRecipeItem(
     ) {
         // 胶片品牌标识
         Text(
-            text = film.brand.first().toString(),
+            text = film.brand.firstOrNull()?.toString() ?: "",
             style = MaterialTheme.typography.headlineMedium,
             color = if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.6f),
             fontWeight = FontWeight.Bold

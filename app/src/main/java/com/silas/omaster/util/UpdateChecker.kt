@@ -236,7 +236,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     val localUri = Uri.parse(localUriString)
                     if (localUri.scheme == "file") {
                         // 直接是文件路径
-                        File(localUri.path!!)
+                        File(localUri.path ?: localUriString.removePrefix("file://"))
                     } else {
                         // content:// URI，尝试通过 ContentResolver 获取真实路径
                         getFileFromContentUri(context, localUri)

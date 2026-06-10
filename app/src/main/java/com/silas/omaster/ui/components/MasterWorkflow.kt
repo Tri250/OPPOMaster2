@@ -245,7 +245,7 @@ fun MasterWorkflow(
             totalDurationMs = totalDuration
         )
 
-        onComplete(workflowResult!!)
+        onComplete(workflowResult)
     }
 
     Column(
