@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,6 +27,8 @@ import com.silas.omaster.data.repository.LUTRepository
 import com.silas.omaster.data.repository.Resource
 import com.silas.omaster.lut.LUTIntensityManager
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.HapticFeedbackTypeCompat
+import com.silas.omaster.util.perform
 
 /**
  * LUT 资源分享页面（与 Web 端 LUTSharePage.tsx 完全对齐）
@@ -85,7 +88,7 @@ fun LUTShareScreen(
             title = { Text("LUT 资源库", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -139,7 +142,7 @@ fun LUTShareScreen(
                             else Color(0xFF2A2A2A)
                         )
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             viewModel.selectCategory(category)
                         }
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -238,7 +241,7 @@ private fun LUTListContent(
                 downloadProgress = downloadStates[lut.id],
                 isFavorite = lut.id in favoriteIds,
                 onDownload = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onDownload(lut)
                 },
                 onToggleFavorite = { onToggleFavorite(lut.id) }

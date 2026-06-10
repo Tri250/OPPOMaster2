@@ -77,9 +77,9 @@ import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.hapticClickable
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import com.silas.omaster.util.perform
+import androidx.compose.ui.platform.LocalHapticFeedback
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
@@ -231,7 +231,7 @@ fun HomeScreen(
                     Tab(
                         selected = isSelected,
                         onClick = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             scope.launch {
                                 pagerState.scrollToPage(index)
                             }
@@ -319,7 +319,7 @@ fun HomeScreen(
         if (selectedTab == 2) {
             FloatingActionButton(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onNavigateToCreate()
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -354,7 +354,7 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         val id = presetToDelete
                         if (id != null) {
                             viewModel.deleteCustomPreset(id)
@@ -369,7 +369,7 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.TextHandleMove)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         showDeleteConfirm = false
                         presetToDelete = null
                     }
@@ -436,12 +436,12 @@ private fun PresetGrid(
 
             if (currentIndex == 0 && !hasHapticAtTop) {
                 // 滚动到顶部
-                haptic.perform(HapticFeedbackType.TextHandleMove)
+                haptic.perform(HapticFeedbackTypeCompat.Select)
                 hasHapticAtTop = true
                 hasHapticAtBottom = false
             } else if (lastVisibleItem >= totalItems - 1 && totalItems > 0 && !hasHapticAtBottom) {
                 // 滚动到底部（最后一个可见 item 是最后一个 item）
-                haptic.perform(HapticFeedbackType.TextHandleMove)
+                haptic.perform(HapticFeedbackTypeCompat.Select)
                 hasHapticAtBottom = true
                 hasHapticAtTop = false
             } else if (currentIndex > 0 && lastVisibleItem < totalItems - 1) {
@@ -740,7 +740,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.CameraAlt,
             color = Color(0xFF4CAF50),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onNavigateToSceneRecognition()
             },
             modifier = Modifier.weight(1f)
@@ -752,7 +752,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.ColorLens,
             color = Color(0xFF9C27B0),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onNavigateToAIFineTune()
             },
             modifier = Modifier.weight(1f)
@@ -764,7 +764,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.WaterDrop,
             color = Color(0xFF00BCD4),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onNavigateToWatermarkEditor()
             },
             modifier = Modifier.weight(1f)
@@ -776,7 +776,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.Memory,
             color = Color(0xFF2196F3),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onNavigateToSmartOptimize()
             },
             modifier = Modifier.weight(1f)
@@ -788,7 +788,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.PhotoFilter,
             color = Color(0xFFFF9800),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onNavigateToPresetManager()
             },
             modifier = Modifier.weight(1f)
@@ -800,7 +800,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.Tune,
             color = Color(0xFFE91E63),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onNavigateToParamAdjustment()
             },
             modifier = Modifier.weight(1f)

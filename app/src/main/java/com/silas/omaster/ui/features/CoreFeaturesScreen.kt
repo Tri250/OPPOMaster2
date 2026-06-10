@@ -73,7 +73,7 @@ import androidx.compose.runtime.getValue
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
-import com.silas.omaster.util.HapticFeedbackType as HapticType
+import com.silas.omaster.util.HapticFeedbackTypeCompat as HapticType
 import com.silas.omaster.util.perform
 
 /**

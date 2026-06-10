@@ -241,7 +241,7 @@ class SceneFeatureExtractor(private val context: Context) {
                 
                 val avgNeighbor = neighbors.average()
                 val variance = neighbors.map { (it - avgNeighbor) * (it - avgNeighbor) }.average()
-                textureSum += variance
+                textureSum += variance.toFloat()
                 textureCount++
                 
                 // 区域纹理统计
@@ -361,7 +361,7 @@ class SceneFeatureExtractor(private val context: Context) {
             val g = ((pixel shr 8) and 0xFF) / 32 * 32
             val b = (pixel and 0xFF) / 32 * 32
             
-            val quantizedColor = (r shl 16) | (g shl 8) | b
+            val quantizedColor = (r shl 16) or (g shl 8) or b
             colorMap[quantizedColor] = colorMap.getOrDefault(quantizedColor, 0) + 1
         }
         
@@ -406,7 +406,7 @@ class SceneFeatureExtractor(private val context: Context) {
     /**
      * 计算图像复杂度评分
      */
-    fun calculateComplexityScore(bitmap: Bitmap): Float {
+    suspend fun calculateComplexityScore(bitmap: Bitmap): Float {
         val featuresResult = extractFeatures(bitmap)
         val features = featuresResult.getOrNull() ?: return 0f
         
@@ -415,7 +415,7 @@ class SceneFeatureExtractor(private val context: Context) {
         val mean = features.average()
         
         for (feature in features) {
-            variance += (feature - mean) * (feature - mean)
+            variance += ((feature - mean) * (feature - mean)).toFloat()
         }
         
         return (variance / features.size).coerceIn(0f, 1f)

@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.silas.omaster.data.db.EditSession
 import com.silas.omaster.data.db.SessionStatus
 import com.silas.omaster.data.repository.EditSessionRepository
+import com.silas.omaster.param.AdjustableParam
 import com.silas.omaster.param.ParamAdjustmentManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -137,7 +138,7 @@ class ParamAdjustmentViewModel(application: Application) : AndroidViewModel(appl
      * 重置所有参数
      */
     fun resetAllParams() {
-        paramManager.adjustableParams.forEach { param ->
+        paramManager.adjustableParams.forEach { param: AdjustableParam ->
             paramManager.adjustParam(param.name, 0f)
         }
         _hasUnsavedChanges.value = true

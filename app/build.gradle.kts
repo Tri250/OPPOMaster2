@@ -1,4 +1,7 @@
 import java.util.Properties
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.ksp)
 }
 
 // 读取签名配置
@@ -38,11 +42,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // BuildConfig 公共字段（所有 buildType 都可见）
-        buildConfigField("String", "BUILD_TIME", "\"${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())}\"")
-        buildConfigField("String", "GIT_SHA", "\"${try {
-            val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD").redirectErrorStream(true).start()
-            process.inputStream.bufferedReader().readText().trim()
-        } catch (e: Exception) { "unknown" }}\"")
+        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
+        buildConfigField("String", "GIT_SHA", "\"${providers.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+        }.standardOutput.asText.get().trim()}\"")
     }
 
     // 签名配置
@@ -115,8 +119,8 @@ android {
             buildConfigField("boolean", "ENABLE_UMENG", "true")
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -212,7 +216,10 @@ dependencies {
     // Gson（已使用 catalog）
     implementation(libs.gson)
 
-    // Room 数据库已移除，使用 SharedPreferences 替代
+    // Room 数据库
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // ⚠️ 替换友盟硬编码依赖
 // 友盟

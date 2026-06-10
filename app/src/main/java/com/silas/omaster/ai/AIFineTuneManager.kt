@@ -18,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import okhttp3.MediaType.Companion.toMediaType
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.math.abs
@@ -77,17 +78,17 @@ class AIFineTuneManager private constructor(context: Context) {
 
     // 色彩风格
     val colorStyles = listOf(
-        ColorStyle("natural", "自然", "还原真实色彩", 0, 0, 0),
-        ColorStyle("vivid", "鲜艳", "增强色彩饱和度", 20, 10, 5),
-        ColorStyle("film", "胶片", "复古胶片质感", -10, 15, 10),
-        ColorStyle("bw", "黑白", "经典黑白影调", -100, 20, 0),
-        ColorStyle("warm", "暖调", "温暖色调风格", 5, 0, 25),
-        ColorStyle("cool", "冷调", "清冷色调风格", 5, 5, -20),
-        ColorStyle("portrait", "人像", "优化肤色表现", 10, -5, 8),
-        ColorStyle("landscape", "风景", "增强自然色彩", 15, 10, 0),
-        ColorStyle("fresh_cc", "清新-CC胶片", "清新通透胶片感", 5, 8, 3),
-        ColorStyle("rich", "浓郁", "浓郁饱满色彩", 25, 15, 8),
-        ColorStyle("retro", "复古", "复古怀旧风格", -5, 10, 15)
+        ColorStyle("natural", "自然", "还原真实色彩", 0, 0, 0, 0),
+        ColorStyle("vivid", "鲜艳", "增强色彩饱和度", 20, 10, 5, 0),
+        ColorStyle("film", "胶片", "复古胶片质感", -10, 15, 10, 0),
+        ColorStyle("bw", "黑白", "经典黑白影调", -100, 20, 0, 0),
+        ColorStyle("warm", "暖调", "温暖色调风格", 5, 0, 25, 0),
+        ColorStyle("cool", "冷调", "清冷色调风格", 5, 5, -20, 0),
+        ColorStyle("portrait", "人像", "优化肤色表现", 10, -5, 8, 0),
+        ColorStyle("landscape", "风景", "增强自然色彩", 15, 10, 0, 0),
+        ColorStyle("fresh_cc", "清新-CC胶片", "清新通透胶片感", 5, 8, 3, 0),
+        ColorStyle("rich", "浓郁", "浓郁饱满色彩", 25, 15, 8, 0),
+        ColorStyle("retro", "复古", "复古怀旧风格", -5, 10, 15, 0)
     )
 
     // 智能优化预设
@@ -712,9 +713,9 @@ class AIFineTuneManager private constructor(context: Context) {
                     .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
                 
-                val requestBody = okhttp3.MediaType.parse("application/json; charset=utf-8")
+                val requestBody = "application/json; charset=utf-8".toMediaType()
                     .let { mediaType ->
-                        okhttp3.RequestBody.create(
+                        okhttp3.RequestBody.Companion.create(
                             mediaType,
                             toJsonString(params)
                         )
@@ -731,9 +732,9 @@ class AIFineTuneManager private constructor(context: Context) {
                 val response = client.newCall(request).execute()
                 
                 if (response.isSuccessful) {
-                    response.body()?.string()
+                    response.body?.string()
                 } else {
-                    Log.w(TAG, "云端API响应失败: ${response.code()}")
+                    Log.w(TAG, "云端API响应失败: ${response.code}")
                     null
                 }
             }
@@ -821,7 +822,7 @@ class AIFineTuneManager private constructor(context: Context) {
             )
         } catch (e: Exception) {
             Log.e(TAG, "解析云端响应失败: ${e.message}")
-            null
+            return null
         }
     }
 
@@ -1276,6 +1277,7 @@ data class ColorStyle(
     val description: String,
     val saturation: Int,
     val contrast: Int,
+    val brightness: Int = 0,
     val warmth: Int
 )
 

@@ -77,6 +77,7 @@ import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.util.UpdateChecker
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -90,7 +91,6 @@ import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.data.repository.PresetRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -130,11 +130,11 @@ fun AboutScreen(
         val maxValue = scrollState.maxValue
 
         if (currentValue == 0 && !hasHapticAtTop) {
-            haptic.perform(HapticFeedbackType.TextHandleMove)
+            haptic.perform(HapticFeedbackTypeCompat.Select)
             hasHapticAtTop = true
             hasHapticAtBottom = false
         } else if (maxValue > 0 && currentValue >= maxValue && !hasHapticAtBottom) {
-            haptic.perform(HapticFeedbackType.TextHandleMove)
+            haptic.perform(HapticFeedbackTypeCompat.Select)
             hasHapticAtBottom = true
             hasHapticAtTop = false
         } else if (currentValue > 0 && currentValue < maxValue) {

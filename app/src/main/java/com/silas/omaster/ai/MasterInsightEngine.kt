@@ -25,7 +25,7 @@ class MasterInsightEngine private constructor(context: Context) {
 
     private val context = context.applicationContext
     private val inferenceEngine = MasterInferenceEngine.getInstance(context)
-    private val sceneMapping = SceneToHasselbladMapping()
+    private val sceneMapping = SceneToHasselbladMapping
 
     /**
      * 生成完整的哈苏风格分析报告

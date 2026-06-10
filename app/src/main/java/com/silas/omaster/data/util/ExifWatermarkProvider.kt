@@ -6,6 +6,7 @@ import androidx.exifinterface.media.ExifInterface
 import com.silas.omaster.data.model.ExifWatermarkData
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 /**
  * EXIF 数据提取工具

@@ -51,6 +51,7 @@ import com.silas.omaster.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 
 private val NavBarBackground = Color(0xFF1A1A1A)
 private val NavBarBorder = Color(0xFF2A2A2A)
@@ -243,7 +244,7 @@ private fun NavItemButton(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onClick()
                 }
             ),

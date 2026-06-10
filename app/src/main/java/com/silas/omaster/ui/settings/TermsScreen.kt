@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 
 /**
  * 用户协议页面
@@ -40,7 +41,7 @@ fun TermsScreen(
             title = { Text("用户协议", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -219,7 +220,7 @@ fun TermsScreen(
 
 @Composable
 private fun KeyTermItem(
-    icon: androidx.compose.material.icons.Icon,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     description: String
 ) {

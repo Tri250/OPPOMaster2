@@ -3,6 +3,8 @@ package com.silas.omaster.watermark
 import android.graphics.Bitmap
 import android.graphics.Color
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -188,11 +190,13 @@ object SmartWatermarkColor {
             WatermarkPosition.BOTTOM_RIGHT -> Pair(bitmap.width - w, bitmap.height - h)
             WatermarkPosition.BOTTOM -> Pair((bitmap.width - w) / 2, bitmap.height - h)
             WatermarkPosition.TOP_LEFT -> Pair(0, 0)
+            WatermarkPosition.TOP_CENTER -> Pair((bitmap.width - w) / 2, 0)
             WatermarkPosition.TOP_RIGHT -> Pair(bitmap.width - w, 0)
             WatermarkPosition.TOP -> Pair((bitmap.width - w) / 2, 0)
             WatermarkPosition.CENTER_LEFT -> Pair(0, (bitmap.height - h) / 2)
             WatermarkPosition.CENTER -> Pair((bitmap.width - w) / 2, (bitmap.height - h) / 2)
             WatermarkPosition.CENTER_RIGHT -> Pair(bitmap.width - w, (bitmap.height - h) / 2)
+            WatermarkPosition.CENTER_BOTTOM -> Pair((bitmap.width - w) / 2, bitmap.height - h)
             WatermarkPosition.CUSTOM -> Pair(0, bitmap.height - h) // 默认左下
         }
 

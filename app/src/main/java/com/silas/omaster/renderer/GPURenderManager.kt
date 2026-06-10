@@ -263,7 +263,7 @@ class GPURenderManager private constructor(private val context: Context) {
      * 处理渲染请求
      */
     private suspend fun processRenderRequest(request: RenderRequest) {
-        _renderQueueSize.value = renderChannel.count()
+        _renderQueueSize.value = maxOf(0, _renderQueueSize.value - 1)
         
         val result = if (_isGpuAvailable.value) {
             // GPU渲染
@@ -424,7 +424,7 @@ class GPURenderManager private constructor(private val context: Context) {
                     }
                 } catch (e: Exception) {
                     if (continuation.isActive) {
-                        continuation.resumeWithException(e)
+                        continuation.resumeWith(Result.failure(e))
                     }
                 }
             }
@@ -458,7 +458,7 @@ class GPURenderManager private constructor(private val context: Context) {
      */
     fun clearQueue() {
         while (renderChannel.tryReceive().isSuccess) {
-            _renderQueueSize.value = renderChannel.count()
+            _renderQueueSize.value = maxOf(0, _renderQueueSize.value - 1)
         }
     }
     
@@ -604,7 +604,7 @@ class CPURenderer {
                 
                 // 应用曝光
                 if (params.exposure != 0f) {
-                    val exposureFactor = Math.pow(2f, params.exposure / 50f).toFloat()
+                    val exposureFactor = Math.pow(2.0, params.exposure.toDouble() / 50.0).toFloat()
                     r = (r * exposureFactor).toInt().coerceIn(0, 255)
                     g = (g * exposureFactor).toInt().coerceIn(0, 255)
                     b = (b * exposureFactor).toInt().coerceIn(0, 255)

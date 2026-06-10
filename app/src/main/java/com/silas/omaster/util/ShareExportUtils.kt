@@ -453,7 +453,7 @@ object ShareExportUtils {
             typeface = resolveTypeface(style.fontFamily, style.fontWeight)
             textAlign = when (layer.position) {
                 WatermarkPosition.TOP_LEFT, WatermarkPosition.CENTER_LEFT, WatermarkPosition.BOTTOM_LEFT -> Paint.Align.LEFT
-                WatermarkPosition.TOP_CENTER, WatermarkPosition.CENTER, WatermarkPosition.BOTTOM -> Paint.Align.CENTER
+                WatermarkPosition.TOP_CENTER, WatermarkPosition.CENTER, WatermarkPosition.BOTTOM, WatermarkPosition.TOP, WatermarkPosition.CENTER_BOTTOM -> Paint.Align.CENTER
                 WatermarkPosition.TOP_RIGHT, WatermarkPosition.CENTER_RIGHT, WatermarkPosition.BOTTOM_RIGHT -> Paint.Align.RIGHT
                 WatermarkPosition.CUSTOM -> Paint.Align.LEFT
             }
@@ -495,9 +495,11 @@ object ShareExportUtils {
             WatermarkPosition.TOP_LEFT -> { x = padding; baselineY = padding + firstLineHeight }
             WatermarkPosition.TOP_CENTER -> { x = w / 2f; baselineY = padding + firstLineHeight }
             WatermarkPosition.TOP_RIGHT -> { x = w - padding; baselineY = padding + firstLineHeight }
+            WatermarkPosition.TOP -> { x = w / 2f; baselineY = padding + firstLineHeight }
             WatermarkPosition.CENTER_LEFT -> { x = padding; baselineY = h / 2f }
             WatermarkPosition.CENTER -> { x = w / 2f; baselineY = h / 2f }
             WatermarkPosition.CENTER_RIGHT -> { x = w - padding; baselineY = h / 2f }
+            WatermarkPosition.CENTER_BOTTOM -> { x = w / 2f; baselineY = h * 0.65f }
             WatermarkPosition.BOTTOM_LEFT -> { x = padding; baselineY = h - padding - fontMetrics.descent }
             WatermarkPosition.BOTTOM -> { x = w / 2f; baselineY = h - padding - fontMetrics.descent }
             WatermarkPosition.BOTTOM_RIGHT -> { x = w - padding; baselineY = h - padding - fontMetrics.descent }
@@ -609,7 +611,7 @@ object ShareExportUtils {
         canvas.drawRoundRect(rect, style.cornerRadius, style.cornerRadius, bgPaint)
 
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
+            this.style = Paint.Style.STROKE
             color = applyAlpha(style.getColor(), style.opacity)
             strokeWidth = 1.5f
         }

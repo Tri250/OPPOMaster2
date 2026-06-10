@@ -302,7 +302,7 @@ class ImageQualityAnalyzer(private val context: Context) {
                 
                 // 计算噪点差异
                 val noiseDiff = kotlin.math.abs(centerLuma - avgNeighborLuma)
-                noiseSum += noiseDiff
+                noiseSum += noiseDiff.toFloat()
                 noiseCount++
             }
         }

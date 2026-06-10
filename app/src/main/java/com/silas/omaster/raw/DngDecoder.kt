@@ -126,7 +126,7 @@ class DngDecoder(private val context: Context) {
                 ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     // 设置目标色彩空间
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        decoder.targetColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
+                        decoder.setTargetColorSpace(ColorSpace.get(ColorSpace.Named.SRGB))
                     }
                     decoder.isMutableRequired = true
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE

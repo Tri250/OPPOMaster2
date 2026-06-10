@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -30,6 +31,8 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.util.LogUtil
+import com.silas.omaster.util.HapticFeedbackTypeCompat
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import java.io.*
 import kotlin.math.*
@@ -247,46 +250,6 @@ fun WatermarkEditorScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
-    // 图片选择器
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                isLoading = true
-                try {
-                    val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)
-                    }
-                    originalBitmap = bitmap
-
-                    // 从 URI 读取 EXIF
-                    try {
-                        context.contentResolver.openInputStream(uri)?.use { stream ->
-                            val exif = ExifInterface(stream)
-                            modelText = exif.getAttribute(ExifInterface.TAG_MODEL) ?: modelText
-                            val params = buildParamsString(exif)
-                            if (params.isNotBlank()) paramsText = params
-                            val date = exif.getAttribute(ExifInterface.TAG_DATETIME)
-                                ?.substring(0, 10)
-                                ?.replace(':', '-')
-                            if (!date.isNullOrBlank()) dateText = date
-                        }
-                    } catch (e: Exception) {
-                        LogUtil.logThrowable("WatermarkEditor", e, "读取 EXIF 信息失败")
-                    }
-
-                    if (bitmap != null) {
-                        recommendedColor = analyzeDominantColor(bitmap)
-                    }
-                } catch (e: Exception) {
-                    LogUtil.logThrowable("WatermarkEditor", e, "加载图片失败")
-                }
-                isLoading = false
-            }
-        }
-    }
-
     // ========== 状态管理 ==========
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -333,6 +296,46 @@ fun WatermarkEditorScreen(
 
     // 智能颜色推荐
     var recommendedColor by remember { mutableStateOf(Color.White) }
+
+    // 图片选择器
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                isLoading = true
+                try {
+                    val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)
+                    }
+                    originalBitmap = bitmap
+
+                    // 从 URI 读取 EXIF
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val exif = ExifInterface(stream)
+                            modelText = exif.getAttribute(ExifInterface.TAG_MODEL) ?: modelText
+                            val params = buildParamsString(exif)
+                            if (params.isNotBlank()) paramsText = params
+                            val date = exif.getAttribute(ExifInterface.TAG_DATETIME)
+                                ?.substring(0, 10)
+                                ?.replace(':', '-')
+                            if (!date.isNullOrBlank()) dateText = date
+                        }
+                    } catch (e: Exception) {
+                        LogUtil.logThrowable("WatermarkEditor", e, "读取 EXIF 信息失败")
+                    }
+
+                    if (bitmap != null) {
+                        recommendedColor = analyzeDominantColor(bitmap)
+                    }
+                } catch (e: Exception) {
+                    LogUtil.logThrowable("WatermarkEditor", e, "加载图片失败")
+                }
+                isLoading = false
+            }
+        }
+    }
 
     // 拖拽状态
     var watermarkOffset by remember { mutableStateOf(Offset.Zero) }
@@ -442,7 +445,7 @@ fun WatermarkEditorScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -451,14 +454,14 @@ fun WatermarkEditorScreen(
             actions = {
                 // 图层按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     showLayerPanel = !showLayerPanel
                 }) {
                     Icon(Icons.Default.Layers, "图层", tint = Color.White.copy(alpha = 0.5f))
                 }
                 // 预览按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     showBeforeAfter = !showBeforeAfter
                 }) {
                     Icon(
@@ -469,7 +472,7 @@ fun WatermarkEditorScreen(
                 }
                 // 导出按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     previewBitmap?.let { onExport(it, watermarkConfig) }
                 }) {
                     Icon(Icons.Default.Download, "导出", tint = CyanAccent)
@@ -496,7 +499,7 @@ fun WatermarkEditorScreen(
             } else if (previewBitmap != null) {
                 // 预览Canvas（支持手势操作）
                 WatermarkPreviewCanvas(
-                    bitmap = if (showBeforeAfter && originalBitmap != null) originalBitmap else previewBitmap,
+                    bitmap = if (showBeforeAfter && originalBitmap != null) originalBitmap!! else previewBitmap!!,
                     watermarkConfig = watermarkConfig.copy(
                         enabled = isWatermarkEnabled,
                         offset = watermarkOffset,
@@ -523,7 +526,7 @@ fun WatermarkEditorScreen(
                     Switch(
                         checked = isWatermarkEnabled,
                         onCheckedChange = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             isWatermarkEnabled = it
                         },
                         colors = SwitchDefaults.colors(
@@ -537,7 +540,7 @@ fun WatermarkEditorScreen(
                 if (originalBitmap != null && previewBitmap != null) {
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             showBeforeAfter = !showBeforeAfter
                         },
                         modifier = Modifier
@@ -581,7 +584,7 @@ fun WatermarkEditorScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             imagePickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -610,7 +613,7 @@ fun WatermarkEditorScreen(
             WatermarkCategoryTabs(
                 selectedCategory = selectedCategory,
                 onCategorySelected = { category ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     selectedCategory = category
                 }
             )
@@ -630,7 +633,7 @@ fun WatermarkEditorScreen(
                 templates = filteredTemplates,
                 selectedTemplate = selectedTemplate,
                 onTemplateSelected = { template ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     selectedTemplate = template
                     // 应用模板配置
                     showBrand = template.showBrand
@@ -653,7 +656,7 @@ fun WatermarkEditorScreen(
             WatermarkPositionGrid(
                 selectedPosition = selectedPosition,
                 onPositionSelected = { position ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     selectedPosition = position
                     watermarkOffset = Offset.Zero
                 }
@@ -741,7 +744,7 @@ fun WatermarkEditorScreen(
                 // 重置默认
                 OutlinedButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         brandText = "Shot on Ophto"
                         selectedPosition = WatermarkPlacement.BOTTOM_LEFT
                         textSize = 14f
@@ -767,7 +770,7 @@ fun WatermarkEditorScreen(
                 // 保存图片
                 Button(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         previewBitmap?.let { onExport(it, watermarkConfig) }
                     },
                     modifier = Modifier.weight(1f),
@@ -1770,9 +1773,9 @@ private fun analyzeDominantColor(bitmap: Bitmap): Color {
     for (x in 0 until bitmap.width step stepX) {
         for (y in 0 until bitmap.height step stepY) {
             val pixel = bitmap.getPixel(x, y)
-            val r = Color.red(pixel)
-            val g = Color.green(pixel)
-            val b = Color.blue(pixel)
+            val r = android.graphics.Color.red(pixel)
+            val g = android.graphics.Color.green(pixel)
+            val b = android.graphics.Color.blue(pixel)
             totalBrightness += (r + g + b) / 3
         }
     }

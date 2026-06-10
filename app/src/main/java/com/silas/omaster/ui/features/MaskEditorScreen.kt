@@ -44,10 +44,11 @@ import com.silas.omaster.ui.theme.PureBlack
 fun MaskEditorScreen(
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val viewModel: MaskViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
-                MaskViewModel.create(LocalContext.current)
+                MaskViewModel.create(context)
             }
         }
     )

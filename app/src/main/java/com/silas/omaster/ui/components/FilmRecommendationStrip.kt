@@ -13,11 +13,15 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import com.silas.omaster.model.FilmPreset
 import com.silas.omaster.model.FilmSeries
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.HapticFeedbackTypeCompat
+import com.silas.omaster.util.perform
 
 /**
  * 胶片推荐条组件
@@ -80,7 +84,7 @@ fun FilmRecommendationStrip(
                     film = film,
                     selected = film.id == selectedId,
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         onSelect(film.id)
                     }
                 )
@@ -306,7 +310,7 @@ fun FilmDetailDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onApply()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)

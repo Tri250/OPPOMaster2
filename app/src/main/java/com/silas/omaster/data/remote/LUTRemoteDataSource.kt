@@ -5,8 +5,10 @@ import com.silas.omaster.data.repository.DownloadProgress
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.client.request.streams.*
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.*
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
@@ -87,9 +89,15 @@ class LUTRemoteDataSource(
             
             var bytesDownloaded = 0L
             
-            response.bodyAsChannel().collect { chunk ->
-                tempFile.appendBytes(chunk.toByteArray())
-                bytesDownloaded += chunk.size
+            val channel: ByteReadChannel = response.bodyAsChannel()
+            val buffer = ByteArray(8192)
+            
+            while (!channel.isClosedForRead) {
+                val bytesRead = channel.readAvailable(buffer)
+                if (bytesRead <= 0) break
+                
+                tempFile.appendBytes(buffer.copyOf(bytesRead))
+                bytesDownloaded += bytesRead
                 
                 if (contentLength > 0) {
                     emit(DownloadProgress.Downloading(

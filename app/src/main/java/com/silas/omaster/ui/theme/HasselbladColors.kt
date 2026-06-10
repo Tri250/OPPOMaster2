@@ -52,7 +52,7 @@ object HasselbladColors {
      * @param alpha 透明度 0-1
      */
     fun getSemiTransparentBackground(alpha: Float): Color {
-        return Color(0xFF000000, alpha.coerceIn(0f, 1f))
+        return Color(0xFF000000).copy(alpha = alpha.coerceIn(0f, 1f))
     }
 }
 

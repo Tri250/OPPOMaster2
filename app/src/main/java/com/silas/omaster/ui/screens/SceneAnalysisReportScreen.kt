@@ -296,14 +296,14 @@ fun SceneAnalysisReportScreen(
                 }
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // 时间范围选择
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -316,13 +316,14 @@ fun SceneAnalysisReportScreen(
                 }
 
                 // 概览卡片
-                if (habits != null) {
-                    OverviewCards(habits)
+                val currentHabits = habits
+                if (currentHabits != null) {
+                    OverviewCards(currentHabits)
                 }
 
                 // 拍摄偏好
-                if (habits != null) {
-                    ShootingPreferenceCard(habits)
+                if (currentHabits != null) {
+                    ShootingPreferenceCard(currentHabits)
                 }
 
                 // 场景分布
@@ -361,6 +362,7 @@ fun SceneAnalysisReportScreen(
             }
         }
     }
+}
 }
 
 /**
@@ -439,7 +441,7 @@ private fun OverviewCards(habits: ShootingHabits) {
  */
 @Composable
 private fun OverviewCard(
-    icon: androidx.compose.material.icons.Icon,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
     modifier: Modifier = Modifier

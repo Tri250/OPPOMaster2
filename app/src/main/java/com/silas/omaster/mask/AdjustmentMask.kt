@@ -291,7 +291,7 @@ data class LuminanceRange(
 @Parcelize
 @Serializable
 data class ColorTarget(
-    val targetColor: Int = 0xFFFF6B35,
+    val targetColor: Int = 0xFFFF6B35.toInt(),
     val tolerance: Float = 0.2f,
     val invertSelection: Boolean = false
 ) : Parcelable

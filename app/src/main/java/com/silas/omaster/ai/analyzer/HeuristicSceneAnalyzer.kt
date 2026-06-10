@@ -684,7 +684,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         }
 
         // 计算置信度
-        val totalScore = sorted.sumOf { it.value }
+        val totalScore = sorted.sumOf { it.value.toDouble() }.toFloat()
         val primaryScore = topScenes.first().value
         val confidence = (primaryScore / totalScore.coerceAtLeast(1f)).coerceIn(0f, 1f)
 
@@ -722,7 +722,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             },
             "face_count" to faceCount.toFloat(),
             "edge_density" to edgeDensity,
-            "has_exif" to (exif != null).toFloat()
+            "has_exif" to (exif != null).let { if (it) 1f else 0f }
         )
     }
 

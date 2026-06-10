@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 
 /**
  * 通知设置页面
@@ -50,7 +51,7 @@ fun NotificationSettingsScreen(
             title = { Text("通知设置", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -134,7 +135,7 @@ fun NotificationSettingsScreen(
                     description = item.description,
                     isEnabled = item.enabled,
                     onToggle = { enabled ->
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         notificationSettings[index] = item.copy(enabled = enabled)
                     }
                 )

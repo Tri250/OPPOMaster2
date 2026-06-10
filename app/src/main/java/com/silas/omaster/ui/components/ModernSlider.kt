@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.util.perform
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 
 /**
  * 现代化滑块组件
@@ -77,7 +78,7 @@ fun ModernSlider(
             onValueChange = { newValue ->
                 onValueChange(newValue)
                 if (kotlin.math.abs(newValue - lastHapticValue) >= stepSize) {
-                    haptic.perform(HapticFeedbackType.TextHandleMove)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     lastHapticValue = newValue
                 }
             },

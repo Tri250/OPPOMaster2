@@ -276,21 +276,21 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 收藏的预设ID列表（PM-003）
     var favoritePresetIds: List<String>
-        get() = prefs.getStringSet(KEY_FAVORITE_PRESET_IDS, emptySet())?.toList() ?: emptyList()
+        get() = prefs.getStringSet(KEY_FAVORITE_PRESET_IDS, emptySet())?.mapNotNull { it } ?: emptyList()
         set(value) {
             prefs.edit().putStringSet(KEY_FAVORITE_PRESET_IDS, value.toSet()).apply()
         }
 
     // 置顶的预设ID列表（PM-008）
     var pinnedPresetIds: List<String>
-        get() = prefs.getStringSet(KEY_PINNED_PRESET_IDS, emptySet())?.toList() ?: emptyList()
+        get() = prefs.getStringSet(KEY_PINNED_PRESET_IDS, emptySet())?.mapNotNull { it } ?: emptyList()
         set(value) {
             prefs.edit().putStringSet(KEY_PINNED_PRESET_IDS, value.toSet()).apply()
         }
 
     // 手动修改的参数（PP-005）
     var manuallyModifiedParams: List<String>
-        get() = prefs.getStringSet(KEY_MANUALLY_MODIFIED_PARAMS, emptySet())?.toList() ?: emptyList()
+        get() = prefs.getStringSet(KEY_MANUALLY_MODIFIED_PARAMS, emptySet())?.mapNotNull { it } ?: emptyList()
         set(value) {
             prefs.edit().putStringSet(KEY_MANUALLY_MODIFIED_PARAMS, value.toSet()).apply()
         }
@@ -307,7 +307,16 @@ class SettingsManager private constructor(private val context: Context) {
             }
         }
         set(value) {
-            val jsonStr = kotlinx.serialization.json.Json.encodeToString(value)
+            val jsonStr = kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.builtins.MapSerializer(
+                    kotlinx.serialization.serializer<String>(),
+                    kotlinx.serialization.builtins.MapSerializer(
+                        kotlinx.serialization.serializer<String>(),
+                        kotlinx.serialization.serializer<Int>()
+                    )
+                ),
+                value
+            )
             prefs.edit().putString(KEY_CUSTOM_QUICK_PRESETS, jsonStr).apply()
         }
 

@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -188,7 +189,7 @@ fun HistogramView(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawScope.drawHistogramChannel(
+private fun DrawScope.drawHistogramChannel(
     values: FloatArray,
     color: Color,
     bucketWidth: Float,

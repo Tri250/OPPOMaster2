@@ -256,10 +256,10 @@ class ColorSpaceManager {
         }
 
         if (temp <= 66) {
-            g = 99.4708025861f * temp.ln().toFloat()
+            g = (99.4708025861 * kotlin.math.ln(temp.toDouble())).toFloat()
         } else {
             val t = temp - 60f
-            g = 288.1221695283f * t.pow(-0.0755148492f).toFloat()
+            g = (288.1221695283 * Math.pow(t.toDouble(), -0.0755148492)).toFloat()
         }
 
         if (temp >= 66) {
@@ -268,7 +268,7 @@ class ColorSpaceManager {
             b = 0f
         } else {
             val t = temp - 10f
-            b = 138.5177312231f * t.ln().toFloat()
+            b = (138.5177312231 * kotlin.math.ln(t.toDouble())).toFloat()
         }
 
         // 归一化到 [0, 1] 然后应用色调

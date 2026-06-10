@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,6 +27,8 @@ import com.silas.omaster.ui.components.HistogramView
 import com.silas.omaster.ui.components.LuminanceRegion
 import com.silas.omaster.ui.components.MiniHistogram
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.HapticFeedbackTypeCompat
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
 
 /**
@@ -98,7 +102,7 @@ fun ParamAdjustScreen(
             title = { Text("参数精细调节", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -107,7 +111,7 @@ fun ParamAdjustScreen(
             actions = {
                 // 重置按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     iso = 100
                     shutterSpeed = 125f
                     aperture = 2.8f
@@ -121,7 +125,7 @@ fun ParamAdjustScreen(
                 }
                 // 应用按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onApply(CameraParams(
                         iso = iso,
                         shutterSpeed = shutterSpeed,
@@ -156,7 +160,7 @@ fun ParamAdjustScreen(
                     isComparing = isShowingOriginal,
                     modifier = Modifier.fillMaxSize(),
                     onLongPressStart = {
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         isShowingOriginal = true
                     },
                     onLongPressEnd = {
@@ -253,7 +257,7 @@ fun ParamAdjustScreen(
                     label = "人像",
                     selected = selectedPreset == "portrait",
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         selectedPreset = "portrait"
                         iso = 100
                         shutterSpeed = 125f
@@ -265,7 +269,7 @@ fun ParamAdjustScreen(
                     label = "风景",
                     selected = selectedPreset == "landscape",
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         selectedPreset = "landscape"
                         iso = 100
                         shutterSpeed = 250f
@@ -277,7 +281,7 @@ fun ParamAdjustScreen(
                     label = "夜景",
                     selected = selectedPreset == "night",
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         selectedPreset = "night"
                         iso = 800
                         shutterSpeed = 30f
@@ -289,7 +293,7 @@ fun ParamAdjustScreen(
                     label = "运动",
                     selected = selectedPreset == "sports",
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         selectedPreset = "sports"
                         iso = 400
                         shutterSpeed = 1000f
@@ -314,8 +318,8 @@ fun ParamAdjustScreen(
                         subtitle = "感光度，影响噪点和曝光",
                         value = iso,
                         valueRange = 50..6400,
-                        options = isoOptions,
-                        onValueChange = { iso = it },
+                        options = isoOptions.map { it.toString() },
+                        onValueChange = { iso = it as Int },
                         unit = "",
                         color = Color(0xFF9C27B0),
                         miniHistogram = histogramData?.luminance
@@ -330,7 +334,7 @@ fun ParamAdjustScreen(
                         value = shutterSpeed.toInt(),
                         valueRange = 1..30000,
                         displayValue = formatShutterSpeed(shutterSpeed),
-                        onValueChange = { shutterSpeed = it.toFloat() },
+                        onValueChange = { shutterSpeed = (it as Number).toFloat() },
                         unit = "",
                         color = Color(0xFF2196F3)
                     )
@@ -344,7 +348,7 @@ fun ParamAdjustScreen(
                         value = aperture,
                         valueRange = 1.4f..22f,
                         options = apertureOptions.map { it.toString() },
-                        onValueChange = { aperture = it },
+                        onValueChange = { aperture = it as Float },
                         unit = "f/",
                         color = HasselbladOrange
                     )
@@ -358,7 +362,7 @@ fun ParamAdjustScreen(
                         value = whiteBalance,
                         valueRange = 2800..9000,
                         options = wbOptions.map { "${it}K" },
-                        onValueChange = { whiteBalance = it },
+                        onValueChange = { whiteBalance = it as Int },
                         unit = "K",
                         color = Color(0xFFFFEB3B),
                         showColorTempGradient = true
@@ -372,7 +376,7 @@ fun ParamAdjustScreen(
                         subtitle = "镜头焦距，影响视角和压缩感",
                         value = focalLength,
                         valueRange = 8..400,
-                        onValueChange = { focalLength = it },
+                        onValueChange = { focalLength = it as Int },
                         unit = "mm",
                         color = Color(0xFFE91E63)
                     )
@@ -385,7 +389,7 @@ fun ParamAdjustScreen(
                         subtitle = "手动调整曝光量",
                         value = exposureCompensation,
                         valueRange = -3f..3f,
-                        onValueChange = { exposureCompensation = it },
+                        onValueChange = { exposureCompensation = it as Float },
                         unit = "EV",
                         color = Color(0xFF4CAF50),
                         miniHistogram = histogramData?.luminance,
@@ -572,7 +576,7 @@ private fun ParamSliderCardEnhanced(
                     Slider(
                         value = value.toFloat(),
                         onValueChange = {
-                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             onValueChange(it.toInt())
                         },
                         valueRange = when (valueRange) {
@@ -589,11 +593,11 @@ private fun ParamSliderCardEnhanced(
                     Slider(
                         value = value,
                         onValueChange = {
-                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             onValueChange(it)
                         },
                         valueRange = when (valueRange) {
-                            is ClosedFloatingPointRange<Float> -> valueRange
+                            is ClosedFloatingPointRange<*> -> valueRange as ClosedFloatingPointRange<Float>
                             else -> 0f..100f
                         },
                         colors = SliderDefaults.colors(
@@ -618,7 +622,7 @@ private fun ParamSliderCardEnhanced(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .clickable {
-                                    haptic.perform(HapticFeedbackType.Select)
+                                    haptic.perform(HapticFeedbackTypeCompat.Select)
                                     val parsedValue = when (value) {
                                         is Int -> option.filter { it.isDigit() }.toIntOrNull() ?: value
                                         is Float -> option.filter { it.isDigit() || it == '.' }.toFloatOrNull() ?: value

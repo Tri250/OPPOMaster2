@@ -602,12 +602,12 @@ object FilmPresets {
     /**
      * 获取所有场景列表
      */
-    fun getAllScenes(): List<SceneProfile> = allScenes
+    fun getAllScenes(): List<SceneProfile> = ScenePresets.allScenes
     
     /**
      * 根据场景ID列表获取场景
      */
     fun getScenesByIds(ids: List<String>): List<SceneProfile> {
-        return ids.mapNotNull { getSceneById(it) }
+        return ids.mapNotNull { ScenePresets.getSceneById(it) }
     }
 }

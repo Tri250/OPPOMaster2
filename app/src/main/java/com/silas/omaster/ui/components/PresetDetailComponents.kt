@@ -1,6 +1,6 @@
 package com.silas.omaster.ui.components
 
-import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,26 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Sparkles
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.silas.omaster.ui.theme.HasselbladOrange
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
@@ -49,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.HasselbladOrange
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * 预设统计数据卡片（对齐用户规范）
@@ -155,7 +138,7 @@ fun ShootingTipsDetailCard(
                 // 标题
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.CameraAlt,
+                        imageVector = Icons.Default.Star,
                         contentDescription = null,
                         tint = HasselbladOrange,
                         modifier = Modifier.size(16.dp)
@@ -455,7 +438,7 @@ fun ApplyPresetButton(
         shape = RoundedCornerShape(12.dp)
     ) {
         Icon(
-            imageVector = if (applied) Icons.Default.CheckCircle else Icons.Default.Sparkles,
+            imageVector = if (applied) Icons.Default.CheckCircle else Icons.Default.Star,
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(16.dp)

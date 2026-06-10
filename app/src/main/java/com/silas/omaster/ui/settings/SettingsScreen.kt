@@ -82,6 +82,7 @@ import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.HapticSettings
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
@@ -122,7 +123,7 @@ fun SettingsScreen(
         ThemeSelectionDialog(
             currentTheme = currentTheme,
             onThemeSelected = { theme ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 settingsManager.currentTheme = theme
                 showThemeDialog = false
             },
@@ -134,7 +135,7 @@ fun SettingsScreen(
         TabSelectionDialog(
             currentTab = defaultStartTab,
             onTabSelected = { tab ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 defaultStartTab = tab
                 settingsManager.defaultStartTab = tab
                 showTabDialog = false
@@ -147,7 +148,7 @@ fun SettingsScreen(
         UpdateChannelDialog(
             currentChannel = updateChannel,
             onChannelSelected = { channel ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 settingsManager.updateChannel = channel
                 updateChannel = channel
                 showChannelDialog = false
@@ -160,7 +161,7 @@ fun SettingsScreen(
         DarkModeDialog(
             currentMode = darkMode,
             onModeSelected = { mode ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 settingsManager.darkMode = mode
                 darkMode = mode
                 showDarkModeDialog = false
@@ -200,7 +201,7 @@ fun SettingsScreen(
                     settingsManager.isVibrationEnabled = enabled
                     HapticSettings.enabled = enabled
                     if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     }
                 }
             )
@@ -296,7 +297,7 @@ fun SettingsScreen(
                         floatingWindowOpacity = newValue
                         settingsManager.floatingWindowOpacity = newValue
                         if (newValue != previousOpacity) {
-                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             previousOpacity = newValue
                         }
                     },
@@ -342,9 +343,9 @@ fun SettingsScreen(
                     cloudSyncEnabled = enabled
                     settingsManager.isCloudSyncEnabled = enabled
                     if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     } else {
-                        haptic.perform(HapticFeedbackType.ToggleOff)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     }
                 }
             )
@@ -358,7 +359,7 @@ fun SettingsScreen(
                     subtitle = "OPPO、realme、vivo、honor",
                     onClick = {
                         // 显示数据源详情对话框
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         showDataSourceDialog = true
                     }
                 )
@@ -382,7 +383,7 @@ fun SettingsScreen(
                     onClick = {
                         // 手动触发同步
                         if (!isSyncing) {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             isSyncing = true
                             coroutineScope.launch {
                                 val result = presetRepository.syncFromCloud()
@@ -433,9 +434,9 @@ fun SettingsScreen(
                     analyticsEnabled = enabled
                     settingsManager.isAnalyticsEnabled = enabled
                     if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     } else {
-                        haptic.perform(HapticFeedbackType.ToggleOff)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     }
                 }
             )
@@ -506,7 +507,7 @@ fun SettingsScreen(
                             ImageCacheManager.clearCache(context)
                             cacheSize = 0.0
                             showClearCacheDialog = false
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         },
                         enabled = cacheSize > 0
                     ) {

@@ -70,7 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.HapticFeedbackType as HapticType
+import com.silas.omaster.util.HapticFeedbackTypeCompat as HapticType
 import com.silas.omaster.util.perform
 import com.silas.omaster.watermark.WatermarkEditorManager
 import com.silas.omaster.watermark.WatermarkElement
@@ -146,8 +146,8 @@ fun WatermarkTemplateSelector(
                 selectedId = selectedTemplate?.id,
                 onSelect = {
                     haptic.perform(HapticType.Select)
-                    watermarkManager.selectTemplate(it.id)
-                    onTemplateSelected(it.id)
+                    watermarkManager.selectTemplate(it)
+                    onTemplateSelected(it)
                 },
                 onEdit = onEditTemplate
             )

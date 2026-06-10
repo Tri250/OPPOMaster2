@@ -6,16 +6,20 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -255,15 +259,13 @@ fun HasselbladApertureAnimation(
                     .size(128.dp)
                     .clip(CircleShape)
                     .background(Color.Transparent)
-                    .then(
-                        Modifier.drawBehind {
-                            drawCircle(
-                                color = HasselbladOrange.copy(alpha = 0.3f),
-                                radius = size.minDimension / 2,
-                                style = Stroke(width = 2.dp.toPx())
-                            )
-                        }
-                    )
+                    .drawBehind {
+                        drawCircle(
+                            color = HasselbladOrange.copy(alpha = 0.3f),
+                            radius = size.minDimension / 2,
+                            style = Stroke(width = 2.dp.toPx())
+                        )
+                    }
             )
 
             // 光圈叶片
@@ -394,29 +396,27 @@ private fun ApertureBlades(
                 modifier = Modifier
                     .size(128.dp)
                     .rotate(angle)
-                    .then(
-                        Modifier.drawBehind {
-                            val bladeWidth = 20.dp.toPx() * openingFactor
-                            val bladeLength = 40.dp.toPx() * openingFactor
+                    .drawBehind {
+                        val bladeWidth = 20.dp.toPx() * openingFactor
+                        val bladeLength = 40.dp.toPx() * openingFactor
 
-                            // 绘制叶片形状
-                            drawPath(
-                                path = androidx.compose.ui.graphics.Path().apply {
-                                    moveTo(size.width / 2, size.height / 2)
-                                    lineTo(
-                                        size.width / 2 + bladeLength,
-                                        size.height / 2 - bladeWidth / 2
-                                    )
-                                    lineTo(
-                                        size.width / 2 + bladeLength,
-                                        size.height / 2 + bladeWidth / 2
-                                    )
-                                    close()
-                                },
-                                color = HasselbladOrange.copy(alpha = alpha)
-                            )
-                        }
-                    )
+                        // 绘制叶片形状
+                        drawPath(
+                            path = androidx.compose.ui.graphics.Path().apply {
+                                moveTo(size.width / 2, size.height / 2)
+                                lineTo(
+                                    size.width / 2 + bladeLength,
+                                    size.height / 2 - bladeWidth / 2
+                                )
+                                lineTo(
+                                    size.width / 2 + bladeLength,
+                                    size.height / 2 + bladeWidth / 2
+                                )
+                                close()
+                            },
+                            color = HasselbladOrange.copy(alpha = alpha)
+                        )
+                    }
             )
         }
     }
@@ -451,7 +451,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
         when (step.status) {
             AnalysisStatus.COMPLETED -> {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Check,
+                    imageVector = Icons.Default.Check,
                     contentDescription = "完成",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(16.dp)
@@ -472,15 +472,13 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                         .size(16.dp)
                         .clip(CircleShape)
                         .background(Color.Transparent)
-                        .then(
-                            Modifier.drawBehind {
-                                drawCircle(
-                                    color = Color.White.copy(alpha = 0.2f),
-                                    radius = size.minDimension / 2,
-                                    style = Stroke(width = 1.dp.toPx())
-                                )
-                            }
-                        )
+                        .drawBehind {
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.2f),
+                                radius = size.minDimension / 2,
+                                style = Stroke(width = 1.dp.toPx())
+                            )
+                        }
                 )
             }
         }

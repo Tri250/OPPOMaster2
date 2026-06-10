@@ -22,6 +22,7 @@ import com.silas.omaster.data.model.PresetSource
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -74,7 +75,7 @@ fun PresetSourceManagerScreen(
             title = { Text("预设源管理", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -82,7 +83,7 @@ fun PresetSourceManagerScreen(
             },
             actions = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     // 刷新
                     scope.launch {
                         isLoading = true
@@ -96,7 +97,7 @@ fun PresetSourceManagerScreen(
                     )
                 }
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     showAddDialog = true
                 }) {
                     Icon(Icons.Default.Add, "添加", tint = Color.White)
@@ -175,7 +176,7 @@ fun PresetSourceManagerScreen(
                     source = source,
                     isEditing = editingSource?.id == source.id,
                     onToggle = { enabled ->
-                        haptic.perform(if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+                        haptic.perform(if (enabled) HapticFeedbackTypeCompat.Confirm else HapticFeedbackTypeCompat.Confirm)
                         sources = sources.map {
                             if (it.id == source.id) it.copy(enabled = enabled) else it
                         }
@@ -193,7 +194,7 @@ fun PresetSourceManagerScreen(
                         editingSource = null
                     },
                     onDelete = {
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.perform(HapticFeedbackTypeCompat.Confirm)
                         sources = sources.filter { it.id != source.id }
                     }
                 )

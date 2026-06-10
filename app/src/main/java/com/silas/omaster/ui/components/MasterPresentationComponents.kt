@@ -4,6 +4,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -21,6 +24,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -240,7 +244,7 @@ fun FilmRecipePreviewBar(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(films.size) { index ->
+            items(count = films.size, key = { films[it].id }) { index ->
                 val film = films[index]
                 FilmRecipeItem(
                     film = film,
@@ -310,6 +314,45 @@ private fun FilmRecipeItem(
         }
     }
 }
+
+/**
+ * 胶片库存类型
+ */
+data class FilmStock(
+    val id: String,
+    val displayName: String,
+    val brand: String,
+    val iso: Int,
+    val description: String = ""
+) {
+    companion object {
+        val entries: List<FilmStock> = listOf(
+            FilmStock("portra", "Portra 400", "Kodak", 400, "人像胶片"),
+            FilmStock("cc", "CC 经典负片", "Fujifilm", 400, "经典色彩"),
+            FilmStock("nc", "NC 自然", "Fujifilm", 400, "自然色彩"),
+            FilmStock("nh", "NH 浓郁负片", "Fujifilm", 400, "浓郁色彩"),
+            FilmStock("rdp3", "RDP3", "Fujifilm", 100, "反转片"),
+            FilmStock("800t", "800T", "Kodak", 800, "灯光片"),
+            FilmStock("tx400", "TX400", "Kodak", 400, "黑白胶片"),
+            FilmStock("ccd_cool", "冷CCD", "Digital", 100, "冷色调"),
+            FilmStock("ccd_warm", "暖CCD", "Digital", 100, "暖色调")
+        )
+    }
+}
+
+/**
+ * 场景层级
+ */
+data class SceneHierarchy(
+    val primary: SceneLevel,
+    val secondary: SceneLevel,
+    val fine: SceneLevel
+)
+
+data class SceneLevel(
+    val displayName: String,
+    val icon: String? = null
+)
 
 /**
  * XPAN 宽幅模式提示

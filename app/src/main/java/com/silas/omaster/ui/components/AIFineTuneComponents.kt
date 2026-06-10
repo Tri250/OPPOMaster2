@@ -1,6 +1,7 @@
 package com.silas.omaster.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,6 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,7 +62,7 @@ import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestion
 import com.silas.omaster.ai.ParamComparison
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.HapticFeedbackType as HapticType
+import com.silas.omaster.util.HapticFeedbackTypeCompat as HapticType
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
 
@@ -321,7 +323,7 @@ private fun ParamComparisonRow(
     isSelected: Boolean,
     onToggle: () -> Unit
 ) {
-    val borderColor by animateFloatAsState(
+    val borderColor by animateColorAsState(
         targetValue = if (isSelected) HasselbladOrange else Color.Transparent,
         label = "border"
     )

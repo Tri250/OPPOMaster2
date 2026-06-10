@@ -45,6 +45,7 @@ import com.silas.omaster.ui.components.WelcomeDialog
 import com.silas.omaster.ui.create.PresetSelectionScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetViewModel
+import com.silas.omaster.ui.create.UniversalCreatePresetViewModelFactory
 import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
@@ -266,7 +267,9 @@ fun MainApp(navController: NavHostController) {
                 TextButton(
                     onClick = {
                         JsonUtil.deleteRemotePresets(context)
-                        repository.reloadDefaultPresets()
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                            repository.reloadDefaultPresets()
+                        }
                         showMigrationDialog = false
                     }
                 ) {

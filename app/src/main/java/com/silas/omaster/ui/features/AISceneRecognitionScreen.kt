@@ -8,7 +8,10 @@ import android.graphics.Paint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,14 +21,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ShareCompat
@@ -34,7 +41,9 @@ import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.util.LogUtil
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import com.silas.omaster.util.ShareExportUtils
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -121,6 +130,30 @@ enum class SceneCategory(val displayName: String) {
     SPORTS("运动"),
     OTHER("其他")
 }
+
+/**
+ * 场景类型数据（分析结果中的单个场景）
+ */
+data class SceneTypeData(
+    val id: String,
+    val name: String,
+    val category: String,
+    val description: String,
+    val confidence: Int,
+    val params: HasselbladParams
+)
+
+/**
+ * 场景分析结果
+ */
+data class SceneAnalysisResult(
+    val primaryScene: SceneTypeData,
+    val confidence: Float,
+    val alternativeScenes: List<SceneTypeData>,
+    val recommendedFilms: List<FilmPreset>,
+    val hasselbladParams: HasselbladParams,
+    val masterTips: List<String>
+)
 
 /**
  * 精细场景类型列表（37种）
@@ -311,7 +344,10 @@ fun AISceneRecognitionScreen(
 
             // 添加到历史记录
             if (analysisResult != null) {
-                recognitionHistory = listOf(analysisResult) + recognitionHistory.take(4)
+                val result = analysisResult
+                if (result != null) {
+                    recognitionHistory = listOf(result) + recognitionHistory.take(4)
+                }
             }
 
             isAnalyzing = false
@@ -338,7 +374,7 @@ fun AISceneRecognitionScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     if (flowState == RecognitionFlowState.RESULT) {
                         flowState = RecognitionFlowState.CAMERA
                         analysisResult = null
@@ -352,10 +388,11 @@ fun AISceneRecognitionScreen(
             },
             actions = {
                 if (flowState == RecognitionFlowState.RESULT && analysisResult != null) {
+                    val result = analysisResult!!
                     IconButton(onClick = {
                         scope.launch {
                             try {
-                                val bitmap = buildRecipeCardBitmap(analysisResult, context)
+                                val bitmap = buildRecipeCardBitmap(result, context)
                                 ShareExportUtils.exportImageToGallery(context, bitmap, "hasselblad_recipe_${System.currentTimeMillis()}.jpg")
                             } catch (e: Exception) {
                                 LogUtil.logThrowable("AIScene", e, "导出配方卡片失败")
@@ -410,9 +447,10 @@ fun AISceneRecognitionScreen(
             
             RecognitionFlowState.RESULT -> {
                 // 分析完成，显示结果
-                if (analysisResult != null) {
+                val result = analysisResult
+                if (result != null) {
                     ResultDisplayScreen(
-                        result = analysisResult,
+                        result = result,
                         sliderPosition = sliderPosition,
                         onSliderPositionChange = { sliderPosition = it },
                         selectedFilmId = selectedFilmId,
@@ -421,7 +459,7 @@ fun AISceneRecognitionScreen(
                         onShowParamsChange = { showParams = it },
                         isOptimized = isOptimized,
                         onOptimize = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             isOptimized = true
                             showParams = true
                             scope.launch {
@@ -432,7 +470,7 @@ fun AISceneRecognitionScreen(
                         isSaving = isSaving,
                         saveSuccess = saveSuccess,
                         onSaveRecipe = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             isSaving = true
                             scope.launch {
                                 kotlinx.coroutines.delay(1000)
@@ -522,7 +560,7 @@ private fun CameraEntryScreen(
                 // 闪光灯控制
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         onFlashModeChange(
                             when (flashMode) {
                                 FlashMode.OFF -> FlashMode.ON
@@ -552,7 +590,7 @@ private fun CameraEntryScreen(
                 // 摄像头切换
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         onCameraFacingChange(
                             if (cameraFacing == CameraFacing.BACK) CameraFacing.FRONT else CameraFacing.BACK
                         )
@@ -661,7 +699,7 @@ private fun CameraEntryScreen(
                     modifier = Modifier
                         .size(80.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.LongPress)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             onTakePhoto()
                         },
                     contentAlignment = Alignment.Center
@@ -688,7 +726,7 @@ private fun CameraEntryScreen(
                 // 选择图片按钮
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         onSelectImage()
                     },
                     modifier = Modifier
@@ -940,6 +978,8 @@ private fun HasselbladCompareSlider(
     sliderPosition: Float,
     onPositionChange: (Float) -> Unit
 ) {
+    var componentWidth by remember { mutableFloatStateOf(0f) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -950,6 +990,9 @@ private fun HasselbladCompareSlider(
                 .fillMaxWidth()
                 .height(200.dp)
                 .clip(RoundedCornerShape(16.dp))
+                .onSizeChanged { size ->
+                    componentWidth = size.width.toFloat()
+                }
         ) {
             // After 图片（处理后）
             Box(
@@ -999,7 +1042,7 @@ private fun HasselbladCompareSlider(
                     .width(2.dp)
                     .background(Color.White)
                     .align(Alignment.CenterStart)
-                    .offset { IntOffset((sliderPosition * (size.width - 2.dp.toPx())).toInt(), 0) }
+                    .offset { IntOffset((sliderPosition * componentWidth).toInt(), 0) }
             )
 
             // 滑杆手柄
@@ -1009,11 +1052,11 @@ private fun HasselbladCompareSlider(
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color.White)
                     .align(Alignment.CenterStart)
-                    .offset { IntOffset((sliderPosition * (size.width - 32.dp.toPx())).toInt(), 0) }
+                    .offset { IntOffset((sliderPosition * componentWidth).toInt(), 0) }
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            val newPosition = sliderPosition + (dragAmount.x / size.width)
+                            val newPosition = sliderPosition + (dragAmount.x / componentWidth)
                             onPositionChange(newPosition.coerceIn(0f, 1f))
                         }
                     },
@@ -1286,17 +1329,17 @@ private fun RecognitionHistoryStrip(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(history) { scene ->
+            items(items = history, key = { scene -> scene.id }) { scene ->
                 Card(
                     modifier = Modifier
                         .size(64.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackTypeCompat.Select)
                             onSelect(scene)
                         },
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(scene.color).copy(alpha = 0.2f)
+                        containerColor = Color(scene.color.toULong()).copy(alpha = 0.2f)
                     )
                 ) {
                     Box(
@@ -1340,7 +1383,7 @@ private fun BottomActionBar(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackTypeCompat.Select)
                     onRetake()
                 }
             ) {
@@ -1372,7 +1415,7 @@ private fun BottomActionBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
                     if (!isSaving && !saveSuccess) {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         onSaveRecipe()
                     }
                 }
@@ -1552,9 +1595,9 @@ private fun createFallbackResult(): SceneAnalysisResult {
         confidence = 0.5f,
         alternativeScenes = emptyList(),
         recommendedFilms = listOf(
-            FilmPreset("cc", "CC 经典负片", FilmPreset.FilmSeries.CLASSIC, 80f, "复古质感"),
-            FilmPreset("nc", "NC 自然", FilmPreset.FilmSeries.CLASSIC, 75f, "自然色彩"),
-            FilmPreset("nh", "NH 浓郁负片", FilmPreset.FilmSeries.CLASSIC, 70f, "浓郁色彩")
+            FilmPreset("cc", "CC 经典负片", FilmSeries.CLASSIC, 80f, "复古质感"),
+            FilmPreset("nc", "NC 自然", FilmSeries.CLASSIC, 75f, "自然色彩"),
+            FilmPreset("nh", "NH 浓郁负片", FilmSeries.CLASSIC, 70f, "浓郁色彩")
         ),
         hasselbladParams = HasselbladParams(
             saturation = 5,
@@ -1645,16 +1688,16 @@ private fun generateAlternativeScenes(
 /**
  * 根据场景类别获取相关场景 ID
  */
-private fun getRelatedSceneIds(category: SceneCategory): List<String> {
+private fun getRelatedSceneIds(category: com.silas.omaster.model.SceneCategory): List<String> {
     return when (category) {
-        SceneCategory.PORTRAIT -> listOf("portrait-backlit", "portrait-soft", "portrait-studio")
-        SceneCategory.LANDSCAPE -> listOf("landscape-sunset", "landscape-mountain", "landscape-water")
-        SceneCategory.NIGHT -> listOf("night-city", "night-street", "night-portrait")
-        SceneCategory.FOOD -> listOf("food-natural", "food-studio", "food-closeup")
-        SceneCategory.URBAN -> listOf("urban-architecture", "urban-street", "urban-industrial")
-        SceneCategory.STILL_LIFE -> listOf("still-natural", "still-minimal", "still-artistic")
-        SceneCategory.MACRO -> listOf("macro-nature", "macro-detail", "macro-texture")
-        SceneCategory.EVENT -> listOf("event-indoor", "event-outdoor", "event-candid")
+        com.silas.omaster.model.SceneCategory.PORTRAIT -> listOf("portrait-backlit", "portrait-soft", "portrait-studio")
+        com.silas.omaster.model.SceneCategory.LANDSCAPE -> listOf("landscape-sunset", "landscape-mountain", "landscape-water")
+        com.silas.omaster.model.SceneCategory.NIGHT -> listOf("night-city", "night-street", "night-portrait")
+        com.silas.omaster.model.SceneCategory.FOOD -> listOf("food-natural", "food-studio", "food-closeup")
+        com.silas.omaster.model.SceneCategory.URBAN -> listOf("urban-architecture", "urban-street", "urban-industrial")
+        com.silas.omaster.model.SceneCategory.STILL_LIFE -> listOf("still-natural", "still-minimal", "still-artistic")
+        com.silas.omaster.model.SceneCategory.MACRO -> listOf("macro-nature", "macro-detail", "macro-texture")
+        com.silas.omaster.model.SceneCategory.EVENT -> listOf("event-indoor", "event-outdoor", "event-candid")
     }
 }
 

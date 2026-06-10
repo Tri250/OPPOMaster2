@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.silas.omaster.data.local.CustomPresetManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetItem
@@ -28,6 +29,8 @@ class UniversalCreatePresetViewModel(
     private val repository: PresetRepository
 ) : ViewModel() {
 
+    private val customPresetManager = CustomPresetManager.getInstance(context)
+
     private val _uiState = MutableStateFlow(UniversalPresetUiState())
     val uiState: StateFlow<UniversalPresetUiState> = _uiState.asStateFlow()
     
@@ -47,7 +50,7 @@ class UniversalCreatePresetViewModel(
         }
 
         viewModelScope.launch {
-            val preset = repository.getPresetById(presetId)
+            val preset = customPresetManager.getPresetById(presetId)
             if (preset != null) {
                 // 如果是旧数据结构，转换为新结构
                 val sections = if (preset.sections.isNullOrEmpty()) {
@@ -74,7 +77,7 @@ class UniversalCreatePresetViewModel(
         editingPresetId = presetId
         
         viewModelScope.launch {
-            val preset = repository.getPresetById(presetId)
+            val preset = customPresetManager.getPresetById(presetId)
             if (preset != null) {
                 val sections = if (preset.sections.isNullOrEmpty()) {
                     convertOldPresetToSections(preset)
@@ -179,9 +182,9 @@ class UniversalCreatePresetViewModel(
             )
             
             if (editingPresetId != null) {
-                repository.updateCustomPreset(preset)
+                customPresetManager.updateCustomPreset(preset)
             } else {
-                repository.addCustomPreset(preset)
+                customPresetManager.addCustomPreset(preset)
             }
             true
         } catch (e: Exception) {

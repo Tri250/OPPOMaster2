@@ -20,24 +20,33 @@ class ParamAdjustmentManager private constructor(context: Context) {
         const val MIN_VALUE = -100
         const val MAX_VALUE = 100
 
+        @Volatile
+        private var instance: ParamAdjustmentManager? = null
+
+        fun getInstance(context: Context): ParamAdjustmentManager {
+            return instance ?: synchronized(this) {
+                instance ?: ParamAdjustmentManager(context.applicationContext).also { instance = it }
+            }
+        }
+
         // 快捷档位
         val QUICK_PRESETS = listOf(
-            QuickPreset("原图", "还原原始效果", mapOf(
+            QuickPreset(id = "original", name = "原图", description = "还原原始效果", params = mapOf(
                 "saturation" to 0, "contrast" to 0, "brightness" to 0,
                 "warmth" to 0, "sharpness" to 0, "clarity" to 0,
                 "highlights" to 0, "shadows" to 0
             )),
-            QuickPreset("轻微调整", "轻度美化", mapOf(
+            QuickPreset(id = "light", name = "轻微调整", description = "轻度美化", params = mapOf(
                 "saturation" to 5, "contrast" to 3, "brightness" to 2,
                 "warmth" to 0, "sharpness" to 5, "clarity" to 3,
                 "highlights" to 0, "shadows" to 0
             )),
-            QuickPreset("中等调整", "中度增强", mapOf(
+            QuickPreset(id = "medium", name = "中等调整", description = "中度增强", params = mapOf(
                 "saturation" to 10, "contrast" to 8, "brightness" to 5,
                 "warmth" to 0, "sharpness" to 10, "clarity" to 8,
                 "highlights" to 0, "shadows" to 0
             )),
-            QuickPreset("强力调整", "深度优化", mapOf(
+            QuickPreset(id = "strong", name = "强力调整", description = "深度优化", params = mapOf(
                 "saturation" to 15, "contrast" to 12, "brightness" to 8,
                 "warmth" to 0, "sharpness" to 15, "clarity" to 12,
                 "highlights" to 0, "shadows" to 0
@@ -370,17 +379,6 @@ class ParamAdjustmentManager private constructor(context: Context) {
      */
     fun getParamDefinition(paramName: String): AdjustableParam? {
         return adjustableParams.find { it.name == paramName }
-    }
-
-    companion object {
-        @Volatile
-        private var instance: ParamAdjustmentManager? = null
-
-        fun getInstance(context: Context): ParamAdjustmentManager {
-            return instance ?: synchronized(this) {
-                instance ?: ParamAdjustmentManager(context.applicationContext).also { instance = it }
-            }
-        }
     }
 }
 

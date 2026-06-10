@@ -58,7 +58,7 @@ fun LUTAndVignetteScreen(
     val vignetteController = remember { VignetteController.getInstance() }
 
     // LUT 参数
-    var selectedLUTs by remember { mutableStateOf listOf<MasterLUT>() }
+    var selectedLUTs by remember { mutableStateOf(listOf<MasterLUT>()) }
     var lutIntensity by remember { mutableFloatStateOf(1.0f) }
     var lutWeights by remember { mutableStateOf(mapOf<String, Float>()) }
 
@@ -81,10 +81,10 @@ fun LUTAndVignetteScreen(
     // 示例 LUT 列表
     val availableLUTs = remember {
         listOf(
-            MasterLUT(id = "1", name = "哈苏经典", nameEn = "Hasselblad Classic", category = com.silas.omaster.data.model.LUTCategory.HASSELBLAD),
-            MasterLUT(id = "2", name = "胶片模拟", nameEn = "Film Emulation", category = com.silas.omaster.data.model.LUTCategory.FILM),
-            MasterLUT(id = "3", name = "复古暖调", nameEn = "Vintage Warm", category = com.silas.omaster.data.model.LUTCategory.VINTAGE),
-            MasterLUT(id = "4", name = "冷色调", nameEn = "Cold Tone", category = com.silas.omaster.data.model.LUTCategory.CINEMATIC)
+            MasterLUT(id = "1", name = "哈苏经典", nameEn = "Hasselblad Classic", description = "哈苏经典色彩", category = com.silas.omaster.data.model.LUTCategory.HASSELBLAD, tags = listOf("哈苏"), suitableFor = listOf("人像"), format = com.silas.omaster.data.model.LUTFormat.CUBE, size = com.silas.omaster.data.model.LUTSize.SIZE_33, fileSize = 1024, coverImage = "", downloadUrl = "", author = "OMaster", createdAt = "2026-01-01"),
+            MasterLUT(id = "2", name = "胶片模拟", nameEn = "Film Emulation", description = "胶片模拟色彩", category = com.silas.omaster.data.model.LUTCategory.FILM, tags = listOf("胶片"), suitableFor = listOf("风景"), format = com.silas.omaster.data.model.LUTFormat.CUBE, size = com.silas.omaster.data.model.LUTSize.SIZE_33, fileSize = 1024, coverImage = "", downloadUrl = "", author = "OMaster", createdAt = "2026-01-01"),
+            MasterLUT(id = "3", name = "复古暖调", nameEn = "Vintage Warm", description = "复古暖色调", category = com.silas.omaster.data.model.LUTCategory.VINTAGE, tags = listOf("复古"), suitableFor = listOf("人像"), format = com.silas.omaster.data.model.LUTFormat.CUBE, size = com.silas.omaster.data.model.LUTSize.SIZE_33, fileSize = 1024, coverImage = "", downloadUrl = "", author = "OMaster", createdAt = "2026-01-01"),
+            MasterLUT(id = "4", name = "冷色调", nameEn = "Cold Tone", description = "冷色调风格", category = com.silas.omaster.data.model.LUTCategory.CINEMATIC, tags = listOf("电影"), suitableFor = listOf("风景"), format = com.silas.omaster.data.model.LUTFormat.CUBE, size = com.silas.omaster.data.model.LUTSize.SIZE_33, fileSize = 1024, coverImage = "", downloadUrl = "", author = "OMaster", createdAt = "2026-01-01")
         )
     }
 

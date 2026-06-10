@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -22,9 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Grid
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Sparkles
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,6 +78,7 @@ import com.silas.omaster.ui.service.FloatingWindowService
 import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
 import com.silas.omaster.util.PresetI18n
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import com.silas.omaster.util.formatSigned
 import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -170,7 +174,7 @@ fun DetailScreen(
                 if (preset?.isCustom == true && onEdit != null) {
                     IconButton(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             preset?.id?.let { presetId ->
                                 onEdit(presetId)
                             }
@@ -186,7 +190,7 @@ fun DetailScreen(
 
                 // 收藏按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     viewModel.toggleFavorite()
                 }) {
                     Icon(
@@ -229,11 +233,11 @@ fun DetailScreen(
                     val maxValue = scrollState.maxValue
 
                     if (currentValue == 0 && !hasHapticAtTop) {
-                        haptic.perform(HapticFeedbackType.TextHandleMove)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         hasHapticAtTop = true
                         hasHapticAtBottom = false
                     } else if (maxValue > 0 && currentValue >= maxValue && !hasHapticAtBottom) {
-                        haptic.perform(HapticFeedbackType.TextHandleMove)
+                        haptic.perform(HapticFeedbackTypeCompat.Select)
                         hasHapticAtBottom = true
                         hasHapticAtTop = false
                     } else if (currentValue > 0 && currentValue < maxValue) {
@@ -294,7 +298,7 @@ fun DetailScreen(
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            it.tags.forEach { tag ->
+                            (it.tags ?: emptyList()).forEach { tag ->
                                 Text(
                                     text = "#$tag",
                                     color = Color.White.copy(alpha = 0.6f),

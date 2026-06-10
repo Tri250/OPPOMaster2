@@ -43,7 +43,7 @@ data class SceneProfile(
         color = parcel.readLong(),
         confidence = parcel.readFloat(),
         hasselbladParams = parcel.readParcelable(HasselbladParams::class.java.classLoader)
-            ?: HasselbladParams.DEFAULT,
+            ?: HasselbladParams(),
         recommendedFilm = parcel.createTypedArrayList(FilmPreset.CREATOR) ?: emptyList(),
         masterTips = parcel.createStringArrayList() ?: emptyList(),
         cameraParams = parcel.readParcelable(CameraParams::class.java.classLoader),
@@ -401,9 +401,9 @@ data class HistogramData(
  */
 @Serializable
 data class FaceData(
-    val faces: List<FaceInfo>,
-    val hasFace: Boolean get() = faces.isNotEmpty()
+    val faces: List<FaceInfo>
 ) : Parcelable {
+    val hasFace: Boolean get() = faces.isNotEmpty()
     constructor(parcel: Parcel) : this(
         faces = parcel.createTypedArrayList(FaceInfo.CREATOR) ?: emptyList()
     )

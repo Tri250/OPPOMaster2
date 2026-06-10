@@ -41,7 +41,7 @@ import com.silas.omaster.ui.theme.CardBorderHighlight
 import com.silas.omaster.ui.theme.CardBorderLight
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.util.PresetI18n
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.silas.omaster.util.HapticFeedbackTypeCompat
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 
@@ -75,7 +75,7 @@ fun PresetCard(
                 interactionSource = interactionSource,
                 indication = androidx.compose.foundation.LocalIndication.current,
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onClick()
                 }
             ),
@@ -102,7 +102,7 @@ fun PresetCard(
                 if (showFavoriteButton) {
                     IconButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                 onFavoriteClick()
             },
             modifier = Modifier
@@ -138,7 +138,7 @@ fun PresetCard(
                 if (showDeleteButton && preset.isCustom) {
                     IconButton(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackTypeCompat.Confirm)
                             onDeleteClick()
                         },
                         modifier = Modifier

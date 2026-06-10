@@ -91,7 +91,7 @@ class HomeViewModel(
      */
     fun toggleFavorite(presetId: String) {
         viewModelScope.launch {
-            repository.toggleFavorite(presetId)
+            repository.toggleFavoriteSuspend(presetId)
         }
     }
 

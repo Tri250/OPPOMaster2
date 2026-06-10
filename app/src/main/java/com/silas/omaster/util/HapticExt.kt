@@ -18,6 +18,16 @@ object HapticSettings {
 }
 
 /**
+ * Compat HapticFeedbackType constants for APIs not available in Compose UI 1.7.x
+ */
+object HapticFeedbackTypeCompat {
+    val ToggleOn: HapticFeedbackType = HapticFeedbackType.LongPress
+    val ToggleOff: HapticFeedbackType = HapticFeedbackType.LongPress
+    val Confirm: HapticFeedbackType = HapticFeedbackType.LongPress
+    val Select: HapticFeedbackType = HapticFeedbackType.TextHandleMove
+}
+
+/**
  * 执行震感反馈
  */
 fun HapticFeedback.perform(type: HapticFeedbackType) {

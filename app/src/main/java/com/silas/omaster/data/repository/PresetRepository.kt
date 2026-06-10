@@ -920,7 +920,7 @@ class PresetRepository private constructor(context: Context) {
     /**
      * 切换收藏状态（用于 HomeViewModel）
      */
-    suspend fun toggleFavorite(presetId: String) {
+    suspend fun toggleFavoriteSuspend(presetId: String) {
         val current = _favorites.value.toMutableSet()
         if (current.contains(presetId)) {
             current.remove(presetId)

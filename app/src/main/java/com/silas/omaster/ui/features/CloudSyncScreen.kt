@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
+import com.silas.omaster.util.HapticFeedbackTypeCompat
+import com.silas.omaster.util.perform
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.launch
@@ -62,7 +64,7 @@ fun CloudSyncScreen(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackTypeCompat.Confirm)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -103,7 +105,7 @@ fun CloudSyncScreen(
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Clock, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Schedule, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
                             Text(
                                 text = "最后同步：$lastSyncTime",
                                 style = MaterialTheme.typography.bodySmall,
@@ -114,10 +116,10 @@ fun CloudSyncScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Confirm)
+                                haptic.perform(HapticFeedbackTypeCompat.Confirm)
                                 isSyncing.value = true
                                 scope.launch {
-                                    syncManager.performSync()
+                                    syncManager.sync()
                                     kotlinx.coroutines.delay(2000)
                                     isSyncing.value = false
                                     lastSyncTime.value = "刚刚"
@@ -201,7 +203,7 @@ fun CloudSyncScreen(
                         description = "仅在 Wi-Fi 下自动同步，节省流量"
                     )
                     FeatureCard(
-                        icon = Icons.Default.Clock,
+                        icon = Icons.Default.Schedule,
                         title = "历史版本",
                         description = "保留 30 天历史版本，随时回退"
                     )
@@ -246,10 +248,10 @@ private fun ProviderCard(provider: ProviderInfo) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(provider.color).copy(alpha = 0.2f)),
+                        .background(parseHexColor(provider.color).copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Smartphone, null, tint = Color(provider.color))
+                    Icon(Icons.Default.Smartphone, null, tint = parseHexColor(provider.color))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -336,7 +338,7 @@ private fun SyncItemCard(item: SyncItem) {
 
 @Composable
 private fun FeatureCard(
-    icon: androidx.compose.material.icons.Icon,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     description: String
 ) {
@@ -374,4 +376,9 @@ private fun FeatureCard(
             }
         }
     }
+}
+
+private fun parseHexColor(hex: String): Color {
+    val colorLong = hex.removePrefix("#").toLong(16)
+    return Color(0xFF000000 or colorLong)
 }

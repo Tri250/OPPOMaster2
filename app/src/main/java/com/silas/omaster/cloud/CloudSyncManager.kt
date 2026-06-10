@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.model.PresetDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -252,7 +253,7 @@ class CloudSyncManager private constructor(context: Context) {
             isNew = isNew,
             params = params,
             colorGradingParams = colorGradingParams,
-            description = descriptionText,
+            description = if (descriptionText.isNotBlank()) PresetDescription(title = "", content = descriptionText) else null,
             brand = brand,
             version = version,
             build = build,
