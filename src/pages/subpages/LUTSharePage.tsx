@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ArrowLeft, Download, Star, Heart, Search, Filter, Check, ExternalLink, FileText, Sparkles, Crown } from 'lucide-react';
+import { ArrowLeft, Download, Star, Heart, Search, Filter, Check, ExternalLink, FileText, Sparkles, Crown, Layers, Sliders, Circle, Users, Sun, X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { 
   LUT_RESOURCES, 
@@ -11,6 +11,13 @@ import {
   searchLUTResources
 } from '../../services/lutResourceService';
 
+// LUT 混合配置
+interface LUTBlendConfig {
+  lut: LUTResource;
+  weight: number;
+  enabled: boolean;
+}
+
 const LUTSharePage: React.FC = () => {
   const { navigateToSubPage } = useAppStore();
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -20,6 +27,14 @@ const LUTSharePage: React.FC = () => {
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [selectedLUT, setSelectedLUT] = useState<LUTResource | null>(null);
+  
+  // 新增状态：LUT 精细调节
+  const [showAdjustPanel, setShowAdjustPanel] = useState(false);
+  const [adjustingLUT, setAdjustingLUT] = useState<LUTResource | null>(null);
+  const [lutIntensity, setLutIntensity] = useState(100);
+  const [blendConfigs, setBlendConfigs] = useState<LUTBlendConfig[]>([]);
+  const [showBlendPanel, setShowBlendPanel] = useState(false);
+  const [maskType, setMaskType] = useState<'full' | 'sky' | 'person' | 'custom'>('full');
 
   // 过滤和排序
   const getFilteredLUTs = useCallback(() => {
@@ -78,6 +93,35 @@ const LUTSharePage: React.FC = () => {
       }
       return next;
     });
+  }, []);
+
+  // 打开 LUT 精细调节
+  const openAdjustPanel = useCallback((lut: LUTResource) => {
+    setAdjustingLUT(lut);
+    setLutIntensity(100);
+    setShowAdjustPanel(true);
+  }, []);
+
+  // 添加到混合列表
+  const addToBlend = useCallback((lut: LUTResource) => {
+    if (blendConfigs.length >= 3) return;
+    setBlendConfigs(prev => [...prev, { lut, weight: 1 / (prev.length + 1), enabled: true }]);
+    setShowBlendPanel(true);
+  }, [blendConfigs.length]);
+
+  // 更新混合权重
+  const updateBlendWeight = useCallback((index: number, weight: number) => {
+    setBlendConfigs(prev => prev.map((c, i) => i === index ? { ...c, weight } : c));
+  }, []);
+
+  // 移除混合项
+  const removeBlendItem = useCallback((index: number) => {
+    setBlendConfigs(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // 导出 LUT（模拟）
+  const handleExport = useCallback(() => {
+    alert('LUT 导出功能：将当前参数导出为 .cube 格式文件');
   }, []);
 
   const filteredLUTs = getFilteredLUTs();
@@ -336,7 +380,7 @@ const LUTSharePage: React.FC = () => {
       </div>
 
       {/* LUT Detail Modal */}
-      {selectedLUT && (
+      {selectedLUT && !showAdjustPanel && !showBlendPanel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl overflow-hidden">
             {/* Preview */}
@@ -423,6 +467,28 @@ const LUTSharePage: React.FC = () => {
                   {likedIds.has(selectedLUT.id) ? '已收藏' : '收藏'}
                 </button>
                 <button
+                  onClick={() => openAdjustPanel(selectedLUT)}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+                >
+                  <Sliders size={16} />
+                  精细调节
+                </button>
+              </div>
+              
+              <div className="flex gap-3 mt-3">
+                <button
+                  onClick={() => addToBlend(selectedLUT)}
+                  disabled={blendConfigs.length >= 3}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                    blendConfigs.length >= 3
+                      ? 'bg-white/5 text-white/30'
+                      : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                  }`}
+                >
+                  <Layers size={16} />
+                  {blendConfigs.length >= 3 ? '已达上限' : '添加混合'}
+                </button>
+                <button
                   onClick={() => handleDownload(selectedLUT)}
                   disabled={downloadingId === selectedLUT.id}
                   className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
@@ -472,6 +538,186 @@ const LUTSharePage: React.FC = () => {
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LUT 精细调节面板 */}
+      {showAdjustPanel && adjustingLUT && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <button
+                onClick={() => setShowAdjustPanel(false)}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft size={18} className="text-white/70" />
+              </button>
+              <h2 className="text-lg font-bold">LUT 精细调节</h2>
+              <button
+                onClick={handleExport}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <Download size={18} className="text-white/70" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* 当前 LUT */}
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                <img src={adjustingLUT.previewImage} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{adjustingLUT.name}</p>
+                  <p className="text-xs text-white/50">{adjustingLUT.category}</p>
+                </div>
+              </div>
+
+              {/* 强度滑块 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-white/70">LUT 强度</span>
+                  <span className="text-sm font-bold text-[#FF6B35]">{lutIntensity}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={lutIntensity}
+                  onChange={(e) => setLutIntensity(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none bg-white/10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#FF6B35]"
+                />
+                <div className="flex gap-2 mt-2">
+                  {[0, 25, 50, 75, 100].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setLutIntensity(v)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        lutIntensity === v ? 'bg-[#FF6B35] text-white' : 'bg-white/5 text-white/50'
+                      }`}
+                    >
+                      {v}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 局部应用 */}
+              <div>
+                <p className="text-sm text-white/70 mb-2">局部应用</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'full', name: '全图', icon: Circle },
+                    { id: 'sky', name: '天空', icon: Sun },
+                    { id: 'person', name: '人物', icon: Users },
+                    { id: 'custom', name: '自定义', icon: Sliders },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setMaskType(item.id as any)}
+                      className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-colors ${
+                        maskType === item.id
+                          ? 'bg-[#FF6B35] text-white'
+                          : 'bg-white/5 text-white/50 hover:bg-white/10'
+                      }`}
+                    >
+                      <item.icon size={16} />
+                      <span className="text-[10px]">{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 应用按钮 */}
+              <button
+                onClick={() => {
+                  setShowAdjustPanel(false);
+                  alert(`已应用 ${adjustingLUT.name}，强度 ${lutIntensity}%，区域 ${maskType}`);
+                }}
+                className="w-full py-3 rounded-xl bg-[#FF6B35] text-white font-medium flex items-center justify-center gap-2"
+              >
+                <Check size={18} />
+                应用调节
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LUT 混合面板 */}
+      {showBlendPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <button
+                onClick={() => setShowBlendPanel(false)}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft size={18} className="text-white/70" />
+              </button>
+              <h2 className="text-lg font-bold">LUT 混合叠加</h2>
+              <button
+                onClick={handleExport}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <Download size={18} className="text-white/70" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {blendConfigs.length === 0 ? (
+                <div className="text-center py-8">
+                  <Layers size={40} className="mx-auto text-white/20 mb-3" />
+                  <p className="text-white/50 text-sm">暂无混合 LUT</p>
+                  <p className="text-white/30 text-xs mt-1">从 LUT 详情添加到混合</p>
+                </div>
+              ) : (
+                <>
+                  {/* 混合列表 */}
+                  <div className="space-y-3">
+                    {blendConfigs.map((config, index) => (
+                      <div key={index} className="p-3 bg-white/5 rounded-xl">
+                        <div className="flex items-center gap-3 mb-2">
+                          <img src={config.lut.previewImage} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{config.lut.name}</p>
+                            <p className="text-xs text-white/50">权重: {(config.weight * 100).toFixed(0)}%</p>
+                          </div>
+                          <button
+                            onClick={() => removeBlendItem(index)}
+                            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                          >
+                            <X size={14} className="text-white/50" />
+                          </button>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={config.weight}
+                          onChange={(e) => updateBlendWeight(index, Number(e.target.value))}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#FF6B35]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 应用按钮 */}
+                  <button
+                    onClick={() => {
+                      setShowBlendPanel(false);
+                      alert(`已应用 ${blendConfigs.length} 个 LUT 混合`);
+                    }}
+                    className="w-full py-3 rounded-xl bg-[#FF6B35] text-white font-medium flex items-center justify-center gap-2"
+                  >
+                    <Check size={18} />
+                    应用混合
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
