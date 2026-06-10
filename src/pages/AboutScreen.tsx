@@ -107,7 +107,7 @@ const AboutScreen: React.FC = () => {
 
             {/* Version */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm">
-              <span className="text-white/70 text-xs">版本 1.3.1</span>
+              <span className="text-white/70 text-xs">版本 2.0</span>
               <span className="w-1 h-1 rounded-full bg-[#FF6B35]" />
               <span className="text-[#FF6B35] text-xs">最新</span>
             </div>
@@ -144,8 +144,9 @@ const AboutScreen: React.FC = () => {
 
         {/* Developer Info */}
         <div className="mt-6 text-center">
-          <p className="text-white/30 text-xs">Developed by Silas</p>
-          <p className="text-white/20 text-xs mt-1">© 2024 OMaster. All rights reserved.</p>
+          <p className="text-white/30 text-xs">开发者：带娃的小陈工</p>
+          <p className="text-white/30 text-xs mt-1">Developed by Silas</p>
+          <p className="text-white/20 text-xs mt-1">© 2026 OMaster. All rights reserved.</p>
         </div>
 
         {/* Bottom Spacing */}
