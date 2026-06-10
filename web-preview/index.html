@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMaster - 哈苏大师摄影助手 UI 展示</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --hasselblad-orange: #E65100;
+            --pure-black: #000000;
+            --near-black: #0A0A0A;
+            --dark-gray: #1A1A1A;
+            --medium-gray: #2A2A2A;
+            --light-gray: #8A8A8A;
+            --off-white: #F5F5F5;
+            --success-green: #4CAF50;
+            --error-red: #F44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--pure-black);
+            color: var(--off-white);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--near-black);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--hasselblad-orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .logo-subtitle {
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        /* Main Container */
+        .main-container {
+            display: flex;
+            padding: 40px;
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Phone Mockup */
+        .phone-mockup {
+            width: 375px;
+            height: 812px;
+            background: var(--near-black);
+            border-radius: 40px;
+            border: 3px solid var(--medium-gray);
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: var(--pure-black);
+            border-radius: 0 0 20px 20px;
+        }
+
+        .phone-content {
+            height: 100%;
+            overflow-y: auto;
+            padding-top: 40px;
+        }
+
+        /* Screen Tabs */
+        .screen-tabs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 0 16px;
+        }
+
+        .screen-tab {
+            padding: 8px 16px;
+            background: var(--dark-gray);
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .screen-tab.active {
+            background: var(--hasselblad-orange);
+        }
+
+        .screen-tab:hover {
+            background: var(--medium-gray);
+        }
+
+        /* App Bar */
+        .app-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--pure-black);
+        }
+
+        .app-bar-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .app-bar-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--dark-gray);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            overflow-x: auto;
+        }
+
+        .category-tab {
+            padding: 8px 16px;
+            background: var(--dark-gray);
+            border-radius: 20px;
+            font-size: 12px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-tab.active {
+            background: var(--hasselblad-orange);
+            font-weight: 500;
+        }
+
+        /* Preset Grid */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px;
+        }
+
+        .preset-card {
+            background: var(--dark-gray);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .preset-card:hover {
+            transform: scale(1.02);
+        }
+
+        .preset-cover {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(135deg, var(--medium-gray), var(--dark-gray));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preset-cover-letter {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--hasselblad-orange);
+            opacity: 0.8;
+        }
+
+        .preset-info {
+            padding: 12px;
+        }
+
+        .preset-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .preset-author {
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        .preset-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--hasselblad-orange);
+            border-radius: 4px;
+            font-size: 10px;
+            margin-top: 8px;
+        }
+
+        /* FAB */
+        .fab {
+            position: absolute;
+            bottom: 80px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            background: var(--hasselblad-orange);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(230, 81, 0, 0.4);
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--near-black);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid var(--medium-gray);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--dark-gray);
+            border-radius: 4px;
+        }
+
+        .nav-item.active .nav-icon {
+            background: var(--hasselblad-orange);
+        }
+
+        .nav-label {
+            font-size: 10px;
+        }
+
+        /* Feature Cards */
+        .feature-section {
+            flex: 1;
+        }
+
+        .feature-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--dark-gray);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--medium-gray);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--hasselblad-orange);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+
+        .feature-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: var(--light-gray);
+            line-height: 1.6;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--hasselblad-orange);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--light-gray);
+        }
+
+        /* Screens Container */
+        .screens-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Detail Screen Preview */
+        .detail-preview {
+            padding: 16px;
+        }
+
+        .detail-cover {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #2A2A2A, #1A1A1A);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .detail-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .detail-meta {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .detail-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        .detail-section {
+            background: var(--dark-gray);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .detail-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--hasselblad-orange);
+        }
+
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .param-item {
+            text-align: center;
+            padding: 8px;
+            background: var(--medium-gray);
+            border-radius: 8px;
+        }
+
+        .param-name {
+            font-size: 10px;
+            color: var(--light-gray);
+        }
+
+        .param-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* AI Screen */
+        .ai-preview {
+            padding: 16px;
+        }
+
+        .ai-header {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .ai-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .ai-subtitle {
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        .ai-steps {
+            display: flex;
+            gap: 8px;
+            margin: 16px 0;
+        }
+
+        .ai-step {
+            flex: 1;
+            padding: 12px;
+            background: var(--dark-gray);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .ai-step.active {
+            background: var(--hasselblad-orange);
+        }
+
+        .ai-step-num {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .ai-step-label {
+            font-size: 10px;
+            margin-top: 4px;
+        }
+
+        .ai-result {
+            background: var(--dark-gray);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .film-match {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--medium-gray);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .film-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .film-score {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--hasselblad-orange);
+        }
+
+        /* LUT Screen */
+        .lut-preview {
+            padding: 16px;
+        }
+
+        .lut-card {
+            background: var(--dark-gray);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .lut-preview-box {
+            width: 60px;
+            height: 60px;
+            background: var(--hasselblad-orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 900;
+        }
+
+        .lut-info {
+            flex: 1;
+        }
+
+        .lut-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .lut-desc {
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        .lut-meta {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .lut-tag {
+            padding: 2px 8px;
+            background: var(--medium-gray);
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        .lut-tag.free {
+            background: var(--hasselblad-orange);
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        /* Scrollbar */
+        .phone-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .phone-content::-webkit-scrollbar-track {
+            background: var(--dark-gray);
+        }
+
+        .phone-content::-webkit-scrollbar-thumb {
+            background: var(--medium-gray);
+            border-radius: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">O</div>
+            <div>
+                <div class="logo-text">OMaster</div>
+                <div class="logo-subtitle">哈苏大师摄影助手 v1.3.1</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 20px;">
+            <span style="color: var(--light-gray);">Android UI 功能展示</span>
+            <span style="color: var(--hasselblad-orange);">2026-06-10</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="screens-container">
+            <!-- 首页 Screen -->
+            <div class="phone-mockup animate-in" style="animation-delay: 0s;">
+                <div class="phone-notch"></div>
+                <div class="phone-content">
+                    <div class="app-bar">
+                        <span class="app-bar-title">预设库</span>
+                        <div class="app-bar-actions">
+                            <div class="icon-btn">🔍</div>
+                            <div class="icon-btn">⚙️</div>
+                        </div>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active">全部</div>
+                        <div class="category-tab">人像</div>
+                        <div class="category-tab">风景</div>
+                        <div class="category-tab">美食</div>
+                        <div class="category-tab">黑白</div>
+                        <div class="category-tab">胶片</div>
+                    </div>
+                    
+                    <div class="preset-grid">
+                        <div class="preset-card">
+                            <div class="preset-cover">
+                                <span class="preset-cover-letter">哈</span>
+                            </div>
+                            <div class="preset-info">
+                                <div class="preset-name">哈苏经典</div>
+                                <div class="preset-author">Hasselblad Official</div>
+                                <span class="preset-badge">HNCS认证</span>
+                            </div>
+                        </div>
+                        <div class="preset-card">
+                            <div class="preset-cover">
+                                <span class="preset-cover-letter">柯</span>
+                            </div>
+                            <div class="preset-info">
+                                <div class="preset-name">柯达 Portra</div>
+                                <div class="preset-author">Film Master</div>
+                            </div>
+                        </div>
+                        <div class="preset-card">
+                            <div class="preset-cover">
+                                <span class="preset-cover-letter">富</span>
+                            </div>
+                            <div class="preset-info">
+                                <div class="preset-name">富士 Velvia</div>
+                                <div class="preset-author">Color Pro</div>
+                            </div>
+                        </div>
+                        <div class="preset-card">
+                            <div class="preset-cover">
+                                <span class="preset-cover-letter">黑</span>
+                            </div>
+                            <div class="preset-info">
+                                <div class="preset-name">黑白经典</div>
+                                <div class="preset-author">B&W Studio</div>
+                            </div>
+                        </div>
+                        <div class="preset-card">
+                            <div class="preset-cover">
+                                <span class="preset-cover-letter">人</span>
+                            </div>
+                            <div class="preset-info">
+                                <div class="preset-name">人像柔光</div>
+                                <div class="preset-author">Portrait Lab</div>
+                            </div>
+                        </div>
+                        <div class="preset-card">
+                            <div class="preset-cover">
+                                <span class="preset-cover-letter">风</span>
+                            </div>
+                            <div class="preset-info">
+                                <div class="preset-name">风景增强</div>
+                                <div class="preset-author">Nature Pro</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="fab">+</div>
+                    
+                    <div class="bottom-nav">
+                        <div class="nav-item active">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">预设</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">AI</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">LUT</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">水印</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">我的</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 10px; color: var(--light-gray); font-size: 12px;">首页 - 预设库</div>
+            </div>
+
+            <!-- 详情 Screen -->
+            <div class="phone-mockup animate-in" style="animation-delay: 0.2s;">
+                <div class="phone-notch"></div>
+                <div class="phone-content">
+                    <div class="app-bar">
+                        <span style="cursor: pointer;">←</span>
+                        <span class="app-bar-title">哈苏经典</span>
+                        <div class="app-bar-actions">
+                            <div class="icon-btn">♡</div>
+                            <div class="icon-btn">✎</div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-preview">
+                        <div class="detail-cover">
+                            <span style="font-size: 72px; font-weight: 900; color: var(--hasselblad-orange);">哈</span>
+                        </div>
+                        
+                        <div class="detail-title">哈苏经典 HNCS</div>
+                        <div class="detail-meta">
+                            <div class="detail-stat">⭐ 4.9</div>
+                            <div class="detail-stat">📥 3000+</div>
+                            <div class="detail-stat">💬 128</div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">哈苏参数</div>
+                            <div class="param-grid">
+                                <div class="param-item">
+                                    <div class="param-name">影调</div>
+                                    <div class="param-value">+5</div>
+                                </div>
+                                <div class="param-item">
+                                    <div class="param-name">饱和度</div>
+                                    <div class="param-value">+8</div>
+                                </div>
+                                <div class="param-item">
+                                    <div class="param-name">对比度</div>
+                                    <div class="param-value">+3</div>
+                                </div>
+                                <div class="param-item">
+                                    <div class="param-name">色温</div>
+                                    <div class="param-value">-2</div>
+                                </div>
+                                <div class="param-item">
+                                    <div class="param-name">锐度</div>
+                                    <div class="param-value">+15</div>
+                                </div>
+                                <div class="param-item">
+                                    <div class="param-name">清晰度</div>
+                                    <div class="param-value">+10</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">拍摄建议</div>
+                            <div style="font-size: 12px; color: var(--light-gray); line-height: 1.6;">
+                                • 自然光或柔和散射光，避免直射强光<br>
+                                • 黄金时刻（日出/日落前后30分钟）色彩最丰富<br>
+                                • 哈苏认证配方，配合大师模式使用效果最佳
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title">关联推荐</div>
+                            <div style="display: flex; gap: 8px;">
+                                <div style="width: 60px; height: 60px; background: var(--medium-gray); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">柯</div>
+                                <div style="width: 60px; height: 60px; background: var(--medium-gray); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">富</div>
+                                <div style="width: 60px; height: 60px; background: var(--medium-gray); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700;">人</div>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 16px;">
+                            <div style="background: var(--hasselblad-orange); border-radius: 12px; padding: 16px; text-align: center; font-weight: 600; cursor: pointer;">
+                                应用哈苏配方
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 10px; color: var(--light-gray); font-size: 12px;">预设详情页</div>
+            </div>
+
+            <!-- AI场景识别 Screen -->
+            <div class="phone-mockup animate-in" style="animation-delay: 0.4s;">
+                <div class="phone-notch"></div>
+                <div class="phone-content">
+                    <div class="app-bar">
+                        <span style="cursor: pointer;">←</span>
+                        <span class="app-bar-title">AI 场景识别</span>
+                        <div class="app-bar-actions">
+                            <div class="icon-btn">📷</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-preview">
+                        <div class="ai-header">
+                            <div class="ai-title">智能场景分析</div>
+                            <div class="ai-subtitle">基于 ML Kit + TensorFlow Lite</div>
+                        </div>
+                        
+                        <div class="ai-steps">
+                            <div class="ai-step active">
+                                <div class="ai-step-num">1</div>
+                                <div class="ai-step-label">场景检测</div>
+                            </div>
+                            <div class="ai-step">
+                                <div class="ai-step-num">2</div>
+                                <div class="ai-step-label">参数匹配</div>
+                            </div>
+                            <div class="ai-step">
+                                <div class="ai-step-num">3</div>
+                                <div class="ai-step-label">效果优化</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: var(--dark-gray); border-radius: 12px; height: 150px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 48px;">📷</div>
+                                <div style="font-size: 12px; color: var(--light-gray);">选择图片进行分析</div>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-result">
+                            <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">识别结果：人像场景</div>
+                            <div style="font-size: 12px; color: var(--hasselblad-orange); margin-bottom: 12px;">置信度：92.5%</div>
+                            
+                            <div style="font-size: 12px; color: var(--light-gray); margin-bottom: 8px;">推荐胶片：</div>
+                            <div class="film-match">
+                                <span class="film-name">柯达 Portra 400</span>
+                                <span class="film-score">95%</span>
+                            </div>
+                            <div class="film-match">
+                                <span class="film-name">富士 Pro 400H</span>
+                                <span class="film-score">88%</span>
+                            </div>
+                            <div class="film-match">
+                                <span class="film-name">哈苏 HNCS</span>
+                                <span class="film-score">85%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section" style="margin-top: 12px;">
+                            <div class="detail-section-title">大师建议</div>
+                            <div style="font-size: 12px; color: var(--light-gray);">
+                                • 使用柔和散射光，避免硬光<br>
+                                • 建议使用 85mm 焦段<br>
+                                • 肤色平滑参数建议 +15
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 10px; color: var(--light-gray); font-size: 12px;">AI场景识别</div>
+            </div>
+
+            <!-- LUT资源库 Screen -->
+            <div class="phone-mockup animate-in" style="animation-delay: 0.6s;">
+                <div class="phone-notch"></div>
+                <div class="phone-content">
+                    <div class="app-bar">
+                        <span style="cursor: pointer;">←</span>
+                        <span class="app-bar-title">LUT 资源库</span>
+                        <div class="app-bar-actions">
+                            <div class="icon-btn">🗑️</div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 8px 16px; display: flex; justify-content: space-between; font-size: 12px; color: var(--light-gray);">
+                        <span>10 个 LUT</span>
+                        <span style="color: var(--hasselblad-orange);">6 个免费</span>
+                    </div>
+                    
+                    <div class="category-tabs">
+                        <div class="category-tab active">全部</div>
+                        <div class="category-tab">电影</div>
+                        <div class="category-tab">胶片</div>
+                        <div class="category-tab">风景</div>
+                    </div>
+                    
+                    <div class="lut-preview">
+                        <div class="lut-card">
+                            <div class="lut-preview-box">P</div>
+                            <div class="lut-info">
+                                <div class="lut-name">柯达 Portra 400</div>
+                                <div class="lut-desc">经典胶片风格，温暖柔和</div>
+                                <div class="lut-meta">
+                                    <span class="lut-tag free">免费</span>
+                                    <span class="lut-tag">v2</span>
+                                    <span class="lut-tag">45KB</span>
+                                </div>
+                            </div>
+                            <div style="color: var(--success-green); font-size: 20px;">✓</div>
+                        </div>
+                        
+                        <div class="lut-card">
+                            <div class="lut-preview-box">V</div>
+                            <div class="lut-info">
+                                <div class="lut-name">富士 Velvia 50</div>
+                                <div class="lut-desc">高饱和度，风景首选</div>
+                                <div class="lut-meta">
+                                    <span class="lut-tag">胶片</span>
+                                    <span class="lut-tag">42KB</span>
+                                </div>
+                            </div>
+                            <div style="color: var(--hasselblad-orange); font-size: 20px;">⬇</div>
+                        </div>
+                        
+                        <div class="lut-card">
+                            <div class="lut-preview-box">H</div>
+                            <div class="lut-info">
+                                <div class="lut-name">好莱坞电影</div>
+                                <div class="lut-desc">电影级调色，专业质感</div>
+                                <div class="lut-meta">
+                                    <span class="lut-tag free">免费</span>
+                                    <span class="lut-tag">v3</span>
+                                    <span class="lut-tag">48KB</span>
+                                </div>
+                            </div>
+                            <div style="color: var(--success-green); font-size: 20px;">✓</div>
+                        </div>
+                        
+                        <div class="lut-card">
+                            <div class="lut-preview-box">N</div>
+                            <div class="lut-info">
+                                <div class="lut-name">哈苏 HNCS</div>
+                                <div class="lut-desc">自然色彩还原，专业标准</div>
+                                <div class="lut-meta">
+                                    <span class="lut-tag free">免费</span>
+                                    <span class="lut-tag">50KB</span>
+                                </div>
+                            </div>
+                            <div style="color: var(--success-green); font-size: 20px;">✓</div>
+                        </div>
+                        
+                        <div class="lut-card">
+                            <div class="lut-preview-box">C</div>
+                            <div class="lut-info">
+                                <div class="lut-name">赛博朋克</div>
+                                <div class="lut-desc">霓虹色彩，科幻风格</div>
+                                <div class="lut-meta">
+                                    <span class="lut-tag">创意</span>
+                                    <span class="lut-tag">44KB</span>
+                                </div>
+                            </div>
+                            <div style="color: var(--hasselblad-orange); font-size: 20px;">⬇</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bottom-nav">
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">预设</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">AI</span>
+                        </div>
+                        <div class="nav-item active">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">LUT</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">水印</span>
+                        </div>
+                        <div class="nav-item">
+                            <div class="nav-icon"></div>
+                            <span class="nav-label">我的</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 10px; color: var(--light-gray); font-size: 12px;">LUT资源库</div>
+            </div>
+        </div>
+    </main>
+
+    <section style="padding: 40px; max-width: 1400px; margin: 0 auto;">
+        <div class="feature-title">核心功能架构</div>
+        <div class="feature-grid">
+            <div class="feature-card animate-in" style="animation-delay: 0.1s;">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-name">AI 场景识别</div>
+                <div class="feature-desc">ML Kit 人脸检测 + TensorFlow Lite 推理引擎，真实置信度计算，三阶段分析流程</div>
+            </div>
+            <div class="feature-card animate-in" style="animation-delay: 0.2s;">
+                <div class="feature-icon">🎨</div>
+                <div class="feature-name">18参数渲染</div>
+                <div class="feature-desc">GPU OpenGL ES 3.0 加速 + CPU 降级备用，全通道调校：影调/饱和度/对比度/色温等</div>
+            </div>
+            <div class="feature-card animate-in" style="animation-delay: 0.3s;">
+                <div class="feature-icon">📦</div>
+                <div class="feature-name">LUT 分发系统</div>
+                <div class="feature-desc">.cube 文件下载/SHA-256校验/原子写入，三线性插值应用，强度可调节</div>
+            </div>
+            <div class="feature-card animate-in" style="animation-delay: 0.4s;">
+                <div class="feature-icon">✒️</div>
+                <div class="feature-name">智能水印</div>
+                <div class="feature-desc">EXIF 自动读取 + 智能颜色分析 + 图层管理系统，支持自定义模板</div>
+            </div>
+            <div class="feature-card animate-in" style="animation-delay: 0.5s;">
+                <div class="feature-icon">☁️</div>
+                <div class="feature-name">云同步</div>
+                <div class="feature-desc">CDN 重试机制 + 原子写入 + 损坏恢复，友盟统计分析集成</div>
+            </div>
+            <div class="feature-card animate-in" style="animation-delay: 0.6s;">
+                <div class="feature-icon">📱</div>
+                <div class="feature-name">悬浮窗服务</div>
+                <div class="feature-desc">系统悬浮窗权限，快捷预设应用，后台渲染处理</div>
+            </div>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-item animate-in" style="animation-delay: 0.7s;">
+                <div class="stat-value">50+</div>
+                <div class="stat-label">预设配方</div>
+            </div>
+            <div class="stat-item animate-in" style="animation-delay: 0.8s;">
+                <div class="stat-value">18</div>
+                <div class="stat-label">调校参数</div>
+            </div>
+            <div class="stat-item animate-in" style="animation-delay: 0.9s;">
+                <div class="stat-value">10+</div>
+                <div class="stat-label">LUT滤镜</div>
+            </div>
+            <div class="stat-item animate-in" style="animation-delay: 1s;">
+                <div class="stat-value">25+</div>
+                <div class="stat-label">单元测试</div>
+            </div>
+        </div>
+    </section>
+
+    <footer style="padding: 20px; text-align: center; border-top: 1px solid var(--medium-gray); color: var(--light-gray);">
+        <p>OMaster v1.3.1 | 哈苏大师摄影助手 | 2026-06-10</p>
+        <p style="margin-top: 8px; font-size: 12px;">技术栈: Kotlin + Jetpack Compose + ML Kit + TensorFlow Lite + OpenGL ES 3.0</p>
+    </footer>
+
+    <script>
+        // Tab切换交互
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                this.parentElement.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 底部导航切换
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                this.parentElement.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 预设卡片点击效果
+        document.querySelectorAll('.preset-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => this.style.transform = 'scale(1.02)', 100);
+            });
+        });
+    </script>
+</body>
+</html>
