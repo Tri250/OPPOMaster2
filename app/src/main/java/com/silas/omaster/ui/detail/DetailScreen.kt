@@ -55,6 +55,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.model.PresetDescription
 import com.silas.omaster.ui.components.DescriptionCard
 import com.silas.omaster.ui.components.FloatingWindowGuideDialog
 import com.silas.omaster.ui.components.ImageGallery
@@ -90,6 +91,7 @@ fun DetailScreen(
     presetId: String,
     onBack: () -> Unit,
     onEdit: ((String) -> Unit)? = null,
+    onNavigateToRelated: ((String) -> Unit)? = null,
     refreshTrigger: Int = 0
 ) {
     val context = LocalContext.current
@@ -321,11 +323,12 @@ fun DetailScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // 拍摄建议
+                        // 拍摄建议（使用预设真实数据或动态生成）
+                        val shootingTipsData = it.description ?: generateShootingTips(it)
                         ShootingTipsDetailCard(
-                            environment = "日间户外或充足自然光",
-                            scenes = "街拍、人像、风景、建筑",
-                            points = "适合追求经典胶片质感，建议使用黄金时刻拍摄",
+                            environment = shootingTipsData.title,
+                            scenes = extractScenesFromTags(it.tags),
+                            points = shootingTipsData.content,
                             modifier = Modifier.fillMaxWidth()
                         )
                         
@@ -339,31 +342,32 @@ fun DetailScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // 关联推荐
-                        RelatedPresetsCard(
-                            presets = listOf(
-                                RelatedPreset("r1", "电影胶片", ""),
-                                RelatedPreset("r2", "复古人像", ""),
-                                RelatedPreset("r3", "清新风景", ""),
-                                RelatedPreset("r4", "黑白经典", "")
-                            ),
-                            onSelect = { id -> },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        // 关联推荐（基于预设标签和类别动态生成）
+                        val relatedPresets = generateRelatedPresets(it, context)
+                        if (relatedPresets.isNotEmpty()) {
+                            RelatedPresetsCard(
+                                presets = relatedPresets,
+                                onSelect = { id -> 
+                                    // 导航到关联预设详情
+                                    onNavigateToRelated?.invoke(id)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                         
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // 用户评价
-                        UserCommentsCard(
-                            comments = listOf(
-                                UserComment("c1", "摄影爱好者", "非常好用的预设！色彩还原很准确", 5),
-                                UserComment("c2", "专业摄影师", "配合哈苏大师模式使用效果绝佳", 5)
-                            ),
-                            onViewAll = { },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
+                        // 用户评价（使用预设真实评论数据或默认提示）
+                        val userComments = it.comments?.map { comment ->
+                            UserComment(comment.id, comment.user, comment.content, comment.rating.toInt().coerceIn(1, 5))
+                        } ?: emptyList()
+                        if (userComments.isNotEmpty()) {
+                            UserCommentsCard(
+                                comments = userComments,
+                                onViewAll = { },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                         
                         // 底部操作按钮（对齐用户规范）
                         Row(
@@ -501,6 +505,112 @@ private fun DynamicParameters(
             }
         }
     }
+}
+
+/**
+ * 根据预设参数动态生成拍摄建议
+ */
+private fun generateShootingTips(preset: MasterPreset): PresetDescription {
+    val environment = when {
+        preset.filter?.contains("黑白") == true -> "强对比光线下效果最佳，侧光或逆光增强明暗层次"
+        preset.saturation?.let { it > 15 } == true -> "黄金时刻（日出/日落前后30分钟）色彩最丰富"
+        preset.colorTemperature?.let { it > 10 } == true -> "暖光环境或室内灯光，营造温馨氛围"
+        preset.colorTemperature?.let { it < -10 } == true -> "阴天或冷光环境，清冷质感更突出"
+        preset.softLight?.let { it.isNotEmpty() } == true -> "柔和散射光或窗户光，柔光效果更明显"
+        else -> "自然光或柔和散射光，避免直射强光"
+    }
+    
+    val scenes = when {
+        preset.filter?.contains("人像") == true -> "人像特写、半身照、情侣合影"
+        preset.filter?.contains("风景") == true -> "自然风光、城市景观、建筑摄影"
+        preset.filter?.contains("黑白") == true -> "街头纪实、建筑线条、人物肖像"
+        preset.filter?.contains("胶片") == true -> "复古场景、文艺氛围、日常记录"
+        preset.tags?.any { it.contains("人像") } == true -> "人像摄影、日常记录、生活场景"
+        preset.tags?.any { it.contains("风景") } == true -> "户外摄影、旅行记录、自然风光"
+        preset.tags?.any { it.contains("美食") } == true -> "美食拍摄、餐厅记录、生活分享"
+        else -> "多种场景适用，灵活调整参数"
+    }
+    
+    val points = buildString {
+        append("• 参数调整建议：")
+        preset.saturation?.let { 
+            if (it > 0) append(" 饱和度+$it 增强色彩活力")
+            else if (it < 0) append(" 饱和度$it 降低色彩饱和")
+        }
+        preset.tone?.let {
+            if (it > 0) append(", 影调+$it 提升对比")
+            else if (it < 0) append(", 影调$it 柔化层次")
+        }
+        append("\n")
+        
+        append("• 拍摄技巧：")
+        if (preset.vignette == "开" || preset.vignette?.contains("开") == true) {
+            append(" 暗角效果增强氛围感，适合中心构图")
+        }
+        preset.sharpness?.let {
+            if (it > 15) append(" 高锐度保留细节纹理，注意避免过度锐化")
+            else if (it < 10) append(" 低锐度柔化画面，适合人像肤色")
+        }
+        append("\n")
+        
+        append("• 最佳实践：")
+        if (preset.isHncs) {
+            append(" 哈苏认证配方，配合大师模式使用效果最佳")
+        } else {
+            append(" 根据实际光线微调参数，多尝试不同角度")
+        }
+    }
+    
+    return PresetDescription(environment, points)
+}
+
+/**
+ * 从标签提取适用场景
+ */
+private fun extractScenesFromTags(tags: List<String>?): String {
+    if (tags.isNullOrEmpty()) return "多种场景适用"
+    
+    val sceneKeywords = listOf("人像", "风景", "美食", "街拍", "建筑", "夜景", "静物", "微距", "宠物", "旅行")
+    val matchedScenes = tags.filter { tag ->
+        sceneKeywords.any { keyword -> tag.contains(keyword) }
+    }
+    
+    return if (matchedScenes.isNotEmpty()) {
+        matchedScenes.take(4).joinToString("、")
+    } else {
+        "多种场景适用"
+    }
+}
+
+/**
+ * 基于预设属性动态生成关联推荐
+ */
+private fun generateRelatedPresets(preset: MasterPreset, context: android.content.Context): List<RelatedPreset> {
+    val repository = PresetRepository.getInstance(context)
+    val allPresets = repository.getAllPresetsOnce()
+    
+    // 基于标签和滤镜类型筛选相似预设
+    val related = allPresets
+        .filter { other ->
+            other.id != preset.id && // 排除自身
+            // 标签匹配或滤镜类型相似
+            (other.tags?.any { preset.tags?.contains(it) == true } == true ||
+             other.filter == preset.filter ||
+             // 同作者预设
+             other.author == preset.author)
+        }
+        .take(4)
+        .map { other ->
+            RelatedPreset(
+                id = other.id ?: "",
+                name = PresetI18n.getLocalizedPresetName(other.name),
+                coverPath = other.coverPath,
+                author = other.author,
+                tags = other.tags
+            )
+        }
+    
+    return related
 }
 
 

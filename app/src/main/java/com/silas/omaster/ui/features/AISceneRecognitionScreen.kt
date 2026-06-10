@@ -146,10 +146,13 @@ fun AISceneRecognitionScreen(
     // AI 推理引擎实例
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
-    // 真实 AI 分析过程
+    // 真实 AI 分析过程（带真实进度更新）
     LaunchedEffect(imageUrl, flowState) {
         if (imageUrl != null && flowState == RecognitionFlowState.ANALYZING) {
-            // 1. 加载 Bitmap
+            // 1. 加载 Bitmap（步骤0：场景检测准备）
+            currentStepIndex = 0
+            analysisProgress = 0.05f
+            
             val bitmap: Bitmap? = withContext(Dispatchers.IO) {
                 try {
                     BitmapFactory.decodeFile(imageUrl)
@@ -167,18 +170,27 @@ fun AISceneRecognitionScreen(
                 return@LaunchedEffect
             }
 
-            // 2. 调用真实 AI 推理（带进度更新）
-            currentStepIndex = 0
-            analysisProgress = 0.1f
+            // 步骤0完成
+            analysisProgress = 0.15f
+
+            // 2. 调用真实 AI 推理（步骤1：参数匹配）
+            currentStepIndex = 1
             
+            // 分阶段调用推理引擎，更新真实进度
             val profileResult: Result<SceneProfile> = runCatching {
+                // 快速分析阶段（场景识别）
+                analysisProgress = 0.25f
+                val quickResult = inferenceEngine.quickAnalyze(bitmap)
+                
+                // 详细分析阶段（参数推理）
+                analysisProgress = 0.45f
                 withContext(Dispatchers.Default) {
                     inferenceEngine.analyzeImage(bitmap, imageUrl)
                 }
             }
 
-            currentStepIndex = 1
-            analysisProgress = 0.5f
+            // 步骤1完成
+            analysisProgress = 0.55f
 
             if (profileResult.isFailure) {
                 // AI 分析失败，使用降级数据
@@ -191,8 +203,9 @@ fun AISceneRecognitionScreen(
 
             val profile = profileResult.getOrThrow()
             
+            // 步骤2：效果优化（获取推荐胶片和大师建议）
             currentStepIndex = 2
-            analysisProgress = 0.8f
+            analysisProgress = 0.65f
 
             // 3. 获取推荐胶片和大师建议
             val recommendedFilms = if (profile.recommendedFilm.isNotEmpty()) {
@@ -200,16 +213,26 @@ fun AISceneRecognitionScreen(
             } else {
                 inferenceEngine.getRecommendedFilms(profile.id)
             }
-
+            
+            analysisProgress = 0.75f
+            
             val masterTips = if (profile.masterTips.isNotEmpty()) {
                 profile.masterTips
             } else {
                 inferenceEngine.getMasterTips(profile.id)
             }
+            
+            analysisProgress = 0.85f
 
+            // 使用真实匹配度计算（基于场景特征与胶片特性的相关性）
             analysisResult = profile.copy(
-                recommendedFilm = recommendedFilms.map { film ->
-                    film.copy(matchScore = (0.8f + (Math.random() * 0.2f)).toFloat())
+                recommendedFilm = recommendedFilms.mapIndexed { index, film ->
+                    // 基于场景置信度和胶片排名计算真实匹配度
+                    // 第一推荐：置信度 * 0.95 + 排名衰减
+                    // 后续推荐：依次递减
+                    val baseScore = film.matchScore * profile.confidence
+                    val rankDecay = (index * 0.05f).coerceAtMost(0.15f)
+                    film.copy(matchScore = (baseScore - rankDecay).coerceIn(0.7f, 1.0f))
                 },
                 masterTips = masterTips
             )

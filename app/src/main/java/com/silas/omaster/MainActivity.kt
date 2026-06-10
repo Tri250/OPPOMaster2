@@ -430,6 +430,9 @@ fun MainApp(navController: NavHostController) {
                     onEdit = { presetId ->
                         navController.navigate(Screen.EditPreset(presetId))
                     },
+                    onNavigateToRelated = { relatedId ->
+                        navController.navigate(Screen.Detail(relatedId))
+                    },
                     refreshTrigger = refreshTrigger
                 )
             }
