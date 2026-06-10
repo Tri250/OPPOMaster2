@@ -291,6 +291,7 @@ fun WatermarkEditorScreen(
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isWatermarkEnabled by remember { mutableStateOf(true) }
     var showBeforeAfter by remember { mutableStateOf(false) }
+    var showLayerPanel by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     // 水印配置
@@ -448,7 +449,10 @@ fun WatermarkEditorScreen(
             },
             actions = {
                 // 图层按钮
-                IconButton(onClick = { /* 图层管理 */ }) {
+                IconButton(onClick = {
+                    haptic.perform(HapticFeedbackType.Select)
+                    showLayerPanel = !showLayerPanel
+                }) {
                     Icon(Icons.Default.Layers, "图层", tint = Color.White.copy(alpha = 0.5f))
                 }
                 // 预览按钮
