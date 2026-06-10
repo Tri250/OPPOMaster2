@@ -547,30 +547,6 @@ const ParamAdjustPage: React.FC = () => {
             );
           })}
         </div>
-
-        {/* 参数摘要 */}
-        <div className="px-4 py-3">
-          <div className="rounded-2xl p-4 bg-gradient-to-r from-[#FF6B35]/10 to-[#FF6B35]/5 border border-[#FF6B35]/20">
-            <p className="text-white/50 text-xs mb-3">当前参数摘要</p>
-            <div className="grid grid-cols-4 gap-2">
-              {Object.entries(params)
-                .filter(([_, v]) => v !== 0 && v !== 100)
-                .slice(0, 8)
-                .map(([key, value]) => {
-                  const group = paramGroups.find((g) => g.params.some((p) => p.key === key));
-                  const param = group?.params.find((p) => p.key === key);
-                  return (
-                    <div key={key} className="text-center">
-                      <p className="text-white/50 text-[10px]">{param?.name || key}</p>
-                      <p className="text-white text-sm font-bold">
-                        {value >= 0 ? `+${value}` : value}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 底部操作栏 */}
