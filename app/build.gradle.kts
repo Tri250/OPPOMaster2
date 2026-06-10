@@ -115,11 +115,12 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all {
-                it.testLogging {
+                testLogging {
                     events("passed", "skipped", "failed", "standardOut", "standardError")
-                    outputs.upToDateWhen { false }
                     showStandardStreams = true
                 }
+                // 强制每次执行测试
+                outputs.upToDateWhen { false }
             }
         }
     }
