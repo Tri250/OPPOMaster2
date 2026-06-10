@@ -131,13 +131,32 @@ class CloudSyncManager private constructor(context: Context) {
      * 同步单个品牌的预设
      */
     private suspend fun syncBrandPresets(brand: String, urlString: String): BrandSyncResult = withContext(Dispatchers.IO) {
+        // 验证URL协议
+        if (!urlString.startsWith("https://")) {
+            throw SecurityException("仅支持 HTTPS 协议: $urlString")
+        }
+        
         val url = URL(urlString)
-        val connection = url.openConnection()
-        connection.setRequestProperty("Accept", "application/json")
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
-
-        val jsonString = connection.getInputStream().bufferedReader().use { it.readText() }
+        val connection = url.openConnection() as java.net.HttpURLConnection
+        connection.apply {
+            requestMethod = "GET"
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "OMaster/${com.silas.omaster.BuildConfig.VERSION_NAME}")
+            connectTimeout = 10000
+            readTimeout = 15000
+            instanceFollowRedirects = false  // 不自动跟随重定向，避免跳转到HTTP
+        }
+        
+        // 验证响应码
+        val responseCode = connection.responseCode
+        if (responseCode !in 200..299) {
+            connection.disconnect()
+            throw java.io.IOException("HTTP $responseCode")
+        }
+        
+        val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
+        connection.disconnect()
+        
         val jsonObject = JSONObject(jsonString)
 
         val version = jsonObject.optInt("version", 1)

@@ -1,13 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Backup rules for Android 6.0 - 11
+   注意：敏感数据（订阅URL、令牌）应排除备份
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- 排除订阅凭证和认证信息 -->
+    <exclude domain="sharedpref" path="omaster_subscription.xml" />
+    <exclude domain="sharedpref" path="omaster_auth.xml" />
+    <!-- 排除临时缓存 -->
+    <exclude domain="file" path="cache/" />
 </full-backup-content>

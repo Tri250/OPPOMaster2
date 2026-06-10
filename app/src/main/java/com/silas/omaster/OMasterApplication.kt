@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
@@ -24,6 +25,9 @@ class OMasterApplication : Application() {
         super.onCreate()
         instance = this
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        // 安装全局异常处理器（在友盟初始化前）
+        CrashHandler.getInstance().install()
 
         // 初始化震动设置
         HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled

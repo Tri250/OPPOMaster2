@@ -3,6 +3,7 @@ package com.silas.omaster.data.local
 import android.content.Context
 import com.silas.omaster.model.Subscription
 import com.silas.omaster.model.SubscriptionList
+import com.silas.omaster.util.SecurityCrypto
 import com.silas.omaster.util.UpdateConfigManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,13 +24,14 @@ class SubscriptionManager private constructor(context: Context) {
     }
 
     private fun loadSubscriptions() {
-        val jsonStr = prefs.getString(KEY_SUBSCRIPTIONS, null)
+        // 优先尝试解密读取，加密存储后无法迁移则回退明文
+        val jsonStr = tryReadSecureSubscriptions() ?: prefs.getString(KEY_SUBSCRIPTIONS, null)
         if (jsonStr != null) {
             try {
                 val list = json.decodeFromString<SubscriptionList>(jsonStr)
                 var updated = false
                 val migratedSubscriptions = list.subscriptions.map { sub ->
-                    // 迁移逻辑：如果订阅名称是“官方内置预设”但 URL 不是最新的，则更新它
+                    // 迁移逻辑：如果订阅名称是"官方内置预设"但 URL 不是最新的，则更新它
                     if (sub.name == "官方内置预设" && sub.url != UpdateConfigManager.DEFAULT_PRESET_URL) {
                         updated = true
                         sub.copy(url = UpdateConfigManager.DEFAULT_PRESET_URL)
@@ -47,7 +49,7 @@ class SubscriptionManager private constructor(context: Context) {
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
-            // First time, add the default subscription
+            // 首次使用，添加默认订阅
             val defaultSub = Subscription(
                 url = UpdateConfigManager.DEFAULT_PRESET_URL,
                 name = "官方内置预设",
@@ -60,9 +62,40 @@ class SubscriptionManager private constructor(context: Context) {
         }
     }
 
+    private fun tryReadSecureSubscriptions(): String? {
+        return try {
+            val encrypted = prefs.getString(KEY_SUBSCRIPTIONS_ENC, null)
+            if (encrypted != null) {
+                SecurityCrypto.decrypt(encrypted)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SubscriptionManager", "读取加密订阅失败", e)
+            null
+        }
+    }
+
     private fun saveSubscriptions() {
         val list = SubscriptionList(_subscriptionsFlow.value)
         val jsonStr = json.encodeToString(SubscriptionList.serializer(), list)
+        
+        // 使用加密存储
+        try {
+            val encrypted = SecurityCrypto.encrypt(jsonStr)
+            if (encrypted != null) {
+                prefs.edit()
+                    .putString(KEY_SUBSCRIPTIONS_ENC, encrypted)
+                    // 清除旧明文（一次性迁移）
+                    .remove(KEY_SUBSCRIPTIONS)
+                    .apply()
+                return
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SubscriptionManager", "加密存储失败，使用明文", e)
+        }
+        
+        // 回退明文存储
         prefs.edit().putString(KEY_SUBSCRIPTIONS, jsonStr).apply()
     }
 
@@ -130,6 +163,7 @@ class SubscriptionManager private constructor(context: Context) {
     companion object {
         private const val PREFS_NAME = "omaster_subscriptions"
         private const val KEY_SUBSCRIPTIONS = "subscriptions_list"
+        private const val KEY_SUBSCRIPTIONS_ENC = "subscriptions_list_enc"
 
         @Volatile
         private var INSTANCE: SubscriptionManager? = null

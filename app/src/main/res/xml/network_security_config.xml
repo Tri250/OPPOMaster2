@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 默认仅允许 HTTPS，禁用明文流量 -->
+    <base-config cleartextTrafficPermitted="false">
+        <!-- TLS 1.2 及以上版本 -->
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- 生产环境 CDN 域名白名单（仅 HTTPS） -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">silas-omaster.com</domain>
+        <domain includeSubdomains="true">cdn.silas-omaster.com</domain>
+    </domain-config>
+
+    <!-- Debug 模式允许本地网络和友盟统计（仅在 debug build 中生效） -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+        <domain-config cleartextTrafficPermitted="true">
+            <domain includeSubdomains="true">10.0.2.2</domain>
+            <domain includeSubdomains="true">localhost</domain>
+            <domain includeSubdomains="true">127.0.0.1</domain>
+        </domain-config>
+    </debug-overrides>
+</network-security-config>

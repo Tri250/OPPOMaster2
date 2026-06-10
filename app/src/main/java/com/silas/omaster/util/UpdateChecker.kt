@@ -174,32 +174,33 @@ object UpdateChecker {
         var status = -1
         var progress = 0
 
-        if (cursor.moveToFirst()) {
-            status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+        cursor.use {
+            if (it.moveToFirst()) {
+                status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
 
-            when (status) {
-                DownloadManager.STATUS_PENDING -> {
-                    progress = 0
-                }
-                DownloadManager.STATUS_RUNNING -> {
-                    val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
-                }
-                DownloadManager.STATUS_SUCCESSFUL -> {
-                    progress = 100
-                }
-                DownloadManager.STATUS_FAILED -> {
-                    progress = -1
-                }
-                DownloadManager.STATUS_PAUSED -> {
-                    val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                when (status) {
+                    DownloadManager.STATUS_PENDING -> {
+                        progress = 0
+                    }
+                    DownloadManager.STATUS_RUNNING -> {
+                        val downloaded = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    }
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        progress = 100
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        progress = -1
+                    }
+                    DownloadManager.STATUS_PAUSED -> {
+                        val downloaded = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    }
                 }
             }
         }
-        cursor.close()
         return Pair(status, progress)
     }
 
@@ -225,39 +226,40 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         val query = DownloadManager.Query().setFilterById(downloadId)
         val cursor = downloadManager.query(query)
 
-        if (cursor.moveToFirst()) {
-            val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-            if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                // 获取本地文件路径
-                val localUriString = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI))
-                Log.d("DownloadReceiver", "下载完成，URI: $localUriString")
+        cursor.use {
+            if (it.moveToFirst()) {
+                val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    // 获取本地文件路径
+                    val localUriString = it.getString(it.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI))
+                    Log.d("DownloadReceiver", "下载完成，URI: $localUriString")
 
-                val apkFile = if (localUriString != null) {
-                    val localUri = Uri.parse(localUriString)
-                    if (localUri.scheme == "file") {
-                        // 直接是文件路径
-                        File(localUri.path ?: localUriString.removePrefix("file://"))
+                    val apkFile = if (localUriString != null) {
+                        val localUri = Uri.parse(localUriString)
+                        if (localUri.scheme == "file") {
+                            // 直接是文件路径
+                            File(localUri.path ?: localUriString.removePrefix("file://"))
+                        } else {
+                            // content:// URI，尝试通过 ContentResolver 获取真实路径
+                            getFileFromContentUri(context, localUri)
+                        }
                     } else {
-                        // content:// URI，尝试通过 ContentResolver 获取真实路径
-                        getFileFromContentUri(context, localUri)
+                        // 备用方案：直接找已知文件名
+                        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                        File(downloadDir, "app-universal-release.apk")
                     }
-                } else {
-                    // 备用方案：直接找已知文件名
-                    val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                    File(downloadDir, "app-universal-release.apk")
-                }
 
-                if (apkFile != null && apkFile.exists()) {
-                    installApk(context, apkFile)
-                } else {
-                    Log.e("DownloadReceiver", "APK 文件不存在")
+                    if (apkFile != null && apkFile.exists()) {
+                        installApk(context, apkFile)
+                    } else {
+                        Log.e("DownloadReceiver", "APK 文件不存在")
+                    }
+                } else if (status == DownloadManager.STATUS_FAILED) {
+                    val reason = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                    Log.e("DownloadReceiver", "下载失败，错误码: $reason")
                 }
-            } else if (status == DownloadManager.STATUS_FAILED) {
-                val reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
-                Log.e("DownloadReceiver", "下载失败，错误码: $reason")
             }
         }
-        cursor.close()
     }
 
     private fun getFileFromContentUri(context: Context, uri: Uri): File? {

@@ -41,10 +41,35 @@ object PresetRemoteManager {
         }
     }
 
+    /**
+     * 验证 URL 安全性
+     * 仅允许 HTTPS 协议（强制加密）
+     */
+    private fun validateUrl(url: String): String? {
+        if (url.isBlank()) return "URL 不能为空"
+        if (!url.startsWith("https://")) return "仅支持 HTTPS 协议"
+        // 防止 SSRF：禁止访问内网地址
+        val lower = url.lowercase()
+        val blockedHosts = listOf("localhost", "127.0.0.1", "0.0.0.0", "10.", "192.168.", "172.16.", "169.254.")
+        blockedHosts.forEach { host ->
+            if (lower.contains(host)) return "禁止访问内网地址"
+        }
+        return null
+    }
+
     suspend fun fetchAndSave(context: Context, url: String, forceUpdate: Boolean = false): Result<PresetList> {
+        // URL 安全验证
+        validateUrl(url)?.let { return Result.failure(SecurityException(it)) }
+        
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
             val response: HttpResponse = client.get(url)
+            
+            // 验证响应码
+            if (response.status.value !in 200..299) {
+                return Result.failure(Exception("HTTP ${response.status.value}"))
+            }
+            
             val text: String = response.body()
             
             // 验证 JSON 是否有效

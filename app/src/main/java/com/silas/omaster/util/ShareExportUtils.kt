@@ -146,27 +146,88 @@ object ShareExportUtils {
             val timestamp = dateFormat.format(Date())
             val name = fileName ?: "hasselblad_$timestamp.jpg"
             
-            // 保存到公共相册目录
-            val picturesDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES
-            )
-            val hasselbladDir = File(picturesDir, "HasselbladMaster")
-            if (!hasselbladDir.exists()) {
-                hasselbladDir.mkdirs()
+            // 使用 MediaStore API（Android 10+ 推荐，作用域存储兼容）
+            val savedUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                saveBitmapViaMediaStore(context, bitmap, name)
+            } else {
+                saveBitmapLegacy(context, bitmap, name)
             }
             
-            val file = File(hasselbladDir, name)
+            savedUri?.toString()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Android 10+ 使用 MediaStore API 写入公共相册
+     */
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+    private fun saveBitmapViaMediaStore(
+        context: Context,
+        bitmap: Bitmap,
+        name: String
+    ): Uri? {
+        val contentValues = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(
+                android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+                "${android.os.Environment.DIRECTORY_PICTURES}/HasselbladMaster"
+            )
+            put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        
+        val resolver = context.contentResolver
+        val uri = resolver.insert(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        ) ?: return null
+        
+        return try {
+            resolver.openOutputStream(uri)?.use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            }
             
+            contentValues.clear()
+            contentValues.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+            uri
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            null
+        }
+    }
+
+    /**
+     * Android 9 及以下使用传统方式写入公共相册
+     */
+    private fun saveBitmapLegacy(
+        context: Context,
+        bitmap: Bitmap,
+        name: String
+    ): Uri? {
+        val picturesDir = android.os.Environment.getExternalStoragePublicDirectory(
+            android.os.Environment.DIRECTORY_PICTURES
+        )
+        val hasselbladDir = File(picturesDir, "HasselbladMaster")
+        if (!hasselbladDir.exists() && !hasselbladDir.mkdirs()) {
+            return null
+        }
+        
+        val file = File(hasselbladDir, name)
+        return try {
             FileOutputStream(file).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
             }
             
-            // 通知媒体库更新
-            val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-            intent.data = Uri.fromFile(file)
-            context.sendBroadcast(intent)
-            
-            file.absolutePath
+            // 使用 FileProvider 而非 file:// URI 触发 FileUriExposedException
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             null
