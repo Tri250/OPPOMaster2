@@ -85,7 +85,7 @@ enum class CameraFacing {
 }
 
 /**
- * 分析进度步骤
+ * 分析进度步骤（扩展为4步，对齐 Web 端）
  */
 data class AnalysisStep(
     val id: String,
@@ -93,6 +93,90 @@ data class AnalysisStep(
     val icon: ImageVector,
     val color: Color,
     val progress: Float = 0f
+)
+
+/**
+ * 场景类型定义（扩展到37种，对齐 Web 端）
+ */
+data class SceneType(
+    val id: String,
+    val name: String,
+    val icon: ImageVector,
+    val color: Color,
+    val category: String,
+    val params: Map<String, Any> = emptyMap()
+)
+
+/**
+ * 场景分类
+ */
+enum class SceneCategory(val displayName: String) {
+    PORTRAIT("人像"),
+    LANDSCAPE("风景"),
+    NIGHT("夜景"),
+    FOOD("美食"),
+    STREET("街拍"),
+    MACRO("微距"),
+    SPORTS("运动"),
+    OTHER("其他")
+}
+
+/**
+ * 精细场景类型列表（37种）
+ */
+val FINE_SCENE_TYPES = listOf(
+    // 人像系列 (6种)
+    SceneType("portrait", "人像", Icons.Outlined.Person, Color(0xFFFF6B9D), "人像"),
+    SceneType("portrait-backlit", "逆光人像", Icons.Outlined.WbSunny, Color(0xFFFFB347), "人像"),
+    SceneType("portrait-studio", "棚拍人像", Icons.Outlined.CameraAlt, Color(0xFFC9A0DC), "人像"),
+    SceneType("portrait-bw", "黑白人像", Icons.Outlined.Visibility, Color(0xFF808080), "人像"),
+    SceneType("portrait-couple", "情侣", Icons.Outlined.People, Color(0xFFFF69B4), "人像"),
+    SceneType("portrait-group", "合影", Icons.Outlined.Groups, Color(0xFFDDA0DD), "人像"),
+    
+    // 风景系列 (7种)
+    SceneType("landscape", "风景", Icons.Outlined.Landscape, Color(0xFF4ECDC4), "风景"),
+    SceneType("landscape-sunset", "日落", Icons.Outlined.WbTwilight, Color(0xFFFF7F50), "风景"),
+    SceneType("landscape-blue-sky", "蓝天白云", Icons.Outlined.Cloud, Color(0xFF87CEEB), "风景"),
+    SceneType("landscape-forest", "森林", Icons.Outlined.Nature, Color(0xFF228B22), "风景"),
+    SceneType("landscape-autumn", "秋景", Icons.Outlined.Eco, Color(0xFFD2691E), "风景"),
+    SceneType("landscape-beach", "海滩", Icons.Outlined.BeachAccess, Color(0xFF20B2AA), "风景"),
+    SceneType("landscape-snow", "雪景", Icons.Outlined.AcUnit, Color(0xFFB0E0E6), "风景"),
+    
+    // 夜景系列 (5种)
+    SceneType("night", "夜景", Icons.Outlined.NightsStay, Color(0xFF483D8B), "夜景"),
+    SceneType("night-city", "城市夜景", Icons.Outlined.LocationCity, Color(0xFF9370DB), "夜景"),
+    SceneType("night-starry", "星空", Icons.Outlined.Star, Color(0xFF191970), "夜景"),
+    SceneType("night-neon", "霓虹", Icons.Outlined.FlashOn, Color(0xFFFF00FF), "夜景"),
+    SceneType("night-candle", "烛光", Icons.Outlined.LightMode, Color(0xFFFFA500), "夜景"),
+    
+    // 美食系列 (4种)
+    SceneType("food", "美食", Icons.Outlined.Restaurant, Color(0xFFFF6347), "美食"),
+    SceneType("food-restaurant", "餐厅美食", Icons.Outlined.LocalDining, Color(0xFFCD853F), "美食"),
+    SceneType("food-dessert", "甜点", Icons.Outlined.Cake, Color(0xFFFFB6C1), "美食"),
+    SceneType("food-drink", "饮品", Icons.Outlined.LocalCafe, Color(0xFF8B4513), "美食"),
+    
+    // 街拍系列 (4种)
+    SceneType("street", "街拍", Icons.Outlined.DirectionsWalk, Color(0xFF708090), "街拍"),
+    SceneType("street-cafe", "咖啡馆", Icons.Outlined.LocalCafe, Color(0xFFA0522D), "街拍"),
+    SceneType("street-architecture", "建筑", Icons.Outlined.Apartment, Color(0xFF4682B4), "街拍"),
+    SceneType("street-museum", "博物馆", Icons.Outlined.Museum, Color(0xFFBC8F8F), "街拍"),
+    
+    // 微距系列 (4种)
+    SceneType("macro-flower", "花卉", Icons.Outlined.LocalFlorist, Color(0xFFFF69B4), "微距"),
+    SceneType("macro-detail", "细节特写", Icons.Outlined.ZoomIn, Color(0xFF00CED1), "微距"),
+    SceneType("macro-insect", "昆虫", Icons.Outlined.BugReport, Color(0xFF32CD32), "微距"),
+    SceneType("macro-product", "产品", Icons.Outlined.Inventory2, Color(0xFF696969), "微距"),
+    
+    // 运动/活动系列 (4种)
+    SceneType("sports", "运动", Icons.Outlined.SportsSoccer, Color(0xFFFF4500), "运动"),
+    SceneType("action", "动作", Icons.Outlined.DirectionsRun, Color(0xFFFFD700), "运动"),
+    SceneType("concert", "演唱会", Icons.Outlined.MusicNote, Color(0xFF9400D3), "运动"),
+    SceneType("party", "派对", Icons.Outlined.Celebration, Color(0xFFFF1493), "运动"),
+    
+    // 其他场景 (3种)
+    SceneType("pet", "宠物", Icons.Outlined.Pets, Color(0xFFDAA520), "其他"),
+    SceneType("document", "文档", Icons.Outlined.Description, Color(0xFF708090), "其他"),
+    SceneType("wedding", "婚礼", Icons.Outlined.Favorite, Color(0xFFFFF0F5), "其他")
 )
 
 /**
@@ -133,14 +217,21 @@ fun AISceneRecognitionScreen(
     // 分析结果
     var analysisResult by remember { mutableStateOf<SceneProfile?>(null) }
     
+    // 新增：置信度和备选场景（对齐 Web 端）
+    var confidence by remember { mutableStateOf(0) }
+    var alternativeScenes by remember { mutableStateOf<List<SceneType>>(emptyList()) }
+    var selectedSceneType by remember { mutableStateOf<SceneType?>(null) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    
     // 历史记录
     var recognitionHistory by remember { mutableStateOf<List<SceneProfile>>(emptyList()) }
 
-    // 分析步骤
+    // 分析步骤（扩展为4步，对齐 Web 端）
     val analysisSteps = listOf(
-        AnalysisStep("detect", "场景检测", Icons.Outlined.RemoveRedEye, Color(0xFF3B82F6)),
-        AnalysisStep("match", "参数匹配", Icons.Outlined.Tune, HasselbladOrange),
-        AnalysisStep("optimize", "效果优化", Icons.Outlined.AutoAwesome, Color(0xFF4CAF50))
+        AnalysisStep("color", "颜色分析", Icons.Outlined.Palette, Color(0xFF3B82F6)),
+        AnalysisStep("brightness", "亮度检测", Icons.Outlined.WbSunny, Color(0xFFFFEB3B)),
+        AnalysisStep("face", "人脸检测", Icons.Outlined.Face, Color(0xFFE91E63)),
+        AnalysisStep("texture", "纹理分析", Icons.Outlined.Tune, Color(0xFF4CAF50))
     )
 
     // AI 推理引擎实例

@@ -48,6 +48,9 @@ class LUTViewModel(
     private val _downloadedIds = MutableStateFlow<Set<String>>(emptySet())
     val downloadedIds: StateFlow<Set<String>> = _downloadedIds.asStateFlow()
 
+    // 下载任务映射（用于取消）
+    private val downloadJobs = mutableMapOf<String, kotlinx.coroutines.Job>()
+
     // === 收藏 ===
     private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
@@ -115,7 +118,9 @@ class LUTViewModel(
      * 取消下载
      */
     fun cancelDownload(lutId: String) {
-        // TODO: 实现下载取消逻辑
+        // 取消正在进行的下载任务
+        downloadJobs[lutId]?.cancel()
+        downloadJobs.remove(lutId)
         _downloadStates.value = _downloadStates.value - lutId
     }
 
