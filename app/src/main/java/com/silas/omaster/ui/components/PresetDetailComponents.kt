@@ -18,6 +18,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Sparkles
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.silas.omaster.ui.theme.HasselbladOrange
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
@@ -413,6 +432,7 @@ fun ApplyPresetButton(
     modifier: Modifier = Modifier
 ) {
     var applied by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     
     val buttonColor by animateColorAsState(
         targetValue = if (applied) Color(0xFF4CAF50) else HasselbladOrange,
@@ -424,9 +444,9 @@ fun ApplyPresetButton(
         onClick = {
             applied = true
             onApply()
-            // 2秒后恢复
-            kotlinx.coroutines.GlobalScope.launch {
-                kotlinx.coroutines.delay(2000)
+            // 2秒后恢复（使用rememberCoroutineScope避免内存泄漏）
+            coroutineScope.launch {
+                delay(2000)
                 applied = false
             }
         },

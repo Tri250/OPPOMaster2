@@ -1,13 +1,11 @@
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    // 添加 Kotlin Serialization 插件，用于类型安全的导航
-    id("org.jetbrains.kotlin.plugin.serialization")
-    // 添加 Kotlin Parcelize 插件，用于Parcelable实现
-    id("kotlin-parcelize")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 // 读取签名配置
@@ -158,7 +156,6 @@ dependencies {
 // 友盟
     implementation(libs.umeng.common)
     implementation(libs.umeng.asms)
-    implementation(libs.androidx.material3)
 
     // ML Kit 人脸检测
     implementation(libs.mlkit.face.detection)

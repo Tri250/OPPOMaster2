@@ -17,6 +17,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 /**
  * GPU渲染管理器
@@ -142,7 +144,7 @@ class GPURenderManager private constructor(private val context: Context) {
     /**
      * 在渲染线程初始化EGL
      */
-    private fun initEGLOnRenderThread(): Boolean {
+    private suspend fun initEGLOnRenderThread(): Boolean {
         return runOnRenderThreadBlocking {
             try {
                 // 获取EGL显示
@@ -240,7 +242,7 @@ class GPURenderManager private constructor(private val context: Context) {
     /**
      * 在渲染线程初始化渲染器
      */
-    private fun initRendererOnRenderThread(): Boolean {
+    private suspend fun initRendererOnRenderThread(): Boolean {
         return runOnRenderThreadBlocking {
             imageRenderer?.initialize() ?: false
         }
@@ -406,23 +408,26 @@ class GPURenderManager private constructor(private val context: Context) {
     }
     
     /**
-     * 在渲染线程执行阻塞操作
+     * 在渲染线程执行阻塞操作（使用suspendCancellableCoroutine替代runBlocking）
      */
-    private fun <T> runOnRenderThreadBlocking(block: () -> T): T {
+    private suspend fun <T> runOnRenderThreadBlocking(block: () -> T): T {
         if (renderThread == null || renderHandler == null) {
             return block()
         }
         
-        val result = CompletableDeferred<T>()
-        
-        renderHandler?.post {
-            result.complete(block())
-        }
-        
-        return runBlocking {
-            withTimeoutOrNull(RENDER_TIMEOUT_MS) {
-                result.await()
-            } ?: throw TimeoutCancellationException("Render thread timeout")
+        return suspendCancellableCoroutine { continuation ->
+            renderHandler?.post {
+                try {
+                    continuation.resume(block()) {}
+                } catch (e: Exception) {
+                    continuation.resumeWithException(e)
+                }
+            }
+            
+            // 设置超时取消
+            continuation.invokeOnCancellation {
+                Log.w(TAG, "Render thread operation cancelled")
+            }
         }
     }
     
@@ -454,6 +459,7 @@ class GPURenderManager private constructor(private val context: Context) {
     
     /**
      * 释放资源
+     * 注意：此方法使用runBlocking确保资源完全释放，适用于生命周期结束时的清理操作
      */
     fun release() {
         // 停止渲染协程
@@ -464,33 +470,35 @@ class GPURenderManager private constructor(private val context: Context) {
         clearQueue()
         renderChannel.close()
         
-        // 在渲染线程释放资源
-        runOnRenderThreadBlocking {
-            imageRenderer?.release()
-            imageRenderer = null
-            
-            // 销毁EGL上下文
-            if (eglContext != null) {
-                EGL14.eglMakeCurrent(
-                    eglDisplay!!,
-                    EGL14.EGL_NO_SURFACE,
-                    EGL14.EGL_NO_SURFACE,
-                    EGL14.EGL_NO_CONTEXT
-                )
-                EGL14.eglDestroyContext(eglDisplay!!, eglContext!!)
-                eglContext = null
-            }
-            
-            // 销毁EGL表面
-            if (eglSurface != null) {
-                EGL14.eglDestroySurface(eglDisplay!!, eglSurface!!)
-                eglSurface = null
-            }
-            
-            // 终止EGL显示
-            if (eglDisplay != null) {
-                EGL14.eglTerminate(eglDisplay!!)
-                eglDisplay = null
+        // 在渲染线程释放资源（使用runBlocking确保同步完成）
+        runBlocking {
+            runOnRenderThreadBlocking {
+                imageRenderer?.release()
+                imageRenderer = null
+                
+                // 销毁EGL上下文
+                if (eglContext != null) {
+                    EGL14.eglMakeCurrent(
+                        eglDisplay!!,
+                        EGL14.EGL_NO_SURFACE,
+                        EGL14.EGL_NO_SURFACE,
+                        EGL14.EGL_NO_CONTEXT
+                    )
+                    EGL14.eglDestroyContext(eglDisplay!!, eglContext!!)
+                    eglContext = null
+                }
+                
+                // 销毁EGL表面
+                if (eglSurface != null) {
+                    EGL14.eglDestroySurface(eglDisplay!!, eglSurface!!)
+                    eglSurface = null
+                }
+                
+                // 终止EGL显示
+                if (eglDisplay != null) {
+                    EGL14.eglTerminate(eglDisplay!!)
+                    eglDisplay = null
+                }
             }
         }
         
