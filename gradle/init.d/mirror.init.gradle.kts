@@ -6,10 +6,17 @@
 //   1. 复制到 ~/.gradle/init.d/mirror.init.gradle.kts
 //   2. 或使用命令行：./gradlew build -I gradle/init.d/mirror.init.gradle.kts
 // 优先级：此文件优先级最高，会覆盖 settings.gradle.kts 中的仓库配置
+//
+// Gradle 分发包镜像：
+//   官方：https://services.gradle.org/distributions/
+//   腾讯：https://mirrors.cloud.tencent.com/gradle/（推荐）
+//   阿里：https://mirrors.aliyun.com/gradle/
+//   阿里macports：https://mirrors.aliyun.com/macports/distfiles/gradle/
 // =============================================================================
 
 import org.gradle.api.initialization.resolve.RepositoriesMode
 
+// Maven 仓库镜像地址
 val ALIYUN_GOOGLE = "https://maven.aliyun.com/repository/google"
 val ALIYUN_CENTRAL = "https://maven.aliyun.com/repository/central"
 val ALIYUN_PUBLIC = "https://maven.aliyun.com/repository/public"

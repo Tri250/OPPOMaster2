@@ -15,6 +15,17 @@
 
 本项目配置了多套镜像源，按优先级排序：
 
+### Gradle 分发包镜像
+
+| 镜像源 | 地址 | 状态 | 用途 |
+|--------|------|------|------|
+| 腾讯云 | `https://mirrors.cloud.tencent.com/gradle/` | ✅ 推荐 | 首选 |
+| 阿里云 | `https://mirrors.aliyun.com/gradle/` | ⚠️ 备用 | 备选 |
+| 阿里云 macports | `https://mirrors.aliyun.com/macports/distfiles/gradle/` | ⚠️ 备用 | 备选 |
+| 官方源 | `https://services.gradle.org/distributions/` | 🐢 兜底 | 最后回退 |
+
+### Maven 仓库镜像
+
 | 优先级 | 镜像源 | 仓库类型 | 速度 | 用途 |
 |--------|--------|----------|------|------|
 | 1 | 阿里云 | Google + Central + Plugin + JCenter | ⚡ 最快 | 主镜像 |
@@ -25,7 +36,30 @@
 
 ## 2. 镜像源说明
 
-### 2.1 阿里云镜像（首选）
+### 2.1 Gradle 分发包镜像
+
+**腾讯云镜像（推荐）**：
+```
+https://mirrors.cloud.tencent.com/gradle/gradle-8.14.4-bin.zip
+```
+- ✅ 版本最全（包含 8.14.5 最新版）
+- ✅ 速度稳定
+- ✅ 国内访问友好
+
+**阿里云镜像（备用）**：
+```
+https://mirrors.aliyun.com/gradle/gradle-8.14.4-bin.zip
+https://mirrors.aliyun.com/macports/distfiles/gradle/gradle-8.14.4-bin.zip
+```
+
+**官方源（兜底）**：
+```
+https://services.gradle.org/distributions/gradle-8.14.4-bin.zip
+```
+
+### 2.2 Maven 仓库镜像
+
+**阿里云镜像（首选）**：
 ```
 https://maven.aliyun.com/repository/google          # Google 仓库镜像
 https://maven.aliyun.com/repository/central         # Maven Central 镜像
