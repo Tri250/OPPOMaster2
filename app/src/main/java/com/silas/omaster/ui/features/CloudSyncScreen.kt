@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,8 @@ fun CloudSyncScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val syncManager = remember { CloudSyncManager.getInstance() }
+    val context = LocalContext.current
+    val syncManager = remember { CloudSyncManager.getInstance(context) }
 
     val isSyncing = remember { mutableStateOf(false) }
     val lastSyncTime = remember { mutableStateOf("2分钟前") }

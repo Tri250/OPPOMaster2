@@ -656,16 +656,23 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
         // 获取场景预设（安全处理空列表）
         if (topScenes.isEmpty()) {
+            // 兜底：使用第一个可用场景，绝不返回 null
             val defaultScene = ScenePresets.allScenes.firstOrNull()
+                ?: SceneProfile(
+                    id = "default",
+                    name = "通用",
+                    category = SceneCategory.PORTRAIT,
+                    description = "通用场景",
+                    color = 0xFFFF6B35,
+                    confidence = 0f,
+                    hasselbladParams = HasselbladParams(),
+                    recommendedFilm = emptyList(),
+                    masterTips = emptyList()
+                )
             return FusedResult(
-                primary = defaultScene ?: return@fuseResults null,
+                primary = defaultScene,
                 confidence = 0f,
-                alternatives = emptyList(),
-                colorProfile = colorProfile,
-                brightnessLevel = brightnessLevel,
-                faceCount = faceCount,
-                edgeDensity = edgeDensity,
-                sourceBreakdown = emptyMap()
+                alternatives = emptyList()
             )
         }
 
