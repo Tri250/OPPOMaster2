@@ -114,7 +114,7 @@ const WATERMARK_TEMPLATES = [
     category: 'legal',
     elements: [
       { type: 'text', content: '©', style: { fontSize: 14 } },
-      { type: 'text', content: '2024 OMaster', style: { fontSize: 12 } },
+      { type: 'text', content: '2026 OMaster', style: { fontSize: 12 } },
     ],
     preset: { position: 'bottom-center', padding: 16 }
   },
@@ -294,7 +294,7 @@ const WatermarkPage: React.FC = () => {
       } else if (templateId === 'location') {
         setCustomText('📍 Location');
       } else if (templateId === 'copyright') {
-        setCustomText('© 2024 OMaster');
+        setCustomText('© 2026 OMaster');
       }
     }
   }, []);

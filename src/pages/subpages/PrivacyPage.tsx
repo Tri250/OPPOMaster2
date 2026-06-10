@@ -87,7 +87,7 @@ const PrivacyPage: React.FC = () => {
 
         {/* Version */}
         <div className="mt-8 text-center">
-          <p className="text-white/30 text-xs">最后更新：2024年6月</p>
+          <p className="text-white/30 text-xs">最后更新：2026年6月</p>
           <p className="text-white/20 text-xs mt-1">版本 1.3.1</p>
         </div>
       </div>
