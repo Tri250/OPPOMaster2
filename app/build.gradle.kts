@@ -130,6 +130,13 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            // 资源压缩配置
+            androidResources {
+                // 忽略未使用的资源
+                ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*readme*"
+                // 启用资源压缩
+                noCompress += listOf("tflite", "webp")
+            }
         }
     }
 
@@ -151,7 +158,23 @@ android {
     // 打包配置
     packaging {
         resources {
+            // 排除未使用的资源
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/*.kotlin_module"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
+            // 排除未使用的 Kotlin 元数据
+            excludes += "**/*.kotlin_metadata"
+            // 排除未使用的 Proguard 配置
+            excludes += "**/*.pro"
+        }
+        // 优化 JNI 库打包
+        jniLibs {
+            // 启用 JNI 库压缩（减少 APK 体积）
+            useLegacyPackaging = false
         }
     }
 }
