@@ -35,11 +35,10 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
 
-        // 友盟仓库
-        maven {
-            url = uri("https://repo.umeng.com/maven-releases/")
-            isAllowInsecureProtocol = true
-        }
+        // 友盟仓库已由阿里云/腾讯云镜像完整代理，无需单独配置
+        // 镜像路径: https://maven.aliyun.com/repository/public/com/umeng/umsdk/
+        // 备用方案（如镜像缺包时可启用）:
+        // maven { url = uri("https://repo.umeng.com/maven-releases/") }
     }
 }
 
