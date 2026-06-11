@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
 class ParamAdjustmentManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
 
-    // 参数值范围定义
+    // 参数值范围定义和单例管理
     companion object {
         const val MIN_VALUE = -100
         const val MAX_VALUE = 100
@@ -43,6 +43,15 @@ class ParamAdjustmentManager private constructor(context: Context) {
                 "highlights" to 0, "shadows" to 0
             ))
         )
+
+        @Volatile
+        private var instance: ParamAdjustmentManager? = null
+
+        fun getInstance(context: Context): ParamAdjustmentManager {
+            return instance ?: synchronized(this) {
+                instance ?: ParamAdjustmentManager(context.applicationContext).also { instance = it }
+            }
+        }
     }
 
     // 可调参数定义
@@ -352,17 +361,6 @@ class ParamAdjustmentManager private constructor(context: Context) {
      */
     fun getParamDefinition(paramName: String): AdjustableParam? {
         return adjustableParams.find { it.name == paramName }
-    }
-
-    companion object {
-        @Volatile
-        private var instance: ParamAdjustmentManager? = null
-
-        fun getInstance(context: Context): ParamAdjustmentManager {
-            return instance ?: synchronized(this) {
-                instance ?: ParamAdjustmentManager(context.applicationContext).also { instance = it }
-            }
-        }
     }
 }
 

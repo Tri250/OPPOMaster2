@@ -154,6 +154,9 @@ data class HasselbladParams(
         override fun newArray(size: Int): Array<HasselbladParams?> {
             return arrayOfNulls(size)
         }
+
+        // 默认参数实例
+        val DEFAULT = HasselbladParams()
     }
 
     /**
