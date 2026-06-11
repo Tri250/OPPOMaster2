@@ -1,0 +1,14 @@
+# TFLite Model Placeholder
+# 
+# This file indicates that the actual model needs to be downloaded.
+# 
+# Model: quality_analyzer.tflite
+# Size: ~500KB (INT8 quantized)
+# Architecture: NIMA-MobileNetV2
+# Output: 4 quality metrics (brightness, contrast, noise, sharpness)
+# 
+# Download URL: https://releases.omaster.app/models/v1.2/quality_analyzer.tflite
+# Backup URL: https://mirrors.cloud.tencent.com/omaster-models/v1.2/quality_analyzer.tflite
+# 
+# The app will automatically use heuristic algorithms when the model is not available.
+# Use ModelDownloadManager to download models at runtime.

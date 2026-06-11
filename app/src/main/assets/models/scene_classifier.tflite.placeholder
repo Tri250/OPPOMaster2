@@ -1,0 +1,14 @@
+# TFLite Model Placeholder
+# 
+# This file indicates that the actual model needs to be downloaded.
+# 
+# Model: scene_classifier.tflite
+# Size: ~700KB (INT8 quantized)
+# Architecture: MobileNetV3-Small
+# Classes: 36 scene types
+# 
+# Download URL: https://releases.omaster.app/models/v1.2/scene_classifier.tflite
+# Backup URL: https://mirrors.cloud.tencent.com/omaster-models/v1.2/scene_classifier.tflite
+# 
+# The app will automatically use heuristic algorithms when the model is not available.
+# Use ModelDownloadManager to download models at runtime.
