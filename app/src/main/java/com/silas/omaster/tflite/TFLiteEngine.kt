@@ -15,6 +15,7 @@ import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.nnapi.NnApiDelegate
 import org.tensorflow.lite.support.common.FileUtil
+import org.tensorflow.lite.xnnpack.XnnPackDelegate
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -72,6 +73,7 @@ class TFLiteEngine private constructor(private val context: Context) {
     // 硬件加速委托
     private var gpuDelegate: GpuDelegate? = null
     private var nnapiDelegate: NnApiDelegate? = null
+    private var xnnpackDelegate: XnnPackDelegate? = null
     
     // 硬件兼容性
     private val gpuCompatibilityList = CompatibilityList()
@@ -241,7 +243,11 @@ class TFLiteEngine private constructor(private val context: Context) {
                         Log.d(TAG, "使用 GPU Delegate: $modelName")
                     }
                 } else if (currentConfig.useXnnpack) {
-                    setUseXNNPACK(true)
+                    val xnnpackOpts = XnnPackDelegate.Options()
+                    xnnpackDelegate = XnnPackDelegate(xnnpackOpts)
+                    xnnpackDelegate?.let { delegate ->
+                        addDelegate(delegate)
+                    }
                     Log.d(TAG, "使用 XNNPACK: $modelName")
                 }
             }
@@ -978,6 +984,9 @@ class TFLiteEngine private constructor(private val context: Context) {
         
         nnapiDelegate?.close()
         nnapiDelegate = null
+
+        xnnpackDelegate?.close()
+        xnnpackDelegate = null
         
         resultCache.clear()
         performanceStats.clear()
