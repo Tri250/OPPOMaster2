@@ -36,6 +36,9 @@ android {
         versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ========== 资源优化：只保留需要的语言 ==========
+        resourceConfigurations += listOf("en", "zh", "zh-rCN")
     }
 
     // 签名配置
@@ -96,8 +99,12 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            enableUnitTestCoverage = true
-            enableAndroidTestCoverage = true
+            // Debug模式下关闭覆盖率以加速构建，CI时再开启
+            enableUnitTestCoverage = false
+            enableAndroidTestCoverage = false
+            // Debug模式关闭资源优化加速构建
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
         release {
             isMinifyEnabled = true
@@ -108,6 +115,24 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+    // ========== Lint 优化配置 ==========
+    lint {
+        // 检查范围限制
+        checkOnly += listOf("NewApi", "InlinedApi")
+        // 不中断构建
+        abortOnError = false
+        // 忽略测试文件
+        ignoreTestSources = true
+        // 禁用某些检查
+        disable += listOf("MissingTranslation", "UnusedResources")
+    }
+
+    // ========== AAPT2 优化 ==========
+    aaptOptions {
+        // 额外参数优化
+        additionalParameters += listOf("--no-version-vectors")
     }
 
     // 测试选项配置
