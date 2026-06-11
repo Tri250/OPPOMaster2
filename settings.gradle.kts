@@ -1,56 +1,16 @@
 pluginManagement {
     repositories {
         // ===== 国内镜像优先（加速下载） =====
-        // 阿里云镜像
-        maven {
-            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("org\\.jetbrains.*")
-                includeGroupByRegex("org\\.gradle.*")
-            }
-        }
-        maven {
-            url = uri("https://maven.aliyun.com/repository/public")
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("org\\.jetbrains.*")
-                includeGroupByRegex("io\\.github.*")
-            }
-        }
-        maven {
-            url = uri("https://maven.aliyun.com/repository/google")
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        // 阿里云镜像 - 不使用 content 过滤以确保插件能正确解析
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
         // 腾讯云镜像（备选）
-        maven {
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/")
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("org\\.jetbrains.*")
-            }
-        }
-        maven {
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("org\\.jetbrains.*")
-                includeGroupByRegex("io\\.github.*")
-            }
-        }
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
         // 官方仓库（后备）
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
