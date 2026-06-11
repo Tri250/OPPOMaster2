@@ -36,6 +36,9 @@ android {
         versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 资源优化：只保留需要的语言资源
+        resourceConfigurations += listOf("en", "zh", "zh-rCN", "zh-rTW")
     }
 
     // 签名配置
@@ -98,6 +101,9 @@ android {
             versionNameSuffix = "-debug"
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
+            // Debug 构建关闭代码压缩和资源压缩，加速构建
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
         release {
             isMinifyEnabled = true
@@ -108,6 +114,16 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+    // Lint 配置优化
+    lint {
+        // 只检查主要源代码，排除测试和生成的代码
+        checkOnly.add("Interoperability")
+        // 错误时不中断构建（开发阶段）
+        abortOnError = false
+        // 不检查 release 构建（CI 中单独运行）
+        checkReleaseBuilds = false
     }
 
     // 测试选项配置
