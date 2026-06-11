@@ -3,6 +3,7 @@ package com.silas.omaster.data.local
 import android.content.Context
 import com.silas.omaster.model.Subscription
 import com.silas.omaster.model.SubscriptionList
+import com.silas.omaster.util.ReleaseLog
 import com.silas.omaster.util.SecurityCrypto
 import com.silas.omaster.util.UpdateConfigManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,10 +43,10 @@ class SubscriptionManager private constructor(context: Context) {
                 _subscriptionsFlow.value = migratedSubscriptions
                 if (updated) {
                     saveSubscriptions()
-                    android.util.Log.d("SubscriptionManager", "Migrated official subscription to new URL")
+                    ReleaseLog.d("SubscriptionManager", "Migrated official subscription to new URL")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SubscriptionManager", "Failed to decode subscriptions", e)
+                ReleaseLog.e("SubscriptionManager", "Failed to decode subscriptions", e)
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
@@ -71,7 +72,7 @@ class SubscriptionManager private constructor(context: Context) {
                 null
             }
         } catch (e: Exception) {
-            android.util.Log.w("SubscriptionManager", "读取加密订阅失败", e)
+            ReleaseLog.w("SubscriptionManager", "读取加密订阅失败", e)
             null
         }
     }
@@ -92,7 +93,7 @@ class SubscriptionManager private constructor(context: Context) {
                 return
             }
         } catch (e: Exception) {
-            android.util.Log.w("SubscriptionManager", "加密存储失败，使用明文", e)
+            ReleaseLog.w("SubscriptionManager", "加密存储失败，使用明文", e)
         }
         
         // 回退明文存储

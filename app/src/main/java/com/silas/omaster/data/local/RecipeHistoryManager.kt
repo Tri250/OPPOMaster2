@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -109,7 +110,7 @@ class RecipeHistoryManager private constructor(context: Context) {
                 val type = object : TypeToken<List<RecipeRecord>>() {}.type
                 gson.fromJson<List<RecipeRecord>>(json, type) ?: emptyList()
             } catch (e: Exception) {
-                android.util.Log.e("RecipeHistoryManager", "加载配方数据失败", e)
+                ReleaseLog.e("RecipeHistoryManager", "加载配方数据失败", e)
                 emptyList()
             }
         } else {

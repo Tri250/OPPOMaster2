@@ -2,7 +2,7 @@ package com.silas.omaster.ai
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.data.local.SettingsManager
@@ -89,7 +89,7 @@ class SceneRecognitionManager private constructor(context: Context) {
      */
     suspend fun recognizeScene(bitmap: Bitmap): SceneRecognitionResult = withContext(Dispatchers.Default) {
         if (!settingsManager.isAISceneRecognitionEnabled) {
-            Log.d(TAG, "AI场景识别已禁用")
+            ReleaseLog.d(TAG, "AI场景识别已禁用")
             return@withContext SceneRecognitionResult(
                 sceneType = SceneType.UNKNOWN,
                 confidence = 0f,
@@ -99,12 +99,12 @@ class SceneRecognitionManager private constructor(context: Context) {
         }
 
         try {
-            Log.d(TAG, "开始真实场景识别分析")
+            ReleaseLog.d(TAG, "开始真实场景识别分析")
             
             // 使用启发式分析器进行真实图像分析
             val analysisResult = heuristicAnalyzer.analyze(bitmap)
             
-            Log.d(TAG, "场景分析完成: 场景=${analysisResult.primaryScene.id}, 置信度=${analysisResult.confidence}")
+            ReleaseLog.d(TAG, "场景分析完成: 场景=${analysisResult.primaryScene.id}, 置信度=${analysisResult.confidence}")
             
             // 将分析结果映射到SceneType
             val detectedSceneType = mapSceneProfileToSceneType(analysisResult.primaryScene.id)
@@ -130,7 +130,7 @@ class SceneRecognitionManager private constructor(context: Context) {
                 }
             )
         } catch (e: Exception) {
-            Log.e(TAG, "场景识别失败: ${e.message}", e)
+            ReleaseLog.e(TAG, "场景识别失败: ${e.message}", e)
             // 错误时返回默认结果
             SceneRecognitionResult(
                 sceneType = SceneType.UNKNOWN,

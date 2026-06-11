@@ -2,7 +2,8 @@ package com.silas.omaster.tflite
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
@@ -134,10 +135,10 @@ class ParamPredictor(private val context: Context) {
             // 解析结果
             val result = parseParamResult(rawParams, startTime)
             
-            Log.d(TAG, "参数预测完成: 耗时=${result.inferenceTimeMs}ms")
+            ReleaseLog.d(TAG, "参数预测完成: 耗时=${result.inferenceTimeMs}ms")
             Result.success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "参数预测失败", e)
+            ReleaseLog.e(TAG, "参数预测失败", e)
             Result.failure(e)
         }
     }

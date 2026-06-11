@@ -1,6 +1,6 @@
 package com.silas.omaster.util
 
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import com.silas.omaster.BuildConfig
 
 /**
@@ -23,7 +23,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         // 记录异常
-        Log.e(TAG, "未捕获异常 [${thread.name}]", throwable)
+        ReleaseLog.e(TAG, "未捕获异常 [${thread.name}]", throwable)
 
         // 分类记录异常类型
         val exceptionType = when (throwable) {
@@ -38,7 +38,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             else -> "OTHER"
         }
 
-        Log.e(TAG, "异常类型: $exceptionType, 消息: ${throwable.message}")
+        ReleaseLog.e(TAG, "异常类型: $exceptionType, 消息: ${throwable.message}")
 
         // 委托给默认处理器
         // 注意：不能完全阻止系统崩溃，但可以记录更详细的信息

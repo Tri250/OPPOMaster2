@@ -7,7 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import androidx.core.content.FileProvider
 import com.silas.omaster.data.local.UpdateChannel
 import kotlinx.coroutines.Dispatchers
@@ -129,11 +129,11 @@ object UpdateChecker {
                     isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
                 )
             } else {
-                Log.e(TAG, "检查更新失败，HTTP 状态码: ${connection.responseCode}")
+                ReleaseLog.e(TAG, "检查更新失败，HTTP 状态码: ${connection.responseCode}")
                 return null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "检查更新出错 [${if (isGitee) "Gitee" else "GitHub"}]", e)
+            ReleaseLog.e(TAG, "检查更新出错 [${if (isGitee) "Gitee" else "GitHub"}]", e)
             return null
         }
     }
@@ -232,7 +232,7 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
                     // 获取本地文件路径
                     val localUriString = it.getString(it.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI))
-                    Log.d("DownloadReceiver", "下载完成，URI: $localUriString")
+                    ReleaseLog.d("DownloadReceiver", "下载完成，URI: $localUriString")
 
                     val apkFile = if (localUriString != null) {
                         val localUri = Uri.parse(localUriString)
@@ -252,11 +252,11 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     if (apkFile != null && apkFile.exists()) {
                         installApk(context, apkFile)
                     } else {
-                        Log.e("DownloadReceiver", "APK 文件不存在")
+                        ReleaseLog.e("DownloadReceiver", "APK 文件不存在")
                     }
                 } else if (status == DownloadManager.STATUS_FAILED) {
                     val reason = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
-                    Log.e("DownloadReceiver", "下载失败，错误码: $reason")
+                    ReleaseLog.e("DownloadReceiver", "下载失败，错误码: $reason")
                 }
             }
         }
@@ -285,14 +285,14 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("DownloadReceiver", "解析文件路径失败", e)
+            ReleaseLog.e("DownloadReceiver", "解析文件路径失败", e)
             null
         }
     }
 
     private fun installApk(context: Context, apkFile: File) {
         try {
-            Log.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
+            ReleaseLog.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
 
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -312,12 +312,12 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
             // 检查是否有应用可以处理这个 intent
             if (intent.resolveActivity(context.packageManager) != null) {
                 context.startActivity(intent)
-                Log.d("DownloadReceiver", "已启动安装界面")
+                ReleaseLog.d("DownloadReceiver", "已启动安装界面")
             } else {
-                Log.e("DownloadReceiver", "没有找到可以处理安装的应用")
+                ReleaseLog.e("DownloadReceiver", "没有找到可以处理安装的应用")
             }
         } catch (e: Exception) {
-            Log.e("DownloadReceiver", "安装失败: ${e.message}", e)
+            ReleaseLog.e("DownloadReceiver", "安装失败: ${e.message}", e)
         }
     }
 }

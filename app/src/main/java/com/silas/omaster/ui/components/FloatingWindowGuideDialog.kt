@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.delay
 
 /**
@@ -72,7 +73,7 @@ fun FloatingWindowGuideDialog(
 
     // 调试日志
     LaunchedEffect(Unit) {
-        android.util.Log.d("FloatingWindowGuideDialog", "对话框显示")
+        ReleaseLog.d("FloatingWindowGuideDialog", "对话框显示")
     }
 
     AnimatedVisibility(

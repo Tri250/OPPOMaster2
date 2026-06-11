@@ -4,7 +4,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -127,18 +128,18 @@ class TFLiteEngine private constructor(private val context: Context) {
             // 检查模型文件是否存在
             val modelsAvailable = checkModelsAvailable()
             if (!modelsAvailable) {
-                Log.w(TAG, "部分模型文件不存在，将使用启发式降级模式")
+                ReleaseLog.w(TAG, "部分模型文件不存在，将使用启发式降级模式")
             }
             
             // 初始化硬件加速
             initializeDelegates(config)
             
             state.set(InferenceState.READY)
-            Log.i(TAG, "TFLite引擎初始化成功 - GPU: ${config.useGpu}, NNAPI: ${config.useNnapi}, XNNPACK: ${config.useXnnpack}")
+            ReleaseLog.i(TAG, "TFLite引擎初始化成功 - GPU: ${config.useGpu}, NNAPI: ${config.useNnapi}, XNNPACK: ${config.useXnnpack}")
             Result.success(true)
         } catch (e: Exception) {
             state.set(InferenceState.ERROR)
-            Log.e(TAG, "TFLite引擎初始化失败", e)
+            ReleaseLog.e(TAG, "TFLite引擎初始化失败", e)
             Result.failure(e)
         }
     }
@@ -163,11 +164,11 @@ class TFLiteEngine private constructor(private val context: Context) {
                 }
                 
                 if (!exists) {
-                    Log.d(TAG, "模型文件不存在: $modelName")
+                    ReleaseLog.d(TAG, "模型文件不存在: $modelName")
                     allAvailable = false
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "检查模型文件失败: $modelName", e)
+                ReleaseLog.e(TAG, "检查模型文件失败: $modelName", e)
                 allAvailable = false
             }
         }
@@ -187,9 +188,9 @@ class TFLiteEngine private constructor(private val context: Context) {
                     .setForceBackend(GpuDelegate.Options.FORCE_BACKEND_OPENCL)
                 
                 gpuDelegate = GpuDelegate(options)
-                Log.i(TAG, "GPU Delegate 初始化成功")
+                ReleaseLog.i(TAG, "GPU Delegate 初始化成功")
             } catch (e: Exception) {
-                Log.w(TAG, "GPU Delegate 初始化失败，将回退到CPU", e)
+                ReleaseLog.w(TAG, "GPU Delegate 初始化失败，将回退到CPU", e)
             }
         }
         
@@ -200,9 +201,9 @@ class TFLiteEngine private constructor(private val context: Context) {
                     .setUseNnapiCpu(true)
                     .setAllowFp16PrecisionForFp32(true)
                     .build()
-                Log.i(TAG, "NNAPI Delegate 初始化成功")
+                ReleaseLog.i(TAG, "NNAPI Delegate 初始化成功")
             } catch (e: Exception) {
-                Log.w(TAG, "NNAPI Delegate 初始化失败", e)
+                ReleaseLog.w(TAG, "NNAPI Delegate 初始化失败", e)
             }
         }
     }
@@ -232,16 +233,16 @@ class TFLiteEngine private constructor(private val context: Context) {
                 if (currentConfig.useNnapi) {
                     nnapiDelegate?.let { delegate ->
                         addDelegate(delegate)
-                        Log.d(TAG, "使用 NNAPI Delegate: $modelName")
+                        ReleaseLog.d(TAG, "使用 NNAPI Delegate: $modelName")
                     }
                 } else if (currentConfig.useGpu) {
                     gpuDelegate?.let { delegate ->
                         addDelegate(delegate)
-                        Log.d(TAG, "使用 GPU Delegate: $modelName")
+                        ReleaseLog.d(TAG, "使用 GPU Delegate: $modelName")
                     }
                 } else if (currentConfig.useXnnpack) {
                     setUseXNNPACK(true)
-                    Log.d(TAG, "使用 XNNPACK: $modelName")
+                    ReleaseLog.d(TAG, "使用 XNNPACK: $modelName")
                 }
             }
             
@@ -257,10 +258,10 @@ class TFLiteEngine private constructor(private val context: Context) {
                 isQuantized = interpreter.getInputTensor(0).dataType() != Interpreter.DataType.FLOAT32
             )
             
-            Log.i(TAG, "模型加载成功: $modelName, 输入形状: ${modelInfoMap[modelName]?.inputShape?.contentToString()}")
+            ReleaseLog.i(TAG, "模型加载成功: $modelName, 输入形状: ${modelInfoMap[modelName]?.inputShape?.contentToString()}")
             interpreter
         } catch (e: Exception) {
-            Log.e(TAG, "模型加载失败: $modelName", e)
+            ReleaseLog.e(TAG, "模型加载失败: $modelName", e)
             null
         }
     }
@@ -287,12 +288,12 @@ class TFLiteEngine private constructor(private val context: Context) {
                 if (modelFile.exists()) {
                     FileUtil.loadMappedFile(context, "models/$modelName")
                 } else {
-                    Log.w(TAG, "模型文件不存在: $modelName，将使用启发式降级")
+                    ReleaseLog.w(TAG, "模型文件不存在: $modelName，将使用启发式降级")
                     null
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "加载模型缓冲区失败: $modelName", e)
+            ReleaseLog.e(TAG, "加载模型缓冲区失败: $modelName", e)
             null
         }
     }
@@ -324,7 +325,7 @@ class TFLiteEngine private constructor(private val context: Context) {
             
             if (interpreter == null) {
                 // 模型不存在，使用启发式降级策略
-                Log.d(TAG, "模型不存在，使用启发式降级策略: $modelName")
+                ReleaseLog.d(TAG, "模型不存在，使用启发式降级策略: $modelName")
                 
                 // 如果输入是Bitmap，使用基于图像特征的启发式推理
                 val heuristicResult = if (input is Bitmap) {
@@ -361,7 +362,7 @@ class TFLiteEngine private constructor(private val context: Context) {
             Result.success(output as T)
         } catch (e: Exception) {
             state.set(InferenceState.ERROR)
-            Log.e(TAG, "推理失败: $modelName", e)
+            ReleaseLog.e(TAG, "推理失败: $modelName", e)
             Result.failure(e)
         }
     }
@@ -391,7 +392,7 @@ class TFLiteEngine private constructor(private val context: Context) {
      * - 参数预测：基于场景特征的参数推荐
      */
     private fun getSimulatedResult(modelName: String): Any {
-        Log.d(TAG, "使用启发式算法生成推理结果: $modelName")
+        ReleaseLog.d(TAG, "使用启发式算法生成推理结果: $modelName")
         
         return when (modelName) {
             MODEL_SCENE_CLASSIFIER -> {
@@ -451,7 +452,7 @@ class TFLiteEngine private constructor(private val context: Context) {
             probabilities[i] = probabilities[i] / sum
         }
         
-        Log.d(TAG, "场景概率分布生成完成，最高概率场景索引: ${probabilities.indices.maxByOrNull { probabilities[it] }}")
+        ReleaseLog.d(TAG, "场景概率分布生成完成，最高概率场景索引: ${probabilities.indices.maxByOrNull { probabilities[it] }}")
         return probabilities
     }
 
@@ -479,7 +480,7 @@ class TFLiteEngine private constructor(private val context: Context) {
         // 总体评分：综合加权
         scores[4] = (scores[0] * 0.2f + scores[1] * 0.2f + scores[2] * 0.25f + scores[3] * 0.35f)
         
-        Log.d(TAG, "质量评分生成完成: 亮度=${scores[0]}, 对比度=${scores[1]}, 噪点=${scores[2]}, 清晰度=${scores[3]}, 总体=${scores[4]}")
+        ReleaseLog.d(TAG, "质量评分生成完成: 亮度=${scores[0]}, 对比度=${scores[1]}, 噪点=${scores[2]}, 清晰度=${scores[3]}, 总体=${scores[4]}")
         return scores
     }
 
@@ -546,7 +547,7 @@ class TFLiteEngine private constructor(private val context: Context) {
         // 分色调阴影（-100到100）
         params[17] = 0f  // 默认分色调阴影
         
-        Log.d(TAG, "参数预测生成完成: 对比度=${params[1]}, 锐度=${params[11]}, 降噪=${params[12]}")
+        ReleaseLog.d(TAG, "参数预测生成完成: 对比度=${params[1]}, 锐度=${params[11]}, 降噪=${params[12]}")
         return params
     }
 
@@ -558,7 +559,7 @@ class TFLiteEngine private constructor(private val context: Context) {
         modelName: String,
         bitmap: Bitmap
     ): Any = withContext(Dispatchers.Default) {
-        Log.d(TAG, "基于图像特征生成启发式结果: $modelName")
+        ReleaseLog.d(TAG, "基于图像特征生成启发式结果: $modelName")
         
         try {
             // 提取图像特征
@@ -582,7 +583,7 @@ class TFLiteEngine private constructor(private val context: Context) {
                 else -> FloatArray(0)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "启发式分析失败: ${e.message}")
+            ReleaseLog.e(TAG, "启发式分析失败: ${e.message}")
             getSimulatedResult(modelName)
         }
     }
@@ -924,7 +925,7 @@ class TFLiteEngine private constructor(private val context: Context) {
         stats.maxTimeMs = maxOf(stats.maxTimeMs, inferenceTime)
         stats.lastInferenceTimeMs = inferenceTime
         
-        Log.d(TAG, "$modelName 推理耗时: ${inferenceTime}ms, 平均: ${stats.averageTimeMs}ms")
+        ReleaseLog.d(TAG, "$modelName 推理耗时: ${inferenceTime}ms, 平均: ${stats.averageTimeMs}ms")
     }
     
     /**
@@ -960,7 +961,7 @@ class TFLiteEngine private constructor(private val context: Context) {
      */
     fun clearCache() {
         resultCache.clear()
-        Log.i(TAG, "推理结果缓存已清除")
+        ReleaseLog.i(TAG, "推理结果缓存已清除")
     }
     
     /**
@@ -983,7 +984,7 @@ class TFLiteEngine private constructor(private val context: Context) {
         modelInfoMap.clear()
         
         state.set(InferenceState.IDLE)
-        Log.i(TAG, "TFLite引擎资源已释放")
+        ReleaseLog.i(TAG, "TFLite引擎资源已释放")
     }
     
     /**

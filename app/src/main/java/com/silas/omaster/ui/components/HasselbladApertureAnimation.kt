@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -228,7 +229,7 @@ fun HasselbladApertureAnimation(
 
         // 总耗时（包含真实分析与必要的视觉过渡）
         val totalMs = colorDuration + rotateDurationMs + 200 + 200
-        android.util.Log.d(
+        ReleaseLog.d(
             "HasselbladAperture",
             "analysis total=${totalMs}ms faceCount=$faceCount scene=${profile.id}"
         )

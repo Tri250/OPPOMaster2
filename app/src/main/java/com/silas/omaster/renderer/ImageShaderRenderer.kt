@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.opengl.GLES30
 import android.opengl.GLUtils
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -85,7 +85,7 @@ class ImageShaderRenderer(private val context: Context) {
             )
             
             if (shaderProgram == null) {
-                Log.e(TAG, "Failed to create shader program")
+                ReleaseLog.e(TAG, "Failed to create shader program")
                 return false
             }
             
@@ -93,11 +93,11 @@ class ImageShaderRenderer(private val context: Context) {
             createVBOAndVAO()
             
             isInitialized = true
-            Log.d(TAG, "ImageShaderRenderer initialized successfully")
+            ReleaseLog.d(TAG, "ImageShaderRenderer initialized successfully")
             return true
             
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize renderer", e)
+            ReleaseLog.e(TAG, "Failed to initialize renderer", e)
             return false
         }
     }
@@ -281,7 +281,7 @@ class ImageShaderRenderer(private val context: Context) {
         // 检查FBO状态
         val status = GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER)
         if (status != GLES30.GL_FRAMEBUFFER_COMPLETE) {
-            Log.e(TAG, "Framebuffer is not complete: $status")
+            ReleaseLog.e(TAG, "Framebuffer is not complete: $status")
         }
         
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
@@ -352,13 +352,13 @@ class ImageShaderRenderer(private val context: Context) {
             
             // 检查性能
             if (processingTime > TARGET_RENDER_TIME_MS) {
-                Log.w(TAG, "Render time exceeded target: ${processingTime}ms > ${TARGET_RENDER_TIME_MS}ms")
+                ReleaseLog.w(TAG, "Render time exceeded target: ${processingTime}ms > ${TARGET_RENDER_TIME_MS}ms")
             }
             
             return RenderResult.Success(outputTextureId, processingTime, quality)
             
         } catch (e: Exception) {
-            Log.e(TAG, "Render failed", e)
+            ReleaseLog.e(TAG, "Render failed", e)
             return RenderResult.Error("Render failed: ${e.message}", e)
         }
     }
@@ -401,7 +401,7 @@ class ImageShaderRenderer(private val context: Context) {
             return bitmap
             
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to read output to bitmap", e)
+            ReleaseLog.e(TAG, "Failed to read output to bitmap", e)
             return null
         }
     }
@@ -485,7 +485,7 @@ class ImageShaderRenderer(private val context: Context) {
         shaderProgram = null
         
         isInitialized = false
-        Log.d(TAG, "ImageShaderRenderer released")
+        ReleaseLog.d(TAG, "ImageShaderRenderer released")
     }
     
     /**

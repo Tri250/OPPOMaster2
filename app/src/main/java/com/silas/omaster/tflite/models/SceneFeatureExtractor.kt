@@ -3,7 +3,8 @@ package com.silas.omaster.tflite.models
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import com.silas.omaster.tflite.TFLiteEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -102,11 +103,11 @@ class SceneFeatureExtractor(private val context: Context) {
             normalizeFeatures(features)
             
             val elapsed = System.currentTimeMillis() - startTime
-            Log.d(TAG, "特征提取完成: ${features.size}维, 耗时${elapsed}ms")
+            ReleaseLog.d(TAG, "特征提取完成: ${features.size}维, 耗时${elapsed}ms")
             
             Result.success(features)
         } catch (e: Exception) {
-            Log.e(TAG, "特征提取失败", e)
+            ReleaseLog.e(TAG, "特征提取失败", e)
             Result.failure(e)
         }
     }

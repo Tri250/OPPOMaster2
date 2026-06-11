@@ -2,7 +2,7 @@ package com.silas.omaster.renderer
 
 import android.content.Context
 import android.opengl.GLES30
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -39,7 +39,7 @@ class ShaderProgram private constructor(
             val fragmentShaderSource = loadShaderFromAssets(context, "shaders/$fragmentShaderFile")
             
             if (vertexShaderSource == null || fragmentShaderSource == null) {
-                Log.e(TAG, "Failed to load shader sources")
+                ReleaseLog.e(TAG, "Failed to load shader sources")
                 return null
             }
             
@@ -59,14 +59,14 @@ class ShaderProgram private constructor(
             // 编译顶点着色器
             val vertexShader = compileShader(GLES30.GL_VERTEX_SHADER, vertexShaderSource)
             if (vertexShader == 0) {
-                Log.e(TAG, "Failed to compile vertex shader")
+                ReleaseLog.e(TAG, "Failed to compile vertex shader")
                 return null
             }
             
             // 编译片段着色器
             val fragmentShader = compileShader(GLES30.GL_FRAGMENT_SHADER, fragmentShaderSource)
             if (fragmentShader == 0) {
-                Log.e(TAG, "Failed to compile fragment shader")
+                ReleaseLog.e(TAG, "Failed to compile fragment shader")
                 GLES30.glDeleteShader(vertexShader)
                 return null
             }
@@ -74,7 +74,7 @@ class ShaderProgram private constructor(
             // 链接程序
             val program = linkProgram(vertexShader, fragmentShader)
             if (program == 0) {
-                Log.e(TAG, "Failed to link program")
+                ReleaseLog.e(TAG, "Failed to link program")
                 GLES30.glDeleteShader(vertexShader)
                 GLES30.glDeleteShader(fragmentShader)
                 return null
@@ -102,7 +102,7 @@ class ShaderProgram private constructor(
                 
                 stringBuilder.toString()
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load shader from assets: $path", e)
+                ReleaseLog.e(TAG, "Failed to load shader from assets: $path", e)
                 null
             }
         }
@@ -116,7 +116,7 @@ class ShaderProgram private constructor(
         private fun compileShader(type: Int, source: String): Int {
             val shader = GLES30.glCreateShader(type)
             if (shader == 0) {
-                Log.e(TAG, "Failed to create shader object")
+                ReleaseLog.e(TAG, "Failed to create shader object")
                 return 0
             }
             
@@ -132,7 +132,7 @@ class ShaderProgram private constructor(
             
             if (compileStatus[0] == GLES30.GL_FALSE) {
                 val log = GLES30.glGetShaderInfoLog(shader)
-                Log.e(TAG, "Shader compilation failed: $log")
+                ReleaseLog.e(TAG, "Shader compilation failed: $log")
                 GLES30.glDeleteShader(shader)
                 return 0
             }
@@ -149,7 +149,7 @@ class ShaderProgram private constructor(
         private fun linkProgram(vertexShader: Int, fragmentShader: Int): Int {
             val program = GLES30.glCreateProgram()
             if (program == 0) {
-                Log.e(TAG, "Failed to create program object")
+                ReleaseLog.e(TAG, "Failed to create program object")
                 return 0
             }
             
@@ -166,7 +166,7 @@ class ShaderProgram private constructor(
             
             if (linkStatus[0] == GLES30.GL_FALSE) {
                 val log = GLES30.glGetProgramInfoLog(program)
-                Log.e(TAG, "Program linking failed: $log")
+                ReleaseLog.e(TAG, "Program linking failed: $log")
                 GLES30.glDeleteProgram(program)
                 return 0
             }
@@ -178,7 +178,7 @@ class ShaderProgram private constructor(
             
             if (validateStatus[0] == GLES30.GL_FALSE) {
                 val log = GLES30.glGetProgramInfoLog(program)
-                Log.w(TAG, "Program validation warning: $log")
+                ReleaseLog.w(TAG, "Program validation warning: $log")
             }
             
             return program
@@ -201,7 +201,7 @@ class ShaderProgram private constructor(
         return uniformLocationCache.getOrPut(cacheKey) {
             val location = GLES30.glGetUniformLocation(programId, name)
             if (location == -1) {
-                Log.w(TAG, "Uniform not found: $name")
+                ReleaseLog.w(TAG, "Uniform not found: $name")
             }
             location
         }
@@ -213,7 +213,7 @@ class ShaderProgram private constructor(
     fun getAttribLocation(name: String): Int {
         val location = GLES30.glGetAttribLocation(programId, name)
         if (location == -1) {
-            Log.w(TAG, "Attribute not found: $name")
+            ReleaseLog.w(TAG, "Attribute not found: $name")
         }
         return location
     }

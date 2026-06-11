@@ -2,7 +2,8 @@ package com.silas.omaster.tflite
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import com.silas.omaster.tflite.models.SceneFeatureExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -136,10 +137,10 @@ class SceneClassifier(private val context: Context) {
             // 解析结果
             val result = parseClassificationResult(probabilities, startTime)
             
-            Log.d(TAG, "场景分类完成: ${result.sceneName}, 置信度: ${result.confidence}, 耗时: ${result.inferenceTimeMs}ms")
+            ReleaseLog.d(TAG, "场景分类完成: ${result.sceneName}, 置信度: ${result.confidence}, 耗时: ${result.inferenceTimeMs}ms")
             Result.success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "场景分类失败", e)
+            ReleaseLog.e(TAG, "场景分类失败", e)
             Result.failure(e)
         }
     }

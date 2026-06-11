@@ -11,7 +11,7 @@ import android.opengl.GLES30
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,7 +106,7 @@ class GPURenderManager private constructor(private val context: Context) {
             val initResult = initEGLOnRenderThread()
             
             if (!initResult) {
-                Log.w(TAG, "EGL initialization failed, will use CPU fallback")
+                ReleaseLog.w(TAG, "EGL initialization failed, will use CPU fallback")
                 _isGpuAvailable.value = false
             } else {
                 _isGpuAvailable.value = true
@@ -116,7 +116,7 @@ class GPURenderManager private constructor(private val context: Context) {
                 val rendererInit = initRendererOnRenderThread()
                 
                 if (!rendererInit) {
-                    Log.w(TAG, "ImageRenderer initialization failed")
+                    ReleaseLog.w(TAG, "ImageRenderer initialization failed")
                     _isGpuAvailable.value = false
                 }
             }
@@ -129,12 +129,12 @@ class GPURenderManager private constructor(private val context: Context) {
             startRenderProcessor()
             
             _isInitialized.value = true
-            Log.d(TAG, "GPURenderManager initialized, GPU available: ${_isGpuAvailable.value}")
+            ReleaseLog.d(TAG, "GPURenderManager initialized, GPU available: ${_isGpuAvailable.value}")
             
             return@withContext true
             
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize GPURenderManager", e)
+            ReleaseLog.e(TAG, "Failed to initialize GPURenderManager", e)
             _isInitialized.value = false
             _isGpuAvailable.value = false
             return@withContext false
@@ -150,14 +150,14 @@ class GPURenderManager private constructor(private val context: Context) {
                 // 获取EGL显示
                 eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
                 if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
-                    Log.e(TAG, "Failed to get EGL display")
+                    ReleaseLog.e(TAG, "Failed to get EGL display")
                     return@runOnRenderThreadBlocking false
                 }
                 
                 // 初始化EGL
                 val version = IntArray(2)
                 if (!EGL14.eglInitialize(eglDisplay!!, version, 0, version, 1)) {
-                    Log.e(TAG, "Failed to initialize EGL")
+                    ReleaseLog.e(TAG, "Failed to initialize EGL")
                     return@runOnRenderThreadBlocking false
                 }
                 
@@ -181,7 +181,7 @@ class GPURenderManager private constructor(private val context: Context) {
                     configs, 0, 1,
                     numConfigs, 0
                 ) || numConfigs[0] == 0) {
-                    Log.e(TAG, "Failed to choose EGL config")
+                    ReleaseLog.e(TAG, "Failed to choose EGL config")
                     return@runOnRenderThreadBlocking false
                 }
                 
@@ -201,7 +201,7 @@ class GPURenderManager private constructor(private val context: Context) {
                 )
                 
                 if (eglContext == null || eglContext == EGL14.EGL_NO_CONTEXT) {
-                    Log.e(TAG, "Failed to create EGL context")
+                    ReleaseLog.e(TAG, "Failed to create EGL context")
                     return@runOnRenderThreadBlocking false
                 }
                 
@@ -219,21 +219,21 @@ class GPURenderManager private constructor(private val context: Context) {
                 )
                 
                 if (eglSurface == null || eglSurface == EGL14.EGL_NO_SURFACE) {
-                    Log.e(TAG, "Failed to create EGL surface")
+                    ReleaseLog.e(TAG, "Failed to create EGL surface")
                     return@runOnRenderThreadBlocking false
                 }
                 
                 // 绑定上下文
                 if (!EGL14.eglMakeCurrent(eglDisplay!!, eglSurface!!, eglSurface!!, eglContext!!)) {
-                    Log.e(TAG, "Failed to make EGL context current")
+                    ReleaseLog.e(TAG, "Failed to make EGL context current")
                     return@runOnRenderThreadBlocking false
                 }
                 
-                Log.d(TAG, "EGL initialized successfully")
+                ReleaseLog.d(TAG, "EGL initialized successfully")
                 return@runOnRenderThreadBlocking true
                 
             } catch (e: Exception) {
-                Log.e(TAG, "EGL initialization error", e)
+                ReleaseLog.e(TAG, "EGL initialization error", e)
                 return@runOnRenderThreadBlocking false
             }
         }
@@ -308,7 +308,7 @@ class GPURenderManager private constructor(private val context: Context) {
                 }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "GPU render failed", e)
+                ReleaseLog.e(TAG, "GPU render failed", e)
                 // 尝试CPU降级
                 renderWithCPU(request)
             }
@@ -336,7 +336,7 @@ class GPURenderManager private constructor(private val context: Context) {
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "CPU render failed", e)
+            ReleaseLog.e(TAG, "CPU render failed", e)
             return RenderResult.Error("Both GPU and CPU render failed", e)
         }
     }
@@ -431,7 +431,7 @@ class GPURenderManager private constructor(private val context: Context) {
             
             // 设置超时取消
             continuation.invokeOnCancellation {
-                Log.w(TAG, "Render thread operation cancelled")
+                ReleaseLog.w(TAG, "Render thread operation cancelled")
             }
         }
     }
@@ -519,7 +519,7 @@ class GPURenderManager private constructor(private val context: Context) {
         _isInitialized.value = false
         _isGpuAvailable.value = false
         
-        Log.d(TAG, "GPURenderManager released")
+        ReleaseLog.d(TAG, "GPURenderManager released")
     }
 }
 

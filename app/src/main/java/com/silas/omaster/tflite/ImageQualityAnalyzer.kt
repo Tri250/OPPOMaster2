@@ -3,7 +3,8 @@ package com.silas.omaster.tflite
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import com.silas.omaster.tflite.models.QualityMetrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -88,10 +89,10 @@ class ImageQualityAnalyzer(private val context: Context) {
             // 解析结果
             val result = parseQualityResult(rawScores, traditionalMetrics, startTime)
             
-            Log.d(TAG, "质量评估完成: 总评分=${result.overallScore}, 耗时=${result.inferenceTimeMs}ms")
+            ReleaseLog.d(TAG, "质量评估完成: 总评分=${result.overallScore}, 耗时=${result.inferenceTimeMs}ms")
             Result.success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "质量评估失败", e)
+            ReleaseLog.e(TAG, "质量评估失败", e)
             Result.failure(e)
         }
     }

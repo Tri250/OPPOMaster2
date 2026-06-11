@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,7 +78,7 @@ class FloatingWindowController private constructor(private val context: Context)
         
         // 仍然找不到，则默认为 0 并记录日志
         if (index == -1) {
-            android.util.Log.w("FloatingWindowController", "Preset not found in list, defaulting to index 0. ID: ${preset.id}, Name: ${preset.name}")
+            ReleaseLog.w("FloatingWindowController", "Preset not found in list, defaulting to index 0. ID: ${preset.id}, Name: ${preset.name}")
             index = 0
         }
 

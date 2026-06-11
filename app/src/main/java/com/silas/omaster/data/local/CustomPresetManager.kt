@@ -3,6 +3,7 @@ package com.silas.omaster.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.ReleaseLog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -113,7 +114,7 @@ class CustomPresetManager(context: Context) {
             val coverFile = File(context.filesDir, coverPath)
             if (coverFile.exists()) {
                 val deleted = coverFile.delete()
-                android.util.Log.d("CustomPresetManager", "Deleted cover image: $coverPath, success: $deleted")
+                ReleaseLog.d("CustomPresetManager", "Deleted cover image: $coverPath, success: $deleted")
             }
         }
         
@@ -122,7 +123,7 @@ class CustomPresetManager(context: Context) {
             val galleryFile = File(context.filesDir, galleryPath)
             if (galleryFile.exists()) {
                 val deleted = galleryFile.delete()
-                android.util.Log.d("CustomPresetManager", "Deleted gallery image: $galleryPath, success: $deleted")
+                ReleaseLog.d("CustomPresetManager", "Deleted gallery image: $galleryPath, success: $deleted")
             }
         }
     }
@@ -157,7 +158,7 @@ class CustomPresetManager(context: Context) {
             } catch (e: Exception) {
                 // 【错误处理】如果 JSON 损坏，记录错误并返回空列表
                 // 这会导致用户数据丢失，但 App 不会崩溃
-                android.util.Log.e("CustomPresetManager", "加载自定义预设失败", e)
+                ReleaseLog.e("CustomPresetManager", "加载自定义预设失败", e)
                 emptyList()
             }
         } else {

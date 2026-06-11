@@ -1,7 +1,8 @@
 package com.silas.omaster.tflite
 
 import android.content.Context
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -98,21 +99,21 @@ class ModelLoader(private val context: Context) {
             // 首先尝试从assets加载
             val assetBuffer = loadFromAssets(modelName)
             if (assetBuffer != null) {
-                Log.i(TAG, "模型从assets加载成功: $modelName")
+                ReleaseLog.i(TAG, "模型从assets加载成功: $modelName")
                 return@withContext assetBuffer
             }
             
             // 尝试从文件系统加载
             val fileBuffer = loadFromFileSystem(modelName)
             if (fileBuffer != null) {
-                Log.i(TAG, "模型从文件系统加载成功: $modelName")
+                ReleaseLog.i(TAG, "模型从文件系统加载成功: $modelName")
                 return@withContext fileBuffer
             }
             
-            Log.w(TAG, "模型文件未找到: $modelName")
+            ReleaseLog.w(TAG, "模型文件未找到: $modelName")
             null
         } catch (e: Exception) {
-            Log.e(TAG, "加载模型失败: $modelName", e)
+            ReleaseLog.e(TAG, "加载模型失败: $modelName", e)
             null
         }
     }
@@ -140,7 +141,7 @@ class ModelLoader(private val context: Context) {
                     buffer.put(bytes)
                     buffer.rewind()
                     
-                    Log.d(TAG, "从assets路径加载成功: $path, 大小: ${bytes.size}字节")
+                    ReleaseLog.d(TAG, "从assets路径加载成功: $path, 大小: ${bytes.size}字节")
                     return buffer
                 } catch (e: Exception) {
                     // 继续尝试下一个路径
@@ -149,7 +150,7 @@ class ModelLoader(private val context: Context) {
             
             null
         } catch (e: Exception) {
-            Log.e(TAG, "从assets加载模型失败: $modelName", e)
+            ReleaseLog.e(TAG, "从assets加载模型失败: $modelName", e)
             null
         }
     }
@@ -172,10 +173,10 @@ class ModelLoader(private val context: Context) {
             buffer.put(bytes)
             buffer.rewind()
             
-            Log.d(TAG, "从文件系统加载成功: ${modelFile.absolutePath}, 大小: ${bytes.size}字节")
+            ReleaseLog.d(TAG, "从文件系统加载成功: ${modelFile.absolutePath}, 大小: ${bytes.size}字节")
             buffer
         } catch (e: Exception) {
-            Log.e(TAG, "从文件系统加载模型失败: $modelName", e)
+            ReleaseLog.e(TAG, "从文件系统加载模型失败: $modelName", e)
             null
         }
     }
@@ -292,7 +293,7 @@ class ModelLoader(private val context: Context) {
             
             // 如果文件已存在且完整，跳过
             if (modelFile.exists() && verifyModelIntegrity(modelName, modelFile.length())) {
-                Log.d(TAG, "模型已存在且完整，跳过复制: $modelName")
+                ReleaseLog.d(TAG, "模型已存在且完整，跳过复制: $modelName")
                 return@withContext true
             }
             
@@ -311,7 +312,7 @@ class ModelLoader(private val context: Context) {
                     outputStream.close()
                     
                     copied = true
-                    Log.i(TAG, "模型复制成功: $modelName -> ${modelFile.absolutePath}")
+                    ReleaseLog.i(TAG, "模型复制成功: $modelName -> ${modelFile.absolutePath}")
                     break
                 } catch (e: Exception) {
                     // 继续尝试下一个路径
@@ -320,7 +321,7 @@ class ModelLoader(private val context: Context) {
             
             copied
         } catch (e: Exception) {
-            Log.e(TAG, "复制模型到文件系统失败: $modelName", e)
+            ReleaseLog.e(TAG, "复制模型到文件系统失败: $modelName", e)
             false
         }
     }
@@ -335,13 +336,13 @@ class ModelLoader(private val context: Context) {
             
             if (modelFile.exists()) {
                 modelFile.delete()
-                Log.i(TAG, "模型缓存已删除: $modelName")
+                ReleaseLog.i(TAG, "模型缓存已删除: $modelName")
                 true
             } else {
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "删除模型缓存失败: $modelName", e)
+            ReleaseLog.e(TAG, "删除模型缓存失败: $modelName", e)
             false
         }
     }
@@ -354,13 +355,13 @@ class ModelLoader(private val context: Context) {
             val modelDir = File(context.filesDir, MODELS_DIR)
             if (modelDir.exists()) {
                 modelDir.deleteRecursively()
-                Log.i(TAG, "所有模型缓存已清除")
+                ReleaseLog.i(TAG, "所有模型缓存已清除")
                 true
             } else {
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "清除所有模型缓存失败", e)
+            ReleaseLog.e(TAG, "清除所有模型缓存失败", e)
             false
         }
     }

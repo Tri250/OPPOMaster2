@@ -61,7 +61,7 @@ object JsonUtil {
     fun loadPresets(context: Context, fileName: String = "presets.json"): List<MasterPreset> {
         // 如果已有缓存，直接返回缓存（性能优化）
         cachedPresets?.let {
-            android.util.Log.d("JsonUtil", "Returning cached presets, count: ${it.size}")
+            ReleaseLog.d("JsonUtil", "Returning cached presets, count: ${it.size}")
             return it
         }
 
@@ -69,7 +69,7 @@ object JsonUtil {
         // 如果存在，说明用户是从旧版本升级上来的，需要提示迁移
         val oldRemoteFile = java.io.File(context.filesDir, "presets_remote.json")
         if (oldRemoteFile.exists()) {
-            android.util.Log.d("JsonUtil", "Old remote presets file detected, triggering migration")
+            ReleaseLog.d("JsonUtil", "Old remote presets file detected, triggering migration")
             currentPresetsVersion = 1
         } else {
             // 如果不存在旧文件，默认设为当前最新版本
@@ -105,7 +105,7 @@ object JsonUtil {
                             }
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("JsonUtil", "Failed to load sub file: ${sub.url}", e)
+                        ReleaseLog.e("JsonUtil", "Failed to load sub file: ${sub.url}", e)
                     }
                 } else if (sub.url == UpdateConfigManager.DEFAULT_PRESET_URL) {
                     // 如果是官方订阅但文件不存在，则从 assets 加载
@@ -122,19 +122,19 @@ object JsonUtil {
                             }
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("JsonUtil", "Failed to load presets from assets", e)
+                        ReleaseLog.e("JsonUtil", "Failed to load presets from assets", e)
                     }
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("JsonUtil", "Failed to load presets from subscriptions", e)
+            ReleaseLog.e("JsonUtil", "Failed to load presets from subscriptions", e)
         }
 
         // 如果没有任何预设，返回空
         if (allPresets.isEmpty()) return emptyList()
 
         cachedPresets = allPresets
-        android.util.Log.d("JsonUtil", "Total presets loaded: ${allPresets.size}")
+        ReleaseLog.d("JsonUtil", "Total presets loaded: ${allPresets.size}")
         return allPresets
     }
 
@@ -218,7 +218,7 @@ object JsonUtil {
      */
     fun invalidateCache() {
         cachedPresets = null
-        android.util.Log.d("JsonUtil", "Cache invalidated")
+        ReleaseLog.d("JsonUtil", "Cache invalidated")
     }
 
     /**
@@ -229,11 +229,11 @@ object JsonUtil {
             val remoteFile = java.io.File(context.filesDir, "presets_remote.json")
             if (remoteFile.exists()) {
                 remoteFile.delete()
-                android.util.Log.d("JsonUtil", "Deleted remote presets file for migration")
+                ReleaseLog.d("JsonUtil", "Deleted remote presets file for migration")
             }
             invalidateCache()
         } catch (e: Exception) {
-            android.util.Log.e("JsonUtil", "Failed to delete remote presets file", e)
+            ReleaseLog.e("JsonUtil", "Failed to delete remote presets file", e)
         }
     }
 }

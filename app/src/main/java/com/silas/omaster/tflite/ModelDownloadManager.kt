@@ -1,7 +1,8 @@
 package com.silas.omaster.tflite
 
 import android.content.Context
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -98,7 +99,7 @@ class ModelDownloadManager(private val context: Context) {
             val modelFile = File(modelDir, modelName)
             
             if (modelFile.exists() && verifyModel(modelFile, info.expectedSize)) {
-                Log.i(TAG, "模型已存在且完整: $modelName")
+                ReleaseLog.i(TAG, "模型已存在且完整: $modelName")
                 callback?.onProgress(100, modelFile.length(), info.expectedSize)
                 callback?.onComplete(true, null)
                 return@withContext true
@@ -114,24 +115,24 @@ class ModelDownloadManager(private val context: Context) {
             
             // 如果主URL失败，尝试备用URL
             if (!success) {
-                Log.w(TAG, "主URL下载失败，尝试备用镜像")
+                ReleaseLog.w(TAG, "主URL下载失败，尝试备用镜像")
                 val backupUrl = info.url.replace(BASE_URL, BACKUP_BASE_URL)
                 success = tryDownload(backupUrl, modelFile, info.expectedSize, callback)
             }
             
             // 验证下载结果
             if (success && verifyModel(modelFile, info.expectedSize)) {
-                Log.i(TAG, "模型下载成功: $modelName, 大小: ${modelFile.length()}")
+                ReleaseLog.i(TAG, "模型下载成功: $modelName, 大小: ${modelFile.length()}")
                 callback?.onComplete(true, null)
                 true
             } else {
-                Log.e(TAG, "模型下载失败或校验失败: $modelName")
+                ReleaseLog.e(TAG, "模型下载失败或校验失败: $modelName")
                 modelFile.delete()
                 callback?.onComplete(false, "下载失败或校验失败")
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "下载模型异常: $modelName", e)
+            ReleaseLog.e(TAG, "下载模型异常: $modelName", e)
             callback?.onComplete(false, e.message ?: "下载异常")
             false
         }
@@ -147,7 +148,7 @@ class ModelDownloadManager(private val context: Context) {
         callback: DownloadCallback?
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "开始下载: $url -> ${targetFile.absolutePath}")
+            ReleaseLog.d(TAG, "开始下载: $url -> ${targetFile.absolutePath}")
             
             val connection = URL(url).openConnection()
             connection.connectTimeout = 30000
@@ -174,16 +175,16 @@ class ModelDownloadManager(private val context: Context) {
                         if (progress > lastProgress + 4 || progress == 99) {
                             lastProgress = progress
                             callback?.onProgress(progress, downloaded, actualTotal)
-                            Log.d(TAG, "下载进度: $progress%, $downloaded/$actualTotal bytes")
+                            ReleaseLog.d(TAG, "下载进度: $progress%, $downloaded/$actualTotal bytes")
                         }
                     }
                 }
             }
             
-            Log.i(TAG, "下载完成: ${targetFile.name}, 大小: ${targetFile.length()}")
+            ReleaseLog.i(TAG, "下载完成: ${targetFile.name}, 大小: ${targetFile.length()}")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "下载失败: $url", e)
+            ReleaseLog.e(TAG, "下载失败: $url", e)
             false
         }
     }
@@ -210,7 +211,7 @@ class ModelDownloadManager(private val context: Context) {
         val results = mutableMapOf<String, Boolean>()
         
         for ((modelName, _) in MODEL_DOWNLOAD_INFO) {
-            Log.i(TAG, "开始下载模型: $modelName")
+            ReleaseLog.i(TAG, "开始下载模型: $modelName")
             results[modelName] = downloadModel(modelName, callback)
         }
         

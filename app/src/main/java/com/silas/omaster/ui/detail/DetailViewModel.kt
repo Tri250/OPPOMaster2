@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,7 +56,7 @@ class DetailViewModel(
         loadJob?.cancel()
         currentPresetId = presetId
 
-        android.util.Log.d("DetailViewModel", "Loading preset with id: $presetId")
+        ReleaseLog.d("DetailViewModel", "Loading preset with id: $presetId")
 
         loadJob = viewModelScope.launch {
             _isLoading.value = true
@@ -63,12 +64,12 @@ class DetailViewModel(
                 val presetData = repository.getPresetById(presetId)
                 // 检查是否仍然是当前要加载的预设（可能被取消了）
                 if (presetId == currentPresetId) {
-                    android.util.Log.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
+                    ReleaseLog.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
                     _preset.value = presetData
                     _isFavorite.value = presetData?.isFavorite ?: false
                 }
             } catch (e: Exception) {
-                android.util.Log.e("DetailViewModel", "Error loading preset: $presetId", e)
+                ReleaseLog.e("DetailViewModel", "Error loading preset: $presetId", e)
                 if (presetId == currentPresetId) {
                     _preset.value = null
                     _isFavorite.value = false
@@ -93,7 +94,7 @@ class DetailViewModel(
                 // 更新预设数据
                 _preset.value = _preset.value?.copy(isFavorite = isNowFavorite)
             } catch (e: Exception) {
-                android.util.Log.e("DetailViewModel", "Error toggling favorite: $id", e)
+                ReleaseLog.e("DetailViewModel", "Error toggling favorite: $id", e)
             }
         }
     }

@@ -1,7 +1,7 @@
 package com.silas.omaster.network
 
 import android.content.Context
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import com.silas.omaster.model.PresetList
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -25,7 +25,7 @@ object PresetRemoteManager {
     }
 
     suspend fun fetchPresets(url: String): PresetList? {
-        Log.d("PresetRemoteManager", "Starting fetch from $url")
+        ReleaseLog.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
             val response: HttpResponse = client.get(url)
             // Some servers (GitHub raw) may return Content-Type: text/plain; charset=utf-8
@@ -33,10 +33,10 @@ object PresetRemoteManager {
             // Read as text and decode explicitly to avoid NoTransformationFoundException.
             val text: String = response.body()
             val presets = Json.decodeFromString(PresetList.serializer(), text)
-            Log.d("PresetRemoteManager", "Fetched ${presets.presets.size} presets")
+            ReleaseLog.d("PresetRemoteManager", "Fetched ${presets.presets.size} presets")
             presets
         } catch (e: Exception) {
-            Log.e("PresetRemoteManager", "Failed to fetch presets", e)
+            ReleaseLog.e("PresetRemoteManager", "Failed to fetch presets", e)
             null
         }
     }
@@ -61,7 +61,7 @@ object PresetRemoteManager {
         // URL 安全验证
         validateUrl(url)?.let { return Result.failure(SecurityException(it)) }
         
-        Log.d("PresetRemoteManager", "Starting fetch from $url")
+        ReleaseLog.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
             val response: HttpResponse = client.get(url)
             
@@ -76,7 +76,7 @@ object PresetRemoteManager {
             val presetList = try {
                 Json.decodeFromString(PresetList.serializer(), text)
             } catch (e: Exception) {
-                Log.e("PresetRemoteManager", "Invalid JSON received", e)
+                ReleaseLog.e("PresetRemoteManager", "Invalid JSON received", e)
                 return Result.failure(Exception("JSON 格式错误"))
             }
 
@@ -103,7 +103,7 @@ object PresetRemoteManager {
                 val fileName = subManager.getFileNameForUrl(url)
                 val file = File(context.filesDir, fileName)
                 file.writeText(text)
-                Log.d("PresetRemoteManager", "Saved remote presets to ${file.absolutePath}")
+                ReleaseLog.d("PresetRemoteManager", "Saved remote presets to ${file.absolutePath}")
                 
                 // Update subscription info
                 subManager.updateSubscriptionStatus(
@@ -119,12 +119,12 @@ object PresetRemoteManager {
                 try {
                     JsonUtil.invalidateCache()
                 } catch (e: Exception) {
-                    Log.w("PresetRemoteManager", "Failed to invalidate JsonUtil cache", e)
+                    ReleaseLog.w("PresetRemoteManager", "Failed to invalidate JsonUtil cache", e)
                 }
             }
             Result.success(presetList)
         } catch (e: Exception) {
-            Log.e("PresetRemoteManager", "Failed to save presets", e)
+            ReleaseLog.e("PresetRemoteManager", "Failed to save presets", e)
             Result.failure(e)
         }
     }

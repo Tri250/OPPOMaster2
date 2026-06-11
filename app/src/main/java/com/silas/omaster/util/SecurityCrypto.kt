@@ -4,7 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -45,7 +45,7 @@ object SecurityCrypto {
 
             Base64.encodeToString(combined, Base64.NO_WRAP)
         } catch (e: Exception) {
-            Log.e(TAG, "加密失败", e)
+            ReleaseLog.e(TAG, "加密失败", e)
             null
         }
     }
@@ -68,7 +68,7 @@ object SecurityCrypto {
 
             String(cipher.doFinal(cipherBytes), Charsets.UTF_8)
         } catch (e: Exception) {
-            Log.e(TAG, "解密失败", e)
+            ReleaseLog.e(TAG, "解密失败", e)
             null
         }
     }
@@ -111,7 +111,7 @@ object SecurityCrypto {
                 .putString(key, encrypted)
                 .apply()
         } catch (e: Exception) {
-            Log.e(TAG, "保存安全数据失败", e)
+            ReleaseLog.e(TAG, "保存安全数据失败", e)
         }
     }
 
@@ -124,7 +124,7 @@ object SecurityCrypto {
                 .getString(key, null) ?: return null
             decrypt(encrypted)
         } catch (e: Exception) {
-            Log.e(TAG, "读取安全数据失败", e)
+            ReleaseLog.e(TAG, "读取安全数据失败", e)
             null
         }
     }

@@ -2,7 +2,7 @@ package com.silas.omaster.data.repository
 
 import android.content.Context
 import android.os.Build
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
@@ -103,7 +103,7 @@ class PresetRepository private constructor(context: Context) {
             try {
                 loadLocalPresets()
             } catch (e: Exception) {
-                Log.e(TAG, "初始化加载本地预设失败", e)
+                ReleaseLog.e(TAG, "初始化加载本地预设失败", e)
             }
         }.apply {
             name = "PresetRepository-Init"
@@ -130,9 +130,9 @@ class PresetRepository private constructor(context: Context) {
 
         val elapsed = System.currentTimeMillis() - startTime
         if (elapsed > 2000) {
-            Log.w(TAG, "加载耗时 ${elapsed}ms 超过 2s 阈值，brand=$brand, count=${sortedPresets.size}")
+            ReleaseLog.w(TAG, "加载耗时 ${elapsed}ms 超过 2s 阈值，brand=$brand, count=${sortedPresets.size}")
         } else {
-            Log.d(TAG, "加载完成: ${sortedPresets.size} 条, 耗时 ${elapsed}ms, brand=$brand")
+            ReleaseLog.d(TAG, "加载完成: ${sortedPresets.size} 条, 耗时 ${elapsed}ms, brand=$brand")
         }
 
         sortedPresets
@@ -314,8 +314,8 @@ class PresetRepository private constructor(context: Context) {
         // 删除封面文件
         preset.coverPath?.let { path ->
             runCatching { File(path).delete() }
-                .onSuccess { deleted -> Log.d(TAG, "删除封面文件: $path, 成功=$deleted") }
-                .onFailure { e -> Log.w(TAG, "删除封面文件失败: $path", e) }
+                .onSuccess { deleted -> ReleaseLog.d(TAG, "删除封面文件: $path, 成功=$deleted") }
+                .onFailure { e -> ReleaseLog.w(TAG, "删除封面文件失败: $path", e) }
         }
 
         // 移除预设
@@ -442,7 +442,7 @@ class PresetRepository private constructor(context: Context) {
 
         for (attempt in 1..maxRetries) {
             try {
-                Log.d(TAG, "云同步第 ${attempt}/${maxRetries} 次尝试")
+                ReleaseLog.d(TAG, "云同步第 ${attempt}/${maxRetries} 次尝试")
                 val result = fetchFromCDN()
                 if (result.isSuccess) {
                     settingsManager.lastSyncTime = System.currentTimeMillis()
@@ -451,10 +451,10 @@ class PresetRepository private constructor(context: Context) {
                     return@withContext result
                 }
                 lastError = result.exceptionOrNull()
-                Log.w(TAG, "第 ${attempt} 次同步失败: ${lastError?.message}")
+                ReleaseLog.w(TAG, "第 ${attempt} 次同步失败: ${lastError?.message}")
             } catch (e: Exception) {
                 lastError = e
-                Log.e(TAG, "第 ${attempt} 次同步异常", e)
+                ReleaseLog.e(TAG, "第 ${attempt} 次同步异常", e)
             }
             // 指数退避：1s, 2s, 4s
             if (attempt < maxRetries) {
@@ -473,7 +473,7 @@ class PresetRepository private constructor(context: Context) {
     private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
         val cloudUrls = settingsManager.cloudPresetUrls
         if (cloudUrls.isEmpty()) {
-            Log.w(TAG, "未配置云端数据源 URL，跳过同步")
+            ReleaseLog.w(TAG, "未配置云端数据源 URL，跳过同步")
             return@withContext Result.failure(IllegalStateException("未配置云端数据源 URL"))
         }
 
@@ -486,7 +486,7 @@ class PresetRepository private constructor(context: Context) {
 
         for ((brand, url) in cloudUrls) {
             try {
-                Log.d(TAG, "拉取品牌 [$brand] 的云端预设: $url")
+                ReleaseLog.d(TAG, "拉取品牌 [$brand] 的云端预设: $url")
                 val brandPresets = fetchBrandFromCDN(brand, url)
                 if (brandPresets.isNotEmpty()) {
                     for (preset in brandPresets) {
@@ -500,7 +500,7 @@ class PresetRepository private constructor(context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "拉取品牌 [$brand] 失败: $url", e)
+                ReleaseLog.e(TAG, "拉取品牌 [$brand] 失败: $url", e)
                 errors.add(e)
             }
         }
@@ -518,12 +518,12 @@ class PresetRepository private constructor(context: Context) {
             _presets.value = newList
             try {
                 saveToCache()
-                Log.d(TAG, "云同步成功，新增 ${imported.size} 条，冲突 ${conflicts.size} 条")
+                ReleaseLog.d(TAG, "云同步成功，新增 ${imported.size} 条，冲突 ${conflicts.size} 条")
             } catch (e: Exception) {
-                Log.e(TAG, "云同步结果写入本地缓存失败", e)
+                ReleaseLog.e(TAG, "云同步结果写入本地缓存失败", e)
             }
         } else {
-            Log.d(TAG, "云端无新增数据（可能全部冲突或最新）")
+            ReleaseLog.d(TAG, "云端无新增数据（可能全部冲突或最新）")
         }
 
         Result.success(SyncResult(imported = imported.size, conflicts = conflicts))
@@ -542,11 +542,11 @@ class PresetRepository private constructor(context: Context) {
         }
         val body = response.bodyAsText()
         if (body.isBlank()) {
-            Log.w(TAG, "品牌 [$brand] 返回空响应体: $url")
+            ReleaseLog.w(TAG, "品牌 [$brand] 返回空响应体: $url")
             return emptyList()
         }
         val presetList = json.decodeFromString(PresetList.serializer(), body)
-        Log.d(TAG, "品牌 [$brand] 解析得到 ${presetList.presets.size} 条云端预设")
+        ReleaseLog.d(TAG, "品牌 [$brand] 解析得到 ${presetList.presets.size} 条云端预设")
         return presetList.presets.map { it.toRepositoryPreset(brand) }
     }
 
@@ -563,7 +563,7 @@ class PresetRepository private constructor(context: Context) {
      */
     suspend fun recoverFromCorruption(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            Log.w(TAG, "PM-010: 开始执行本地缓存损坏恢复流程")
+            ReleaseLog.w(TAG, "PM-010: 开始执行本地缓存损坏恢复流程")
 
             // 1) 备份用户关键数据（内存中的收藏/置顶已经是最新）
             val favoritesBackup = _favorites.value.toSet()
@@ -573,7 +573,7 @@ class PresetRepository private constructor(context: Context) {
             val corrupted = !isCacheFileValid()
 
             if (corrupted) {
-                Log.w(TAG, "检测到缓存文件损坏或不可读，开始恢复")
+                ReleaseLog.w(TAG, "检测到缓存文件损坏或不可读，开始恢复")
 
                 // 将损坏文件改名备份，保留现场以便事后排查
                 if (cacheFile.exists()) {
@@ -583,17 +583,17 @@ class PresetRepository private constructor(context: Context) {
                         }
                         val renamed = cacheFile.renameTo(corruptedBackupFile)
                         if (renamed) {
-                            Log.w(TAG, "已将损坏缓存备份至: ${corruptedBackupFile.absolutePath}")
+                            ReleaseLog.w(TAG, "已将损坏缓存备份至: ${corruptedBackupFile.absolutePath}")
                         } else {
-                            Log.w(TAG, "重命名损坏缓存失败，将直接删除")
+                            ReleaseLog.w(TAG, "重命名损坏缓存失败，将直接删除")
                             cacheFile.delete()
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "备份损坏缓存时发生异常", e)
+                        ReleaseLog.e(TAG, "备份损坏缓存时发生异常", e)
                     }
                 }
             } else {
-                Log.d(TAG, "缓存文件结构正常，无需恢复")
+                ReleaseLog.d(TAG, "缓存文件结构正常，无需恢复")
                 return@withContext Result.success(Unit)
             }
 
@@ -613,7 +613,7 @@ class PresetRepository private constructor(context: Context) {
             // 5) 立刻写回新的干净缓存
             saveToCache()
 
-            Log.i(
+            ReleaseLog.i(
                 TAG,
                 "PM-010: 恢复完成。预设 ${_presets.value.size} 条，" +
                         "收藏恢复 ${restoredFavorites.size}/${favoritesBackup.size}，" +
@@ -622,7 +622,7 @@ class PresetRepository private constructor(context: Context) {
 
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "PM-010: 损坏恢复过程中出现未捕获异常", e)
+            ReleaseLog.e(TAG, "PM-010: 损坏恢复过程中出现未捕获异常", e)
             // 上报日志（真实环境可对接 FirebaseCrashlytics）
             // FirebaseCrashlytics.recordException(e)
             Result.failure(e)
@@ -636,21 +636,21 @@ class PresetRepository private constructor(context: Context) {
      */
     private fun isCacheFileValid(): Boolean {
         if (!cacheFile.exists()) {
-            Log.d(TAG, "缓存文件不存在，视为正常")
+            ReleaseLog.d(TAG, "缓存文件不存在，视为正常")
             return true
         }
         if (cacheFile.length() == 0L) {
-            Log.w(TAG, "缓存文件大小为 0，视为损坏: ${cacheFile.absolutePath}")
+            ReleaseLog.w(TAG, "缓存文件大小为 0，视为损坏: ${cacheFile.absolutePath}")
             return false
         }
         return try {
             val text = cacheFile.readText()
             val cache = json.decodeFromString(PresetCache.serializer(), text)
             // 进一步校验：必须能解析出 presets 字段
-            Log.d(TAG, "缓存文件校验通过，包含 ${cache.presets.size} 条预设")
+            ReleaseLog.d(TAG, "缓存文件校验通过，包含 ${cache.presets.size} 条预设")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "缓存文件解析失败: ${e.message}", e)
+            ReleaseLog.w(TAG, "缓存文件解析失败: ${e.message}", e)
             false
         }
     }
@@ -689,9 +689,9 @@ class PresetRepository private constructor(context: Context) {
         try {
             val loaded = readFromCache() ?: readFromAssets() ?: emptyList()
             _presets.value = loaded
-            Log.d(TAG, "本地预设加载完成: ${loaded.size} 条 (来源=${if (cacheFile.exists()) "cache" else "assets"})")
+            ReleaseLog.d(TAG, "本地预设加载完成: ${loaded.size} 条 (来源=${if (cacheFile.exists()) "cache" else "assets"})")
         } catch (e: Exception) {
-            Log.e(TAG, "本地预设加载失败，返回空列表", e)
+            ReleaseLog.e(TAG, "本地预设加载失败，返回空列表", e)
             _presets.value = emptyList()
         }
     }
@@ -701,20 +701,20 @@ class PresetRepository private constructor(context: Context) {
      */
     private fun readFromCache(): List<PresetItem>? {
         if (!cacheFile.exists()) {
-            Log.d(TAG, "本地缓存文件不存在: ${cacheFile.absolutePath}")
+            ReleaseLog.d(TAG, "本地缓存文件不存在: ${cacheFile.absolutePath}")
             return null
         }
         return try {
             val text = cacheFile.readText()
             if (text.isBlank()) {
-                Log.w(TAG, "本地缓存文件为空: ${cacheFile.absolutePath}")
+                ReleaseLog.w(TAG, "本地缓存文件为空: ${cacheFile.absolutePath}")
                 return null
             }
             val cache = json.decodeFromString(PresetCache.serializer(), text)
-            Log.d(TAG, "从本地缓存读取 ${cache.presets.size} 条预设 (version=${cache.version})")
+            ReleaseLog.d(TAG, "从本地缓存读取 ${cache.presets.size} 条预设 (version=${cache.version})")
             cache.presets
         } catch (e: Exception) {
-            Log.w(TAG, "本地缓存解析失败，将回退到 assets", e)
+            ReleaseLog.w(TAG, "本地缓存解析失败，将回退到 assets", e)
             null
         }
     }
@@ -730,10 +730,10 @@ class PresetRepository private constructor(context: Context) {
             val presetList = json.decodeFromString(PresetList.serializer(), text)
             // assets 是官方内置预设，统一标记为系统预设
             val items = presetList.presets.map { it.toRepositoryPreset(brand = "oppo") }
-            Log.i(TAG, "从 assets 加载 ${items.size} 条内置预设")
+            ReleaseLog.i(TAG, "从 assets 加载 ${items.size} 条内置预设")
             items
         } catch (e: Exception) {
-            Log.e(TAG, "从 assets 加载预设失败", e)
+            ReleaseLog.e(TAG, "从 assets 加载预设失败", e)
             null
         }
     }
@@ -757,7 +757,7 @@ class PresetRepository private constructor(context: Context) {
         try {
             triggerBackgroundSync(brand)
         } catch (e: Exception) {
-            Log.w(TAG, "后台同步调度失败", e)
+            ReleaseLog.w(TAG, "后台同步调度失败", e)
         }
 
         // 按品牌过滤
@@ -765,7 +765,7 @@ class PresetRepository private constructor(context: Context) {
             localPresets
         } else {
             val filtered = localPresets.filter { it.brand.equals(brand, ignoreCase = true) }
-            Log.d(TAG, "按品牌 [$brand] 过滤后剩余 ${filtered.size}/${localPresets.size} 条")
+            ReleaseLog.d(TAG, "按品牌 [$brand] 过滤后剩余 ${filtered.size}/${localPresets.size} 条")
             filtered
         }
     }
@@ -776,26 +776,26 @@ class PresetRepository private constructor(context: Context) {
      */
     private suspend fun triggerBackgroundSync(brand: String?) {
         if (!settingsManager.isCloudSyncEnabled) {
-            Log.d(TAG, "云同步开关未启用，跳过后台同步")
+            ReleaseLog.d(TAG, "云同步开关未启用，跳过后台同步")
             return
         }
         // 节流：距上次同步不足 5 分钟则跳过
         val now = System.currentTimeMillis()
         val lastSync = settingsManager.lastSyncTime
         if (lastSync > 0 && now - lastSync < BACKGROUND_SYNC_INTERVAL_MS) {
-            Log.d(TAG, "距上次同步不足 ${BACKGROUND_SYNC_INTERVAL_MS / 1000}s，跳过")
+            ReleaseLog.d(TAG, "距上次同步不足 ${BACKGROUND_SYNC_INTERVAL_MS / 1000}s，跳过")
             return
         }
 
         try {
             val result = fetchFromCDN()
             result.onSuccess { syncResult ->
-                Log.i(TAG, "后台同步完成: 新增 ${syncResult.imported} 条")
+                ReleaseLog.i(TAG, "后台同步完成: 新增 ${syncResult.imported} 条")
             }.onFailure { e ->
-                Log.w(TAG, "后台同步失败，已使用本地缓存: ${e.message}")
+                ReleaseLog.w(TAG, "后台同步失败，已使用本地缓存: ${e.message}")
             }
         } catch (e: Exception) {
-            Log.w(TAG, "后台同步异常，已使用本地缓存", e)
+            ReleaseLog.w(TAG, "后台同步异常，已使用本地缓存", e)
         }
     }
 
@@ -840,7 +840,7 @@ class PresetRepository private constructor(context: Context) {
                 json.decodeFromString<Map<String, Int>>(raw)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "加载预设版本缓存失败，返回空 Map", e)
+            ReleaseLog.w(TAG, "加载预设版本缓存失败，返回空 Map", e)
             emptyMap()
         }
     }
@@ -853,7 +853,7 @@ class PresetRepository private constructor(context: Context) {
         try {
             val currentList = _presets.value
             if (currentList.isEmpty()) {
-                Log.d(TAG, "预设列表为空，跳过缓存写入")
+                ReleaseLog.d(TAG, "预设列表为空，跳过缓存写入")
                 return@withContext
             }
 
@@ -872,9 +872,9 @@ class PresetRepository private constructor(context: Context) {
                 cacheFile.writeText(jsonStr, Charsets.UTF_8)
                 tempFile.delete()
             }
-            Log.d(TAG, "已写入本地缓存: ${currentList.size} 条, ${jsonStr.length / 1024}KB")
+            ReleaseLog.d(TAG, "已写入本地缓存: ${currentList.size} 条, ${jsonStr.length / 1024}KB")
         } catch (e: Exception) {
-            Log.e(TAG, "写入本地缓存失败", e)
+            ReleaseLog.e(TAG, "写入本地缓存失败", e)
         }
     }
 
@@ -945,7 +945,7 @@ class PresetRepository private constructor(context: Context) {
      */
     fun close() {
         runCatching { httpClient.close() }
-            .onFailure { Log.w(TAG, "关闭 HttpClient 时发生异常", it) }
+            .onFailure { ReleaseLog.w(TAG, "关闭 HttpClient 时发生异常", it) }
     }
 
     companion object {

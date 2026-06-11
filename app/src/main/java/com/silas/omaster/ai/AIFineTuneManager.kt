@@ -5,7 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import androidx.core.content.ContextCompat
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
@@ -188,14 +188,14 @@ class AIFineTuneManager private constructor(context: Context) {
                     try {
                         val cloudResult = generateCloudSuggestion(bitmap, currentParams)
                         if (cloudResult != null) {
-                            Log.d(TAG, "云端AI推理成功")
+                            ReleaseLog.d(TAG, "云端AI推理成功")
                             appliedSuggestions.add(cloudResult)
                             _suggestedParams.value = cloudResult
                             _isProcessing.value = false
                             return@withTimeout AISuggestionResult.Success(cloudResult, isOfflineMode = false)
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "云端AI推理失败，降级到本地推理: ${e.message}")
+                        ReleaseLog.w(TAG, "云端AI推理失败，降级到本地推理: ${e.message}")
                     }
                 }
 
@@ -208,13 +208,13 @@ class AIFineTuneManager private constructor(context: Context) {
             }
         } catch (e: TimeoutCancellationException) {
             // 超时降级：使用规则引擎
-            Log.w(TAG, "AI推理超时，降级到规则引擎")
+            ReleaseLog.w(TAG, "AI推理超时，降级到规则引擎")
             val fallbackResult = generateFallbackSuggestion(currentParams)
             _isProcessing.value = false
             _errorState.value = ErrorState.Timeout("处理超时，已使用规则引擎优化")
             AISuggestionResult.Success(fallbackResult, isOfflineMode = true)
         } catch (e: Exception) {
-            Log.e(TAG, "AI推理异常: ${e.message}", e)
+            ReleaseLog.e(TAG, "AI推理异常: ${e.message}", e)
             _isProcessing.value = false
             _errorState.value = ErrorState.Unknown(e.message ?: "未知错误")
             AISuggestionResult.Error(ErrorState.Unknown(e.message ?: "未知错误"))
@@ -290,7 +290,7 @@ class AIFineTuneManager private constructor(context: Context) {
         bitmap: Bitmap,
         currentParams: Map<String, Int>
     ): AISuggestion = withContext(Dispatchers.Default) {
-        Log.d(TAG, "开始本地AI推理")
+        ReleaseLog.d(TAG, "开始本地AI推理")
 
         // Step 1: 使用启发式分析器提取图像特征
         val analysisResult = sceneAnalyzer.analyze(bitmap)
@@ -299,7 +299,7 @@ class AIFineTuneManager private constructor(context: Context) {
         val faceCount = analysisResult.faceCount
         val edgeDensity = analysisResult.edgeDensity
 
-        Log.d(TAG, "图像特征分析完成: 场景=${analysisResult.primaryScene.id}, 置信度=${analysisResult.confidence}")
+        ReleaseLog.d(TAG, "图像特征分析完成: 场景=${analysisResult.primaryScene.id}, 置信度=${analysisResult.confidence}")
 
         // Step 2: 获取场景对应的哈苏参数
         val sceneId = analysisResult.primaryScene.id
@@ -307,7 +307,7 @@ class AIFineTuneManager private constructor(context: Context) {
         val recommendedFilms = sceneMapping.getRecommendedFilms(sceneId)
         val masterTips = sceneMapping.getMasterTips(sceneId)
 
-        Log.d(TAG, "哈苏参数映射完成: 场景=$sceneId, 饱和度=${hasselbladParams.saturation}, 对比度=${hasselbladParams.contrast}")
+        ReleaseLog.d(TAG, "哈苏参数映射完成: 场景=$sceneId, 饱和度=${hasselbladParams.saturation}, 对比度=${hasselbladParams.contrast}")
 
         // Step 3: 基于图像特征微调参数（质量分析驱动）
         val refinedParams = refineParamsByImageFeatures(
@@ -379,7 +379,7 @@ class AIFineTuneManager private constructor(context: Context) {
             // 暗部占比高，提升阴影恢复细节
             refined["shadows"] = (refined["shadows"] ?: 0) + (colorProfile.darkPixelRatio * 30).toInt()
             refined["contrast"] = (refined["contrast"] ?: 0) - 5
-            Log.d(TAG, "暗部占比=${colorProfile.darkPixelRatio}, 提升阴影+${(colorProfile.darkPixelRatio * 30).toInt()}")
+            ReleaseLog.d(TAG, "暗部占比=${colorProfile.darkPixelRatio}, 提升阴影+${(colorProfile.darkPixelRatio * 30).toInt()}")
         }
 
         // 基于高光占比调整高光压制
@@ -387,7 +387,7 @@ class AIFineTuneManager private constructor(context: Context) {
             // 高光占比高，降低高光防止过曝
             refined["highlights"] = (refined["highlights"] ?: 0) - (colorProfile.highlightRatio * 40).toInt()
             refined["contrast"] = (refined["contrast"] ?: 0) + 5
-            Log.d(TAG, "高光占比=${colorProfile.highlightRatio}, 降低高光-${(colorProfile.highlightRatio * 40).toInt()}")
+            ReleaseLog.d(TAG, "高光占比=${colorProfile.highlightRatio}, 降低高光-${(colorProfile.highlightRatio * 40).toInt()}")
         }
 
         // 基于肤色占比调整人像优化参数
@@ -396,7 +396,7 @@ class AIFineTuneManager private constructor(context: Context) {
             refined["contrast"] = (refined["contrast"] ?: 0) - 10
             refined["clarity"] = (refined["clarity"] ?: 0) + 15
             refined["skinSmooth"] = if (colorProfile.skinToneRatio > 0.1f) 20 else 10
-            Log.d(TAG, "肤色占比=${colorProfile.skinToneRatio}, 人脸数=$faceCount, 应用人像优化")
+            ReleaseLog.d(TAG, "肤色占比=${colorProfile.skinToneRatio}, 人脸数=$faceCount, 应用人像优化")
         }
 
         // 基于边缘密度调整清晰度和锐度
@@ -404,14 +404,14 @@ class AIFineTuneManager private constructor(context: Context) {
             // 高纹理场景，提升细节表现
             refined["clarity"] = (refined["clarity"] ?: 0) + (edgeDensity * 20).toInt()
             refined["sharpness"] = (refined["sharpness"] ?: 0) + (edgeDensity * 15).toInt()
-            Log.d(TAG, "边缘密度=${edgeDensity}, 提升清晰度+${(edgeDensity * 20).toInt()}")
+            ReleaseLog.d(TAG, "边缘密度=${edgeDensity}, 提升清晰度+${(edgeDensity * 20).toInt()}")
         }
 
         // 基于暖色调占比调整色温
         if (colorProfile.warmthRatio > 0.4f) {
             // 暖色调场景，适当降低色温保持自然
             refined["warmth"] = (refined["warmth"] ?: 0) - 5
-            Log.d(TAG, "暖色调占比=${colorProfile.warmthRatio}, 调整色温-5")
+            ReleaseLog.d(TAG, "暖色调占比=${colorProfile.warmthRatio}, 调整色温-5")
         }
 
         // 基于亮度等级调整曝光
@@ -419,20 +419,20 @@ class AIFineTuneManager private constructor(context: Context) {
             HeuristicSceneAnalyzer.BrightnessLevel.VERY_DARK -> {
                 refined["brightness"] = (refined["brightness"] ?: 0) + 15
                 refined["noiseReduction"] = 25
-                Log.d(TAG, "亮度等级=极暗, 提升亮度+15, 降噪+25")
+                ReleaseLog.d(TAG, "亮度等级=极暗, 提升亮度+15, 降噪+25")
             }
             HeuristicSceneAnalyzer.BrightnessLevel.DARK -> {
                 refined["brightness"] = (refined["brightness"] ?: 0) + 8
                 refined["noiseReduction"] = 15
-                Log.d(TAG, "亮度等级=暗调, 提升亮度+8")
+                ReleaseLog.d(TAG, "亮度等级=暗调, 提升亮度+8")
             }
             HeuristicSceneAnalyzer.BrightnessLevel.VERY_BRIGHT -> {
                 refined["brightness"] = (refined["brightness"] ?: 0) - 10
                 refined["highlights"] = (refined["highlights"] ?: 0) - 15
-                Log.d(TAG, "亮度等级=高亮, 降低亮度-10")
+                ReleaseLog.d(TAG, "亮度等级=高亮, 降低亮度-10")
             }
             else -> {
-                Log.d(TAG, "亮度等级=正常, 无需调整")
+                ReleaseLog.d(TAG, "亮度等级=正常, 无需调整")
             }
         }
 
@@ -557,11 +557,11 @@ class AIFineTuneManager private constructor(context: Context) {
         currentParams: Map<String, Int>
     ): AISuggestion? = withContext(Dispatchers.Default) {
         try {
-            Log.d(TAG, "开始云端AI推理")
+            ReleaseLog.d(TAG, "开始云端AI推理")
             
             // Step 1: 检查网络连接质量
             if (!isNetworkAvailable() || !isNetworkQualityGood()) {
-                Log.w(TAG, "网络不可用或质量不佳，跳过云端推理")
+                ReleaseLog.w(TAG, "网络不可用或质量不佳，跳过云端推理")
                 return@withContext null
             }
             
@@ -570,7 +570,7 @@ class AIFineTuneManager private constructor(context: Context) {
             val imageBase64 = bitmapToBase64(compressedBitmap)
             
             if (imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
-                Log.w(TAG, "图像数据过大(${imageBase64.length}字节)，跳过云端推理")
+                ReleaseLog.w(TAG, "图像数据过大(${imageBase64.length}字节)，跳过云端推理")
                 return@withContext null
             }
             
@@ -583,14 +583,14 @@ class AIFineTuneManager private constructor(context: Context) {
             // Step 5: 解析响应并转换为AI建议
             if (responseJson != null) {
                 val suggestion = parseCloudResponse(responseJson)
-                Log.d(TAG, "云端AI推理成功: 场景=${suggestion?.basePresetName}, 置信度=${suggestion?.confidence}")
+                ReleaseLog.d(TAG, "云端AI推理成功: 场景=${suggestion?.basePresetName}, 置信度=${suggestion?.confidence}")
                 return@withContext suggestion
             }
             
-            Log.w(TAG, "云端API响应无效，降级到本地推理")
+            ReleaseLog.w(TAG, "云端API响应无效，降级到本地推理")
             null
         } catch (e: Exception) {
-            Log.w(TAG, "云端AI推理失败: ${e.message}, 降级到本地推理")
+            ReleaseLog.w(TAG, "云端AI推理失败: ${e.message}, 降级到本地推理")
             null
         }
     }
@@ -604,13 +604,13 @@ class AIFineTuneManager private constructor(context: Context) {
         val network = connectivityManager.activeNetwork
         
         if (network == null) {
-            Log.d(TAG, "无活跃网络连接")
+            ReleaseLog.d(TAG, "无活跃网络连接")
             return false
         }
         
         val capabilities = connectivityManager.getNetworkCapabilities(network)
         if (capabilities == null) {
-            Log.d(TAG, "无法获取网络能力信息")
+            ReleaseLog.d(TAG, "无法获取网络能力信息")
             return false
         }
         
@@ -619,7 +619,7 @@ class AIFineTuneManager private constructor(context: Context) {
         val hasValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         
         if (!hasInternet || !hasValidated) {
-            Log.d(TAG, "网络连接未验证或无互联网访问")
+            ReleaseLog.d(TAG, "网络连接未验证或无互联网访问")
             return false
         }
         
@@ -629,7 +629,7 @@ class AIFineTuneManager private constructor(context: Context) {
         
         // WiFi总是适合；移动网络需要检查带宽
         if (isWifi) {
-            Log.d(TAG, "WiFi网络，适合云端推理")
+            ReleaseLog.d(TAG, "WiFi网络，适合云端推理")
             return true
         }
         
@@ -637,15 +637,15 @@ class AIFineTuneManager private constructor(context: Context) {
             // 检查预估下行带宽（至少1Mbps）
             val downlinkBandwidth = capabilities.linkDownstreamBandwidthKbps
             if (downlinkBandwidth >= 1000) {
-                Log.d(TAG, "移动网络带宽充足(${downlinkBandwidth}Kbps)，适合云端推理")
+                ReleaseLog.d(TAG, "移动网络带宽充足(${downlinkBandwidth}Kbps)，适合云端推理")
                 return true
             }
-            Log.d(TAG, "移动网络带宽不足(${downlinkBandwidth}Kbps)，跳过云端推理")
+            ReleaseLog.d(TAG, "移动网络带宽不足(${downlinkBandwidth}Kbps)，跳过云端推理")
             return false
         }
         
         // 其他网络类型（以太网等）默认允许
-        Log.d(TAG, "其他网络类型，允许云端推理")
+        ReleaseLog.d(TAG, "其他网络类型，允许云端推理")
         return true
     }
 
@@ -733,15 +733,15 @@ class AIFineTuneManager private constructor(context: Context) {
                 if (response.isSuccessful) {
                     response.body()?.string()
                 } else {
-                    Log.w(TAG, "云端API响应失败: ${response.code()}")
+                    ReleaseLog.w(TAG, "云端API响应失败: ${response.code()}")
                     null
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            Log.w(TAG, "云端API请求超时")
+            ReleaseLog.w(TAG, "云端API请求超时")
             null
         } catch (e: Exception) {
-            Log.w(TAG, "云端API请求异常: ${e.message}")
+            ReleaseLog.w(TAG, "云端API请求异常: ${e.message}")
             null
         }
     }
@@ -757,13 +757,13 @@ class AIFineTuneManager private constructor(context: Context) {
             // 检查响应状态
             val success = jsonObject.optBoolean("success", false)
             if (!success) {
-                Log.w(TAG, "云端API返回失败状态")
+                ReleaseLog.w(TAG, "云端API返回失败状态")
                 return null
             }
             
             val data = jsonObject.optJSONObject("data")
             if (data == null) {
-                Log.w(TAG, "云端API响应缺少data字段")
+                ReleaseLog.w(TAG, "云端API响应缺少data字段")
                 return null
             }
             
@@ -820,7 +820,7 @@ class AIFineTuneManager private constructor(context: Context) {
                 masterTips = masterTips
             )
         } catch (e: Exception) {
-            Log.e(TAG, "解析云端响应失败: ${e.message}")
+            ReleaseLog.e(TAG, "解析云端响应失败: ${e.message}")
             null
         }
     }
@@ -883,7 +883,7 @@ class AIFineTuneManager private constructor(context: Context) {
      * 当TFLite推理失败或超时时使用
      */
     private fun generateFallbackSuggestion(currentParams: Map<String, Int>): AISuggestion {
-        Log.d(TAG, "使用规则引擎降级策略")
+        ReleaseLog.d(TAG, "使用规则引擎降级策略")
         
         // 基于当前参数生成保守建议
         val suggestions = listOf(

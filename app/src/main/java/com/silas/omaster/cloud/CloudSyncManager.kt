@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.ReleaseLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +51,7 @@ class CloudSyncManager private constructor(context: Context) {
             val type = object : TypeToken<List<MasterPreset>>() {}.type
             gson.fromJson<List<MasterPreset>>(json, type) ?: emptyList()
         } catch (e: Exception) {
-            android.util.Log.e("CloudSyncManager", "加载云端预设失败", e)
+            ReleaseLog.e("CloudSyncManager", "加载云端预设失败", e)
             emptyList()
         }
     }
@@ -102,7 +103,7 @@ class CloudSyncManager private constructor(context: Context) {
                     allPresets.addAll(result.presets)
                 } catch (e: Exception) {
                     // 单个品牌同步失败不影响其他品牌
-                    android.util.Log.e("CloudSyncManager", "同步品牌 $brand 失败", e)
+                    ReleaseLog.e("CloudSyncManager", "同步品牌 $brand 失败", e)
                 }
             }
 
@@ -116,11 +117,11 @@ class CloudSyncManager private constructor(context: Context) {
             settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.SYNCED
             _syncState.value = SyncState.Success(totalNewPresets, totalUpdatedPresets)
 
-            android.util.Log.d("CloudSyncManager", "同步完成: 新增$totalNewPresets, 更新$totalUpdatedPresets")
+            ReleaseLog.d("CloudSyncManager", "同步完成: 新增$totalNewPresets, 更新$totalUpdatedPresets")
 
             SyncResult.Success(totalNewPresets, totalUpdatedPresets)
         } catch (e: Exception) {
-            android.util.Log.e("CloudSyncManager", "同步失败", e)
+            ReleaseLog.e("CloudSyncManager", "同步失败", e)
             settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.ERROR
             _syncState.value = SyncState.Error(e.message ?: "Unknown error")
             SyncResult.Error(e.message ?: "Unknown error")

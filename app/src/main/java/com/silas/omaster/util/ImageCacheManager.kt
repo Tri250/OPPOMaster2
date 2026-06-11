@@ -1,7 +1,7 @@
 package com.silas.omaster.util
 
 import android.content.Context
-import android.util.Log
+import com.silas.omaster.util.ReleaseLog
 import androidx.core.net.toUri
 import coil.request.ImageRequest
 import coil.request.CachePolicy
@@ -132,7 +132,7 @@ object ImageCacheManager {
                 try {
                     if (attempt > 0) {
                         callback?.onRetry(url, attempt)
-                        Log.d(TAG, "第${attempt + 1}次重试下载: $url")
+                        ReleaseLog.d(TAG, "第${attempt + 1}次重试下载: $url")
                         // 指数退避：1s, 2s, 3s
                         delay(1000L * attempt)
                     }
@@ -151,19 +151,19 @@ object ImageCacheManager {
                     // 下载成功
                     failedDownloads.remove(url)
                     callback?.onSuccess(url, localFile)
-                    Log.d(TAG, "下载成功: $url (${bytes.size / 1024}KB)")
+                    ReleaseLog.d(TAG, "下载成功: $url (${bytes.size / 1024}KB)")
 
                     return@withContext DownloadResult.Success(localFile)
 
                 } catch (e: Exception) {
                     lastException = e
-                    Log.w(TAG, "下载失败 (尝试 ${attempt + 1}/$maxRetries): $url - ${e.message}")
+                    ReleaseLog.w(TAG, "下载失败 (尝试 ${attempt + 1}/$maxRetries): $url - ${e.message}")
 
                     if (attempt == maxRetries - 1) {
                         // 最终失败
                         failedDownloads.add(url)
                         callback?.onError(url, e, maxRetries)
-                        Log.e(TAG, "下载最终失败: $url", e)
+                        ReleaseLog.e(TAG, "下载最终失败: $url", e)
                     }
                 }
             }
@@ -222,7 +222,7 @@ object ImageCacheManager {
             }
         }
 
-        Log.d(TAG, "重试完成: $successCount/${toRetry.size} 成功")
+        ReleaseLog.d(TAG, "重试完成: $successCount/${toRetry.size} 成功")
         return successCount
     }
 
@@ -246,7 +246,7 @@ object ImageCacheManager {
                 }
             }
 
-            Log.d(TAG, "清理旧缓存: $cleanedCount 个文件")
+            ReleaseLog.d(TAG, "清理旧缓存: $cleanedCount 个文件")
         }
     }
 
@@ -271,7 +271,7 @@ object ImageCacheManager {
     fun clearCache(context: Context) {
         File(context.filesDir, CACHE_DIR).deleteRecursively()
         failedDownloads.clear()
-        Log.d(TAG, "缓存已清空")
+        ReleaseLog.d(TAG, "缓存已清空")
     }
 
     /**
