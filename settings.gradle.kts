@@ -5,6 +5,9 @@ pluginManagement {
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
 
+        // 腾讯云镜像（备用）
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+
         // 原有仓库（保留作为后备）
         google {
             content {
@@ -23,6 +26,9 @@ dependencyResolutionManagement {
         // 阿里云镜像
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+
+        // 腾讯云镜像（备用）
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
         // 官方仓库（后备）
         google()
