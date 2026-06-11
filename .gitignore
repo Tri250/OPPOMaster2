@@ -107,3 +107,7 @@ app/src/main/assets/models/*.h5
 .env
 .env.local
 .env.*.local
+
+# Gradle 临时配置备份
+gradle.properties.optimized
+gradle.properties.bak
