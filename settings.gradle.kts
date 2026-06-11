@@ -1,13 +1,13 @@
 pluginManagement {
     repositories {
         // ===== 国内镜像优先（加速下载） =====
-        // 腾讯云镜像 - Gradle 插件
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
-        // 腾讯云镜像 - Maven 公共仓库
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
         // 阿里云镜像
         maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        // 腾讯云镜像（备选）
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
         // 官方仓库（后备）
         google {
@@ -25,11 +25,11 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         // ===== 国内镜像优先（加速下载） =====
-        // 腾讯云镜像 - 包含 Google 和 Maven Central
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
         // 阿里云镜像
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+        // 腾讯云镜像（备选）
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
         // 官方仓库（后备）
         google()
