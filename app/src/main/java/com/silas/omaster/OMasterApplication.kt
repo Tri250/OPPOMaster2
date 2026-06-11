@@ -3,13 +3,18 @@ package com.silas.omaster
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.startup.AppInitializer
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.util.CoilConfig
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
 
-class OMasterApplication : Application() {
+class OMasterApplication : Application(), ImageLoaderFactory {
+
     companion object {
         private const val PREFS_NAME = "omaster_prefs"
         private const val KEY_USER_AGREED = "user_agreed_to_policy"
@@ -19,6 +24,14 @@ class OMasterApplication : Application() {
 
         fun getInstance(): OMasterApplication = instance
         fun getPrefs(): SharedPreferences = prefs
+    }
+
+    /**
+     * Coil ImageLoader 工厂方法
+     * 实现接口以自动注册优化的图片加载器
+     */
+    override fun newImageLoader(): ImageLoader {
+        return CoilConfig.createOptimizedImageLoader(this)
     }
 
     override fun onCreate() {

@@ -184,3 +184,28 @@
 # 保留导航参数序列化
 -keep class **$NavArgs { *; }
 -keepclassmembers class **$NavArgs { *; }
+
+# ========================================
+# Coil 图片加载相关规则
+# ========================================
+-keep class coil.** { *; }
+-keepclassmembers class coil.** { *; }
+-dontwarn coil.**
+# 保留 Coil 的 ImageLoader 工厂
+-keep class * implements coil.ImageLoaderFactory { *; }
+-keepclassmembers class * implements coil.ImageLoaderFactory {
+    public *** newImageLoader();
+}
+
+# ========================================
+# Okio 相关规则（Coil 依赖）
+# ========================================
+-keep class okio.** { *; }
+-keepclassmembers class okio.** { *; }
+-dontwarn okio.**
+
+# ========================================
+# Android Startup 库规则
+# ========================================
+-keep class androidx.startup.** { *; }
+-keepclassmembers class androidx.startup.** { *; }

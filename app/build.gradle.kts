@@ -85,9 +85,32 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Kotlin 编译优化
+    kotlinOptions {
+        jvmTarget = "17"
+        // 启用增量编译
+        freeCompilerArgs += listOf(
+            "-Xopt-in=kotlin.RequiresOptIn",
+            // 启用 Kotlin 编译器缓存
+            "-Xallow-kotlin-package",
+            // 减少编译时间
+            "-Xskip-runtime-version-check"
+        )
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
+        // 禁用 Aidl 和 RenderScript（未使用）
+        aidl = false
+        renderScript = false
+        // 启用 BuildConfig 生成优化
+        prefab = false
+    }
+
+    // Compose 编译器优化
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     // 测试覆盖率配置
