@@ -88,6 +88,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Kotlin 编译优化
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-Xjvm-default=all",
+            "-Xcontext-receivers"
+        )
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -124,6 +135,21 @@ android {
         abortOnError = false
         // 不检查 release 构建（CI 中单独运行）
         checkReleaseBuilds = false
+        // 禁用某些检查以加速构建
+        disable += listOf(
+            "UnusedResources",
+            "IconMissingDensityFolder"
+        )
+        // 忽略测试文件
+        ignoreTestSources = true
+        // 忽略生成的代码
+        ignoreGeneratedSources = true
+    }
+
+    // 编译优化
+    compileOptions {
+        // 增量注解处理
+        isIncremental = true
     }
 
     // 测试选项配置

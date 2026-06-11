@@ -1,0 +1,62 @@
+// Gradle 全局初始化脚本
+// 此脚本会在所有 Gradle 项目构建前自动执行
+// 用于配置全局镜像和优化设置
+
+allprojects {
+    // 配置仓库镜像（作为后备方案）
+    buildscript {
+        repositories {
+            // 阿里云镜像
+            maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+            maven { url 'https://maven.aliyun.com/repository/public' }
+            maven { url 'https://maven.aliyun.com/repository/google' }
+            // 腾讯云镜像
+            maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/' }
+            maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }
+            // 官方仓库
+            google()
+            mavenCentral()
+            gradlePluginPortal()
+        }
+    }
+
+    repositories {
+        // 阿里云镜像
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        // 腾讯云镜像
+        maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }
+        // 官方仓库
+        google()
+        mavenCentral()
+    }
+}
+
+// 构建性能监控
+gradle.projectsLoaded {
+    rootProject.ext.buildStartTime = System.currentTimeMillis()
+}
+
+gradle.buildFinished {
+    def buildEndTime = System.currentTimeMillis()
+    def buildDuration = buildEndTime - rootProject.ext.buildStartTime
+    println ""
+    println "========================================"
+    println "构建完成！总耗时: ${buildDuration / 1000} 秒"
+    println "========================================"
+}
+
+// 任务执行时间统计
+gradle.taskGraph.whenReady { taskGraph ->
+    taskGraph.allTasks.each { task ->
+        task.doFirst {
+            task.ext.startTime = System.currentTimeMillis()
+        }
+        task.doLast {
+            def duration = System.currentTimeMillis() - task.ext.startTime
+            if (duration > 1000) { // 只显示耗时超过1秒的任务
+                println "[性能] ${task.name} 耗时: ${duration / 1000} 秒"
+            }
+        }
+    }
+}

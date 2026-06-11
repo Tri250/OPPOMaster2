@@ -2,12 +2,46 @@ pluginManagement {
     repositories {
         // ===== 国内镜像优先（加速下载） =====
         // 阿里云镜像
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven {
+            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("org\\.jetbrains.*")
+                includeGroupByRegex("org\\.gradle.*")
+            }
+        }
+        maven {
+            url = uri("https://maven.aliyun.com/repository/public")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("org\\.jetbrains.*")
+                includeGroupByRegex("io\\.github.*")
+            }
+        }
+        maven {
+            url = uri("https://maven.aliyun.com/repository/google")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         // 腾讯云镜像（备选）
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("org\\.jetbrains.*")
+            }
+        }
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("org\\.jetbrains.*")
+                includeGroupByRegex("io\\.github.*")
+            }
+        }
 
         // 官方仓库（后备）
         google {
@@ -25,14 +59,56 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         // ===== 国内镜像优先（加速下载） =====
-        // 阿里云镜像
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        // 阿里云镜像 - 使用内容过滤减少网络请求
+        maven {
+            url = uri("https://maven.aliyun.com/repository/public")
+            content {
+                // Android/Google 相关
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+                // Kotlin 相关
+                includeGroupByRegex("org\\.jetbrains.*")
+                includeGroupByRegex("org\\.kotlinx.*")
+                // 第三方库
+                includeGroupByRegex("io\\.ktor.*")
+                includeGroupByRegex("io\\.coil.*")
+                includeGroupByRegex("com\\.squareup.*")
+                includeGroupByRegex("io\\.github.*")
+                // 友盟
+                includeGroupByRegex("com\\.umeng.*")
+                // TensorFlow
+                includeGroupByRegex("org\\.tensorflow.*")
+                // ML Kit
+                includeGroupByRegex("com\\.google\\.mlkit.*")
+            }
+        }
+        maven {
+            url = uri("https://maven.aliyun.com/repository/google")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         // 腾讯云镜像（备选）
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("org\\.jetbrains.*")
+                includeGroupByRegex("org\\.kotlinx.*")
+            }
+        }
 
         // 官方仓库（后备）
-        google()
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
 
         // 友盟仓库已由阿里云/腾讯云镜像完整代理，无需单独配置
