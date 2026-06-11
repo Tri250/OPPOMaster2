@@ -254,7 +254,7 @@ class TFLiteEngine private constructor(private val context: Context) {
                 sizeBytes = modelBuffer.capacity().toLong(),
                 inputShape = interpreter.getInputTensor(0).shape(),
                 outputShape = interpreter.getOutputTensor(0).shape(),
-                isQuantized = interpreter.getInputTensor(0).dataType() != Interpreter.DataType.FLOAT32
+                isQuantized = interpreter.getInputTensor(0).dataType() != org.tensorflow.lite.DataType.FLOAT32
             )
             
             Log.i(TAG, "模型加载成功: $modelName, 输入形状: ${modelInfoMap[modelName]?.inputShape?.contentToString()}")

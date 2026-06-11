@@ -657,16 +657,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 获取场景预设（安全处理空列表）
         if (topScenes.isEmpty()) {
             val defaultScene = ScenePresets.allScenes.firstOrNull()
-            return FusedResult(
-                primary = defaultScene ?: return@fuseResults null,
-                confidence = 0f,
-                alternatives = emptyList(),
-                colorProfile = colorProfile,
-                brightnessLevel = brightnessLevel,
-                faceCount = faceCount,
-                edgeDensity = edgeDensity,
-                sourceBreakdown = emptyMap()
-            )
+            if (defaultScene != null) {
+                return FusedResult(
+                    primary = defaultScene.copy(confidence = 0f),
+                    confidence = 0f,
+                    alternatives = emptyList()
+                )
+            }
         }
 
         val primaryScene = ScenePresets.getSceneById(topScenes.first().key)

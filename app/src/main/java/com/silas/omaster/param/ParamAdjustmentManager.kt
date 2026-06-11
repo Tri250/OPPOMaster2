@@ -15,36 +15,6 @@ import kotlin.math.roundToInt
 class ParamAdjustmentManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
 
-    // 参数值范围定义
-    companion object {
-        const val MIN_VALUE = -100
-        const val MAX_VALUE = 100
-
-        // 快捷档位
-        val QUICK_PRESETS = listOf(
-            QuickPreset("原图", "还原原始效果", mapOf(
-                "saturation" to 0, "contrast" to 0, "brightness" to 0,
-                "warmth" to 0, "sharpness" to 0, "clarity" to 0,
-                "highlights" to 0, "shadows" to 0
-            )),
-            QuickPreset("轻微调整", "轻度美化", mapOf(
-                "saturation" to 5, "contrast" to 3, "brightness" to 2,
-                "warmth" to 0, "sharpness" to 5, "clarity" to 3,
-                "highlights" to 0, "shadows" to 0
-            )),
-            QuickPreset("中等调整", "中度增强", mapOf(
-                "saturation" to 10, "contrast" to 8, "brightness" to 5,
-                "warmth" to 0, "sharpness" to 10, "clarity" to 8,
-                "highlights" to 0, "shadows" to 0
-            )),
-            QuickPreset("强力调整", "深度优化", mapOf(
-                "saturation" to 15, "contrast" to 12, "brightness" to 8,
-                "warmth" to 0, "sharpness" to 15, "clarity" to 12,
-                "highlights" to 0, "shadows" to 0
-            ))
-        )
-    }
-
     // 可调参数定义
     val adjustableParams = listOf(
         AdjustableParam("saturation", "饱和度", MIN_VALUE, MAX_VALUE, 1, ParamUnit.NONE),
@@ -355,6 +325,33 @@ class ParamAdjustmentManager private constructor(context: Context) {
     }
 
     companion object {
+        const val MIN_VALUE = -100
+        const val MAX_VALUE = 100
+
+        // 快捷档位
+        val QUICK_PRESETS = listOf(
+            QuickPreset("原图", "还原原始效果", mapOf(
+                "saturation" to 0, "contrast" to 0, "brightness" to 0,
+                "warmth" to 0, "sharpness" to 0, "clarity" to 0,
+                "highlights" to 0, "shadows" to 0
+            )),
+            QuickPreset("轻微调整", "轻度美化", mapOf(
+                "saturation" to 5, "contrast" to 3, "brightness" to 2,
+                "warmth" to 0, "sharpness" to 5, "clarity" to 3,
+                "highlights" to 0, "shadows" to 0
+            )),
+            QuickPreset("中等调整", "中度增强", mapOf(
+                "saturation" to 10, "contrast" to 8, "brightness" to 5,
+                "warmth" to 0, "sharpness" to 10, "clarity" to 8,
+                "highlights" to 0, "shadows" to 0
+            )),
+            QuickPreset("强力调整", "深度优化", mapOf(
+                "saturation" to 15, "contrast" to 12, "brightness" to 8,
+                "warmth" to 0, "sharpness" to 15, "clarity" to 12,
+                "highlights" to 0, "shadows" to 0
+            ))
+        )
+
         @Volatile
         private var instance: ParamAdjustmentManager? = null
 
@@ -393,10 +390,10 @@ enum class ParamUnit {
  * 快捷预设
  */
 data class QuickPreset(
-    val id: String,
     val name: String,
     val description: String,
     val params: Map<String, Int>,
+    val id: String = name.lowercase().replace(" ", "_"),
     val isCustom: Boolean = false
 )
 
