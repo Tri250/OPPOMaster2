@@ -398,7 +398,16 @@ data class QuickPreset(
     val description: String,
     val params: Map<String, Int>,
     val isCustom: Boolean = false
-)
+) {
+    // 便捷构造函数：id 和 name 相同时使用
+    constructor(name: String, description: String, params: Map<String, Int>) : this(
+        id = name,
+        name = name,
+        description = description,
+        params = params,
+        isCustom = false
+    )
+}
 
 /**
  * 输入结果

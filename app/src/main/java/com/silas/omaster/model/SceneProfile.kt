@@ -42,14 +42,14 @@ data class SceneProfile(
         description = parcel.readString() ?: "",
         color = parcel.readLong(),
         confidence = parcel.readFloat(),
-        hasselbladParams = parcel.readParcelable(HasselbladParams::class.java.classLoader)
+        hasselbladParams = parcel.readParcelable<HasselbladParams>(HasselbladParams::class.java.classLoader)
             ?: HasselbladParams.DEFAULT,
         recommendedFilm = parcel.createTypedArrayList(FilmPreset.CREATOR) ?: emptyList(),
         masterTips = parcel.createStringArrayList() ?: emptyList(),
-        cameraParams = parcel.readParcelable(CameraParams::class.java.classLoader),
-        exifData = parcel.readParcelable(ExifData::class.java.classLoader),
-        histogramData = parcel.readParcelable(HistogramData::class.java.classLoader),
-        faceData = parcel.readParcelable(FaceData::class.java.classLoader),
+        cameraParams = parcel.readParcelable<CameraParams>(CameraParams::class.java.classLoader),
+        exifData = parcel.readParcelable<ExifData>(ExifData::class.java.classLoader),
+        histogramData = parcel.readParcelable<HistogramData>(HistogramData::class.java.classLoader),
+        faceData = parcel.readParcelable<FaceData>(FaceData::class.java.classLoader),
         timestamp = parcel.readLong()
     )
 
@@ -434,7 +434,7 @@ data class FaceInfo(
     val rightEyeOpen: Boolean
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        bounds = parcel.readParcelable(RectData::class.java.classLoader)
+        bounds = parcel.readParcelable<RectData>(RectData::class.java.classLoader)
             ?: RectData(0f, 0f, 0f, 0f),
         confidence = parcel.readFloat(),
         hasSmile = parcel.readByte() != 0.toByte(),
