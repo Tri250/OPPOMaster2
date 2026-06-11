@@ -258,7 +258,9 @@ fun MainApp(navController: NavHostController) {
                 TextButton(
                     onClick = {
                         JsonUtil.deleteRemotePresets(context)
-                        repository.reloadDefaultPresets()
+                        coroutineScope.launch {
+                            repository.reloadDefaultPresets()
+                        }
                         showMigrationDialog = false
                     }
                 ) {

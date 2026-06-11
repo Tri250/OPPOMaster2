@@ -247,7 +247,7 @@ data class MasterPreset(
         isFavorite = parcel.readByte() != 0.toByte(),
         isCustom = parcel.readByte() != 0.toByte(),
         isNew = parcel.readByte() != 0.toByte(),
-        description = parcel.readParcelable(PresetDescription::class.java.classLoader),
+        description = parcel.readParcelable<PresetDescription>(PresetDescription::class.java.classLoader),
         shootingTips = parcel.readString(),
         sections = parcel.createTypedArrayList(PresetSection.CREATOR),
         tags = parcel.createStringArrayList() ?: emptyList(),
