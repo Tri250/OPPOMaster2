@@ -33,7 +33,7 @@ tensorflow-lite-gpu = "2.16.1"
 tensorflow-lite-support = "0.4.4"
 
 # ===== Analytics =====
-umeng-common = "9.8.9"
+umeng-common = "9.9.2"
 umeng-asms = "1.8.7.2"
 
 # ===== Coroutines =====
