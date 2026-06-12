@@ -3,36 +3,25 @@ pluginManagement {
         // ===== 本地 Maven 仓库优先 =====
         mavenLocal()
 
-        // ===== Google 仓库优先（AGP 唯一来源） =====
-        google()
-
-        // ===== 国内镜像（用于其他插件） =====
-        maven {
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/")
-            name = "Tencent Gradle Plugins"
-        }
-        maven {
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
-            name = "Tencent Maven"
-        }
-        maven {
-            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
-            name = "Aliyun Gradle Plugin"
-        }
+        // ===== 阿里云镜像（Maven Central 代理） =====
         maven {
             url = uri("https://maven.aliyun.com/repository/public")
             name = "Aliyun Public"
         }
         maven {
+            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
+            name = "Aliyun Gradle Plugin"
+        }
+
+        // ===== Google (Android 依赖) =====
+        google()
+
+        // ===== 阿里云 Google 镜像 =====
+        maven {
             url = uri("https://maven.aliyun.com/repository/google")
             name = "Aliyun Google"
         }
-        maven {
-            url = uri("https://repo.huaweicloud.com/repository/maven/")
-            name = "Huawei Maven"
-        }
 
-        mavenCentral()
         gradlePluginPortal()
     }
 }
@@ -43,32 +32,26 @@ dependencyResolutionManagement {
         // ===== 本地 Maven 仓库优先 =====
         mavenLocal()
 
-        // ===== Google 仓库优先 =====
-        google()
-
-        // ===== 国内镜像（备用） =====
-        maven {
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
-            name = "Tencent Maven"
-        }
+        // ===== 阿里云镜像（Maven Central 代理） =====
         maven {
             url = uri("https://maven.aliyun.com/repository/public")
             name = "Aliyun Public"
         }
+
+        // ===== Google (Android 依赖) =====
+        google()
+
+        // ===== 阿里云 Google 镜像 =====
         maven {
             url = uri("https://maven.aliyun.com/repository/google")
             name = "Aliyun Google"
         }
-        maven {
-            url = uri("https://repo.huaweicloud.com/repository/maven/")
-            name = "Huawei Maven"
-        }
+
+        // ===== 清华大学镜像 =====
         maven {
             url = uri("https://mirrors.tuna.tsinghua.edu.cn/maven/")
             name = "Tsinghua Maven"
         }
-
-        mavenCentral()
 
         // ===== 友盟仓库 =====
         maven {

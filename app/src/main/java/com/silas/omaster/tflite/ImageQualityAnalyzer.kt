@@ -47,7 +47,63 @@ class ImageQualityAnalyzer(private val context: Context) {
     }
     
     // TFLite引擎
-    private val engine = TFLiteEngine.getInstance(context)
+    private var engine: TFLiteEngine? = null
+    
+    private fun getEngine(): TFLiteEngine {
+        if (engine == null) {
+            engine = TFLiteEngine.getInstance(context)
+        }
+        return engine!!
+    }
+
+    /**
+     * 启发式分析（无需 TFLite 模型，仅使用传统图像处理）
+     * 
+     * 在 TFLite 模型不可用时的后备方案
+     * 
+     * @param bitmap 输入图像
+     * @return 质量评估结果
+     */
+    suspend fun analyzeHeuristic(bitmap: Bitmap): QualityResult = withContext(Dispatchers.Default) {
+        val startTime = System.currentTimeMillis()
+        val traditionalMetrics = analyzeTraditionalMetrics(bitmap)
+        
+        // 基于传统指标计算评分
+        val brightness = traditionalMetrics.brightnessDistribution
+        val contrast = traditionalMetrics.contrastMetrics
+        val noise = traditionalMetrics.noiseMetrics
+        val blur = traditionalMetrics.blurMetrics
+        
+        // 亮度评分：偏离中间值越远分数越低
+        val idealBrightness = 128f
+        val brightnessDeviation = kotlin.math.abs(brightness.meanBrightness - idealBrightness) / idealBrightness
+        val brightnessScore = (100f - brightnessDeviation * 100f).coerceIn(0f, 100f)
+        
+        // 对比度评分：基于全局对比度
+        val contrastScore = contrast.globalContrast.coerceIn(0f, 100f)
+        
+        // 噪点评分：噪点越少分数越高
+        val noiseScore = (100f - noise.estimatedNoise * 2f).coerceIn(0f, 100f)
+        
+        // 清晰度评分：模糊越少分数越高
+        val sharpnessScore = (100f - blur.blurScore).coerceIn(0f, 100f)
+        
+        // 总体评分：加权平均
+        val overallScore = (brightnessScore * 0.25f + contrastScore * 0.25f + noiseScore * 0.25f + sharpnessScore * 0.25f)
+        
+        QualityResult(
+            brightnessScore = brightnessScore,
+            contrastScore = contrastScore,
+            noiseScore = noiseScore,
+            sharpnessScore = sharpnessScore,
+            overallScore = overallScore,
+            brightnessDistribution = brightness,
+            contrastMetrics = contrast,
+            noiseMetrics = noise,
+            blurMetrics = blur,
+            inferenceTimeMs = System.currentTimeMillis() - startTime
+        )
+    }
     
     /**
      * 分析图像质量
@@ -72,7 +128,7 @@ class ImageQualityAnalyzer(private val context: Context) {
             val inputBuffer = preprocessImage(bitmap)
             
             // 执行推理
-            val inferenceResult = engine.runInference<FloatArray>(
+            val inferenceResult = getEngine().runInference<FloatArray>(
                 modelName = TFLiteEngine.MODEL_QUALITY_ANALYZER,
                 input = inputBuffer,
                 cacheKey = cacheKey
@@ -101,7 +157,7 @@ class ImageQualityAnalyzer(private val context: Context) {
      */
     private fun preprocessImage(bitmap: Bitmap): ByteBuffer {
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
-        return engine.preprocessBitmap(resizedBitmap, INPUT_SIZE, normalize = true)
+        return getEngine().preprocessBitmap(resizedBitmap, INPUT_SIZE, normalize = true)
     }
     
     /**

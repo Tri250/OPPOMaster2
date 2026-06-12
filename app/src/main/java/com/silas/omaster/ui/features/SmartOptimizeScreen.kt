@@ -19,6 +19,10 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.model.*
+import com.silas.omaster.tflite.ImageQualityAnalyzer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
@@ -63,6 +67,11 @@ fun SmartOptimizeScreen(
     
     // 预览模式
     var previewMode by remember { mutableStateOf("before") }
+    
+    // AI 分析状态
+    var isAnalyzing by remember { mutableStateOf(false) }
+    var analysisResult by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     
     // 从 assets 加载示例预览图
     LaunchedEffect(Unit) {
@@ -307,23 +316,98 @@ fun SmartOptimizeScreen(
                 Text("重置")
             }
 
-            // 一键优化按钮
+            // 一键优化按钮（AI 智能分析）
             Button(
                 onClick = {
                     haptic.perform(HapticFeedbackType.Confirm)
-                    // 启用所有优化
-                    hdrEnabled = true
-                    noiseReductionEnabled = true
-                    sharpenEnabled = true
-                    colorCorrectionEnabled = true
+                    val bitmap = previewBitmap
+                    if (bitmap != null && !isAnalyzing) {
+                        isAnalyzing = true
+                        analysisResult = null
+                        scope.launch {
+                            try {
+                                // 使用 AI 引擎真实分析图像质量
+                                val analyzer = ImageQualityAnalyzer(context)
+                                val result = withContext(Dispatchers.Default) {
+                                    val analyzeResult = analyzer.analyze(bitmap)
+                                    analyzeResult.getOrNull() ?: analyzer.analyzeHeuristic(bitmap)
+                                }
+                                // 根据分析结果智能设定参数（评分 0-100）
+                                val brightness = result.brightnessScore / 100f
+                                val contrast = result.contrastScore / 100f
+                                val noiseLevel = (100f - result.noiseScore) / 100f  // noiseScore 越高噪点越少
+                                val sharpness = result.sharpnessScore / 100f
+                                
+                                // HDR: 对比度不足时开启
+                                hdrEnabled = contrast < 0.35f
+                                hdrStrength = ((1f - contrast) * 100f).coerceIn(10f, 90f)
+                                
+                                // 降噪: 噪点较多时开启
+                                noiseReductionEnabled = noiseLevel > 0.3f
+                                noiseReductionStrength = (noiseLevel * 100f).coerceIn(10f, 80f)
+                                
+                                // 锐化: 清晰度不足时开启
+                                sharpenEnabled = sharpness < 0.7f
+                                sharpenStrength = ((1f - sharpness) * 80f).coerceIn(10f, 60f)
+                                
+                                // 曝光: 亮度偏离理想值时调整
+                                val idealBrightness = 0.55f
+                                val exposureDelta = idealBrightness - brightness
+                                exposureAuto = true
+                                exposureAdjustment = (exposureDelta * 200f).coerceIn(-100f, 100f)
+                                
+                                // 色彩校正: 始终开启，根据质量调节
+                                colorCorrectionEnabled = true
+                                colorCorrectionStrength = ((1f - sharpness * 0.5f) * 50f).coerceIn(10f, 60f)
+                                
+                                analysisResult = "亮度:${String.format("%.0f", result.brightnessScore)} | 对比度:${String.format("%.0f", result.contrastScore)} | 噪点:${String.format("%.0f", 100f - result.noiseScore)}%"
+                            } catch (e: Exception) {
+                                // AI 模型不可用时使用启发式规则
+                                val analyzer = ImageQualityAnalyzer(context)
+                                val result = withContext(Dispatchers.Default) {
+                                    analyzer.analyzeHeuristic(bitmap)
+                                }
+                                val brightness = result.brightnessScore / 100f
+                                val contrast = result.contrastScore / 100f
+                                val noiseLevel = (100f - result.noiseScore) / 100f
+                                val sharpness = result.sharpnessScore / 100f
+                                
+                                hdrEnabled = contrast < 0.35f
+                                hdrStrength = ((1f - contrast) * 100f).coerceIn(10f, 90f)
+                                noiseReductionEnabled = noiseLevel > 0.3f
+                                noiseReductionStrength = (noiseLevel * 100f).coerceIn(10f, 80f)
+                                sharpenEnabled = sharpness < 0.7f
+                                sharpenStrength = ((1f - sharpness) * 80f).coerceIn(10f, 60f)
+                                exposureAuto = true
+                                exposureAdjustment = ((0.55f - brightness) * 200f).coerceIn(-100f, 100f)
+                                colorCorrectionEnabled = true
+                                colorCorrectionStrength = ((1f - sharpness * 0.5f) * 50f).coerceIn(10f, 60f)
+                                
+                                analysisResult = "启发式分析完成"
+                            } finally {
+                                isAnalyzing = false
+                            }
+                        }
+                    }
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                enabled = !isAnalyzing
             ) {
-                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("一键优化")
+                if (isAnalyzing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("分析中...")
+                } else {
+                    Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("一键优化")
+                }
             }
         }
     }
