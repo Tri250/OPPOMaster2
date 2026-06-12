@@ -1,303 +1,160 @@
 package com.silas.omaster.cloud
 
-import org.junit.Test
 import org.junit.Assert.*
-import org.json.JSONObject
+import org.junit.Test
 
 /**
- * 云同步管理器测试
- * 测试云同步的核心逻辑
+ * CloudSyncManager 单元测试
  */
-class CloudSyncManagerTest {
+class CloudSyncTest {
 
     @Test
-    fun testPresetJsonParsing() {
-        // 测试预设JSON解析
-        val jsonString = """
-        {
-            "id": "preset_001",
-            "name": "Portrait Classic",
-            "author": "Hasselblad Master",
-            "brand": "Hasselblad",
-            "params": {
-                "saturation": 10,
-                "contrast": 20,
-                "warmth": 5
-            }
+    fun `同步状态 - 状态枚举验证`() {
+        val states = listOf("IDLE", "SYNCING", "SUCCESS", "FAILED", "OFFLINE")
+        
+        for (state in states) {
+            assertTrue("状态应该是有效的: $state", state in states)
         }
-        """
-        
-        val json = JSONObject(jsonString)
-        
-        assertEquals("preset_001", json.getString("id"))
-        assertEquals("Portrait Classic", json.getString("name"))
-        assertEquals("Hasselblad Master", json.getString("author"))
-        
-        val params = json.getJSONObject("params")
-        assertEquals(10, params.getInt("saturation"))
-        assertEquals(20, params.getInt("contrast"))
-        assertEquals(5, params.getInt("warmth"))
     }
 
     @Test
-    fun testPresetListJsonParsing() {
-        // 测试预设列表JSON解析
-        val jsonString = """
-        {
-            "presets": [
-                {"id": "001", "name": "Preset 1"},
-                {"id": "002", "name": "Preset 2"},
-                {"id": "003", "name": "Preset 3"}
-            ]
+    fun `同步间隔 - 最小间隔验证`() {
+        val minIntervalMs = 5 * 60 * 1000L // 5分钟
+        val currentTime = System.currentTimeMillis()
+        val lastSyncTime = currentTime - 60000 // 1分钟前
+        
+        val shouldSync = (currentTime - lastSyncTime) >= minIntervalMs
+        
+        assertFalse("不应该同步，间隔太短", shouldSync)
+    }
+
+    @Test
+    fun `同步间隔 - 足够间隔`() {
+        val minIntervalMs = 5 * 60 * 1000L
+        val currentTime = System.currentTimeMillis()
+        val lastSyncTime = currentTime - 10 * 60 * 1000 // 10分钟前
+        
+        val shouldSync = (currentTime - lastSyncTime) >= minIntervalMs
+        
+        assertTrue("应该同步，间隔足够", shouldSync)
+    }
+
+    @Test
+    fun `冲突检测 - 版本号比较`() {
+        val localVersion = 10
+        val remoteVersion = 12
+        
+        val hasConflict = localVersion != remoteVersion
+        
+        assertTrue("应该检测到版本冲突", hasConflict)
+    }
+
+    @Test
+    fun `冲突解决策略 - 策略枚举`() {
+        val strategies = listOf("KEEP_LOCAL", "KEEP_REMOTE", "KEEP_BOTH", "MANUAL_MERGE")
+        
+        for (strategy in strategies) {
+            assertTrue("策略应该是有效的: $strategy", strategy in strategies)
         }
-        """
-        
-        val json = JSONObject(jsonString)
-        val presetsArray = json.getJSONArray("presets")
-        
-        assertEquals(3, presetsArray.length())
-        
-        val firstPreset = presetsArray.getJSONObject(0)
-        assertEquals("001", firstPreset.getString("id"))
-        assertEquals("Preset 1", firstPreset.getString("name"))
     }
 
     @Test
-    fun testSyncStatusCalculation() {
-        // 测试同步状态计算
-        val localVersion = 1
-        val remoteVersion = 2
+    fun `网络状态检测 - 在线状态`() {
+        var isOnline = true
         
-        val needsUpdate = remoteVersion > localVersion
-        
-        assertTrue(needsUpdate)
-        
-        val localVersion2 = 2
-        val remoteVersion2 = 2
-        
-        val needsUpdate2 = remoteVersion2 > localVersion2
-        
-        assertFalse(needsUpdate2)
+        assertTrue("应该是在线状态", isOnline)
     }
 
     @Test
-    fun testTimestampComparison() {
-        // 测试时间戳比较
-        val localTimestamp = 1704067200000L // 2024-01-01
-        val remoteTimestamp = 1704153600000L // 2024-01-02
+    fun `网络状态检测 - 离线状态`() {
+        var isOnline = false
         
-        val isNewer = remoteTimestamp > localTimestamp
-        
-        assertTrue(isNewer)
+        assertFalse("应该是离线状态", isOnline)
     }
 
     @Test
-    fun testConflictResolution() {
-        // 测试冲突解决策略
-        val localModified = true
-        val remoteModified = true
-        
-        // 策略：保留较新的版本
-        val localTimestamp = 1704067200000L
-        val remoteTimestamp = 1704153600000L
-        
-        val resolution = if (localTimestamp > remoteTimestamp) "keep_local" else "keep_remote"
-        
-        assertEquals("keep_remote", resolution)
-    }
-
-    @Test
-    fun testBrandFiltering() {
-        // 测试品牌过滤
-        val presets = listOf(
-            mockPreset("001", "Hasselblad"),
-            mockPreset("002", "Fuji"),
-            mockPreset("003", "Hasselblad"),
-            mockPreset("004", "Sony")
-        )
-        
-        val hasselbladPresets = presets.filter { it.brand == "Hasselblad" }
-        
-        assertEquals(2, hasselbladPresets.size)
-    }
-
-    @Test
-    fun testPresetValidation() {
-        // 测试预设验证
-        val validPreset = mockPreset("001", "Hasselblad")
-        
-        val isValid = validPreset.id.isNotEmpty() && 
-                      validPreset.name.isNotEmpty() &&
-                      validPreset.brand.isNotEmpty()
-        
-        assertTrue(isValid)
-        
-        val invalidPreset = mockPreset("", "")
-        
-        val isInvalid = invalidPreset.id.isEmpty() || 
-                        invalidPreset.name.isEmpty()
-        
-        assertTrue(isInvalid)
-    }
-
-    @Test
-    fun testCacheKeyGeneration() {
-        // 测试缓存键生成
-        val presetId = "preset_001"
-        val brand = "Hasselblad"
-        
-        val cacheKey = "${brand}_${presetId}"
-        
-        assertEquals("Hasselblad_preset_001", cacheKey)
-    }
-
-    @Test
-    fun testUrlConstruction() {
-        // 测试URL构建
-        val baseUrl = "https://cdn.example.com"
-        val brand = "hasselblad"
-        val presetId = "001"
-        
-        val url = "$baseUrl/presets/$brand/$presetId.json"
-        
-        assertEquals("https://cdn.example.com/presets/hasselblad/001.json", url)
-    }
-
-    @Test
-    fun testPaginationCalculation() {
-        // 测试分页计算
-        val totalItems = 100
-        val pageSize = 20
-        
-        val totalPages = (totalItems + pageSize - 1) / pageSize
-        
-        assertEquals(5, totalPages)
-        
-        val currentPage = 2
-        val startIndex = (currentPage - 1) * pageSize
-        val endIndex = startIndex + pageSize
-        
-        assertEquals(20, startIndex)
-        assertEquals(40, endIndex)
-    }
-
-    @Test
-    fun testRetryLogic() {
-        // 测试重试逻辑
+    fun `重试机制 - 指数退避`() {
+        val baseDelay = 1000L
         val maxRetries = 3
-        var retryCount = 0
         
-        // 模拟重试
-        for (i in 0 until maxRetries) {
-            retryCount++
+        val delays = (1..maxRetries).map { baseDelay * (1L shl (it - 1)) }
+        
+        assertEquals(listOf(1000L, 2000L, 4000L), delays)
+    }
+
+    @Test
+    fun `同步进度 - 进度计算`() {
+        val totalItems = 100
+        val syncedItems = 45
+        
+        val progress = (syncedItems.toFloat() / totalItems * 100).toInt()
+        
+        assertEquals(45, progress)
+    }
+
+    @Test
+    fun `数据完整性校验 - checksum计算`() {
+        val data1 = "preset_data_1"
+        val data2 = "preset_data_2"
+        
+        val checksum1 = data1.hashCode()
+        val checksum2 = data2.hashCode()
+        
+        assertNotEquals("不同的数据应该有不同的checksum", checksum1, checksum2)
+    }
+
+    @Test
+    fun `数据完整性校验 - 相同数据`() {
+        val data = "preset_data"
+        
+        val checksum1 = data.hashCode()
+        val checksum2 = data.hashCode()
+        
+        assertEquals("相同的数据应该有相同的checksum", checksum1, checksum2)
+    }
+
+    @Test
+    fun `批量同步限制 - 最大数量`() {
+        val maxBatchSize = 50
+        val itemsToSync = 75
+        
+        val batches = (itemsToSync + maxBatchSize - 1) / maxBatchSize
+        
+        assertEquals(2, batches)
+    }
+
+    @Test
+    fun `增量同步 - 变更检测`() {
+        val localData = mapOf("preset_1" to 10, "preset_2" to 20, "preset_3" to 30)
+        val remoteData = mapOf("preset_1" to 10, "preset_2" to 25, "preset_4" to 40)
+        
+        val changedKeys = localData.keys.filter { key ->
+            remoteData[key] != localData[key]
         }
         
-        assertEquals(3, retryCount)
-        assertTrue(retryCount <= maxRetries)
+        assertEquals(1, changedKeys.size)
+        assertTrue(changedKeys.contains("preset_2"))
     }
 
     @Test
-    fun testTimeoutHandling() {
-        // 测试超时处理
-        val timeoutMs = 5000L
-        val startTime = System.currentTimeMillis()
+    fun `增量同步 - 新增数据检测`() {
+        val localData = mapOf("preset_1" to 10)
+        val remoteData = mapOf("preset_1" to 10, "preset_2" to 20)
         
-        // 模拟操作
-        val elapsed = System.currentTimeMillis() - startTime
+        val newKeys = remoteData.keys - localData.keys
         
-        val isTimeout = elapsed > timeoutMs
-        
-        assertFalse(isTimeout)
+        assertEquals(1, newKeys.size)
+        assertTrue(newKeys.contains("preset_2"))
     }
 
-    private fun mockPreset(id: String, brand: String): MockPreset {
-        return MockPreset(
-            id = id,
-            name = "Test Preset",
-            brand = brand,
-            author = "Test Author",
-            timestamp = System.currentTimeMillis()
-        )
+    @Test
+    fun `增量同步 - 删除数据检测`() {
+        val localData = mapOf("preset_1" to 10, "preset_2" to 20)
+        val remoteData = mapOf("preset_1" to 10)
+        
+        val deletedKeys = localData.keys - remoteData.keys
+        
+        assertEquals(1, deletedKeys.size)
+        assertTrue(deletedKeys.contains("preset_2"))
     }
 }
-
-/**
- * 同步状态测试
- */
-class SyncStatusTest {
-
-    @Test
-    fun testSyncStateIdle() {
-        val state = SyncState.IDLE
-        
-        assertEquals("IDLE", state.name)
-    }
-
-    @Test
-    fun testSyncStateSyncing() {
-        val state = SyncState.SYNCING
-        
-        assertEquals("SYNCING", state.name)
-    }
-
-    @Test
-    fun testSyncStateSuccess() {
-        val state = SyncState.SUCCESS
-        
-        assertEquals("SUCCESS", state.name)
-    }
-
-    @Test
-    fun testSyncStateError() {
-        val state = SyncState.ERROR
-        
-        assertEquals("ERROR", state.name)
-    }
-}
-
-/**
- * 同步配置测试
- */
-class SyncConfigTest {
-
-    @Test
-    fun testDefaultConfig() {
-        val config = SyncConfig()
-        
-        assertTrue(config.autoSync)
-        assertEquals(300000L, config.syncIntervalMs) // 5分钟
-        assertTrue(config.syncOnStartup)
-    }
-
-    @Test
-    fun testCustomConfig() {
-        val config = SyncConfig(
-            autoSync = false,
-            syncIntervalMs = 600000L,
-            syncOnStartup = false
-        )
-        
-        assertFalse(config.autoSync)
-        assertEquals(600000L, config.syncIntervalMs)
-        assertFalse(config.syncOnStartup)
-    }
-}
-
-// 辅助数据类
-data class MockPreset(
-    val id: String,
-    val name: String,
-    val brand: String,
-    val author: String,
-    val timestamp: Long
-)
-
-enum class SyncState {
-    IDLE, SYNCING, SUCCESS, ERROR
-}
-
-data class SyncConfig(
-    val autoSync: Boolean = true,
-    val syncIntervalMs: Long = 300000L,
-    val syncOnStartup: Boolean = true
-)

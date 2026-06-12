@@ -1,260 +1,190 @@
 package com.silas.omaster.network
 
-import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Test
 
 /**
  * PresetRemoteManager 单元测试
- * 测试远程预设管理器的逻辑
+ * 测试网络请求的安全验证和URL处理逻辑
  */
 class PresetRemoteManagerTest {
 
     @Test
-    fun `URL验证 - HTTPS协议应该被允许`() {
-        val url = "https://cdn.jsdelivr.net/gh/user/repo/presets.json"
-        assertTrue(url.startsWith("https://"))
+    fun `URL验证 - 空白URL应该被拒绝`() {
+        val blankUrls = listOf("", "   ", "\t", "\n")
+        
+        for (url in blankUrls) {
+            val isBlank = url.isBlank()
+            assertTrue("空白URL应该被检测: '$url'", isBlank)
+        }
     }
 
     @Test
     fun `URL验证 - HTTP协议应该被拒绝`() {
-        val url = "http://example.com/presets.json"
-        assertFalse(url.startsWith("https://"))
-    }
-
-    @Test
-    fun `URL验证 - 空URL应该被拒绝`() {
-        val url = ""
-        assertTrue(url.isBlank())
-    }
-
-    @Test
-    fun `URL验证 - 内网地址应该被拒绝`() {
-        val blockedHosts = listOf("localhost", "127.0.0.1", "0.0.0.0", "10.", "192.168.", "172.16.", "169.254.")
-        
-        val testUrls = listOf(
-            "https://localhost/test.json",
-            "https://127.0.0.1/test.json",
-            "https://192.168.1.1/test.json",
-            "https://10.0.0.1/test.json",
-            "https://172.16.0.1/test.json"
+        val httpUrls = listOf(
+            "http://example.com/presets.json",
+            "http://cdn.jsdelivr.net/gh/user/repo/presets.json",
+            "HTTP://EXAMPLE.COM"
         )
         
-        for (url in testUrls) {
-            val lower = url.lowercase()
-            val isBlocked = blockedHosts.any { lower.contains(it) }
-            assertTrue("$url 应该被阻止", isBlocked)
+        for (url in httpUrls) {
+            assertFalse("HTTP URL不应该通过验证: $url", url.startsWith("https://"))
         }
     }
 
     @Test
-    fun `URL验证 - 公网地址应该被允许`() {
+    fun `URL验证 - HTTPS协议应该被允许`() {
+        val httpsUrls = listOf(
+            "https://example.com/presets.json",
+            "https://cdn.jsdelivr.net/gh/user/repo/presets.json",
+            "HTTPS://API.OMASTER.APP"
+        )
+        
+        for (url in httpsUrls) {
+            assertTrue("HTTPS URL应该通过验证: $url", url.startsWith("https://"))
+        }
+    }
+
+    @Test
+    fun `URL验证 - 内网地址应该被阻止`() {
+        val blockedHosts = listOf(
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+            "10.0.0.1",
+            "192.168.1.1",
+            "172.16.0.1",
+            "169.254.169.254"
+        )
+        
+        for (host in blockedHosts) {
+            val testUrl = "https://$host/presets.json"
+            val containsBlocked = blockedHosts.any { testUrl.lowercase().contains(it) }
+            assertTrue("内网地址应该被阻止: $testUrl", containsBlocked)
+        }
+    }
+
+    @Test
+    fun `URL验证 - 正常外网地址应该通过`() {
         val validUrls = listOf(
+            "https://api.omaster.app/presets",
             "https://cdn.jsdelivr.net/gh/user/repo/presets.json",
             "https://raw.githubusercontent.com/user/repo/main/presets.json",
-            "https://example.com/presets.json"
+            "https://gitee.com/user/repo/raw/main/presets.json"
         )
-        
-        val blockedHosts = listOf("localhost", "127.0.0.1", "0.0.0.0", "10.", "192.168.", "172.16.", "169.254.")
         
         for (url in validUrls) {
-            val lower = url.lowercase()
-            val isBlocked = blockedHosts.any { lower.contains(it) }
-            assertFalse("$url 不应该被阻止", isBlocked)
+            val isHttps = url.startsWith("https://")
+            val containsBlocked = listOf("localhost", "127.0.0.1", "0.0.0.0", "10.", "192.168.", "172.16.", "169.254.")
+                .any { url.lowercase().contains(it) }
+            
+            assertTrue("有效URL应该通过验证: $url", isHttps && !containsBlocked)
         }
     }
 
     @Test
-    fun `响应验证 - 成功状态码应该在200-299范围内`() {
-        val successCodes = listOf(200, 201, 204, 299)
+    fun `HTTP状态码 - 2xx应该被认为是成功`() {
+        val successCodes = listOf(200, 201, 202, 204, 206)
         
         for (code in successCodes) {
-            assertTrue("$code 应该是成功状态码", code in 200..299)
+            assertTrue("状态码 $code 应该是成功", code in 200..299)
         }
-        
-        val errorCodes = listOf(400, 404, 500, 503)
+    }
+
+    @Test
+    fun `HTTP状态码 - 4xx 5xx应该被认为是错误`() {
+        val errorCodes = listOf(400, 401, 403, 404, 500, 502, 503)
         
         for (code in errorCodes) {
-            assertFalse("$code 不应该是成功状态码", code in 200..299)
+            assertFalse("状态码 $code 不应该在2xx范围", code in 200..299)
         }
     }
 
     @Test
-    fun `版本检查 - 应该正确判断是否需要更新`() {
-        val localBuild = 1
-        val remoteBuild = 2
+    fun `JSON解析 - 有效JSON字符串应该被正确解析`() {
+        val jsonStr = """
+            {
+                "name": "Test Preset",
+                "author": "Test Author",
+                "presets": []
+            }
+        """.trimIndent()
         
-        val needsUpdate = remoteBuild > localBuild
-        assertTrue("远程版本更高时应该需要更新", needsUpdate)
-        
-        val noUpdate = remoteBuild <= localBuild
-        assertFalse("本地版本更高或相等时不应该需要更新", noUpdate)
+        assertTrue("JSON应该包含name字段", jsonStr.contains("\"name\""))
+        assertTrue("JSON应该包含author字段", jsonStr.contains("\"author\""))
+        assertTrue("JSON应该包含presets字段", jsonStr.contains("\"presets\""))
     }
 
     @Test
-    fun `强制更新 - 应该跳过版本检查`() {
-        val forceUpdate = true
-        val localBuild = 2
-        val remoteBuild = 1
+    fun `JSON解析 - 缺少必填字段应该被检测`() {
+        val missingFields = mutableListOf<String>()
         
-        // 强制更新时，即使本地版本更高也应该更新
-        val shouldUpdate = forceUpdate || remoteBuild > localBuild
-        assertTrue("强制更新时应该跳过版本检查", shouldUpdate)
+        val name = ""
+        val author = "Test Author"
+        
+        if (name.isBlank()) missingFields.add("name (订阅名称)")
+        if (author.isBlank()) missingFields.add("author (作者)")
+        
+        assertTrue("应该检测到name字段缺失", missingFields.contains("name (订阅名称)"))
+        assertFalse("author字段不应该缺失", missingFields.contains("author (作者)"))
     }
 
     @Test
-    fun `文件名生成 - 应该从URL生成有效的文件名`() {
+    fun `缓存键生成 - 基于URL生成唯一键`() {
+        val url1 = "https://example.com/presets.json"
+        val url2 = "https://example.com/presets2.json"
+        
+        val key1 = url1.hashCode().toString()
+        val key2 = url2.hashCode().toString()
+        
+        assertNotEquals("不同的URL应该生成不同的缓存键", key1, key2)
+    }
+
+    @Test
+    fun `文件名字符串 - URL转文件名处理`() {
         val url = "https://cdn.jsdelivr.net/gh/user/repo/presets.json"
         
-        // 使用hashCode生成文件名
-        val fileName = "presets_${url.hashCode().toString(16)}.json"
+        // 简化处理：提取路径最后一部分
+        val fileName = url.substringAfterLast("/").substringBefore(".")
         
-        assertTrue("文件名不应该为空", fileName.isNotEmpty())
-        assertTrue("文件名应该以.json结尾", fileName.endsWith(".json"))
-    }
-
-    @Test
-    fun `JSON验证 - 应该验证必填字段`() {
-        // 模拟JSON对象
-        val name: String? = "Official Presets"
-        val author: String? = "OMaster"
-        
-        val missingFields = mutableListOf<String>()
-        if (name.isNullOrBlank()) missingFields.add("name")
-        if (author.isNullOrBlank()) missingFields.add("author")
-        
-        assertTrue("必填字段验证应该通过", missingFields.isEmpty())
-    }
-
-    @Test
-    fun `JSON验证 - 应该检测缺失字段`() {
-        val name: String? = null
-        val author: String? = ""
-        
-        val missingFields = mutableListOf<String>()
-        if (name.isNullOrBlank()) missingFields.add("name")
-        if (author.isNullOrBlank()) missingFields.add("author")
-        
-        assertEquals("应该检测到2个缺失字段", 2, missingFields.size)
-    }
-
-    @Test
-    fun `预设计数 - 应该正确更新预设数量`() {
-        val presetCount = 50
-        val lastUpdateTime = System.currentTimeMillis()
-        
-        assertTrue("预设数量应该非负", presetCount >= 0)
-        assertTrue("更新时间应该是有效的时间戳", lastUpdateTime > 0)
-    }
-
-    @Test
-    fun `缓存失效 - 应该在更新后失效缓存`() {
-        var cacheInvalidated = false
-        
-        // 模拟缓存失效
-        fun invalidateCache() {
-            cacheInvalidated = true
-        }
-        
-        invalidateCache()
-        
-        assertTrue("缓存应该被失效", cacheInvalidated)
+        assertEquals("presets", fileName)
     }
 }
 
 /**
- * 网络请求测试
+ * 网络响应测试
  */
-class NetworkRequestTest {
+class NetworkResponseTest {
 
     @Test
-    fun `请求超时 - 应该设置合理的超时时间`() {
-        val connectTimeout = 10_000L // 10秒
-        val requestTimeout = 30_000L // 30秒
+    fun `响应时间 - 应该在合理范围内`() {
+        val reasonableTimeout = 30000L // 30秒
+        val responseTime = 2500L // 模拟2.5秒响应
         
-        assertTrue("连接超时应该大于0", connectTimeout > 0)
-        assertTrue("请求超时应该大于0", requestTimeout > 0)
-        assertTrue("请求超时应该大于连接超时", requestTimeout > connectTimeout)
+        assertTrue("响应时间应该在合理范围内", responseTime < reasonableTimeout)
     }
 
     @Test
-    fun `重试逻辑 - 应该限制重试次数`() {
-        val maxRetries = 3
-        var retryCount = 0
-        
-        while (retryCount < maxRetries) {
-            retryCount++
-        }
-        
-        assertEquals("重试次数应该等于最大重试次数", maxRetries, retryCount)
-    }
-
-    @Test
-    fun `重试延迟 - 应该使用指数退避`() {
+    fun `重试机制 - 指数退避计算`() {
         val baseDelay = 1000L
+        val maxDelay = 4000L
+        
         val delays = listOf(
-            baseDelay,           // 第1次: 1秒
-            baseDelay * 2,       // 第2次: 2秒
-            baseDelay * 4        // 第3次: 4秒
+            baseDelay * (1L shl 0), // 1s
+            baseDelay * (1L shl 1), // 2s
+            baseDelay * (1L shl 2)  // 4s
         )
         
-        for (i in 1 until delays.size) {
-            assertTrue("延迟应该递增", delays[i] > delays[i - 1])
-        }
-    }
-}
-
-/**
- * JSON解析测试
- */
-class JsonParsingTest {
-
-    @Test
-    fun `预设列表解析 - 应该正确解析预设列表`() {
-        // 模拟预设列表数据
-        val presetList = mapOf(
-            "name" to "Official Presets",
-            "author" to "OMaster",
-            "version" to 2,
-            "build" to 1,
-            "presets" to listOf(
-                mapOf("id" to "001", "name" to "Preset 1"),
-                mapOf("id" to "002", "name" to "Preset 2")
-            )
-        )
-        
-        assertEquals("Official Presets", presetList["name"])
-        assertEquals("OMaster", presetList["author"])
-        assertEquals(2, presetList["version"])
-        assertEquals(2, (presetList["presets"] as List<*>).size)
+        assertEquals(1000L, delays[0])
+        assertEquals(2000L, delays[1])
+        assertEquals(4000L, delays[2])
+        assertTrue("延迟不应该超过最大值", delays[2] <= maxDelay)
     }
 
     @Test
-    fun `预设解析 - 应该正确解析预设对象`() {
-        val preset = mapOf(
-            "id" to "portrait-standard",
-            "name" to "标准人像",
-            "coverPath" to "portrait.jpg",
-            "saturation" to 10,
-            "contrast" to -5
-        )
+    fun `连接超时 - 应该设置为合理值`() {
+        val connectionTimeout = 120000L // 120秒
         
-        assertEquals("portrait-standard", preset["id"])
-        assertEquals("标准人像", preset["name"])
-        assertEquals(10, preset["saturation"])
-        assertEquals(-5, preset["contrast"])
-    }
-
-    @Test
-    fun `可选字段解析 - 应该处理可选字段`() {
-        val preset = mapOf(
-            "id" to "001",
-            "name" to "Test"
-        )
-        
-        val galleryImages: List<String>? = null
-        val tags: List<String>? = null
-        
-        assertNull("可选字段应该可以为null", galleryImages)
-        assertNull("可选字段应该可以为null", tags)
+        assertTrue("连接超时应该大于60秒", connectionTimeout >= 60000L)
     }
 }

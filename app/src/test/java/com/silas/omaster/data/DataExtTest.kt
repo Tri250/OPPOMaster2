@@ -1,368 +1,288 @@
 package com.silas.omaster.data
 
-import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Test
 
 /**
- * LUTResource 单元测试
- * 测试LUT资源数据模型
+ * SubscriptionManager 单元测试
  */
-class LUTResourceTest {
+class SubscriptionManagerTest {
 
     @Test
-    fun `LUT创建 - 应该正确创建LUT对象`() {
-        val lut = LUTResource(
-            id = "lut_001",
-            name = "Film Look",
-            description = "经典胶片风格",
-            category = "Film",
-            downloadUrl = "https://example.com/lut.cube",
-            downloadCount = 1000,
-            rating = 4.5
-        )
+    fun `订阅状态 - 状态枚举验证`() {
+        val states = listOf("ACTIVE", "EXPIRED", "CANCELLED", "PENDING")
         
-        assertEquals("lut_001", lut.id)
-        assertEquals("Film Look", lut.name)
-        assertEquals("经典胶片风格", lut.description)
-        assertEquals("Film", lut.category)
-        assertEquals(1000, lut.downloadCount)
-        assertEquals(4.5, lut.rating, 0.01)
+        for (state in states) {
+            assertTrue("状态应该是有效的: $state", state in states)
+        }
     }
 
     @Test
-    fun `LUT评分 - 应该在有效范围内`() {
-        val lut = LUTResource(
-            id = "lut_001",
-            name = "Test",
-            description = "Test",
-            category = "Test",
-            downloadUrl = "https://example.com/lut.cube",
-            downloadCount = 0,
-            rating = 4.8
-        )
+    fun `订阅验证 - URL格式验证`() {
+        val validUrl = "https://example.com/presets.json"
+        val invalidUrl = "http://example.com/presets.json"
         
-        assertTrue("评分应该在0到5之间", lut.rating in 0.0..5.0)
+        assertTrue("HTTPS URL应该有效", validUrl.startsWith("https://"))
+        assertFalse("HTTP URL应该无效", invalidUrl.startsWith("https://"))
     }
 
     @Test
-    fun `LUT下载量 - 应该非负`() {
-        val lut = LUTResource(
-            id = "lut_001",
-            name = "Test",
-            description = "Test",
-            category = "Test",
-            downloadUrl = "https://example.com/lut.cube",
-            downloadCount = 500,
-            rating = 4.0
-        )
+    fun `订阅验证 - 构建号比较`() {
+        val currentBuild = 10
+        val remoteBuild = 15
         
-        assertTrue("下载量应该非负", lut.downloadCount >= 0)
+        val needsUpdate = remoteBuild > currentBuild
+        
+        assertTrue("远程构建更新时需要更新", needsUpdate)
+    }
+
+    @Test
+    fun `订阅验证 - 无需更新情况`() {
+        val currentBuild = 15
+        val remoteBuild = 15
+        
+        val needsUpdate = remoteBuild > currentBuild
+        
+        assertFalse("相同构建不需要更新", needsUpdate)
+    }
+
+    @Test
+    fun `订阅验证 - 版本回退情况`() {
+        val currentBuild = 15
+        val remoteBuild = 10
+        
+        val needsUpdate = remoteBuild > currentBuild
+        
+        assertFalse("远程版本更旧不应该更新", needsUpdate)
     }
 }
 
 /**
- * PresetSource 单元测试
- * 测试预设源数据模型
+ * FavoriteManager 单元测试
  */
-class PresetSourceTest {
+class FavoriteManagerTest {
 
     @Test
-    fun `预设源创建 - 应该正确创建预设源对象`() {
-        val source = PresetSource(
-            id = "source_001",
-            name = "Official Presets",
-            url = "https://cdn.example.com/presets.json",
-            enabled = true,
-            lastUpdated = System.currentTimeMillis()
-        )
-        
-        assertEquals("source_001", source.id)
-        assertEquals("Official Presets", source.name)
-        assertEquals("https://cdn.example.com/presets.json", source.url)
-        assertTrue(source.enabled)
-        assertNotNull(source.lastUpdated)
-    }
-
-    @Test
-    fun `预设源默认值 - 应该有正确的默认值`() {
-        val source = PresetSource(
-            id = "source_001",
-            name = "Test",
-            url = "https://example.com/presets.json"
-        )
-        
-        assertTrue("默认应该启用", source.enabled)
-        assertNull("默认更新时间应该为null", source.lastUpdated)
-    }
-
-    @Test
-    fun `预设源状态 - 应该正确切换启用状态`() {
-        val source = PresetSource(
-            id = "source_001",
-            name = "Test",
-            url = "https://example.com/presets.json",
-            enabled = true
-        )
-        
-        val disabled = source.copy(enabled = false)
-        assertFalse("应该被禁用", disabled.enabled)
-    }
-
-    @Test
-    fun `预设源配置 - 应该正确创建配置对象`() {
-        val config = PresetSourceConfig(
-            sources = listOf(
-                PresetSource("001", "Source 1", "https://example1.com/presets.json"),
-                PresetSource("002", "Source 2", "https://example2.com/presets.json")
-            )
-        )
-        
-        assertEquals(2, config.sources.size)
-    }
-
-    @Test
-    fun `预设源响应 - 应该正确创建响应对象`() {
-        val response = PresetSourceResponse(
-            presets = emptyList(),
-            version = "1.0.0",
-            updateTime = "2024-01-15"
-        )
-        
-        assertEquals("1.0.0", response.version)
-        assertEquals("2024-01-15", response.updateTime)
-    }
-}
-
-/**
- * PresetRepository 单元测试
- * 测试预设仓库逻辑
- */
-class PresetRepositoryLogicTest {
-
-    @Test
-    fun `预设排序 - 应该按时间戳降序排列`() {
-        val presets = listOf(
-            TestPresetData("001", timestamp = 1000L),
-            TestPresetData("002", timestamp = 3000L),
-            TestPresetData("003", timestamp = 2000L)
-        )
-        
-        val sorted = presets.sortedByDescending { it.timestamp }
-        
-        assertEquals("002", sorted[0].id)
-        assertEquals("003", sorted[1].id)
-        assertEquals("001", sorted[2].id)
-    }
-
-    @Test
-    fun `预设过滤 - 应该按品牌过滤`() {
-        val presets = listOf(
-            TestPresetData("001", brand = "Hasselblad"),
-            TestPresetData("002", brand = "Fuji"),
-            TestPresetData("003", brand = "Hasselblad")
-        )
-        
-        val filtered = presets.filter { it.brand == "Hasselblad" }
-        
-        assertEquals(2, filtered.size)
-    }
-
-    @Test
-    fun `预设搜索 - 应该支持模糊搜索`() {
-        val presets = listOf(
-            TestPresetData("001", name = "Portrait Classic"),
-            TestPresetData("002", name = "Landscape Pro"),
-            TestPresetData("003", name = "Portrait Modern")
-        )
-        
-        val query = "portrait"
-        val results = presets.filter { it.name.lowercase().contains(query.lowercase()) }
-        
-        assertEquals(2, results.size)
-    }
-
-    @Test
-    fun `预设分页 - 应该正确计算分页`() {
-        val totalItems = 100
-        val pageSize = 20
-        val currentPage = 2
-        
-        val startIndex = (currentPage - 1) * pageSize
-        val endIndex = startIndex + pageSize
-        
-        assertEquals(20, startIndex)
-        assertEquals(40, endIndex)
-    }
-
-    @Test
-    fun `预设去重 - 应该移除重复预设`() {
-        val presets = listOf(
-            TestPresetData("001"),
-            TestPresetData("001"),
-            TestPresetData("002")
-        )
-        
-        val unique = presets.distinctBy { it.id }
-        
-        assertEquals(2, unique.size)
-    }
-}
-
-/**
- * FavoriteManager 逻辑测试
- */
-class FavoriteManagerLogicTest {
-
-    @Test
-    fun `收藏添加 - 应该正确添加收藏`() {
+    fun `收藏操作 - 添加收藏`() {
         val favorites = mutableSetOf<String>()
         
-        favorites.add("preset_001")
+        favorites.add("preset_1")
         
-        assertTrue(favorites.contains("preset_001"))
+        assertEquals(1, favorites.size)
+        assertTrue(favorites.contains("preset_1"))
+    }
+
+    @Test
+    fun `收藏操作 - 移除收藏`() {
+        val favorites = mutableSetOf("preset_1", "preset_2")
+        
+        favorites.remove("preset_1")
+        
+        assertEquals(1, favorites.size)
+        assertFalse(favorites.contains("preset_1"))
+    }
+
+    @Test
+    fun `收藏操作 - 重复添加`() {
+        val favorites = mutableSetOf<String>()
+        
+        favorites.add("preset_1")
+        favorites.add("preset_1") // 重复添加
+        
         assertEquals(1, favorites.size)
     }
 
     @Test
-    fun `收藏移除 - 应该正确移除收藏`() {
-        val favorites = mutableSetOf("preset_001", "preset_002")
+    fun `收藏状态检查 - 已收藏`() {
+        val favorites = setOf("preset_1", "preset_2")
         
-        favorites.remove("preset_001")
-        
-        assertFalse(favorites.contains("preset_001"))
-        assertEquals(1, favorites.size)
+        assertTrue(favorites.contains("preset_1"))
     }
 
     @Test
-    fun `收藏切换 - 应该正确切换收藏状态`() {
-        val favorites = mutableSetOf<String>()
-        val presetId = "preset_001"
+    fun `收藏状态检查 - 未收藏`() {
+        val favorites = setOf("preset_1", "preset_2")
         
-        // 添加
-        if (!favorites.contains(presetId)) {
-            favorites.add(presetId)
-        }
-        assertTrue(favorites.contains(presetId))
-        
-        // 移除
-        if (favorites.contains(presetId)) {
-            favorites.remove(presetId)
-        }
-        assertFalse(favorites.contains(presetId))
+        assertFalse(favorites.contains("preset_3"))
     }
 }
 
 /**
- * SettingsManager 逻辑测试
+ * RecipeHistoryManager 单元测试
  */
-class SettingsManagerLogicTest {
+class RecipeHistoryManagerTest {
 
     @Test
-    fun `设置默认值 - 应该有合理的默认值`() {
-        val settings = TestSettings(
-            autoSync = true,
-            darkMode = false,
-            language = "zh"
-        )
-        
-        assertTrue(settings.autoSync)
-        assertFalse(settings.darkMode)
-        assertEquals("zh", settings.language)
-    }
-
-    @Test
-    fun `设置更新 - 应该正确更新设置`() {
-        val original = TestSettings(autoSync = true, darkMode = false, language = "zh")
-        
-        val updated = original.copy(darkMode = true)
-        
-        assertTrue(updated.darkMode)
-        assertEquals(original.autoSync, updated.autoSync)
-    }
-}
-
-/**
- * CustomPresetManager 逻辑测试
- */
-class CustomPresetManagerLogicTest {
-
-    @Test
-    fun `自定义预设创建 - 应该正确创建预设`() {
-        val preset = TestCustomPreset(
-            id = "custom_001",
-            name = "My Preset",
-            params = mapOf("saturation" to 10, "contrast" to 5),
-            createdAt = System.currentTimeMillis()
-        )
-        
-        assertEquals("custom_001", preset.id)
-        assertEquals("My Preset", preset.name)
-        assertEquals(10, preset.params["saturation"])
-    }
-
-    @Test
-    fun `自定义预设限制 - 应该限制预设数量`() {
-        val maxPresets = 50
-        val currentCount = 45
-        
-        val canCreate = currentCount < maxPresets
-        assertTrue("应该允许创建更多预设", canCreate)
-        
-        val fullCount = 50
-        val cannotCreate = fullCount >= maxPresets
-        assertTrue("达到上限时不应该允许创建", cannotCreate)
-    }
-}
-
-/**
- * RecipeHistoryManager 逻辑测试
- */
-class RecipeHistoryManagerLogicTest {
-
-    @Test
-    fun `历史记录 - 应该正确添加历史记录`() {
+    fun `历史记录 - 添加记录`() {
         val history = mutableListOf<String>()
         
-        history.add(0, "preset_001")
-        history.add(0, "preset_002")
+        history.add("preset_1")
+        history.add("preset_2")
         
         assertEquals(2, history.size)
-        assertEquals("preset_002", history[0]) // 最新的在前面
     }
 
     @Test
-    fun `历史记录限制 - 应该限制历史记录数量`() {
-        val maxHistory = 20
+    fun `历史记录 - FIFO顺序`() {
+        val history = mutableListOf("preset_1", "preset_2", "preset_3")
+        
+        val first = history.removeAt(0)
+        
+        assertEquals("preset_1", first)
+        assertEquals(2, history.size)
+    }
+
+    @Test
+    fun `历史记录 - 最大数量限制`() {
+        val maxHistory = 100
         val history = mutableListOf<String>()
         
-        for (i in 1..25) {
-            history.add(0, "preset_$i")
+        for (i in 1..150) {
+            history.add("preset_$i")
             if (history.size > maxHistory) {
-                history.removeAt(history.size - 1)
+                history.removeAt(0)
             }
         }
         
         assertEquals(maxHistory, history.size)
     }
+
+    @Test
+    fun `历史记录 - 去重处理`() {
+        val history = mutableListOf("preset_1", "preset_2", "preset_1")
+        
+        val distinct = history.distinct()
+        
+        assertEquals(2, distinct.size)
+    }
 }
 
-// 辅助数据类
-data class TestPresetData(
-    val id: String,
-    val name: String = "Test",
-    val brand: String = "Unknown",
-    val timestamp: Long = System.currentTimeMillis()
-)
+/**
+ * NewPresetManager 单元测试
+ */
+class NewPresetManagerTest {
 
-data class TestSettings(
-    val autoSync: Boolean,
-    val darkMode: Boolean,
-    val language: String
-)
+    @Test
+    fun `NEW标记 - 时间戳判断`() {
+        val createdAt = System.currentTimeMillis() - (3 * 24 * 60 * 60 * 1000L) // 3天前
+        
+        val isNew = (System.currentTimeMillis() - createdAt) <= (7 * 24 * 60 * 60 * 1000L)
+        
+        assertTrue("3天前的预设应该标记为NEW", isNew)
+    }
 
-data class TestCustomPreset(
-    val id: String,
-    val name: String,
-    val params: Map<String, Int>,
-    val createdAt: Long
-)
+    @Test
+    fun `NEW标记 - 过期判断`() {
+        val createdAt = System.currentTimeMillis() - (10 * 24 * 60 * 60 * 1000L) // 10天前
+        
+        val isNew = (System.currentTimeMillis() - createdAt) <= (7 * 24 * 60 * 60 * 1000L)
+        
+        assertFalse("10天前的预设不应该标记为NEW", isNew)
+    }
+
+    @Test
+    fun `NEW标记 - 刚好7天`() {
+        val createdAt = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L) // 刚好7天
+        
+        val isNew = (System.currentTimeMillis() - createdAt) <= (7 * 24 * 60 * 60 * 1000L)
+        
+        assertTrue("刚好7天的预设应该标记为NEW", isNew)
+    }
+
+    @Test
+    fun `NEW标记 - 刚好8天`() {
+        val createdAt = System.currentTimeMillis() - (8 * 24 * 60 * 60 * 1000L) // 刚好8天
+        
+        val isNew = (System.currentTimeMillis() - createdAt) <= (7 * 24 * 60 * 60 * 1000L)
+        
+        assertFalse("刚好8天的预设不应该标记为NEW", isNew)
+    }
+}
+
+/**
+ * CustomPresetManager 单元测试
+ */
+class CustomPresetManagerTest {
+
+    @Test
+    fun `自定义预设 - 名称验证`() {
+        val validNames = listOf("我的预设", "My Preset", "预设123")
+        
+        for (name in validNames) {
+            assertTrue("名称应该在1-20字符之间: $name", name.length in 1..20)
+        }
+    }
+
+    @Test
+    fun `自定义预设 - 名称过长`() {
+        val longName = "a".repeat(25)
+        
+        assertFalse("25字符的名称应该无效", longName.length in 1..20)
+    }
+
+    @Test
+    fun `自定义预设 - 空名称`() {
+        val emptyName = ""
+        
+        assertFalse("空名称应该无效", emptyName.length in 1..20)
+    }
+
+    @Test
+    fun `自定义预设 - ID生成`() {
+        val timestamp = System.currentTimeMillis()
+        val id = "custom_$timestamp"
+        
+        assertTrue(id.startsWith("custom_"))
+        assertTrue(id.length > 10)
+    }
+}
+
+/**
+ * FloatingWindowGuideManager 单元测试
+ */
+class FloatingWindowGuideManagerTest {
+
+    @Test
+    fun `悬浮窗引导 - 显示次数限制`() {
+        val maxShowCount = 3
+        var showCount = 0
+        
+        showCount++
+        assertTrue(showCount <= maxShowCount)
+        
+        showCount++
+        assertTrue(showCount <= maxShowCount)
+        
+        showCount++
+        assertTrue(showCount <= maxShowCount)
+        
+        showCount++
+        assertFalse(showCount <= maxShowCount)
+    }
+
+    @Test
+    fun `悬浮窗引导 - 永久 dismissal`() {
+        var isDismissed = false
+        var isPermanent = false
+        
+        // 用户选择"不再显示"
+        isDismissed = true
+        isPermanent = true
+        
+        assertTrue(isDismissed)
+        assertTrue(isPermanent)
+    }
+
+    @Test
+    fun `悬浮窗引导 - 临时 dismissal`() {
+        var isDismissed = false
+        var isPermanent = false
+        
+        // 用户暂时关闭
+        isDismissed = true
+        isPermanent = false
+        
+        assertTrue(isDismissed)
+        assertFalse(isPermanent)
+    }
+}

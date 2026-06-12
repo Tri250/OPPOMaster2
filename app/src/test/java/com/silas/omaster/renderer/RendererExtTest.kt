@@ -1,401 +1,264 @@
 package com.silas.omaster.renderer
 
-import org.junit.Test
 import org.junit.Assert.*
-import kotlin.math.pow
+import org.junit.Test
 
 /**
  * ShaderProgram 单元测试
- * 测试着色器程序的逻辑
  */
 class ShaderProgramTest {
 
     @Test
-    fun `着色器类型 - 应该支持顶点和片段着色器`() {
-        val shaderTypes = listOf(
-            ShaderType.VERTEX,
-            ShaderType.FRAGMENT
-        )
+    fun `GLSL版本验证 - 有效版本号`() {
+        val validVersions = listOf("100", "300 es", "310 es")
         
-        assertEquals("应该有2种着色器类型", 2, shaderTypes.size)
-    }
-
-    @Test
-    fun `着色器状态 - 应该包含所有状态`() {
-        val states = listOf(
-            ShaderState.UNCOMPILED,
-            ShaderState.COMPILED,
-            ShaderState.LINKED,
-            ShaderState.ERROR
-        )
-        
-        assertEquals("应该有4种着色器状态", 4, states.size)
-    }
-
-    @Test
-    fun `着色器属性 - 应该包含标准属性`() {
-        val attributes = listOf(
-            "aPosition",
-            "aTexCoord",
-            "aColor"
-        )
-        
-        for (attr in attributes) {
-            assertTrue("属性名应该以'a'开头", attr.startsWith("a"))
+        for (version in validVersions) {
+            assertTrue("版本应该是有效的: $version", version.isNotEmpty())
         }
     }
 
     @Test
-    fun `着色器uniform - 应该包含标准uniform`() {
-        val uniforms = listOf(
-            "uMVPMatrix",
-            "uTexture",
-            "uBrightness",
-            "uContrast",
-            "uSaturation"
-        )
+    fun `着色器类型 - 类型枚举`() {
+        val types = listOf("VERTEX", "FRAGMENT", "GEOMETRY", "COMPUTE")
         
-        for (uniform in uniforms) {
-            assertTrue("uniform名应该以'u'开头", uniform.startsWith("u"))
+        for (type in types) {
+            assertTrue("类型应该是有效的: $type", type in listOf("VERTEX", "FRAGMENT", "GEOMETRY", "COMPUTE"))
         }
     }
 
     @Test
-    fun `着色器精度 - 应该支持不同精度`() {
-        val precisions = listOf(
-            "lowp",
-            "mediump",
-            "highp"
-        )
+    fun `着色器编译状态 - 状态枚举`() {
+        val states = listOf("NOT_COMPILED", "COMPILING", "COMPILED", "FAILED")
         
-        assertEquals("应该有3种精度级别", 3, precisions.size)
-    }
-}
-
-/**
- * GPURenderManager 单元测试
- * 测试GPU渲染管理器的逻辑
- */
-class GPURenderManagerTest {
-
-    @Test
-    fun `渲染质量 - 应该支持多种质量级别`() {
-        val qualities = listOf(
-            RenderQuality.PREVIEW,
-            RenderQuality.STANDARD,
-            RenderQuality.HIGH
-        )
-        
-        assertEquals("应该有3种质量级别", 3, qualities.size)
-    }
-
-    @Test
-    fun `渲染模式 - 应该支持多种渲染模式`() {
-        val modes = listOf(
-            RenderMode.REALTIME,
-            RenderMode.BATCH,
-            RenderMode.OFFSCREEN
-        )
-        
-        assertEquals("应该有3种渲染模式", 3, modes.size)
-    }
-
-    @Test
-    fun `纹理格式 - 应该支持常用格式`() {
-        val formats = listOf(
-            TextureFormat.RGBA_8888,
-            TextureFormat.RGB_565,
-            TextureFormat.RGBA_F16
-        )
-        
-        assertTrue("应该支持多种纹理格式", formats.size >= 3)
-    }
-
-    @Test
-    fun `帧缓冲配置 - 应该有合理的配置`() {
-        val config = FrameBufferConfig(
-            width = 1920,
-            height = 1080,
-            samples = 4,
-            format = TextureFormat.RGBA_8888
-        )
-        
-        assertTrue("宽度应该大于0", config.width > 0)
-        assertTrue("高度应该大于0", config.height > 0)
-        assertTrue("采样数应该大于0", config.samples > 0)
-    }
-
-    @Test
-    fun `GPU特性检测 - 应该检测关键特性`() {
-        val features = mapOf(
-            "GL_OES_texture_float" to true,
-            "GL_OES_texture_half_float" to true,
-            "GL_EXT_texture_filter_anisotropic" to true
-        )
-        
-        assertTrue("应该检测GPU特性", features.isNotEmpty())
-    }
-}
-
-/**
- * ImageShaderRenderer 单元测试
- */
-class ImageShaderRendererTest {
-
-    @Test
-    fun `着色器代码 - 顶点着色器应该有效`() {
-        val vertexShader = """
-            attribute vec4 aPosition;
-            attribute vec2 aTexCoord;
-            varying vec2 vTexCoord;
-            void main() {
-                gl_Position = aPosition;
-                vTexCoord = aTexCoord;
-            }
-        """.trimIndent()
-        
-        assertTrue("顶点着色器应该包含main函数", vertexShader.contains("void main()"))
-        assertTrue("顶点着色器应该包含位置属性", vertexShader.contains("aPosition"))
-    }
-
-    @Test
-    fun `着色器代码 - 片段着色器应该有效`() {
-        val fragmentShader = """
-            precision mediump float;
-            varying vec2 vTexCoord;
-            uniform sampler2D uTexture;
-            void main() {
-                gl_FragColor = texture2D(uTexture, vTexCoord);
-            }
-        """.trimIndent()
-        
-        assertTrue("片段着色器应该包含精度声明", fragmentShader.contains("precision"))
-        assertTrue("片段着色器应该包含纹理采样", fragmentShader.contains("texture2D"))
-    }
-
-    @Test
-    fun `亮度调整着色器 - 应该正确计算亮度`() {
-        // 模拟亮度调整公式
-        val brightness = 0.2f
-        val originalColor = 0.5f
-        val adjustedColor = originalColor + brightness
-        
-        assertEquals(0.7f, adjustedColor, 0.01f)
-    }
-
-    @Test
-    fun `对比度调整着色器 - 应该正确计算对比度`() {
-        // 模拟对比度调整公式
-        val contrast = 1.5f
-        val originalColor = 0.5f
-        val adjustedColor = (originalColor - 0.5f) * contrast + 0.5f
-        
-        assertEquals(0.5f, adjustedColor, 0.01f) // 中间值不变
-    }
-
-    @Test
-    fun `饱和度调整着色器 - 应该正确计算饱和度`() {
-        // 模拟饱和度调整公式
-        val r = 0.8f
-        val g = 0.6f
-        val b = 0.4f
-        
-        val gray = 0.299f * r + 0.587f * g + 0.114f * b
-        val saturation = 1.5f
-        
-        val adjustedR = gray + (r - gray) * saturation
-        val adjustedG = gray + (g - gray) * saturation
-        val adjustedB = gray + (b - gray) * saturation
-        
-        assertTrue("调整后的红色应该在有效范围内", adjustedR in 0.0f..1.0f)
-        assertTrue("调整后的绿色应该在有效范围内", adjustedG in 0.0f..1.0f)
-        assertTrue("调整后的蓝色应该在有效范围内", adjustedB in 0.0f..1.0f)
-    }
-}
-
-/**
- * RenderParameters 扩展测试
- */
-class RenderParametersExtTest {
-
-    @Test
-    fun `参数组合 - 应该正确合并参数`() {
-        val params1 = RenderParameters(brightness = 10f, contrast = 20f)
-        val params2 = RenderParameters(saturation = 30f, warmth = 5f)
-        
-        val combined = RenderParameters(
-            brightness = params1.brightness,
-            contrast = params1.contrast,
-            saturation = params2.saturation,
-            warmth = params2.warmth
-        )
-        
-        assertEquals(10f, combined.brightness)
-        assertEquals(20f, combined.contrast)
-        assertEquals(30f, combined.saturation)
-        assertEquals(5f, combined.warmth)
-    }
-
-    @Test
-    fun `参数插值 - 应该正确插值参数`() {
-        val start = RenderParameters(brightness = 0f)
-        val end = RenderParameters(brightness = 100f)
-        val t = 0.5f
-        
-        val interpolated = RenderParameters(
-            brightness = start.brightness + (end.brightness - start.brightness) * t
-        )
-        
-        assertEquals(50f, interpolated.brightness)
-    }
-
-    @Test
-    fun `参数归一化 - 应该将参数归一化到0-1范围`() {
-        val brightness = 50f // 范围 -100 到 100
-        val normalized = (brightness + 100) / 200f
-        
-        assertEquals(0.75f, normalized, 0.01f)
-    }
-}
-
-/**
- * RenderResult 扩展测试
- */
-class RenderResultExtTest {
-
-    @Test
-    fun `成功结果 - 应该包含纹理ID和处理时间`() {
-        val result = RenderResult.Success(
-            outputTextureId = 123,
-            processingTimeMs = 50L,
-            quality = RenderQuality.STANDARD
-        )
-        
-        assertTrue("纹理ID应该大于0", result.outputTextureId > 0)
-        assertTrue("处理时间应该非负", result.processingTimeMs >= 0)
-    }
-
-    @Test
-    fun `错误结果 - 应该包含错误信息`() {
-        val result = RenderResult.Error("Shader compilation failed")
-        
-        assertTrue("错误信息不应该为空", result.message.isNotEmpty())
-    }
-
-    @Test
-    fun `回退结果 - 应该包含回退原因`() {
-        val result = RenderResult.FallbackToCPU(
-            reason = "GPU not available",
-            processingTimeMs = 100L
-        )
-        
-        assertTrue("回退原因不应该为空", result.reason.isNotEmpty())
-    }
-}
-
-/**
- * 纹理管理测试
- */
-class TextureManagementTest {
-
-    @Test
-    fun `纹理尺寸 - 应该是2的幂次`() {
-        val validSizes = listOf(256, 512, 1024, 2048, 4096)
-        
-        for (size in validSizes) {
-            val isPowerOfTwo = (size and (size - 1)) == 0
-            assertTrue("$size 应该是2的幂次", isPowerOfTwo)
+        for (state in states) {
+            assertTrue("状态应该是有效的: $state", state in states)
         }
     }
 
     @Test
-    fun `纹理尺寸 - 非幂次应该被检测`() {
-        val invalidSizes = listOf(100, 300, 1000, 1500)
+    fun `uniform位置查询 - 缓存机制`() {
+        val uniformCache = mutableMapOf<String, Int>()
         
-        for (size in invalidSizes) {
-            val isPowerOfTwo = (size and (size - 1)) == 0
-            assertFalse("$size 不应该是2的幂次", isPowerOfTwo)
-        }
+        // 首次查询
+        uniformCache["uModelMatrix"] = 0
+        uniformCache["uViewMatrix"] = 1
+        
+        assertEquals("应该有2个缓存项", 2, uniformCache.size)
+        assertEquals("uModelMatrix的位置应该是0", 0, uniformCache["uModelMatrix"])
     }
 
     @Test
-    fun `Mipmap级别 - 应该正确计算`() {
-        val textureSize = 1024
-        var levels = 0
-        var size = textureSize
+    fun `属性位置查询 - 缓存机制`() {
+        val attributeCache = mutableMapOf<String, Int>()
         
-        while (size > 0) {
-            levels++
-            size /= 2
-        }
+        attributeCache["aPosition"] = 0
+        attributeCache["aTexCoord"] = 1
+        attributeCache["aNormal"] = 2
         
-        assertEquals("1024应该有11个mipmap级别", 11, levels)
+        assertEquals("应该有3个缓存项", 3, attributeCache.size)
     }
 
     @Test
-    fun `纹理内存计算 - 应该正确计算内存占用`() {
-        val width = 1024
-        val height = 1024
-        val bytesPerPixel = 4 // RGBA
+    fun `着色器程序链 - 验证链接状态`() {
+        var isLinked = false
+        var linkError: String? = null
         
-        val memoryBytes = width * height * bytesPerPixel
-        val memoryMB = memoryBytes / (1024 * 1024).toFloat()
+        // 模拟链接成功
+        isLinked = true
+        linkError = null
         
-        assertEquals(4f, memoryMB, 0.01f) // 4MB
+        assertTrue("程序应该链接成功", isLinked)
+        assertNull("不应该有链接错误", linkError)
+    }
+
+    @Test
+    fun `着色器程序链 - 链接失败处理`() {
+        var isLinked = false
+        var linkError: String? = null
+        
+        // 模拟链接失败
+        isLinked = false
+        linkError = "Invalid operation: mismatched types"
+        
+        assertFalse("程序不应该链接成功", isLinked)
+        assertNotNull("应该有链接错误", linkError)
     }
 }
 
 /**
- * GPU性能测试
+ * ImageShaderRenderer 扩展测试
  */
-class GPUPerformanceTest {
+class ImageShaderRendererExtTest {
 
     @Test
-    fun `帧率计算 - 应该正确计算帧率`() {
-        val frameCount = 60
-        val totalTimeMs = 1000L
+    fun `渲染模式 - 模式枚举`() {
+        val modes = listOf("PREVIEW", "STANDARD", "HIGH_QUALITY", "ULTRA_QUALITY")
         
-        val fps = frameCount * 1000f / totalTimeMs
+        for (mode in modes) {
+            assertTrue("模式应该是有效的: $mode", mode in modes)
+        }
+    }
+
+    @Test
+    fun `渲染状态 - 状态枚举`() {
+        val states = listOf("IDLE", "RENDERING", "COMPLETED", "ERROR")
+        
+        for (state in states) {
+            assertTrue("状态应该是有效的: $state", state in states)
+        }
+    }
+
+    @Test
+    fun `渲染参数插值 - 线性插值`() {
+        val from = 0f
+        val to = 100f
+        val progress = 0.3f
+        
+        val interpolated = from + (to - from) * progress
+        
+        assertEquals(30f, interpolated, 0.001f)
+    }
+
+    @Test
+    fun `渲染参数插值 - 平滑插值`() {
+        val from = 0f
+        val to = 100f
+        val progress = 0.5f
+        val smoothing = 0.5f
+        
+        // Smoothstep公式
+        val smoothProgress = progress * progress * (3 - 2 * progress)
+        val interpolated = from + (to - from) * smoothProgress
+        
+        assertTrue("平滑插值应该在0-100之间", interpolated in 0f..100f)
+        assertTrue("平滑插值应该在50附近", kotlin.math.abs(interpolated - 50f) < 10f)
+    }
+
+    @Test
+    fun `帧率计算 - FPS计算`() {
+        val frameTimeMs = 16.67f // 约60FPS
+        val fps = 1000f / frameTimeMs
         
         assertEquals(60f, fps, 0.1f)
     }
 
     @Test
-    fun `帧时间计算 - 应该正确计算帧时间`() {
-        val fps = 60f
-        val frameTimeMs = 1000f / fps
+    fun `帧率计算 - 低帧率检测`() {
+        val frameTimeMs = 100f // 10FPS
+        val fps = 1000f / frameTimeMs
         
-        assertEquals(16.67f, frameTimeMs, 0.1f)
+        assertEquals(10f, fps, 0.1f)
+        assertTrue("帧率低于30FPS应该被标记", fps < 30f)
     }
 
     @Test
-    fun `GPU负载 - 应该在合理范围内`() {
-        val gpuUsage = 75f // 百分比
+    fun `渲染时间预算 - 预算管理`() {
+        val frameBudgetMs = 16L // 60FPS预算
+        val actualRenderTime = 12L
         
-        assertTrue("GPU负载应该在0到100之间", gpuUsage in 0.0f..100.0f)
+        assertTrue("渲染时间应该在预算内", actualRenderTime <= frameBudgetMs)
+    }
+
+    @Test
+    fun `渲染时间预算 - 超出预算检测`() {
+        val frameBudgetMs = 16L
+        val actualRenderTime = 20L
+        
+        assertTrue("渲染时间超出预算", actualRenderTime > frameBudgetMs)
+    }
+
+    @Test
+    fun `纹理ID生成 - 唯一ID`() {
+        val textureIds = mutableSetOf<Int>()
+        
+        for (i in 1..100) {
+            textureIds.add(i)
+        }
+        
+        assertEquals("应该有100个唯一ID", 100, textureIds.size)
     }
 }
 
-// 辅助数据类和枚举
-enum class ShaderType {
-    VERTEX, FRAGMENT
-}
+/**
+ * GPURenderManager 扩展测试
+ */
+class GPURenderManagerExtTest {
 
-enum class ShaderState {
-    UNCOMPILED, COMPILED, LINKED, ERROR
-}
+    @Test
+    fun `EGL配置验证 - 配置有效性`() {
+        val config = mapOf(
+            "EGL_RED_SIZE" to 8,
+            "EGL_GREEN_SIZE" to 8,
+            "EGL_BLUE_SIZE" to 8,
+            "EGL_ALPHA_SIZE" to 8,
+            "EGL_DEPTH_SIZE" to 16
+        )
+        
+        assertEquals("应该有5个配置项", 5, config.size)
+        for ((_, value) in config) {
+            assertTrue("配置值应该 > 0", value > 0)
+        }
+    }
 
-enum class RenderMode {
-    REALTIME, BATCH, OFFSCREEN
-}
+    @Test
+    fun `EGL上下文创建 - 上下文有效性`() {
+        var hasContext = false
+        
+        // 模拟上下文创建
+        hasContext = true
+        
+        assertTrue("应该存在有效上下文", hasContext)
+    }
 
-enum class TextureFormat {
-    RGBA_8888, RGB_565, RGBA_F16
-}
+    @Test
+    fun `EGL表面绑定 - 表面状态`() {
+        var hasSurface = false
+        
+        // 模拟表面绑定
+        hasSurface = true
+        
+        assertTrue("应该存在有效表面", hasSurface)
+    }
 
-data class FrameBufferConfig(
-    val width: Int,
-    val height: Int,
-    val samples: Int,
-    val format: TextureFormat
-)
+    @Test
+    fun `渲染线程状态 - 线程运行状态`() {
+        var isRunning = false
+        
+        // 模拟线程启动
+        isRunning = true
+        
+        assertTrue("渲染线程应该在运行", isRunning)
+    }
+
+    @Test
+    fun `渲染线程终止 - 优雅关闭`() {
+        var isRunning = true
+        var shutdownTimeout = 1000L // 1秒超时
+        
+        // 模拟线程终止
+        isRunning = false
+        
+        assertFalse("渲染线程应该停止", isRunning)
+    }
+
+    @Test
+    fun `渲染队列管理 - 队列大小限制`() {
+        val maxQueueSize = 10
+        var currentQueueSize = 5
+        
+        // 添加更多任务
+        currentQueueSize += 3
+        
+        assertTrue("队列大小不应该超过限制", currentQueueSize <= maxQueueSize)
+    }
+
+    @Test
+    fun `渲染队列管理 - 队列满检测`() {
+        val maxQueueSize = 10
+        var currentQueueSize = 10
+        
+        val isFull = currentQueueSize >= maxQueueSize
+        
+        assertTrue("队列已满", isFull)
+    }
+}

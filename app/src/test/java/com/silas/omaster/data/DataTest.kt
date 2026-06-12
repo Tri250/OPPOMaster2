@@ -1,447 +1,322 @@
 package com.silas.omaster.data
 
-import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Test
 
 /**
- * 预设仓库测试
- * 测试预设数据管理的核心逻辑
- */
-class PresetRepositoryTest {
-
-    @Test
-    fun testPresetIdGeneration() {
-        // 测试预设ID生成
-        val timestamp = System.currentTimeMillis()
-        val random = (0..9999).random()
-        
-        val presetId = "preset_${timestamp}_${random}"
-        
-        assertTrue(presetId.startsWith("preset_"))
-        assertTrue(presetId.contains("_"))
-    }
-
-    @Test
-    fun testPresetSortingByDate() {
-        // 测试按日期排序
-        val presets = listOf(
-            mockPreset("001", timestamp = 1704067200000L),
-            mockPreset("002", timestamp = 1704153600000L),
-            mockPreset("003", timestamp = 1704240000000L)
-        )
-        
-        val sortedPresets = presets.sortedByDescending { it.timestamp }
-        
-        assertEquals("003", sortedPresets[0].id)
-        assertEquals("002", sortedPresets[1].id)
-        assertEquals("001", sortedPresets[2].id)
-    }
-
-    @Test
-    fun testPresetSortingByRating() {
-        // 测试按评分排序
-        val presets = listOf(
-            mockPresetWithRating("001", rating = 4.5f),
-            mockPresetWithRating("002", rating = 5.0f),
-            mockPresetWithRating("003", rating = 3.8f)
-        )
-        
-        val sortedPresets = presets.sortedByDescending { it.rating }
-        
-        assertEquals("002", sortedPresets[0].id)
-        assertEquals("001", sortedPresets[1].id)
-        assertEquals("003", sortedPresets[2].id)
-    }
-
-    @Test
-    fun testPresetFilteringByBrand() {
-        // 测试按品牌过滤
-        val presets = listOf(
-            mockPresetWithBrand("001", "Hasselblad"),
-            mockPresetWithBrand("002", "Fuji"),
-            mockPresetWithBrand("003", "Hasselblad"),
-            mockPresetWithBrand("004", "Sony")
-        )
-        
-        val filteredPresets = presets.filter { it.brand == "Hasselblad" }
-        
-        assertEquals(2, filteredPresets.size)
-        assertEquals("001", filteredPresets[0].id)
-        assertEquals("003", filteredPresets[1].id)
-    }
-
-    @Test
-    fun testPresetFilteringByTag() {
-        // 测试按标签过滤
-        val presets = listOf(
-            mockPresetWithTags("001", listOf("portrait", "skin")),
-            mockPresetWithTags("002", listOf("landscape", "nature")),
-            mockPresetWithTags("003", listOf("portrait", "classic"))
-        )
-        
-        val filteredPresets = presets.filter { it.tags.contains("portrait") }
-        
-        assertEquals(2, filteredPresets.size)
-    }
-
-    @Test
-    fun testPresetSearchByName() {
-        // 测试按名称搜索
-        val presets = listOf(
-            mockPresetWithName("001", "Portrait Classic"),
-            mockPresetWithName("002", "Landscape Pro"),
-            mockPresetWithName("003", "Portrait Modern")
-        )
-        
-        val searchQuery = "portrait"
-        val filteredPresets = presets.filter { 
-            it.name.lowercase().contains(searchQuery.lowercase()) 
-        }
-        
-        assertEquals(2, filteredPresets.size)
-    }
-
-    @Test
-    fun testPresetPagination() {
-        // 测试预设分页
-        val presets = (1..100).map { i -> mockPreset("preset_$i") }
-        
-        val pageSize = 20
-        val currentPage = 2
-        
-        val startIndex = (currentPage - 1) * pageSize
-        val endIndex = startIndex + pageSize
-        
-        val pagePresets = presets.subList(startIndex, endIndex.coerceAtMost(presets.size))
-        
-        assertEquals(20, pagePresets.size)
-        assertEquals("preset_21", pagePresets[0].id)
-    }
-
-    @Test
-    fun testFavoriteToggle() {
-        // 测试收藏切换
-        val favorites = mutableSetOf<String>()
-        
-        val presetId = "preset_001"
-        
-        // 添加收藏
-        favorites.add(presetId)
-        assertTrue(favorites.contains(presetId))
-        
-        // 移除收藏
-        favorites.remove(presetId)
-        assertFalse(favorites.contains(presetId))
-    }
-
-    @Test
-    fun testFavoriteCount() {
-        // 测试收藏计数
-        val favorites = mutableSetOf<String>()
-        
-        favorites.add("001")
-        favorites.add("002")
-        favorites.add("003")
-        
-        assertEquals(3, favorites.size)
-    }
-
-    @Test
-    fun testPresetValidation() {
-        // 测试预设验证
-        val validPreset = mockPreset("001")
-        
-        val isValid = validPreset.id.isNotEmpty() && 
-                      validPreset.name.isNotEmpty()
-        
-        assertTrue(isValid)
-        
-        val invalidPreset = TestPreset(id = "", name = "", timestamp = 0L)
-        
-        val isInvalid = invalidPreset.id.isEmpty() || 
-                        invalidPreset.name.isEmpty()
-        
-        assertTrue(isInvalid)
-    }
-
-    @Test
-    fun testPresetCopy() {
-        // 测试预设复制
-        val original = mockPreset("001")
-        val copy = original.copy(id = "002")
-        
-        assertEquals("002", copy.id)
-        assertEquals(original.name, copy.name)
-        assertEquals(original.timestamp, copy.timestamp)
-    }
-
-    @Test
-    fun testPresetMerge() {
-        // 测试预设合并
-        val localPresets = listOf(mockPreset("001"), mockPreset("002"))
-        val remotePresets = listOf(mockPreset("003"), mockPreset("004"))
-        
-        val mergedPresets = localPresets + remotePresets
-        
-        assertEquals(4, mergedPresets.size)
-    }
-
-    @Test
-    fun testPresetDeduplication() {
-        // 测试预设去重
-        val presets = listOf(
-            mockPreset("001"),
-            mockPreset("001"), // 重复
-            mockPreset("002"),
-            mockPreset("002")  // 重复
-        )
-        
-        val uniquePresets = presets.distinctBy { it.id }
-        
-        assertEquals(2, uniquePresets.size)
-    }
-
-    private fun mockPreset(id: String, timestamp: Long = System.currentTimeMillis()): TestPreset {
-        return TestPreset(
-            id = id,
-            name = "Test Preset $id",
-            timestamp = timestamp
-        )
-    }
-
-    private fun mockPresetWithRating(id: String, rating: Float): TestPresetWithRating {
-        return TestPresetWithRating(id = id, name = "Test", rating = rating)
-    }
-
-    private fun mockPresetWithBrand(id: String, brand: String): TestPresetWithBrand {
-        return TestPresetWithBrand(id = id, name = "Test", brand = brand)
-    }
-
-    private fun mockPresetWithTags(id: String, tags: List<String>): TestPresetWithTags {
-        return TestPresetWithTags(id = id, name = "Test", tags = tags)
-    }
-
-    private fun mockPresetWithName(id: String, name: String): TestPreset {
-        return TestPreset(id = id, name = name, timestamp = System.currentTimeMillis())
-    }
-}
-
-/**
- * 自定义预设管理器测试
- */
-class CustomPresetManagerTest {
-
-    @Test
-    fun testCustomPresetCreation() {
-        // 测试自定义预设创建
-        val customPreset = CustomPresetData(
-            id = "custom_001",
-            name = "My Custom Preset",
-            params = mapOf(
-                "saturation" to 10f,
-                "contrast" to 20f
-            ),
-            createdAt = System.currentTimeMillis()
-        )
-        
-        assertEquals("custom_001", customPreset.id)
-        assertEquals("My Custom Preset", customPreset.name)
-        assertEquals(10f, customPreset.params["saturation"])
-    }
-
-    @Test
-    fun testCustomPresetUpdate() {
-        // 测试自定义预设更新
-        val original = CustomPresetData(
-            id = "custom_001",
-            name = "Original Name",
-            params = mapOf("saturation" to 10f),
-            createdAt = System.currentTimeMillis()
-        )
-        
-        val updated = original.copy(
-            name = "Updated Name",
-            params = mapOf("saturation" to 15f, "contrast" to 25f)
-        )
-        
-        assertEquals("Updated Name", updated.name)
-        assertEquals(15f, updated.params["saturation"])
-        assertEquals(25f, updated.params["contrast"])
-    }
-
-    @Test
-    fun testCustomPresetDeletion() {
-        // 测试自定义预设删除
-        val customPresets = mutableListOf(
-            CustomPresetData("001", "Preset 1", mapOf(), 0L),
-            CustomPresetData("002", "Preset 2", mapOf(), 0L),
-            CustomPresetData("003", "Preset 3", mapOf(), 0L)
-        )
-        
-        customPresets.removeAll { it.id == "002" }
-        
-        assertEquals(2, customPresets.size)
-        assertFalse(customPresets.any { it.id == "002" })
-    }
-
-    @Test
-    fun testCustomPresetLimit() {
-        // 测试自定义预设数量限制
-        val maxCustomPresets = 50
-        val currentCount = 45
-        
-        val canCreateMore = currentCount < maxCustomPresets
-        
-        assertTrue(canCreateMore)
-        
-        val fullCount = 50
-        val cannotCreateMore = fullCount >= maxCustomPresets
-        
-        assertTrue(cannotCreateMore)
-    }
-}
-
-/**
- * 收藏管理器测试
- */
-class FavoriteManagerTest {
-
-    @Test
-    fun testFavoriteAdd() {
-        val favorites = mutableSetOf<String>()
-        
-        favorites.add("preset_001")
-        
-        assertTrue(favorites.contains("preset_001"))
-        assertEquals(1, favorites.size)
-    }
-
-    @Test
-    fun testFavoriteRemove() {
-        val favorites = mutableSetOf("preset_001", "preset_002")
-        
-        favorites.remove("preset_001")
-        
-        assertFalse(favorites.contains("preset_001"))
-        assertEquals(1, favorites.size)
-    }
-
-    @Test
-    fun testFavoriteToggle() {
-        val favorites = mutableSetOf<String>()
-        val presetId = "preset_001"
-        
-        // 第一次切换：添加
-        if (favorites.contains(presetId)) {
-            favorites.remove(presetId)
-        } else {
-            favorites.add(presetId)
-        }
-        
-        assertTrue(favorites.contains(presetId))
-        
-        // 第二次切换：移除
-        if (favorites.contains(presetId)) {
-            favorites.remove(presetId)
-        } else {
-            favorites.add(presetId)
-        }
-        
-        assertFalse(favorites.contains(presetId))
-    }
-
-    @Test
-    fun testFavoriteSort() {
-        val presets = listOf(
-            TestPreset("001", "Preset 1", 0L),
-            TestPreset("002", "Preset 2", 0L),
-            TestPreset("003", "Preset 3", 0L)
-        )
-        
-        val favorites = setOf("002", "003")
-        
-        val sortedPresets = presets.sortedByDescending { favorites.contains(it.id) }
-        
-        assertEquals("002", sortedPresets[0].id)
-        assertEquals("003", sortedPresets[1].id)
-        assertEquals("001", sortedPresets[2].id)
-    }
-}
-
-/**
- * 设置管理器测试
+ * SettingsManager 单元测试
+ * 测试设置管理器的数据验证逻辑
  */
 class SettingsManagerTest {
 
     @Test
-    fun testDefaultSettings() {
-        val settings = AppSettings()
+    fun `API密钥验证 - 有效密钥格式`() {
+        val validKey = "abcd1234567890efghij"
         
-        assertTrue(settings.autoSync)
-        assertFalse(settings.darkMode)
-        assertEquals("zh", settings.language)
+        val isValid = validKey.isNotBlank() && validKey.length >= 16
+        
+        assertTrue("有效密钥应该通过验证", isValid)
     }
 
     @Test
-    fun testSettingsUpdate() {
-        val settings = AppSettings()
+    fun `API密钥验证 - 密钥太短`() {
+        val shortKey = "abcd1234"
         
-        val updatedSettings = settings.copy(
-            autoSync = false,
-            darkMode = true,
-            language = "en"
+        val isValid = shortKey.isNotBlank() && shortKey.length >= 16
+        
+        assertFalse("太短的密钥应该被拒绝", isValid)
+    }
+
+    @Test
+    fun `API密钥验证 - 空密钥`() {
+        val emptyKey = ""
+        
+        val isValid = emptyKey.isNotBlank() && emptyKey.length >= 16
+        
+        assertFalse("空密钥应该被拒绝", isValid)
+    }
+
+    @Test
+    fun `API密钥格式验证 - 允许的字符`() {
+        val validKeys = listOf(
+            "abcd1234-efgh-5678",
+            "ABCD_1234_EFGH_5678",
+            "1234567890123456"
         )
         
-        assertFalse(updatedSettings.autoSync)
-        assertTrue(updatedSettings.darkMode)
-        assertEquals("en", updatedSettings.language)
+        for (key in validKeys) {
+            val isValidFormat = key.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+            assertTrue("密钥格式应该有效: $key", isValidFormat)
+        }
     }
 
     @Test
-    fun testSettingsPersistence() {
-        // 模拟设置持久化
-        val settings = AppSettings(darkMode = true)
+    fun `API密钥格式验证 - 不允许的字符`() {
+        val invalidKeys = listOf(
+            "abcd1234@efgh!5678",
+            "abcd 1234 efgh 5678",
+            "abcd\t1234"
+        )
         
-        val serialized = settings.toString()
+        for (key in invalidKeys) {
+            val isValidFormat = key.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+            assertFalse("密钥格式应该无效: $key", isValidFormat)
+        }
+    }
+
+    @Test
+    fun `API密钥格式验证 - 空格和空白字符`() {
+        val keyWithSpace = "abcd 1234"
+        val keyWithTab = "abcd\t1234"
         
-        assertTrue(serialized.contains("darkMode=true"))
+        assertTrue("包含空格的密钥应该被检测", keyWithSpace.contains(" "))
+        assertTrue("包含制表符的密钥应该被检测", keyWithTab.contains("\t"))
+    }
+
+    @Test
+    fun `API端点URL构建 - 完整URL生成`() {
+        val baseUrl = "https://api.omaster.app/ai"
+        val apiVersion = "v1"
+        val endpoint = "analyze"
+        
+        val fullUrl = "${baseUrl.trimEnd('/')}/${apiVersion}/${endpoint.trimStart('/')}"
+        
+        assertEquals("https://api.omaster.app/ai/v1/analyze", fullUrl)
+    }
+
+    @Test
+    fun `API端点URL构建 - 不同类型的端点`() {
+        val aiEndpoint = "https://api.omaster.app/ai"
+        val presetEndpoint = "https://api.omaster.app/presets"
+        val authEndpoint = "https://api.omaster.app/auth"
+        
+        assertTrue(aiEndpoint.contains("/ai"))
+        assertTrue(presetEndpoint.contains("/presets"))
+        assertTrue(authEndpoint.contains("/auth"))
+    }
+
+    @Test
+    fun `透明度范围限制 - 30-70范围`() {
+        val values = listOf(-10, 0, 30, 56, 70, 100, 150)
+        
+        for (value in values) {
+            val coerced = value.coerceIn(30, 70)
+            assertTrue("值应该在30-70范围内: $value -> $coerced", coerced in 30..70)
+        }
+    }
+
+    @Test
+    fun `启动Tab范围限制 - 0-2范围`() {
+        val values = listOf(-1, 0, 1, 2, 3, 5)
+        
+        for (value in values) {
+            val coerced = value.coerceIn(0, 2)
+            assertTrue("值应该在0-2范围内: $value -> $coerced", coerced in 0..2)
+        }
+    }
+
+    @Test
+    fun `深色模式枚举解析 - 有效值`() {
+        val validModes = listOf("SYSTEM", "LIGHT", "DARK")
+        
+        for (mode in validModes) {
+            try {
+                val enumValue = com.silas.omaster.data.local.DarkMode.valueOf(mode)
+                assertNotNull(enumValue)
+            } catch (e: Exception) {
+                fail("有效的深色模式应该被解析: $mode")
+            }
+        }
+    }
+
+    @Test
+    fun `深色模式枚举解析 - 无效值`() {
+        val invalidMode = "INVALID_MODE"
+        
+        try {
+            com.silas.omaster.data.local.DarkMode.valueOf(invalidMode)
+            fail("无效的深色模式应该抛出异常")
+        } catch (e: IllegalArgumentException) {
+            // 预期异常
+            assertTrue(true)
+        }
+    }
+
+    @Test
+    fun `更新渠道枚举解析 - Gitee和GitHub`() {
+        val giteeMode = com.silas.omaster.data.local.UpdateChannel.valueOf("GITEE")
+        val githubMode = com.silas.omaster.data.local.UpdateChannel.valueOf("GITHUB")
+        
+        assertEquals("GITEE", giteeMode.name)
+        assertEquals("GITHUB", githubMode.name)
+    }
+
+    @Test
+    fun `云同步状态枚举 - 所有状态`() {
+        val statuses = listOf(
+            "DISABLED",
+            "SYNCING",
+            "SYNCED",
+            "ERROR"
+        )
+        
+        for (status in statuses) {
+            try {
+                val enumValue = com.silas.omaster.data.local.CloudSyncStatus.valueOf(status)
+                assertNotNull(enumValue)
+            } catch (e: Exception) {
+                fail("有效的同步状态应该被解析: $status")
+            }
+        }
+    }
+
+    @Test
+    fun `收藏预设ID列表 - Set转List`() {
+        val presetIds = setOf("preset_1", "preset_2", "preset_3")
+        
+        val list = presetIds.toList()
+        
+        assertEquals(3, list.size)
+        assertTrue(list.contains("preset_1"))
+    }
+
+    @Test
+    fun `置顶预设ID列表 - List转Set`() {
+        val pinnedIds = listOf("preset_1", "preset_2")
+        
+        val set = pinnedIds.toSet()
+        
+        assertEquals(2, set.size)
+        assertTrue(set.contains("preset_1"))
+    }
+
+    @Test
+    fun `自定义快捷预设 - Map结构验证`() {
+        val customPresets = mapOf(
+            "my_preset_1" to mapOf(
+                "saturation" to 10,
+                "contrast" to 5
+            ),
+            "my_preset_2" to mapOf(
+                "saturation" to -10,
+                "contrast" to -5
+            )
+        )
+        
+        assertEquals(2, customPresets.size)
+        assertEquals(10, customPresets["my_preset_1"]?.get("saturation"))
+    }
+
+    @Test
+    fun `API配置数据类 - 默认值`() {
+        val config = com.silas.omaster.data.local.ApiConfig()
+        
+        assertEquals("", config.aiApiEndpoint)
+        assertEquals("", config.presetApiEndpoint)
+        assertEquals("", config.authApiEndpoint)
+        assertEquals("v1", config.apiVersion)
+    }
+
+    @Test
+    fun `API配置数据类 - 自定义值`() {
+        val config = com.silas.omaster.data.local.ApiConfig(
+            aiApiEndpoint = "https://custom-ai.api.com",
+            presetApiEndpoint = "https://custom-preset.api.com",
+            authApiEndpoint = "https://custom-auth.api.com",
+            apiVersion = "v2"
+        )
+        
+        assertEquals("https://custom-ai.api.com", config.aiApiEndpoint)
+        assertEquals("https://custom-preset.api.com", config.presetApiEndpoint)
+        assertEquals("https://custom-auth.api.com", config.authApiEndpoint)
+        assertEquals("v2", config.apiVersion)
+    }
+
+    @Test
+    fun `云端预设URL映射 - 品牌URL验证`() {
+        val cloudUrls = mapOf(
+            "oppo" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json",
+            "realme" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json",
+            "vivo" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json",
+            "honor" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json"
+        )
+        
+        assertEquals(4, cloudUrls.size)
+        for ((_, url) in cloudUrls) {
+            assertTrue("URL应该是HTTPS", url.startsWith("https://"))
+        }
+    }
+
+    @Test
+    fun `版本比较逻辑 - versionCode计算`() {
+        fun parseVersionCode(version: String): Int {
+            val parts = version.split(".")
+            return try {
+                val major = parts.getOrElse(0) { "0" }.toInt()
+                val minor = parts.getOrElse(1) { "0" }.toInt()
+                val patch = parts.getOrElse(2) { "0" }.toInt()
+                major * 10000 + minor * 100 + patch
+            } catch (e: Exception) {
+                0
+            }
+        }
+        
+        assertEquals(10100, parseVersionCode("1.1.0"))
+        assertEquals(10001, parseVersionCode("1.0.1"))
+        assertEquals(20000, parseVersionCode("2.0.0"))
     }
 }
 
-// 辅助数据类
-data class TestPreset(
-    val id: String,
-    val name: String,
-    val timestamp: Long
-)
+/**
+ * DataExt 扩展测试
+ */
+class DataExtTest {
 
-data class TestPresetWithRating(
-    val id: String,
-    val name: String,
-    val rating: Float
-)
+    @Test
+    fun `列表过滤 - 品牌过滤逻辑`() {
+        val presets = listOf(
+            mapOf("brand" to "oppo", "name" to "Preset1"),
+            mapOf("brand" to "vivo", "name" to "Preset2"),
+            mapOf("brand" to "oppo", "name" to "Preset3")
+        )
+        
+        val filtered = presets.filter { it["brand"] == "oppo" }
+        
+        assertEquals(2, filtered.size)
+    }
 
-data class TestPresetWithBrand(
-    val id: String,
-    val name: String,
-    val brand: String
-)
+    @Test
+    fun `列表搜索 - 名称和描述搜索`() {
+        val presets = listOf(
+            mapOf("name" to "人像美颜", "description" to "适合拍摄人像"),
+            mapOf("name" to "风景优化", "description" to "适合拍摄风景"),
+            mapOf("name" to "美食滤镜", "description" to "适合拍摄美食")
+        )
+        
+        val searchQuery = "人像"
+        val filtered = presets.filter {
+            (it["name"] as String).contains(searchQuery, ignoreCase = true) ||
+            (it["description"] as String).contains(searchQuery, ignoreCase = true)
+        }
+        
+        assertEquals(1, filtered.size)
+        assertEquals("人像美颜", filtered[0]["name"])
+    }
 
-data class TestPresetWithTags(
-    val id: String,
-    val name: String,
-    val tags: List<String>
-)
-
-data class CustomPresetData(
-    val id: String,
-    val name: String,
-    val params: Map<String, Float>,
-    val createdAt: Long
-)
-
-data class AppSettings(
-    val autoSync: Boolean = true,
-    val darkMode: Boolean = false,
-    val language: String = "zh"
-)
+    @Test
+    fun `列表搜索 - 标签搜索`() {
+        val presets = listOf(
+            mapOf("name" to "Preset1", "tags" to listOf("portrait", "skin")),
+            mapOf("name" to "Preset2", "tags" to listOf("landscape", "nature")),
+            mapOf("name" to "Preset3", "tags" to listOf("food", "vibrant"))
+        )
+        
+        val searchQuery = "portrait"
+        @Suppress("UNCHECKED_CAST")
+        val filtered = presets.filter {
+            (it["tags"] as List<String>).any { tag -> tag.contains(searchQuery, ignoreCase = true) }
+        }
+        
+        assertEquals(1, filtered.size)
+    }
+}
