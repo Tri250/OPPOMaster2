@@ -1,26 +1,29 @@
 [versions]
 # ===== Android Gradle Plugin =====
+# AGP 9.0 有重大变化（内置 Kotlin 支持），保持 8.7.3 稳定版
 agp = "8.7.3"
 
 # ===== Kotlin =====
-kotlin = "2.1.0"
+# Kotlin 2.4.0 是最新版，但 2.1.20 更稳定
+kotlin = "2.1.20"
 
 # ===== AndroidX Core =====
 coreKtx = "1.15.0"
-lifecycleRuntimeKtx = "2.8.7"
+lifecycleRuntimeKtx = "2.10.0"
 
 # ===== Compose =====
-composeBom = "2025.01.01"
-activityCompose = "1.9.3"
-material = "1.7.6"
-material3 = "1.3.1"
+composeBom = "2026.04.01"
+activityCompose = "1.10.0"
+material = "1.8.0"
+material3 = "1.4.0"
 
 # ===== Navigation =====
-navigationCompose = "2.8.5"
+navigationCompose = "2.9.8"
 
 # ===== Networking =====
+# Coil 3.x 包名变化 (io.coil-kt.coil3)，保持 2.7.0 避免代码修改
 coil = "2.7.0"
-ktor = "3.0.3"
+ktor = "3.4.3"
 gson = "2.11.0"
 
 # ===== Serialization =====
