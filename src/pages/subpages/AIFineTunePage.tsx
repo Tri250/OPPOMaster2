@@ -1,9 +1,10 @@
-import React, { useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useReducer, useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, RefreshCw, Check, Wand2, Sparkles, Sun, Moon, Palette, 
   Camera, Aperture, Zap, Eye, Contrast, Droplets, Layers, Sliders,
-  Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search
+  Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search,
+  Upload, Download, Share2, Image, FileImage, X
 } from 'lucide-react';
 
 // 导入状态管理和 AI 推理服务
@@ -282,6 +283,129 @@ const AIFineTunePage: React.FC = () => {
     dispatch({ type: FineTuneActionType.SET_PARAMS, params: newParams });
   }, [state.selectedOptimizations, state.params]);
   
+  // ========== 拖拽上传和导出功能 ==========
+  
+  // 拖拽上传状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 处理拖拽进入
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+  
+  // 处理拖拽离开
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+  
+  // 处理拖拽悬停
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+  
+  // 处理拖拽放置
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            dispatch({ 
+              type: FineTuneActionType.SET_IMAGE_SOURCE, 
+              source: event.target.result as string 
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, []);
+  
+  // 处理文件选择
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            dispatch({ 
+              type: FineTuneActionType.SET_IMAGE_SOURCE, 
+              source: event.target.result as string 
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, []);
+  
+  // 导出图片
+  const handleExport = useCallback((format: 'png' | 'jpg' | 'webp') => {
+    const canvas = document.createElement('canvas');
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.src = state.imageSource || DEFAULT_IMAGE_SOURCE;
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // 应用滤镜效果
+        ctx.filter = `
+          saturate(${100 + state.params.saturation}%) 
+          contrast(${100 + state.params.contrast}%) 
+          brightness(${100 + state.params.brightness}%)
+          sepia(${state.params.warmth > 0 ? state.params.warmth * 0.5 : 0}%)
+          hue-rotate(${state.params.warmth < 0 ? state.params.warmth * 0.5 : 0}deg)
+        `;
+        ctx.drawImage(img, 0, 0);
+        
+        // 导出
+        const mimeType = format === 'png' ? 'image/png' : format === 'jpg' ? 'image/jpeg' : 'image/webp';
+        const quality = format === 'jpg' ? 0.9 : 1;
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+        
+        // 下载
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `omaster_finetune_${Date.now()}.${format}`;
+        link.click();
+      }
+    };
+    
+    setShowExportMenu(false);
+  }, [state.imageSource, state.params]);
+  
+  // 分享
+  const handleShare = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'OMaster AI 微调效果',
+          text: '看看我用 OMaster AI 微调的效果！',
+        });
+      } catch (err) {
+        console.log('分享失败:', err);
+      }
+    }
+  }, []);
+  
   // ========== 参数配置 ==========
   
   // 基础参数配置
@@ -331,6 +455,67 @@ const AIFineTunePage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* 上传按钮 */}
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="上传图片"
+            >
+              <Upload size={18} className="text-white/50" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            {/* 导出按钮 */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="p-2 rounded-full hover:bg-white/10"
+                title="导出图片"
+              >
+                <Download size={18} className="text-white/50" />
+              </button>
+              {/* 导出菜单 */}
+              {showExportMenu && (
+                <div className="absolute right-0 top-full mt-2 bg-[#1a1a1a] rounded-xl border border-white/10 shadow-lg z-50">
+                  <div className="p-2 space-y-1">
+                    <button
+                      onClick={() => handleExport('png')}
+                      className="w-full px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 text-sm flex items-center gap-2"
+                    >
+                      <FileImage size={14} />
+                      PNG (无损)
+                    </button>
+                    <button
+                      onClick={() => handleExport('jpg')}
+                      className="w-full px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 text-sm flex items-center gap-2"
+                    >
+                      <FileImage size={14} />
+                      JPG (高质量)
+                    </button>
+                    <button
+                      onClick={() => handleExport('webp')}
+                      className="w-full px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 text-sm flex items-center gap-2"
+                    >
+                      <FileImage size={14} />
+                      WebP (现代格式)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* 分享按钮 */}
+            <button 
+              onClick={handleShare}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="分享"
+            >
+              <Share2 size={18} className="text-white/50" />
+            </button>
             {/* 撤销按钮 */}
             {canUndo(state) && (
               <button onClick={handleUndo} className="p-2 rounded-full hover:bg-white/10" title="撤销">
@@ -355,7 +540,22 @@ const AIFineTunePage: React.FC = () => {
 
       {/* Preview Area */}
       <div className="px-4 py-4">
-        <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
+        <div 
+          className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* 拖拽上传提示 */}
+          {isDragging && (
+            <div className="absolute inset-0 bg-[#9C27B0]/20 border-2 border-[#9C27B0] rounded-2xl flex flex-col items-center justify-center z-50">
+              <Upload size={48} className="text-[#9C27B0] mb-4" />
+              <span className="text-white text-lg font-medium">拖拽图片到这里</span>
+              <span className="text-white/50 text-sm mt-2">支持 JPG、PNG、WebP 格式</span>
+            </div>
+          )}
+          
           {/* 预览图像 */}
           <img 
             src={state.imageSource || DEFAULT_IMAGE_SOURCE}

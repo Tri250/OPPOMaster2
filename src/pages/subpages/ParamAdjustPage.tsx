@@ -1,9 +1,78 @@
-import React from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Aperture, Timer, Thermometer } from 'lucide-react';
+import { ArrowLeft, Aperture, Timer, Thermometer, Download, Upload, Share2, FileImage, Save } from 'lucide-react';
 
 const ParamAdjustPage: React.FC = () => {
   const { cameraParams, setCameraParam, goBack } = useAppStore();
+  
+  // 导出状态
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 导出参数配置
+  const handleExport = useCallback((format: 'json' | 'txt' | 'preset' = 'json') => {
+    const paramsData = {
+      iso: cameraParams.iso,
+      shutter: cameraParams.shutter,
+      aperture: cameraParams.aperture,
+      wb: cameraParams.wb,
+      timestamp: new Date().toISOString(),
+      version: '3.2.0'
+    };
+    
+    let content = '';
+    let filename = '';
+    
+    if (format === 'json') {
+      content = JSON.stringify(paramsData, null, 2);
+      filename = `omaster_params_${Date.now()}.json`;
+    } else if (format === 'txt') {
+      content = `OMaster 参数配置\n==================\nISO: ${paramsData.iso}\n快门: ${paramsData.shutter >= 1000 ? `${paramsData.shutter/1000}s` : `1/${paramsData.shutter}s`}\n光圈: f/${paramsData.aperture.toFixed(1)}\n白平衡: ${paramsData.wb}K\n时间: ${paramsData.timestamp}\n版本: ${paramsData.version}`;
+      filename = `omaster_params_${Date.now()}.txt`;
+    } else if (format === 'preset') {
+      content = JSON.stringify({
+        name: '自定义参数预设',
+        params: paramsData,
+        created: paramsData.timestamp
+      }, null, 2);
+      filename = `omaster_preset_${Date.now()}.preset`;
+    }
+    
+    // 创建 Blob 并下载
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    setShowExportMenu(false);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 1500);
+  }, [cameraParams]);
+  
+  // 分享
+  const handleShare = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'OMaster 参数配置',
+          text: `ISO: ${cameraParams.iso}, 快门: ${cameraParams.shutter}, 光圈: f/${cameraParams.aperture.toFixed(1)}, 白平衡: ${cameraParams.wb}K`,
+        });
+      } catch (err) {
+        console.log('分享失败:', err);
+      }
+    }
+  }, [cameraParams]);
+  
+  // 保存到本地
+  const handleSaveToLocal = useCallback(() => {
+    localStorage.setItem('omaster_camera_params', JSON.stringify(cameraParams));
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 1500);
+  }, [cameraParams]);
 
   const params = [
     { 
@@ -69,7 +138,74 @@ const ParamAdjustPage: React.FC = () => {
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">参数精细调节</h1>
+        
+        {/* 导出按钮 */}
+        <div className="flex items-center gap-2 ml-auto">
+          {/* 保存按钮 */}
+          <button 
+            onClick={handleSaveToLocal}
+            className="p-2 rounded-full hover:bg-white/10"
+            title="保存到本地"
+          >
+            <Save size={18} className="text-white/50" />
+          </button>
+          
+          {/* 导出按钮 */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="导出参数"
+            >
+              <Download size={18} className="text-white/50" />
+            </button>
+            {/* 导出菜单 */}
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 bg-[#1a1a1a] rounded-xl border border-white/10 shadow-lg z-50">
+                <div className="p-2 space-y-1">
+                  <button
+                    onClick={() => handleExport('json')}
+                    className="w-full px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 text-sm flex items-center gap-2"
+                  >
+                    <FileImage size={14} />
+                    JSON 格式
+                  </button>
+                  <button
+                    onClick={() => handleExport('txt')}
+                    className="w-full px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 text-sm flex items-center gap-2"
+                  >
+                    <FileImage size={14} />
+                    TXT 文档
+                  </button>
+                  <button
+                    onClick={() => handleExport('preset')}
+                    className="w-full px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 text-sm flex items-center gap-2"
+                  >
+                    <FileImage size={14} />
+                    预设文件
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* 分享按钮 */}
+          <button 
+            onClick={handleShare}
+            className="p-2 rounded-full hover:bg-white/10"
+            title="分享"
+          >
+            <Share2 size={18} className="text-white/50" />
+          </button>
+        </div>
       </div>
+      
+      {/* 成功提示 */}
+      {showSuccess && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-[#FF6B35] text-white text-sm font-medium shadow-lg z-50">
+          已保存
+        </div>
+      )}
 
       {/* Quick Presets */}
       <div className="px-4 py-4">

@@ -144,8 +144,8 @@ const AboutScreen: React.FC = () => {
 
         {/* Developer Info */}
         <div className="mt-6 text-center">
-          <p className="text-white/30 text-xs">Developed by Silas</p>
-          <p className="text-white/20 text-xs mt-1">© 2024 OMaster. All rights reserved.</p>
+          <p className="text-white/30 text-xs">开发者：带娃的小陈工</p>
+          <p className="text-white/20 text-xs mt-1">© 2026 OMaster. All rights reserved.</p>
         </div>
 
         {/* Bottom Spacing */}
