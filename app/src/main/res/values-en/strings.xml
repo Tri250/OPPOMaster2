@@ -20,6 +20,8 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_subscription">Subscribe</string>
+    <string name="nav_featured">Featured</string>
+    <string name="nav_core_features">Core Features</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_about">About</string>
 
@@ -43,11 +45,18 @@
     <string name="settings_section_general">General</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_floating_window">Floating Window</string>
+    <string name="settings_section_privacy">Privacy</string>
     <string name="vibration_feedback">Vibration Feedback</string>
     <string name="default_start_tab">Default Start Tab</string>
     <string name="settings_theme_title">Theme Color</string>
     <string name="settings_theme_dialog_title">Select Theme Color</string>
     <string name="floating_window_opacity">Floating Window Opacity</string>
+    <string name="analytics_enabled">Use Umeng Analytics</string>
+    <string name="analytics_restart_hint">Restart app to apply</string>
+    <string name="clear_cache">Clear Image Cache</string>
+    <string name="clear_cache_desc">Free up storage space, images will be re-downloaded on next browse</string>
+    <string name="cache_size_format">Cache size: %.2f MB</string>
+    <string name="cache_cleared">Cache cleared</string>
 
     <!-- Brand Names -->
     <string name="brand_hasselblad">Hasselblad</string>

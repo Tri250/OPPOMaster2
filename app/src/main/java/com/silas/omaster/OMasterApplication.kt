@@ -48,7 +48,8 @@ class OMasterApplication : Application() {
      */
     private fun preInitUMeng() {
         UMConfigure.setLogEnabled(false)
-        UMConfigure.preInit(this, "698938eb9a7f3764885bbdaa", "default")
+        // 使用 BuildConfig 中的 AppKey（从 gradle.properties 注入，避免硬编码）
+        UMConfigure.preInit(this, BuildConfig.UMENG_APPKEY, "default")
     }
 
     /**
@@ -57,7 +58,8 @@ class OMasterApplication : Application() {
      * 此时才会采集设备信息并上报数据
      */
     fun initUMeng() {
-        UMConfigure.init(this, "698938eb9a7f3764885bbdaa", "default", UMConfigure.DEVICE_TYPE_PHONE, null)
+        // 使用 BuildConfig 中的 AppKey（从 gradle.properties 注入，避免硬编码）
+        UMConfigure.init(this, BuildConfig.UMENG_APPKEY, "default", UMConfigure.DEVICE_TYPE_PHONE, null)
     }
 
     fun hasUserAgreed(): Boolean {

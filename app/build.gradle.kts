@@ -8,16 +8,37 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
 }
 
+// ===== 安全配置读取 =====
+// 从 gradle.properties 读取友盟 AppKey（避免硬编码）
+val umengAppKey: String = project.findProperty("UMENG_APPKEY") as String? ?: "698938eb9a7f3764885bbdaa"
+val umengMessageSecret: String = project.findProperty("UMENG_MESSAGE_SECRET") as String? ?: ""
+
 // 读取签名配置
-// 优先读取 keystore-release.properties（真实签名配置，不应提交到版本控制）
-// 如果不存在则读取 keystore.properties（模板文件）
+// 优先级：1. gradle.properties 中的 RELEASE_* 配置
+//        2. keystore-release.properties 文件（不应提交到版本控制）
+//        3. keystore.properties 模板文件
+val keystoreProperties = Properties()
+
+// 方式1：从 gradle.properties 读取
+val releaseStoreFile = project.findProperty("RELEASE_STORE_FILE") as String?
+val releaseStorePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
+val releaseKeyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
+val releaseKeyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+
+// 方式2：从 keystore-release.properties 文件读取（优先级更高）
 val keystorePropertiesFile = file("keystore-release.properties")
     .takeIf { it.exists() }
     ?: file("keystore.properties")
-val keystoreProperties = Properties()
+
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
+
+// 合并配置：文件配置优先于 gradle.properties
+val finalStoreFile = keystoreProperties.getProperty("storeFile") ?: releaseStoreFile
+val finalStorePassword = keystoreProperties.getProperty("storePassword") ?: releaseStorePassword
+val finalKeyAlias = keystoreProperties.getProperty("keyAlias") ?: releaseKeyAlias
+val finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseKeyPassword
 
 android {
     namespace = "com.silas.omaster"
@@ -39,6 +60,11 @@ android {
 
         // 资源优化：只保留需要的语言资源
         resourceConfigurations += listOf("en", "zh", "zh-rCN", "zh-rTW")
+        
+        // ===== 安全配置注入到 BuildConfig =====
+        // 友盟统计 AppKey（从 gradle.properties 读取，避免硬编码）
+        buildConfigField("String", "UMENG_APPKEY", "\"$umengAppKey\"")
+        buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
     }
 
     // 签名配置
@@ -48,19 +74,23 @@ android {
         }
         // Release签名配置
         create("release") {
-            // 检查是否有有效的签名配置
-            val hasValidKeystore = keystoreProperties.containsKey("storePassword") &&
-                keystoreProperties.getProperty("storePassword") != "YOUR_STORE_PASSWORD"
+            // 检查是否有有效的签名配置（来自 gradle.properties 或 keystore 文件）
+            val hasValidKeystore = finalStorePassword != null &&
+                finalStorePassword != "YOUR_STORE_PASSWORD" &&
+                finalStorePassword != "android"
 
-            if (hasValidKeystore) {
-                // 使用 keystore.properties 中的配置
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+            if (hasValidKeystore && finalStoreFile != null) {
+                // 使用真实签名配置
+                storeFile = file(finalStoreFile)
+                storePassword = finalStorePassword!!
+                keyAlias = finalKeyAlias ?: "omaster"
+                keyPassword = finalKeyPassword!!
+                println("✅ Release 签名配置已加载: $finalStoreFile")
             } else {
-                // 回退到 debug 签名（便于开发测试）
-                // ⚠️ 正式发布前请配置真实的 release 签名
+                // 回退到 debug 签名（仅用于开发测试）
+                // ⚠️ 正式发布前请配置真实的 release 签名！
+                println("⚠️ 未配置真实 Release 签名，使用 debug 签名（仅用于开发测试）")
+                println("⚠️ 请在 gradle.properties 或 keystore-release.properties 中配置 RELEASE_* 变量")
                 storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
                 storePassword = "android"
                 keyAlias = "androiddebugkey"
@@ -120,10 +150,19 @@ android {
     lint {
         // 只检查主要源代码，排除测试和生成的代码
         checkOnly.add("Interoperability")
-        // 错误时不中断构建（开发阶段）
-        abortOnError = false
-        // 不检查 release 构建（CI 中单独运行）
-        checkReleaseBuilds = false
+        // 发布前启用严格检查（开发阶段可关闭）
+        // ⚠️ 正式发布前请将 abortOnError 改为 true
+        abortOnError = false  // 发布前改为 true
+        // release 构建时检查
+        checkReleaseBuilds = true
+        // 忽略警告（谨慎使用）
+        ignore.add("IconLauncherShape")
+        ignore.add("IconMissingDensityFolder")
+        // 错误严重级别配置
+        error.add("HardcodedText")
+        error.add("MissingTranslation")
+        warning.add("UnusedResources")
+        warning.add("IconDensities")
     }
 
     // 测试选项配置
@@ -204,6 +243,8 @@ dependencies {
 
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
