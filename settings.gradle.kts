@@ -1,41 +1,55 @@
 pluginManagement {
     repositories {
+        // 官方仓库优先（更可靠）
         google()
         mavenCentral()
         gradlePluginPortal()
         
-        // 国内镜像
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
-        maven { url = uri("https://mirrors.tuna.tsinghua.edu.cn/maven/") }
+        // 国内镜像备用
+        maven { 
+            url = uri("https://maven.aliyun.com/repository/google")
+            name = "Aliyun Google"
+        }
+        maven { 
+            url = uri("https://maven.aliyun.com/repository/public")
+            name = "Aliyun Public"
+        }
+        maven { 
+            url = uri("https://maven.aliyun.com/repository/gradle-plugin")
+            name = "Aliyun Gradle Plugin"
+        }
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // 官方仓库优先
         google()
         mavenCentral()
         
-        // 国内镜像
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
-        maven { url = uri("https://mirrors.tuna.tsinghua.edu.cn/maven/") }
+        // 国内镜像备用
+        maven { 
+            url = uri("https://maven.aliyun.com/repository/google")
+            name = "Aliyun Google"
+        }
+        maven { 
+            url = uri("https://maven.aliyun.com/repository/public")
+            name = "Aliyun Public"
+        }
         
         // 友盟仓库
         maven {
             url = uri("https://repo.umeng.com/maven-releases/")
             isAllowInsecureProtocol = true
+            name = "Umeng"
         }
         
         // JitPack
-        maven { url = uri("https://jitpack.io") }
+        maven { 
+            url = uri("https://jitpack.io")
+            name = "JitPack"
+        }
     }
 }
 
