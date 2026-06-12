@@ -720,8 +720,11 @@ class AIFineTuneManager private constructor(context: Context) {
                         )
                     }
                 
+                // 使用SettingsManager配置的API端点
+                val apiEndpoint = settingsManager.getFullApiUrl("scene/analyze", "ai")
+                
                 val request = okhttp3.Request.Builder()
-                    .url(CLOUD_API_ENDPOINT)
+                    .url(apiEndpoint)
                     .post(requestBody)
                     .addHeader("Content-Type", "application/json")
                     .addHeader("X-Api-Key", getApiKey())
@@ -1219,8 +1222,7 @@ class AIFineTuneManager private constructor(context: Context) {
     companion object {
         private const val TAG = "AIFineTuneManager"
         
-        // 云端API配置
-        private const val CLOUD_API_ENDPOINT = "https://api.omaster.ai/v1/scene/analyze"
+        // 云端API超时配置
         private const val CLOUD_API_TIMEOUT_MS = 5000L // 5秒超时
         private const val MAX_IMAGE_SIZE_BYTES = 500000 // 最大500KB图像数据
 
