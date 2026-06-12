@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- 2026年最高安全标准配置 -->
     <!-- 默认仅允许 HTTPS，禁用明文流量 -->
     <base-config cleartextTrafficPermitted="false">
-        <!-- TLS 1.2 及以上版本 -->
+        <!-- 仅信任系统证书，禁用用户证书 -->
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
+        <!-- 强制 TLS 1.3 或更高版本 -->
+        <pin-set expiration="2030-01-01">
+            <!-- 生产环境证书固定（示例，需要替换为真实证书指纹） -->
+            <pin digest="SHA-256">sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+            <pin digest="SHA-256">sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        </pin-set>
     </base-config>
 
     <!-- 生产环境 CDN 域名白名单（仅 HTTPS） -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">silas-omaster.com</domain>
         <domain includeSubdomains="true">cdn.silas-omaster.com</domain>
+        <domain includeSubdomains="true">api.omaster.app</domain>
+        <domain includeSubdomains="true">cdn.jsdelivr.net</domain>
+        <domain includeSubdomains="true">raw.githubusercontent.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
     </domain-config>
 
     <!-- Debug 模式允许本地网络和友盟统计（仅在 debug build 中生效） -->

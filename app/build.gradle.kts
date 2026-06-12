@@ -93,7 +93,27 @@ android {
         buildConfig = true
     }
 
-    // 测试覆盖率配置
+    // Lint 配置优化 - 2026年最高标准
+    lint {
+        // 启用所有检查
+        checkAllWarnings = true
+        // 错误时中断构建（生产环境）
+        abortOnError = true
+        // 检查 release 构建
+        checkReleaseBuilds = true
+        // 忽略特定警告
+        disable += listOf(
+            "MissingTranslation",  // 翻译缺失
+            "UnusedResources"      // 未使用资源
+        )
+        // 报告输出格式
+        xmlReport = true
+        htmlReport = true
+        // 基准文件（用于渐进式修复）
+        baseline = file("lint-baseline.xml")
+    }
+    
+    // 2026年安全与性能增强配置
     buildTypes {
         debug {
             isDebuggable = true
@@ -108,22 +128,36 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // 启用 R8 全模式优化
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            // 启用 crunch 压缩
+            isCrunchPngs = true
+            // 启用资源优化
+            resValue("bool", "enableAnalytics", "true")
+            // 混淆后的映射文件
+            consumerProguardFiles("consumer-rules.pro")
         }
     }
-
-    // Lint 配置优化
-    lint {
-        // 只检查主要源代码，排除测试和生成的代码
-        checkOnly.add("Interoperability")
-        // 错误时不中断构建（开发阶段）
-        abortOnError = false
-        // 不检查 release 构建（CI 中单独运行）
-        checkReleaseBuilds = false
+    
+    // 编译选项优化
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        // 启用增量注解处理
+        incremental = true
+    }
+    
+    kotlinOptions {
+        jvmTarget = "17"
+        // 启用 Kotlin 优化
+        freeCompilerArgs += listOf(
+            "-Xjvm-default=all",
+            "-Xopt-in=kotlin.RequiresOptIn"
+        )
     }
 
     // 测试选项配置

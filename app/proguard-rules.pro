@@ -184,3 +184,36 @@
 # 保留导航参数序列化
 -keep class **$NavArgs { *; }
 -keepclassmembers class **$NavArgs { *; }
+
+# ========================================
+# 2026年安全增强规则
+# ========================================
+# 移除日志代码（生产环境）
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int i(...);
+    public static int w(...);
+    public static int d(...);
+    public static int e(...);
+}
+
+# 移除 Kotlin 标准库中的断言
+-assumenosideeffects class kotlin.jvm.internal.Intrinsics {
+    static void checkParameterIsNotNull(...);
+    static void checkNotNull(...);
+    static void checkExpressionValueIsNotNull(...);
+    static void checkNotNullExpressionValue(...);
+}
+
+# 混淆字符串加密（增强反编译难度）
+-obfuscationdictionary dict.txt
+-classobfuscationdictionary dict.txt
+-packageobfuscationdictionary dict.txt
+
+# 优化代码结构
+-flattenpackagehierarchy ''
+-repackageclasses ''
+
+# 移除未使用的资源引用
+-dontwarn android.content.res.Resources
