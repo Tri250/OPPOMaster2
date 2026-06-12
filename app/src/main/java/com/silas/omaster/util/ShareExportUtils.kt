@@ -609,9 +609,9 @@ object ShareExportUtils {
         canvas.drawRoundRect(rect, style.cornerRadius, style.cornerRadius, bgPaint)
 
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            color = applyAlpha(style.getColor(), style.opacity)
-            strokeWidth = 1.5f
+            this.style = Paint.Style.STROKE
+            this.color = applyAlpha(style.getColor(), style.opacity)
+            this.strokeWidth = 1.5f
         }
         canvas.drawRoundRect(rect, style.cornerRadius, style.cornerRadius, borderPaint)
     }

@@ -20,7 +20,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
-import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.*
@@ -31,6 +31,7 @@ import androidx.core.content.FileProvider
 import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import java.io.File
 
 /**
@@ -148,7 +149,7 @@ fun SceneRecognitionResultScreen(
                     selectedId = selectedFilmId,
                     onSelect = { id ->
                         selectedFilmId = id
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                     }
                 )
             }
@@ -188,7 +189,7 @@ fun SceneRecognitionResultScreen(
                 onApply = {
                     selectedFilmId = showFilmDetail?.id
                     showFilmDetail = null
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.LongPress)
                 }
             )
         }
@@ -303,12 +304,13 @@ private fun BeforeAfterCompareSlider(
             Spacer(modifier = Modifier.height(12.dp))
             
             // 对比滑块
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(280.dp)
                     .clip(RoundedCornerShape(12.dp))
             ) {
+                val boxWidth = maxWidth
                 // After 图片（底层）
                 Image(
                     bitmap = android.graphics.Bitmap.createBitmap(afterBitmap).asImageBitmap(),
@@ -316,7 +318,7 @@ private fun BeforeAfterCompareSlider(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                
+
                 // Before 图片（裁剪显示）
                 Box(
                     modifier = Modifier
@@ -330,7 +332,7 @@ private fun BeforeAfterCompareSlider(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    
+
                     // 原图标签
                     Surface(
                         modifier = Modifier
@@ -347,18 +349,18 @@ private fun BeforeAfterCompareSlider(
                         )
                     }
                 }
-                
+
                 // 分割线和滑块
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(4.dp)
-                        .offset { IntOffset((sliderPosition * size.width.value - 2.dp.value).roundToInt(), 0) }
+                        .offset { IntOffset((sliderPosition * boxWidth.roundToPx() - 2.dp.roundToPx()).toInt(), 0) }
                         .background(Color.White)
                         .pointerInput(Unit) {
                             detectHorizontalDragGestures { change, dragAmount ->
                                 change.consume()
-                                val newPosition = sliderPosition + dragAmount / size.width.value
+                                val newPosition = sliderPosition + dragAmount / boxWidth.toPx()
                                 onSliderChange(newPosition.coerceIn(0f, 1f))
                             }
                         }
@@ -505,7 +507,7 @@ private fun ConfidenceVisualization(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        animatedConfidence >= 0.9f -> HasselbladGreen
+                        animatedConfidence >= 0.9f -> SuccessGreen
                         animatedConfidence >= 0.7f -> HasselbladOrange
                         else -> Color.White.copy(alpha = 0.7f)
                     }
@@ -529,7 +531,7 @@ private fun ConfidenceVisualization(
                         .clip(RoundedCornerShape(4.dp))
                         .background(
                             when {
-                                animatedConfidence >= 0.9f -> HasselbladGreen
+                                animatedConfidence >= 0.9f -> SuccessGreen
                                 animatedConfidence >= 0.7f -> HasselbladOrange
                                 else -> Color.White.copy(alpha = 0.5f)
                             }
@@ -901,7 +903,7 @@ private fun ActionButtonsRow(
         // 分享
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onShare()
             },
             modifier = Modifier.weight(1f),
@@ -912,11 +914,11 @@ private fun ActionButtonsRow(
             Spacer(modifier = Modifier.width(4.dp))
             Text("分享")
         }
-        
+
         // 保存
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onSave()
             },
             modifier = Modifier.weight(1f),
@@ -927,11 +929,11 @@ private fun ActionButtonsRow(
             Spacer(modifier = Modifier.width(4.dp))
             Text("保存")
         }
-        
+
         // 导出
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onExport()
             },
             modifier = Modifier.weight(1f),
@@ -949,13 +951,13 @@ private fun ActionButtonsRow(
     // 一键优化按钮
     Button(
         onClick = {
-            haptic.perform(HapticFeedbackType.Confirm)
-            onOptimize()
-        },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
-    ) {
+            haptic.perform(HapticFeedbackType.LongPress)
+                onOptimize()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+        ) {
         Icon(Icons.Default.AutoFixHigh, null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(6.dp))
         Text(

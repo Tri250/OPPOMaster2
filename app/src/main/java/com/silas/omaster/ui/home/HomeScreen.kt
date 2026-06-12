@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhotoFilter
@@ -77,8 +79,6 @@ import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.hapticClickable
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -231,7 +231,7 @@ fun HomeScreen(
                     Tab(
                         selected = isSelected,
                         onClick = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             scope.launch {
                                 pagerState.scrollToPage(index)
                             }
@@ -275,7 +275,7 @@ fun HomeScreen(
                             presets = allPresets,
                             tabIndex = 0,
                             onNavigateToDetail = onNavigateToDetail,
-                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onToggleFavorite = { scope.launch { viewModel.toggleFavorite(it) } },
                             onDeletePreset = {
                                 presetToDelete = it
                                 showDeleteConfirm = true
@@ -287,7 +287,7 @@ fun HomeScreen(
                             presets = favorites,
                             tabIndex = 1,
                             onNavigateToDetail = onNavigateToDetail,
-                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onToggleFavorite = { scope.launch { viewModel.toggleFavorite(it) } },
                             onDeletePreset = {
                                 presetToDelete = it
                                 showDeleteConfirm = true
@@ -300,7 +300,7 @@ fun HomeScreen(
                             presets = customPresets,
                             tabIndex = 2,
                             onNavigateToDetail = onNavigateToDetail,
-                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onToggleFavorite = { scope.launch { viewModel.toggleFavorite(it) } },
                             onDeletePreset = {
                                 presetToDelete = it
                                 showDeleteConfirm = true
@@ -319,8 +319,8 @@ fun HomeScreen(
         if (selectedTab == 2) {
             FloatingActionButton(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
-                    onNavigateToCreate()
+                    haptic.perform(HapticFeedbackType.LongPress)
+                onNavigateToCreate()
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
@@ -354,7 +354,7 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         val id = presetToDelete
                         if (id != null) {
                             viewModel.deleteCustomPreset(id)
@@ -740,67 +740,67 @@ private fun FeatureEntryRow(
             icon = Icons.Default.CameraAlt,
             color = Color(0xFF4CAF50),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToSceneRecognition()
             },
             modifier = Modifier.weight(1f)
         )
-        
+
         // AI微调
         FeatureEntryCard(
             title = "AI微调",
             icon = Icons.Default.ColorLens,
             color = Color(0xFF9C27B0),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToAIFineTune()
             },
             modifier = Modifier.weight(1f)
         )
-        
+
         // 水印编辑
         FeatureEntryCard(
             title = "水印",
             icon = Icons.Default.WaterDrop,
             color = Color(0xFF00BCD4),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToWatermarkEditor()
             },
             modifier = Modifier.weight(1f)
         )
-        
+
         // 智能优化
         FeatureEntryCard(
             title = "优化",
             icon = Icons.Default.Memory,
             color = Color(0xFF2196F3),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToSmartOptimize()
             },
             modifier = Modifier.weight(1f)
         )
-        
+
         // 预设管理
         FeatureEntryCard(
             title = "预设",
             icon = Icons.Default.PhotoFilter,
             color = Color(0xFFFF9800),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToPresetManager()
             },
             modifier = Modifier.weight(1f)
         )
-        
+
         // 参数调节
         FeatureEntryCard(
             title = "参数",
             icon = Icons.Default.Tune,
             color = Color(0xFFE91E63),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToParamAdjustment()
             },
             modifier = Modifier.weight(1f)

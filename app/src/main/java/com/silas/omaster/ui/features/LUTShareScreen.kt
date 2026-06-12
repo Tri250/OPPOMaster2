@@ -11,10 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 
 /**
  * LUT 资源分享页面
@@ -72,48 +74,48 @@ fun LUTShareScreen(
             title = { Text("LUT 资源库", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
-                    onBack()
-                }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
-            )
-        )
-
-        // 分类标签
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(categories) { category ->
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (category == selectedCategory) HasselbladOrange
-                            else Color(0xFF2A2A2A)
-                        )
-                        .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
-                            selectedCategory = category
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
+                            onBack()
+                        }) {
+                            Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                         }
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = category,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal,
-                        color = if (category == selectedCategory) Color.White else Color.White.copy(alpha = 0.7f)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = PureBlack,
+                        titleContentColor = Color.White
                     )
+                )
+
+                // 分类标签
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(categories) { category ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (category == selectedCategory) HasselbladOrange
+                                    else Color(0xFF2A2A2A)
+                                )
+                                .clickable {
+                                    haptic.perform(HapticFeedbackType.TextHandleMove)
+                                    selectedCategory = category
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = category,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal,
+                                color = if (category == selectedCategory) Color.White else Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                 }
-            }
-        }
 
         // LUT 数量统计
         Row(
@@ -146,7 +148,7 @@ fun LUTShareScreen(
                 LUTCard(
                     lut = lut,
                     onDownload = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         onDownload(lut)
                     }
                 )

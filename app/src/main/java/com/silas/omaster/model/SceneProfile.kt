@@ -5,6 +5,30 @@ import android.os.Parcelable
 import kotlinx.serialization.Serializable
 
 /**
+ * 场景分析结果（兼容旧代码）
+ */
+data class SceneAnalysisResult(
+    val primaryScene: SceneTypeData,
+    val confidence: Float,
+    val alternativeScenes: List<SceneTypeData>,
+    val recommendedFilms: List<FilmPreset>,
+    val hasselbladParams: HasselbladParams,
+    val masterTips: List<String>
+)
+
+/**
+ * 场景类型数据（兼容旧代码）
+ */
+data class SceneTypeData(
+    val id: String,
+    val name: String,
+    val category: String,
+    val description: String,
+    val confidence: Int,
+    val params: HasselbladParams
+)
+
+/**
  * Layer 1: 大师数据 (Master Data)
  * 统一 SceneProfile 模型 - 场景画像
  * 对齐 Android 和 React 两端的数据结构
@@ -233,7 +257,15 @@ enum class FilmSeries(val displayName: String, val films: List<String>) {
     CLASSIC("原生经典", listOf("cc", "nc", "nh")),        // CC经典负片, NC自然, NH浓郁
     EMOTION("情绪与表达", listOf("portra", "rdp3")),      // Portra 400, RDP3
     STRUCTURE("结构与时间", listOf("800t", "tx400")),     // 800T, TX400黑白
-    DIGITAL("数字记忆", listOf("ccd_cool", "ccd_warm"))   // 冷CCD, 暖CCD
+    DIGITAL("数字记忆", listOf("ccd_cool", "ccd_warm"));   // 冷CCD, 暖CCD
+
+    companion object {
+        fun fromString(value: String): FilmSeries = try {
+            valueOf(value.uppercase())
+        } catch (_: IllegalArgumentException) {
+            CLASSIC
+        }
+    }
 }
 
 /**

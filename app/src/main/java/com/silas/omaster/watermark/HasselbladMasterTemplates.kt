@@ -1,7 +1,6 @@
 package com.silas.omaster.watermark
 
 import android.graphics.Color
-import com.silas.omaster.watermark.WatermarkLayerSystem.*
 
 /**
  * 哈苏品牌色板定义
@@ -162,7 +161,7 @@ object HasselbladMasterTemplates {
 
     /**
      * 模板 1：哈苏大师印记 (hasselblad-master)
-     * 
+     *
      * 设计要素：
      * - 底部信息栏高约 8% 画面高度，半透明黑色背景 (alpha=0.4)
      * - "HASSELBLAD" 使用 bold 字体，letterSpacing=2，金色 (#D4AF37)

@@ -8,7 +8,10 @@ import android.graphics.Paint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,9 +24,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -34,6 +39,7 @@ import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.util.ShareExportUtils
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -218,8 +224,9 @@ fun AISceneRecognitionScreen(
             analysisProgress = 1f
 
             // 添加到历史记录
-            if (analysisResult != null) {
-                recognitionHistory = listOf(analysisResult) + recognitionHistory.take(4)
+            val result = analysisResult
+            if (result != null) {
+                recognitionHistory = listOf(result) + recognitionHistory.take(4)
             }
 
             isAnalyzing = false
@@ -246,7 +253,7 @@ fun AISceneRecognitionScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     if (flowState == RecognitionFlowState.RESULT) {
                         flowState = RecognitionFlowState.CAMERA
                         analysisResult = null
@@ -329,7 +336,7 @@ fun AISceneRecognitionScreen(
                         onShowParamsChange = { showParams = it },
                         isOptimized = isOptimized,
                         onOptimize = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             isOptimized = true
                             showParams = true
                             scope.launch {
@@ -340,7 +347,7 @@ fun AISceneRecognitionScreen(
                         isSaving = isSaving,
                         saveSuccess = saveSuccess,
                         onSaveRecipe = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             isSaving = true
                             scope.launch {
                                 kotlinx.coroutines.delay(1000)
@@ -430,7 +437,7 @@ private fun CameraEntryScreen(
                 // 闪光灯控制
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onFlashModeChange(
                             when (flashMode) {
                                 FlashMode.OFF -> FlashMode.ON
@@ -460,7 +467,7 @@ private fun CameraEntryScreen(
                 // 摄像头切换
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onCameraFacingChange(
                             if (cameraFacing == CameraFacing.BACK) CameraFacing.FRONT else CameraFacing.BACK
                         )
@@ -596,7 +603,7 @@ private fun CameraEntryScreen(
                 // 选择图片按钮
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onSelectImage()
                     },
                     modifier = Modifier
@@ -1199,7 +1206,7 @@ private fun RecognitionHistoryStrip(
                     modifier = Modifier
                         .size(64.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             onSelect(scene)
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -1248,7 +1255,7 @@ private fun BottomActionBar(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onRetake()
                 }
             ) {
@@ -1280,7 +1287,7 @@ private fun BottomActionBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
                     if (!isSaving && !saveSuccess) {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onSaveRecipe()
                     }
                 }

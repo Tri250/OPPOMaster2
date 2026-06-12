@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
 
 /**
@@ -60,7 +61,7 @@ fun CloudSyncScreen(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -112,7 +113,7 @@ fun CloudSyncScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Confirm)
+                                haptic.perform(HapticFeedbackType.LongPress)
                                 isSyncing.value = true
                                 scope.launch {
                                     syncManager.performSync()
@@ -334,7 +335,7 @@ private fun SyncItemCard(item: SyncItem) {
 
 @Composable
 private fun FeatureCard(
-    icon: androidx.compose.material.icons.Icon,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     description: String
 ) {

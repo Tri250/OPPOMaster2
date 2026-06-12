@@ -2,6 +2,7 @@ package com.silas.omaster.ui.features
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -10,10 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 
 /**
  * 参数精细调节页面
@@ -69,7 +72,7 @@ fun ParamAdjustScreen(
             title = { Text("参数精细调节", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -78,7 +81,7 @@ fun ParamAdjustScreen(
             actions = {
                 // 重置按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     iso = 100
                     shutterSpeed = 125f
                     aperture = 2.8f
@@ -91,7 +94,7 @@ fun ParamAdjustScreen(
                 }
                 // 应用按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onApply(CameraParams(
                         iso = iso,
                         shutterSpeed = shutterSpeed,
@@ -121,7 +124,7 @@ fun ParamAdjustScreen(
                 label = "人像",
                 selected = selectedPreset == "portrait",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedPreset = "portrait"
                     iso = 100
                     shutterSpeed = 125f
@@ -133,7 +136,7 @@ fun ParamAdjustScreen(
                 label = "风景",
                 selected = selectedPreset == "landscape",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedPreset = "landscape"
                     iso = 100
                     shutterSpeed = 250f
@@ -145,7 +148,7 @@ fun ParamAdjustScreen(
                 label = "夜景",
                 selected = selectedPreset == "night",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedPreset = "night"
                     iso = 800
                     shutterSpeed = 30f
@@ -157,7 +160,7 @@ fun ParamAdjustScreen(
                 label = "运动",
                 selected = selectedPreset == "sports",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedPreset = "sports"
                     iso = 400
                     shutterSpeed = 1000f
@@ -408,7 +411,7 @@ private fun ParamSliderCard(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .clickable {
-                                    haptic.perform(HapticFeedbackType.Select)
+                                    haptic.perform(HapticFeedbackType.TextHandleMove)
                                     // 解析选项值
                                     val parsedValue = when (value) {
                                         is Int -> option.filter { it.isDigit() }.toIntOrNull() ?: value

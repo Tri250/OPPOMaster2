@@ -21,7 +21,8 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
-import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.*
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import java.io.*
 import kotlin.math.*
@@ -440,7 +442,7 @@ fun WatermarkEditorScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -453,7 +455,7 @@ fun WatermarkEditorScreen(
                 }
                 // 预览按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     showBeforeAfter = !showBeforeAfter
                 }) {
                     Icon(
@@ -464,7 +466,7 @@ fun WatermarkEditorScreen(
                 }
                 // 导出按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     previewBitmap?.let { onExport(it, watermarkConfig) }
                 }) {
                     Icon(Icons.Default.Download, "导出", tint = CyanAccent)
@@ -491,7 +493,7 @@ fun WatermarkEditorScreen(
             } else if (previewBitmap != null) {
                 // 预览Canvas（支持手势操作）
                 WatermarkPreviewCanvas(
-                    bitmap = if (showBeforeAfter && originalBitmap != null) originalBitmap else previewBitmap,
+                    bitmap = if (showBeforeAfter && originalBitmap != null) originalBitmap!! else previewBitmap!!,
                     watermarkConfig = watermarkConfig.copy(
                         enabled = isWatermarkEnabled,
                         offset = watermarkOffset,
@@ -518,7 +520,7 @@ fun WatermarkEditorScreen(
                     Switch(
                         checked = isWatermarkEnabled,
                         onCheckedChange = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             isWatermarkEnabled = it
                         },
                         colors = SwitchDefaults.colors(
@@ -532,7 +534,7 @@ fun WatermarkEditorScreen(
                 if (originalBitmap != null && previewBitmap != null) {
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             showBeforeAfter = !showBeforeAfter
                         },
                         modifier = Modifier
@@ -576,7 +578,7 @@ fun WatermarkEditorScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             imagePickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -605,7 +607,7 @@ fun WatermarkEditorScreen(
             WatermarkCategoryTabs(
                 selectedCategory = selectedCategory,
                 onCategorySelected = { category ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedCategory = category
                 }
             )
@@ -625,7 +627,7 @@ fun WatermarkEditorScreen(
                 templates = filteredTemplates,
                 selectedTemplate = selectedTemplate,
                 onTemplateSelected = { template ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedTemplate = template
                     // 应用模板配置
                     showBrand = template.showBrand
@@ -648,7 +650,7 @@ fun WatermarkEditorScreen(
             WatermarkPositionGrid(
                 selectedPosition = selectedPosition,
                 onPositionSelected = { position ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedPosition = position
                     watermarkOffset = Offset.Zero
                 }
@@ -736,7 +738,7 @@ fun WatermarkEditorScreen(
                 // 重置默认
                 OutlinedButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         brandText = "Shot on Ophto"
                         selectedPosition = WatermarkPlacement.BOTTOM_LEFT
                         textSize = 14f
@@ -762,7 +764,7 @@ fun WatermarkEditorScreen(
                 // 保存图片
                 Button(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         previewBitmap?.let { onExport(it, watermarkConfig) }
                     },
                     modifier = Modifier.weight(1f),
@@ -851,7 +853,7 @@ private fun SearchBar(
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        BasicTextField(
+        TextField(
             value = query,
             onValueChange = onQueryChange,
             textStyle = TextStyle(
@@ -862,16 +864,19 @@ private fun SearchBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 24.dp),
-            decorationBox = { innerTextField ->
-                if (query.isEmpty()) {
-                    Text(
-                        "搜索水印模板...",
-                        color = Color.White.copy(alpha = 0.4f),
-                        fontSize = 14.sp
-                    )
-                }
-                innerTextField()
-            }
+            placeholder = {
+                Text(
+                    "搜索水印模板...",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 14.sp
+                )
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
         )
     }
 }
@@ -1074,7 +1079,7 @@ private fun CustomTextInput(
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            BasicTextField(
+            TextField(
                 value = value,
                 onValueChange = onValueChange,
                 textStyle = TextStyle(
@@ -1082,7 +1087,13 @@ private fun CustomTextInput(
                     fontSize = 14.sp
                 ),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
             )
         }
     }
@@ -1246,7 +1257,7 @@ private fun WatermarkElementRow(
                         color = Color.Gray
                     )
                 } else {
-                    BasicTextField(
+                    TextField(
                         value = text,
                         onValueChange = onTextChange,
                         textStyle = TextStyle(
@@ -1254,7 +1265,13 @@ private fun WatermarkElementRow(
                             fontSize = 12.sp
                         ),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
                 }
             }
@@ -1765,9 +1782,9 @@ private fun analyzeDominantColor(bitmap: Bitmap): Color {
     for (x in 0 until bitmap.width step stepX) {
         for (y in 0 until bitmap.height step stepY) {
             val pixel = bitmap.getPixel(x, y)
-            val r = Color.red(pixel)
-            val g = Color.green(pixel)
-            val b = Color.blue(pixel)
+            val r = android.graphics.Color.red(pixel)
+            val g = android.graphics.Color.green(pixel)
+            val b = android.graphics.Color.blue(pixel)
             totalBrightness += (r + g + b) / 3
         }
     }

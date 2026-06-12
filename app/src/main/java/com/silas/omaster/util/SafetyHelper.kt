@@ -20,7 +20,7 @@ import java.io.OutputStream
  */
 object SafetyHelper {
 
-    private const val TAG = "SafetyHelper"
+    const val TAG = "SafetyHelper"
 
     /**
      * 安全获取值，避免空指针
@@ -36,7 +36,7 @@ object SafetyHelper {
      * @param onError 错误回调
      * @return 操作结果，失败返回null
      */
-    inline fun <T> safeRun(block: () -> T, onError: ((Exception) -> Unit)? = null): T? {
+    inline fun <T> safeRun(block: () -> T, noinline onError: ((Exception) -> Unit)? = null): T? {
         return try {
             block()
         } catch (e: Exception) {
@@ -128,7 +128,7 @@ object SafetyHelper {
      * @param block 异步操作
      * @param onError 错误回调
      */
-    inline fun safeAsync(block: () -> Unit, onError: ((Exception) -> Unit)? = null) {
+    inline fun safeAsync(crossinline block: () -> Unit, noinline onError: ((Exception) -> Unit)? = null) {
         try {
             Thread {
                 try {

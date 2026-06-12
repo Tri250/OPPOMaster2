@@ -122,7 +122,7 @@ fun SettingsScreen(
         ThemeSelectionDialog(
             currentTheme = currentTheme,
             onThemeSelected = { theme ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 settingsManager.currentTheme = theme
                 showThemeDialog = false
             },
@@ -134,7 +134,7 @@ fun SettingsScreen(
         TabSelectionDialog(
             currentTab = defaultStartTab,
             onTabSelected = { tab ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 defaultStartTab = tab
                 settingsManager.defaultStartTab = tab
                 showTabDialog = false
@@ -147,7 +147,7 @@ fun SettingsScreen(
         UpdateChannelDialog(
             currentChannel = updateChannel,
             onChannelSelected = { channel ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 settingsManager.updateChannel = channel
                 updateChannel = channel
                 showChannelDialog = false
@@ -160,7 +160,7 @@ fun SettingsScreen(
         DarkModeDialog(
             currentMode = darkMode,
             onModeSelected = { mode ->
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 settingsManager.darkMode = mode
                 darkMode = mode
                 showDarkModeDialog = false
@@ -200,7 +200,7 @@ fun SettingsScreen(
                     settingsManager.isVibrationEnabled = enabled
                     HapticSettings.enabled = enabled
                     if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackType.LongPress)
                     }
                 }
             )
@@ -342,9 +342,9 @@ fun SettingsScreen(
                     cloudSyncEnabled = enabled
                     settingsManager.isCloudSyncEnabled = enabled
                     if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackType.LongPress)
                     } else {
-                        haptic.perform(HapticFeedbackType.ToggleOff)
+                        haptic.perform(HapticFeedbackType.LongPress)
                     }
                 }
             )
@@ -358,7 +358,7 @@ fun SettingsScreen(
                     subtitle = "OPPO、realme、vivo、honor",
                     onClick = {
                         // 显示数据源详情对话框
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         showDataSourceDialog = true
                     }
                 )
@@ -382,7 +382,7 @@ fun SettingsScreen(
                     onClick = {
                         // 手动触发同步
                         if (!isSyncing) {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             isSyncing = true
                             coroutineScope.launch {
                                 val result = presetRepository.syncFromCloud()
@@ -433,9 +433,9 @@ fun SettingsScreen(
                     analyticsEnabled = enabled
                     settingsManager.isAnalyticsEnabled = enabled
                     if (enabled) {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackType.LongPress)
                     } else {
-                        haptic.perform(HapticFeedbackType.ToggleOff)
+                        haptic.perform(HapticFeedbackType.LongPress)
                     }
                 }
             )
@@ -506,7 +506,7 @@ fun SettingsScreen(
                             ImageCacheManager.clearCache(context)
                             cacheSize = 0.0
                             showClearCacheDialog = false
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                         },
                         enabled = cacheSize > 0
                     ) {

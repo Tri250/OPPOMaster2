@@ -316,13 +316,14 @@ fun SceneAnalysisReportScreen(
                 }
 
                 // 概览卡片
-                if (habits != null) {
-                    OverviewCards(habits)
+                val currentHabits = habits
+                if (currentHabits != null) {
+                    OverviewCards(currentHabits)
                 }
 
                 // 拍摄偏好
-                if (habits != null) {
-                    ShootingPreferenceCard(habits)
+                if (currentHabits != null) {
+                    ShootingPreferenceCard(currentHabits)
                 }
 
                 // 场景分布
@@ -342,7 +343,6 @@ fun SceneAnalysisReportScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
                     .background(PureBlack.copy(alpha = 0.95f))
                     .padding(vertical = 12.dp)
             ) {
@@ -439,7 +439,7 @@ private fun OverviewCards(habits: ShootingHabits) {
  */
 @Composable
 private fun OverviewCard(
-    icon: androidx.compose.material.icons.Icon,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
     modifier: Modifier = Modifier

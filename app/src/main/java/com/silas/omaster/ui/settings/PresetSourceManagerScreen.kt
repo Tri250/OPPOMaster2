@@ -74,7 +74,7 @@ fun PresetSourceManagerScreen(
             title = { Text("预设源管理", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -82,7 +82,7 @@ fun PresetSourceManagerScreen(
             },
             actions = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     // 刷新
                     scope.launch {
                         isLoading = true
@@ -96,7 +96,7 @@ fun PresetSourceManagerScreen(
                     )
                 }
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     showAddDialog = true
                 }) {
                     Icon(Icons.Default.Add, "添加", tint = Color.White)
@@ -175,7 +175,7 @@ fun PresetSourceManagerScreen(
                     source = source,
                     isEditing = editingSource?.id == source.id,
                     onToggle = { enabled ->
-                        haptic.perform(if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         sources = sources.map {
                             if (it.id == source.id) it.copy(enabled = enabled) else it
                         }

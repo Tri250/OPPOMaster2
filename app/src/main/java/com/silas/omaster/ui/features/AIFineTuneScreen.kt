@@ -25,6 +25,7 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.tflite.InferenceResult
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
 
 /**
@@ -485,7 +486,7 @@ fun AIFineTuneScreen(
             ) {
                 // 重置
                 TextButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     renderParams = RenderParameters()
                     selectedStyleId = null
                     selectedOptimizations.clear()
@@ -499,7 +500,7 @@ fun AIFineTuneScreen(
                 // 应用
                 Button(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         onApply(renderParams)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
