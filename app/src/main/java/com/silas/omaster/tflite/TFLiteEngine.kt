@@ -6,9 +6,6 @@ import android.graphics.Color
 import android.os.Build
 import android.util.Log
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
-import com.silas.omaster.mediapipe.ClassificationResult
-import com.silas.omaster.mediapipe.MediaPipeSceneClassifier
-import com.silas.omaster.mediapipe.ModelManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -28,21 +25,14 @@ import kotlin.math.sqrt
  * TensorFlow Lite 推理引擎
  * 
  * 单例模式，管理模型加载和推理
- * 支持 GPU Delegate、NNAPI Delegate 和 XNNPACK 加速
- * 集成 MediaPipe Tasks Vision 进行场景分类
+ * 支持GPU Delegate、NNAPI Delegate和XNNPACK加速
  * 
  * 功能：
  * - 模型生命周期管理
  * - 多硬件加速支持（GPU/NNAPI/XNNPACK）
- * - MediaPipe 场景分类集成
- * - 异步推理，不阻塞 UI 线程
+ * - 异步推理，不阻塞UI线程
  * - 推理结果缓存机制
  * - 性能监控和统计
- * 
- * 推理策略：
- * 1. 优先使用 MediaPipe ImageClassifier（准确率 80%+）
- * 2. MediaPipe 不可用时使用 TFLite Interpreter
- * 3. 模型文件不存在时使用启发式降级算法
  */
 class TFLiteEngine private constructor(private val context: Context) {
     
@@ -60,9 +50,6 @@ class TFLiteEngine private constructor(private val context: Context) {
         const val TARGET_PARAM_PREDICTION_MS = 10L
         const val TARGET_TOTAL_INFERENCE_MS = 100L
         
-        // 准确率目标
-        const val TARGET_ACCURACY = 0.80f
-        
         @Volatile
         private var instance: TFLiteEngine? = null
         
@@ -78,13 +65,7 @@ class TFLiteEngine private constructor(private val context: Context) {
     // 推理配置
     private val config = AtomicReference(InferenceConfig())
     
-    // MediaPipe 场景分类器（优先使用）
-    private val mediaPipeClassifier = MediaPipeSceneClassifier.getInstance(context)
-    
-    // 模型管理器
-    private val modelManager = ModelManager.getInstance(context)
-    
-    // 模型解释器（备用）
+    // 模型解释器
     private val interpreters = ConcurrentHashMap<String, Interpreter>()
     
     // 硬件加速委托
@@ -109,9 +90,6 @@ class TFLiteEngine private constructor(private val context: Context) {
     
     // 模型信息
     private val modelInfoMap = ConcurrentHashMap<String, ModelInfo>()
-    
-    // MediaPipe 是否已初始化
-    private var mediaPipeInitialized = false
     
     /**
      * 缓存的推理结果
@@ -138,8 +116,6 @@ class TFLiteEngine private constructor(private val context: Context) {
     /**
      * 初始化引擎
      * 
-     * 优先初始化 MediaPipe 分类器，失败时使用 TFLite Interpreter
-     * 
      * @param config 推理配置
      * @return 初始化是否成功
      */
@@ -148,31 +124,17 @@ class TFLiteEngine private constructor(private val context: Context) {
             state.set(InferenceState.LOADING)
             this@TFLiteEngine.config.set(config)
             
-            // Step 1: 初始化模型管理器
-            val modelManagerResult = modelManager.initialize()
-            Log.i(TAG, "模型管理器初始化: ${modelManagerResult.isSuccess}")
-            
-            // Step 2: 初始化 MediaPipe 场景分类器（优先）
-            val mediaPipeResult = mediaPipeClassifier.initialize(config.useGpu)
-            mediaPipeInitialized = mediaPipeResult.isSuccess && mediaPipeResult.getOrDefault(false)
-            
-            if (mediaPipeInitialized) {
-                Log.i(TAG, "MediaPipe 场景分类器初始化成功 - 准确率目标: ${TARGET_ACCURACY * 100}%")
-            } else {
-                Log.w(TAG, "MediaPipe 初始化失败，将使用 TFLite Interpreter 降级模式")
-            }
-            
-            // Step 3: 检查模型文件是否存在（备用）
+            // 检查模型文件是否存在
             val modelsAvailable = checkModelsAvailable()
-            if (!modelsAvailable && !mediaPipeInitialized) {
-                Log.w(TAG, "模型文件不存在且 MediaPipe 不可用，将使用启发式降级模式")
+            if (!modelsAvailable) {
+                Log.w(TAG, "部分模型文件不存在，将使用启发式降级模式")
             }
             
-            // Step 4: 初始化硬件加速（备用 TFLite）
+            // 初始化硬件加速
             initializeDelegates(config)
             
             state.set(InferenceState.READY)
-            Log.i(TAG, "TFLite引擎初始化成功 - MediaPipe: $mediaPipeInitialized, GPU: ${config.useGpu}, NNAPI: ${config.useNnapi}")
+            Log.i(TAG, "TFLite引擎初始化成功 - GPU: ${config.useGpu}, NNAPI: ${config.useNnapi}, XNNPACK: ${config.useXnnpack}")
             Result.success(true)
         } catch (e: Exception) {
             state.set(InferenceState.ERROR)
@@ -333,126 +295,6 @@ class TFLiteEngine private constructor(private val context: Context) {
             Log.e(TAG, "加载模型缓冲区失败: $modelName", e)
             null
         }
-    }
-    
-    /**
-     * 场景分类（优先使用 MediaPipe）
-     * 
-     * 推理策略：
-     * 1. MediaPipe ImageClassifier（准确率 80%+）
-     * 2. TFLite Interpreter（备用）
-     * 3. 启发式算法（降级）
-     * 
-     * @param bitmap 输入图像
-     * @param cacheKey 缓存键（可选）
-     * @return 场景分类结果
-     */
-    suspend fun classifyScene(
-        bitmap: Bitmap,
-        cacheKey: String? = null
-    ): Result<ClassificationResult> = withContext(Dispatchers.Default) {
-        try {
-            val startTime = System.currentTimeMillis()
-            
-            // 检查缓存
-            if (config.get().enableCache && cacheKey != null) {
-                resultCache[cacheKey]?.let { cached ->
-                    @Suppress("UNCHECKED_CAST")
-                    val cachedResult = cached.result as ClassificationResult
-                    Log.d(TAG, "使用缓存结果: ${cachedResult.topScene}")
-                    return@withContext Result.success(cachedResult)
-                }
-            }
-            
-            // Step 1: 优先使用 MediaPipe
-            if (mediaPipeInitialized && mediaPipeClassifier.isReady()) {
-                Log.d(TAG, "使用 MediaPipe 进行场景分类")
-                val result = mediaPipeClassifier.classify(bitmap)
-                
-                // 更新性能统计
-                updatePerformanceStats(MODEL_SCENE_CLASSIFIER, result.inferenceTimeMs)
-                
-                // 缓存结果
-                if (config.get().enableCache && cacheKey != null) {
-                    resultCache[cacheKey] = CachedResult(result)
-                    cleanupCache()
-                }
-                
-                Log.i(TAG, "MediaPipe 分类完成: ${result.topScene} (${(result.topConfidence * 100).toInt()}%) - ${result.inferenceTimeMs}ms")
-                return@withContext Result.success(result)
-            }
-            
-            // Step 2: 使用 TFLite Interpreter（备用）
-            val interpreter = loadModel(MODEL_SCENE_CLASSIFIER)
-            if (interpreter != null) {
-                Log.d(TAG, "使用 TFLite Interpreter 进行场景分类")
-                
-                // 预处理图像
-                val inputBuffer = preprocessBitmap(bitmap, 224, true)
-                val outputBuffer = allocateOutputBuffer(interpreter)
-                
-                val inferenceStartTime = System.currentTimeMillis()
-                interpreter.run(inputBuffer, outputBuffer)
-                val inferenceTime = System.currentTimeMillis() - inferenceStartTime
-                
-                // 解析输出
-                val probabilities = parseSceneProbabilities(outputBuffer)
-                val topIndex = probabilities.indices.maxByOrNull { probabilities[it] } ?: 0
-                
-                val result = ClassificationResult(
-                    topScene = MediaPipeSceneClassifier.SCENE_CLASSES[topIndex],
-                    topConfidence = probabilities[topIndex],
-                    allProbabilities = probabilities,
-                    inferenceTimeMs = inferenceTime,
-                    usedGpu = config.get().useGpu
-                )
-                
-                // 更新性能统计
-                updatePerformanceStats(MODEL_SCENE_CLASSIFIER, inferenceTime)
-                
-                // 缓存结果
-                if (config.get().enableCache && cacheKey != null) {
-                    resultCache[cacheKey] = CachedResult(result)
-                    cleanupCache()
-                }
-                
-                Log.i(TAG, "TFLite 分类完成: ${result.topScene} (${(result.topConfidence * 100).toInt()}%) - ${inferenceTime}ms")
-                return@withContext Result.success(result)
-            }
-            
-            // Step 3: 启发式降级
-            Log.d(TAG, "使用启发式算法进行场景分类")
-            val heuristicResult = mediaPipeClassifier.classify(bitmap)
-            
-            Log.i(TAG, "启发式分类完成: ${heuristicResult.topScene} (${(heuristicResult.topConfidence * 100).toInt()}%)")
-            Result.success(heuristicResult)
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "场景分类失败", e)
-            Result.failure(e)
-        }
-    }
-    
-    /**
-     * 解析场景概率输出
-     */
-    private fun parseSceneProbabilities(outputBuffer: ByteBuffer): FloatArray {
-        outputBuffer.rewind()
-        val probabilities = FloatArray(MediaPipeSceneClassifier.SCENE_CLASSES.size)
-        
-        for (i in probabilities.indices) {
-            probabilities[i] = outputBuffer.getFloat()
-        }
-        
-        // 归一化
-        val sum = probabilities.sum()
-        if (sum > 0) {
-            for (i in probabilities.indices) {
-                probabilities[i] /= sum
-            }
-        }
-        
-        return probabilities
     }
     
     /**
@@ -1126,10 +968,6 @@ class TFLiteEngine private constructor(private val context: Context) {
      */
     fun release() {
         inferenceScope.cancel()
-        
-        // 释放 MediaPipe 分类器
-        mediaPipeClassifier.release()
-        mediaPipeInitialized = false
         
         interpreters.values.forEach { it.close() }
         interpreters.clear()

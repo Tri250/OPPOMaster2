@@ -11,7 +11,6 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.silas.omaster.util.JsonUtil
 import kotlinx.serialization.json.Json
@@ -24,18 +23,9 @@ object PresetRemoteManager {
             json(Json { ignoreUnknownKeys = true })
         }
     }
-    
-    // 重试配置
-    private const val MAX_RETRY_COUNT = 3
-    private const val RETRY_DELAY_MS = 1000L
 
-    /**
-     * 带重试机制的预设获取
-     * @param url 预设URL
-     * @param retryCount 当前重试次数
-     */
-    suspend fun fetchPresets(url: String, retryCount: Int = 0): PresetList? {
-        Log.d("PresetRemoteManager", "Starting fetch from $url (retry: $retryCount)")
+    suspend fun fetchPresets(url: String): PresetList? {
+        Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
             val response: HttpResponse = client.get(url)
             // Some servers (GitHub raw) may return Content-Type: text/plain; charset=utf-8
@@ -46,16 +36,8 @@ object PresetRemoteManager {
             Log.d("PresetRemoteManager", "Fetched ${presets.presets.size} presets")
             presets
         } catch (e: Exception) {
-            Log.e("PresetRemoteManager", "Failed to fetch presets (retry: $retryCount)", e)
-            // 重试逻辑
-            if (retryCount < MAX_RETRY_COUNT) {
-                Log.d("PresetRemoteManager", "Retrying in ${RETRY_DELAY_MS}ms...")
-                delay(RETRY_DELAY_MS)
-                fetchPresets(url, retryCount + 1)
-            } else {
-                Log.e("PresetRemoteManager", "Max retry count reached, giving up")
-                null
-            }
+            Log.e("PresetRemoteManager", "Failed to fetch presets", e)
+            null
         }
     }
 

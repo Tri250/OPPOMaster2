@@ -27,7 +27,7 @@ class OMasterApplication : Application() {
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         // 安装全局异常处理器（在友盟初始化前）
-        CrashHandler.getInstance().install(this)
+        CrashHandler.getInstance().install()
 
         // 初始化震动设置
         HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled

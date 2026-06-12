@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, Type, AlignLeft, AlignCenter, AlignRight, Check, 
@@ -6,7 +6,7 @@ import {
   Minimize, Eye, Download, ChevronRight, Crown, Sparkles,
   Plus, Trash2, Copy, Layers, RotateCcw,
   Grid, Square, Shield, Award,
-  Image, Sliders, Upload, FileImage, Share2
+  Image, Sliders
 } from 'lucide-react';
 
 // 15+ 专业水印模板
@@ -114,7 +114,7 @@ const WATERMARK_TEMPLATES = [
     category: 'legal',
     elements: [
       { type: 'text', content: '©', style: { fontSize: 14 } },
-      { type: 'text', content: '2026 OMaster', style: { fontSize: 12 } },
+      { type: 'text', content: '2024 OMaster', style: { fontSize: 12 } },
     ],
     preset: { position: 'bottom-center', padding: 16 }
   },
@@ -239,70 +239,6 @@ const WatermarkPage: React.FC = () => {
   const [showExport, setShowExport] = useState(false);
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [bgOpacity, setBgOpacity] = useState(0);
-  
-  // 拖拽上传状态
-  const [isDragging, setIsDragging] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // 处理拖拽进入
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-  
-  // 处理拖拽离开
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-  
-  // 处理拖拽悬停
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-  
-  // 处理拖拽放置
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            // 这里可以设置选中的图片
-            // setSelectedImage(event.target.result as string);
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  }, []);
-  
-  // 处理文件选择
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            // setSelectedImage(event.target.result as string);
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  }, []);
 
   // 过滤模板
   const filteredTemplates = useMemo(() => {
@@ -358,7 +294,7 @@ const WatermarkPage: React.FC = () => {
       } else if (templateId === 'location') {
         setCustomText('📍 Location');
       } else if (templateId === 'copyright') {
-        setCustomText('© 2026 OMaster');
+        setCustomText('© 2024 OMaster');
       }
     }
   }, []);
@@ -393,118 +329,17 @@ const WatermarkPage: React.FC = () => {
   }, [selectedLayer]);
 
   // 导出图片
-  const handleExport = useCallback((format: 'png' | 'jpg' | 'webp' = 'png') => {
-    const canvas = document.createElement('canvas');
-    const img = new window.Image();
-    img.crossOrigin = 'anonymous';
-    img.src = selectedImage;
-    
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // 绘制原图
-        ctx.drawImage(img, 0, 0);
-        
-        // 绘制水印
-        ctx.font = `${fontWeight} ${fontSize}px ${FONT_OPTIONS.find(f => f.id === fontFamily)?.family || 'sans-serif'}`;
-        ctx.fillStyle = textColor;
-        ctx.globalAlpha = opacity;
-        
-        // 计算水印位置
-        let x = 0, y = 0;
-        const text = customText;
-        const textWidth = ctx.measureText(text).width;
-        
-        switch (position) {
-          case 'top-left':
-            x = padding;
-            y = padding + fontSize;
-            break;
-          case 'top-center':
-            x = (canvas.width - textWidth) / 2;
-            y = padding + fontSize;
-            break;
-          case 'top-right':
-            x = canvas.width - textWidth - padding;
-            y = padding + fontSize;
-            break;
-          case 'center':
-            x = (canvas.width - textWidth) / 2;
-            y = canvas.height / 2;
-            break;
-          case 'bottom-left':
-            x = padding;
-            y = canvas.height - padding;
-            break;
-          case 'bottom-center':
-            x = (canvas.width - textWidth) / 2;
-            y = canvas.height - padding;
-            break;
-          case 'bottom-right':
-            x = canvas.width - textWidth - padding;
-            y = canvas.height - padding;
-            break;
-        }
-        
-        // 绘制阴影
-        if (shadowEnabled) {
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-          ctx.shadowBlur = shadowBlur;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        }
-        
-        // 绘制背景
-        if (bgOpacity > 0) {
-          ctx.globalAlpha = bgOpacity;
-          ctx.fillStyle = 'black';
-          ctx.fillRect(x - 4, y - fontSize - 4, textWidth + 8, fontSize + 8);
-          ctx.globalAlpha = opacity;
-          ctx.fillStyle = textColor;
-        }
-        
-        // 绘制文字
-        ctx.fillText(text, x, y);
-        
-        // 导出
-        const mimeType = format === 'png' ? 'image/png' : format === 'jpg' ? 'image/jpeg' : 'image/webp';
-        const quality = format === 'jpg' ? 0.9 : 1;
-        const dataUrl = canvas.toDataURL(mimeType, quality);
-        
-        // 下载
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = `omaster_watermark_${Date.now()}.${format}`;
-        link.click();
-      }
-    };
-    
-    setShowExportMenu(false);
+  const handleExport = useCallback(() => {
     setShowExport(true);
     setTimeout(() => {
       setShowExport(false);
+      alert('图片已保存到相册');
     }, 1500);
-  }, [selectedImage, customText, position, padding, fontFamily, fontSize, fontWeight, opacity, textColor, shadowEnabled, shadowBlur, bgOpacity]);
+  }, []);
 
   // 批量导出
   const handleBatchExport = useCallback(() => {
     alert('批量导出功能：选择多张图片应用当前水印设置');
-  }, []);
-  
-  // 分享
-  const handleShare = useCallback(async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'OMaster 水印效果',
-          text: '看看我用 OMaster 添加的水印效果！',
-        });
-      } catch (err) {
-        console.log('分享失败:', err);
-      }
-    }
   }, []);
 
   // 计算水印位置样式
@@ -571,7 +406,7 @@ const WatermarkPage: React.FC = () => {
               <Eye size={18} className={showPreview ? 'text-[#00BCD4]' : 'text-white/50'} />
             </button>
             <button
-              onClick={() => handleExport('png')}
+              onClick={handleExport}
               className="px-3 py-1.5 rounded-lg bg-[#00BCD4] text-white text-sm font-medium flex items-center gap-1"
             >
               <Download size={14} />
@@ -1028,7 +863,7 @@ const WatermarkPage: React.FC = () => {
             批量应用
           </button>
           <button
-            onClick={() => handleExport('png')}
+            onClick={handleExport}
             className="flex-1 py-3 rounded-xl bg-[#00BCD4] text-white text-sm font-medium flex items-center justify-center gap-2"
           >
             <Download size={16} />

@@ -1,12 +1,16 @@
 pluginManagement {
     repositories {
-        // ===== 本地Maven仓库优先（手动下载的插件） =====
+        // ===== 国内镜像优先（腾讯云 - 沙箱环境最快） =====
         maven {
-            url = uri("${rootProject.projectDir}/local-maven-repo")
-            name = "Local Maven"
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/")
+            name = "Tencent Gradle Plugins"
         }
-        
-        // ===== 阿里云镜像优先（网络稳定） =====
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            name = "Tencent Maven"
+        }
+
+        // ===== 阿里云镜像（备用） =====
         maven {
             url = uri("https://maven.aliyun.com/repository/gradle-plugin")
             name = "Aliyun Gradle Plugin"
@@ -19,16 +23,7 @@ pluginManagement {
             url = uri("https://maven.aliyun.com/repository/google")
             name = "Aliyun Google"
         }
-        
-        // ===== Gradle Plugin Portal =====
-        maven {
-            url = uri("https://plugins.gradle.org/m2")
-            name = "Gradle Plugin Portal"
-        }
-        
-        // ===== Google仓库 =====
-        google()
-        
+
         // ===== 华为云镜像（备用） =====
         maven {
             url = uri("https://repo.huaweicloud.com/repository/maven/")
@@ -36,6 +31,7 @@ pluginManagement {
         }
 
         // ===== 官方仓库（最后备用） =====
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -44,7 +40,23 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // ===== 阿里云镜像优先（网络稳定） =====
+        // ===== 国内镜像优先（腾讯云 - 沙箱环境最快 0.05s） =====
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            name = "Tencent Maven"
+            content {
+                // 优先处理常见依赖
+                includeGroupByRegex("androidx\\..*")
+                includeGroupByRegex("com\\.android\\..*")
+                includeGroupByRegex("org\\.jetbrains\\..*")
+                includeGroupByRegex("io\\.coil-kt")
+                includeGroupByRegex("com\\.squareup\\..*")
+                includeGroupByRegex("com\\.google\\..*")
+                includeGroupByRegex("org\\.gradle\\..*")
+            }
+        }
+
+        // ===== 阿里云镜像（备用） =====
         maven {
             url = uri("https://maven.aliyun.com/repository/public")
             name = "Aliyun Public"
@@ -55,7 +67,6 @@ dependencyResolutionManagement {
                 includeGroupByRegex("io\\.coil-kt")
                 includeGroupByRegex("com\\.squareup\\..*")
                 includeGroupByRegex("com\\.google\\..*")
-                includeGroupByRegex("org\\.gradle\\..*")
             }
         }
         maven {
