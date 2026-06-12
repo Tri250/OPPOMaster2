@@ -186,6 +186,16 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // ===== 排除 Web 前端资源，防止打包进 APK =====
+    // 项目根目录存在 React/Vite Web 项目（src/、public/、index.html 等）
+    // 这些文件不属于 Android 模块，必须显式排除
+    sourceSets["main"].assets.setSrcDirs(
+        listOf(file("src/main/assets"))
+    )
+    sourceSets["main"].res.setSrcDirs(
+        listOf(file("src/main/res"))
+    )
 }
 
 dependencies {
