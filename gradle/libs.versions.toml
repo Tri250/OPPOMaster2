@@ -34,6 +34,7 @@ mlkit-face-detection = "16.1.7"
 tensorflow-lite = "2.16.1"
 tensorflow-lite-gpu = "2.16.1"
 tensorflow-lite-support = "0.4.4"
+mediapipe-tasks-vision = "0.10.9"
 
 # ===== Analytics =====
 umeng-common = "9.8.9"
@@ -90,6 +91,9 @@ mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", ve
 tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflow-lite" }
 tensorflow-lite-gpu = { group = "org.tensorflow", name = "tensorflow-lite-gpu", version.ref = "tensorflow-lite-gpu" }
 tensorflow-lite-support = { group = "org.tensorflow", name = "tensorflow-lite-support", version.ref = "tensorflow-lite-support" }
+
+# MediaPipe Tasks Vision (图像分类、目标检测)
+mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipe-tasks-vision" }
 
 # kotlinx-coroutines-play-services (Task -> suspend bridge for ML Kit)
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinx-coroutines-play-services" }

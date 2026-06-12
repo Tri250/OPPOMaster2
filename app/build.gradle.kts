@@ -199,6 +199,9 @@ dependencies {
     implementation(libs.tensorflow.lite.gpu)
     implementation(libs.tensorflow.lite.support)
 
+    // MediaPipe Tasks Vision (场景分类)
+    implementation(libs.mediapipe.tasks.vision)
+
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
 
