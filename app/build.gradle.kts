@@ -151,12 +151,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
-
-    // ===== 编译优化 =====
-    compilerOptions {
-        // 启用增量编译
-        // 已移至gradle.properties
-    }
 }
 
 // ===== 依赖配置优化 =====

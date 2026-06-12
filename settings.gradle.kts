@@ -1,26 +1,30 @@
 pluginManagement {
     repositories {
-        // ===== 国内镜像优先 =====
+        // ===== 腾讯云镜像（优先，国内稳定） =====
         maven { 
-            url = uri("https://maven.aliyun.com/repository/google")
-            name = "Aliyun Google"
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            name = "Tencent Maven"
         }
+        maven { 
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/")
+            name = "Tencent Gradle Plugins"
+        }
+        
+        // ===== 阿里云镜像（备用） =====
         maven { 
             url = uri("https://maven.aliyun.com/repository/public")
             name = "Aliyun Public"
+        }
+        maven { 
+            url = uri("https://maven.aliyun.com/repository/google")
+            name = "Aliyun Google"
         }
         maven { 
             url = uri("https://maven.aliyun.com/repository/gradle-plugin")
             name = "Aliyun Gradle Plugin"
         }
         
-        // ===== 腾讯云镜像备用 =====
-        maven { 
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
-            name = "Tencent Maven"
-        }
-        
-        // ===== 华为云镜像备用 =====
+        // ===== 华为云镜像（备用） =====
         maven { 
             url = uri("https://repo.huaweicloud.com/repository/maven/")
             name = "Huawei Maven"
@@ -34,9 +38,15 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        // ===== 国内镜像优先 =====
+        // ===== 腾讯云镜像（优先） =====
+        maven { 
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+            name = "Tencent Maven"
+        }
+        
+        // ===== 阿里云镜像（备用） =====
         maven { 
             url = uri("https://maven.aliyun.com/repository/google")
             name = "Aliyun Google"
@@ -46,13 +56,7 @@ dependencyResolutionManagement {
             name = "Aliyun Public"
         }
         
-        // ===== 腾讯云镜像备用 =====
-        maven { 
-            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
-            name = "Tencent Maven"
-        }
-        
-        // ===== 华为云镜像备用 =====
+        // ===== 华为云镜像（备用） =====
         maven { 
             url = uri("https://repo.huaweicloud.com/repository/maven/")
             name = "Huawei Maven"
