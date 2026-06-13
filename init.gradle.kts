@@ -1,68 +1,51 @@
-// Gradle 初始化脚本 - 国内镜像全局配置
-// 使用方法: ./gradlew -I init.gradle.kts <task>
+// Gradle 初始化脚本 - 彻底解决镜像问题
+// 通过 settingsEvaluated 钩子覆盖 settings.gradle.kts 的仓库配置
+// 使用方法: gradle -I init.gradle.kts <task>
 
-allprojects {
-    buildscript {
+beforeSettings {
+    pluginManagement {
         repositories {
-            // 阿里云镜像
+            // 阿里云镜像（首选，响应快）
             maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
             maven { url = uri("https://maven.aliyun.com/repository/public") }
             maven { url = uri("https://maven.aliyun.com/repository/google") }
-            
-            // 腾讯云镜像
-            maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
-            maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-            
-            // 华为云镜像
-            maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
-            
-            // 官方仓库
+
+            // 华为云镜像（备用）
+            maven { url = uri("https://mirrors.huaweicloud.com/repository/maven/") }
+
+            // 官方仓库（最后备用）
             google()
             mavenCentral()
             gradlePluginPortal()
         }
     }
-    
-    repositories {
-        // 阿里云镜像
-        maven { 
-            url = uri("https://maven.aliyun.com/repository/public")
-            content {
-                includeGroupByRegex("androidx\\..*")
-                includeGroupByRegex("com\\.android\\..*")
-                includeGroupByRegex("org\\.jetbrains\\..*")
+
+    dependencyResolutionManagement {
+        // 使用 PREFER_PROJECT 允许 init 脚本添加仓库
+        repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+        repositories {
+            // 阿里云镜像（首选，响应快）
+            maven { url = uri("https://maven.aliyun.com/repository/public") }
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+
+            // 华为云镜像（备用）
+            maven { url = uri("https://mirrors.huaweicloud.com/repository/maven/") }
+
+            // 官方仓库（最后备用）
+            google()
+            mavenCentral()
+
+            // 友盟仓库
+            maven {
+                url = uri("https://repo.umeng.com/maven-releases/")
+                isAllowInsecureProtocol = true
             }
+
+            // JitPack
+            maven { url = uri("https://jitpack.io") }
         }
-        maven { 
-            url = uri("https://maven.aliyun.com/repository/google")
-            content {
-                includeGroupByRegex("com\\.android\\..*")
-                includeGroupByRegex("androidx\\..*")
-                includeGroupByRegex("com\\.google\\..*")
-            }
-        }
-        
-        // 腾讯云镜像
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-        
-        // 华为云镜像
-        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
-        
-        // 清华大学镜像
-        maven { url = uri("https://mirrors.tuna.tsinghua.edu.cn/maven/") }
-        
-        // 官方仓库
-        google()
-        mavenCentral()
-        
-        // JitPack
-        maven { url = uri("https://jitpack.io") }
     }
 }
 
-// 打印配置信息
-println("✅ Gradle 国内镜像配置已加载")
-println("   - 阿里云镜像: 已启用")
-println("   - 腾讯云镜像: 已启用")
-println("   - 华为云镜像: 已启用")
-println("   - 清华大学镜像: 已启用")
+println("✅ Gradle 国内镜像配置已加载（beforeSettings 钩子）")
