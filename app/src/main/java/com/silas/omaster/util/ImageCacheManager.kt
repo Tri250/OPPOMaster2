@@ -58,7 +58,8 @@ object ImageCacheManager {
     }
 
     // 记录失败的下载，用于后台重试
-    private val failedDownloads = mutableSetOf<String>()
+    // 线程安全：使用 Collections.synchronizedSet 包裹
+    private val failedDownloads = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     /**
      * 获取图片的本地缓存路径
@@ -190,19 +191,30 @@ object ImageCacheManager {
         preset: MasterPreset,
         callback: ImageDownloadCallback? = null
     ) {
-        // 下载封面
-        downloadAndCacheImage(context, preset.coverPath, callback = callback)
+        // 下载封面（单张失败不影响整体）
+        try {
+            downloadAndCacheImage(context, preset.coverPath, callback = callback)
+        } catch (e: Exception) {
+            Log.w(TAG, "封面下载失败: ${preset.coverPath}", e)
+        }
 
         // 下载图库图片
         preset.galleryImages?.forEach { url ->
-            downloadAndCacheImage(context, url, callback = callback)
+            try {
+                downloadAndCacheImage(context, url, callback = callback)
+            } catch (e: Exception) {
+                // 单张图库图片失败不影响其他图片
+                Log.w(TAG, "图库图片下载失败: $url", e)
+            }
         }
     }
 
     /**
      * 获取失败的下载列表
      */
-    fun getFailedDownloads(): Set<String> = failedDownloads.toSet()
+    fun getFailedDownloads(): Set<String> {
+        return synchronized(failedDownloads) { failedDownloads.toSet() }
+    }
 
     /**
      * 重试所有失败的下载
@@ -211,14 +223,19 @@ object ImageCacheManager {
         context: Context,
         callback: ImageDownloadCallback? = null
     ): Int {
-        val toRetry = failedDownloads.toList()
+        // 复制快照避免 ConcurrentModificationException
+        val toRetry = synchronized(failedDownloads) { failedDownloads.toList() }
         var successCount = 0
 
         toRetry.forEach { url ->
-            val result = downloadAndCacheImage(context, url, callback = callback)
-            if (result is DownloadResult.Success) {
-                failedDownloads.remove(url)
-                successCount++
+            try {
+                val result = downloadAndCacheImage(context, url, callback = callback)
+                if (result is DownloadResult.Success) {
+                    failedDownloads.remove(url)
+                    successCount++
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "重试URL失败: $url", e)
             }
         }
 

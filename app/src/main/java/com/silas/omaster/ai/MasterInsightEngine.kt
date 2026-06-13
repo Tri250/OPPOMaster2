@@ -87,7 +87,18 @@ class MasterInsightEngine private constructor(context: Context) {
         preferences: UserPreferences = UserPreferences()
     ): MasterWorkflowResult = withContext(Dispatchers.Default) {
         // Step 1: 图像分析 (Layer 2)
+        // 防御性：BitmapFactory.decodeFile 可能返回 null（文件不存在、权限不足、OOM）
         val bitmap = android.graphics.BitmapFactory.decodeFile(imagePath)
+        if (bitmap == null) {
+            android.util.Log.w("MasterInsightEngine", "无法解码图像: $imagePath")
+            return@withContext MasterWorkflowResult(
+                sceneProfile = createEmptyProfile(),
+                filmMatch = createEmptyFilmMatch(),
+                hasselbladReport = createEmptyReport(),
+                lightNarrative = createEmptyNarrative(),
+                finalParams = createEmptyParams()
+            )
+        }
         val profile = inferenceEngine.analyzeImage(bitmap, imagePath)
 
         // Step 2: 胶片匹配 (Layer 4)
@@ -107,6 +118,45 @@ class MasterInsightEngine private constructor(context: Context) {
             finalParams = calculateFinalParams(profile, filmMatch.primaryRecommendation.film)
         )
     }
+
+    // ==================== 降级工厂方法（防OOM/解码失败时使用） ====================
+
+    private fun createEmptyProfile(): SceneProfile = SceneProfile(
+        id = "empty",
+        name = "未知场景",
+        category = SceneCategory.OTHER,
+        description = "图像解码失败",
+        color = 0xFF808080.toInt(),
+        confidence = 0f
+    )
+
+    private fun createEmptyFilmMatch(): FilmMatchResult = FilmMatchResult(
+        primaryRecommendation = FilmCandidate(
+            film = FilmPreset(id = "default", name = "默认", series = FilmSeries.CLASSIC, matchScore = 0.5f),
+            score = 0.5f
+        ),
+        alternatives = emptyList(),
+        reasoning = "图像解析失败,使用默认推荐"
+    )
+
+    private fun createEmptyReport(): HasselbladReport = HasselbladReport(
+        sceneAnalysis = SceneAnalysis("", "", "", 0f, emptyList()),
+        colorAnalysis = ColorAnalysis(0f, 0f, 0f, ""),
+        lightAnalysis = LightAnalysis(0f, "", ""),
+        compositionAnalysis = CompositionAnalysis(0f, "", emptyList()),
+        recommendations = emptyList(),
+        narrative = "无法生成分析报告"
+    )
+
+    private fun createEmptyNarrative(): LightNarrative = LightNarrative(
+        mood = "未知",
+        story = "图像分析失败",
+        technicalTips = emptyList(),
+        artisticDirection = "请检查图像文件是否有效"
+    )
+
+    private fun createEmptyParams(): com.silas.omaster.param.AdjustableParams =
+        com.silas.omaster.param.AdjustableParams.DEFAULT
 
     // ==================== 私有分析方法 ====================
 
