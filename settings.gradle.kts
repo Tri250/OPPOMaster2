@@ -2,12 +2,13 @@ pluginManagement {
     repositories {
         // 腾讯云镜像（沙箱环境首选，响应 0.05s）
         maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
 
-        // 阿里云镜像（备用）
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        // 阿里云镜像（google 仓库含 Gradle 插件）
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+
+        // 华为云镜像（备用）
+        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
 
         // 官方仓库（最后备用）
         google()
@@ -23,8 +24,11 @@ dependencyResolutionManagement {
         maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
         // 阿里云镜像（备用）
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+
+        // 华为云镜像（备用）
+        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
 
         // 官方仓库（最后备用）
         google()

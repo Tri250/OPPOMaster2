@@ -4,57 +4,38 @@
 allprojects {
     buildscript {
         repositories {
-            // 阿里云镜像
-            maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-            maven { url = uri("https://maven.aliyun.com/repository/public") }
+            // 阿里云镜像（google 仓库含 Gradle 插件）
             maven { url = uri("https://maven.aliyun.com/repository/google") }
-            
+            maven { url = uri("https://maven.aliyun.com/repository/public") }
+
             // 腾讯云镜像
-            maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
             maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-            
+
             // 华为云镜像
             maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
-            
+
             // 官方仓库
             google()
             mavenCentral()
             gradlePluginPortal()
         }
     }
-    
+
     repositories {
         // 阿里云镜像
-        maven { 
-            url = uri("https://maven.aliyun.com/repository/public")
-            content {
-                includeGroupByRegex("androidx\\..*")
-                includeGroupByRegex("com\\.android\\..*")
-                includeGroupByRegex("org\\.jetbrains\\..*")
-            }
-        }
-        maven { 
-            url = uri("https://maven.aliyun.com/repository/google")
-            content {
-                includeGroupByRegex("com\\.android\\..*")
-                includeGroupByRegex("androidx\\..*")
-                includeGroupByRegex("com\\.google\\..*")
-            }
-        }
-        
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+
         // 腾讯云镜像
         maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-        
+
         // 华为云镜像
         maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
-        
-        // 清华大学镜像
-        maven { url = uri("https://mirrors.tuna.tsinghua.edu.cn/maven/") }
-        
+
         // 官方仓库
         google()
         mavenCentral()
-        
+
         // JitPack
         maven { url = uri("https://jitpack.io") }
     }
@@ -62,7 +43,6 @@ allprojects {
 
 // 打印配置信息
 println("✅ Gradle 国内镜像配置已加载")
-println("   - 阿里云镜像: 已启用")
+println("   - 阿里云镜像: 已启用 (google + public)")
 println("   - 腾讯云镜像: 已启用")
 println("   - 华为云镜像: 已启用")
-println("   - 清华大学镜像: 已启用")
