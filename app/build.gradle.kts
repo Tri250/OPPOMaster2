@@ -118,6 +118,19 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Kotlin 编译选项
+    kotlinOptions {
+        jvmTarget = "17"
+        // 启用实验性 API opt-in，避免编译警告
+        freeCompilerArgs += listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+            "-opt-in=androidx.compose.animation.ExperimentalAnimationApi",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -136,14 +149,36 @@ android {
             isShrinkResources = false
         }
         release {
+            // 启用 R8 代码混淆（完整模式）
             isMinifyEnabled = true
+            // 启用资源压缩
             isShrinkResources = true
+            // 启用 R8 完整模式（更激进的优化，APK 更小、运行更快）
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            // 发布前关闭调试信息
+            isDebuggable = false
+            isJniDebuggable = false
+            isPseudoLocalesEnabled = false
+            // 启用资源去重与混淆
+            resValue("string", "build_type", "release")
         }
+    }
+
+    // Android 资源优化配置
+    androidResources {
+        // 标记不需要 AAPT2 压缩的文件类型（直接拷贝到 APK）
+        noCompress += listOf(
+            "tflite",      // TFLite 模型文件，直接拷贝避免运行时解压
+            "task",        // ML Kit task 文件
+            "bin",         // 二进制资源
+            "dat",         // 数据文件
+            "ttf",         // 字体文件
+            "otf"          // OpenType 字体
+        )
     }
 
     // Lint 配置优化
