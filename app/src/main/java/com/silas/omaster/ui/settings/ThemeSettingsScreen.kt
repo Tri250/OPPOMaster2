@@ -10,7 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
@@ -62,7 +63,7 @@ fun ThemeSettingsScreen(
             title = { Text("主题设置", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -70,7 +71,7 @@ fun ThemeSettingsScreen(
             },
             actions = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onApply(ThemeSettings(
                         theme = selectedTheme,
                         customColor = customColor,
@@ -107,7 +108,7 @@ fun ThemeSettingsScreen(
                     theme = theme,
                     selected = selectedTheme == theme.id,
                     onClick = {
-                        haptic.perform(HapticFeedbackType.SegmentTick)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         selectedTheme = theme.id
                         customColor = theme.color
                     }
@@ -150,7 +151,7 @@ fun ThemeSettingsScreen(
                                 else Color(0xFF2A2A2A)
                             )
                             .clickable {
-                                haptic.perform(HapticFeedbackType.SegmentTick)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 darkMode = mode
                             }
                             .padding(12.dp),
@@ -232,7 +233,7 @@ fun ThemeSettingsScreen(
                                 CircleShape
                             )
                             .clickable {
-                                haptic.perform(HapticFeedbackType.SegmentTick)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 customColor = color
                             }
                     )

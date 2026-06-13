@@ -170,7 +170,6 @@ class ExifWatermarkProvider(private val context: Context) {
 
         // ISO
         val iso = formatIso(
-            exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY) ?: 
             exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS)
         )
 
@@ -189,9 +188,10 @@ class ExifWatermarkProvider(private val context: Context) {
         val (dateTaken, timeTaken, fullDateTime) = parseDateTime(dateTimeStr)
 
         // GPS坐标
-        val latLong = exif.latLong
-        val gpsLat = latLong?.get(0)
-        val gpsLng = latLong?.get(1)
+        val latLong = FloatArray(2)
+        val hasGps = exif.getLatLong(latLong)
+        val gpsLat: Double? = if (hasGps) latLong[0].toDouble() else null
+        val gpsLng: Double? = if (hasGps) latLong[1].toDouble() else null
 
         // 反地理编码获取位置名称
         val locationName = if (gpsLat != null && gpsLng != null) {
@@ -393,37 +393,18 @@ class ExifWatermarkProvider(private val context: Context) {
      */
     private fun reverseGeocode(lat: Double, lng: Double): String? {
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Android 13+ 使用新的 Geocoder API
-                val geocoder = Geocoder(context, Locale.getDefault())
-                geocoder.getFromLocation(lat, lng, 1) { addresses ->
-                    addresses.firstOrNull()?.let { address ->
-                        // 优先返回城市+区名
-                        val parts = mutableListOf<String>()
-                        address.locality?.let { parts.add(it) }      // 城市
-                        address.subLocality?.let { parts.add(it) }   // 区
-                        if (parts.isNotEmpty()) {
-                            parts.joinToString("")
-                        } else {
-                            address.getAddressLine(0)
-                        }
-                    }
-                }
-            } else {
-                // 旧版本 Geocoder
-                @Suppress("DEPRECATION")
-                val geocoder = Geocoder(context, Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocation(lat, lng, 1)
-                addresses?.firstOrNull()?.let { address ->
-                    val parts = mutableListOf<String>()
-                    address.locality?.let { parts.add(it) }
-                    address.subLocality?.let { parts.add(it) }
-                    if (parts.isNotEmpty()) {
-                        parts.joinToString("")
-                    } else {
-                        address.getAddressLine(0)
-                    }
+            @Suppress("DEPRECATION")
+            val geocoder = Geocoder(context, Locale.getDefault())
+            @Suppress("DEPRECATION")
+            val addresses = geocoder.getFromLocation(lat, lng, 1)
+            addresses?.firstOrNull()?.let { address ->
+                val parts = mutableListOf<String>()
+                address.locality?.let { parts.add(it) }
+                address.subLocality?.let { parts.add(it) }
+                if (parts.isNotEmpty()) {
+                    parts.joinToString("")
+                } else {
+                    address.getAddressLine(0)
                 }
             }
         } catch (e: Exception) {
@@ -437,8 +418,8 @@ class ExifWatermarkProvider(private val context: Context) {
      */
     private fun formatWhiteBalance(value: Int): String? {
         return when (value) {
-            ExifInterface.WHITE_BALANCE_AUTO -> "自动"
-            ExifInterface.WHITE_BALANCE_MANUAL -> "手动"
+            0 -> "自动"  // ExifInterface.WHITE_BALANCE_AUTO
+            1 -> "手动"  // ExifInterface.WHITE_BALANCE_MANUAL
             else -> null
         }
     }

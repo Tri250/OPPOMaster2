@@ -10,7 +10,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsBytes
+import io.ktor.client.call.body
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -47,7 +47,7 @@ object ImageCacheManager {
     private const val MAX_RETRIES = 3
     private const val TAG = "ImageCacheManager"
 
-    private val client by lazy {
+    private val client: HttpClient by lazy {
         HttpClient(CIO) {
             install(HttpTimeout) {
                 requestTimeoutMillis = TIMEOUT_MS
@@ -142,7 +142,7 @@ object ImageCacheManager {
                     localFile.parentFile?.mkdirs()
 
                     // 下载图片
-                    val bytes = client.get(url).bodyAsBytes()
+                    val bytes = client.get(url).body<ByteArray>()
 
                     // 使用临时文件写入，成功后重命名（原子操作）
                     val tempFile = File(localFile.absolutePath + ".tmp")

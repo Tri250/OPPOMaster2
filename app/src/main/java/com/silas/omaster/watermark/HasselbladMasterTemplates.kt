@@ -1,7 +1,6 @@
 package com.silas.omaster.watermark
 
 import android.graphics.Color
-import com.silas.omaster.watermark.WatermarkLayerSystem.*
 
 /**
  * 哈苏品牌色板定义
