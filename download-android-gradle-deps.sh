@@ -5,33 +5,62 @@
 set -e
 
 LOCAL_REPO="/workspace/local-maven-repo"
-BASE_URL="https://dl.google.com/android/maven2"
+# 镜像源回退列表: 阿里云 > 腾讯云 > 官方
+BASE_URLS=(
+    "https://maven.aliyun.com/repository/google"
+    "https://mirrors.cloud.tencent.com/nexus/repository/maven-public"
+    "https://dl.google.com/android/maven2"
+)
 
 echo "下载Android Gradle插件依赖..."
 
-# 下载函数
+# 下载函数（带多镜像回退 + 严格大小校验）
 download_artifact() {
     local group=$1
     local artifact=$2
     local version=$3
-    
+
     # 转换group路径
     local group_path=$(echo $group | tr '.' '/')
     local artifact_dir="$LOCAL_REPO/$group_path/$artifact/$version"
-    
+
     mkdir -p $artifact_dir
-    
-    # 下载JAR
-    local jar_url="$BASE_URL/$group_path/$artifact/$version/$artifact-$version.jar"
-    echo "下载: $jar_url"
-    curl -L -s -o "$artifact_dir/$artifact-$version.jar" "$jar_url" || echo "JAR下载失败: $jar_url"
-    
+
+    # 下载JAR（多镜像回退 + 最小大小校验 1KB）
+    local jar_success=false
+    for base in "${BASE_URLS[@]}"; do
+        local jar_url="$base/$group_path/$artifact/$version/$artifact-$version.jar"
+        curl -L --max-time 30 -s -o "$artifact_dir/$artifact-$version.jar" "$jar_url"
+        if [ -s "$artifact_dir/$artifact-$version.jar" ] && [ $(stat -c%s "$artifact_dir/$artifact-$version.jar" 2>/dev/null || stat -f%z "$artifact_dir/$artifact-$version.jar" 2>/dev/null) -gt 1024 ]; then
+            jar_success=true
+            echo "  ✅ JAR: $base"
+            break
+        fi
+    done
+    if [ "$jar_success" = false ]; then
+        rm -f "$artifact_dir/$artifact-$version.jar"
+        echo "  ❌ JAR: $group:$artifact:$version"
+        return 1
+    fi
+
     # 下载POM
-    local pom_url="$BASE_URL/$group_path/$artifact/$version/$artifact-$version.pom"
-    echo "下载: $pom_url"
-    curl -L -s -o "$artifact_dir/$artifact-$version.pom" "$pom_url" || echo "POM下载失败: $pom_url"
-    
-    ls -la $artifact_dir
+    local pom_success=false
+    for base in "${BASE_URLS[@]}"; do
+        local pom_url="$base/$group_path/$artifact/$version/$artifact-$version.pom"
+        curl -L --max-time 30 -s -o "$artifact_dir/$artifact-$version.pom" "$pom_url"
+        if [ -s "$artifact_dir/$artifact-$version.pom" ] && [ $(stat -c%s "$artifact_dir/$artifact-$version.pom" 2>/dev/null || stat -f%z "$artifact_dir/$artifact-$version.pom" 2>/dev/null) -gt 200 ]; then
+            pom_success=true
+            echo "  ✅ POM: $base"
+            break
+        fi
+    done
+    if [ "$pom_success" = false ]; then
+        rm -f "$artifact_dir/$artifact-$version.pom"
+        echo "  ❌ POM: $group:$artifact:$version"
+        return 1
+    fi
+
+    return 0
 }
 
 # 下载核心依赖

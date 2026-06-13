@@ -99,15 +99,38 @@ class PresetRepository private constructor(context: Context) {
 
     init {
         // 在后台线程初始化本地预设，避免阻塞主线程
+        // 优化：守护线程 + 指数退避重试 + 中断检测
         Thread {
-            try {
-                loadLocalPresets()
-            } catch (e: Exception) {
-                Log.e(TAG, "初始化加载本地预设失败", e)
+            var attempts = 0
+            val maxAttempts = 3
+            while (attempts < maxAttempts) {
+                try {
+                    loadLocalPresets()
+                    Log.i(TAG, "本地预设初始化完成: ${_presets.value.size} 条")
+                    return@Thread
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return@Thread
+                } catch (e: Exception) {
+                    attempts++
+                    Log.e(TAG, "本地预设初始化失败 (尝试 $attempts/$maxAttempts)", e)
+                    if (attempts < maxAttempts) {
+                        try {
+                            Thread.sleep(2000L * attempts)  // 指数退避
+                        } catch (ie: InterruptedException) {
+                            Thread.currentThread().interrupt()
+                            return@Thread
+                        }
+                    } else {
+                        Log.e(TAG, "本地预设初始化彻底失败,使用空列表")
+                        _presets.value = emptyList()
+                    }
+                }
             }
         }.apply {
             name = "PresetRepository-Init"
             isDaemon = true
+            priority = Thread.MIN_PRIORITY  // 低优先级,不抢占主线程
         }.start()
     }
 

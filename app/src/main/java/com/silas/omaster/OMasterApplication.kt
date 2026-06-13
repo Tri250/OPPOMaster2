@@ -23,21 +23,40 @@ class OMasterApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // 第 1 步: 初始化基础变量（必须在任何访问前）
         instance = this
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // 安装全局异常处理器（在友盟初始化前）
-        CrashHandler.getInstance().install()
+        // 第 2 步: 安装全局异常处理器（最早安装,确保后续初始化异常能被捕获）
+        // 必须传 context,CrashHandler 才能持久化日志
+        try {
+            CrashHandler.getInstance().install(applicationContext)
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "CrashHandler安装失败", e)
+        }
 
-        // 初始化震动设置
-        HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled
+        // 第 3 步: 初始化震动设置（fail-safe 模式,使用默认值兜底）
+        try {
+            HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled
+        } catch (e: Throwable) {
+            android.util.Log.w("OMasterApplication", "HapticSettings初始化失败,使用默认值", e)
+        }
 
-        // 每次冷启动都调用预初始化（不采集数据）
-        preInitUMeng()
+        // 第 4 步: 预初始化友盟（不采集数据,任何异常都不应阻塞启动）
+        try {
+            preInitUMeng()
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "友盟预初始化失败", e)
+        }
 
-        // 如果用户已同意隐私政策且统计开关开启，则调用正式初始化
-        if (hasUserAgreed() && isAnalyticsEnabled()) {
-            initUMeng()
+        // 第 5 步: 如果用户已同意隐私政策且统计开关开启,则正式初始化
+        try {
+            if (hasUserAgreed() && isAnalyticsEnabled()) {
+                initUMeng()
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "友盟正式初始化失败", e)
         }
     }
 

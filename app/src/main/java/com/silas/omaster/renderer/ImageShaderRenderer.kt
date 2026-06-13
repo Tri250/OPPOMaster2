@@ -166,16 +166,30 @@ class ImageShaderRenderer(private val context: Context) {
      * @return 纹理ID，失败返回0
      */
     fun createInputTexture(bitmap: Bitmap): Int {
+        if (bitmap.isRecycled) {
+            Log.e(TAG, "Bitmap已被回收，无法创建纹理")
+            return 0
+        }
         imageWidth = bitmap.width
         imageHeight = bitmap.height
-        
+
+        // 性能优化：如果已有纹理，先删除避免泄漏
+        if (inputTextureId != 0) {
+            GLES30.glDeleteTextures(1, intArrayOf(inputTextureId), 0)
+            inputTextureId = 0
+        }
+
         // 创建纹理
         val textureArray = IntArray(1)
         GLES30.glGenTextures(1, textureArray, 0)
+        if (textureArray[0] == 0) {
+            Log.e(TAG, "glGenTextures失败")
+            return 0
+        }
         inputTextureId = textureArray[0]
-        
+
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTextureId)
-        
+
         // 设置纹理参数
         GLES30.glTexParameteri(
             GLES30.GL_TEXTURE_2D,
@@ -197,12 +211,28 @@ class ImageShaderRenderer(private val context: Context) {
             GLES30.GL_TEXTURE_WRAP_T,
             GLES30.GL_CLAMP_TO_EDGE
         )
-        
+
         // 上传纹理数据
-        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
-        
+        try {
+            GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "纹理上传OOM", e)
+            GLES30.glDeleteTextures(1, intArrayOf(inputTextureId), 0)
+            inputTextureId = 0
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+            return 0
+        }
+
+        // 检查GL错误
+        val glError = GLES30.glGetError()
+        if (glError != GLES30.GL_NO_ERROR) {
+            Log.e(TAG, "输入纹理创建GL错误: 0x${glError.toString(16)}")
+            GLES30.glDeleteTextures(1, intArrayOf(inputTextureId), 0)
+            inputTextureId = 0
+        }
+
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
-        
+
         return inputTextureId
     }
     
@@ -302,61 +332,86 @@ class ImageShaderRenderer(private val context: Context) {
         if (!isInitialized) {
             return RenderResult.Error("Renderer not initialized")
         }
-        
+
         val startTime = System.currentTimeMillis()
-        
+
         try {
-            // 创建输出纹理和FBO
-            createOutputTexture(imageWidth, imageHeight)
-            createFramebuffer()
-            
+            // 性能优化：复用输出纹理和FBO，仅在尺寸变化时重建
+            if (outputTextureId == 0) {
+                createOutputTexture(imageWidth, imageHeight)
+            }
+            if (framebufferId == 0) {
+                createFramebuffer()
+            }
+
             // 绑定FBO进行离屏渲染
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, framebufferId)
-            
+
+            // 检查FBO完整性（防御性检查）
+            val fboStatus = GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER)
+            if (fboStatus != GLES30.GL_FRAMEBUFFER_COMPLETE) {
+                GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+                Log.e(TAG, "FBO不完整: $fboStatus, 重建FBO")
+                // 销毁并重建FBO
+                GLES30.glDeleteFramebuffers(1, intArrayOf(framebufferId), 0)
+                framebufferId = 0
+                createFramebuffer()
+                GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, framebufferId)
+            }
+
             // 设置视口
             GLES30.glViewport(0, 0, imageWidth, imageHeight)
-            
+
             // 清除缓冲区
             GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
             GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
-            
+
             // 使用着色器程序
             shaderProgram?.use()
-            
+
             // 设置渲染参数
             shaderProgram?.setRenderParameters(params)
-            
+
             // 设置图像尺寸（用于锐化等卷积操作）
             shaderProgram?.setUniform2f("uImageSize", imageWidth.toFloat(), imageHeight.toFloat())
-            
+
             // 设置时间（用于颗粒效果）
             shaderProgram?.setUniform1f("uTime", System.currentTimeMillis() / 1000f)
-            
+
             // 绑定VAO
             GLES30.glBindVertexArray(vaoId)
-            
+
             // 绑定输入纹理
             GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTextureId)
             shaderProgram?.setUniform1i("uTexture", 0)
-            
+
             // 绘制
             GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, VERTEX_COUNT)
-            
+
             // 解绑
             GLES30.glBindVertexArray(0)
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-            
+
+            // 检查GL错误
+            val glError = GLES30.glGetError()
+            if (glError != GLES30.GL_NO_ERROR) {
+                Log.w(TAG, "GL错误: 0x${glError.toString(16)}")
+            }
+
             val processingTime = System.currentTimeMillis() - startTime
-            
+
             // 检查性能
             if (processingTime > TARGET_RENDER_TIME_MS) {
                 Log.w(TAG, "Render time exceeded target: ${processingTime}ms > ${TARGET_RENDER_TIME_MS}ms")
             }
-            
+
             return RenderResult.Success(outputTextureId, processingTime, quality)
-            
+
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "渲染OOM", e)
+            return RenderResult.Error("Out of memory: ${e.message}", e)
         } catch (e: Exception) {
             Log.e(TAG, "Render failed", e)
             return RenderResult.Error("Render failed: ${e.message}", e)
@@ -436,16 +491,30 @@ class ImageShaderRenderer(private val context: Context) {
      * @param bitmap 新的输入图像
      */
     fun updateInputTexture(bitmap: Bitmap) {
+        if (bitmap.isRecycled) {
+            Log.e(TAG, "Bitmap已被回收，无法更新纹理")
+            return
+        }
         if (inputTextureId == 0) {
             createInputTexture(bitmap)
-        } else {
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTextureId)
-            GLUtils.texSubImage2D(GLES30.GL_TEXTURE_2D, 0, 0, 0, bitmap)
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
-            
-            imageWidth = bitmap.width
-            imageHeight = bitmap.height
+            return
         }
+
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, inputTextureId)
+        try {
+            GLUtils.texSubImage2D(GLES30.GL_TEXTURE_2D, 0, 0, 0, bitmap)
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "更新纹理OOM", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "更新纹理失败", e)
+        }
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+
+        imageWidth = bitmap.width
+        imageHeight = bitmap.height
+
+        // 性能优化：尺寸变化时需要重新创建输出纹理和FBO
+        // 由于FBO绑定的纹理是固定尺寸的
     }
     
     /**

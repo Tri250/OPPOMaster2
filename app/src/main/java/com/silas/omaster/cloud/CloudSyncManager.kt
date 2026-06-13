@@ -131,62 +131,81 @@ class CloudSyncManager private constructor(context: Context) {
      * 同步单个品牌的预设
      */
     private suspend fun syncBrandPresets(brand: String, urlString: String): BrandSyncResult = withContext(Dispatchers.IO) {
-        // 验证URL协议
-        if (!urlString.startsWith("https://")) {
+        // 严格验证URL协议：忽略大小写，必须是 https://
+        val normalizedUrl = urlString.trim()
+        if (!normalizedUrl.lowercase().startsWith("https://")) {
             throw SecurityException("仅支持 HTTPS 协议: $urlString")
         }
-        
-        val url = URL(urlString)
+
+        val url = URL(normalizedUrl)
         val connection = url.openConnection() as java.net.HttpURLConnection
-        connection.apply {
-            requestMethod = "GET"
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "OMaster/${com.silas.omaster.BuildConfig.VERSION_NAME}")
-            connectTimeout = 10000
-            readTimeout = 15000
-            instanceFollowRedirects = false  // 不自动跟随重定向，避免跳转到HTTP
-        }
-        
-        // 验证响应码
-        val responseCode = connection.responseCode
-        if (responseCode !in 200..299) {
-            connection.disconnect()
-            throw java.io.IOException("HTTP $responseCode")
-        }
-        
-        val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
-        connection.disconnect()
-        
-        val jsonObject = JSONObject(jsonString)
+        var success = false
+        try {
+            connection.apply {
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("User-Agent", "OMaster/${com.silas.omaster.BuildConfig.VERSION_NAME}")
+                connectTimeout = 10000
+                readTimeout = 15000
+                instanceFollowRedirects = false  // 不自动跟随重定向，避免跳转到HTTP
+            }
 
-        val version = jsonObject.optInt("version", 1)
-        val build = jsonObject.optInt("build", 1)
-        val presetsArray = jsonObject.getJSONArray("presets")
+            // 验证响应码
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                throw java.io.IOException("HTTP $responseCode")
+            }
 
-        var newCount = 0
-        var updatedCount = 0
-        val brandPresets = mutableListOf<MasterPreset>()
+            val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
+            success = true
 
-        // 获取现有预设用于比较
-        val existingPresets = _cloudPresets.value.filter { it.brand == brand }
-        val existingMap = existingPresets.associateBy { it.name }
+            val jsonObject = JSONObject(jsonString)
+            val version = jsonObject.optInt("version", 1)
+            val build = jsonObject.optInt("build", 1)
+            // 防御性：getJSONArray 可能在缺失时抛 JSONException
+            val presetsArray = jsonObject.optJSONArray("presets") ?: return@withContext BrandSyncResult(0, 0, emptyList())
 
-        for (i in 0 until presetsArray.length()) {
-            val presetJson = presetsArray.getJSONObject(i)
-            val preset = parsePresetJson(presetJson, brand, version, build)
+            var newCount = 0
+            var updatedCount = 0
+            val brandPresets = mutableListOf<MasterPreset>()
 
-            brandPresets.add(preset)
+            // 获取现有预设用于比较
+            val existingPresets = _cloudPresets.value.filter { it.brand == brand }
+            val existingMap = existingPresets.associateBy { it.name }
 
-            // 检查是否已存在
-            val existing = existingMap[preset.name]
-            if (existing == null) {
-                newCount++
-            } else if (existing.build < preset.build) {
-                updatedCount++
+            for (i in 0 until presetsArray.length()) {
+                try {
+                    val presetJson = presetsArray.getJSONObject(i)
+                    val preset = parsePresetJson(presetJson, brand, version, build)
+
+                    brandPresets.add(preset)
+
+                    // 检查是否已存在
+                    val existing = existingMap[preset.name]
+                    if (existing == null) {
+                        newCount++
+                    } else if (existing.build < preset.build) {
+                        updatedCount++
+                    }
+                } catch (e: Exception) {
+                    // 单个预设解析失败不影响其他预设
+                    android.util.Log.w("CloudSyncManager", "解析品牌 $brand 第 ${i + 1} 条预设失败", e)
+                }
+            }
+
+            BrandSyncResult(newCount, updatedCount, brandPresets)
+        } finally {
+            // 无论成功失败，都释放连接
+            try {
+                if (!success) {
+                    // 失败时尝试读取错误流以重置连接
+                    connection.errorStream?.close()
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                android.util.Log.w("CloudSyncManager", "关闭连接异常", e)
             }
         }
-
-        BrandSyncResult(newCount, updatedCount, brandPresets)
     }
 
     /**

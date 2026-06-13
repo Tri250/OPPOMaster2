@@ -10,6 +10,23 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
+ * 工具函数：安全的枚举反序列化（性能优化：基于 enumConstants 缓存）
+ * @param name 枚举名称
+ * @param default 解析失败时的默认值
+ * @return 解析结果或默认值
+ */
+private inline fun <reified E : Enum<E>> safeValueOf(name: String?, default: E): E {
+    if (name.isNullOrEmpty()) return default
+    return try {
+        enumValueOf<E>(name)
+    } catch (_: IllegalArgumentException) {
+        default
+    } catch (_: NullPointerException) {
+        default
+    }
+}
+
+/**
  * 更新渠道枚举
  */
 enum class UpdateChannel {
@@ -89,13 +106,8 @@ class SettingsManager private constructor(private val context: Context) {
         _themeFlow = MutableStateFlow(BrandTheme.fromId(themeId))
         themeFlow = _themeFlow.asStateFlow()
 
-        val darkModeValue = prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name)
         _darkModeFlow = MutableStateFlow(
-            try {
-                DarkMode.valueOf(darkModeValue ?: DarkMode.SYSTEM.name)
-            } catch (e: Exception) {
-                DarkMode.SYSTEM
-            }
+            safeValueOf(prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name), DarkMode.SYSTEM)
         )
         darkModeFlow = _darkModeFlow.asStateFlow()
     }
@@ -123,14 +135,7 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 更新渠道（默认 Gitee）
     var updateChannel: UpdateChannel
-        get() {
-            val value = prefs.getString(KEY_UPDATE_CHANNEL, UpdateChannel.GITEE.name)
-            return try {
-                UpdateChannel.valueOf(value ?: UpdateChannel.GITEE.name)
-            } catch (e: Exception) {
-                UpdateChannel.GITEE
-            }
-        }
+        get() = safeValueOf(prefs.getString(KEY_UPDATE_CHANNEL, UpdateChannel.GITEE.name), UpdateChannel.GITEE)
         set(value) {
             prefs.edit().putString(KEY_UPDATE_CHANNEL, value.name).apply()
         }
@@ -146,14 +151,7 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 深色模式设置
     var darkMode: DarkMode
-        get() {
-            val value = prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name)
-            return try {
-                DarkMode.valueOf(value ?: DarkMode.SYSTEM.name)
-            } catch (e: Exception) {
-                DarkMode.SYSTEM
-            }
-        }
+        get() = safeValueOf(prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name), DarkMode.SYSTEM)
         set(value) {
             prefs.edit().putString(KEY_DARK_MODE, value.name).apply()
             _darkModeFlow.value = value
@@ -188,14 +186,7 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 云同步状态
     var cloudSyncStatus: CloudSyncStatus
-        get() {
-            val value = prefs.getString(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.DISABLED.name)
-            return try {
-                CloudSyncStatus.valueOf(value ?: CloudSyncStatus.DISABLED.name)
-            } catch (e: Exception) {
-                CloudSyncStatus.DISABLED
-            }
-        }
+        get() = safeValueOf(prefs.getString(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.DISABLED.name), CloudSyncStatus.DISABLED)
         set(value) {
             prefs.edit().putString(KEY_CLOUD_SYNC_STATUS, value.name).apply()
         }

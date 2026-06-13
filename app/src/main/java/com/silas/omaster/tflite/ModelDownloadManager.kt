@@ -194,7 +194,7 @@ class ModelDownloadManager(private val context: Context) {
     ): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             callback?.onStateChanged(DownloadState.Checking(modelFile.name))
-            
+
             // 检查是否已下载
             if (isModelDownloaded(modelFile.name)) {
                 Log.i(TAG, "模型已存在: ${modelFile.name}")
@@ -202,94 +202,115 @@ class ModelDownloadManager(private val context: Context) {
                 callback?.onComplete(modelFile.name, true)
                 return@withContext Result.success(true)
             }
-            
+
             // 创建模型目录
             val modelDir = File(context.filesDir, "models")
             if (!modelDir.exists()) {
                 modelDir.mkdirs()
             }
-            
+
             val targetFile = File(modelDir, modelFile.name)
             val tempFile = File(modelDir, "${modelFile.name}.tmp")
-            
-            // 构建下载 URL
+
+            // 构建下载 URL（严格 HTTPS 校验）
             val downloadUrl = "$BASE_URL/v${MODEL_VERSION}/${modelFile.name}"
+            if (!downloadUrl.lowercase().startsWith("https://")) {
+                val err = "模型下载URL必须是HTTPS: $downloadUrl"
+                Log.e(TAG, err)
+                callback?.onStateChanged(DownloadState.Failed(modelFile.name, err))
+                return@withContext Result.failure(SecurityException(err))
+            }
             Log.i(TAG, "开始下载模型: ${modelFile.name} from $downloadUrl")
-            
+
             callback?.onStateChanged(DownloadState.Downloading(modelFile.name, 0f, 0, modelFile.expectedSize))
-            
-            // 执行下载
+
+            // 执行下载（用 try-finally 确保流关闭）
             var downloadedBytes = 0L
             val connection = URL(downloadUrl).openConnection()
             connection.connectTimeout = 30000
             connection.readTimeout = 60000
-            
-            val inputStream = connection.getInputStream()
-            val outputStream = FileOutputStream(tempFile)
-            
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                outputStream.write(buffer, 0, bytesRead)
-                downloadedBytes += bytesRead
-                
-                // 更新进度
-                val progress = downloadedBytes.toFloat() / modelFile.expectedSize
-                callback?.onStateChanged(DownloadState.Downloading(modelFile.name, progress, downloadedBytes, modelFile.expectedSize))
-                callback?.onProgress(modelFile.name, progress)
+
+            var inputStream: java.io.InputStream? = null
+            var outputStream: java.io.OutputStream? = null
+            try {
+                inputStream = connection.getInputStream()
+                outputStream = FileOutputStream(tempFile)
+
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                    downloadedBytes += bytesRead
+
+                    // 更新进度
+                    val progress = downloadedBytes.toFloat() / modelFile.expectedSize
+                    callback?.onStateChanged(DownloadState.Downloading(modelFile.name, progress, downloadedBytes, modelFile.expectedSize))
+                    callback?.onProgress(modelFile.name, progress)
+                }
+
+                outputStream.flush()
+            } finally {
+                // 无论成功失败,必须关闭流
+                try { outputStream?.close() } catch (_: Exception) {}
+                try { inputStream?.close() } catch (_: Exception) {}
             }
-            
-            outputStream.flush()
-            outputStream.close()
-            inputStream.close()
-            
-            Log.i(TAG, "模型下载完成: ${modelFile.name}, 大小: ${downloadedBytes} bytes")
-            
+
+            Log.i(TAG, "模型下载完成: ${modelFile.name}, 大小: $downloadedBytes bytes")
+
             // 校验文件
             callback?.onStateChanged(DownloadState.Verifying(modelFile.name))
-            
+
             // 检查文件大小
             if (tempFile.length() < modelFile.expectedSize * 0.9f) {
                 tempFile.delete()
                 return@withContext Result.failure(Exception("下载文件大小不足: ${tempFile.length()} < ${modelFile.expectedSize}"))
             }
-            
+
             // 校验 SHA256（如果提供了校验值）
             if (modelFile.checksum.startsWith("sha256:") && modelFile.checksum.length > 7) {
                 val expectedHash = modelFile.checksum.substring(7)
-                val actualHash = calculateSHA256(tempFile)
-                
-                if (actualHash != expectedHash) {
-                    Log.w(TAG, "模型校验失败: ${modelFile.name}, 预期=$expectedHash, 实际=$actualHash")
-                    // 注意：由于当前校验值是占位符，暂时跳过校验失败
-                    // 正式发布时替换为真实校验值后启用校验
-                    Log.w(TAG, "跳过校验（当前使用占位符校验值）")
+                // 防御性：跳过 placeholder 校验值
+                if (!expectedHash.contains("...") && !expectedHash.endsWith("...")) {
+                    val actualHash = calculateSHA256(tempFile)
+
+                    if (actualHash != expectedHash) {
+                        Log.w(TAG, "模型校验失败: ${modelFile.name}, 预期=$expectedHash, 实际=$actualHash")
+                        tempFile.delete()
+                        return@withContext Result.failure(SecurityException("SHA256 校验失败"))
+                    } else {
+                        Log.i(TAG, "模型校验成功: ${modelFile.name}")
+                    }
                 } else {
-                    Log.i(TAG, "模型校验成功: ${modelFile.name}")
+                    Log.w(TAG, "跳过校验（使用占位符校验值）")
                 }
             }
-            
+
             // 重命名临时文件为正式文件
             if (targetFile.exists()) {
                 targetFile.delete()
             }
             tempFile.renameTo(targetFile)
-            
+
             // 删除占位符文件（如果存在）
             val placeholderFile = File(context.filesDir, "models/${modelFile.name}.placeholder")
             if (placeholderFile.exists()) {
                 placeholderFile.delete()
                 Log.i(TAG, "已删除占位符文件: ${modelFile.name}.placeholder")
             }
-            
+
             downloadedModels.add(modelFile.name)
             callback?.onStateChanged(DownloadState.Completed(modelFile.name))
             callback?.onComplete(modelFile.name, true)
-            
+
             Result.success(true)
         } catch (e: Exception) {
             Log.e(TAG, "模型下载失败: ${modelFile.name}", e)
+            // 清理临时文件
+            try {
+                val modelDir = File(context.filesDir, "models")
+                File(modelDir, "${modelFile.name}.tmp").takeIf { it.exists() }?.delete()
+            } catch (_: Exception) {}
             callback?.onStateChanged(DownloadState.Failed(modelFile.name, e.message ?: "未知错误"))
             callback?.onComplete(modelFile.name, false)
             Result.failure(e)
@@ -348,15 +369,17 @@ class ModelDownloadManager(private val context: Context) {
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(8192)
         val inputStream = file.inputStream()
-        
-        var bytesRead: Int
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-            digest.update(buffer, 0, bytesRead)
+
+        return try {
+            var bytesRead: Int
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+            val hashBytes = digest.digest()
+            hashBytes.joinToString("") { "%02x".format(it) }
+        } finally {
+            try { inputStream.close() } catch (_: Exception) {}
         }
-        inputStream.close()
-        
-        val hashBytes = digest.digest()
-        return hashBytes.joinToString("") { "%02x".format(it) }
     }
     
     /**

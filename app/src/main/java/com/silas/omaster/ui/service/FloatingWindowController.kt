@@ -22,11 +22,20 @@ class FloatingWindowController private constructor(private val context: Context)
     private var presetList: List<MasterPreset> = emptyList()
     private var currentIndex: Int = 0
 
+    // 状态标志：避免重复注册或注销
+    @Volatile
+    private var isRegistered = false
+
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == FloatingWindowService.ACTION_SWITCH_PRESET) {
-                val direction = intent.getStringExtra(FloatingWindowService.EXTRA_SWITCH_DIRECTION)
-                handlePresetSwitch(direction)
+            try {
+                if (intent.action == FloatingWindowService.ACTION_SWITCH_PRESET) {
+                    val direction = intent.getStringExtra(FloatingWindowService.EXTRA_SWITCH_DIRECTION)
+                    handlePresetSwitch(direction)
+                }
+            } catch (e: Exception) {
+                // 广播回调中抛出的异常会被系统忽略，但记录日志便于排查
+                android.util.Log.e("FloatingWindowController", "广播处理异常", e)
             }
         }
     }
@@ -35,6 +44,10 @@ class FloatingWindowController private constructor(private val context: Context)
      * 注册广播接收器
      */
     fun register() {
+        if (isRegistered) {
+            android.util.Log.w("FloatingWindowController", "广播接收器已注册,跳过")
+            return
+        }
         val filter = IntentFilter(FloatingWindowService.ACTION_SWITCH_PRESET)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -42,8 +55,10 @@ class FloatingWindowController private constructor(private val context: Context)
             } else {
                 context.registerReceiver(broadcastReceiver, filter)
             }
+            isRegistered = true
+            android.util.Log.i("FloatingWindowController", "广播接收器已注册")
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("FloatingWindowController", "注册广播接收器失败", e)
         }
     }
 
@@ -51,10 +66,20 @@ class FloatingWindowController private constructor(private val context: Context)
      * 注销广播接收器
      */
     fun unregister() {
+        if (!isRegistered) {
+            // 未注册时静默返回,避免 IllegalArgumentException
+            return
+        }
         try {
             context.unregisterReceiver(broadcastReceiver)
+            isRegistered = false
+            android.util.Log.i("FloatingWindowController", "广播接收器已注销")
+        } catch (e: IllegalArgumentException) {
+            // 已被外部注销,重置状态
+            isRegistered = false
+            android.util.Log.w("FloatingWindowController", "注销时未找到接收器,已重置状态")
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("FloatingWindowController", "注销广播接收器失败", e)
         }
     }
 
@@ -105,12 +130,30 @@ class FloatingWindowController private constructor(private val context: Context)
      * 处理预设切换
      */
     private fun handlePresetSwitch(direction: String?) {
-        if (presetList.isEmpty()) return
+        if (presetList.isEmpty()) {
+            android.util.Log.w("FloatingWindowController", "预设列表为空,无法切换")
+            return
+        }
+
+        // 防御性：currentIndex 越界时重置
+        if (currentIndex !in presetList.indices) {
+            android.util.Log.w("FloatingWindowController", "currentIndex 越界($currentIndex),重置为0")
+            currentIndex = 0
+        }
 
         val newIndex = when (direction) {
             "prev" -> (currentIndex - 1 + presetList.size) % presetList.size
             "next" -> (currentIndex + 1) % presetList.size
-            else -> return
+            else -> {
+                android.util.Log.w("FloatingWindowController", "未知切换方向: $direction")
+                return
+            }
+        }
+
+        // 防御性：newIndex 必须有效
+        if (newIndex !in presetList.indices) {
+            android.util.Log.e("FloatingWindowController", "计算后的索引无效: $newIndex")
+            return
         }
 
         currentIndex = newIndex
@@ -118,7 +161,11 @@ class FloatingWindowController private constructor(private val context: Context)
         _currentPreset.value = newPreset
 
         // 使用 update 方法更新悬浮窗内容（避免闪动）
-        FloatingWindowService.update(context, newPreset, currentIndex, presetList.map { it.id ?: "" })
+        try {
+            FloatingWindowService.update(context, newPreset, currentIndex, presetList.map { it.id ?: "" })
+        } catch (e: Exception) {
+            android.util.Log.e("FloatingWindowController", "更新悬浮窗失败", e)
+        }
     }
 
     companion object {

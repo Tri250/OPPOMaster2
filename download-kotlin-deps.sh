@@ -1,8 +1,6 @@
 #!/bin/bash
 # 下载所有必要的Gradle插件依赖
 
-set -e
-
 LOCAL_REPO="/workspace/local-maven-repo"
 
 download_artifact() {
@@ -10,21 +8,28 @@ download_artifact() {
     local artifact=$2
     local version=$3
     local repo_url=$4
-    
+
     # 转换group路径
     local group_path=$(echo $group | tr '.' '/')
     local artifact_dir="$LOCAL_REPO/$group_path/$artifact/$version"
-    
+
     mkdir -p $artifact_dir
-    
+
     echo "下载: $group:$artifact:$version"
-    
+
     # 下载JAR
-    curl -L -s -o "$artifact_dir/$artifact-$version.jar" "$repo_url/$group_path/$artifact/$version/$artifact-$version.jar" || echo "JAR下载失败"
-    
+    curl -L -s -o "$artifact_dir/$artifact-$version.jar" "$repo_url/$group_path/$artifact/$version/$artifact-$version.jar"
     # 下载POM
-    curl -L -s -o "$artifact_dir/$artifact-$version.pom" "$repo_url/$group_path/$artifact/$version/$artifact-$version.pom" || echo "POM下载失败"
-    
+    curl -L -s -o "$artifact_dir/$artifact-$version.pom" "$repo_url/$group_path/$artifact/$version/$artifact-$version.pom"
+
+    # 清理无效文件
+    if [ -f "$artifact_dir/$artifact-$version.jar" ] && [ $(stat -c%s "$artifact_dir/$artifact-$version.jar" 2>/dev/null) -lt 1024 ]; then
+        rm -f "$artifact_dir/$artifact-$version.jar"
+    fi
+    if [ -f "$artifact_dir/$artifact-$version.pom" ] && [ $(stat -c%s "$artifact_dir/$artifact-$version.pom" 2>/dev/null) -lt 200 ]; then
+        rm -f "$artifact_dir/$artifact-$version.pom"
+    fi
+
     ls -la $artifact_dir
 }
 
