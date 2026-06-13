@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
+import android.util.Log
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.watermark.ExifWatermarkProvider
 import com.silas.omaster.watermark.WatermarkConfigDef
@@ -36,6 +37,8 @@ import java.util.*
  * 与 Web 端功能对齐
  */
 object ShareExportUtils {
+
+    private const val TAG = "ShareExportUtils"
 
     /**
      * 分享预设配方
@@ -123,7 +126,7 @@ object ShareExportUtils {
             
             return true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "savePresetToFavorites failed", e)
             return false
         }
     }
@@ -155,7 +158,7 @@ object ShareExportUtils {
             
             savedUri?.toString()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "exportImageToGallery failed", e)
             null
         }
     }
@@ -229,7 +232,7 @@ object ShareExportUtils {
                 file
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "saveBitmapLegacy failed", e)
             null
         }
     }
@@ -254,7 +257,7 @@ object ShareExportUtils {
             // 导出到相册
             exportImageToGallery(context, watermarkedBitmap)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "exportImageWithWatermark failed", e)
             null
         }
     }
@@ -295,7 +298,7 @@ object ShareExportUtils {
                 }
                 .sortedByDescending { it.createdAt }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "getFavoritePresets failed", e)
             return emptyList()
         }
     }
@@ -310,7 +313,7 @@ object ShareExportUtils {
             editor.remove("preset_$presetId")
             editor.apply()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "removeFavoritePreset failed", e)
         }
     }
 

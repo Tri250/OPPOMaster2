@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -266,7 +267,7 @@ fun AISceneRecognitionScreen(
                                 val bitmap = buildRecipeCardBitmap(analysisResult, context)
                                 ShareExportUtils.exportImageToGallery(context, bitmap, "hasselblad_recipe_${System.currentTimeMillis()}.jpg")
                             } catch (e: Exception) {
-                                e.printStackTrace()
+                                Log.e("AISceneRecognition", "Export recipe card failed", e)
                             }
                         }
                     }) {

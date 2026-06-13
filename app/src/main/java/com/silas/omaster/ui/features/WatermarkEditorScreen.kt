@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -272,14 +273,14 @@ fun WatermarkEditorScreen(
                             if (!date.isNullOrBlank()) dateText = date
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.w("WatermarkEditor", "EXIF read failed", e)
                     }
 
                     if (bitmap != null) {
                         recommendedColor = analyzeDominantColor(bitmap)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.w("WatermarkEditor", "Image load failed", e)
                 }
                 isLoading = false
             }
@@ -362,7 +363,7 @@ fun WatermarkEditorScreen(
                 recommendedColor = analyzeDominantColor(bitmap)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("WatermarkEditor", "Init image load failed", e)
         }
         isLoading = false
     }

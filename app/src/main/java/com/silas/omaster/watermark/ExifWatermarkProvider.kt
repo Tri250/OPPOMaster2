@@ -7,6 +7,7 @@ import android.location.Geocoder
 import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
@@ -22,6 +23,10 @@ import kotlin.math.*
  * - 智能后备方案（无 EXIF 时的默认值）
  */
 class ExifWatermarkProvider(private val context: Context) {
+
+    companion object {
+        private const val TAG = "ExifWatermarkProvider"
+    }
 
     /**
      * EXIF 水印数据结构
@@ -111,7 +116,7 @@ class ExifWatermarkProvider(private val context: Context) {
                 extractFromInputStream(inputStream)
             } ?: getFallbackData()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "extractFromUri failed", e)
             getFallbackData()
         }
     }
@@ -124,7 +129,7 @@ class ExifWatermarkProvider(private val context: Context) {
             val exif = ExifInterface(path)
             parseExifData(exif)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "extractFromPath failed", e)
             getFallbackData()
         }
     }
@@ -137,7 +142,7 @@ class ExifWatermarkProvider(private val context: Context) {
             val exif = ExifInterface(inputStream)
             parseExifData(exif)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "extractFromInputStream failed", e)
             getFallbackData()
         }
     }
@@ -422,7 +427,7 @@ class ExifWatermarkProvider(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "reverseGeocode failed", e)
             null
         }
     }

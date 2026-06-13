@@ -2,6 +2,7 @@ package com.silas.omaster.ui.create
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -184,7 +185,7 @@ class UniversalCreatePresetViewModel(
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("CreatePresetVM", "savePreset failed", e)
             false
         }
     }

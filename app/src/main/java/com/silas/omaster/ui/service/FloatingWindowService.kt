@@ -11,6 +11,7 @@ import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
@@ -62,6 +63,7 @@ class FloatingWindowService : Service() {
     }
 
     companion object {
+        private const val TAG = "FloatingWindowService"
         private const val EXTRA_NAME = "name"
         private const val EXTRA_SECTIONS = "sections"
         private const val EXTRA_PRESET_ID = "preset_id"
@@ -231,7 +233,7 @@ class FloatingWindowService : Service() {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "updateWindowContent failed", e)
             // 如果更新失败，重新创建窗口
             showExpandedWindow(
                 name, sections, params?.x ?: 50, params?.y ?: 300,
@@ -282,7 +284,7 @@ class FloatingWindowService : Service() {
             floatingView?.post { snapToEdge(wm) }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "showExpandedWindow failed", e)
             stopSelf()
         }
     }
@@ -332,7 +334,7 @@ class FloatingWindowService : Service() {
             floatingView?.post { snapToEdge(wm) }
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "showCollapsedWindow failed", e)
         }
     }
 
@@ -809,7 +811,7 @@ class FloatingWindowService : Service() {
             startService(intent)
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "collapseToBubble failed", e)
         }
     }
 
@@ -917,7 +919,7 @@ class FloatingWindowService : Service() {
                 windowManager?.removeView(view)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "removeWindow failed", e)
         }
         floatingView = null
     }
