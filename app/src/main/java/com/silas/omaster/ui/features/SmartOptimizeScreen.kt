@@ -14,7 +14,9 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
@@ -85,7 +87,7 @@ fun SmartOptimizeScreen(
             title = { Text("智能优化", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -94,7 +96,7 @@ fun SmartOptimizeScreen(
             actions = {
                 // 预览切换
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.SegmentTick)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     previewMode = if (previewMode == "before") "after" else "before"
                 }) {
                     Icon(
@@ -105,7 +107,7 @@ fun SmartOptimizeScreen(
                 }
                 // 应用按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onApply(OptimizeParams(
                         hdrEnabled = hdrEnabled,
                         hdrStrength = hdrStrength,
@@ -134,10 +136,10 @@ fun SmartOptimizeScreen(
                 .height(200.dp)
                 .background(Color(0xFF1A1A1A))
         ) {
-            if (previewBitmap != null) {
+            previewBitmap?.let { bitmap ->
                 // 显示预览图片（带优化后效果模拟滤镜）
                 Image(
-                    bitmap = previewBitmap.asImageBitmap(),
+                    bitmap = bitmap.asImageBitmap(),
                     contentDescription = if (previewMode == "after") "优化后预览" else "原图预览",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -174,7 +176,7 @@ fun SmartOptimizeScreen(
                         fontSize = 11.sp
                     )
                 }
-            } else {
+            } ?: run {
                 // 图片未加载时显示占位提示
                 Column(
                     modifier = Modifier.align(Alignment.Center),
@@ -237,7 +239,7 @@ fun SmartOptimizeScreen(
                 OptimizeOptionCard(
                     title = "锐化优化",
                     description = "增强边缘清晰度，提升质感",
-                    icon = Icons.Default.Sharp,
+                    icon = Icons.Default.Tune,
                     enabled = sharpenEnabled,
                     onToggle = { sharpenEnabled = it },
                     strength = sharpenStrength,
@@ -286,7 +288,7 @@ fun SmartOptimizeScreen(
             // 重置按钮
             OutlinedButton(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     hdrEnabled = false
                     hdrStrength = 50f
                     noiseReductionEnabled = false
@@ -310,7 +312,7 @@ fun SmartOptimizeScreen(
             // 一键优化按钮
             Button(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     // 启用所有优化
                     hdrEnabled = true
                     noiseReductionEnabled = true
@@ -385,7 +387,7 @@ private fun OptimizeOptionCard(
                 Switch(
                     checked = enabled,
                     onCheckedChange = {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onToggle(it)
                     },
                     colors = SwitchDefaults.colors(

@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * GPU渲染管理器
@@ -263,7 +264,7 @@ class GPURenderManager private constructor(private val context: Context) {
      * 处理渲染请求
      */
     private suspend fun processRenderRequest(request: RenderRequest) {
-        _renderQueueSize.value = renderChannel.count()
+        _renderQueueSize.value = _renderQueueSize.value.coerceAtLeast(1) - 1
         
         val result = if (_isGpuAvailable.value) {
             // GPU渲染
@@ -367,6 +368,7 @@ class GPURenderManager private constructor(private val context: Context) {
         
         renderScope?.launch {
             renderChannel.send(request)
+            _renderQueueSize.value += 1
         }
         
         return requestId
@@ -458,8 +460,9 @@ class GPURenderManager private constructor(private val context: Context) {
      */
     fun clearQueue() {
         while (renderChannel.tryReceive().isSuccess) {
-            _renderQueueSize.value = renderChannel.count()
+            // drain the channel
         }
+        _renderQueueSize.value = 0
     }
     
     /**
@@ -604,7 +607,7 @@ class CPURenderer {
                 
                 // 应用曝光
                 if (params.exposure != 0f) {
-                    val exposureFactor = Math.pow(2f, params.exposure / 50f).toFloat()
+                    val exposureFactor = Math.pow(2.0, (params.exposure / 50f).toDouble()).toFloat()
                     r = (r * exposureFactor).toInt().coerceIn(0, 255)
                     g = (g * exposureFactor).toInt().coerceIn(0, 255)
                     b = (b * exposureFactor).toInt().coerceIn(0, 255)

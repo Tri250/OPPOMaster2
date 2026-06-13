@@ -5,13 +5,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import android.content.Intent
@@ -22,9 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Grid
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Sparkles
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -170,7 +171,7 @@ fun DetailScreen(
                 if (preset?.isCustom == true && onEdit != null) {
                     IconButton(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             preset?.id?.let { presetId ->
                                 onEdit(presetId)
                             }
@@ -186,7 +187,7 @@ fun DetailScreen(
 
                 // 收藏按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     viewModel.toggleFavorite()
                 }) {
                     Icon(
@@ -294,7 +295,7 @@ fun DetailScreen(
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            it.tags.forEach { tag ->
+                            it.tags?.forEach { tag ->
                                 Text(
                                     text = "#$tag",
                                     color = Color.White.copy(alpha = 0.6f),

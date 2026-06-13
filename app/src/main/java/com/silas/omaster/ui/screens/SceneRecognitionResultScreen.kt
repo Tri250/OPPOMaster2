@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.core.content.FileProvider
 import com.silas.omaster.model.*
+import kotlin.math.roundToInt
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
 import java.io.File
@@ -119,7 +120,7 @@ fun SceneRecognitionResultScreen(
                         sliderPosition = sliderPosition,
                         onSliderChange = { position ->
                             sliderPosition = position
-                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     )
                 } else {
@@ -148,7 +149,7 @@ fun SceneRecognitionResultScreen(
                     selectedId = selectedFilmId,
                     onSelect = { id ->
                         selectedFilmId = id
-                        haptic.perform(HapticFeedbackType.SegmentTick)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 )
             }
@@ -188,7 +189,7 @@ fun SceneRecognitionResultScreen(
                 onApply = {
                     selectedFilmId = showFilmDetail?.id
                     showFilmDetail = null
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
             )
         }
@@ -266,6 +267,8 @@ private fun BeforeAfterCompareSlider(
     sliderPosition: Float,
     onSliderChange: (Float) -> Unit
 ) {
+    var containerWidthPx by remember { mutableStateOf(0f) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -308,6 +311,7 @@ private fun BeforeAfterCompareSlider(
                     .fillMaxWidth()
                     .height(280.dp)
                     .clip(RoundedCornerShape(12.dp))
+                    .onSizeChanged { containerWidthPx = it.width.toFloat() }
             ) {
                 // After 图片（底层）
                 Image(
@@ -353,12 +357,12 @@ private fun BeforeAfterCompareSlider(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(4.dp)
-                        .offset { IntOffset((sliderPosition * size.width.value - 2.dp.value).roundToInt(), 0) }
+                        .offset { IntOffset((sliderPosition * containerWidthPx - 2.dp.toPx()).roundToInt(), 0) }
                         .background(Color.White)
                         .pointerInput(Unit) {
                             detectHorizontalDragGestures { change, dragAmount ->
                                 change.consume()
-                                val newPosition = sliderPosition + dragAmount / size.width.value
+                                val newPosition = sliderPosition + dragAmount / containerWidthPx
                                 onSliderChange(newPosition.coerceIn(0f, 1f))
                             }
                         }
@@ -901,7 +905,7 @@ private fun ActionButtonsRow(
         // 分享
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onShare()
             },
             modifier = Modifier.weight(1f),
@@ -916,7 +920,7 @@ private fun ActionButtonsRow(
         // 保存
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onSave()
             },
             modifier = Modifier.weight(1f),
@@ -931,7 +935,7 @@ private fun ActionButtonsRow(
         // 导出
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onExport()
             },
             modifier = Modifier.weight(1f),
@@ -949,7 +953,7 @@ private fun ActionButtonsRow(
     // 一键优化按钮
     Button(
         onClick = {
-            haptic.perform(HapticFeedbackType.Confirm)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onOptimize()
         },
         modifier = Modifier.fillMaxWidth(),

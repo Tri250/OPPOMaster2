@@ -210,7 +210,7 @@ class ModelManager private constructor(private val context: Context) {
             if (!verifyModelChecksum(tempFile, modelName)) {
                 Log.w(TAG, "模型校验失败: $modelName")
                 tempFile.delete()
-                return Result.failure(Exception("模型校验失败"))
+                return@withContext Result.failure(Exception("模型校验失败"))
             }
 
             // 移动到最终位置

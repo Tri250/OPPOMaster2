@@ -1,6 +1,7 @@
 package com.silas.omaster.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,6 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -113,7 +115,7 @@ fun AIFineTuneDialog(
 
     AlertDialog(
         onDismissRequest = {
-            haptic.perform(HapticFeedbackType.ToggleOff)
+            haptic.perform(HapticFeedbackType.LongPress)
             onDismiss()
         },
         title = {
@@ -128,7 +130,7 @@ fun AIFineTuneDialog(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onDismiss()
                 }) {
                     Icon(Icons.Default.Close, contentDescription = "关闭")
@@ -150,7 +152,7 @@ fun AIFineTuneDialog(
                             suggestions = aiFineTuneManager.getParamComparison(),
                             selectedFields = selectedFields,
                             onToggle = { field ->
-                                haptic.perform(HapticFeedbackType.SegmentTick)
+                                haptic.perform(HapticFeedbackType.LongPress)
                                 if (selectedFields.contains(field)) {
                                     selectedFields.remove(field)
                                 } else {
@@ -167,7 +169,7 @@ fun AIFineTuneDialog(
                 // 单选按钮
                 OutlinedButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         if (selectedFields.size == 1) {
                             onApplySelected(selectedFields.toSet())
                         }
@@ -180,7 +182,7 @@ fun AIFineTuneDialog(
                 // 全部应用按钮
                 Button(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         onApplyAll()
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -193,7 +195,7 @@ fun AIFineTuneDialog(
         },
         dismissButton = {
             TextButton(onClick = {
-                haptic.perform(HapticFeedbackType.ToggleOff)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onDismiss()
             }) {
                 Text("取消")
@@ -320,7 +322,7 @@ private fun ParamComparisonRow(
     isSelected: Boolean,
     onToggle: () -> Unit
 ) {
-    val borderColor by animateFloatAsState(
+    val borderColor by animateColorAsState(
         targetValue = if (isSelected) HasselbladOrange else Color.Transparent,
         label = "border"
     )

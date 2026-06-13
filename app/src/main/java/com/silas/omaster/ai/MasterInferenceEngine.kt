@@ -37,7 +37,7 @@ class MasterInferenceEngine private constructor(context: Context) {
 
     private val context = context.applicationContext
     private val sceneAnalyzer = HeuristicSceneAnalyzer.getInstance(context)
-    private val sceneMapping = SceneToHasselbladMapping()
+    private val sceneMapping = SceneToHasselbladMapping
 
     // ML Kit 人脸检测器（全局单例，使用 ACCURATE 模式以获得人脸详细分类）
     private val faceDetector: FaceDetector by lazy {

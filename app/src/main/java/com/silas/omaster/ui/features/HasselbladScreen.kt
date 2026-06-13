@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -43,7 +44,7 @@ data class ColorMode(
     val name: String,
     val description: String,
     val color: Color,
-    val icon: androidx.compose.material.icons.Icon,
+    val icon: ImageVector,
     val params: Map<String, Int>
 )
 
@@ -151,7 +152,7 @@ fun HasselbladScreen(
             title = { Text("哈苏色彩科学", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -244,7 +245,7 @@ fun HasselbladScreen(
                             mode = mode,
                             isSelected = selectedMode == mode.id,
                             onClick = {
-                                haptic.perform(HapticFeedbackType.SegmentTick)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 selectMode(mode.id)
                             }
                         )
@@ -354,7 +355,7 @@ fun HasselbladScreen(
                 ) {
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             resetParams()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
@@ -365,7 +366,7 @@ fun HasselbladScreen(
                     }
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isApplied = true
                             scope.launch {
                                 kotlinx.coroutines.delay(2000)
@@ -471,7 +472,7 @@ private fun ColorModeCard(
  */
 @Composable
 private fun FeatureItem(
-    icon: androidx.compose.material.icons.Icon,
+    icon: ImageVector,
     iconBgColor: Color,
     title: String,
     description: String

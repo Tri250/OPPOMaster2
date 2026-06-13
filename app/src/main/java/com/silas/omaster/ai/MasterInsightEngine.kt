@@ -1,13 +1,10 @@
 package com.silas.omaster.ai
 
 import android.content.Context
-import android.graphics.Bitmap
-import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 
 /**
  * Layer 4: 大师洞察 (Master Insight)
@@ -25,7 +22,7 @@ class MasterInsightEngine private constructor(context: Context) {
 
     private val context = context.applicationContext
     private val inferenceEngine = MasterInferenceEngine.getInstance(context)
-    private val sceneMapping = SceneToHasselbladMapping()
+    private val sceneMapping = SceneToHasselbladMapping
 
     /**
      * 生成完整的哈苏风格分析报告
@@ -124,10 +121,13 @@ class MasterInsightEngine private constructor(context: Context) {
     private fun createEmptyProfile(): SceneProfile = SceneProfile(
         id = "empty",
         name = "未知场景",
-        category = SceneCategory.OTHER,
+        category = SceneCategory.PORTRAIT,
         description = "图像解码失败",
-        color = 0xFF808080.toInt(),
-        confidence = 0f
+        color = 0xFF808080,
+        confidence = 0f,
+        hasselbladParams = HasselbladParams(),
+        recommendedFilm = emptyList(),
+        masterTips = emptyList()
     )
 
     private fun createEmptyFilmMatch(): FilmMatchResult = FilmMatchResult(
@@ -140,23 +140,26 @@ class MasterInsightEngine private constructor(context: Context) {
     )
 
     private fun createEmptyReport(): HasselbladReport = HasselbladReport(
-        sceneAnalysis = SceneAnalysis("", "", "", 0f, emptyList()),
-        colorAnalysis = ColorAnalysis(0f, 0f, 0f, ""),
-        lightAnalysis = LightAnalysis(0f, "", ""),
-        compositionAnalysis = CompositionAnalysis(0f, "", emptyList()),
+        sceneAnalysis = SceneAnalysis("", "", "", 0f, emptyList(), "", ""),
+        colorAnalysis = ColorAnalysis("", 0, SaturationLevel.MODERATE, ColorHarmony.COMPLEMENTARY, 0f),
+        lightAnalysis = LightAnalysis(ExposureLevel.BALANCED, ContrastLevel.MEDIUM, DynamicRange.STANDARD, LightQuality.DIRECT_HARD, false, false),
+        compositionAnalysis = CompositionAnalysis(false, "", false, false, ""),
         recommendations = emptyList(),
         narrative = "无法生成分析报告"
     )
 
     private fun createEmptyNarrative(): LightNarrative = LightNarrative(
-        mood = "未知",
+        mood = Mood.NEUTRAL_CALM,
         story = "图像分析失败",
         technicalTips = emptyList(),
         artisticDirection = "请检查图像文件是否有效"
     )
 
-    private fun createEmptyParams(): com.silas.omaster.param.AdjustableParams =
-        com.silas.omaster.param.AdjustableParams.DEFAULT
+    private fun createEmptyParams(): FinalParams = FinalParams(
+        baseParams = HasselbladParams(),
+        filmAdjustments = emptyMap(),
+        totalAdjustments = emptyMap()
+    )
 
     // ==================== 私有分析方法 ====================
 

@@ -109,7 +109,7 @@ fun FeaturedPresetsScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     // 收藏状态
-    val favoriteIds by favoriteManager.favoriteIds.collectAsState()
+    val favoriteIds by favoriteManager.favoritesFlow.collectAsState()
 
     // 加载精选预设
     LaunchedEffect(Unit) {
@@ -142,14 +142,14 @@ fun FeaturedPresetsScreen(
         FeaturedHeader(
             searchQuery = searchQuery,
             onSearchChange = { searchQuery = it },
-            onFilterClick = { haptic.perform(HapticFeedbackType.SegmentTick) }
+            onFilterClick = { haptic.perform(HapticFeedbackType.LongPress) }
         )
 
         // 品牌筛选
         BrandFilterRow(
             selectedBrand = selectedBrand,
             onBrandSelected = { brand ->
-                haptic.perform(HapticFeedbackType.SegmentTick)
+                haptic.perform(HapticFeedbackType.LongPress)
                 selectedBrand = brand
             }
         )
@@ -158,7 +158,7 @@ fun FeaturedPresetsScreen(
         SceneFilterRow(
             selectedScene = selectedScene,
             onSceneSelected = { scene ->
-                haptic.perform(HapticFeedbackType.SegmentTick)
+                haptic.perform(HapticFeedbackType.LongPress)
                 selectedScene = scene
             }
         )
@@ -178,7 +178,7 @@ fun FeaturedPresetsScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 TextButton(onClick = {
-                    haptic.perform(HapticFeedbackType.SegmentTick)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     selectedBrand = null
                     selectedScene = null
                     searchQuery = ""
@@ -201,7 +201,7 @@ fun FeaturedPresetsScreen(
         } else if (filteredPresets.isEmpty()) {
             EmptyState(
                 onRetry = {
-                    haptic.perform(HapticFeedbackType.SegmentTick)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     selectedBrand = null
                     selectedScene = null
                     searchQuery = ""
@@ -219,15 +219,15 @@ fun FeaturedPresetsScreen(
                         preset = preset,
                         isFavorite = favoriteIds.contains(preset.id),
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             onNavigateToDetail(preset)
                         },
                         onFavoriteClick = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             preset.id?.let { favoriteManager.toggleFavorite(it) }
                         },
                         onApplyClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             onApplyPreset(preset)
                         }
                     )
@@ -550,8 +550,8 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             isNew = true,
             isHncs = true,
             saturation = 10,
-            contrast = 5,
-            warmth = 8,
+            tone = 5,
+            warmCool = 8,
             sharpness = 15
         ),
         MasterPreset(
@@ -564,8 +564,8 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             isNew = false,
             isHncs = true,
             saturation = 35,
-            contrast = 20,
-            warmth = -10,
+            tone = 20,
+            warmCool = -10,
             sharpness = 25
         ),
         MasterPreset(
@@ -577,8 +577,8 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             tags = listOf("美食", "暖调"),
             isNew = true,
             saturation = 15,
-            contrast = 10,
-            warmth = 20,
+            tone = 10,
+            warmCool = 20,
             sharpness = 12
         ),
         MasterPreset(
@@ -590,7 +590,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             tags = listOf("街拍", "黑白"),
             isNew = false,
             saturation = -100,
-            contrast = 25,
+            tone = 25,
             sharpness = 20
         ),
         MasterPreset(
@@ -603,8 +603,8 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             isNew = true,
             isHncs = true,
             saturation = 20,
-            contrast = 10,
-            warmth = -10,
+            tone = 10,
+            warmCool = -10,
             sharpness = 25
         ),
         MasterPreset(
@@ -616,7 +616,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             tags = listOf("建筑", "几何"),
             isNew = false,
             saturation = 8,
-            contrast = 15,
+            tone = 15,
             sharpness = 30
         )
     )

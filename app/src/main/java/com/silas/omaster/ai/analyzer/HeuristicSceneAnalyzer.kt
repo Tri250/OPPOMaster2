@@ -657,15 +657,21 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 获取场景预设（安全处理空列表）
         if (topScenes.isEmpty()) {
             val defaultScene = ScenePresets.allScenes.firstOrNull()
+                ?: SceneProfile(
+                    id = "unknown",
+                    name = "Unknown",
+                    category = SceneCategory.PORTRAIT,
+                    description = "",
+                    color = 0xFFFF6B35,
+                    confidence = 0f,
+                    hasselbladParams = HasselbladParams(),
+                    recommendedFilm = emptyList(),
+                    masterTips = emptyList()
+                )
             return FusedResult(
-                primary = defaultScene ?: return@fuseResults null,
+                primary = defaultScene,
                 confidence = 0f,
-                alternatives = emptyList(),
-                colorProfile = colorProfile,
-                brightnessLevel = brightnessLevel,
-                faceCount = faceCount,
-                edgeDensity = edgeDensity,
-                sourceBreakdown = emptyMap()
+                alternatives = emptyList()
             )
         }
 
@@ -677,7 +683,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         }
 
         // 计算置信度
-        val totalScore = sorted.sumOf { it.value }
+        val totalScore = sorted.sumOf { it.value.toDouble() }.toFloat()
         val primaryScore = topScenes.first().value
         val confidence = (primaryScore / totalScore.coerceAtLeast(1f)).coerceIn(0f, 1f)
 
@@ -715,7 +721,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             },
             "face_count" to faceCount.toFloat(),
             "edge_density" to edgeDensity,
-            "has_exif" to (exif != null).toFloat()
+            "has_exif" to if (exif != null) 1f else 0f
         )
     }
 

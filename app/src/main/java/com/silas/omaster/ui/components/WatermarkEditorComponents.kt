@@ -99,7 +99,7 @@ fun WatermarkTemplateSelector(
             templates = templates.filter { it.type == com.silas.omaster.watermark.WatermarkType.BRAND },
             selectedId = selectedTemplate?.id,
             onSelect = {
-                haptic.perform(HapticFeedbackType.SegmentTick)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.selectTemplate(it)
                 onTemplateSelected(it)
             },
@@ -114,7 +114,7 @@ fun WatermarkTemplateSelector(
             templates = templates.filter { it.type == com.silas.omaster.watermark.WatermarkType.FUNCTIONAL },
             selectedId = selectedTemplate?.id,
             onSelect = {
-                haptic.perform(HapticFeedbackType.SegmentTick)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.selectTemplate(it)
                 onTemplateSelected(it)
             },
@@ -129,7 +129,7 @@ fun WatermarkTemplateSelector(
             templates = templates.filter { it.type == com.silas.omaster.watermark.WatermarkType.STYLE },
             selectedId = selectedTemplate?.id,
             onSelect = {
-                haptic.perform(HapticFeedbackType.SegmentTick)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.selectTemplate(it)
                 onTemplateSelected(it)
             },
@@ -144,9 +144,9 @@ fun WatermarkTemplateSelector(
                 templates = customTemplates,
                 selectedId = selectedTemplate?.id,
                 onSelect = {
-                    haptic.perform(HapticFeedbackType.SegmentTick)
-                    watermarkManager.selectTemplate(it.id)
-                    onTemplateSelected(it.id)
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    watermarkManager.selectTemplate(it)
+                    onTemplateSelected(it)
                 },
                 onEdit = onEditTemplate
             )
@@ -287,7 +287,7 @@ fun WatermarkElementConfigPanel(
             name = "品牌名称",
             isEnabled = elementConfig.showBrand,
             onToggle = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.toggleElement(WatermarkElement.BRAND)
             }
         )
@@ -297,7 +297,7 @@ fun WatermarkElementConfigPanel(
             name = "手机型号",
             isEnabled = elementConfig.showModel,
             onToggle = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.toggleElement(WatermarkElement.MODEL)
             }
         )
@@ -307,7 +307,7 @@ fun WatermarkElementConfigPanel(
             name = "参数栏",
             isEnabled = elementConfig.showParams,
             onToggle = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.toggleElement(WatermarkElement.PARAMS)
             }
         )
@@ -317,7 +317,7 @@ fun WatermarkElementConfigPanel(
             name = "时间戳",
             isEnabled = elementConfig.showTimestamp,
             onToggle = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.toggleElement(WatermarkElement.TIMESTAMP)
             }
         )
@@ -327,7 +327,7 @@ fun WatermarkElementConfigPanel(
             name = "暗角效果",
             isEnabled = elementConfig.showVignette,
             onToggle = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.toggleElement(WatermarkElement.VIGNETTE)
             }
         )
@@ -347,7 +347,7 @@ fun WatermarkElementConfigPanel(
         PositionGrid(
             selectedPosition = elementConfig.brandPosition,
             onPositionSelected = { pos ->
-                haptic.perform(HapticFeedbackType.SegmentTick)
+                haptic.perform(HapticFeedbackType.LongPress)
                 watermarkManager.updateElementPosition(WatermarkElement.BRAND, pos)
             }
         )
@@ -394,7 +394,7 @@ fun WatermarkElementConfigPanel(
         // 保存为模板按钮
         Button(
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.LongPress)
                 onSaveAsTemplate()
             },
             modifier = Modifier.fillMaxWidth(),
@@ -581,7 +581,7 @@ fun SaveAsTemplateDialog(
             Button(
                 onClick = {
                     if (templateName.isNotBlank()) {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         onConfirm(templateName.trim())
                     }
                 },

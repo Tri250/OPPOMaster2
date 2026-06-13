@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 val HasselbladOrange = Color(0xFF6B35)
 val HasselbladOrangeDark = Color(0xFF5A25)
 val HasselbladOrangeLight = Color(0xFF8A50)
+val HasselbladGreen = Color(0xFF4CAF50)
 
 /**
  * 品牌主题色

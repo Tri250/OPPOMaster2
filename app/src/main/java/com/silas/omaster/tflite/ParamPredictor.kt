@@ -158,14 +158,14 @@ class ParamPredictor(private val context: Context) {
         // 填充场景概率（使用候选场景的概率）
         val classifier = SceneClassifier(context)
         for (candidate in sceneResult.topCandidates) {
-            val index = classifier.SCENE_LABELS.entries.find { it.value.id == candidate.sceneId }?.key
+            val index = SceneClassifier.SCENE_LABELS.entries.find { it.value.id == candidate.sceneId }?.key
             if (index != null && index < SCENE_FEATURE_DIM) {
                 sceneProbabilities[index] = candidate.confidence
             }
         }
         
         // 如果主场景概率未填充，确保填充
-        val primaryIndex = classifier.SCENE_LABELS.entries.find { it.value.id == sceneResult.sceneId }?.key
+        val primaryIndex = SceneClassifier.SCENE_LABELS.entries.find { it.value.id == sceneResult.sceneId }?.key
         if (primaryIndex != null && primaryIndex < SCENE_FEATURE_DIM && sceneProbabilities[primaryIndex] == 0f) {
             sceneProbabilities[primaryIndex] = sceneResult.confidence
         }

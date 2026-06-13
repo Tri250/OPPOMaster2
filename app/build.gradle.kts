@@ -219,6 +219,11 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "linuxMain/**"
+            excludes += "nativeMain/**"
+            excludes += "commonMain/**"
+            excludes += "META-INF/kotlin-project-structure-metadata.json"
+            excludes += "META-INF/versions/**"
         }
     }
 

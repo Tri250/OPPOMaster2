@@ -243,7 +243,7 @@ private fun NavItemButton(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onClick()
                 }
             ),

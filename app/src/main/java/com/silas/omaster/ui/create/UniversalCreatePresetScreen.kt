@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -41,6 +42,7 @@ fun UniversalCreatePresetScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -70,8 +72,10 @@ fun UniversalCreatePresetScreen(
                     val isSaveEnabled = uiState.name.isNotBlank() && (uiState.imageUri != null || uiState.originalCoverPath != null)
                     TextButton(
                         onClick = {
-                            if (viewModel.savePreset()) {
-                                onSave()
+                            scope.launch {
+                                if (viewModel.savePreset()) {
+                                    onSave()
+                                }
                             }
                         },
                         enabled = isSaveEnabled

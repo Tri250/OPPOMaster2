@@ -200,19 +200,6 @@ class PresetRepository private constructor(context: Context) {
         return filtered
     }
 
-    /**
-     * PM-003: 预设收藏/取消收藏
-     */
-    fun toggleFavorite(presetId: String) {
-        val current = _favorites.value.toMutableSet()
-        if (current.contains(presetId)) {
-            current.remove(presetId)
-        } else {
-            current.add(presetId)
-        }
-        _favorites.value = current
-        saveFavorites(current)
-    }
 
     fun isFavorite(presetId: String): Boolean = _favorites.value.contains(presetId)
 

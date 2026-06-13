@@ -4,6 +4,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -21,6 +24,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -221,11 +225,11 @@ enum class WatermarkStyle {
  */
 @Composable
 fun FilmRecipePreviewBar(
-    selectedFilm: FilmStock,
-    onFilmSelected: (FilmStock) -> Unit,
+    selectedFilm: FilmPreset,
+    onFilmSelected: (FilmPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val films = FilmStock.entries.toTypedArray()
+    val films = FilmPresets.allFilms
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -240,8 +244,7 @@ fun FilmRecipePreviewBar(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(films.size) { index ->
-                val film = films[index]
+            items(films) { film ->
                 FilmRecipeItem(
                     film = film,
                     isSelected = film == selectedFilm,
@@ -254,7 +257,7 @@ fun FilmRecipePreviewBar(
 
 @Composable
 private fun FilmRecipeItem(
-    film: FilmStock,
+    film: FilmPreset,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -273,7 +276,7 @@ private fun FilmRecipeItem(
     ) {
         // 胶片品牌标识
         Text(
-            text = film.brand.firstOrNull()?.toString() ?: "",
+            text = film.series.displayName.firstOrNull()?.toString() ?: "",
             style = MaterialTheme.typography.headlineMedium,
             color = if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.6f),
             fontWeight = FontWeight.Bold
@@ -281,9 +284,9 @@ private fun FilmRecipeItem(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // ISO 值
+        // 胶片系列
         Text(
-            text = "ISO ${film.iso}",
+            text = film.series.displayName,
             style = MaterialTheme.typography.labelSmall,
             color = Color.White.copy(alpha = 0.5f)
         )
@@ -292,7 +295,7 @@ private fun FilmRecipeItem(
 
         // 胶片名称
         Text(
-            text = film.displayName,
+            text = film.name,
             style = MaterialTheme.typography.labelSmall,
             color = if (isSelected) HasselbladOrange else Color.White,
             textAlign = TextAlign.Center,
@@ -475,6 +478,15 @@ fun HistogramVisualizer(
 }
 
 /**
+ * 场景层级数据
+ */
+data class SceneHierarchy(
+    val primary: SceneCategory,
+    val secondary: String,
+    val fine: String
+)
+
+/**
  * 场景标签组件
  */
 @Composable
@@ -495,13 +507,13 @@ fun SceneHierarchyBadge(
 
         // 二级场景
         SceneBadge(
-            text = sceneHierarchy.secondary.displayName,
+            text = sceneHierarchy.secondary,
             isPrimary = false
         )
 
         // 三级场景
         SceneBadge(
-            text = sceneHierarchy.fine.displayName,
+            text = sceneHierarchy.fine,
             isPrimary = false,
             isFine = true
         )

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -296,67 +297,68 @@ fun SceneAnalysisReportScreen(
                 }
             }
         } else {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 时间范围选择
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    TimeRangeChip("本周", "week", timeRange == "week") { timeRange = "week" }
-                    TimeRangeChip("本月", "month", timeRange == "month") { timeRange = "month" }
-                    TimeRangeChip("本年", "year", timeRange == "year") { timeRange = "year" }
-                    TimeRangeChip("全部", "all", timeRange == "all") { timeRange = "all" }
+                    // 时间范围选择
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TimeRangeChip("本周", "week", timeRange == "week") { timeRange = "week" }
+                        TimeRangeChip("本月", "month", timeRange == "month") { timeRange = "month" }
+                        TimeRangeChip("本年", "year", timeRange == "year") { timeRange = "year" }
+                        TimeRangeChip("全部", "all", timeRange == "all") { timeRange = "all" }
+                    }
+
+                    // 概览卡片
+                    habits?.let { OverviewCards(it) }
+
+                    // 拍摄偏好
+                    habits?.let { ShootingPreferenceCard(it) }
+
+                    // 场景分布
+                    SceneDistributionCard(sceneStats)
+
+                    // 胶片风格使用排行
+                    FilmUsageCard(filmUsage)
+
+                    // 大师建议
+                    MasterTipsCard(masterTips)
+
+                    // 底部间距
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
 
-                // 概览卡片
-                if (habits != null) {
-                    OverviewCards(habits)
-                }
-
-                // 拍摄偏好
-                if (habits != null) {
-                    ShootingPreferenceCard(habits)
-                }
-
-                // 场景分布
-                SceneDistributionCard(sceneStats)
-
-                // 胶片风格使用排行
-                FilmUsageCard(filmUsage)
-
-                // 大师建议
-                MasterTipsCard(masterTips)
-
-                // 底部间距
-                Spacer(modifier = Modifier.height(80.dp))
-            }
-
-            // 底部操作栏
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(PureBlack.copy(alpha = 0.95f))
-                    .padding(vertical = 12.dp)
-            ) {
-                Button(
-                    onClick = onViewDetails,
+                // 底部操作栏
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                        .align(Alignment.BottomCenter)
+                        .background(PureBlack.copy(alpha = 0.95f))
+                        .padding(vertical = 12.dp)
                 ) {
-                    Icon(Icons.Default.Visibility, null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("查看详细数据", color = Color.White, fontWeight = FontWeight.Medium)
+                    Button(
+                        onClick = onViewDetails,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    ) {
+                        Icon(Icons.Default.Visibility, null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("查看详细数据", color = Color.White, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
         }
@@ -439,7 +441,7 @@ private fun OverviewCards(habits: ShootingHabits) {
  */
 @Composable
 private fun OverviewCard(
-    icon: androidx.compose.material.icons.Icon,
+    icon: ImageVector,
     label: String,
     value: String,
     modifier: Modifier = Modifier

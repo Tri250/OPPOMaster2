@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.model.PresetDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -258,8 +259,13 @@ class CloudSyncManager private constructor(context: Context) {
         }
 
         // 解析描述
-        val description = json.optJSONObject("description")
-        val descriptionText = description?.optString("content", "") ?: ""
+        val descriptionJson = json.optJSONObject("description")
+        val description = descriptionJson?.let {
+            PresetDescription(
+                title = it.optString("title", ""),
+                content = it.optString("content", "")
+            )
+        }
 
         return MasterPreset(
             id = id,
@@ -271,7 +277,7 @@ class CloudSyncManager private constructor(context: Context) {
             isNew = isNew,
             params = params,
             colorGradingParams = colorGradingParams,
-            description = descriptionText,
+            description = description,
             brand = brand,
             version = version,
             build = build,

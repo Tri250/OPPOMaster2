@@ -1,5 +1,6 @@
 package com.silas.omaster.data.model
 
+import com.silas.omaster.model.MasterPreset
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.util.UUID
 
 /**
  * 通用预设编辑器 ViewModel
@@ -47,7 +46,7 @@ class UniversalCreatePresetViewModel(
         }
 
         viewModelScope.launch {
-            val preset = repository.getPresetById(presetId)
+            val preset = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
             if (preset != null) {
                 // 如果是旧数据结构，转换为新结构
                 val sections = if (preset.sections.isNullOrEmpty()) {
@@ -55,7 +54,7 @@ class UniversalCreatePresetViewModel(
                 } else {
                     preset.sections
                 }
-                
+
                 _uiState.value = UniversalPresetUiState(
                     name = if (preset.isCustom) preset.name else "${preset.name} (Copy)",
                     sections = sections,
@@ -74,14 +73,14 @@ class UniversalCreatePresetViewModel(
         editingPresetId = presetId
         
         viewModelScope.launch {
-            val preset = repository.getPresetById(presetId)
+            val preset = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
             if (preset != null) {
                 val sections = if (preset.sections.isNullOrEmpty()) {
                     convertOldPresetToSections(preset)
                 } else {
                     preset.sections
                 }
-                
+
                 _uiState.value = UniversalPresetUiState(
                     name = preset.name,
                     sections = sections,
@@ -153,10 +152,10 @@ class UniversalCreatePresetViewModel(
         }
     }
 
-    fun savePreset(): Boolean {
+    suspend fun savePreset(): Boolean {
         val state = _uiState.value
         if (state.name.isBlank()) return false
-        
+
         // Validation:
         // - Create mode: must have imageUri
         // - Edit mode: must have imageUri OR originalCoverPath
@@ -168,26 +167,49 @@ class UniversalCreatePresetViewModel(
             } else {
                 state.originalCoverPath ?: return false
             }
-            
-            val preset = MasterPreset(
-                id = editingPresetId ?: UUID.randomUUID().toString(),
-                name = state.name,
-                coverPath = coverPath,
-                author = "@用户自定义",
-                sections = state.sections,
-                isCustom = true
-            )
-            
+
             if (editingPresetId != null) {
-                repository.updateCustomPreset(preset)
+                repository.updateCustomPreset(
+                    editingPresetId!!,
+                    mapOf(
+                        "name" to state.name,
+                        "coverPath" to coverPath,
+                        "params" to sectionsToParams(state.sections)
+                    )
+                )
             } else {
-                repository.addCustomPreset(preset)
+                repository.createCustomPreset(
+                    name = state.name,
+                    params = sectionsToParams(state.sections),
+                    coverPath = coverPath
+                )
             }
             true
         } catch (e: Exception) {
             Log.e("CreatePresetVM", "savePreset failed", e)
             false
         }
+    }
+
+    private fun sectionsToParams(sections: List<PresetSection>): Map<String, Int> {
+        val params = mutableMapOf<String, Int>()
+        for (section in sections) {
+            for (item in section.items) {
+                val key = when (item.label) {
+                    "饱和度" -> "saturation"
+                    "影调" -> "contrast"
+                    "冷暖" -> "warmth"
+                    "锐度" -> "sharpness"
+                    "青品" -> "cyan_magenta"
+                    "色温" -> "color_temperature"
+                    "色调" -> "color_hue"
+                    "曝光补偿" -> "exposure_compensation"
+                    else -> item.label
+                }
+                item.value.toIntOrNull()?.let { params[key] = it }
+            }
+        }
+        return params
     }
 
     private fun convertOldPresetToSections(preset: MasterPreset): List<PresetSection> {

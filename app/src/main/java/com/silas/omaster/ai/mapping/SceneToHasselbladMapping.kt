@@ -1,6 +1,7 @@
 package com.silas.omaster.ai.mapping
 
 import com.silas.omaster.model.*
+import kotlin.math.abs
 
 /**
  * 5.3 场景→哈苏参数映射表

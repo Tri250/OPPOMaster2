@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import okhttp3.MediaType.Companion.toMediaType
 import kotlin.math.abs
 
 /**
@@ -712,7 +713,7 @@ class AIFineTuneManager private constructor(context: Context) {
                     .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
                 
-                val requestBody = okhttp3.MediaType.parse("application/json; charset=utf-8")
+                val requestBody = "application/json; charset=utf-8".toMediaType()
                     .let { mediaType ->
                         okhttp3.RequestBody.create(
                             mediaType,
@@ -731,9 +732,9 @@ class AIFineTuneManager private constructor(context: Context) {
                 val response = client.newCall(request).execute()
                 
                 if (response.isSuccessful) {
-                    response.body()?.string()
+                    response.body?.string()
                 } else {
-                    Log.w(TAG, "云端API响应失败: ${response.code()}")
+                    Log.w(TAG, "云端API响应失败: ${response.code}")
                     null
                 }
             }
@@ -821,7 +822,7 @@ class AIFineTuneManager private constructor(context: Context) {
             )
         } catch (e: Exception) {
             Log.e(TAG, "解析云端响应失败: ${e.message}")
-            null
+            return null
         }
     }
 
@@ -1101,7 +1102,7 @@ class AIFineTuneManager private constructor(context: Context) {
         val newParams = AdjustmentParams(
             saturation = style.saturation,
             contrast = style.contrast,
-            brightness = style.brightness,
+            brightness = 0,
             warmth = style.warmth,
             selectedStyleId = styleId
         )

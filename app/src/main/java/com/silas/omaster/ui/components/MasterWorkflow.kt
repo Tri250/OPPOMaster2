@@ -245,7 +245,10 @@ fun MasterWorkflow(
             totalDurationMs = totalDuration
         )
 
-        onComplete(workflowResult)
+        val result = workflowResult
+        if (result != null) {
+            onComplete(result)
+        }
     }
 
     Column(

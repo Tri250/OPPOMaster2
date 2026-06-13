@@ -9,6 +9,7 @@ import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
@@ -102,7 +103,7 @@ class TFLiteEngine private constructor(private val context: Context) {
     /**
      * 性能统计
      */
-    private data class PerformanceStats(
+    data class PerformanceStats(
         var totalInferences: Long = 0,
         var totalTimeMs: Long = 0,
         var minTimeMs: Long = Long.MAX_VALUE,
@@ -182,11 +183,7 @@ class TFLiteEngine private constructor(private val context: Context) {
         // GPU Delegate
         if (config.useGpu && gpuCompatibilityList.isDelegateSupportedOnThisDevice) {
             try {
-                val options = GpuDelegate.Options()
-                    .setQuantizedModelsAllowed(true)
-                    .setForceBackend(GpuDelegate.Options.FORCE_BACKEND_OPENCL)
-                
-                gpuDelegate = GpuDelegate(options)
+                gpuDelegate = GpuDelegate()
                 Log.i(TAG, "GPU Delegate 初始化成功")
             } catch (e: Exception) {
                 Log.w(TAG, "GPU Delegate 初始化失败，将回退到CPU", e)
@@ -196,10 +193,9 @@ class TFLiteEngine private constructor(private val context: Context) {
         // NNAPI Delegate (Android 8.1+)
         if (config.useNnapi && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             try {
-                nnapiDelegate = NnApiDelegate.Builder()
+                nnapiDelegate = NnApiDelegate(NnApiDelegate.Options()
                     .setUseNnapiCpu(true)
-                    .setAllowFp16PrecisionForFp32(true)
-                    .build()
+                    .setAllowFp16(true))
                 Log.i(TAG, "NNAPI Delegate 初始化成功")
             } catch (e: Exception) {
                 Log.w(TAG, "NNAPI Delegate 初始化失败", e)
@@ -254,7 +250,7 @@ class TFLiteEngine private constructor(private val context: Context) {
                 sizeBytes = modelBuffer.capacity().toLong(),
                 inputShape = interpreter.getInputTensor(0).shape(),
                 outputShape = interpreter.getOutputTensor(0).shape(),
-                isQuantized = interpreter.getInputTensor(0).dataType() != Interpreter.DataType.FLOAT32
+                isQuantized = interpreter.getInputTensor(0).dataType() != DataType.FLOAT32
             )
             
             Log.i(TAG, "模型加载成功: $modelName, 输入形状: ${modelInfoMap[modelName]?.inputShape?.contentToString()}")

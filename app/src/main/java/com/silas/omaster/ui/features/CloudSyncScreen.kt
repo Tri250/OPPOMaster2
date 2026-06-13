@@ -13,10 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.launch
@@ -32,16 +34,17 @@ fun CloudSyncScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val syncManager = remember { CloudSyncManager.getInstance() }
+    val context = LocalContext.current
+    val syncManager = remember { CloudSyncManager.getInstance(context) }
 
     val isSyncing = remember { mutableStateOf(false) }
     val lastSyncTime = remember { mutableStateOf("2分钟前") }
 
     val providers = listOf(
-        ProviderInfo("OPPO", "#1E90FF", true),
-        ProviderInfo("realme", "#FFD700", false),
-        ProviderInfo("vivo", "#4169E1", false),
-        ProviderInfo("荣耀", "#32CD32", false),
+        ProviderInfo("OPPO", 0xFF1E90FF, true),
+        ProviderInfo("realme", 0xFFFFD700, false),
+        ProviderInfo("vivo", 0xFF4169E1, false),
+        ProviderInfo("荣耀", 0xFF32CD32, false),
     )
 
     val syncItems = listOf(
@@ -60,7 +63,7 @@ fun CloudSyncScreen(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -101,7 +104,7 @@ fun CloudSyncScreen(
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Clock, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Schedule, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
                             Text(
                                 text = "最后同步：$lastSyncTime",
                                 style = MaterialTheme.typography.bodySmall,
@@ -112,10 +115,10 @@ fun CloudSyncScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Confirm)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 isSyncing.value = true
                                 scope.launch {
-                                    syncManager.performSync()
+                                    syncManager.sync()
                                     kotlinx.coroutines.delay(2000)
                                     isSyncing.value = false
                                     lastSyncTime.value = "刚刚"
@@ -199,7 +202,7 @@ fun CloudSyncScreen(
                         description = "仅在 Wi-Fi 下自动同步，节省流量"
                     )
                     FeatureCard(
-                        icon = Icons.Default.Clock,
+                        icon = Icons.Default.Schedule,
                         title = "历史版本",
                         description = "保留 30 天历史版本，随时回退"
                     )
@@ -216,7 +219,7 @@ fun CloudSyncScreen(
 
 data class ProviderInfo(
     val name: String,
-    val color: String,
+    val color: Long,
     val connected: Boolean
 )
 
@@ -334,7 +337,7 @@ private fun SyncItemCard(item: SyncItem) {
 
 @Composable
 private fun FeatureCard(
-    icon: androidx.compose.material.icons.Icon,
+    icon: ImageVector,
     title: String,
     description: String
 ) {

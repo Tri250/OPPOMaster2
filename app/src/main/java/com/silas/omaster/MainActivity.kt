@@ -45,6 +45,7 @@ import com.silas.omaster.ui.components.WelcomeDialog
 import com.silas.omaster.ui.create.PresetSelectionScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetViewModel
+import com.silas.omaster.ui.create.UniversalCreatePresetViewModelFactory
 import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
@@ -257,7 +258,9 @@ fun MainApp(navController: NavHostController) {
                 TextButton(
                     onClick = {
                         JsonUtil.deleteRemotePresets(context)
-                        repository.reloadDefaultPresets()
+                        coroutineScope.launch {
+                            repository.reloadDefaultPresets()
+                        }
                         showMigrationDialog = false
                     }
                 ) {
@@ -610,7 +613,8 @@ fun MainApp(navController: NavHostController) {
             // LUT资源分享页面
             composable<Screen.LUTShare> {
                 LUTShareScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onDownload = { /* LUT download handled internally */ }
                 )
             }
 

@@ -3,16 +3,11 @@ package com.silas.omaster.mediapipe
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.vision.imageclassifier.ImageClassifier
-import com.google.mediapipe.tasks.vision.imageclassifier.ImageClassifierResult
 import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
  * MediaPipe 场景分类器
@@ -100,8 +95,8 @@ class MediaPipeSceneClassifier private constructor(private val context: Context)
         }
     }
 
-    // MediaPipe 图像分类器实例
-    private var imageClassifier: ImageClassifier? = null
+    // MediaPipe 图像分类器已移除（依赖不可用），始终使用启发式降级模式
+    // private var imageClassifier: ImageClassifier? = null
 
     // 模型是否已加载
     private var isModelLoaded = false
@@ -116,58 +111,11 @@ class MediaPipeSceneClassifier private constructor(private val context: Context)
      * @return 初始化是否成功
      */
     suspend fun initialize(useGpu: Boolean = true): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            Log.i(TAG, "开始初始化 MediaPipe 场景分类器...")
-
-            // 检查模型文件是否存在
-            val modelPath = getModelPath()
-            if (!modelPath.exists()) {
-                Log.w(TAG, "模型文件不存在: ${modelPath.absolutePath}")
-                // 尝试从 assets 复制模型
-                val copied = copyModelFromAssets()
-                if (!copied) {
-                    Log.e(TAG, "无法获取模型文件，将使用启发式降级模式")
-                    return Result.success(false)
-                }
-            }
-
-            // 配置 MediaPipe ImageClassifier
-            val baseOptionsBuilder = BaseOptions.builder()
-                .setModelAssetPath(MODEL_NAME)
-                .let { builder ->
-                    if (useGpu && checkGpuSupport()) {
-                        Log.i(TAG, "使用 GPU 加速")
-                        builder.setDelegate(BaseOptions.Delegate.GPU)
-                    } else {
-                        Log.i(TAG, "使用 CPU 推理")
-                        builder.setDelegate(BaseOptions.Delegate.XNNPACK)
-                    }
-                }
-
-            val optionsBuilder = ImageClassifier.ImageClassifierOptions.builder()
-                .setBaseOptions(baseOptionsBuilder.build())
-                .setRunningMode(ImageClassifier.RunningMode.IMAGE)
-                .setMaxResults(5)  // 返回前5个最可能的场景
-                .setScoreThreshold(0.1f)  // 只返回置信度 > 0.1 的结果
-
-            // 创建分类器
-            imageClassifier = ImageClassifier.createFromFileAndOptions(
-                context,
-                MODEL_NAME,
-                optionsBuilder.build()
-            )
-
-            isModelLoaded = true
-            gpuSupported = useGpu && checkGpuSupport()
-
-            Log.i(TAG, "MediaPipe 场景分类器初始化成功 - GPU: $gpuSupported")
-            Result.success(true)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "MediaPipe 场景分类器初始化失败", e)
-            isModelLoaded = false
-            Result.failure(e)
-        }
+        // MediaPipe 依赖不可用，始终使用启发式降级模式
+        Log.i(TAG, "MediaPipe 依赖不可用，将使用启发式降级模式")
+        isModelLoaded = false
+        gpuSupported = false
+        Result.success(false)
     }
 
     /**
@@ -222,100 +170,8 @@ class MediaPipeSceneClassifier private constructor(private val context: Context)
      * @return 分类结果
      */
     suspend fun classify(bitmap: Bitmap): ClassificationResult = withContext(Dispatchers.Default) {
-        if (!isModelLoaded || imageClassifier == null) {
-            Log.w(TAG, "模型未加载，使用启发式降级")
-            return heuristicClassification(bitmap)
-        }
-
-        try {
-            // 预处理图像
-            val mpImage = com.google.mediapipe.framework.image.BitmapImageBuilder(bitmap).build()
-
-            // 执行分类
-            val startTime = System.currentTimeMillis()
-            val result = imageClassifier!!.classify(mpImage)
-            val inferenceTime = System.currentTimeMillis() - startTime
-
-            Log.d(TAG, "推理耗时: ${inferenceTime}ms")
-
-            // 解析结果
-            parseClassificationResult(result, inferenceTime)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "场景分类失败", e)
-            heuristicClassification(bitmap)
-        }
-    }
-
-    /**
-     * 解析分类结果
-     */
-    private fun parseClassificationResult(
-        result: ImageClassifierResult,
-        inferenceTime: Long
-    ): ClassificationResult {
-        val classifications = result.classificationResult()?.classifications()
-
-        if (classifications == null || classifications.isEmpty()) {
-            return ClassificationResult(
-                topScene = "other",
-                topConfidence = 0.0f,
-                allProbabilities = FloatArray(SCENE_CLASSES.size) { 1f / SCENE_CLASSES.size },
-                inferenceTimeMs = inferenceTime,
-                usedGpu = gpuSupported
-            )
-        }
-
-        // 获取第一个分类结果（通常只有一个）
-        val category = classifications.first().categories()
-
-        // 构建概率分布
-        val probabilities = FloatArray(SCENE_CLASSES.size) { 0f }
-        val sceneResults = mutableListOf<SceneProbability>()
-
-        for (classification in category) {
-            val index = classification.index()
-            val score = classification.score()
-            val label = classification.categoryName() ?: SCENE_CLASSES.getOrElse(index) { "other" }
-
-            // 映射到我们的场景类别
-            val mappedIndex = SCENE_CLASSES.indexOf(label).let { idx ->
-                if (idx >= 0) idx else index.coerceIn(0, SCENE_CLASSES.size - 1)
-            }
-
-            probabilities[mappedIndex] = score
-            sceneResults.add(SceneProbability(
-                sceneId = label,
-                sceneName = getSceneDisplayName(label),
-                confidence = score,
-                category = SCENE_TO_CATEGORY_MAP[label] ?: SceneCategory.PORTRAIT
-            ))
-        }
-
-        // 归一化概率
-        val sum = probabilities.sum()
-        if (sum > 0) {
-            for (i in probabilities.indices) {
-                probabilities[i] /= sum
-            }
-        }
-
-        // 获取最高置信度的场景
-        val topResult = sceneResults.maxByOrNull { it.confidence } ?: SceneProbability(
-            sceneId = "other",
-            sceneName = "其他",
-            confidence = 0.5f,
-            category = SceneCategory.PORTRAIT
-        )
-
-        return ClassificationResult(
-            topScene = topResult.sceneId,
-            topConfidence = topResult.confidence,
-            allProbabilities = probabilities,
-            sceneResults = sceneResults.sortedByDescending { it.confidence },
-            inferenceTimeMs = inferenceTime,
-            usedGpu = gpuSupported
-        )
+        // MediaPipe 依赖不可用，始终使用启发式降级模式
+        heuristicClassification(bitmap)
     }
 
     /**
@@ -532,7 +388,7 @@ class MediaPipeSceneClassifier private constructor(private val context: Context)
     /**
      * 检查模型是否已加载
      */
-    fun isReady(): Boolean = isModelLoaded && imageClassifier != null
+    fun isReady(): Boolean = isModelLoaded
 
     /**
      * 获取 GPU 支持状态
@@ -544,8 +400,7 @@ class MediaPipeSceneClassifier private constructor(private val context: Context)
      */
     fun release() {
         try {
-            imageClassifier?.close()
-            imageClassifier = null
+            // MediaPipe 分类器已移除，无需关闭
             isModelLoaded = false
             Log.i(TAG, "MediaPipe 场景分类器已释放")
         } catch (e: Exception) {
