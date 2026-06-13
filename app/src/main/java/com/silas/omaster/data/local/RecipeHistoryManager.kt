@@ -41,11 +41,18 @@ class RecipeHistoryManager private constructor(context: Context) {
 
     /**
      * 添加新的配方记录
+     * 性能优化：自动限制最大记录数,防止 SharedPreferences 过载
      */
     fun addRecipe(recipe: RecipeRecord) {
         val recipes = getAllRecipes().toMutableList()
         recipes.add(0, recipe) // 最新的在前面
-        saveRecipes(recipes)
+        // 限制最大记录数,防止 OOM 与持久化文件膨胀
+        val trimmed = if (recipes.size > MAX_RECIPES) {
+            recipes.take(MAX_RECIPES)
+        } else {
+            recipes
+        }
+        saveRecipes(trimmed)
     }
 
     /**
@@ -138,6 +145,8 @@ class RecipeHistoryManager private constructor(context: Context) {
     companion object {
         private const val PREFS_NAME = "omaster_recipe_history"
         private const val KEY_RECIPES = "recipes"
+        // 最大记录数：防止 SharedPreferences 与内存膨胀
+        private const val MAX_RECIPES = 500
 
         @Volatile
         private var INSTANCE: RecipeHistoryManager? = null

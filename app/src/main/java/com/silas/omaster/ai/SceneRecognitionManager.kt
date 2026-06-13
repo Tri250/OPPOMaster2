@@ -8,6 +8,7 @@ import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.HasselbladParams
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -293,13 +294,22 @@ class SceneRecognitionManager private constructor(context: Context) {
     /**
      * 实时识别流
      * 用于相机预览时持续识别场景
+     * 优化：使用 ensureActive() 让协程可被外部取消,避免泄漏
      */
     fun recognizeSceneStream(bitmap: Bitmap): Flow<SceneRecognitionResult> = flow {
-        while (true) {
+        while (currentCoroutineIsActive()) {
             emit(recognizeScene(bitmap))
-            delay(500) // 每 500ms 识别一次
+            kotlinx.coroutines.delay(500) // 每 500ms 识别一次
         }
     }.flowOn(Dispatchers.Default)
+
+    /**
+     * 检查当前协程是否仍处于活动状态
+     * (避免直接导入 currentCoroutineContext,提升可读性)
+     */
+    private suspend inline fun currentCoroutineIsActive(): Boolean {
+        return kotlin.coroutines.coroutineContext[Job]?.isActive ?: true
+    }
 
     /**
      * 切换哈苏之眼开关

@@ -100,6 +100,16 @@ class SubscriptionManager private constructor(context: Context) {
     }
 
     fun addSubscription(url: String, name: String = "", author: String = "", build: Int = 1) {
+        // 防御性:验证URL非空
+        if (url.isBlank()) {
+            android.util.Log.w("SubscriptionManager", "URL为空,拒绝添加订阅")
+            return
+        }
+        // HTTPS 安全校验
+        if (!url.lowercase().startsWith("https://")) {
+            android.util.Log.w("SubscriptionManager", "非HTTPS URL,拒绝添加: $url")
+            return
+        }
         if (_subscriptionsFlow.value.any { it.url == url }) return
         val newSub = Subscription(url = url, name = name, author = author, build = build)
         _subscriptionsFlow.value = _subscriptionsFlow.value + newSub
