@@ -73,7 +73,6 @@ import androidx.compose.runtime.getValue
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
-import com.silas.omaster.util.HapticFeedbackType as HapticType
 import com.silas.omaster.util.perform
 
 /**
@@ -148,7 +147,7 @@ fun CoreFeaturesScreen(
                 gradientColors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32)),
                 isEnabled = aiSceneEnabled,
                 onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.ToggleOn)
                     aiSceneEnabled = enabled
                     settingsManager.isAISceneRecognitionEnabled = enabled
                 },
@@ -167,7 +166,7 @@ fun CoreFeaturesScreen(
                 gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
                 isEnabled = aiFineTuneEnabled,
                 onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.ToggleOn)
                     aiFineTuneEnabled = enabled
                     settingsManager.isAIFineTuneEnabled = enabled
                 },
@@ -186,7 +185,7 @@ fun CoreFeaturesScreen(
                 gradientColors = listOf(Color(0xFF0D47A1), Color(0xFF1565C0)),
                 isEnabled = aiFineTuneEnabled,
                 onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.ToggleOn)
                     aiFineTuneEnabled = enabled
                     settingsManager.isAIFineTuneEnabled = enabled
                 },
@@ -214,7 +213,7 @@ fun CoreFeaturesScreen(
                 gradientColors = listOf(Color(0xFF006064), Color(0xFF00838F)),
                 isEnabled = watermarkEnabled,
                 onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.ToggleOn)
                     watermarkEnabled = enabled
                     settingsManager.isWatermarkEditorEnabled = enabled
                 },
@@ -287,7 +286,7 @@ fun CoreFeaturesScreen(
                 gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
                 isEnabled = hasselbladEnabled,
                 onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.ToggleOn)
                     hasselbladEnabled = enabled
                     settingsManager.isHasselbladColorEnabled = enabled
                 },
@@ -306,7 +305,7 @@ fun CoreFeaturesScreen(
                 gradientColors = listOf(Color(0xFF1A237E), Color(0xFF303F9F)),
                 isEnabled = cloudSyncEnabled,
                 onToggle = { enabled ->
-                    haptic.perform(HapticType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.ToggleOn)
                     cloudSyncEnabled = enabled
                     settingsManager.isCloudSyncEnabled = enabled
                 },

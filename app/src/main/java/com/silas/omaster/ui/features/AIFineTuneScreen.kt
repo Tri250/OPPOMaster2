@@ -340,7 +340,7 @@ fun AIFineTuneScreen(
                                 }
                             },
                             onPresetApply = { presetParams ->
-                                haptic.perform(HapticFeedbackType.Select)
+                                haptic.perform(HapticFeedbackType.SegmentTick)
                                 renderParams = renderParams.merge(presetParams)
                             }
                         )
@@ -382,7 +382,7 @@ fun AIFineTuneScreen(
                                     style = style,
                                     isSelected = selectedStyleId == style.id,
                                     onClick = {
-                                        haptic.perform(HapticFeedbackType.Select)
+                                        haptic.perform(HapticFeedbackType.SegmentTick)
                                         selectedStyleId = style.id
                                         renderParams = renderParams.merge(style.params)
                                     },
@@ -409,7 +409,7 @@ fun AIFineTuneScreen(
                                     optimization = opt,
                                     isSelected = selectedOptimizations.contains(opt.id),
                                     onClick = {
-                                        haptic.perform(HapticFeedbackType.Select)
+                                        haptic.perform(HapticFeedbackType.SegmentTick)
                                         if (selectedOptimizations.contains(opt.id)) {
                                             selectedOptimizations.remove(opt.id)
                                         } else {

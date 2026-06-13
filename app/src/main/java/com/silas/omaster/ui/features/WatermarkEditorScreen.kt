@@ -454,7 +454,7 @@ fun WatermarkEditorScreen(
                 }
                 // 预览按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     showBeforeAfter = !showBeforeAfter
                 }) {
                     Icon(
@@ -533,7 +533,7 @@ fun WatermarkEditorScreen(
                 if (originalBitmap != null && previewBitmap != null) {
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.SegmentTick)
                             showBeforeAfter = !showBeforeAfter
                         },
                         modifier = Modifier
@@ -577,7 +577,7 @@ fun WatermarkEditorScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.SegmentTick)
                             imagePickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -606,7 +606,7 @@ fun WatermarkEditorScreen(
             WatermarkCategoryTabs(
                 selectedCategory = selectedCategory,
                 onCategorySelected = { category ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedCategory = category
                 }
             )
@@ -626,7 +626,7 @@ fun WatermarkEditorScreen(
                 templates = filteredTemplates,
                 selectedTemplate = selectedTemplate,
                 onTemplateSelected = { template ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedTemplate = template
                     // 应用模板配置
                     showBrand = template.showBrand
@@ -649,7 +649,7 @@ fun WatermarkEditorScreen(
             WatermarkPositionGrid(
                 selectedPosition = selectedPosition,
                 onPositionSelected = { position ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedPosition = position
                     watermarkOffset = Offset.Zero
                 }

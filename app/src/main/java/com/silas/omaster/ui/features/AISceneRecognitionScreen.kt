@@ -431,7 +431,7 @@ private fun CameraEntryScreen(
                 // 闪光灯控制
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         onFlashModeChange(
                             when (flashMode) {
                                 FlashMode.OFF -> FlashMode.ON
@@ -461,7 +461,7 @@ private fun CameraEntryScreen(
                 // 摄像头切换
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         onCameraFacingChange(
                             if (cameraFacing == CameraFacing.BACK) CameraFacing.FRONT else CameraFacing.BACK
                         )
@@ -597,7 +597,7 @@ private fun CameraEntryScreen(
                 // 选择图片按钮
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         onSelectImage()
                     },
                     modifier = Modifier
@@ -1200,7 +1200,7 @@ private fun RecognitionHistoryStrip(
                     modifier = Modifier
                         .size(64.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.SegmentTick)
                             onSelect(scene)
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -1249,7 +1249,7 @@ private fun BottomActionBar(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     onRetake()
                 }
             ) {
@@ -1281,7 +1281,7 @@ private fun BottomActionBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
                     if (!isSaving && !saveSuccess) {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         onSaveRecipe()
                     }
                 }

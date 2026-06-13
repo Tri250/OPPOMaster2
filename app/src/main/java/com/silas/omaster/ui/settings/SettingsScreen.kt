@@ -358,7 +358,7 @@ fun SettingsScreen(
                     subtitle = "OPPO、realme、vivo、honor",
                     onClick = {
                         // 显示数据源详情对话框
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         showDataSourceDialog = true
                     }
                 )

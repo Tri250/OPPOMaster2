@@ -60,7 +60,6 @@ import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestion
 import com.silas.omaster.ai.ParamComparison
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.HapticFeedbackType as HapticType
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
 
@@ -114,7 +113,7 @@ fun AIFineTuneDialog(
 
     AlertDialog(
         onDismissRequest = {
-            haptic.perform(HapticType.ToggleOff)
+            haptic.perform(HapticFeedbackType.ToggleOff)
             onDismiss()
         },
         title = {
@@ -129,7 +128,7 @@ fun AIFineTuneDialog(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = {
-                    haptic.perform(HapticType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.ToggleOff)
                     onDismiss()
                 }) {
                     Icon(Icons.Default.Close, contentDescription = "关闭")
@@ -151,7 +150,7 @@ fun AIFineTuneDialog(
                             suggestions = aiFineTuneManager.getParamComparison(),
                             selectedFields = selectedFields,
                             onToggle = { field ->
-                                haptic.perform(HapticType.Select)
+                                haptic.perform(HapticFeedbackType.SegmentTick)
                                 if (selectedFields.contains(field)) {
                                     selectedFields.remove(field)
                                 } else {
@@ -168,7 +167,7 @@ fun AIFineTuneDialog(
                 // 单选按钮
                 OutlinedButton(
                     onClick = {
-                        haptic.perform(HapticType.Confirm)
+                        haptic.perform(HapticFeedbackType.Confirm)
                         if (selectedFields.size == 1) {
                             onApplySelected(selectedFields.toSet())
                         }
@@ -181,7 +180,7 @@ fun AIFineTuneDialog(
                 // 全部应用按钮
                 Button(
                     onClick = {
-                        haptic.perform(HapticType.Confirm)
+                        haptic.perform(HapticFeedbackType.Confirm)
                         onApplyAll()
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -194,7 +193,7 @@ fun AIFineTuneDialog(
         },
         dismissButton = {
             TextButton(onClick = {
-                haptic.perform(HapticType.ToggleOff)
+                haptic.perform(HapticFeedbackType.ToggleOff)
                 onDismiss()
             }) {
                 Text("取消")

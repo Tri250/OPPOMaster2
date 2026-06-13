@@ -244,7 +244,7 @@ fun HasselbladScreen(
                             mode = mode,
                             isSelected = selectedMode == mode.id,
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Select)
+                                haptic.perform(HapticFeedbackType.SegmentTick)
                                 selectMode(mode.id)
                             }
                         )

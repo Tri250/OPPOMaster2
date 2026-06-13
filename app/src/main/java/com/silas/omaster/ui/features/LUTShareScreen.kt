@@ -100,7 +100,7 @@ fun LUTShareScreen(
                             else Color(0xFF2A2A2A)
                         )
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.SegmentTick)
                             selectedCategory = category
                         }
                         .padding(horizontal = 16.dp, vertical = 8.dp)

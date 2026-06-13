@@ -94,7 +94,7 @@ fun SmartOptimizeScreen(
             actions = {
                 // 预览切换
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     previewMode = if (previewMode == "before") "after" else "before"
                 }) {
                     Icon(

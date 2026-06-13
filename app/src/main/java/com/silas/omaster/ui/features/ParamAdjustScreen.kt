@@ -121,7 +121,7 @@ fun ParamAdjustScreen(
                 label = "人像",
                 selected = selectedPreset == "portrait",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedPreset = "portrait"
                     iso = 100
                     shutterSpeed = 125f
@@ -133,7 +133,7 @@ fun ParamAdjustScreen(
                 label = "风景",
                 selected = selectedPreset == "landscape",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedPreset = "landscape"
                     iso = 100
                     shutterSpeed = 250f
@@ -145,7 +145,7 @@ fun ParamAdjustScreen(
                 label = "夜景",
                 selected = selectedPreset == "night",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedPreset = "night"
                     iso = 800
                     shutterSpeed = 30f
@@ -157,7 +157,7 @@ fun ParamAdjustScreen(
                 label = "运动",
                 selected = selectedPreset == "sports",
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedPreset = "sports"
                     iso = 400
                     shutterSpeed = 1000f
@@ -408,7 +408,7 @@ private fun ParamSliderCard(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .clickable {
-                                    haptic.perform(HapticFeedbackType.Select)
+                                    haptic.perform(HapticFeedbackType.SegmentTick)
                                     // 解析选项值
                                     val parsedValue = when (value) {
                                         is Int -> option.filter { it.isDigit() }.toIntOrNull() ?: value

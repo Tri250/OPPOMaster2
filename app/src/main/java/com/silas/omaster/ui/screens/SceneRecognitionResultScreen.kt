@@ -148,7 +148,7 @@ fun SceneRecognitionResultScreen(
                     selectedId = selectedFilmId,
                     onSelect = { id ->
                         selectedFilmId = id
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                     }
                 )
             }

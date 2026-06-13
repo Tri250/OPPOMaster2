@@ -80,7 +80,7 @@ fun FilmRecommendationStrip(
                     film = film,
                     selected = film.id == selectedId,
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         onSelect(film.id)
                     }
                 )

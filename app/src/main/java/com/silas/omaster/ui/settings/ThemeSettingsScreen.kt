@@ -107,7 +107,7 @@ fun ThemeSettingsScreen(
                     theme = theme,
                     selected = selectedTheme == theme.id,
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.SegmentTick)
                         selectedTheme = theme.id
                         customColor = theme.color
                     }
@@ -150,7 +150,7 @@ fun ThemeSettingsScreen(
                                 else Color(0xFF2A2A2A)
                             )
                             .clickable {
-                                haptic.perform(HapticFeedbackType.Select)
+                                haptic.perform(HapticFeedbackType.SegmentTick)
                                 darkMode = mode
                             }
                             .padding(12.dp),
@@ -232,7 +232,7 @@ fun ThemeSettingsScreen(
                                 CircleShape
                             )
                             .clickable {
-                                haptic.perform(HapticFeedbackType.Select)
+                                haptic.perform(HapticFeedbackType.SegmentTick)
                                 customColor = color
                             }
                     )

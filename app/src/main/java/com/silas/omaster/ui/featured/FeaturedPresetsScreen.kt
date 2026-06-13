@@ -142,14 +142,14 @@ fun FeaturedPresetsScreen(
         FeaturedHeader(
             searchQuery = searchQuery,
             onSearchChange = { searchQuery = it },
-            onFilterClick = { haptic.perform(HapticFeedbackType.Select) }
+            onFilterClick = { haptic.perform(HapticFeedbackType.SegmentTick) }
         )
 
         // 品牌筛选
         BrandFilterRow(
             selectedBrand = selectedBrand,
             onBrandSelected = { brand ->
-                haptic.perform(HapticFeedbackType.Select)
+                haptic.perform(HapticFeedbackType.SegmentTick)
                 selectedBrand = brand
             }
         )
@@ -158,7 +158,7 @@ fun FeaturedPresetsScreen(
         SceneFilterRow(
             selectedScene = selectedScene,
             onSceneSelected = { scene ->
-                haptic.perform(HapticFeedbackType.Select)
+                haptic.perform(HapticFeedbackType.SegmentTick)
                 selectedScene = scene
             }
         )
@@ -178,7 +178,7 @@ fun FeaturedPresetsScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 TextButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedBrand = null
                     selectedScene = null
                     searchQuery = ""
@@ -201,7 +201,7 @@ fun FeaturedPresetsScreen(
         } else if (filteredPresets.isEmpty()) {
             EmptyState(
                 onRetry = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.SegmentTick)
                     selectedBrand = null
                     selectedScene = null
                     searchQuery = ""
