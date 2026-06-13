@@ -53,8 +53,8 @@ android {
         // versionName: 对外显示版本号，格式 主.次.修订
         // 正式版: 1.0, 1.0.1, 1.1.0, 2.0.0
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
-        versionCode = 10
-        versionName = "1.3.1"
+        versionCode = 11
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -151,8 +151,8 @@ android {
         // 只检查主要源代码，排除测试和生成的代码
         checkOnly.add("Interoperability")
         // 发布前启用严格检查（开发阶段可关闭）
-        // ⚠️ 正式发布前请将 abortOnError 改为 true
-        abortOnError = false  // 发布前改为 true
+        // 发布前严格检查
+        abortOnError = true
         // release 构建时检查
         checkReleaseBuilds = true
         // 忽略警告（谨慎使用）

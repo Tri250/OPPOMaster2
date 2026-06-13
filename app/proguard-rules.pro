@@ -22,8 +22,8 @@
 # Kotlin 基础规则
 # ========================================
 -keep class kotlin.Metadata { *; }
--keep class kotlin.** { *; }
--keepclassmembers class kotlin.** { *; }
+# Kotlin 标准库：只保留必要元数据，不过度保留
+-keep class kotlin.Metadata { *; }
 -dontwarn kotlin.**
 
 # Kotlin 协程
@@ -45,12 +45,11 @@
 # ========================================
 # Jetpack Compose 相关规则
 # ========================================
--keep class androidx.compose.** { *; }
--keep class androidx.compose.material.** { *; }
--keep class androidx.compose.material3.** { *; }
--keep class androidx.compose.foundation.** { *; }
--keep class androidx.compose.runtime.** { *; }
--keep class androidx.compose.ui.** { *; }
+# Compose 编译器会自动处理大部分保留，只需保留关键类
+-keep class androidx.compose.runtime.Composable { *; }
+-keepclassmembers class * {
+    @androidx.compose.runtime.Composable <methods>;
+}
 -dontwarn androidx.compose.**
 
 # Composable 函数
@@ -283,5 +282,4 @@
 # -printusage
 # -printmapping
 
-# 忽略警告（谨慎使用）
--dontwarn **.**
+# 不忽略所有警告，发布时保持严格
