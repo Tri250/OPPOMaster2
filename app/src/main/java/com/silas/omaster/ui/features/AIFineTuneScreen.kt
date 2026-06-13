@@ -213,7 +213,7 @@ fun AIFineTuneScreen(
             title = { Text("AI 微调", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -228,7 +228,7 @@ fun AIFineTuneScreen(
                     )
                 }
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onApply(renderParams)
                 }) {
                     Icon(Icons.Default.Check, "应用", tint = HasselbladOrange)
@@ -305,7 +305,7 @@ fun AIFineTuneScreen(
                         QuickPresetsSection(
                             isProcessing = isProcessing,
                             onAutoTune = {
-                                haptic.perform(HapticFeedbackType.Confirm)
+                                haptic.perform(HapticFeedbackType.TextHandleMove)
                                 scope.launch {
                                     inferenceStage = InferenceStage.ANALYZING
                                     inferenceMessage = "分析图像特征..."
@@ -340,7 +340,7 @@ fun AIFineTuneScreen(
                                 }
                             },
                             onPresetApply = { presetParams ->
-                                haptic.perform(HapticFeedbackType.Select)
+                                haptic.perform(HapticFeedbackType.TextHandleMove)
                                 renderParams = renderParams.merge(presetParams)
                             }
                         )
@@ -382,7 +382,7 @@ fun AIFineTuneScreen(
                                     style = style,
                                     isSelected = selectedStyleId == style.id,
                                     onClick = {
-                                        haptic.perform(HapticFeedbackType.Select)
+                                        haptic.perform(HapticFeedbackType.TextHandleMove)
                                         selectedStyleId = style.id
                                         renderParams = renderParams.merge(style.params)
                                     },
@@ -409,7 +409,7 @@ fun AIFineTuneScreen(
                                     optimization = opt,
                                     isSelected = selectedOptimizations.contains(opt.id),
                                     onClick = {
-                                        haptic.perform(HapticFeedbackType.Select)
+                                        haptic.perform(HapticFeedbackType.TextHandleMove)
                                         if (selectedOptimizations.contains(opt.id)) {
                                             selectedOptimizations.remove(opt.id)
                                         } else {
@@ -485,7 +485,7 @@ fun AIFineTuneScreen(
             ) {
                 // 重置
                 TextButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     renderParams = RenderParameters()
                     selectedStyleId = null
                     selectedOptimizations.clear()
@@ -499,7 +499,7 @@ fun AIFineTuneScreen(
                 // 应用
                 Button(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onApply(renderParams)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),

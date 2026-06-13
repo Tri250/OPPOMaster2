@@ -80,7 +80,7 @@ fun FilmRecommendationStrip(
                     film = film,
                     selected = film.id == selectedId,
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onSelect(film.id)
                     }
                 )
@@ -306,7 +306,7 @@ fun FilmDetailDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onApply()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)

@@ -246,7 +246,7 @@ fun AISceneRecognitionScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     if (flowState == RecognitionFlowState.RESULT) {
                         flowState = RecognitionFlowState.CAMERA
                         analysisResult = null
@@ -329,7 +329,7 @@ fun AISceneRecognitionScreen(
                         onShowParamsChange = { showParams = it },
                         isOptimized = isOptimized,
                         onOptimize = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             isOptimized = true
                             showParams = true
                             scope.launch {
@@ -340,7 +340,7 @@ fun AISceneRecognitionScreen(
                         isSaving = isSaving,
                         saveSuccess = saveSuccess,
                         onSaveRecipe = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             isSaving = true
                             scope.launch {
                                 kotlinx.coroutines.delay(1000)
@@ -430,7 +430,7 @@ private fun CameraEntryScreen(
                 // 闪光灯控制
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onFlashModeChange(
                             when (flashMode) {
                                 FlashMode.OFF -> FlashMode.ON
@@ -460,7 +460,7 @@ private fun CameraEntryScreen(
                 // 摄像头切换
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onCameraFacingChange(
                             if (cameraFacing == CameraFacing.BACK) CameraFacing.FRONT else CameraFacing.BACK
                         )
@@ -596,7 +596,7 @@ private fun CameraEntryScreen(
                 // 选择图片按钮
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onSelectImage()
                     },
                     modifier = Modifier
@@ -1199,7 +1199,7 @@ private fun RecognitionHistoryStrip(
                     modifier = Modifier
                         .size(64.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             onSelect(scene)
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -1248,7 +1248,7 @@ private fun BottomActionBar(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onRetake()
                 }
             ) {
@@ -1280,7 +1280,7 @@ private fun BottomActionBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
                     if (!isSaving && !saveSuccess) {
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onSaveRecipe()
                     }
                 }

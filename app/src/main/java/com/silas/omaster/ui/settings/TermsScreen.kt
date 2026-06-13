@@ -40,7 +40,7 @@ fun TermsScreen(
             title = { Text("用户协议", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")

@@ -231,7 +231,7 @@ fun HomeScreen(
                     Tab(
                         selected = isSelected,
                         onClick = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             scope.launch {
                                 pagerState.scrollToPage(index)
                             }
@@ -319,7 +319,7 @@ fun HomeScreen(
         if (selectedTab == 2) {
             FloatingActionButton(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onNavigateToCreate()
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -354,7 +354,7 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         val id = presetToDelete
                         if (id != null) {
                             viewModel.deleteCustomPreset(id)
@@ -740,7 +740,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.CameraAlt,
             color = Color(0xFF4CAF50),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onNavigateToSceneRecognition()
             },
             modifier = Modifier.weight(1f)
@@ -752,7 +752,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.ColorLens,
             color = Color(0xFF9C27B0),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onNavigateToAIFineTune()
             },
             modifier = Modifier.weight(1f)
@@ -764,7 +764,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.WaterDrop,
             color = Color(0xFF00BCD4),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onNavigateToWatermarkEditor()
             },
             modifier = Modifier.weight(1f)
@@ -776,7 +776,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.Memory,
             color = Color(0xFF2196F3),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onNavigateToSmartOptimize()
             },
             modifier = Modifier.weight(1f)
@@ -788,7 +788,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.PhotoFilter,
             color = Color(0xFFFF9800),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onNavigateToPresetManager()
             },
             modifier = Modifier.weight(1f)
@@ -800,7 +800,7 @@ private fun FeatureEntryRow(
             icon = Icons.Default.Tune,
             color = Color(0xFFE91E63),
             onClick = {
-                haptic.perform(HapticFeedbackType.Confirm)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onNavigateToParamAdjustment()
             },
             modifier = Modifier.weight(1f)

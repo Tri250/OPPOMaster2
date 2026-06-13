@@ -151,7 +151,7 @@ fun HasselbladScreen(
             title = { Text("哈苏色彩科学", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -244,7 +244,7 @@ fun HasselbladScreen(
                             mode = mode,
                             isSelected = selectedMode == mode.id,
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Select)
+                                haptic.perform(HapticFeedbackType.TextHandleMove)
                                 selectMode(mode.id)
                             }
                         )
@@ -354,7 +354,7 @@ fun HasselbladScreen(
                 ) {
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             resetParams()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
@@ -365,7 +365,7 @@ fun HasselbladScreen(
                     }
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             isApplied = true
                             scope.launch {
                                 kotlinx.coroutines.delay(2000)

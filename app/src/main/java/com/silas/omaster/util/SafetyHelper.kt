@@ -36,7 +36,7 @@ object SafetyHelper {
      * @param onError 错误回调
      * @return 操作结果，失败返回null
      */
-    inline fun <T> safeRun(block: () -> T, onError: ((Exception) -> Unit)? = null): T? {
+    fun <T> safeRun(block: () -> T, onError: ((Exception) -> Unit)? = null): T? {
         return try {
             block()
         } catch (e: Exception) {
@@ -52,7 +52,7 @@ object SafetyHelper {
      * @param default 默认值
      * @return 操作结果，失败返回默认值
      */
-    inline fun <T> safeRunWithDefault(block: () -> T, default: T): T {
+    fun <T> safeRunWithDefault(block: () -> T, default: T): T {
         return try {
             block()
         } catch (e: Exception) {
@@ -108,14 +108,14 @@ object SafetyHelper {
      * @param default 默认值
      * @return 非空值
      */
-    inline fun <T> safeFlowValue(flow: StateFlow<T?>, default: T): T = flow.value ?: default
+    fun <T> safeFlowValue(flow: StateFlow<T?>, default: T): T = flow.value ?: default
 
     /**
      * 安全更新MutableStateFlow
      * @param flow MutableStateFlow
      * @param value 新值
      */
-    inline fun <T> safeUpdateFlow(flow: MutableStateFlow<T>, value: T) {
+    fun <T> safeUpdateFlow(flow: MutableStateFlow<T>, value: T) {
         try {
             flow.value = value
         } catch (e: Exception) {
@@ -128,7 +128,7 @@ object SafetyHelper {
      * @param block 异步操作
      * @param onError 错误回调
      */
-    inline fun safeAsync(block: () -> Unit, onError: ((Exception) -> Unit)? = null) {
+    fun safeAsync(block: () -> Unit, onError: ((Exception) -> Unit)? = null) {
         try {
             Thread {
                 try {
@@ -247,7 +247,7 @@ object SafetyHelper {
      * @param block 要执行的操作
      * @return 操作结果
      */
-    inline fun <T> safeRetry(maxRetries: Int, delayMs: Long, block: (Int) -> T): T? {
+    fun <T> safeRetry(maxRetries: Int, delayMs: Long, block: (Int) -> T): T? {
         var lastException: Exception? = null
         for (i in 0 until maxRetries) {
             try {

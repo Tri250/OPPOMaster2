@@ -148,7 +148,7 @@ fun SceneRecognitionResultScreen(
                     selectedId = selectedFilmId,
                     onSelect = { id ->
                         selectedFilmId = id
-                        haptic.perform(HapticFeedbackType.Select)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                     }
                 )
             }
@@ -188,7 +188,7 @@ fun SceneRecognitionResultScreen(
                 onApply = {
                     selectedFilmId = showFilmDetail?.id
                     showFilmDetail = null
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                 }
             )
         }
@@ -901,7 +901,7 @@ private fun ActionButtonsRow(
         // 分享
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onShare()
             },
             modifier = Modifier.weight(1f),
@@ -916,7 +916,7 @@ private fun ActionButtonsRow(
         // 保存
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onSave()
             },
             modifier = Modifier.weight(1f),
@@ -931,7 +931,7 @@ private fun ActionButtonsRow(
         // 导出
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.Click)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onExport()
             },
             modifier = Modifier.weight(1f),
@@ -949,7 +949,7 @@ private fun ActionButtonsRow(
     // 一键优化按钮
     Button(
         onClick = {
-            haptic.perform(HapticFeedbackType.Confirm)
+            haptic.perform(HapticFeedbackType.TextHandleMove)
             onOptimize()
         },
         modifier = Modifier.fillMaxWidth(),

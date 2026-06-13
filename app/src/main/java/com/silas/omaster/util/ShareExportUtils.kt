@@ -453,7 +453,7 @@ object ShareExportUtils {
             typeface = resolveTypeface(style.fontFamily, style.fontWeight)
             textAlign = when (layer.position) {
                 WatermarkPosition.TOP_LEFT, WatermarkPosition.CENTER_LEFT, WatermarkPosition.BOTTOM_LEFT -> Paint.Align.LEFT
-                WatermarkPosition.TOP_CENTER, WatermarkPosition.CENTER, WatermarkPosition.BOTTOM -> Paint.Align.CENTER
+                WatermarkPosition.TOP_CENTER, WatermarkPosition.CENTER, WatermarkPosition.CENTER_BOTTOM, WatermarkPosition.BOTTOM -> Paint.Align.CENTER
                 WatermarkPosition.TOP_RIGHT, WatermarkPosition.CENTER_RIGHT, WatermarkPosition.BOTTOM_RIGHT -> Paint.Align.RIGHT
                 WatermarkPosition.CUSTOM -> Paint.Align.LEFT
             }
@@ -462,7 +462,9 @@ object ShareExportUtils {
             }
         }
 
-        val (x, y) = computeTextOrigin(canvas, bitmap, paint, text, layer, style)
+        val origin = computeTextOrigin(canvas, bitmap, paint, text, layer, style)
+        val x = origin.first
+        val y = origin.second
         // 多行文本支持
         val lines = text.split("\n")
         val lineHeight = scaledTextSize * style.lineHeight
@@ -489,8 +491,8 @@ object ShareExportUtils {
         val firstLineHeight = fontMetrics.descent - fontMetrics.ascent
 
         // 先计算位置
-        var x: Float
-        var baselineY: Float
+        val x: Float
+        val baselineY: Float
         when (layer.position) {
             WatermarkPosition.TOP_LEFT -> { x = padding; baselineY = padding + firstLineHeight }
             WatermarkPosition.TOP_CENTER -> { x = w / 2f; baselineY = padding + firstLineHeight }
@@ -498,14 +500,15 @@ object ShareExportUtils {
             WatermarkPosition.CENTER_LEFT -> { x = padding; baselineY = h / 2f }
             WatermarkPosition.CENTER -> { x = w / 2f; baselineY = h / 2f }
             WatermarkPosition.CENTER_RIGHT -> { x = w - padding; baselineY = h / 2f }
+            WatermarkPosition.CENTER_BOTTOM -> { x = w / 2f; baselineY = h - padding - fontMetrics.descent }
             WatermarkPosition.BOTTOM_LEFT -> { x = padding; baselineY = h - padding - fontMetrics.descent }
             WatermarkPosition.BOTTOM -> { x = w / 2f; baselineY = h - padding - fontMetrics.descent }
             WatermarkPosition.BOTTOM_RIGHT -> { x = w - padding; baselineY = h - padding - fontMetrics.descent }
             WatermarkPosition.CUSTOM -> { x = padding; baselineY = padding + firstLineHeight }
         }
-        x += layer.offset.x
-        baselineY += layer.offset.y
-        return Pair(x, baselineY)
+        val finalX = x + layer.offset.x
+        val finalY = baselineY + layer.offset.y
+        return Pair(finalX, finalY)
     }
 
     /**
@@ -556,7 +559,7 @@ object ShareExportUtils {
         val w = bitmap.width.toFloat()
         val y = when (layer.position) {
             WatermarkPosition.TOP_LEFT, WatermarkPosition.TOP_CENTER, WatermarkPosition.TOP_RIGHT -> padding
-            WatermarkPosition.CENTER_LEFT, WatermarkPosition.CENTER, WatermarkPosition.CENTER_RIGHT -> bitmap.height / 2f
+            WatermarkPosition.CENTER_LEFT, WatermarkPosition.CENTER, WatermarkPosition.CENTER_RIGHT, WatermarkPosition.CENTER_BOTTOM -> bitmap.height / 2f
             else -> bitmap.height - padding
         } + layer.offset.y
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -577,6 +580,12 @@ object ShareExportUtils {
         val rect = when (layer.position) {
             WatermarkPosition.TOP_LEFT, WatermarkPosition.TOP_CENTER, WatermarkPosition.TOP_RIGHT ->
                 RectF(0f, 0f, bitmap.width.toFloat(), padding * 4f + 60f)
+            WatermarkPosition.CENTER_BOTTOM -> RectF(
+                0f,
+                bitmap.height / 2f - padding * 2f - 30f,
+                bitmap.width.toFloat(),
+                bitmap.height / 2f + padding * 2f + 30f
+            )
             else -> RectF(
                 0f,
                 bitmap.height - padding * 4f - 60f,
@@ -609,7 +618,7 @@ object ShareExportUtils {
         canvas.drawRoundRect(rect, style.cornerRadius, style.cornerRadius, bgPaint)
 
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
+            this.style = Paint.Style.STROKE
             color = applyAlpha(style.getColor(), style.opacity)
             strokeWidth = 1.5f
         }

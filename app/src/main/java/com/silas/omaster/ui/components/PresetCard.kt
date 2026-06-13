@@ -75,7 +75,7 @@ fun PresetCard(
                 interactionSource = interactionSource,
                 indication = androidx.compose.foundation.LocalIndication.current,
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onClick()
                 }
             ),
@@ -102,7 +102,7 @@ fun PresetCard(
                 if (showFavoriteButton) {
                     IconButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.ToggleOn)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
                 onFavoriteClick()
             },
             modifier = Modifier
@@ -138,7 +138,7 @@ fun PresetCard(
                 if (showDeleteButton && preset.isCustom) {
                     IconButton(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             onDeleteClick()
                         },
                         modifier = Modifier

@@ -1,7 +1,13 @@
 package com.silas.omaster.watermark
 
 import android.graphics.Color
-import com.silas.omaster.watermark.WatermarkLayerSystem.*
+import com.silas.omaster.watermark.WatermarkLayerDef
+import com.silas.omaster.watermark.WatermarkLayerStyle
+import com.silas.omaster.watermark.WatermarkLayerType
+import com.silas.omaster.watermark.WatermarkPosition
+import com.silas.omaster.watermark.WatermarkTemplateDef
+import com.silas.omaster.watermark.ContentSource
+import com.silas.omaster.watermark.OffsetData
 
 /**
  * 哈苏品牌色板定义

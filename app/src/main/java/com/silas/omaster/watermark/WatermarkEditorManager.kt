@@ -301,9 +301,11 @@ class WatermarkEditorManager private constructor(context: Context) {
             WatermarkPosition.CENTER_LEFT -> Pair(bitmap.width * 0.05f, bitmap.height / 2f)
             WatermarkPosition.CENTER -> Pair((bitmap.width - textWidth) / 2, bitmap.height / 2f)
             WatermarkPosition.CENTER_RIGHT -> Pair(bitmap.width - textWidth - bitmap.width * 0.05f, bitmap.height / 2f)
+            WatermarkPosition.CENTER_BOTTOM -> Pair((bitmap.width - textWidth) / 2, bitmap.height - bitmap.height * 0.03f)
             WatermarkPosition.BOTTOM_LEFT -> Pair(bitmap.width * 0.05f, bitmap.height - bitmap.height * 0.03f)
             WatermarkPosition.BOTTOM -> Pair((bitmap.width - textWidth) / 2, bitmap.height - bitmap.height * 0.03f)
             WatermarkPosition.BOTTOM_RIGHT -> Pair(bitmap.width - textWidth - bitmap.width * 0.05f, bitmap.height - bitmap.height * 0.03f)
+            WatermarkPosition.CUSTOM -> Pair(bitmap.width * 0.05f, bitmap.height - bitmap.height * 0.03f)
         }
 
         canvas.drawText(text, x, y, paint)
@@ -405,20 +407,7 @@ enum class WatermarkType {
     CUSTOM      // 自定义水印
 }
 
-/**
- * 水印位置
- */
-enum class WatermarkPosition {
-    TOP_LEFT,
-    TOP_CENTER,
-    TOP_RIGHT,
-    CENTER_LEFT,
-    CENTER,
-    CENTER_RIGHT,
-    BOTTOM_LEFT,
-    BOTTOM,
-    BOTTOM_RIGHT
-}
+// WatermarkPosition 定义在 WatermarkLayerSystem.kt 中，统一使用
 
 /**
  * 水印元素

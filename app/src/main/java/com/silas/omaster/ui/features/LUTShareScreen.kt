@@ -72,7 +72,7 @@ fun LUTShareScreen(
             title = { Text("LUT 资源库", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -100,7 +100,7 @@ fun LUTShareScreen(
                             else Color(0xFF2A2A2A)
                         )
                         .clickable {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             selectedCategory = category
                         }
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -146,7 +146,7 @@ fun LUTShareScreen(
                 LUTCard(
                     lut = lut,
                     onDownload = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onDownload(lut)
                     }
                 )

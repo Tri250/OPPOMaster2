@@ -76,7 +76,7 @@ enum class ContentSource {
 @Serializable
 enum class WatermarkPosition {
     TOP_LEFT, TOP_CENTER, TOP_RIGHT,
-    CENTER_LEFT, CENTER, CENTER_RIGHT,
+    CENTER_LEFT, CENTER, CENTER_RIGHT, CENTER_BOTTOM,
     BOTTOM_LEFT, BOTTOM, BOTTOM_RIGHT,
     CUSTOM       // 自定义位置（通过offset控制）
 }

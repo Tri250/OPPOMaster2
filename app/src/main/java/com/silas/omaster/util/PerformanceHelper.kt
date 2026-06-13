@@ -72,7 +72,7 @@ object PerformanceHelper {
     fun getAppMemoryUsageMB(): Long {
         val memoryInfo = Debug.MemoryInfo()
         Debug.getMemoryInfo(memoryInfo)
-        return memoryInfo.getTotalPss() / 1024
+        return memoryInfo.getTotalPss().toLong() / 1024L
     }
 
     /**

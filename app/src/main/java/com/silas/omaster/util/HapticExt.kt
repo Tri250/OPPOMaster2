@@ -30,7 +30,7 @@ fun HapticFeedback.perform(type: HapticFeedbackType) {
  * 带震感反馈的点击
  */
 fun Modifier.hapticClickable(
-    type: HapticFeedbackType = HapticFeedbackType.TextHandleMove,
+    type: HapticFeedbackType = HapticFeedbackType.LongPress,
     enabled: Boolean = true,
     onClick: () -> Unit
 ) = composed {

@@ -60,7 +60,7 @@ fun CloudSyncScreen(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -112,7 +112,7 @@ fun CloudSyncScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                haptic.perform(HapticFeedbackType.Confirm)
+                                haptic.perform(HapticFeedbackType.TextHandleMove)
                                 isSyncing.value = true
                                 scope.launch {
                                     syncManager.performSync()

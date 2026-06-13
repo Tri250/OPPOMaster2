@@ -50,7 +50,7 @@ fun NotificationSettingsScreen(
             title = { Text("通知设置", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -134,7 +134,7 @@ fun NotificationSettingsScreen(
                     description = item.description,
                     isEnabled = item.enabled,
                     onToggle = { enabled ->
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         notificationSettings[index] = item.copy(enabled = enabled)
                     }
                 )

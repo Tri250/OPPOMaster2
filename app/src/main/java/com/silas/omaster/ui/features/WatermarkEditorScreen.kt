@@ -440,7 +440,7 @@ fun WatermarkEditorScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -453,7 +453,7 @@ fun WatermarkEditorScreen(
                 }
                 // 预览按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     showBeforeAfter = !showBeforeAfter
                 }) {
                     Icon(
@@ -464,7 +464,7 @@ fun WatermarkEditorScreen(
                 }
                 // 导出按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     previewBitmap?.let { onExport(it, watermarkConfig) }
                 }) {
                     Icon(Icons.Default.Download, "导出", tint = CyanAccent)
@@ -518,7 +518,7 @@ fun WatermarkEditorScreen(
                     Switch(
                         checked = isWatermarkEnabled,
                         onCheckedChange = {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             isWatermarkEnabled = it
                         },
                         colors = SwitchDefaults.colors(
@@ -532,7 +532,7 @@ fun WatermarkEditorScreen(
                 if (originalBitmap != null && previewBitmap != null) {
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             showBeforeAfter = !showBeforeAfter
                         },
                         modifier = Modifier
@@ -576,7 +576,7 @@ fun WatermarkEditorScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Select)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             imagePickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
                                     ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -605,7 +605,7 @@ fun WatermarkEditorScreen(
             WatermarkCategoryTabs(
                 selectedCategory = selectedCategory,
                 onCategorySelected = { category ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedCategory = category
                 }
             )
@@ -625,7 +625,7 @@ fun WatermarkEditorScreen(
                 templates = filteredTemplates,
                 selectedTemplate = selectedTemplate,
                 onTemplateSelected = { template ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedTemplate = template
                     // 应用模板配置
                     showBrand = template.showBrand
@@ -648,7 +648,7 @@ fun WatermarkEditorScreen(
             WatermarkPositionGrid(
                 selectedPosition = selectedPosition,
                 onPositionSelected = { position ->
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     selectedPosition = position
                     watermarkOffset = Offset.Zero
                 }
@@ -736,7 +736,7 @@ fun WatermarkEditorScreen(
                 // 重置默认
                 OutlinedButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         brandText = "Shot on Ophto"
                         selectedPosition = WatermarkPlacement.BOTTOM_LEFT
                         textSize = 14f
@@ -762,7 +762,7 @@ fun WatermarkEditorScreen(
                 // 保存图片
                 Button(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.Confirm)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         previewBitmap?.let { onExport(it, watermarkConfig) }
                     },
                     modifier = Modifier.weight(1f),

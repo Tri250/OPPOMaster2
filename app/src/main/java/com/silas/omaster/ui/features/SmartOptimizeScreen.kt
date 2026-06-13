@@ -85,7 +85,7 @@ fun SmartOptimizeScreen(
             title = { Text("智能优化", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
@@ -94,7 +94,7 @@ fun SmartOptimizeScreen(
             actions = {
                 // 预览切换
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Select)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     previewMode = if (previewMode == "before") "after" else "before"
                 }) {
                     Icon(
@@ -105,7 +105,7 @@ fun SmartOptimizeScreen(
                 }
                 // 应用按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     onApply(OptimizeParams(
                         hdrEnabled = hdrEnabled,
                         hdrStrength = hdrStrength,
@@ -286,7 +286,7 @@ fun SmartOptimizeScreen(
             // 重置按钮
             OutlinedButton(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOff)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     hdrEnabled = false
                     hdrStrength = 50f
                     noiseReductionEnabled = false
@@ -310,7 +310,7 @@ fun SmartOptimizeScreen(
             // 一键优化按钮
             Button(
                 onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     // 启用所有优化
                     hdrEnabled = true
                     noiseReductionEnabled = true
@@ -385,7 +385,7 @@ private fun OptimizeOptionCard(
                 Switch(
                     checked = enabled,
                     onCheckedChange = {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         onToggle(it)
                     },
                     colors = SwitchDefaults.colors(

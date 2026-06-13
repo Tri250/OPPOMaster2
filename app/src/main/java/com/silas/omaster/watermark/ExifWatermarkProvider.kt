@@ -165,7 +165,6 @@ class ExifWatermarkProvider(private val context: Context) {
 
         // ISO
         val iso = formatIso(
-            exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY) ?: 
             exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS)
         )
 
@@ -184,9 +183,10 @@ class ExifWatermarkProvider(private val context: Context) {
         val (dateTaken, timeTaken, fullDateTime) = parseDateTime(dateTimeStr)
 
         // GPS坐标
-        val latLong = exif.latLong
-        val gpsLat = latLong?.get(0)
-        val gpsLng = latLong?.get(1)
+        val latLong = FloatArray(2)
+        val hasLatLong = exif.getLatLong(latLong)
+        val gpsLat = if (hasLatLong) latLong[0].toDouble() else null
+        val gpsLng = if (hasLatLong) latLong[1].toDouble() else null
 
         // 反地理编码获取位置名称
         val locationName = if (gpsLat != null && gpsLng != null) {
@@ -389,19 +389,19 @@ class ExifWatermarkProvider(private val context: Context) {
     private fun reverseGeocode(lat: Double, lng: Double): String? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Android 13+ 使用新的 Geocoder API
+                // Android 13+ 使用新的 Geocoder API（异步，无法直接返回结果，这里使用旧API兼容）
+                @Suppress("DEPRECATION")
                 val geocoder = Geocoder(context, Locale.getDefault())
-                geocoder.getFromLocation(lat, lng, 1) { addresses ->
-                    addresses.firstOrNull()?.let { address ->
-                        // 优先返回城市+区名
-                        val parts = mutableListOf<String>()
-                        address.locality?.let { parts.add(it) }      // 城市
-                        address.subLocality?.let { parts.add(it) }   // 区
-                        if (parts.isNotEmpty()) {
-                            parts.joinToString("")
-                        } else {
-                            address.getAddressLine(0)
-                        }
+                @Suppress("DEPRECATION")
+                val addresses = geocoder.getFromLocation(lat, lng, 1)
+                addresses?.firstOrNull()?.let { address ->
+                    val parts = mutableListOf<String>()
+                    address.locality?.let { parts.add(it) }
+                    address.subLocality?.let { parts.add(it) }
+                    if (parts.isNotEmpty()) {
+                        parts.joinToString("")
+                    } else {
+                        address.getAddressLine(0)
                     }
                 }
             } else {
@@ -432,8 +432,8 @@ class ExifWatermarkProvider(private val context: Context) {
      */
     private fun formatWhiteBalance(value: Int): String? {
         return when (value) {
-            ExifInterface.WHITE_BALANCE_AUTO -> "自动"
-            ExifInterface.WHITE_BALANCE_MANUAL -> "手动"
+            0 -> "自动"
+            1 -> "手动"
             else -> null
         }
     }
@@ -502,175 +502,4 @@ class ExifWatermarkProvider(private val context: Context) {
             WatermarkLayerType.VIGNETTE -> ""
         }
     }
-}
-
-/**
- * 智能颜色适配系统
- * 
- * 功能：
- * - 分析水印区域亮度
- * - 推荐最佳文字颜色
- * - 自动调整阴影效果
- */
-object SmartWatermarkColor {
-
-    /**
-     * 分析预览图水印区域的亮度，推荐最佳文字颜色
-     */
-    fun recommendColor(bitmap: Bitmap, position: WatermarkPosition): Int {
-        val region = sampleRegion(bitmap, position)
-        val avgLuminance = calculateLuminance(region)
-
-        return when {
-            avgLuminance > 0.7f -> Color.BLACK   // 亮区用深色
-            avgLuminance < 0.3f -> Color.WHITE   // 暗区用白色
-            else -> Color.WHITE                   // 中间调默认白色 + 阴影
-        }
-    }
-
-    /**
-     * 推荐颜色并返回颜色名称
-     */
-    fun recommendColorWithName(bitmap: Bitmap, position: WatermarkPosition): Pair<Int, String> {
-        val color = recommendColor(bitmap, position)
-        val name = if (color == Color.BLACK) "黑色" else "白色"
-        return Pair(color, name)
-    }
-
-    /**
-     * 推荐是否启用阴影
-     */
-    fun recommendShadow(bitmap: Bitmap, position: WatermarkPosition): Boolean {
-        val region = sampleRegion(bitmap, position)
-        val avgLuminance = calculateLuminance(region)
-
-        // 中间调和高对比度场景建议启用阴影
-        return avgLuminance >= 0.3f && avgLuminance <= 0.7f
-    }
-
-    /**
-     * 推荐阴影模糊度
-     */
-    fun recommendShadowBlur(bitmap: Bitmap, position: WatermarkPosition): Float {
-        val region = sampleRegion(bitmap, position)
-        val avgLuminance = calculateLuminance(region)
-
-        // 亮度越接近中间值，阴影越强
-        val distanceFromMiddle = abs(avgLuminance - 0.5f)
-        return (6f - distanceFromMiddle * 8f).coerceIn(2f, 8f)
-    }
-
-    /**
-     * 采样水印所在区域（占画面 20%）
-     */
-    private fun sampleRegion(bitmap: Bitmap, position: WatermarkPosition): IntArray {
-        val w = bitmap.width / 5
-        val h = bitmap.height / 5
-
-        val (x, y) = when (position) {
-            WatermarkPosition.BOTTOM_LEFT -> Pair(0, bitmap.height - h)
-            WatermarkPosition.BOTTOM_RIGHT -> Pair(bitmap.width - w, bitmap.height - h)
-            WatermarkPosition.BOTTOM -> Pair((bitmap.width - w) / 2, bitmap.height - h)
-            WatermarkPosition.TOP_LEFT -> Pair(0, 0)
-            WatermarkPosition.TOP_RIGHT -> Pair(bitmap.width - w, 0)
-            WatermarkPosition.TOP -> Pair((bitmap.width - w) / 2, 0)
-            WatermarkPosition.CENTER_LEFT -> Pair(0, (bitmap.height - h) / 2)
-            WatermarkPosition.CENTER -> Pair((bitmap.width - w) / 2, (bitmap.height - h) / 2)
-            WatermarkPosition.CENTER_RIGHT -> Pair(bitmap.width - w, (bitmap.height - h) / 2)
-            WatermarkPosition.CUSTOM -> Pair(0, bitmap.height - h) // 默认左下
-        }
-
-        // 确保采样区域在图片范围内
-        val safeX = x.coerceIn(0, bitmap.width - w)
-        val safeY = y.coerceIn(0, bitmap.height - h)
-        val safeW = w.coerceAtMost(bitmap.width - safeX)
-        val safeH = h.coerceAtMost(bitmap.height - safeY)
-
-        val pixels = IntArray(safeW * safeH)
-        bitmap.getPixels(pixels, 0, safeW, safeX, safeY, safeW, safeH)
-        return pixels
-    }
-
-    /**
-     * 计算亮度平均值
-     */
-    private fun calculateLuminance(pixels: IntArray): Float {
-        if (pixels.isEmpty()) return 0.5f
-
-        var totalLum = 0f
-        for (pixel in pixels) {
-            val r = Color.red(pixel) / 255f
-            val g = Color.green(pixel) / 255f
-            val b = Color.blue(pixel) / 255f
-            // 使用标准亮度公式
-            totalLum += 0.299f * r + 0.587f * g + 0.114f * b
-        }
-        return totalLum / pixels.size
-    }
-
-    /**
-     * 分析图片整体色调
-     */
-    fun analyzeOverallTone(bitmap: Bitmap): ToneAnalysis {
-        val sampleSize = 1000
-        val stepX = max(1, bitmap.width / 50)
-        val stepY = max(1, bitmap.height / 50)
-
-        var totalBrightness = 0f
-        var totalR = 0f
-        var totalG = 0f
-        var totalB = 0f
-        var sampleCount = 0
-
-        for (x in 0 until bitmap.width step stepX) {
-            for (y in 0 until bitmap.height step stepY) {
-                val pixel = bitmap.getPixel(x, y)
-                val r = Color.red(pixel) / 255f
-                val g = Color.green(pixel) / 255f
-                val b = Color.blue(pixel) / 255f
-                val brightness = 0.299f * r + 0.587f * g + 0.114f * b
-
-                totalBrightness += brightness
-                totalR += r
-                totalG += g
-                totalB += b
-                sampleCount++
-            }
-        }
-
-        val avgBrightness = if (sampleCount > 0) totalBrightness / sampleCount else 0.5f
-        val avgR = if (sampleCount > 0) totalR / sampleCount else 0.5f
-        val avgG = if (sampleCount > 0) totalG / sampleCount else 0.5f
-        val avgB = if (sampleCount > 0) totalB / sampleCount else 0.5f
-
-        // 判断色调
-        val isWarm = avgR > avgB + 0.1f
-        val isCool = avgB > avgR + 0.1f
-        val isNeutral = !isWarm && !isCool
-
-        return ToneAnalysis(
-            avgBrightness = avgBrightness,
-            avgR = avgR,
-            avgG = avgG,
-            avgB = avgB,
-            isWarm = isWarm,
-            isCool = isCool,
-            isNeutral = isNeutral,
-            recommendedColor = if (avgBrightness > 0.6f) Color.BLACK else Color.WHITE
-        )
-    }
-
-    /**
-     * 色调分析结果
-     */
-    data class ToneAnalysis(
-        val avgBrightness: Float,      // 平均亮度 (0-1)
-        val avgR: Float,               // 平均红色分量
-        val avgG: Float,               // 平均绿色分量
-        val avgB: Float,               // 平均蓝色分量
-        val isWarm: Boolean,           // 是否暖色调
-        val isCool: Boolean,           // 是否冷色调
-        val isNeutral: Boolean,        // 是否中性色调
-        val recommendedColor: Int      // 推荐水印颜色
-    )
 }

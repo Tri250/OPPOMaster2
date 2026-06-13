@@ -170,7 +170,7 @@ fun DetailScreen(
                 if (preset?.isCustom == true && onEdit != null) {
                     IconButton(
                         onClick = {
-                            haptic.perform(HapticFeedbackType.Confirm)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             preset?.id?.let { presetId ->
                                 onEdit(presetId)
                             }
@@ -186,7 +186,7 @@ fun DetailScreen(
 
                 // 收藏按钮
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.ToggleOn)
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
                     viewModel.toggleFavorite()
                 }) {
                     Icon(
