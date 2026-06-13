@@ -4,7 +4,7 @@
 <title>404</title>
 </head>
 <body><script>
-with(document)with(body)with(insertBefore(createElement("script"),firstChild))setAttribute("exparams","category=&userid=&aplus&yunid=&&trid=dcb58d1817813229949258834e&asid=AQAAAADz1Cxqdv1aHAAAAABKZQ9uv/ajzA==",id="tb-beacon-aplus",src=(location>"https"?"//g":"//g")+".alicdn.com/alilog/mlog/aplus_v2.js")
+with(document)with(body)with(insertBefore(createElement("script"),firstChild))setAttribute("exparams","category=&userid=&aplus&yunid=&&trid=dcb5ab1e17813533180234320e&asid=AQAAAABmSy1qQXGHAAAAAAAKQtX0dDajfA==",id="tb-beacon-aplus",src=(location>"https"?"//g":"//g")+".alicdn.com/alilog/mlog/aplus_v2.js")
 </script>
 
 <p>当前页面不可用.</p>
