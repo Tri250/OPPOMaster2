@@ -1,13 +1,16 @@
 pluginManagement {
     repositories {
-        // 腾讯云镜像（沙箱环境首选，响应 0.05s）
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
+        // 本地 Maven 仓库（优先使用，包含所有预下载的依赖）
+        maven { url = uri(rootProject.projectDir.resolve("local-maven-repo")) }
 
-        // 阿里云镜像（备用）
+        // 阿里云镜像（首选）
         maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+
+        // 腾讯云镜像（备用）
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
 
         // 官方仓库（最后备用）
         google()
@@ -19,12 +22,15 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 腾讯云镜像（沙箱环境首选，响应 0.05s）
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        // 本地 Maven 仓库（优先使用，包含所有预下载的依赖）
+        maven { url = uri(rootProject.projectDir.resolve("local-maven-repo")) }
 
-        // 阿里云镜像（备用）
+        // 阿里云镜像（首选）
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+
+        // 腾讯云镜像（备用）
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
         // 官方仓库（最后备用）
         google()
