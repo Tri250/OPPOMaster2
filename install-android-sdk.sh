@@ -46,7 +46,7 @@ echo "配置环境变量..."
 export ANDROID_HOME=$ANDROID_SDK_DIR
 export PATH=$PATH:$ANDROID_SDK_DIR/cmdline-tools/latest/bin:$ANDROID_SDK_DIR/platform-tools
 
-# 写入环境变量到profile
+# 写入环境变量到profile（仅当前用户）
 echo "export ANDROID_HOME=$ANDROID_SDK_DIR" >> ~/.bashrc
 echo "export PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools" >> ~/.bashrc
 
@@ -54,9 +54,14 @@ echo "export PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/
 echo "接受SDK许可..."
 yes | sdkmanager --licenses 2>/dev/null || true
 
-# 安装必要组件
+# 安装必要组件（与项目 build.gradle.kts 匹配：compileSdk=36, minSdk=24, targetSdk=36, AGP=8.7.3）
 echo "安装必要SDK组件..."
-sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || {
+sdkmanager --install \
+    "platform-tools" \
+    "platforms;android-36" \
+    "build-tools;36.0.0" \
+    "extras;android;m2repository" \
+    "extras;google;m2repository" 2>/dev/null || {
     echo "SDK组件安装失败，请手动安装"
 }
 
