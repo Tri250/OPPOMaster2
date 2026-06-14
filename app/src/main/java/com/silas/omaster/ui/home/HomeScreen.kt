@@ -340,12 +340,12 @@ private fun HeaderSection(
                 ) {
                     Text(
                         text = "👑",
-                        fontSize = 10.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Color.White
                     )
                     Text(
                         text = stringResource(R.string.hasselblad_master),
-                        fontSize = 9.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -417,8 +417,8 @@ private fun SearchBar(
                     if (query.isEmpty()) {
                         Text(
                             text = stringResource(R.string.search_placeholder),
-                            color = Color.White.copy(alpha = 0.4f),
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.4f)
                         )
                     }
                     innerTextField()
@@ -477,9 +477,9 @@ private fun TabBar(
                     ) {
                         Text(
                             text = title,
+                            style = MaterialTheme.typography.labelLarge,
                             color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 14.sp
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                         // 计数徽章（对齐Web端）
                         if (count > 0) {
@@ -496,7 +496,7 @@ private fun TabBar(
                             ) {
                                 Text(
                                     text = count.toString(),
-                                    fontSize = 10.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = if (isSelected)
                                         MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                                     else
@@ -564,7 +564,7 @@ private fun BrandAndSortFilter(
             ) {
                 Text(
                     text = sortOptions.find { it.first == sortType }?.second ?: stringResource(R.string.sort_newest),
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.6f)
                 )
                 Icon(
@@ -585,8 +585,8 @@ private fun BrandAndSortFilter(
                         text = {
                             Text(
                                 text = label,
-                                color = if (sortType == type) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f),
-                                fontSize = 12.sp
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (sortType == type) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)
                             )
                         },
                         onClick = {
@@ -621,7 +621,7 @@ private fun BrandFilterButton(
     ) {
         Text(
             text = label,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
         )
@@ -902,12 +902,12 @@ private fun PresetCardWebStyle(
                     ) {
                         Text(
                             text = "👑",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = Color.White
                         )
                         Text(
                             text = stringResource(R.string.badge_hncs),
-                            fontSize = 9.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -933,12 +933,12 @@ private fun PresetCardWebStyle(
                     ) {
                         Text(
                             text = "✨",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = Color.White
                         )
                         Text(
                             text = stringResource(R.string.badge_new),
-                            fontSize = 9.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -990,17 +990,17 @@ private fun PresetCardWebStyle(
             ) {
                 Text(
                     text = PresetI18n.getLocalizedPresetName(preset.name),
-                    color = Color.White,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 Text(
                     text = preset.author,
+                    style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1015,8 +1015,8 @@ private fun PresetCardWebStyle(
                     preset.rating?.let { rating ->
                         Text(
                             text = "⭐ ${String.format("%.1f", rating)}",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 10.sp
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
                         )
                     }
                     // 下载量（仅在有数据时展示）
@@ -1028,16 +1028,16 @@ private fun PresetCardWebStyle(
                         }
                         Text(
                             text = "📥 $downloadsText",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 10.sp
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
                         )
                     }
                     // 品牌
                     preset.brand?.let { brand ->
                         Text(
                             text = brand,
+                            style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.4f),
-                            fontSize = 10.sp,
                             modifier = Modifier.padding(start = 4.dp)
                         )
                     }

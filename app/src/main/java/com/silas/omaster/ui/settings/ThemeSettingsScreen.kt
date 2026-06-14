@@ -149,7 +149,7 @@ fun ThemeSettingsScreen(
                             .clip(RoundedCornerShape(8.dp))
                             .background(
                                 if (darkMode == mode) HasselbladOrange
-                                else Color(0xFF2A2A2A)
+                                else DarkGray
                             )
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -248,7 +248,7 @@ fun ThemeSettingsScreen(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -296,7 +296,7 @@ private fun ThemeOptionCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) theme.color.copy(alpha = 0.2f) else Color(0xFF2A2A2A)
+            containerColor = if (selected) theme.color.copy(alpha = 0.2f) else DarkGray
         )
     ) {
         Row(

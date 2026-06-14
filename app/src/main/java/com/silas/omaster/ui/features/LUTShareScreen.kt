@@ -152,7 +152,7 @@ fun LUTShareScreen(
                         .clip(RoundedCornerShape(20.dp))
                         .background(
                             if (category.key == selectedCategory) HasselbladOrange
-                            else Color(0xFF2A2A2A)
+                            else DarkGray
                         )
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -227,7 +227,7 @@ fun LUTShareScreen(
                             text = "热门推荐",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFFFC107),
+                            color = WarningYellow,
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                         )
                     }
@@ -412,7 +412,7 @@ private fun LUTPosterCard(
                     Icon(
                         if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         null,
-                        tint = if (isLiked) Color(0xFFE53935) else Color.White.copy(alpha = 0.7f),
+                        tint = if (isLiked) ErrorRed else Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -526,7 +526,7 @@ private fun LUTGridCard(
                     Icon(
                         if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         null,
-                        tint = if (isLiked) Color(0xFFE53935) else Color.White.copy(alpha = 0.7f),
+                        tint = if (isLiked) ErrorRed else Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -573,7 +573,7 @@ private fun LUTGridCard(
                         .padding(top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(10.dp))
+                    Icon(Icons.Default.Star, null, tint = WarningYellow, modifier = Modifier.size(10.dp))
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = String.format(Locale.US, "%.1f", lut.rating),
@@ -700,7 +700,7 @@ private fun LUTDetailDialog(
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(12.dp))
+                        Icon(Icons.Default.Star, null, tint = WarningYellow, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
                             text = String.format(Locale.US, "%.1f", lut.rating),
@@ -771,7 +771,7 @@ private fun LUTDetailDialog(
                         onClick = onLike,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isLiked) Color(0xFFE53935) else Color.White.copy(alpha = 0.7f)
+                            contentColor = if (isLiked) ErrorRed else Color.White.copy(alpha = 0.7f)
                         )
                     ) {
                         Icon(
@@ -823,7 +823,7 @@ private fun LUTDetailDialog(
                             .clip(CircleShape)
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(HasselbladOrange, Color(0xFFFF9800))
+                                    listOf(HasselbladOrange, WarningYellow)
                                 )
                             ),
                         contentAlignment = Alignment.Center

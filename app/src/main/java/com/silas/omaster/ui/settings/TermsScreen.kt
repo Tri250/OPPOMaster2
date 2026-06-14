@@ -17,6 +17,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.ui.theme.CyanAccent
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
@@ -64,7 +66,7 @@ fun TermsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -91,7 +93,7 @@ fun TermsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF9C27B0).copy(alpha = 0.15f))
+                    colors = CardDefaults.cardColors(containerColor = CyanAccent.copy(alpha = 0.15f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -169,7 +171,7 @@ fun TermsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         TermSection(

@@ -77,8 +77,11 @@ import com.silas.omaster.data.local.FavoriteManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.PresetImage
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.LightGray
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
@@ -190,7 +193,11 @@ fun FeaturedPresetsScreen(
                     selectedScene = null
                     searchQuery = ""
                 }) {
-                    Text("清空筛选", color = Color.Gray, fontSize = 12.sp)
+                    Text(
+                        text = "清空筛选",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray
+                    )
                 }
             }
         }
@@ -271,16 +278,14 @@ private fun FeaturedHeader(
         Column {
             Text(
                 text = "精选推荐",
-                fontSize = 24.sp,
+                style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
-                letterSpacing = 1.sp
+                color = Color.White
             )
             Text(
                 text = "大师级影像参数库",
-                fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.5f),
-                letterSpacing = 0.5.sp
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.5f)
             )
         }
 
@@ -399,7 +404,7 @@ private fun FeaturedPresetCard(
                 onClick = onClick
             ),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
@@ -423,7 +428,7 @@ private fun FeaturedPresetCard(
                             .align(Alignment.TopStart)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF4CAF50))
+                            .background(SuccessGreen)
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
@@ -459,7 +464,7 @@ private fun FeaturedPresetCard(
             ) {
                 Text(
                     text = preset.name,
-                    fontSize = 15.sp,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 1,
@@ -472,8 +477,8 @@ private fun FeaturedPresetCard(
                 ) {
                     Text(
                         text = preset.author,
-                        fontSize = 12.sp,
-                        color = Color(0xFF999999)
+                        style = MaterialTheme.typography.labelMedium,
+                        color = LightGray
                     )
 
                     if (preset.isHncs == true) {
@@ -486,7 +491,7 @@ private fun FeaturedPresetCard(
                         )
                         Text(
                             text = "HNCS",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = HasselbladOrange
                         )
                     }
@@ -513,7 +518,7 @@ private fun FeaturedPresetCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "应用哈苏配方",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -692,8 +697,8 @@ private fun SearchBar(
                     if (query.isEmpty()) {
                         Text(
                             text = "搜索精选预设...",
-                            color = Color.White.copy(alpha = 0.4f),
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.4f)
                         )
                     }
                     innerTextField()

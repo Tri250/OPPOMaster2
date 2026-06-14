@@ -571,8 +571,8 @@ private fun QuickPresetsSection(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF6B21A8).copy(alpha = 0.2f)),
-            border = BorderStroke(1.dp, Color(0xFF6B21A8).copy(alpha = 0.3f))
+            colors = CardDefaults.cardColors(containerColor = CyanAccent.copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, CyanAccent.copy(alpha = 0.3f))
         ) {
             Row(
                 modifier = Modifier
@@ -874,8 +874,8 @@ private fun SmartOptimizationCard(
                     )
                     if (optimization.isPro) {
                         Spacer(modifier = Modifier.width(4.dp))
-                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(10.dp))
-                        Text("PRO", color = Color(0xFFFFD700), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Star, null, tint = WarningYellow, modifier = Modifier.size(10.dp))
+                        Text("PRO", color = WarningYellow, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
                 Text(
@@ -1030,7 +1030,7 @@ private fun CurveAdjustCard(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { onChannelChange(ch) },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (channel == ch) channelColors[index].copy(alpha = 0.2f) else Color(0xFF2A2A2A)
+                            containerColor = if (channel == ch) channelColors[index].copy(alpha = 0.2f) else DarkGray
                         )
                     ) {
                         Text(
@@ -1052,7 +1052,7 @@ private fun CurveAdjustCard(
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF0A0A0A)),
+                    .background(PureBlack),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1084,7 +1084,7 @@ private fun CurveAdjustCard(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { selectedPreset = preset.id },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (selectedPreset == preset.id) HasselbladOrange.copy(alpha = 0.2f) else Color(0xFF2A2A2A)
+                            containerColor = if (selectedPreset == preset.id) HasselbladOrange.copy(alpha = 0.2f) else DarkGray
                         ),
                         border = BorderStroke(1.dp, if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.1f))
                     ) {

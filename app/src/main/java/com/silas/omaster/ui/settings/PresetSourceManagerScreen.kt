@@ -19,8 +19,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.MediumGray
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
@@ -115,7 +119,7 @@ fun PresetSourceManagerScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Row(
                 modifier = Modifier
@@ -154,7 +158,7 @@ fun PresetSourceManagerScreen(
                         text = if (isLoading) "..." else "$fetchedPresetCount",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50)
+                        color = SuccessGreen
                     )
                     Text(
                         text = "已加载预设",
@@ -317,7 +321,7 @@ private fun PresetSourceCard(
                         onCheckedChange = onToggle,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF4CAF50),
+                            checkedTrackColor = SuccessGreen,
                             uncheckedThumbColor = Color.Gray,
                             uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
                         )
@@ -340,7 +344,7 @@ private fun PresetSourceCard(
                     IconButton(onClick = onDelete) {
                         Icon(
                             Icons.Default.Delete, "删除",
-                            tint = Color(0xFFE53935)
+                            tint = ErrorRed
                         )
                     }
                 }
@@ -359,7 +363,7 @@ private fun AddSourceDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF2D2D2D),
+        containerColor = MediumGray,
         title = {
             Text("添加预设源", color = Color.White)
         },

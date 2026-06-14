@@ -21,8 +21,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.perform
 
 /**
@@ -94,7 +96,7 @@ fun UpdateChannelScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -121,7 +123,7 @@ fun UpdateChannelScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -164,7 +166,7 @@ fun UpdateChannelScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -201,7 +203,7 @@ private fun CurrentVersionCard() {
                 .clip(RoundedCornerShape(16.dp))
                 .background(
                     Brush.horizontalGradient(
-                        listOf(HasselbladOrange, Color(0xFFFF8C42))
+                        listOf(HasselbladOrange, WarningYellow)
                     )
                 )
         ) {
