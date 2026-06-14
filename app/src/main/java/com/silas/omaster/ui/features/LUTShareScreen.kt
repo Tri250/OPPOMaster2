@@ -86,6 +86,7 @@ fun LUTShareScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
             title = {

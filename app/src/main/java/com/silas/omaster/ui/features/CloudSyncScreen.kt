@@ -104,6 +104,7 @@ fun CloudSyncScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },

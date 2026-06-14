@@ -154,6 +154,7 @@ fun HasselbladScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
             title = { Text("哈苏色彩科学", fontWeight = FontWeight.Bold) },

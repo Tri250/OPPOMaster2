@@ -205,6 +205,7 @@ fun AIFineTuneScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏
         TopAppBar(

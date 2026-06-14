@@ -195,7 +195,7 @@ fun FeaturedPresetsScreen(
             }
         }
 
-        // 预设网格
+        // 预设网格 - 适配移动端分辨率，小屏单列大屏双列
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -215,8 +215,16 @@ fun FeaturedPresetsScreen(
                 }
             )
         } else {
+            val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+            val screenWidthDp = configuration.screenWidthDp
+            // 小屏手机(<360dp)用单列，普通手机双列，平板大屏3列
+            val columnCount = when {
+                screenWidthDp >= 600 -> 3
+                screenWidthDp >= 360 -> 2
+                else -> 1
+            }
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Fixed(columnCount),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -263,14 +271,16 @@ private fun FeaturedHeader(
         Column {
             Text(
                 text = "精选推荐",
-                style = MaterialTheme.typography.headlineMedium,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
+                letterSpacing = 1.sp
             )
             Text(
                 text = "大师级影像参数库",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f)
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.5f),
+                letterSpacing = 0.5.sp
             )
         }
 
@@ -449,7 +459,7 @@ private fun FeaturedPresetCard(
             ) {
                 Text(
                     text = preset.name,
-                    style = MaterialTheme.typography.titleSmall,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 1,
@@ -462,8 +472,8 @@ private fun FeaturedPresetCard(
                 ) {
                     Text(
                         text = preset.author,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        fontSize = 12.sp,
+                        color = Color(0xFF999999)
                     )
 
                     if (preset.isHncs == true) {
@@ -476,31 +486,34 @@ private fun FeaturedPresetCard(
                         )
                         Text(
                             text = "HNCS",
-                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
                             color = HasselbladOrange
                         )
                     }
                 }
 
-                // 应用按钮
+                // 应用哈苏配方按钮
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onApplyClick,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = HasselbladOrange.copy(alpha = 0.2f)
+                        containerColor = HasselbladOrange.copy(alpha = 0.2f),
+                        contentColor = HasselbladOrange
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 6.dp)
                 ) {
                     Icon(
                         Icons.Default.AutoAwesome,
                         null,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(14.dp),
+                        tint = HasselbladOrange
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "应用参数",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = "应用哈苏配方",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }

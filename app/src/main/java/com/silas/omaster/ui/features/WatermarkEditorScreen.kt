@@ -440,6 +440,7 @@ fun WatermarkEditorScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
         TopAppBar(

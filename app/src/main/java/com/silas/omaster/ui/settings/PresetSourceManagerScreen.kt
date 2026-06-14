@@ -68,6 +68,7 @@ fun PresetSourceManagerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏
         TopAppBar(
