@@ -229,17 +229,21 @@ class PresetRepository private constructor(context: Context) {
             scene = "自定义",
             params = params,
             coverPath = coverPath,
+            galleryImages = null,  // 自定义预设默认无画廊图片
             description = description,
             isSystem = false,
             isHncs = false,
             rating = 0f,
+            ratingCount = null,
             downloadCount = 0,
             favoriteCount = 0,
+            comments = null,
             tags = listOf("自定义"),
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis(),
             isNew = false,
-            isPinned = false
+            isPinned = false,
+            mode = null
         )
 
         val current = _presets.value.toMutableList()
@@ -899,10 +903,13 @@ class PresetRepository private constructor(context: Context) {
     /**
      * 获取所有预设（实时转换为 MasterPreset）
      * 使用 map 操作符实现响应式更新
+     * 正确设置 isFavorite 属性
      */
     fun getAllPresets(): Flow<List<MasterPreset>> {
-        return _presets.map { items ->
-            items.map { it.toMasterPreset() }
+        return combine(_presets, _favorites) { items, favIds ->
+            items.map { item ->
+                item.toMasterPreset().copy(isFavorite = favIds.contains(item.id))
+            }
         }
     }
 
@@ -913,7 +920,7 @@ class PresetRepository private constructor(context: Context) {
     fun getFavoritePresets(): Flow<List<MasterPreset>> {
         return combine(_presets, _favorites) { items, favIds ->
             items.filter { favIds.contains(it.id) }
-                .map { it.toMasterPreset() }
+                .map { it.toMasterPreset().copy(isFavorite = true) }
         }
     }
 
@@ -921,9 +928,14 @@ class PresetRepository private constructor(context: Context) {
      * 获取自定义预设（非系统预设）
      */
     fun getCustomPresets(): Flow<List<MasterPreset>> {
-        return _presets.map { items ->
+        return combine(_presets, _favorites) { items, favIds ->
             items.filter { !it.isSystem }
-                .map { it.toMasterPreset() }
+                .map { item ->
+                    item.toMasterPreset().copy(
+                        isFavorite = favIds.contains(item.id),
+                        isCustom = true
+                    )
+                }
         }
     }
 
@@ -990,17 +1002,21 @@ data class PresetItem(
     val scene: String,
     val params: Map<String, Int>,
     val coverPath: String? = null,
+    val galleryImages: List<String>? = null,  // 画廊图片列表（对齐Web端）
     val description: String = "",
     val isSystem: Boolean = true,
     val isHncs: Boolean = false,
     val rating: Float = 0f,
+    val ratingCount: Int? = null,  // 评分数量（对齐Web端）
     val downloadCount: Int = 0,
     val favoriteCount: Int = 0,
+    val comments: List<com.silas.omaster.model.PresetComment>? = null,  // 评论列表（对齐Web端）
     val tags: List<String> = emptyList(),
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
     val isNew: Boolean = false,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val mode: String? = null  // 模式：auto或pro（对齐Web端）
 ) {
     fun toExportModel() = ExportPresetModel(
         name = name,
@@ -1019,6 +1035,7 @@ data class PresetItem(
             id = id,
             name = name,
             coverPath = coverPath ?: "images/placeholder.webp",
+            galleryImages = galleryImages,  // 对齐Web端
             brand = brand,
             tags = tags,
             description = if (description.isNotEmpty()) {
@@ -1028,7 +1045,10 @@ data class PresetItem(
             isHncs = isHncs,
             downloads = downloadCount,
             rating = rating,
+            ratingCount = ratingCount,  // 对齐Web端
+            comments = comments,  // 对齐Web端
             createdAt = createdAt,
+            mode = mode,  // 对齐Web端
             saturation = params["saturation"],
             tone = params["contrast"],
             warmCool = params["warmth"],
@@ -1077,12 +1097,16 @@ data class ExportPresetModel(
         brand = brand,
         scene = scene,
         params = params,
+        galleryImages = null,  // 导入预设默认无画廊图片
         description = description,
-        tags = tags,
         isSystem = false,
         isHncs = false,
+        ratingCount = null,
+        comments = null,
+        tags = tags,
         createdAt = System.currentTimeMillis(),
-        updatedAt = System.currentTimeMillis()
+        updatedAt = System.currentTimeMillis(),
+        mode = null
     )
 }
 
@@ -1122,17 +1146,21 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         scene = resolvedScene,
         params = paramsMap,
         coverPath = coverPath,
+        galleryImages = galleryImages,  // 对齐Web端
         description = resolvedDescription,
         isSystem = true,
         isHncs = isHncs,
         rating = rating ?: 0f,
+        ratingCount = ratingCount,  // 对齐Web端
         downloadCount = downloads ?: 0,
         favoriteCount = 0,
+        comments = comments,  // 对齐Web端
         tags = tags ?: emptyList(),
         createdAt = if (createdAt > 0) createdAt else System.currentTimeMillis(),
         updatedAt = System.currentTimeMillis(),
         isNew = isNew,
-        isPinned = false
+        isPinned = false,
+        mode = mode  // 对齐Web端
     )
 }
 

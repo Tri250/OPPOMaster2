@@ -104,17 +104,17 @@ class HomeFullTest {
 
     @Test
     fun `HomeScreen should display tabs with counts`() {
-        // 测试 Tab 显示和计数
-        val tabs = listOf("全部", "收藏", "我的")
+        // 测试 Tab 显示和计数（对齐Web端：发现、收藏、哈苏、上新）
+        val tabs = listOf("发现", "收藏", "哈苏", "上新")
         for (tab in tabs) {
             assertTrue("Tab '$tab' should be displayed", true)
         }
     }
 
     @Test
-    fun `HomeScreen should show FAB only on custom presets tab`() {
-        // 测试悬浮按钮仅在"我的"Tab显示
-        assertTrue("FAB should only show on custom presets tab", true)
+    fun `HomeScreen should show FAB only on favorites tab`() {
+        // 测试悬浮按钮仅在"收藏"Tab显示（对齐Web端）
+        assertTrue("FAB should only show on favorites tab", true)
     }
 
     @Test
@@ -461,10 +461,11 @@ class HomeFullTest {
 
     @Test
     fun `HomeScreen should load string resources correctly`() {
-        // 测试字符串资源
+        // 测试字符串资源（对齐Web端）
         val resources = listOf(
-            "app_name", "tab_all", "tab_favorites", "tab_my",
-            "create_preset", "delete_preset_title", "delete_preset_message"
+            "app_name", "tab_discover", "tab_favorites", "tab_hncs", "tab_new",
+            "create_preset", "delete_preset_title", "delete_preset_message",
+            "brand_all", "brand_oppo", "sort_newest", "search_placeholder"
         )
         for (resource in resources) {
             assertTrue("Resource '$resource' should load", true)

@@ -80,10 +80,38 @@
     <string name="color_sony_orange">Sony Orange</string>
     <string name="color_phaseone_grey">Phase One Grey</string>
 
-    <!-- Home Tabs -->
-    <string name="tab_all">All</string>
+    <!-- Home Tabs (Aligned with Web) -->
+    <string name="tab_discover">Discover</string>
     <string name="tab_favorites">Favorites</string>
-    <string name="tab_my">My</string>
+    <string name="tab_hncs">HNCS</string>
+    <string name="tab_new">New</string>
+    
+    <!-- Brand Filter -->
+    <string name="brand_all">All</string>
+    <string name="brand_oppo">OPPO</string>
+    <string name="brand_realme">realme</string>
+    <string name="brand_vivo">vivo</string>
+    <string name="brand_honor">Honor</string>
+    <string name="brand_xiaomi">Xiaomi</string>
+    
+    <!-- Sort Filter -->
+    <string name="sort_newest">Newest</string>
+    <string name="sort_popular">Popular</string>
+    <string name="sort_rating">Rating</string>
+    
+    <!-- Search -->
+    <string name="search_hint">Search presets / authors / tags</string>
+    
+    <!-- Badges -->
+    <string name="badge_hncs">HNCS</string>
+    <string name="badge_new">NEW</string>
+    <string name="badge_pro">PRO</string>
+    
+    <!-- Hasselblad Master -->
+    <string name="hasselblad_master">Hasselblad Master</string>
+    
+    <!-- Search Bar -->
+    <string name="search_placeholder">Search presets / authors / tags</string>
 
     <!-- Home Actions -->
     <string name="create_preset">Create Preset</string>

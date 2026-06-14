@@ -510,6 +510,18 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToSettings = {
                         navController.navigate(Screen.Settings)
                     },
+                    onNavigateToNotificationSettings = {
+                        navController.navigate(Screen.NotificationSettings)
+                    },
+                    onNavigateToPresetSourceManager = {
+                        navController.navigate(Screen.PresetSourceManager)
+                    },
+                    onNavigateToPrivacy = {
+                        navController.navigate(Screen.PrivacyPolicy)
+                    },
+                    onNavigateToTerms = {
+                        navController.navigate(Screen.Terms)
+                    },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     },

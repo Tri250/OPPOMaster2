@@ -126,11 +126,11 @@ class SettingsManager private constructor(private val context: Context) {
             prefs.edit().putInt(KEY_FLOATING_WINDOW_OPACITY, value.coerceIn(30, 70)).apply()
         }
 
-    // 默认启动 Tab (0=全部, 1=收藏, 2=我的，默认0)
+    // 默认启动 Tab (0=发现, 1=收藏, 2=哈苏, 3=上新，默认0)
     var defaultStartTab: Int
         get() = prefs.getInt(KEY_DEFAULT_START_TAB, 0)
         set(value) {
-            prefs.edit().putInt(KEY_DEFAULT_START_TAB, value.coerceIn(0, 2)).apply()
+            prefs.edit().putInt(KEY_DEFAULT_START_TAB, value.coerceIn(0, 3)).apply()
         }
 
     // 更新渠道（默认 Gitee）
@@ -224,6 +224,13 @@ class SettingsManager private constructor(private val context: Context) {
         get() = prefs.getBoolean(KEY_AI_FINE_TUNE_ENABLED, true)
         set(value) {
             prefs.edit().putBoolean(KEY_AI_FINE_TUNE_ENABLED, value).apply()
+        }
+
+    // 智能优化开关
+    var isSmartOptimizeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SMART_OPTIMIZE_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_SMART_OPTIMIZE_ENABLED, value).apply()
         }
 
     // 水印编辑器开关
@@ -461,6 +468,7 @@ class SettingsManager private constructor(private val context: Context) {
         private const val KEY_AI_SCENE_ENABLED = "ai_scene_enabled"
         private const val KEY_LAST_WATERMARK_TEMPLATE = "last_watermark_template"
         private const val KEY_AI_FINE_TUNE_ENABLED = "ai_fine_tune_enabled"
+        private const val KEY_SMART_OPTIMIZE_ENABLED = "smart_optimize_enabled"
         private const val KEY_WATERMARK_EDITOR_ENABLED = "watermark_editor_enabled"
         private const val KEY_HASSELBLAD_COLOR_ENABLED = "hasselblad_color_enabled"
         private const val KEY_CUSTOM_DEVICE_MODEL = "custom_device_model"

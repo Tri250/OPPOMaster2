@@ -657,10 +657,11 @@ private fun SettingsClickableItem(
 @Composable
 private fun getTabName(tabIndex: Int): String {
     return when (tabIndex) {
-        0 -> "全部"
+        0 -> "发现"
         1 -> "收藏"
-        2 -> "我的"
-        else -> "全部"
+        2 -> "哈苏"
+        3 -> "上新"
+        else -> "发现"
     }
 }
 
@@ -791,7 +792,7 @@ fun TabSelectionDialog(
     onTabSelected: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val tabs = listOf("全部" to 0, "收藏" to 1, "我的" to 2)
+    val tabs = listOf("发现" to 0, "收藏" to 1, "哈苏" to 2, "上新" to 3)
 
     AlertDialog(
         onDismissRequest = onDismiss,

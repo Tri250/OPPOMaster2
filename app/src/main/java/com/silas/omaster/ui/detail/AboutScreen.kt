@@ -1,15 +1,8 @@
 package com.silas.omaster.ui.detail
 
 import android.app.DownloadManager
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,29 +19,37 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Globe
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,46 +62,44 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
-import com.silas.omaster.ui.theme.CardBorderLight
 import com.silas.omaster.ui.theme.DarkGray
-import com.silas.omaster.ui.theme.NearBlack
+import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.data.local.DarkMode
+import com.silas.omaster.data.local.UpdateChannel
+import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.ui.settings.ThemeSelectionDialog
+import com.silas.omaster.ui.settings.DarkModeDialog
+import com.silas.omaster.ui.settings.UpdateChannelDialog
 import com.silas.omaster.util.UpdateChecker
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import android.widget.Toast
-import com.silas.omaster.util.UpdateConfigManager
-import com.silas.omaster.network.PresetRemoteManager
-import com.silas.omaster.data.repository.PresetRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 
 @Composable
 fun AboutScreen(
     onBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToNotificationSettings: () -> Unit,
+    onNavigateToPresetSourceManager: () -> Unit,
+    onNavigateToPrivacy: () -> Unit,
+    onNavigateToTerms: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit,
     currentVersionCode: Int = VersionInfo.VERSION_CODE,
     currentVersionName: String = VersionInfo.VERSION_NAME
@@ -110,6 +109,15 @@ fun AboutScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+    val settingsManager = remember { SettingsManager.getInstance(context) }
+    val currentTheme by settingsManager.themeFlow.collectAsState()
+    var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
+    var updateChannel by remember { mutableStateOf(settingsManager.updateChannel) }
+
+    // Dialog states
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showDarkModeDialog by remember { mutableStateOf(false) }
+    var showChannelDialog by remember { mutableStateOf(false) }
 
     val isScrollingUp by remember {
         derivedStateOf {
@@ -153,10 +161,6 @@ fun AboutScreen(
     var downloadId by remember { mutableStateOf<Long>(-1L) }
     var downloadProgress by remember { mutableIntStateOf(0) }
     var isDownloading by remember { mutableStateOf(false) }
-
-    // 获取设置管理器和更新渠道
-    val settingsManager = remember { SettingsManager.getInstance(context) }
-    val updateChannel = settingsManager.updateChannel
 
     LaunchedEffect(isScrollingUp) {
         onScrollStateChanged(isScrollingUp)
@@ -205,8 +209,75 @@ fun AboutScreen(
         }
     }
 
+    // 监听下载进度
+    LaunchedEffect(isDownloading, downloadId) {
+        if (isDownloading && downloadId != -1L) {
+            while (isActive) {
+                val (status, progress) = UpdateChecker.queryDownloadProgress(context, downloadId)
+                downloadProgress = progress
+                
+                when (status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        isDownloading = false
+                        downloadProgress = 100
+                        break
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        isDownloading = false
+                        downloadProgress = -1
+                        break
+                    }
+                }
+                
+                if (!isDownloading) break
+                delay(500)
+            }
+        }
+    }
+
+    // Dialogs
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentTheme = currentTheme,
+            onThemeSelected = { theme ->
+                haptic.perform(HapticFeedbackType.LongPress)
+                settingsManager.currentTheme = theme
+                showThemeDialog = false
+            },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showDarkModeDialog) {
+        DarkModeDialog(
+            currentMode = darkMode,
+            onModeSelected = { mode ->
+                haptic.perform(HapticFeedbackType.LongPress)
+                settingsManager.darkMode = mode
+                darkMode = mode
+                showDarkModeDialog = false
+            },
+            onDismiss = { showDarkModeDialog = false }
+        )
+    }
+
+    if (showChannelDialog) {
+        UpdateChannelDialog(
+            currentChannel = updateChannel,
+            onChannelSelected = { channel ->
+                haptic.perform(HapticFeedbackType.LongPress)
+                settingsManager.updateChannel = channel
+                updateChannel = channel
+                showChannelDialog = false
+            },
+            onDismiss = { showChannelDialog = false }
+        )
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PureBlack)
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.about_title),
@@ -214,7 +285,7 @@ fun AboutScreen(
             actions = {
                 IconButton(onClick = onNavigateToSettings) {
                     Icon(
-                        imageVector = Icons.Default.Settings,
+                        imageVector = androidx.compose.material.icons.Icons.Default.Settings,
                         contentDescription = stringResource(R.string.nav_settings),
                         tint = Color.White
                     )
@@ -226,15 +297,13 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(24.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AppTitleSection(currentVersionName)
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            UpdateCard(
+            // App Info Card - Logo + Version
+            AppInfoCard(
                 currentVersionName = currentVersionName,
+                currentTheme = currentTheme,
                 isChecking = isChecking,
                 updateInfo = updateInfo,
                 checkError = checkError,
@@ -262,97 +331,37 @@ fun AboutScreen(
                     checkForUpdate()
                 }
             )
-            
-            // 监听下载进度
-            LaunchedEffect(isDownloading, downloadId) {
-                if (isDownloading && downloadId != -1L) {
-                    while (isActive) {
-                        val (status, progress) = UpdateChecker.queryDownloadProgress(context, downloadId)
-                        downloadProgress = progress
-                        
-                        when (status) {
-                            DownloadManager.STATUS_SUCCESSFUL -> {
-                                isDownloading = false
-                                downloadProgress = 100
-                                break
-                            }
-                            DownloadManager.STATUS_FAILED -> {
-                                isDownloading = false
-                                downloadProgress = -1
-                                break
-                            }
-                        }
-                        
-                        if (!isDownloading) break
-                        delay(500) // 每500ms查询一次
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            FeatureCard()
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            CreditsCard(context)
+            // Settings List Card
+            SettingsListCard(
+                currentTheme = currentTheme,
+                darkMode = darkMode,
+                updateChannel = updateChannel,
+                onThemeClick = { showThemeDialog = true },
+                onDarkModeClick = { showDarkModeDialog = true },
+                onUpdateChannelClick = { showChannelDialog = true },
+                onNotificationClick = onNavigateToNotificationSettings,
+                onPresetSourceClick = onNavigateToPresetSourceManager,
+                onPrivacyClick = onNavigateToPrivacy,
+                onTermsClick = onNavigateToTerms
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            FooterSection(context)
+            // Developer Info Footer
+            DeveloperFooter()
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-private fun AppTitleSection(currentVersionName: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                    append("O")
-                }
-                withStyle(style = SpanStyle(color = Color.White)) {
-                    append("Master")
-                }
-            },
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = stringResource(R.string.app_slogan),
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = 0.7f)
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Box(
-            modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = "v$currentVersionName",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun UpdateCard(
+private fun AppInfoCard(
     currentVersionName: String,
+    currentTheme: BrandTheme,
     isChecking: Boolean,
     updateInfo: UpdateChecker.UpdateInfo?,
     checkError: String?,
@@ -369,250 +378,320 @@ private fun UpdateCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(
-                width = if (hasUpdate) 1.5.dp else 1.dp,
-                color = if (hasUpdate) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else CardBorderLight,
-                shape = RoundedCornerShape(16.dp)
-            ),
+            .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = DarkGray.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            currentTheme.primaryColor.copy(alpha = 0.2f),
+                            currentTheme.primaryColor.copy(alpha = 0.1f),
+                            Color.Transparent
+                        )
+                    )
+                )
         ) {
-            // 顶部：图标 + 版本号 + 刷新
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                // Logo Icon
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    currentTheme.primaryColor,
+                                    currentTheme.primaryColor.copy(alpha = 0.8f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // App Name
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(style = SpanStyle(color = currentTheme.primaryColor)) {
+                            append("O")
+                        }
+                        withStyle(style = SpanStyle(color = Color.White)) {
+                            append("Master")
+                        }
+                    },
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // App Slogan
+                Text(
+                    text = stringResource(R.string.app_slogan),
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Version Badge
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.version_format, currentVersionName),
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .background(
-                                color = if (hasUpdate) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
-                                shape = RoundedCornerShape(10.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = null,
-                            tint = if (hasUpdate) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column {
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(currentTheme.primaryColor)
+                    )
+                    if (hasUpdate) {
                         Text(
-                            text = "v$currentVersionName",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            text = stringResource(R.string.version_new_available),
+                            fontSize = 12.sp,
+                            color = currentTheme.primaryColor
                         )
-                        if (lastCheckTime != null && !isChecking) {
-                            val diff = System.currentTimeMillis() - lastCheckTime
-                            val timeText = when {
-                                diff < 60000 -> stringResource(R.string.time_just_now)
-                                diff < 3600000 -> stringResource(R.string.time_minutes_ago, diff / 60000)
-                                diff < 86400000 -> stringResource(R.string.time_hours_ago, diff / 3600000)
-                                else -> stringResource(R.string.time_days_ago, diff / 86400000)
-                            }
-                            Text(
-                                text = stringResource(R.string.last_check, timeText),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.4f)
-                            )
-                        }
+                    } else if (!isChecking && updateInfo != null && !updateInfo.isNewer) {
+                        Text(
+                            text = stringResource(R.string.version_latest_badge),
+                            fontSize = 12.sp,
+                            color = currentTheme.primaryColor
+                        )
                     }
                 }
 
-                if (!isChecking) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.refresh),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable { onCheckClick() }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Update Status Section
+                UpdateStatusSection(
+                    isChecking = isChecking,
+                    updateInfo = updateInfo,
+                    checkError = checkError,
+                    lastCheckTime = lastCheckTime,
+                    isDownloading = isDownloading,
+                    downloadProgress = downloadProgress,
+                    onCheckClick = onCheckClick,
+                    onDownloadClick = onDownloadClick,
+                    onCancelDownload = onCancelDownload,
+                    onRetryClick = onRetryClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateStatusSection(
+    isChecking: Boolean,
+    updateInfo: UpdateChecker.UpdateInfo?,
+    checkError: String?,
+    lastCheckTime: Long?,
+    isDownloading: Boolean,
+    downloadProgress: Int,
+    onCheckClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onCancelDownload: () -> Unit,
+    onRetryClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        when {
+            isChecking -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(R.string.checking),
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.7f)
                     )
                 }
             }
-
-            // 状态显示
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                when {
-                    isChecking -> {
+            updateInfo != null -> {
+                if (updateInfo.isNewer) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 2.dp
-                            )
-                            Text(
-                                text = stringResource(R.string.checking),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    updateInfo != null -> {
-                        if (updateInfo.isNewer) {
-                            Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "v${updateInfo.versionName}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            
+                            if (isDownloading) {
+                                Column(
+                                    horizontalAlignment = Alignment.End
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                                    shape = RoundedCornerShape(6.dp)
-                                                )
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = "v${updateInfo.versionName}",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-                                    }
-                                    if (isDownloading) {
-                                        // 显示下载进度
-                                        Column(
-                                            horizontalAlignment = Alignment.End
-                                        ) {
-                                            Text(
-                                                text = "$downloadProgress%",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            LinearProgressIndicator(
-                                                progress = { downloadProgress / 100f },
-                                                modifier = Modifier.width(120.dp),
-                                                color = MaterialTheme.colorScheme.primary,
-                                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                                drawStopIndicator = {}
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = "取消",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                                modifier = Modifier.clickable { onCancelDownload() }
-                                            )
-                                        }
-                                    } else {
-                                        Button(
-                                            onClick = onDownloadClick,
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary
-                                            ),
-                                            shape = RoundedCornerShape(10.dp),
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                        ) {
-                                            Text(
-                                                stringResource(R.string.version_download_btn),
-                                                style = MaterialTheme.typography.labelMedium
-                                            )
-                                        }
-                                    }
-                                }
-                                
-                                // 显示更新日志
-                                if (updateInfo.releaseNotes.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(12.dp))
                                     Text(
-                                        text = "更新内容",
-                                        style = MaterialTheme.typography.labelMedium,
+                                        text = "$downloadProgress%",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    LinearProgressIndicator(
+                                        progress = { downloadProgress / 100f },
+                                        modifier = Modifier.width(120.dp),
                                         color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Medium
+                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                        drawStopIndicator = {}
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = updateInfo.releaseNotes,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.White.copy(alpha = 0.8f),
-                                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.2
+                                        text = stringResource(R.string.cancel),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        modifier = Modifier.clickable { onCancelDownload() }
+                                    )
+                                }
+                            } else {
+                                Button(
+                                    onClick = onDownloadClick,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.version_download_btn),
+                                        fontSize = 12.sp
                                     )
                                 }
                             }
-                        } else {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.version_is_latest),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
-                            }
                         }
-                    }
-                    checkError != null -> {
-                        Row(
-                            modifier = Modifier.clickable { onRetryClick() },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = Color(0xFFFF5252),
-                                modifier = Modifier.size(18.dp)
-                            )
+                        
+                        if (updateInfo.releaseNotes.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = stringResource(R.string.version_retry),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                text = stringResource(R.string.update_notes_title),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
                             )
-                        }
-                    }
-                    else -> {
-                        Row(
-                            modifier = Modifier.clickable { onCheckClick() },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = stringResource(R.string.version_check),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.5f)
+                                text = updateInfo.releaseNotes,
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.version_is_latest),
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            checkError != null -> {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onRetryClick() },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFFF5252),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.version_retry),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            else -> {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onCheckClick() },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.version_check),
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
                 }
             }
         }
@@ -620,259 +699,192 @@ private fun UpdateCard(
 }
 
 @Composable
-private fun FeatureCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = CardBorderLight,
-                shape = RoundedCornerShape(16.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+private fun SettingsListCard(
+    currentTheme: BrandTheme,
+    darkMode: DarkMode,
+    updateChannel: UpdateChannel,
+    onThemeClick: () -> Unit,
+    onDarkModeClick: () -> Unit,
+    onUpdateChannelClick: () -> Unit,
+    onNotificationClick: () -> Unit,
+    onPresetSourceClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+    onTermsClick: () -> Unit
+) {
+    val settingsItems = listOf(
+        SettingsItem(
+            icon = Icons.Default.Palette,
+            label = stringResource(R.string.settings_theme_title),
+            value = stringResource(currentTheme.brandNameResId),
+            onClick = onThemeClick
         ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = stringResource(R.string.feature_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-            Text(
-                text = stringResource(R.string.feature_desc_1),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f),
-                textAlign = TextAlign.Start
-            )
-            Text(
-                text = stringResource(R.string.feature_desc_2),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f),
-                textAlign = TextAlign.Start
-            )
-        }
-    }
-}
-
-private data class Contributor(
-    val name: String,
-    val url: String
-)
-
-@Composable
-private fun CreditsCard(context: android.content.Context) {
-    val contributors = listOf(
-        Contributor("@OPPO影像", "https://xhslink.com/m/8c2gJYGlCTR"),
-        Contributor("@蘭州白鴿", "https://xhslink.com/m/4h5lx4Lg37n"),
-        Contributor("@派瑞特凯", "https://xhslink.com/m/AkrgUI0kgg1"),
-        Contributor("@ONESTEP™", "https://xhslink.com/m/4LZ8zRdNCSv"),
-        Contributor("@盒子叔", "https://xhslink.com/m/4mje9mimNXJ"),
-        Contributor("@Aurora", "https://xhslink.com/m/2Ebow4iyVOE"),
-        Contributor("@屋顶橙子味", "https://v.douyin.com/YkVXPX9kZgY/")
+        SettingsItem(
+            icon = when (darkMode) {
+                DarkMode.LIGHT -> Icons.Default.WbSunny
+                DarkMode.DARK -> Icons.Default.DarkMode
+                else -> Icons.Default.Brush
+            },
+            label = stringResource(R.string.dark_mode_title),
+            value = when (darkMode) {
+                DarkMode.SYSTEM -> stringResource(R.string.dark_mode_system)
+                DarkMode.LIGHT -> stringResource(R.string.dark_mode_light)
+                DarkMode.DARK -> stringResource(R.string.dark_mode_dark)
+            },
+            onClick = onDarkModeClick
+        ),
+        SettingsItem(
+            icon = Icons.Default.Globe,
+            label = stringResource(R.string.update_channel_title),
+            value = when (updateChannel) {
+                UpdateChannel.GITEE -> stringResource(R.string.update_channel_gitee)
+                UpdateChannel.GITHUB -> stringResource(R.string.update_channel_github)
+            },
+            onClick = onUpdateChannelClick
+        ),
+        SettingsItem(
+            icon = Icons.Default.Notifications,
+            label = stringResource(R.string.notification_settings_title),
+            value = "",
+            onClick = onNotificationClick
+        ),
+        SettingsItem(
+            icon = Icons.Default.Storage,
+            label = stringResource(R.string.preset_source_title),
+            value = "",
+            onClick = onPresetSourceClick
+        ),
+        SettingsItem(
+            icon = Icons.Default.Security,
+            label = stringResource(R.string.privacy_policy_title),
+            value = "",
+            onClick = onPrivacyClick
+        ),
+        SettingsItem(
+            icon = Icons.Default.Description,
+            label = stringResource(R.string.user_agreement_title),
+            value = "",
+            onClick = onTermsClick
+        )
     )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = CardBorderLight,
-                shape = RoundedCornerShape(16.dp)
-            ),
+            .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = Color.White.copy(alpha = 0.05f)
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+            settingsItems.forEachIndexed { index, item ->
+                SettingsListItem(
+                    item = item,
+                    showDivider = index < settingsItems.size - 1
                 )
-                Text(
-                    text = stringResource(R.string.credits_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = stringResource(R.string.developer) + "：",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-            }
-
-            // 开发者标签
-            val developers = listOf(
-                "带娃的小工" to "https://github.com/silas"
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(start = 24.dp)
-            ) {
-                developers.forEach { (name, url) ->
-                    DeveloperChip(name = name, url = url, context = context)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.material_provider),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    contributors.take(3).forEach { contributor ->
-                        ContributorItem(
-                            name = contributor.name,
-                            url = contributor.url,
-                            context = context
-                        )
-                    }
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    contributors.drop(3).forEach { contributor ->
-                        ContributorItem(
-                            name = contributor.name,
-                            url = contributor.url,
-                            context = context
-                        )
-                    }
-                }
             }
         }
     }
 }
 
+private data class SettingsItem(
+    val icon: ImageVector,
+    val label: String,
+    val value: String,
+    val onClick: () -> Unit
+)
+
 @Composable
-private fun ContributorItem(
-    name: String,
-    url: String,
-    context: android.content.Context
+private fun SettingsListItem(
+    item: SettingsItem,
+    showDivider: Boolean
 ) {
+    val haptic = LocalHapticFeedback.current
+    
     Row(
         modifier = Modifier
+            .fillMaxWidth()
             .clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
+                haptic.perform(HapticFeedbackType.TextHandleMove)
+                item.onClick()
             }
-            .padding(vertical = 4.dp),
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(6.dp)
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    RoundedCornerShape(50)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
                 )
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            textDecoration = TextDecoration.Underline
-        )
-    }
-}
-
-@Composable
-private fun DeveloperChip(name: String, url: String, context: android.content.Context) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
             }
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(
-            text = "@$name",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Medium
+            Text(
+                text = item.label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White
+            )
+        }
+        
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (item.value.isNotEmpty()) {
+                Text(
+                    text = item.value,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.3f),
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+    
+    if (showDivider) {
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 68.dp),
+            color = Color.White.copy(alpha = 0.05f)
         )
     }
 }
 
 @Composable
-private fun FooterSection(context: android.content.Context) {
+private fun DeveloperFooter() {
     Column(
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "© 2026 Ophto",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.4f)
+            text = stringResource(R.string.developer_footer),
+            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.3f)
         )
-
+        
         Text(
-            text = stringResource(R.string.privacy_policy),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-            textDecoration = TextDecoration.Underline,
-            modifier = Modifier.clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.umeng.com/page/policy"))
-                context.startActivity(intent)
-            }
+            text = stringResource(R.string.copyright_footer),
+            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.2f)
         )
     }
 }

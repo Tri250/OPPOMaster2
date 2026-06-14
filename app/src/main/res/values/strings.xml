@@ -80,10 +80,38 @@
     <string name="color_sony_orange">索尼橙</string>
     <string name="color_phaseone_grey">飞思灰</string>
 
-    <!-- 主页 Tab -->
-    <string name="tab_all">全部</string>
+    <!-- 主页 Tab (对齐Web端) -->
+    <string name="tab_discover">发现</string>
     <string name="tab_favorites">收藏</string>
-    <string name="tab_my">我的</string>
+    <string name="tab_hncs">哈苏</string>
+    <string name="tab_new">上新</string>
+    
+    <!-- 品牌筛选 -->
+    <string name="brand_all">全部</string>
+    <string name="brand_oppo">OPPO</string>
+    <string name="brand_realme">真我</string>
+    <string name="brand_vivo">vivo</string>
+    <string name="brand_honor">荣耀</string>
+    <string name="brand_xiaomi">小米</string>
+    
+    <!-- 排序筛选 -->
+    <string name="sort_newest">最新</string>
+    <string name="sort_popular">最热</string>
+    <string name="sort_rating">评分</string>
+    
+    <!-- 搜索 -->
+    <string name="search_hint">搜索预设 / 作者 / 标签</string>
+    
+    <!-- 角标 -->
+    <string name="badge_hncs">HNCS</string>
+    <string name="badge_new">NEW</string>
+    <string name="badge_pro">PRO</string>
+    
+    <!-- 哈苏大师 -->
+    <string name="hasselblad_master">哈苏大师</string>
+    
+    <!-- 搜索栏 -->
+    <string name="search_placeholder">搜索预设 / 作者 / 标签</string>
 
     <!-- 主页操作 -->
     <string name="create_preset">新建预设</string>
@@ -285,10 +313,13 @@
     <!-- 关于页 -->
     <string name="about_title">关于</string>
     <string name="version_current">当前版本：v%1$s</string>
+    <string name="version_format">版本 %1$s</string>
     <string name="version_check">点击检查更新</string>
     <string name="version_checking">正在检查更新…</string>
     <string name="version_new_found">发现新版本 v%1$s</string>
+    <string name="version_new_available">有更新</string>
     <string name="version_latest">当前已是最新版本</string>
+    <string name="version_latest_badge">最新</string>
     <string name="version_check_failed">检查失败</string>
     <string name="version_download">国内下载</string>
     <string name="version_download_btn">更新</string>
@@ -299,6 +330,24 @@
     <string name="time_minutes_ago">%1$d分钟前</string>
     <string name="time_hours_ago">%1$d小时前</string>
     <string name="time_days_ago">%1$d天前</string>
+    <string name="update_notes_title">更新内容</string>
+    
+    <!-- 设置项标题 -->
+    <string name="dark_mode_title">深色模式</string>
+    <string name="dark_mode_system">跟随系统</string>
+    <string name="dark_mode_light">浅色模式</string>
+    <string name="dark_mode_dark">深色模式</string>
+    <string name="update_channel_title">更新渠道</string>
+    <string name="update_channel_gitee">稳定版</string>
+    <string name="update_channel_github">GitHub</string>
+    <string name="notification_settings_title">通知设置</string>
+    <string name="preset_source_title">预设源管理</string>
+    <string name="privacy_policy_title">隐私政策</string>
+    <string name="user_agreement_title">用户协议</string>
+    
+    <!-- 底部开发者信息 -->
+    <string name="developer_footer">Developed by Silas</string>
+    <string name="copyright_footer">© 2026 OMaster. All rights reserved.</string>
 
     <!-- 功能介绍 -->
     <string name="feature_title">功能介绍</string>

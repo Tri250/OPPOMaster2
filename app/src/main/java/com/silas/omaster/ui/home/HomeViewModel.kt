@@ -13,8 +13,27 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 /**
+ * Tab类型枚举（对齐Web端）
+ */
+enum class TabType {
+    DISCOVER,   // 发现
+    FAVORITES,  // 收藏
+    HNCS,       // 哈苏
+    NEW         // 上新
+}
+
+/**
+ * 排序类型枚举（对齐Web端）
+ */
+enum class SortType {
+    NEWEST,     // 最新
+    POPULAR,    // 最热
+    RATING      // 评分
+}
+
+/**
  * 主页 ViewModel
- * 管理预设列表、收藏和 Tab 状态
+ * 管理预设列表、收藏、Tab状态、品牌筛选、排序和搜索（对齐Web端）
  *
  * 修复：
  * 1. 使用 Job 管理协程，避免重复收集
@@ -32,13 +51,25 @@ class HomeViewModel(
     private val _favorites = MutableStateFlow<List<MasterPreset>>(emptyList())
     val favorites: StateFlow<List<MasterPreset>> = _favorites.asStateFlow()
 
-    // 自定义预设
+    // 自定义预设（保留Android原生功能）
     private val _customPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
     val customPresets: StateFlow<List<MasterPreset>> = _customPresets.asStateFlow()
 
-    // 当前选中的 Tab
+    // 当前选中的 Tab（对齐Web端：0=发现, 1=收藏, 2=哈苏, 3=上新）
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    // 当前选中的品牌（对齐Web端）
+    private val _selectedBrand = MutableStateFlow("all")
+    val selectedBrand: StateFlow<String> = _selectedBrand.asStateFlow()
+
+    // 当前排序方式（对齐Web端）
+    private val _sortType = MutableStateFlow(SortType.NEWEST)
+    val sortType: StateFlow<SortType> = _sortType.asStateFlow()
+
+    // 搜索关键词（对齐Web端）
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     // 用于管理收集任务的 Job
     private var allPresetsJob: Job? = null
@@ -80,10 +111,83 @@ class HomeViewModel(
     }
 
     /**
-     * 切换 Tab
+     * 切换 Tab（对齐Web端）
      */
     fun selectTab(index: Int) {
         _selectedTab.value = index
+    }
+
+    /**
+     * 切换品牌筛选（对齐Web端）
+     */
+    fun selectBrand(brand: String) {
+        _selectedBrand.value = brand
+    }
+
+    /**
+     * 切换排序方式（对齐Web端）
+     */
+    fun setSortType(sortType: SortType) {
+        _sortType.value = sortType
+    }
+
+    /**
+     * 设置搜索关键词（对齐Web端）
+     */
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    /**
+     * 获取过滤后的预设列表（对齐Web端）
+     */
+    fun getFilteredPresets(): List<MasterPreset> {
+        val baseList = _allPresets.value
+        var result = baseList.toList()
+
+        // Tab 过滤
+        when (_selectedTab.value) {
+            1 -> result = result.filter { it.isFavorite } // 收藏
+            2 -> result = result.filter { it.isHncs }     // 哈苏
+            3 -> result = result.filter { it.isNew }      // 上新
+        }
+
+        // 品牌过滤
+        if (_selectedBrand.value != "all") {
+            result = result.filter { it.brand == _selectedBrand.value }
+        }
+
+        // 搜索过滤
+        if (_searchQuery.value.isNotEmpty()) {
+            val query = _searchQuery.value.lowercase()
+            result = result.filter { preset ->
+                preset.name.lowercase().contains(query) ||
+                preset.author.lowercase().contains(query) ||
+                preset.tags?.any { it.lowercase().contains(query) } == true
+            }
+        }
+
+        // 排序
+        result = when (_sortType.value) {
+            SortType.NEWEST -> result.sortedByDescending { it.isNew }
+            SortType.POPULAR -> result.sortedByDescending { it.downloads ?: 0 }
+            SortType.RATING -> result.sortedByDescending { it.rating ?: 0f }
+        }
+
+        return result
+    }
+
+    /**
+     * 获取Tab计数（对齐Web端）
+     */
+    fun getTabCount(tabIndex: Int): Int {
+        return when (tabIndex) {
+            0 -> _allPresets.value.size      // 发现
+            1 -> _favorites.value.size       // 收藏
+            2 -> _allPresets.value.filter { it.isHncs }.size  // 哈苏
+            3 -> _allPresets.value.filter { it.isNew }.size   // 上新
+            else -> 0
+        }
     }
 
     /**

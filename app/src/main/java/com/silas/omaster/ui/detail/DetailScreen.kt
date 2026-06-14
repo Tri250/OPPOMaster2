@@ -72,11 +72,9 @@ import com.silas.omaster.ui.components.RelatedPreset
 import com.silas.omaster.ui.components.ApplyPresetButton
 import com.silas.omaster.ui.components.FavoriteButton
 import com.silas.omaster.ui.service.FloatingWindowController
-import com.silas.omaster.ui.service.FloatingWindowService
 import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
 import com.silas.omaster.util.PresetI18n
-import com.silas.omaster.util.formatSigned
 import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -130,9 +128,6 @@ fun DetailScreen(
 
     // 悬浮窗控制器（全局单例，已在 MainActivity 中注册）
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
-
-    // 当前显示的预设（用于悬浮窗切换时更新 UI）
-    val floatingPreset by floatingWindowController.currentPreset.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         OMasterTopAppBar(
