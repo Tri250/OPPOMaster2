@@ -1,6 +1,7 @@
 package com.silas.omaster.util
 
 import android.content.Context
+import com.silas.omaster.BuildConfig
 
 object UpdateConfigManager {
     private const val PREFS_NAME = "omaster_update_prefs"
@@ -16,6 +17,8 @@ object UpdateConfigManager {
     fun setPresetUrl(context: Context, url: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_PRESET_URL, url).apply()
-        android.util.Log.d("UpdateConfigManager", "Saved preset update URL: $url")
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("UpdateConfigManager", "Saved preset update URL: $url")
+        }
     }
 }

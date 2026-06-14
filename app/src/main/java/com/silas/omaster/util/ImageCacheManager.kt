@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.core.net.toUri
 import coil.request.ImageRequest
 import coil.request.CachePolicy
+import com.silas.omaster.BuildConfig
 import com.silas.omaster.model.MasterPreset
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -133,7 +134,9 @@ object ImageCacheManager {
                 try {
                     if (attempt > 0) {
                         callback?.onRetry(url, attempt)
-                        Log.d(TAG, "第${attempt + 1}次重试下载: $url")
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "第${attempt + 1}次重试下载: $url")
+                        }
                         // 指数退避：1s, 2s, 3s
                         delay(1000L * attempt)
                     }
@@ -152,7 +155,9 @@ object ImageCacheManager {
                     // 下载成功
                     failedDownloads.remove(url)
                     callback?.onSuccess(url, localFile)
-                    Log.d(TAG, "下载成功: $url (${bytes.size / 1024}KB)")
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "下载成功: $url (${bytes.size / 1024}KB)")
+                    }
 
                     return@withContext DownloadResult.Success(localFile)
 
@@ -239,7 +244,9 @@ object ImageCacheManager {
             }
         }
 
-        Log.d(TAG, "重试完成: $successCount/${toRetry.size} 成功")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "重试完成: $successCount/${toRetry.size} 成功")
+        }
         return successCount
     }
 
@@ -263,7 +270,9 @@ object ImageCacheManager {
                 }
             }
 
-            Log.d(TAG, "清理旧缓存: $cleanedCount 个文件")
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "清理旧缓存: $cleanedCount 个文件")
+            }
         }
     }
 
@@ -288,7 +297,9 @@ object ImageCacheManager {
     fun clearCache(context: Context) {
         File(context.filesDir, CACHE_DIR).deleteRecursively()
         failedDownloads.clear()
-        Log.d(TAG, "缓存已清空")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "缓存已清空")
+        }
     }
 
     /**

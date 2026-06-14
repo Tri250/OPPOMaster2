@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,7 +56,9 @@ class DetailViewModel(
         loadJob?.cancel()
         currentPresetId = presetId
 
-        android.util.Log.d("DetailViewModel", "Loading preset with id: $presetId")
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("DetailViewModel", "Loading preset with id: $presetId")
+        }
 
         loadJob = viewModelScope.launch {
             _isLoading.value = true
@@ -63,7 +66,9 @@ class DetailViewModel(
                 val presetData = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
                 // 检查是否仍然是当前要加载的预设（可能被取消了）
                 if (presetId == currentPresetId) {
-                    android.util.Log.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
+                    }
                     _preset.value = presetData
                     _isFavorite.value = presetData?.isFavorite ?: false
                 }

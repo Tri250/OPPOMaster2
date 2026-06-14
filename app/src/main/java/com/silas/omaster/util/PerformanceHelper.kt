@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Debug
 import android.util.Log
+import com.silas.omaster.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -214,7 +215,9 @@ object PerformanceHelper {
     fun createSafeScope(name: String): CoroutineScope {
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         scopeMap[name] = WeakReference(scope)
-        Log.d(TAG, "创建协程作用域: $name")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "创建协程作用域: $name")
+        }
         return scope
     }
 
@@ -225,7 +228,9 @@ object PerformanceHelper {
     fun cancelScope(name: String) {
         scopeMap[name]?.get()?.let { scope ->
             scope.cancel()
-            Log.d(TAG, "取消协程作用域: $name")
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "取消协程作用域: $name")
+            }
         }
         scopeMap.remove(name)
     }
@@ -236,7 +241,9 @@ object PerformanceHelper {
     fun clearAllScopes() {
         scopeMap.forEach { (name, ref) ->
             ref.get()?.cancel()
-            Log.d(TAG, "清理协程作用域: $name")
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "清理协程作用域: $name")
+            }
         }
         scopeMap.clear()
     }

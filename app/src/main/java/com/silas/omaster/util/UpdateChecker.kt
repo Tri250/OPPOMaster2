@@ -10,6 +10,7 @@ import android.os.Environment
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.silas.omaster.data.local.UpdateChannel
+import com.silas.omaster.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -232,7 +233,9 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
                     // 获取本地文件路径
                     val localUriString = it.getString(it.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI))
-                    Log.d("DownloadReceiver", "下载完成，URI: $localUriString")
+                    if (BuildConfig.DEBUG) {
+                        Log.d("DownloadReceiver", "下载完成，URI: $localUriString")
+                    }
 
                     val apkFile = if (localUriString != null) {
                         val localUri = Uri.parse(localUriString)
@@ -292,7 +295,9 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
 
     private fun installApk(context: Context, apkFile: File) {
         try {
-            Log.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
+            if (BuildConfig.DEBUG) {
+                Log.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
+            }
 
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -312,7 +317,9 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
             // 检查是否有应用可以处理这个 intent
             if (intent.resolveActivity(context.packageManager) != null) {
                 context.startActivity(intent)
-                Log.d("DownloadReceiver", "已启动安装界面")
+                if (BuildConfig.DEBUG) {
+                    Log.d("DownloadReceiver", "已启动安装界面")
+                }
             } else {
                 Log.e("DownloadReceiver", "没有找到可以处理安装的应用")
             }
