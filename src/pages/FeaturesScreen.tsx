@@ -82,7 +82,7 @@ const FeaturesScreen: React.FC = () => {
 
   const aiFeatures = features.slice(0, 4);
   const toolFeatures = features.slice(4, 6);
-  const brandFeatures = features.slice(6, 8);
+  const brandFeatures = features.slice(6);
 
   const handleFeatureClick = (featureId: string) => {
     if (featureRouteMap[featureId]) {

@@ -138,11 +138,18 @@ fun FeaturedPresetsScreen(
             .background(PureBlack)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        // 标题栏
+        // 标题栏（对齐Web端）
         FeaturedHeader(
             searchQuery = searchQuery,
             onSearchChange = { searchQuery = it },
             onFilterClick = { haptic.perform(HapticFeedbackType.LongPress) }
+        )
+
+        // 搜索栏（对齐Web端：可见搜索栏）
+        SearchBar(
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
 
         // 品牌筛选
@@ -232,6 +239,10 @@ fun FeaturedPresetsScreen(
                         }
                     )
                 }
+                // 底部提示（对齐Web端）
+                item {
+                    LoadingMoreTip()
+                }
             }
         }
     }
@@ -292,7 +303,7 @@ private fun BrandFilterRow(
             FilterChip(
                 selected = selectedBrand == null,
                 onClick = { onBrandSelected(null) },
-                label = { Text("全部") },
+                label = { Text("全部品牌") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange,
                     selectedLabelColor = Color.White
@@ -395,14 +406,14 @@ private fun FeaturedPresetCard(
                     showDownloadIndicator = true
                 )
 
-                // NEW标签
+                // NEW标签（对齐Web端：绿色）
                 if (preset.isNew) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(HasselbladOrange)
+                            .background(Color(0xFF4CAF50))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
@@ -522,7 +533,7 @@ private fun EmptyState(
             color = Color.White
         )
         Text(
-            text = "请调整筛选条件或稍后重试",
+            text = "请调整筛选条件",
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp)
@@ -620,4 +631,115 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
             sharpness = 30
         )
     )
+}
+
+/**
+ * 搜索栏（对齐Web端）
+ */
+@Composable
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = Color.White.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        androidx.compose.foundation.layout.Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "搜索",
+                tint = Color.White.copy(alpha = 0.4f),
+                modifier = Modifier.size(16.dp)
+            )
+            androidx.compose.foundation.text.BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                    color = Color.White
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(HasselbladOrange),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { innerTextField ->
+                    if (query.isEmpty()) {
+                        Text(
+                            text = "搜索精选预设...",
+                            color = Color.White.copy(alpha = 0.4f),
+                            fontSize = 14.sp
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+        }
+    }
+}
+
+/**
+ * 底部提示（对齐Web端）
+ */
+@Composable
+private fun LoadingMoreTip() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(2.dp)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                HasselbladOrange.copy(alpha = 0.5f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+            Text(
+                text = "持续更新 敬请期待",
+                style = MaterialTheme.typography.bodyMedium,
+                color = HasselbladOrange.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 2.sp
+            )
+            Box(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(2.dp)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                HasselbladOrange.copy(alpha = 0.5f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+    }
 }

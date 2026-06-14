@@ -917,6 +917,31 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
+     * 获取关联推荐预设（基于品牌和标签匹配）
+     */
+    fun getRelatedPresets(
+        currentId: String?,
+        brand: String?,
+        tags: List<String>?,
+        limit: Int = 4
+    ): List<MasterPreset> {
+        val current = _presets.value
+        val favIds = _favorites.value
+        return current
+            .filter { it.id != currentId }
+            .map { it.toMasterPreset().copy(isFavorite = favIds.contains(it.id)) }
+            .sortedByDescending { preset ->
+                var score = 0
+                if (preset.brand == brand) score += 2
+                if (!tags.isNullOrEmpty()) {
+                    score += preset.tags?.count { tag -> tags.contains(tag) } ?: 0
+                }
+                score
+            }
+            .take(limit)
+    }
+
+    /**
      * 切换收藏状态（用于 HomeViewModel）
      */
     suspend fun toggleFavorite(presetId: String) {

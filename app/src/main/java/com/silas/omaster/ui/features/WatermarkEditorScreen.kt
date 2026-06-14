@@ -2,6 +2,10 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
@@ -65,7 +69,7 @@ data class WatermarkTemplate(
     val showDate: Boolean = true,
     val showLocation: Boolean = false,
     val showPhotographer: Boolean = false,
-    val brandText: String = "Ophto",
+    val brandText: String = "OMaster",
     val defaultPosition: WatermarkPlacement = WatermarkPlacement.BOTTOM_LEFT,
     val defaultFontSize: Float = 14f,
     val defaultLetterSpacing: Float = 0f,
@@ -78,7 +82,7 @@ val WATERMARK_TEMPLATES = listOf(
         id = "classic",
         name = "经典相机",
         category = WatermarkCategory.BRAND,
-        brandText = "Ophto",
+        brandText = "OMaster",
         defaultPosition = WatermarkPlacement.BOTTOM_LEFT
     ),
     WatermarkTemplate(
@@ -142,7 +146,7 @@ val WATERMARK_TEMPLATES = listOf(
         showModel = false,
         showParams = false,
         showDate = false,
-        brandText = "@ophto",
+        brandText = "@omaster",
         defaultPosition = WatermarkPlacement.BOTTOM_CENTER
     ),
     WatermarkTemplate(
@@ -161,7 +165,7 @@ val WATERMARK_TEMPLATES = listOf(
         showBrand = false,
         showModel = false,
         showParams = false,
-        brandText = "© 2026 Ophto",
+        brandText = "© 2026 OMaster",
         defaultPosition = WatermarkPlacement.BOTTOM_CENTER
     ),
     WatermarkTemplate(
@@ -220,7 +224,8 @@ enum class FontOption(
     DEFAULT("default", "默认", FontFamily.Default),
     SERIF("serif", "衬线", FontFamily.Serif),
     MONOSPACE("mono", "等宽", FontFamily.Monospace),
-    SANS_SERIF("sans", "无衬线", FontFamily.SansSerif),
+    ELEGANT("elegant", "优雅", FontFamily.Serif),
+    SANS_SERIF("sans", "现代", FontFamily.SansSerif),
     CURSIVE("cursive", "手写", FontFamily.Cursive)
 }
 
@@ -243,7 +248,8 @@ fun WatermarkEditorScreen(
     imagePath: String? = null,
     onBack: () -> Unit,
     onSave: (WatermarkConfig) -> Unit,
-    onExport: (Bitmap, WatermarkConfig) -> Unit
+    onExport: (Bitmap, WatermarkConfig) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -257,7 +263,7 @@ fun WatermarkEditorScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     // 元素文本
-    var brandText by remember { mutableStateOf("Ophto") }
+    var brandText by remember { mutableStateOf("OMaster") }
     var modelText by remember { mutableStateOf("OPPO Find X8 Pro") }
     var paramsText by remember { mutableStateOf("f/1.8 1/125 ISO100") }
     var dateText by remember { mutableStateOf("2026-06-09") }
@@ -299,8 +305,9 @@ fun WatermarkEditorScreen(
                     }
                 } catch (e: Exception) {
                     Log.w("WatermarkEditor", "Image load failed", e)
+                } finally {
+                    isLoading = false
                 }
-                isLoading = false
             }
         }
     }
@@ -429,9 +436,8 @@ fun WatermarkEditorScreen(
         }
     }
 
-    // ========== 主界面 ==========
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
@@ -441,7 +447,7 @@ fun WatermarkEditorScreen(
                 Column {
                     Text("水印编辑器", fontWeight = FontWeight.Bold)
                     Text(
-                        "${WATERMARK_TEMPLATES.size}+模板",
+                        "专业水印设计 · ${WATERMARK_TEMPLATES.size}+模板",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -457,8 +463,14 @@ fun WatermarkEditorScreen(
             },
             actions = {
                 // 图层按钮
-                IconButton(onClick = { /* 图层管理 */ }) {
-                    Icon(Icons.Default.Layers, "图层", tint = Color.White.copy(alpha = 0.5f))
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showBeforeAfter = !showBeforeAfter
+                }) {
+                    Icon(
+                        Icons.Default.Layers, "图层",
+                        tint = if (showBeforeAfter) CyanAccent else Color.White.copy(alpha = 0.5f)
+                    )
                 }
                 // 预览按钮
                 IconButton(onClick = {
@@ -490,7 +502,7 @@ fun WatermarkEditorScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.55f)
-                .background(Color(0xFF1A1A1A))
+                .background(DarkGray)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
@@ -740,13 +752,13 @@ fun WatermarkEditorScreen(
             // 底部操作按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 重置默认
                 OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        brandText = "Shot on Ophto"
+                        brandText = "Shot on OMaster"
                         selectedPosition = WatermarkPlacement.BOTTOM_LEFT
                         textSize = 14f
                         opacity = 0.8f
@@ -765,7 +777,25 @@ fun WatermarkEditorScreen(
                 ) {
                     Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("重置默认")
+                    Text("重置默认", fontSize = 12.sp)
+                }
+
+                // 批量应用
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        // 批量应用功能
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = CyanAccent
+                    ),
+                    border = BorderStroke(1.dp, CyanAccent)
+                ) {
+                    Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("批量应用", fontSize = 12.sp)
                 }
 
                 // 保存图片
@@ -780,7 +810,7 @@ fun WatermarkEditorScreen(
                 ) {
                     Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("保存图片")
+                    Text("保存图片", fontSize = 12.sp)
                 }
             }
 
@@ -848,7 +878,7 @@ private fun SearchBar(
             .fillMaxWidth()
             .height(40.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1A1A1A))
+            .background(DarkGray)
             .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
@@ -1078,7 +1108,7 @@ private fun CustomTextInput(
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF1A1A1A))
+                .background(DarkGray)
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart
@@ -1244,7 +1274,7 @@ private fun WatermarkElementRow(
                     .weight(1f)
                     .height(32.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF1A1A1A))
+                    .background(DarkGray)
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -1374,7 +1404,7 @@ private fun WatermarkStyleSection(
         Color(0xFFFF6B35) to "橙色",
         CyanAccent to "青色",
         Color(0xFFFF6B9D) to "粉色",
-        Color(0xFF4CAF50) to "绿色",
+        SuccessGreen to "绿色",
         Color(0xFF9C27B0) to "紫色"
     )
 
@@ -1787,6 +1817,104 @@ private fun analyzeDominantColor(bitmap: Bitmap): Color {
 
 private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bitmap {
     val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+    if (!config.enabled) return result
+
+    val canvas = Canvas(result)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = config.textSize * result.width / 400f
+        color = config.textColor.copy(alpha = config.opacity).toArgb()
+        letterSpacing = config.letterSpacing
+        typeface = if (config.fontWeight >= FontWeight.Bold) {
+            android.graphics.Typeface.DEFAULT_BOLD
+        } else {
+            android.graphics.Typeface.DEFAULT
+        }
+    }
+
+    val shadowPaint = if (config.shadowEnabled) Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = config.textSize * result.width / 400f
+        color = android.graphics.Color.argb((config.opacity * 0.5f).coerceIn(0f, 1f), 0, 0, 0)
+        letterSpacing = config.letterSpacing
+        maskFilter = BlurMaskFilter(config.shadowBlur * result.width / 400f, BlurMaskFilter.Blur.NORMAL)
+        typeface = if (config.fontWeight >= FontWeight.Bold) {
+            android.graphics.Typeface.DEFAULT_BOLD
+        } else {
+            android.graphics.Typeface.DEFAULT
+        }
+    } else null
+
+    // 构建水印文字行
+    val lines = mutableListOf<String>()
+    if (config.showBrand && config.brandText.isNotBlank()) lines.add(config.brandText)
+    if (config.showModel && config.modelText.isNotBlank()) lines.add(config.modelText)
+    if (config.showParams && config.paramsText.isNotBlank()) lines.add(config.paramsText)
+    if (config.showDate && config.dateText.isNotBlank()) lines.add(config.dateText)
+    if (config.showLocation && config.locationText.isNotBlank()) lines.add("📍 ${config.locationText}")
+    if (config.showPhotographer && config.photographerText.isNotBlank()) lines.add("📸 ${config.photographerText}")
+
+    if (lines.isEmpty()) return result
+
+    val paddingPx = config.padding * result.width / 400f
+    val lineHeight = paint.textSize * 1.4f
+
+    // 计算起始位置
+    val totalHeight = lineHeight * lines.size
+    val startY = when (config.position) {
+        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.TOP_CENTER, WatermarkPlacement.TOP_RIGHT ->
+            paddingPx + lineHeight
+        WatermarkPlacement.CENTER ->
+            (result.height - totalHeight) / 2f + lineHeight
+        else ->
+            result.height - paddingPx - totalHeight + lineHeight
+    }
+
+    val startX = when (config.position) {
+        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.BOTTOM_LEFT -> paddingPx
+        WatermarkPlacement.TOP_CENTER, WatermarkPlacement.CENTER, WatermarkPlacement.BOTTOM_CENTER ->
+            (result.width - paint.measureText(lines.maxByOrNull { it.length } ?: "")) / 2f
+        else -> result.width - paddingPx
+    }
+
+    // 绘制暗角
+    if (config.showVignette && config.vignetteStrength > 0) {
+        val vignettePaint = Paint().apply {
+            shader = android.graphics.RadialGradient(
+                result.width / 2f, result.height / 2f,
+                maxOf(result.width, result.height) * 0.5f,
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.argb((config.vignetteStrength * 180).toInt(), 0, 0, 0),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRect(0f, 0f, result.width.toFloat(), result.height.toFloat(), vignettePaint)
+    }
+
+    // 绘制背景
+    if (config.bgOpacity > 0) {
+        val bgPaint = Paint().apply {
+            color = android.graphics.Color.argb((config.bgOpacity * 255).toInt(), 0, 0, 0)
+        }
+        val bgRect = android.graphics.RectF(
+            startX - paddingPx / 2,
+            startY - lineHeight,
+            startX + paint.measureText(lines.maxByOrNull { it.length } ?: "") + paddingPx / 2,
+            startY + (lines.size - 1) * lineHeight + paddingPx / 2
+        )
+        canvas.drawRoundRect(bgRect, 8f, 8f, bgPaint)
+    }
+
+    // 绘制文字
+    lines.forEachIndexed { index, line ->
+        val y = startY + index * lineHeight
+        val x = when (config.position) {
+            WatermarkPlacement.TOP_RIGHT, WatermarkPlacement.BOTTOM_RIGHT ->
+                result.width - paddingPx - paint.measureText(line)
+            else -> startX
+        }
+        shadowPaint?.let { canvas.drawText(line, x + 1f, y + 1f, it) }
+        canvas.drawText(line, x, y, paint)
+    }
+
     return result
 }
 
@@ -1801,7 +1929,7 @@ data class WatermarkConfig(
     val showLocation: Boolean = false,
     val showPhotographer: Boolean = false,
     val showVignette: Boolean = false,
-    val brandText: String = "Ophto",
+    val brandText: String = "OMaster",
     val modelText: String = "",
     val paramsText: String = "",
     val dateText: String = "",

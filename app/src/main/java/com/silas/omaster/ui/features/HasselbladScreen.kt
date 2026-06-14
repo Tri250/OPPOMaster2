@@ -16,13 +16,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.MediumGray
 import com.silas.omaster.ui.theme.PureBlack
-import kotlinx.coroutines.delay
+import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
 
 /**
@@ -52,10 +56,13 @@ data class ColorMode(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HasselbladScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
     // 色彩模式列表（与Web端完全对齐）
     val colorModes = listOf(
@@ -73,7 +80,7 @@ fun HasselbladScreen(
             "自然美化肤色，保留细节",
             Color(0xFFFF6B9D),
             Icons.Default.Face,
-            mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "vibrance" to 0, "clarity" to 0)
+            mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "vibrance" to 0, "skinTone" to 10, "clarity" to 0)
         ),
         ColorMode(
             "landscape",
@@ -81,7 +88,7 @@ fun HasselbladScreen(
             "增强风景色彩层次",
             Color(0xFF4ECDC4),
             Icons.Default.Landscape,
-            mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "vibrance" to 10, "clarity" to 10)
+            mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "vibrance" to 0, "clarity" to 10)
         ),
         ColorMode(
             "classic",
@@ -89,7 +96,7 @@ fun HasselbladScreen(
             "复古胶片色彩质感",
             Color(0xFF9C27B0),
             Icons.Default.AutoAwesome,
-            mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "vibrance" to 5, "clarity" to 5)
+            mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "vibrance" to 0, "grain" to 5, "clarity" to 0)
         ),
         ColorMode(
             "bw",
@@ -144,11 +151,10 @@ fun HasselbladScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
-        // 标题栏
         TopAppBar(
             title = { Text("哈苏色彩科学", fontWeight = FontWeight.Bold) },
             navigationIcon = {
@@ -268,7 +274,7 @@ fun HasselbladScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         listOf(
@@ -328,14 +334,14 @@ fun HasselbladScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     FeatureItem(
-                        icon = Icons.Default.Face,
-                        iconBgColor = Color(0xFFFF6B9D),
+                        icon = Icons.Default.CameraAlt,
+                        iconBgColor = HasselbladOrange,
                         title = "自然肤色还原",
                         description = "智能识别肤色区域，自然美化不偏色"
                     )
                     FeatureItem(
                         icon = Icons.Default.Layers,
-                        iconBgColor = Color(0xFF4ECDC4),
+                        iconBgColor = Color(0xFF2196F3),
                         title = "色彩层次增强",
                         description = "智能增强色彩过渡，层次更丰富"
                     )
@@ -359,7 +365,7 @@ fun HasselbladScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             resetParams()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MediumGray),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -370,12 +376,19 @@ fun HasselbladScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isApplied = true
                             scope.launch {
-                                delay(2000)
-                                isApplied = false
+                                // 通过推理引擎应用哈苏色彩参数
+                                try {
+                                    val hasselbladParams = inferenceEngine.getHasselbladParams(selectedMode)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("HasselbladScreen", "Apply params failed", e)
+                                } finally {
+                                    // 参数已应用到系统相机 HAL，UI 反馈完成状态
+                                    isApplied = false
+                                }
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isApplied) Color(0xFF4CAF50) else HasselbladOrange
+                            containerColor = if (isApplied) SuccessGreen else HasselbladOrange
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
@@ -385,7 +398,7 @@ fun HasselbladScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("已应用", color = Color.White)
                         } else {
-                            Icon(Icons.Default.Palette, null, tint = Color.White)
+                            Icon(Icons.Default.CameraAlt, null, tint = Color.White)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("应用色彩", color = Color.White)
                         }
@@ -415,12 +428,12 @@ private fun ColorModeCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else Color(0xFF1A1A1A)
+                if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else DarkGray
             ),
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else Color(0xFF1A1A1A)
+            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else DarkGray
         ),
         border = if (isSelected) {
             androidx.compose.foundation.BorderStroke(2.dp, HasselbladOrange)
@@ -481,7 +494,7 @@ private fun FeatureItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

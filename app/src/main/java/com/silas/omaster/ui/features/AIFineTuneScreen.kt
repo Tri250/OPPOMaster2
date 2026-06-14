@@ -120,7 +120,8 @@ data class SmartOptimization(
 fun AIFineTuneScreen(
     bitmap: Bitmap? = null,
     onBack: () -> Unit,
-    onApply: (RenderParameters) -> Unit = {}
+    onApply: (RenderParameters) -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val aiManager = remember { AIFineTuneManager.getInstance(context) }
@@ -157,7 +158,7 @@ fun AIFineTuneScreen(
     // 自然、鲜艳、暖调、冷调、胶片、黑白、复古、电影、情绪、柔和、戏剧、HDR
     val colorStyles = remember {
         listOf(
-            ColorStylePreset("natural", "自然", Icons.Default.WbSunny, Color(0xFF4CAF50),
+            ColorStylePreset("natural", "自然", Icons.Default.WbSunny, SuccessGreen,
                 RenderParameters(saturation = 5f, contrast = 5f, vibrance = 5f), "自然真实色彩"),
             ColorStylePreset("vivid", "鲜艳", Icons.Default.Palette, Color(0xFFFF5722),
                 RenderParameters(saturation = 25f, contrast = 15f, warmth = 5f, vibrance = 20f), "浓郁鲜艳色彩"),
@@ -188,7 +189,7 @@ fun AIFineTuneScreen(
     val smartOptimizations = remember {
         listOf(
             SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", Color(0xFFFF6B35)),
-            SmartOptimization("denoise", "智能降噪", Icons.Default.WaterDrop, "减少噪点，保持细节", Color(0xFF4CAF50)),
+            SmartOptimization("denoise", "智能降噪", Icons.Default.WaterDrop, "减少噪点，保持细节", SuccessGreen),
             SmartOptimization("sharpen", "智能锐化", Icons.Default.Visibility, "增强边缘清晰度", Color(0xFF2196F3)),
             SmartOptimization("dehaze", "去雾", Icons.Default.WbSunny, "去除雾气，提升通透感", Color(0xFF9C27B0)),
             SmartOptimization("skin", "肤色优化", Icons.Default.Face, "智能美化肤色", Color(0xFFE91E63)),
@@ -201,7 +202,7 @@ fun AIFineTuneScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
@@ -263,15 +264,15 @@ fun AIFineTuneScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f))
+                colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.2f))
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("AI优化已完成", color = Color.White, fontWeight = FontWeight.Medium)
+                    Text("优化完成", color = Color.White, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -308,29 +309,34 @@ fun AIFineTuneScreen(
                                     inferenceMessage = "分析图像特征..."
                                     inferenceProgress = 0.1f
 
-                                    val result = if (bitmap != null) {
-                                        aiManager.generateAISuggestion(bitmap, renderParams.toMap().mapValues { it.value.toInt() })
-                                    } else {
-                                        aiManager.generateAISuggestion("auto")
-                                    }
-
-                                    inferenceProgress = 0.5f
-                                    inferenceMessage = "计算最佳参数..."
-
-                                    if (result is AISuggestionResult.Success) {
-                                        inferenceProgress = 1f
-                                        inferenceMessage = "优化完成"
-                                        inferenceStage = InferenceStage.COMPLETED
-                                        showSuccess = true
-
-                                        // 更新渲染参数
-                                        result.suggestion.suggestions.forEach { s ->
-                                            renderParams = updateRenderParam(renderParams, s.field, s.suggestedValue.toFloat())
+                                    try {
+                                        val result = if (bitmap != null) {
+                                            aiManager.generateAISuggestion(bitmap, renderParams.toMap().mapValues { it.value.toInt() })
+                                        } else {
+                                            aiManager.generateAISuggestion("auto")
                                         }
 
-                                        kotlinx.coroutines.delay(2000)
-                                        showSuccess = false
-                                    } else {
+                                        inferenceProgress = 0.5f
+                                        inferenceMessage = "计算最佳参数..."
+
+                                        if (result is AISuggestionResult.Success) {
+                                            inferenceProgress = 1f
+                                            inferenceMessage = "优化完成"
+                                            inferenceStage = InferenceStage.COMPLETED
+                                            showSuccess = true
+
+                                            // 更新渲染参数
+                                            result.suggestion.suggestions.forEach { s ->
+                                                renderParams = updateRenderParam(renderParams, s.field, s.suggestedValue.toFloat())
+                                            }
+
+                                            showSuccess = false
+                                        } else {
+                                            inferenceStage = InferenceStage.ERROR
+                                            inferenceMessage = "优化失败"
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("AIFineTune", "AI auto-tune failed", e)
                                         inferenceStage = InferenceStage.ERROR
                                         inferenceMessage = "优化失败"
                                     }
@@ -526,7 +532,7 @@ private fun TabChip(
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange else Color(0xFF1A1A1A)
+            containerColor = if (isSelected) HasselbladOrange else DarkGray
         )
     ) {
         Text(
@@ -602,7 +608,7 @@ private fun QuickPresetsSection(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(enabled = !isProcessing) { onPresetApply(preset.second) },
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
+                    colors = CardDefaults.cardColors(containerColor = DarkGray),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
                 ) {
                     Text(
@@ -666,7 +672,7 @@ private fun ParamSliderCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -689,7 +695,7 @@ private fun ParamSliderCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -712,7 +718,7 @@ private fun ParamSliderCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -807,7 +813,7 @@ private fun ColorStyleCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) style.color.copy(alpha = 0.2f) else Color(0xFF1A1A1A)
+            containerColor = if (isSelected) style.color.copy(alpha = 0.2f) else DarkGray
         ),
         border = BorderStroke(1.dp, if (isSelected) style.color else Color.White.copy(alpha = 0.1f))
     ) {
@@ -847,7 +853,7 @@ private fun SmartOptimizationCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) optimization.color.copy(alpha = 0.2f) else Color(0xFF1A1A1A)
+            containerColor = if (isSelected) optimization.color.copy(alpha = 0.2f) else DarkGray
         ),
         border = BorderStroke(1.dp, if (isSelected) optimization.color else Color.White.copy(alpha = 0.1f))
     ) {
@@ -868,6 +874,7 @@ private fun SmartOptimizationCard(
                     if (optimization.isPro) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(Icons.Default.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(10.dp))
+                        Text("PRO", color = Color(0xFFFFD700), fontSize = 8.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Text(
@@ -895,7 +902,7 @@ private fun HSLSelectorCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 颜色选择
@@ -1008,7 +1015,7 @@ private fun CurveAdjustCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 通道选择

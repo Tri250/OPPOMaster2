@@ -50,7 +50,7 @@ fun ParamAdjustScreen(
     var selectedPreset by remember { mutableStateOf<String?>(null) }
     
     // ISO 选项
-    val isoOptions = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400)
+    val isoOptions = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800)
     
     // 快门速度选项
     val shutterOptions = listOf("1/4000", "1/2000", "1/1000", "1/500", "1/250", "1/125", "1/60", "1/30", "1/15", "1/8", "1/4", "1/2", "1s", "2s", "4s", "8s", "15s", "30s")
@@ -125,9 +125,9 @@ fun ParamAdjustScreen(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "portrait"
-                    iso = 100
+                    iso = 200
                     shutterSpeed = 125f
-                    aperture = 1.8f
+                    aperture = 2.8f
                     whiteBalance = 5500
                 }
             )
@@ -138,9 +138,9 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "landscape"
                     iso = 100
-                    shutterSpeed = 250f
+                    shutterSpeed = 60f
                     aperture = 8.0f
-                    whiteBalance = 5500
+                    whiteBalance = 5600
                 }
             )
             ParamPresetChip(
@@ -149,10 +149,10 @@ fun ParamAdjustScreen(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "night"
-                    iso = 800
+                    iso = 3200
                     shutterSpeed = 30f
                     aperture = 2.8f
-                    whiteBalance = 3200
+                    whiteBalance = 4000
                 }
             )
             ParamPresetChip(
@@ -161,8 +161,8 @@ fun ParamAdjustScreen(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "sports"
-                    iso = 400
-                    shutterSpeed = 1000f
+                    iso = 800
+                    shutterSpeed = 500f
                     aperture = 4.0f
                     whiteBalance = 5500
                 }
@@ -183,7 +183,7 @@ fun ParamAdjustScreen(
                     title = "ISO",
                     subtitle = "感光度，影响噪点和曝光",
                     value = iso,
-                    valueRange = 50..6400,
+                    valueRange = 50..12800,
                     options = isoOptions.map { it.toString() },
                     onValueChange = { iso = it as Int },
                     unit = "",

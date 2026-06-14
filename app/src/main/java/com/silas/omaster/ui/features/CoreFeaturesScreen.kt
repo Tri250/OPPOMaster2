@@ -223,7 +223,7 @@ fun CoreFeaturesScreen(
             FeatureData(
                 id = "cloud-sync",
                 title = "云同步",
-                subtitle = "OPPO/realme/vivo/荣耀 CDN数据同步",
+                subtitle = "多平台云同步，数据永不丢失",
                 icon = Icons.Default.Cloud,
                 gradientColors = listOf(Color(0xFF1A237E), Color(0xFF303F9F)),
                 description = FeatureDescription(

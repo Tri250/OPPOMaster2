@@ -88,8 +88,11 @@ import com.silas.omaster.ui.animation.ListItemFadeInSpec
 import com.silas.omaster.ui.animation.ListItemPlacementSpec
 import com.silas.omaster.ui.animation.calculateStaggerDelay
 import com.silas.omaster.ui.service.FloatingWindowController
-import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -325,7 +328,7 @@ private fun HeaderSection(
                 modifier = Modifier
                     .background(
                         brush = Brush.horizontalGradient(
-                            colors = listOf(HasselbladOrange, Color(0xFFFF9800))
+                            colors = listOf(HasselbladOrange, WarningYellow)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -575,7 +578,7 @@ private fun BrandAndSortFilter(
             DropdownMenu(
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false },
-                modifier = Modifier.background(Color(0xFF1A1A1A))
+                modifier = Modifier.background(DarkGray)
             ) {
                 sortOptions.forEach { (type, label) ->
                     DropdownMenuItem(
@@ -845,7 +848,7 @@ private fun PresetCardWebStyle(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = DarkGray
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -887,7 +890,7 @@ private fun PresetCardWebStyle(
                         .padding(8.dp)
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(HasselbladOrange, Color(0xFFFF9800))
+                                colors = listOf(HasselbladOrange, WarningYellow)
                             ),
                             shape = RoundedCornerShape(8.dp)
                         )
@@ -919,7 +922,7 @@ private fun PresetCardWebStyle(
                         .align(Alignment.TopStart)
                         .padding(8.dp)
                         .background(
-                            color = Color(0xFF4CAF50),
+                            color = SuccessGreen,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1002,31 +1005,33 @@ private fun PresetCardWebStyle(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // 统计数据（对齐Web端）
+                // 统计数据（对齐Web端，仅展示真实数据）
                 Row(
                     modifier = Modifier.padding(top = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 评分
-                    val displayRating = preset.rating ?: (4.5f + index * 0.1f).coerceAtMost(4.9f)
-                    Text(
-                        text = "⭐ ${String.format("%.1f", displayRating)}",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 10.sp
-                    )
-                    // 下载量
-                    val displayDownloads = preset.downloads ?: (index + 1) * 2300
-                    val downloadsText = if (displayDownloads >= 10000) {
-                        "${(displayDownloads / 10000).toInt()}w"
-                    } else {
-                        "${displayDownloads}"
+                    // 评分（仅在有数据时展示）
+                    preset.rating?.let { rating ->
+                        Text(
+                            text = "⭐ ${String.format("%.1f", rating)}",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp
+                        )
                     }
-                    Text(
-                        text = "📥 $downloadsText",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 10.sp
-                    )
+                    // 下载量（仅在有数据时展示）
+                    preset.downloads?.let { downloads ->
+                        val downloadsText = if (downloads >= 10000) {
+                            "${(downloads / 10000).toInt()}w"
+                        } else {
+                            "$downloads"
+                        }
+                        Text(
+                            text = "📥 $downloadsText",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp
+                        )
+                    }
                     // 品牌
                     preset.brand?.let { brand ->
                         Text(

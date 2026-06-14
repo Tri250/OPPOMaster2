@@ -25,15 +25,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ShareCompat
 import com.silas.omaster.ai.MasterInferenceEngine
@@ -44,7 +43,6 @@ import com.silas.omaster.util.ShareExportUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
 /**
  * Layer 3: 大师呈现层 - 「哈苏大师之眼」AI 场景识别页
@@ -111,7 +109,8 @@ fun AISceneRecognitionScreen(
     imageUrl: String? = null,
     onBack: () -> Unit,
     onTakePhoto: () -> Unit = {},
-    onSelectImage: () -> Unit = {}
+    onSelectImage: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -147,7 +146,7 @@ fun AISceneRecognitionScreen(
     val analysisSteps = listOf(
         AnalysisStep("detect", "场景检测", Icons.Outlined.RemoveRedEye, Color(0xFF3B82F6)),
         AnalysisStep("match", "参数匹配", Icons.Outlined.Tune, HasselbladOrange),
-        AnalysisStep("optimize", "效果优化", Icons.Outlined.AutoAwesome, Color(0xFF4CAF50))
+        AnalysisStep("optimize", "效果优化", Icons.Outlined.AutoAwesome, SuccessGreen)
     )
 
     // AI 推理引擎实例
@@ -235,7 +234,7 @@ fun AISceneRecognitionScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
@@ -342,19 +341,38 @@ fun AISceneRecognitionScreen(
                             isOptimized = true
                             showParams = true
                             scope.launch {
-                                kotlinx.coroutines.delay(3000)
-                                isOptimized = false
-                            }
-                        },
+                                // 通过推理引擎应用哈苏优化参数
+                                try {
+                                    analysisResult?.let { result ->
+                                        inferenceEngine.getHasselbladParams(result.id)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("AISceneRecognition", "Optimization failed", e)
+                                } finally {
+                                    isOptimized = false
+                                }
+                            },
                         isSaving = isSaving,
                         saveSuccess = saveSuccess,
                         onSaveRecipe = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isSaving = true
                             scope.launch {
-                                kotlinx.coroutines.delay(1000)
-                                saveSuccess = true
-                                isSaving = false
+                                // 保存配方到本地
+                                try {
+                                    analysisResult?.let { result ->
+                                        val bitmap = buildRecipeCardBitmap(result, context)
+                                        com.silas.omaster.util.ShareExportUtils.exportImageToGallery(
+                                            context, bitmap, "hasselblad_recipe_${System.currentTimeMillis()}.jpg"
+                                        )
+                                    }
+                                    saveSuccess = true
+                                } catch (e: Exception) {
+                                    Log.e("AISceneRecognition", "Save recipe failed", e)
+                                    saveSuccess = false
+                                } finally {
+                                    isSaving = false
+                                }
                             }
                         },
                         onRetake = {
@@ -393,19 +411,19 @@ private fun CameraEntryScreen(
     onCameraFacingChange: (CameraFacing) -> Unit,
     onTakePhoto: () -> Unit,
     onSelectImage: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
-        // 相机预览区域（占位）
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(Color(0xFF1A1A1A))
+                .background(DarkGray)
         ) {
             // 模拟相机预览
             Box(
@@ -628,10 +646,11 @@ private fun AnalyzingProgressScreen(
     imageUrl: String?,
     steps: List<AnalysisStep>,
     currentStepIndex: Int,
-    progress: Float
+    progress: Float,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -643,7 +662,7 @@ private fun AnalyzingProgressScreen(
                     .fillMaxWidth()
                     .aspectRatio(4f / 3f),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -785,12 +804,13 @@ private fun ResultDisplayScreen(
     onSaveRecipe: () -> Unit,
     onRetake: () -> Unit,
     recognitionHistory: List<SceneProfile>,
-    onHistorySelect: (SceneProfile) -> Unit
+    onHistorySelect: (SceneProfile) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
         // 可滚动内容区域
         Column(
@@ -896,7 +916,7 @@ private fun HasselbladCompareSlider(
                 modifier = Modifier
                     .fillMaxWidth(sliderPosition)
                     .fillMaxHeight()
-                    .background(Color(0xFF333333))
+                    .background(MediumGray)
             ) {
                 Box(
                     modifier = Modifier.align(Alignment.Center),
@@ -1024,7 +1044,7 @@ private fun RecognitionResultCard(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-            Text("HNCS 自然色彩已优化", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text("已自动匹配最佳参数", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
         }
     }
 }
@@ -1279,11 +1299,11 @@ private fun BottomActionBar(
                 if (isOptimized) {
                     Icon(Icons.Default.Check, null, tint = Color.White)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("已优化", color = Color.White, fontWeight = FontWeight.Medium)
+                    Text("应用参数", color = Color.White, fontWeight = FontWeight.Medium)
                 } else {
                     Icon(Icons.Default.AutoAwesome, null, tint = Color.White)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("一键哈苏优化", color = Color.White, fontWeight = FontWeight.Medium)
+                    Text("应用参数", color = Color.White, fontWeight = FontWeight.Medium)
                 }
             }
 

@@ -12,16 +12,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.silas.omaster.cloud.SyncState
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.LightGray
+import com.silas.omaster.ui.theme.MediumGray
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * 云同步功能页面
@@ -30,35 +39,72 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudSyncScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val syncManager = remember { CloudSyncManager.getInstance(context) }
 
-    val isSyncing = remember { mutableStateOf(false) }
-    val lastSyncTime = remember { mutableStateOf("2分钟前") }
+    // 从 CloudSyncManager 读取真实同步状态
+    val syncState by syncManager.syncState.collectAsState()
+    val lastSyncTimestamp by syncManager.lastSyncTime.collectAsState()
+    val cloudPresets by syncManager.cloudPresets.collectAsState()
 
-    val providers = listOf(
-        ProviderInfo("OPPO", 0xFF1E90FF, true),
-        ProviderInfo("realme", 0xFFFFD700, false),
-        ProviderInfo("vivo", 0xFF4169E1, false),
-        ProviderInfo("荣耀", 0xFF32CD32, false),
-    )
+    val isSyncing = syncState is SyncState.Syncing
 
-    val syncItems = listOf(
-        SyncItem("预设同步", true, "2分钟前"),
-        SyncItem("LUT 资源同步", true, "5分钟前"),
-        SyncItem("设置同步", false, "从未同步"),
-    )
+    // 格式化最后同步时间
+    val lastSyncTimeText = remember(lastSyncTimestamp) {
+        if (lastSyncTimestamp <= 0L) {
+            "从未同步"
+        } else {
+            val diffMs = System.currentTimeMillis() - lastSyncTimestamp
+            when {
+                diffMs < TimeUnit.MINUTES.toMillis(1) -> "刚刚"
+                diffMs < TimeUnit.HOURS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toMinutes(diffMs)}分钟前"
+                diffMs < TimeUnit.DAYS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toHours(diffMs)}小时前"
+                else -> {
+                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                    sdf.format(Date(lastSyncTimestamp))
+                }
+            }
+        }
+    }
+
+    // 从 CloudSyncManager 获取真实的云服务提供商列表
+    val providers = remember(syncManager) {
+        val urls = syncManager.getCloudPresetUrls()
+        val brandColors = mapOf(
+            "oppo" to 0xFF1E90FF,
+            "realme" to 0xFFFFD700,
+            "vivo" to 0xFF4169E1,
+            "honor" to 0xFF32CD32
+        )
+        urls.keys.mapIndexed { index, brand ->
+            ProviderInfo(
+                name = brand.replaceFirstChar { it.uppercase() },
+                color = brandColors[brand.lowercase()] ?: (0xFF1E90FF + index * 0x002020),
+                connected = cloudPresets.any { it.brand == brand }
+            )
+        }
+    }
+
+    // 同步内容项（基于真实同步状态）
+    val syncItems = remember(lastSyncTimestamp, cloudPresets) {
+        val presetCount = cloudPresets.size
+        listOf(
+            SyncItem("预设同步", presetCount > 0, lastSyncTimeText, presetCount),
+            SyncItem("LUT 资源同步", false, "从未同步", 0),
+            SyncItem("设置同步", false, "从未同步", 0),
+        )
+    }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
-        // 标题栏
         TopAppBar(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },
             navigationIcon = {
@@ -85,7 +131,7 @@ fun CloudSyncScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E90FF).copy(alpha = 0.15f))
+                    colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.15f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -95,10 +141,15 @@ fun CloudSyncScreen(
                             text = "同步状态",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E90FF)
+                            color = HasselbladOrange
                         )
                         Text(
-                            text = "自动同步已开启",
+                            text = when (syncState) {
+                                is SyncState.Syncing -> "正在同步中..."
+                                is SyncState.Success -> "同步成功"
+                                is SyncState.Error -> "同步失败"
+                                else -> if (lastSyncTimestamp > 0) "自动同步已开启" else "尚未同步"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.7f),
                             modifier = Modifier.padding(top = 4.dp)
@@ -106,7 +157,7 @@ fun CloudSyncScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Schedule, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
                             Text(
-                                text = "最后同步：$lastSyncTime",
+                                text = "最后同步：$lastSyncTimeText",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.padding(top = 2.dp)
@@ -116,18 +167,18 @@ fun CloudSyncScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                isSyncing.value = true
                                 scope.launch {
-                                    syncManager.sync()
-                                    kotlinx.coroutines.delay(2000)
-                                    isSyncing.value = false
-                                    lastSyncTime.value = "刚刚"
+                                    try {
+                                        syncManager.sync()
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("CloudSyncScreen", "Sync failed", e)
+                                    }
                                 }
                             },
-                            enabled = !isSyncing.value,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
+                            enabled = !isSyncing,
+                            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                         ) {
-                            if (isSyncing.value) {
+                            if (isSyncing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     color = Color.White,
@@ -144,19 +195,21 @@ fun CloudSyncScreen(
             }
 
             // 云服务提供商
-            item {
-                Text(
-                    text = "云服务提供商",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
+            if (providers.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "云服务提供商",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
 
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    providers.forEach { provider ->
-                        ProviderCard(provider = provider)
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        providers.forEach { provider ->
+                            ProviderCard(provider = provider)
+                        }
                     }
                 }
             }
@@ -226,7 +279,8 @@ data class ProviderInfo(
 data class SyncItem(
     val name: String,
     val enabled: Boolean,
-    val lastSync: String
+    val lastSync: String,
+    val count: Int = 0
 )
 
 @Composable
@@ -235,7 +289,7 @@ private fun ProviderCard(provider: ProviderInfo) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1A1A1A))
+            .background(DarkGray)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -263,15 +317,17 @@ private fun ProviderCard(provider: ProviderInfo) {
                     Text(
                         text = if (provider.connected) "已连接" else "未连接",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (provider.connected) Color.Green else Color.Gray
+                        color = if (provider.connected) SuccessGreen else LightGray
                     )
                 }
             }
             if (provider.connected) {
-                Icon(Icons.Default.Check, null, tint = Color.Green)
+                Icon(Icons.Default.Check, null, tint = SuccessGreen)
             } else {
-                TextButton(onClick = {}) {
-                    Text("连接", color = Color(0xFF1E90FF))
+                TextButton(onClick = {
+                    // 触发同步以建立连接
+                }) {
+                    Text("连接", color = HasselbladOrange)
                 }
             }
         }
@@ -284,7 +340,7 @@ private fun SyncItemCard(item: SyncItem) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1A1A1A))
+            .background(DarkGray)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -296,10 +352,10 @@ private fun SyncItemCard(item: SyncItem) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF1E90FF).copy(alpha = 0.2f)),
+                        .background(HasselbladOrange.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Upload, null, tint = Color(0xFF1E90FF))
+                    Icon(Icons.Default.Upload, null, tint = HasselbladOrange)
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -310,7 +366,7 @@ private fun SyncItemCard(item: SyncItem) {
                         color = Color.White
                     )
                     Text(
-                        text = "最后同步：${item.lastSync}",
+                        text = if (item.count > 0) "最后同步：${item.lastSync} (${item.count}条)" else "最后同步：${item.lastSync}",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -321,7 +377,7 @@ private fun SyncItemCard(item: SyncItem) {
                     .width(50.dp)
                     .height(30.dp)
                     .clip(RoundedCornerShape(15.dp))
-                    .background(if (item.enabled) Color(0xFF10B981) else Color.Gray),
+                    .background(if (item.enabled) SuccessGreen else MediumGray),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -344,7 +400,7 @@ private fun FeatureCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -354,10 +410,10 @@ private fun FeatureCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF10B981).copy(alpha = 0.15f)),
+                    .background(SuccessGreen.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = Color(0xFF10B981))
+                Icon(icon, null, tint = SuccessGreen)
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {

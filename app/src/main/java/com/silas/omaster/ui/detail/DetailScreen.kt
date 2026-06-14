@@ -25,12 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,9 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,10 +51,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
-import com.silas.omaster.ui.components.DescriptionCard
+import com.silas.omaster.model.PresetSection
 import com.silas.omaster.ui.components.FloatingWindowGuideDialog
 import com.silas.omaster.ui.components.ImageGallery
-import com.silas.omaster.ui.components.ModeBadge
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.ParameterCard
 import com.silas.omaster.ui.components.SectionTitle
@@ -72,24 +66,20 @@ import com.silas.omaster.ui.components.RelatedPreset
 import com.silas.omaster.ui.components.ApplyPresetButton
 import com.silas.omaster.ui.components.FavoriteButton
 import com.silas.omaster.ui.service.FloatingWindowController
-import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
 import com.silas.omaster.util.PresetI18n
-import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
-
-import com.silas.omaster.model.PresetSection
 
 @Composable
 fun DetailScreen(
     presetId: String,
     onBack: () -> Unit,
     onEdit: ((String) -> Unit)? = null,
-    refreshTrigger: Int = 0
+    refreshTrigger: Int = 0,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
@@ -129,7 +119,7 @@ fun DetailScreen(
     // 悬浮窗控制器（全局单例，已在 MainActivity 中注册）
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxSize()) {
         OMasterTopAppBar(
             title = preset?.let { PresetI18n.getLocalizedPresetName(it.name) } ?: stringResource(R.string.detail_title),
             subtitle = preset?.author,
@@ -305,25 +295,29 @@ fun DetailScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // 统计数据（使用预设真实数据）
-                        PresetStatsCard(
-                            downloads = it.downloads ?: 0,
-                            rating = it.rating ?: 4.5f,
-                            ratingCount = it.ratingCount ?: 0,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // 拍摄建议
-                        ShootingTipsDetailCard(
-                            environment = "日间户外或充足自然光",
-                            scenes = "街拍、人像、风景、建筑",
-                            points = "适合追求经典胶片质感，建议使用黄金时刻拍摄",
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
+                        // 统计数据（使用预设真实数据，无数据时不显示）
+                        if (it.rating != null || it.downloads != null) {
+                            PresetStatsCard(
+                                downloads = it.downloads ?: 0,
+                                rating = it.rating ?: 0f,
+                                ratingCount = it.ratingCount ?: 0,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        // 拍摄建议（从预设描述中读取真实数据）
+                        val desc = it.description
+                        val tips = it.shootingTips
+                        if (desc != null || tips != null) {
+                            ShootingTipsDetailCard(
+                                environment = desc?.title ?: tips ?: "",
+                                scenes = desc?.content ?: "",
+                                points = tips ?: "",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                         
                         // 动态参数展示
                         DynamicParameters(
@@ -333,31 +327,33 @@ fun DetailScreen(
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // 关联推荐
-                        RelatedPresetsCard(
-                            presets = listOf(
-                                RelatedPreset("r1", "电影胶片", ""),
-                                RelatedPreset("r2", "复古人像", ""),
-                                RelatedPreset("r3", "清新风景", ""),
-                                RelatedPreset("r4", "黑白经典", "")
-                            ),
-                            onSelect = { id -> },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        // 关联推荐（从仓库获取同品牌/同标签的真实预设）
+                        val relatedPresets = remember(it.id, it.brand, it.tags) {
+                            repository.getRelatedPresets(it.id, it.brand, it.tags, limit = 4)
+                        }
+                        if (relatedPresets.isNotEmpty()) {
+                            RelatedPresetsCard(
+                                presets = relatedPresets.map { rp ->
+                                    RelatedPreset(rp.id ?: "", rp.name, rp.coverPath)
+                                },
+                                onSelect = { id -> },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                         
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // 用户评价
-                        UserCommentsCard(
-                            comments = listOf(
-                                UserComment("c1", "摄影爱好者", "非常好用的预设！色彩还原很准确", 5),
-                                UserComment("c2", "专业摄影师", "配合哈苏大师模式使用效果绝佳", 5)
-                            ),
-                            onViewAll = { },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
+                        // 用户评价（从预设评论数据中读取真实评论）
+                        val comments = it.comments
+                        if (!comments.isNullOrEmpty()) {
+                            UserCommentsCard(
+                                comments = comments.map { c ->
+                                    UserComment(c.id, c.user, c.content, c.rating.toInt())
+                                },
+                                onViewAll = { },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                         
                         // 底部操作按钮（对齐用户规范）
                         Row(
@@ -373,7 +369,11 @@ fun DetailScreen(
                             
                             // 应用按钮（带动画反馈）
                             ApplyPresetButton(
-                                onApply = { },
+                                onApply = {
+                                    preset?.let { p ->
+                                        handleFloatingWindowClick(context, p)
+                                    }
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                         }

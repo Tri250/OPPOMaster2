@@ -1,7 +1,7 @@
 <resources>
     <!-- 应用名称 -->
     <string name="app_name">OMaster</string>
-    <string name="app_slogan">大师模式调色参数库</string>
+    <string name="app_slogan">专业影像参数管理工具</string>
 
     <!-- 通用按钮 -->
     <string name="confirm">确定</string>
@@ -119,14 +119,14 @@
     <string name="delete_preset_message">确定要删除这个预设吗？此操作无法撤销。</string>
 
     <!-- 空状态 -->
-    <string name="empty_no_presets">暂无预设数据</string>
+    <string name="empty_no_presets">未找到匹配的预设</string>
     <string name="empty_no_favorites">暂无收藏预设</string>
     <string name="empty_no_custom">暂无自定义预设</string>
     <string name="empty_no_data">暂无数据</string>
-    <string name="empty_hint_add_presets">请在 assets/presets.json 中添加数据</string>
+    <string name="empty_hint_add_presets">请调整筛选条件</string>
     <string name="empty_hint_favorite">点击心形图标收藏预设</string>
     <string name="empty_hint_create">点击右下角按钮创建预设</string>
-    <string name="load_more_hint">持续更新 · 敬请期待</string>
+    <string name="load_more_hint">持续更新 敬请期待</string>
     <string name="loading_more">正在加载更多...</string>
     <string name="no_more_data">没有更多数据了</string>
 

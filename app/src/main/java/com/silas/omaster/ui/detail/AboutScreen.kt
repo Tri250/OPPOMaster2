@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Globe
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -75,7 +74,9 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.UpdateChannel
@@ -100,7 +101,8 @@ fun AboutScreen(
     onNavigateToTerms: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit,
     currentVersionCode: Int = VersionInfo.VERSION_CODE,
-    currentVersionName: String = VersionInfo.VERSION_NAME
+    currentVersionName: String = VersionInfo.VERSION_NAME,
+    modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -266,7 +268,7 @@ fun AboutScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
@@ -410,7 +412,7 @@ private fun AppInfoCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Download,
+                        imageVector = Icons.Default.CameraAlt,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(36.dp)
@@ -629,7 +631,7 @@ private fun UpdateStatusSection(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color(0xFF4CAF50),
+                            tint = SuccessGreen,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -652,7 +654,7 @@ private fun UpdateStatusSection(
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
-                        tint = Color(0xFFFF5252),
+                        tint = ErrorRed,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))

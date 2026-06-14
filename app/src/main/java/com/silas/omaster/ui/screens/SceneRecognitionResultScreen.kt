@@ -74,7 +74,7 @@ fun SceneRecognitionResultScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "场景识别结果",
+                        text = "AI 出片",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
@@ -797,7 +797,7 @@ private fun MasterTipsSection(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "大师拍摄建议",
+                    text = "大师建议",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
@@ -914,7 +914,7 @@ private fun ActionButtonsRow(
         ) {
             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("分享")
+            Text("分享配方")
         }
         
         // 保存
@@ -929,7 +929,7 @@ private fun ActionButtonsRow(
         ) {
             Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("保存")
+            Text("保存配方")
         }
         
         // 导出
@@ -963,7 +963,7 @@ private fun ActionButtonsRow(
         Icon(Icons.Default.AutoFixHigh, null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = "一键优化",
+            text = "一键哈苏优化",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold
         )

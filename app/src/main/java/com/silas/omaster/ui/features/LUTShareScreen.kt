@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import com.silas.omaster.data.model.LUTResource
+import com.silas.omaster.data.repository.LUTResourceRepository
 import com.silas.omaster.ui.theme.*
 import java.util.Locale
 
@@ -35,13 +37,15 @@ import java.util.Locale
 @Composable
 fun LUTShareScreen(
     onBack: () -> Unit,
-    onDownload: (LUTItem) -> Unit
+    onDownload: (LUTResource) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val repo = LUTResourceRepository
 
-    // 分类选择
-    var selectedCategory by remember { mutableStateOf("全部") }
-    val categories = listOf("全部", "电影", "胶片", "风景", "人像", "商业", "创意")
+    // 分类选择 - 对齐 Web 端 LUT_CATEGORIES
+    var selectedCategory by remember { mutableStateOf("all") }
+    val categories = repo.CATEGORIES
 
     // 搜索
     var searchQuery by remember { mutableStateOf("") }
@@ -54,36 +58,17 @@ fun LUTShareScreen(
     // 正在下载
     var downloadingId by remember { mutableStateOf<String?>(null) }
     // 详情弹窗
-    var selectedLUT by remember { mutableStateOf<LUTItem?>(null) }
+    var selectedLUT by remember { mutableStateOf<LUTResource?>(null) }
 
-    // LUT 数据
-    val luts = remember {
-        listOf(
-            LUTItem("lut_1", "柯达 Portra 400", "Kodak Portra 400", "经典胶片风格，温暖柔和", "胶片", "https://example.com/lut1.cube", 1024, 8, true, true, false, 4.8f, 12580, "https://omaster.app/authors/kodak", listOf("电影", "人像"), "2026-05-12"),
-            LUTItem("lut_2", "富士 Velvia 50", "Fuji Velvia 50", "高饱和度，风景首选", "胶片", "https://example.com/lut2.cube", 2048, 12, false, true, true, 4.6f, 8932, "https://omaster.app/authors/fuji", listOf("风景", "自然"), "2026-05-18"),
-            LUTItem("lut_3", "好莱坞电影", "Hollywood Cinema", "电影级调色，专业质感", "电影", "https://example.com/lut3.cube", 1024, 6, true, false, false, 4.9f, 23411, "https://omaster.app/authors/hollywood", listOf("电影", "广告"), "2026-04-20"),
-            LUTItem("lut_4", "哈苏 HNCS", "Hasselblad HNCS", "自然色彩还原，专业标准", "风景", "https://example.com/lut4.cube", 2048, 10, true, true, true, 4.7f, 15802, "https://omaster.app/authors/hasselblad", listOf("风景", "人像"), "2026-05-25"),
-            LUTItem("lut_5", "人像柔光", "Portrait Soft", "柔和肤色，自然美化", "人像", "https://example.com/lut5.cube", 1024, 4, false, false, false, 4.5f, 9320, "https://omaster.app/authors/portrait", listOf("人像", "美妆"), "2026-03-10"),
-            LUTItem("lut_6", "商业广告", "Commercial Ad", "明亮通透，产品展示", "商业", "https://example.com/lut6.cube", 2048, 14, true, false, false, 4.4f, 6210, "https://omaster.app/authors/ad", listOf("商业", "产品"), "2026-02-08"),
-            LUTItem("lut_7", "赛博朋克", "Cyberpunk", "霓虹色彩，科幻风格", "创意", "https://example.com/lut7.cube", 1024, 5, false, true, true, 4.7f, 18230, "https://omaster.app/authors/cyber", listOf("创意", "夜景"), "2026-05-30"),
-            LUTItem("lut_8", "黑白经典", "Classic B&W", "黑白胶片质感", "胶片", "https://example.com/lut8.cube", 512, 2, true, false, false, 4.3f, 4521, "https://omaster.app/authors/bw", listOf("人像", "街拍"), "2026-01-22"),
-            LUTItem("lut_9", "日落暖调", "Sunset Warm", "温暖日落氛围", "风景", "https://example.com/lut9.cube", 1024, 7, false, false, true, 4.6f, 11230, "https://omaster.app/authors/sunset", listOf("风景", "旅行"), "2026-04-30"),
-            LUTItem("lut_10", "复古怀旧", "Retro Vintage", "复古褪色效果", "创意", "https://example.com/lut10.cube", 1024, 6, true, false, false, 4.5f, 7890, "https://omaster.app/authors/retro", listOf("创意", "胶片"), "2026-03-15")
-        )
-    }
+    // LUT 数据 - 来自真实数据源
+    val luts = remember { repo.RESOURCES }
 
     // 过滤 + 排序
     val filteredLuts = remember(searchQuery, selectedCategory, sortBy, luts) {
         var result = if (searchQuery.isNotBlank()) {
-            luts.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.nameEn.contains(searchQuery, ignoreCase = true) ||
-                it.description.contains(searchQuery, ignoreCase = true)
-            }
-        } else if (selectedCategory == "全部") {
-            luts
+            repo.searchResources(searchQuery)
         } else {
-            luts.filter { it.category == selectedCategory }
+            repo.getResources(selectedCategory)
         }
         result = when (sortBy) {
             SortType.DOWNLOADS -> result.sortedByDescending { it.downloads }
@@ -94,15 +79,14 @@ fun LUTShareScreen(
     }
 
     // 2026新品 / 热门
-    val newLuts = remember(luts) { luts.filter { it.isNew } }
-    val hotLuts = remember(luts) { luts.filter { it.isHot && !it.isNew }.take(6) }
+    val newLuts = remember(luts) { repo.getNewResources() }
+    val hotLuts = remember(luts) { repo.getHotResources().filter { !it.isNew }.take(6) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
-        // TopAppBar
         TopAppBar(
             title = {
                 Column {
@@ -120,7 +104,7 @@ fun LUTShareScreen(
             },
             actions = {
                 Text(
-                    text = "${luts.size} 个LUT",
+                    text = "${repo.RESOURCES.size} 个LUT",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.4f),
                     modifier = Modifier.padding(end = 16.dp)
@@ -149,12 +133,12 @@ fun LUTShareScreen(
                 focusedBorderColor = HasselbladOrange,
                 unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
                 cursorColor = HasselbladOrange,
-                focusedContainerColor = Color(0xFF1A1A1A),
-                unfocusedContainerColor = Color(0xFF1A1A1A)
+                focusedContainerColor = DarkGray,
+                unfocusedContainerColor = DarkGray
             )
         )
 
-        // 分类标签
+        // 分类标签 - 对齐 Web 端
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -166,20 +150,20 @@ fun LUTShareScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            if (category == selectedCategory) HasselbladOrange
+                            if (category.key == selectedCategory) HasselbladOrange
                             else Color(0xFF2A2A2A)
                         )
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            selectedCategory = category
+                            selectedCategory = category.key
                         }
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = category,
+                        text = "${category.icon} ${category.label}",
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal,
-                        color = if (category == selectedCategory) Color.White else Color.White.copy(alpha = 0.7f)
+                        fontWeight = if (category.key == selectedCategory) FontWeight.Bold else FontWeight.Normal,
+                        color = if (category.key == selectedCategory) Color.White else Color.White.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -210,7 +194,7 @@ fun LUTShareScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // 2026新品 & 热门
-            if (selectedCategory == "全部" && searchQuery.isBlank()) {
+            if (selectedCategory == "all" && searchQuery.isBlank()) {
                 if (newLuts.isNotEmpty()) {
                     item {
                         Text(
@@ -227,7 +211,7 @@ fun LUTShareScreen(
                                 LUTPosterCard(
                                     lut = lut,
                                     badge = "NEW",
-                                    badgeColor = Color(0xFF4CAF50),
+                                    badgeColor = SuccessGreen,
                                     isLiked = likedIds.contains(lut.id),
                                     onLike = { likedIds.toggle(lut.id) },
                                     onClick = { selectedLUT = lut }
@@ -376,7 +360,7 @@ private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun LUTPosterCard(
-    lut: LUTItem,
+    lut: LUTResource,
     badge: String,
     badgeColor: Color,
     isLiked: Boolean,
@@ -392,7 +376,7 @@ private fun LUTPosterCard(
                 onClick()
             },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column {
             Box(
@@ -442,7 +426,7 @@ private fun LUTPosterCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${formatDownloads(lut.downloads)}下载",
+                    text = "${LUTResourceRepository.formatDownloads(lut.downloads)}下载",
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 10.sp,
                     color = Color.White.copy(alpha = 0.5f)
@@ -455,7 +439,7 @@ private fun LUTPosterCard(
 @Composable
 private fun LUTGridCard(
     modifier: Modifier = Modifier,
-    lut: LUTItem,
+    lut: LUTResource,
     isLiked: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
@@ -470,7 +454,7 @@ private fun LUTGridCard(
             onClick()
         },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column {
             // 预览
@@ -498,7 +482,7 @@ private fun LUTGridCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFF4CAF50))
+                                .background(SuccessGreen)
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Text("NEW", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -600,7 +584,7 @@ private fun LUTGridCard(
                     Icon(Icons.Default.Download, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(10.dp))
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
-                        text = formatDownloads(lut.downloads),
+                        text = LUTResourceRepository.formatDownloads(lut.downloads),
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 10.sp,
                         color = Color.White.copy(alpha = 0.5f)
@@ -621,8 +605,8 @@ private fun LUTGridCard(
                         .fillMaxWidth()
                         .padding(top = 6.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDownloaded) Color(0xFF4CAF50).copy(alpha = 0.2f) else HasselbladOrange.copy(alpha = 0.2f),
-                        contentColor = if (isDownloaded) Color(0xFF4CAF50) else HasselbladOrange
+                        containerColor = if (isDownloaded) SuccessGreen.copy(alpha = 0.2f) else HasselbladOrange.copy(alpha = 0.2f),
+                        contentColor = if (isDownloaded) SuccessGreen else HasselbladOrange
                     ),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(vertical = 6.dp)
@@ -643,7 +627,7 @@ private fun LUTGridCard(
                         Icon(Icons.Default.Download, null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "下载 (${formatFileSize(lut.fileSize)})",
+                            text = "下载 (${LUTResourceRepository.formatFileSize(lut.fileSize)})",
                             fontSize = 11.sp
                         )
                     }
@@ -655,7 +639,7 @@ private fun LUTGridCard(
 
 @Composable
 private fun LUTDetailDialog(
-    lut: LUTItem,
+    lut: LUTResource,
     isLiked: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
@@ -665,7 +649,7 @@ private fun LUTDetailDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = DarkGray,
         title = null,
         text = {
             Column(
@@ -753,8 +737,8 @@ private fun LUTDetailDialog(
                     Column(modifier = Modifier.padding(12.dp)) {
                         DetailInfoRow("格式", ".${lut.format.uppercase()}")
                         DetailInfoRow("尺寸", "${lut.size}x${lut.size}")
-                        DetailInfoRow("文件大小", formatFileSize(lut.fileSize))
-                        DetailInfoRow("下载次数", formatDownloads(lut.downloads))
+                        DetailInfoRow("文件大小", LUTResourceRepository.formatFileSize(lut.fileSize))
+                        DetailInfoRow("下载次数", LUTResourceRepository.formatDownloads(lut.downloads))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -802,7 +786,7 @@ private fun LUTDetailDialog(
                         enabled = !isDownloading,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDownloaded) Color(0xFF4CAF50) else HasselbladOrange
+                            containerColor = if (isDownloaded) SuccessGreen else HasselbladOrange
                         )
                     ) {
                         if (isDownloaded) {
@@ -885,35 +869,4 @@ private fun DetailInfoRow(label: String, value: String) {
     }
 }
 
-private fun formatFileSize(sizeInKb: Int): String = when {
-    sizeInKb >= 1024 -> String.format(Locale.US, "%.1f MB", sizeInKb / 1024f)
-    else -> "$sizeInKb KB"
-}
 
-private fun formatDownloads(count: Int): String = when {
-    count >= 10000 -> String.format(Locale.US, "%.1f万", count / 10000f)
-    else -> count.toString()
-}
-
-/**
- * LUT 数据项
- */
-data class LUTItem(
-    val id: String,
-    val name: String,
-    val nameEn: String,
-    val description: String,
-    val category: String,
-    val url: String,
-    val size: Int = 1024,
-    val fileSize: Int = 8,    // KB
-    val isFree: Boolean = false,
-    val isNew: Boolean = false,
-    val isHot: Boolean = false,
-    val rating: Float = 4.5f,
-    val downloads: Int = 1000,
-    val authorUrl: String = "",
-    val suitableFor: List<String> = emptyList(),
-    val createdAt: String = "2026-01-01",
-    val author: String = "OMaster官方"
-)

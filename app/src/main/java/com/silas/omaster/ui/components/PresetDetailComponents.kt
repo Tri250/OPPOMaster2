@@ -38,6 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.silas.omaster.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -361,6 +367,8 @@ private fun RelatedPresetItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -371,22 +379,41 @@ private fun RelatedPresetItem(
             modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 封面图（对齐用户规范：96dp = w-24）
+            // 封面图（对齐用户规范：96dp = w-24，使用Coil加载真实图片）
             Card(
                 modifier = Modifier.size(96.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
             ) {
-                // 这里可以加载图片，暂时用占位
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1A1A1A))
-                )
+                if (preset.coverPath.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(preset.coverPath)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = preset.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF1A1A1A)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Camera,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.3f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // 名称
             Text(
                 text = preset.name,
@@ -394,7 +421,7 @@ private fun RelatedPresetItem(
                 fontSize = 12.sp,
                 maxLines = 1
             )
-            
+
             // 作者
             preset.author?.let {
                 Text(

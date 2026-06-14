@@ -62,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -74,11 +75,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
-import kotlinx.coroutines.delay
+import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.ui.theme.SurfaceElevated
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.IOException
+import kotlinx.coroutines.withContext
 
 /**
  * 智能优化页面
@@ -97,11 +102,15 @@ import java.io.IOException
 @Composable
 fun SmartOptimizeScreen(
     onBack: () -> Unit,
-    onApply: (OptimizeParams) -> Unit
+    onApply: (OptimizeParams) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // AI 推理引擎实例
+    val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
     // 预览图片状态
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -156,7 +165,7 @@ fun SmartOptimizeScreen(
     }
 
     val optimizeIdToName = mapOf(
-        "hdr" to "HDR 增强",
+        "hdr" to "HDR增强",
         "denoise" to "智能降噪",
         "sharpen" to "锐化增强",
         "exposure" to "自动曝光",
@@ -164,6 +173,7 @@ fun SmartOptimizeScreen(
     )
 
     // 顺序执行优化流程（对齐Web端handleOptimize + processStep）
+    // 使用 AI 推理引擎执行真实优化处理
     fun runOptimizeWorkflow() {
         if (selectedOptimizeIds.isEmpty()) return
         scope.launch {
@@ -173,16 +183,30 @@ fun SmartOptimizeScreen(
             optimizationStep = 0
             optimizationProgress = 0f
 
-            for ((index, id) in selectedOptimizeIds.withIndex()) {
-                optimizationStep = index + 1
-                optimizationCurrentName = optimizeIdToName[id] ?: id
-                optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
-                delay(500) // 模拟每项处理耗时
-                optimizedOptions.add(id)
+            try {
+                for ((index, id) in selectedOptimizeIds.withIndex()) {
+                    optimizationStep = index + 1
+                    optimizationCurrentName = optimizeIdToName[id] ?: id
+                    optimizationProgress = (index.toFloat()) / selectedOptimizeIds.size
+
+                    // 调用 AI 推理引擎执行真实优化处理
+                    val bitmap = previewBitmap
+                    if (bitmap != null) {
+                        withContext(Dispatchers.Default) {
+                            inferenceEngine.applyOptimization(bitmap, id)
+                        }
+                    }
+
+                    optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
+                    optimizedOptions.add(id)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SmartOptimize", "Optimization failed", e)
+                return@launch
+            } finally {
+                isOptimizing = false
             }
-            delay(300)
             // 完成 - 应用参数
-            isOptimizing = false
             onApply(OptimizeParams(
                 hdrEnabled = hdrEnabled,
                 hdrStrength = hdrStrength,
@@ -198,11 +222,10 @@ fun SmartOptimizeScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
     ) {
-        // TopAppBar
         TopAppBar(
             title = { Text("智能优化", fontWeight = FontWeight.Bold) },
             navigationIcon = {
@@ -249,7 +272,7 @@ fun SmartOptimizeScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
@@ -298,7 +321,7 @@ fun SmartOptimizeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(Color(0xFF1A1A1A))
+                .background(DarkGray)
         ) {
             previewBitmap?.let { bitmap ->
                 // 显示预览图片（带优化后效果模拟滤镜）
@@ -377,7 +400,7 @@ fun SmartOptimizeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF4CAF50).copy(alpha = 0.1f)
+                            containerColor = SuccessGreen.copy(alpha = 0.1f)
                         )
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -385,14 +408,14 @@ fun SmartOptimizeScreen(
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     null,
-                                    tint = Color(0xFF4CAF50),
+                                    tint = SuccessGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "已完成 ${optimizedOptions.size} 项优化",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF4CAF50),
+                                    color = SuccessGreen,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -435,24 +458,24 @@ fun SmartOptimizeScreen(
             // HDR 增强
             item {
                 OptimizeOptionCard(
-                    title = "HDR 增强",
-                    description = "扩展动态范围，增强明暗细节",
+                    title = "HDR增强",
+                    description = "提升动态范围，保留更多细节",
                     icon = Icons.Default.AutoFixHigh,
                     enabled = hdrEnabled,
                     onToggle = { hdrEnabled = it },
                     strength = hdrStrength,
                     onStrengthChange = { hdrStrength = it },
-                    color = HasselbladOrange,
+                    color = Color(0xFFFF9800),
                     isOptimized = optimizedOptions.contains("hdr"),
-                    isProcessing = isOptimizing && optimizationCurrentName == "HDR 增强"
+                    isProcessing = isOptimizing && optimizationCurrentName == "HDR增强"
                 )
             }
 
-            // 降噪处理
+            // 智能降噪
             item {
                 OptimizeOptionCard(
-                    title = "降噪处理",
-                    description = "智能降噪，保留细节纹理",
+                    title = "智能降噪",
+                    description = "AI识别并消除噪点",
                     icon = Icons.Default.FilterAlt,
                     enabled = noiseReductionEnabled,
                     onToggle = { noiseReductionEnabled = it },
@@ -464,17 +487,17 @@ fun SmartOptimizeScreen(
                 )
             }
 
-            // 锐化优化
+            // 锐化增强
             item {
                 OptimizeOptionCard(
-                    title = "锐化优化",
-                    description = "增强边缘清晰度，提升质感",
+                    title = "锐化增强",
+                    description = "提升画面清晰度和质感",
                     icon = Icons.Default.Tune,
                     enabled = sharpenEnabled,
                     onToggle = { sharpenEnabled = it },
                     strength = sharpenStrength,
                     onStrengthChange = { sharpenStrength = it },
-                    color = Color(0xFFE91E63),
+                    color = Color(0xFF9C27B0),
                     isOptimized = optimizedOptions.contains("sharpen"),
                     isProcessing = isOptimizing && optimizationCurrentName == "锐化增强"
                 )
@@ -559,7 +582,7 @@ fun SmartOptimizeScreen(
             ) {
                 Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isOptimizing) "处理中..." else "开始优化")
+                Text(if (isOptimizing) "优化中..." else "开始智能优化")
             }
         }
     }
@@ -583,7 +606,7 @@ private fun CompositeOptimizeCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) Color(0xFF4CAF50).copy(alpha = 0.15f) else Color(0xFF2A2A2A)
+            containerColor = if (enabled) SuccessGreen.copy(alpha = 0.15f) else SurfaceElevated
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -596,7 +619,7 @@ private fun CompositeOptimizeCard(
                         .size(40.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(
-                            if (enabled) Color(0xFF4CAF50).copy(alpha = 0.3f)
+                            if (enabled) SuccessGreen.copy(alpha = 0.3f)
                             else Color.White.copy(alpha = 0.1f)
                         ),
                     contentAlignment = Alignment.Center
@@ -604,7 +627,7 @@ private fun CompositeOptimizeCard(
                     Icon(
                         Icons.Default.Bolt,
                         null,
-                        tint = if (enabled) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.6f),
+                        tint = if (enabled) SuccessGreen else Color.White.copy(alpha = 0.6f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -614,7 +637,7 @@ private fun CompositeOptimizeCard(
                         text = "综合优化",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (enabled) Color(0xFF4CAF50) else Color.White
+                        color = if (enabled) SuccessGreen else Color.White
                     )
                     Text(
                         text = "一键优化全部参数 · 已选 $selectedCount 项",
@@ -630,7 +653,7 @@ private fun CompositeOptimizeCard(
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF4CAF50)
+                        checkedTrackColor = SuccessGreen
                     )
                 )
             }
@@ -645,7 +668,7 @@ private fun CompositeOptimizeCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF4CAF50)
+                        contentColor = SuccessGreen
                     )
                 ) {
                     Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
@@ -680,7 +703,7 @@ private fun OptimizeOptionCard(
             containerColor = when {
                 isProcessing -> color.copy(alpha = 0.15f)
                 enabled -> color.copy(alpha = 0.1f)
-                else -> Color(0xFF2A2A2A)
+                else -> SurfaceElevated
             }
         )
     ) {
@@ -721,7 +744,7 @@ private fun OptimizeOptionCard(
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     null,
-                                    tint = Color(0xFF4CAF50),
+                                    tint = SuccessGreen,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
