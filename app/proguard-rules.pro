@@ -138,8 +138,6 @@
 -keep class kotlinx.serialization.json.** { *; }
 -keepclassmembers class kotlinx.serialization.json.** { *; }
 -dontwarn io.ktor.**
--dontwarn java.lang.management.ManagementFactory
--dontwarn java.lang.management.RuntimeMXBean
 
 # ========================================
 # Coil 图片加载
@@ -156,12 +154,6 @@
 -dontwarn com.uc.**
 
 # ========================================
-# SLF4J 日志框架
-# ========================================
--dontwarn org.slf4j.impl.StaticLoggerBinder
--dontwarn sun.misc.**
-
-# ========================================
 # 项目特定规则（精细化）
 # ========================================
 
@@ -171,9 +163,6 @@
 -keepclassmembers class com.silas.omaster.model.** { *; }
 
 # ===== 数据仓库和本地存储（SharedPreferences 序列化） =====
-# 只保留序列化相关的类，其他类可以优化
--keep class com.silas.omaster.data.repository.Preset { *; }
--keep class com.silas.omaster.data.repository.PresetCategory { *; }
 -keep class com.silas.omaster.data.local.SettingsManager { *; }
 -keepclassmembers class com.silas.omaster.data.local.SettingsManager { *; }
 -keep class com.silas.omaster.data.local.CustomPresetManager { *; }
@@ -182,24 +171,19 @@
 -keepclassmembers class com.silas.omaster.data.local.RecipeHistoryManager { *; }
 
 # ===== AI 和 TFLite 相关（模型推理需要） =====
-# 只保留与 TFLite 交互的核心类
--keep class com.silas.omaster.ai.AIEngine { *; }
--keepclassmembers class com.silas.omaster.ai.AIEngine { *; }
 -keep class com.silas.omaster.ai.MasterInsightEngine { *; }
 -keepclassmembers class com.silas.omaster.ai.MasterInsightEngine { *; }
--keep class com.silas.omaster.ai.SceneClassifier { *; }
--keepclassmembers class com.silas.omaster.ai.SceneClassifier { *; }
--keep class com.silas.omaster.ai.QualityAnalyzer { *; }
--keepclassmembers class com.silas.omaster.ai.QualityAnalyzer { *; }
--keep class com.silas.omaster.ai.ParamPredictor { *; }
--keepclassmembers class com.silas.omaster.ai.ParamPredictor { *; }
+-keep class com.silas.omaster.ai.SceneRecognitionManager { *; }
+-keepclassmembers class com.silas.omaster.ai.SceneRecognitionManager { *; }
 -keep class com.silas.omaster.tflite.TFLiteEngine { *; }
 -keepclassmembers class com.silas.omaster.tflite.TFLiteEngine { *; }
+-keep class com.silas.omaster.tflite.SceneClassifier { *; }
+-keepclassmembers class com.silas.omaster.tflite.SceneClassifier { *; }
+-keep class com.silas.omaster.tflite.ParamPredictor { *; }
+-keepclassmembers class com.silas.omaster.tflite.ParamPredictor { *; }
 
 # ===== 水印系统（JSON 配置序列化） =====
-# 只保留配置类，其他类可以优化
 -keep class com.silas.omaster.watermark.WatermarkConfig { *; }
--keep class com.silas.omaster.watermark.WatermarkLayer { *; }
 -keep class com.silas.omaster.watermark.WatermarkTemplate { *; }
 -keep class com.silas.omaster.watermark.HasselbladMasterTemplates { *; }
 -keepclassmembers class com.silas.omaster.watermark.HasselbladMasterTemplates { *; }
@@ -209,21 +193,13 @@
 # ===== 云同步（网络请求序列化） =====
 -keep class com.silas.omaster.cloud.CloudSyncManager { *; }
 -keepclassmembers class com.silas.omaster.cloud.CloudSyncManager { *; }
--keep class com.silas.omaster.cloud.CloudPreset { *; }
--keep class com.silas.omaster.cloud.SyncState { *; }
 
 # ===== GPU 渲染器（OpenGL ES 需要） =====
 -keep class com.silas.omaster.renderer.GPURenderManager { *; }
 -keepclassmembers class com.silas.omaster.renderer.GPURenderManager { *; }
--keep class com.silas.omaster.renderer.RenderConfig { *; }
-
-# ===== 参数系统（JSON 序列化） =====
--keep class com.silas.omaster.param.RenderParams { *; }
--keep class com.silas.omaster.param.AdjustChannel { *; }
 
 # ===== 场景识别（枚举和配置） =====
--keep class com.silas.omaster.scene.SceneType { *; }
--keep class com.silas.omaster.scene.SceneConfig { *; }
+-keep class com.silas.omaster.ai.SceneRecognitionManager$SceneType { *; }
 
 # ===== 工具类（反射使用） =====
 -keep class com.silas.omaster.util.JsonUtil { *; }
@@ -246,7 +222,7 @@
 # ========================================
 # 优化配置
 # ========================================
-# 优化次数（5次通常足够）
+# 优化次数
 -optimizationpasses 5
 
 # 允许访问修饰符优化
@@ -255,33 +231,21 @@
 # 积极合并接口
 -mergeinterfacesaggressively
 
-# 移除未使用的代码
--shrink
--optimize
-
-# 不警告缺失的类
--dontwarn java.lang.invoke.**
--dontwarn sun.misc.**
-
 # ========================================
 # 混淆配置
 # ========================================
-# 使用应用优化
--useuniqueclassmembernames
-
-# 保留外部依赖的类名（避免反射问题）
 -keepclassmembernames class * {
     java.lang.Class class$(java.lang.String);
     java.lang.Class class$(java.lang.String, boolean);
 }
 
 # ========================================
-# 调试配置（发布时可关闭）
+# 其他常见警告抑制（仅抑制已知安全的第三方库警告）
 # ========================================
-# 打印详细信息（调试用，发布时注释掉）
-# -printseeds
-# -printusage
-# -printmapping
+# SLF4J 日志框架
+-dontwarn org.slf4j.impl.StaticLoggerBinder
 
-# 忽略警告（谨慎使用）
--dontwarn **.**
+# Java 内部 API
+-dontwarn java.lang.invoke.**
+-dontwarn java.lang.management.**
+-dontwarn sun.misc.**

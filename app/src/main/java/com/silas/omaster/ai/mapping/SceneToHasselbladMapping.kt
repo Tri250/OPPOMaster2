@@ -530,7 +530,7 @@ object SceneToHasselbladMapping {
             // 创建默认场景画像
             SceneProfile(
                 id = sceneId,
-                name = sceneId.replace("-", " ").capitalize(),
+                name = sceneId.replace("-", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() },
                 category = inferCategory(sceneId),
                 description = "通用场景",
                 color = 0xFFFF6B35,

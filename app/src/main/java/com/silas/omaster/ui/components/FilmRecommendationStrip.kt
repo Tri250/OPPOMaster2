@@ -135,7 +135,6 @@ private fun FilmCard(
                             FilmSeries.EMOTION -> Color(0xFF4CAF50) // 绿色
                             FilmSeries.STRUCTURE -> Color(0xFF808080) // 灰色
                             FilmSeries.DIGITAL -> Color(0xFF9C27B0) // 紫色
-                            else -> HasselbladOrange
                         }.copy(alpha = 0.3f)
                     )
             ) {
@@ -149,7 +148,6 @@ private fun FilmCard(
                         FilmSeries.EMOTION -> Color(0xFF4CAF50)
                         FilmSeries.STRUCTURE -> Color(0xFF808080)
                         FilmSeries.DIGITAL -> Color(0xFF9C27B0)
-                        else -> HasselbladOrange
                     },
                     modifier = Modifier.align(Alignment.Center)
                 )

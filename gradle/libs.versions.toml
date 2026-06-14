@@ -80,7 +80,6 @@ ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serializatio
 # 友盟
 umeng-common = { group = "com.umeng.umsdk", name = "common", version.ref = "umeng-common" }
 umeng-asms = { group = "com.umeng.umsdk", name = "asms", version.ref = "umeng-asms" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 
 # ML Kit 人脸检测
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkit-face-detection" }

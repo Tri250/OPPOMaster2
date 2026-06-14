@@ -117,7 +117,7 @@ fun ThemeSettingsScreen(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = Color.White.copy(alpha = 0.1f)
         )
@@ -185,7 +185,7 @@ fun ThemeSettingsScreen(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = Color.White.copy(alpha = 0.1f)
         )

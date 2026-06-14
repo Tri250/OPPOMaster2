@@ -191,8 +191,8 @@ android {
         // release 构建时检查
         checkReleaseBuilds = true
         // 忽略警告（谨慎使用）
-        ignore.add("IconLauncherShape")
-        ignore.add("IconMissingDensityFolder")
+        disable.add("IconLauncherShape")
+        disable.add("IconMissingDensityFolder")
         // 错误严重级别配置
         error.add("HardcodedText")
         error.add("MissingTranslation")

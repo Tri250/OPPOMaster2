@@ -1040,7 +1040,6 @@ private fun WatermarkPositionGrid(
                                                 WatermarkPlacement.BOTTOM_LEFT -> Alignment.BottomStart
                                                 WatermarkPlacement.BOTTOM_CENTER -> Alignment.BottomCenter
                                                 WatermarkPlacement.BOTTOM_RIGHT -> Alignment.BottomEnd
-                                                else -> Alignment.Center
                                             }
                                         )
                                         .padding(4.dp)
