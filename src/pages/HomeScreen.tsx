@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useAppStore, homePresets, Preset } from '../store/appStore';
+import { useAppStore, homePresets, Preset, PresetSection } from '../store/appStore';
 import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, Zap, Grid as GridIcon, Edit2 } from 'lucide-react';
 import PresetImageGallery from '../components/PresetImageGallery';
 import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton, SimpleRelatedPresets } from '../components/PresetParameters';
@@ -44,20 +44,20 @@ const HomeScreen: React.FC = () => {
           const response = await fetch(source.url);
           if (response.ok) {
             const data = await response.json();
-            const presets = (data.presets || data || []).map((p): Preset => ({
-              id: `${source.id}-${p.id || Date.now() + Math.random()}`,
-              name: p.name || '未命名预设',
-              coverPath: p.coverPath || p.cover || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop',
-              author: p.author || source.name,
-              brand: p.brand || source.name,
-              tags: p.tags || ['预设'],
+            const presets = (data.presets || data || []).map((p: Record<string, unknown>): Preset => ({
+              id: `${source.id}-${String(p.id || Date.now() + Math.random())}`,
+              name: String(p.name || '未命名预设'),
+              coverPath: String(p.coverPath || p.cover || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop'),
+              author: String(p.author || source.name),
+              brand: String(p.brand || source.name),
+              tags: Array.isArray(p.tags) ? p.tags as string[] : ['预设'],
               isNew: true,
-              isHncs: p.isHncs || false,
-              sections: p.sections || [],
-              saturation: p.saturation || 10,
-              contrast: p.contrast || 5,
-              warmth: p.warmth || 0,
-              sharpness: p.sharpness || 15,
+              isHncs: Boolean(p.isHncs || false),
+              sections: Array.isArray(p.sections) ? p.sections as PresetSection[] : [],
+              saturation: Number(p.saturation || 10),
+              contrast: Number(p.contrast || 5),
+              warmth: Number(p.warmth || 0),
+              sharpness: Number(p.sharpness || 15),
             }));
             allPresets.push(...presets);
           }

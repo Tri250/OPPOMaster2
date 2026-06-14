@@ -141,8 +141,8 @@ export const SceneRecognitionResult: React.FC<SceneRecognitionResultProps> = ({
       // 应用优化后的参数（增强版）
       const optimizedParams: HasselbladParams = {
         ...sceneProfile.hasselbladParams,
-        clarity: Math.min(sceneProfile.hasselbladParams.clarity + 10, 30),
-        sharpness: Math.min(sceneProfile.hasselbladParams.sharpness + 5, 30),
+        clarity: Math.min((sceneProfile.hasselbladParams.clarity ?? 0) + 10, 30),
+        sharpness: Math.min((sceneProfile.hasselbladParams.sharpness ?? 0) + 5, 30),
       };
 
       const processed = await applyHasselbladEffect(img, optimizedParams);

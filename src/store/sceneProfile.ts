@@ -84,7 +84,7 @@ export interface FilmPreset {
   name: string;            // "Portra 400", "CC 经典负片"
   series: FilmSeries;
   matchScore: number;      // 场景匹配度 0-1
-  description?: string;
+  description: string;
 }
 
 /**

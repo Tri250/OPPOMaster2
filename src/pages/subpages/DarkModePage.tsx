@@ -66,10 +66,10 @@ const DarkModePage: React.FC = () => {
           <div className={`p-4 rounded-xl transition-all ${
             darkMode === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'
           }`}>
-            <p className={darkMode === 'light' ? 'text-gray-900' : 'text-white'}>
+            <p className={darkMode === 'light' ? 'text-[#1a1a1a]' : 'text-white'}>
               这是一段示例文字
             </p>
-            <p className={`text-sm mt-1 ${darkMode === 'light' ? 'text-gray-500' : 'text-white/50'}`}>
+            <p className={`text-sm mt-1 ${darkMode === 'light' ? 'text-white/60' : 'text-white/50'}`}>
               用于展示当前模式效果
             </p>
           </div>
