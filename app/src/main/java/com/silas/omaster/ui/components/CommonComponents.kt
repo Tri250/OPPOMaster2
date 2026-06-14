@@ -475,8 +475,7 @@ fun DescriptionCard(
                     Text(
                         text = line.trim(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f),
-                        lineHeight = 22.sp
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }

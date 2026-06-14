@@ -111,6 +111,16 @@ object AnimationSpecs {
      * 页面切换动画时长
      */
     const val PageTransitionMillis = 250
+
+    /**
+     * 光圈动画过渡时长 - 用于视觉缓冲
+     */
+    const val ApertureTransitionMillis = 200L
+
+    /**
+     * 光圈叶片旋转帧时长
+     */
+    const val ApertureBladeRotateMillis = 40L
 }
 
 /**

@@ -253,16 +253,16 @@ fun DetailScreen(
                         ) {
                             Text(
                                 text = PresetI18n.getLocalizedPresetName(it.name),
+                                style = MaterialTheme.typography.headlineLarge,
                                 color = Color.White,
-                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             if (it.isHncs) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "👑 HNCS",
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = HasselbladOrange,
-                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -272,8 +272,8 @@ fun DetailScreen(
                         
                         Text(
                             text = "@${it.author}",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.5f)
                         )
                         
                         Spacer(modifier = Modifier.height(8.dp))
@@ -285,8 +285,8 @@ fun DetailScreen(
                             it.tags?.forEach { tag ->
                                 Text(
                                     text = "#$tag",
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.6f),
-                                    fontSize = 10.sp,
                                     modifier = Modifier
                                         .background(
                                             color = Color.White.copy(alpha = 0.05f),

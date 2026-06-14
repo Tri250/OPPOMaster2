@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +93,7 @@ fun HasselbladApertureAnimation(
         apertureState = ApertureState.CLOSED
         currentMessage = "正在读取光影信息..."
         // 给视觉动画一点点起始缓冲（光圈闭合到开始旋转），这是必要的 UI 过渡
-        delay(200)
+        delay(AnimationSpecs.ApertureTransitionMillis)
         progress = 5f
 
         // Phase 2: 旋转状态 - 准备分析（与图像解码并发）
@@ -101,7 +102,7 @@ fun HasselbladApertureAnimation(
         // 旋转动画（光圈快速转动）
         repeat(8) {
             rotationAngle += 22.5f
-            delay(40)
+            delay(AnimationSpecs.ApertureBladeRotateMillis)
         }
         progress = 15f
         val rotateDurationMs = (System.nanoTime() - rotateStart) / 1_000_000
@@ -227,10 +228,10 @@ fun HasselbladApertureAnimation(
         progress = 100f
         currentMessage = "哈苏之眼已睁开 · 人脸数 $faceCount"
         // 极短视觉过渡，让最后一帧动画完整呈现
-        delay(200)
+        delay(AnimationSpecs.ApertureTransitionMillis)
 
         // 总耗时（包含真实分析与必要的视觉过渡）
-        val totalMs = colorDuration + rotateDurationMs + 200 + 200
+        val totalMs = colorDuration + rotateDurationMs + AnimationSpecs.ApertureTransitionMillis + AnimationSpecs.ApertureTransitionMillis
         android.util.Log.d(
             "HasselbladAperture",
             "analysis total=${totalMs}ms faceCount=$faceCount scene=${profile.id}"
@@ -293,8 +294,8 @@ fun HasselbladApertureAnimation(
         // 当前状态文字
         Text(
             text = currentMessage,
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 14.sp
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.7f)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -332,13 +333,13 @@ fun HasselbladApertureAnimation(
         ) {
             Text(
                 text = "分析进度",
-                color = Color.White.copy(alpha = 0.4f),
-                fontSize = 12.sp
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.4f)
             )
             Text(
                 text = "${progress.toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
                 color = HasselbladOrange,
-                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -360,8 +361,8 @@ fun HasselbladApertureAnimation(
         // 底部品牌标识
         Text(
             text = "HNCS · HASSELBLAD NATURAL COLOR SOLUTION",
+            style = MaterialTheme.typography.labelSmall,
             color = Color.White.copy(alpha = 0.3f),
-            fontSize = 10.sp,
             letterSpacing = 2.sp
         )
     }
@@ -491,16 +492,16 @@ private fun AnalysisStepItem(step: AnalysisStep) {
         // 步骤名称
         Text(
             text = step.name,
-            color = textColor,
-            fontSize = 14.sp
+            style = MaterialTheme.typography.bodyMedium,
+            color = textColor
         )
 
         // 完成标记
         if (step.status == AnalysisStatus.COMPLETED) {
             Text(
                 text = "完成",
-                color = HasselbladOrange.copy(alpha = 0.6f),
-                fontSize = 12.sp
+                style = MaterialTheme.typography.labelSmall,
+                color = HasselbladOrange.copy(alpha = 0.6f)
             )
         }
     }

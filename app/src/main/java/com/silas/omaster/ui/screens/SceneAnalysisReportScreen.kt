@@ -291,8 +291,8 @@ fun SceneAnalysisReportScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "正在分析你的拍摄数据...",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -386,8 +386,8 @@ private fun TimeRangeChip(
     ) {
         Text(
             text = label,
+            style = MaterialTheme.typography.labelSmall,
             color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
-            fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
@@ -459,10 +459,10 @@ private fun OverviewCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = HasselbladOrange, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(label, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.4f))
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(value, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(value, style = MaterialTheme.typography.displaySmall, color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -479,7 +479,7 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("拍摄偏好", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text("拍摄偏好", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Medium)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -487,8 +487,8 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("最爱场景", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                Text(habits.favoriteScene, color = Color.White, fontSize = 14.sp)
+                Text("最爱场景", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.4f))
+                Text(habits.favoriteScene, style = MaterialTheme.typography.bodyMedium, color = Color.White)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -497,8 +497,8 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("最爱胶片", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                Text(habits.favoriteFilm, color = Color.White, fontSize = 14.sp)
+                Text("最爱胶片", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.4f))
+                Text(habits.favoriteFilm, style = MaterialTheme.typography.bodyMedium, color = Color.White)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -507,8 +507,8 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("最后拍摄", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                Text(habits.lastShootDate, color = Color.White, fontSize = 14.sp)
+                Text("最后拍摄", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.4f))
+                Text(habits.lastShootDate, style = MaterialTheme.typography.bodyMedium, color = Color.White)
             }
         }
     }
@@ -529,7 +529,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Camera, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("场景分布", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("场景分布", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -542,8 +542,8 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                     ) {
                         Text(
                             scene.name,
+                            style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
                             modifier = Modifier.width(48.dp)
                         )
 
@@ -564,8 +564,8 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
 
                             Text(
                                 "${scene.count} (${scene.percentage}%)",
+                                style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
@@ -576,7 +576,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             } else {
-                Text("暂无场景数据", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+                Text("暂无场景数据", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.4f))
             }
         }
     }

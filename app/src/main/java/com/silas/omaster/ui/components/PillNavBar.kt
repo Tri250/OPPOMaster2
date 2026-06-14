@@ -5,9 +5,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import com.silas.omaster.ui.animation.AnimationSpecs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -79,11 +79,11 @@ fun PillNavBar(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it },
-            animationSpec = tween(durationMillis = 300)
+            animationSpec = AnimationSpecs.SlideSpec
         ),
         exit = slideOutVertically(
             targetOffsetY = { it },
-            animationSpec = tween(durationMillis = 300)
+            animationSpec = AnimationSpecs.SlideSpec
         ),
         modifier = modifier
     ) {

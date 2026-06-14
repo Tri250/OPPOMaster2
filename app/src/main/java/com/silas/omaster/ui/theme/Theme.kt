@@ -46,32 +46,33 @@ private fun generateDarkColorScheme(primaryColor: Color) = darkColorScheme(
 )
 
 /**
- * 生成浅色主题配色方案（备用）
+ * 生成浅色主题配色方案
+ * 完善的浅色模式配色，与深色模式对齐
  */
 private fun generateLightColorScheme(primaryColor: Color) = lightColorScheme(
     primary = primaryColor,
-    onPrimary = OffWhite,
-    primaryContainer = primaryColor.copy(alpha = 0.6f),
-    onPrimaryContainer = PureBlack,
-    secondary = DarkGray,
-    onSecondary = OffWhite,
-    secondaryContainer = LightGray,
-    onSecondaryContainer = PureBlack,
-    tertiary = primaryColor.copy(alpha = 0.8f),
-    onTertiary = OffWhite,
-    tertiaryContainer = OffWhite,
-    onTertiaryContainer = PureBlack,
-    background = OffWhite,
-    onBackground = PureBlack,
-    surface = Color.White,
-    onSurface = PureBlack,
-    surfaceVariant = LightGray,
-    onSurfaceVariant = DarkGray,
+    onPrimary = Color.White,
+    primaryContainer = primaryColor.copy(alpha = 0.15f),
+    onPrimaryContainer = LightOnBackground,
+    secondary = MediumGray,
+    onSecondary = Color.White,
+    secondaryContainer = LightSurfaceVariant,
+    onSecondaryContainer = LightOnBackground,
+    tertiary = primaryColor.copy(alpha = 0.3f),
+    onTertiary = Color.White,
+    tertiaryContainer = primaryColor.copy(alpha = 0.1f),
+    onTertiaryContainer = LightOnBackground,
+    background = LightBackground,
+    onBackground = LightOnBackground,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = MediumGray,
     error = ErrorRed,
     onError = Color.White,
-    outline = MediumGray,
-    outlineVariant = LightGray,
-    scrim = PureBlack.copy(alpha = 0.5f)
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+    scrim = PureBlack.copy(alpha = 0.3f)
 )
 
 /**
