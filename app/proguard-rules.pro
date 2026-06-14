@@ -255,13 +255,12 @@
 # 积极合并接口
 -mergeinterfacesaggressively
 
-# 移除未使用的代码
--shrink
--optimize
-
 # 不警告缺失的类
 -dontwarn java.lang.invoke.**
 -dontwarn sun.misc.**
+# Umeng 公共库 stack map table 警告（兼容旧版本 R8）
+-dontwarn com.umeng.commonsdk.**
+-dontwarn com.umeng.common.**
 
 # ========================================
 # 混淆配置
