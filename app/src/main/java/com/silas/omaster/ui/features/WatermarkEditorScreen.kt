@@ -34,7 +34,7 @@ import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.*
 import java.io.*
@@ -778,7 +778,7 @@ fun WatermarkEditorScreen(
                 ) {
                     Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("重置默认", fontSize = 12.sp)
+                    Text("重置默认", style = MaterialTheme.typography.labelMedium)
                 }
 
                 // 批量应用
@@ -796,7 +796,7 @@ fun WatermarkEditorScreen(
                 ) {
                     Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("批量应用", fontSize = 12.sp)
+                    Text("批量应用", style = MaterialTheme.typography.labelMedium)
                 }
 
                 // 保存图片
@@ -811,7 +811,7 @@ fun WatermarkEditorScreen(
                 ) {
                     Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("保存图片", fontSize = 12.sp)
+                    Text("保存图片", style = MaterialTheme.typography.labelMedium)
                 }
             }
 
@@ -896,7 +896,7 @@ private fun SearchBar(
             onValueChange = onQueryChange,
             textStyle = TextStyle(
                 color = Color.White,
-                fontSize = 14.sp
+                fontSize = MaterialTheme.typography.bodyMedium.fontSize
             ),
             singleLine = true,
             modifier = Modifier
@@ -907,7 +907,7 @@ private fun SearchBar(
                     Text(
                         "搜索水印模板...",
                         color = Color.White.copy(alpha = 0.4f),
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 innerTextField()
@@ -999,11 +999,10 @@ private fun WatermarkTemplateCard(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = template.name,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.7f),
-            maxLines = 1,
-            fontSize = 10.sp
+            maxLines = 1
         )
     }
 }
@@ -1115,15 +1114,15 @@ private fun CustomTextInput(
             contentAlignment = Alignment.CenterStart
         ) {
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                textStyle = TextStyle(
-                    color = Color.White,
-                    fontSize = 14.sp
-                ),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+                    value = value,
+                    onValueChange = onValueChange,
+                    textStyle = TextStyle(
+                        color = Color.White,
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
         }
     }
 }
@@ -1291,7 +1290,7 @@ private fun WatermarkElementRow(
                         onValueChange = onTextChange,
                         textStyle = TextStyle(
                             color = Color.White,
-                            fontSize = 12.sp
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize
                         ),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()

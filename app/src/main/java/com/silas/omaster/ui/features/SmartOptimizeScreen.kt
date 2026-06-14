@@ -74,7 +74,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -361,7 +360,7 @@ fun SmartOptimizeScreen(
                     Text(
                         text = if (previewMode == "after") "优化后" else "原图",
                         color = if (previewMode == "after") HasselbladOrange else Color.White,
-                        fontSize = 11.sp
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             } ?: run {

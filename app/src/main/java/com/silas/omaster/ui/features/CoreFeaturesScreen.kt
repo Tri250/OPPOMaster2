@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -67,7 +68,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
@@ -268,17 +268,15 @@ fun CoreFeaturesScreen(
             Column(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
                 Text(
                     text = "核心功能",
-                    fontSize = 24.sp,
+                    style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = 1.sp
+                    color = Color.White
                 )
                 Text(
                     text = "点击进入功能操作界面",
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(top = 2.dp),
-                    letterSpacing = 0.5.sp
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
         }
@@ -460,13 +458,13 @@ private fun SectionHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
             )
             Text(
                 text = description,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.labelMedium,
                 color = Color.White.copy(alpha = 0.5f)
             )
         }
@@ -480,7 +478,7 @@ private fun SectionHeader(
         ) {
             Text(
                 text = count.toString(),
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.labelMedium,
                 color = Color.White.copy(alpha = 0.5f)
             )
         }
@@ -601,17 +599,15 @@ private fun FeatureCard(
                 // 标题和副标题
                 Text(
                     text = feature.title,
-                    fontSize = 17.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f),
-                    letterSpacing = 0.3.sp
+                    color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f)
                 )
                 Text(
                     text = feature.subtitle,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     color = if (isEnabled) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f),
-                    modifier = Modifier.padding(top = 2.dp),
-                    letterSpacing = 0.2.sp
+                    modifier = Modifier.padding(top = 2.dp)
                 )
                 
                 // 描述和标签 - 同步Web端样式
@@ -628,7 +624,7 @@ private fun FeatureCard(
                     // 描述文字
                     Text(
                         text = feature.description.desc,
-                        fontSize = 10.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.5f)
                     )
                     
@@ -648,7 +644,7 @@ private fun FeatureCard(
                                 ) {
                                     Text(
                                         text = tip,
-                                        fontSize = 10.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = Color.White.copy(alpha = 0.7f)
                                     )
                                 }

@@ -442,7 +442,7 @@ private fun CameraEntryScreen(
                     Text(
                         "相机预览",
                         color = Color.White.copy(alpha = 0.4f),
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -535,7 +535,7 @@ private fun CameraEntryScreen(
                             Text(
                                 "拍摄后自动识别场景并匹配最佳参数",
                                 color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 12.sp
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
@@ -555,7 +555,7 @@ private fun CameraEntryScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("50+ 精细场景识别", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                            Text("50+ 精细场景识别", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
                         }
                         
                         // 一键参数优化
@@ -567,7 +567,7 @@ private fun CameraEntryScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("一键参数优化", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                            Text("一键参数优化", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -745,7 +745,7 @@ private fun AnalyzingProgressScreen(
                         Text(
                             step.name,
                             color = Color.White,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )
                         
@@ -780,7 +780,7 @@ private fun AnalyzingProgressScreen(
         Text(
             "识别颜色 · 分析光线 · 匹配胶片",
             color = Color.White.copy(alpha = 0.4f),
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center
         )
     }
@@ -908,7 +908,7 @@ private fun HasselbladCompareSlider(
                         tint = Color.White.copy(alpha = 0.3f),
                         modifier = Modifier.size(48.dp)
                     )
-                    Text("处理后", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Text("处理后", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
                 }
             }
 
@@ -929,7 +929,7 @@ private fun HasselbladCompareSlider(
                         tint = Color.White.copy(alpha = 0.2f),
                         modifier = Modifier.size(48.dp)
                     )
-                    Text("原图", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                    Text("原图", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.labelSmall)
                 }
             }
 
@@ -974,8 +974,8 @@ private fun HasselbladCompareSlider(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Before", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-            Text("After", color = HasselbladOrange, fontSize = 11.sp)
+            Text("Before", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
+            Text("After", color = HasselbladOrange, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -998,7 +998,7 @@ private fun RecognitionResultCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("哈苏大师识别", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("哈苏大师识别", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1010,14 +1010,14 @@ private fun RecognitionResultCard(
                 Text(
                     result.name,
                     color = Color.White,
-                    fontSize = 18.sp,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "· 置信度 ${(result.confidence * 100).toInt()}%",
                     color = HasselbladOrange,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -1045,7 +1045,7 @@ private fun RecognitionResultCard(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-            Text("已自动匹配最佳参数", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text("已自动匹配最佳参数", color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -1068,7 +1068,7 @@ private fun HasselbladParamsDisplay(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Palette, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("哈苏大师参数", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("哈苏大师参数", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1092,11 +1092,11 @@ private fun HasselbladParamsDisplay(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(name, color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                            Text(name, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                             Text(
                                 params.formatParamValue(value),
                                 color = HasselbladOrange,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -1109,8 +1109,8 @@ private fun HasselbladParamsDisplay(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("暗角", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-                            Text(params.formatParamValue(params.vignette), color = HasselbladOrange, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("暗角", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                            Text(params.formatParamValue(params.vignette), color = HasselbladOrange, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1157,11 +1157,11 @@ private fun ParamItem(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(name, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text(name, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
             Text(
                 if (value >= 0) "+$value" else "$value",
                 color = Color.White,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -1185,7 +1185,7 @@ private fun MasterTipsCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lightbulb, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("大师建议", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("大师建议", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1195,13 +1195,13 @@ private fun MasterTipsCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top
                 ) {
-                    Text("•", color = HasselbladOrange, fontSize = 12.sp)
+                    Text("•", color = HasselbladOrange, style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         tip,
                         color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
+                        style = MaterialTheme.typography.bodySmall,
+                        lineHeight = MaterialTheme.typography.bodySmall.fontSize * 1.5
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1221,7 +1221,7 @@ private fun RecognitionHistoryStrip(
     val haptic = LocalHapticFeedback.current
 
     Column {
-        Text("最近识别", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+        Text("最近识别", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
         Spacer(modifier = Modifier.height(8.dp))
         
         LazyRow(
@@ -1286,7 +1286,7 @@ private fun BottomActionBar(
                 }
             ) {
                 Icon(Icons.Default.Refresh, null, tint = Color.White.copy(alpha = 0.6f))
-                Text("重拍", color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp)
+                Text("重拍", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
             }
 
             // 一键哈苏优化按钮
@@ -1326,7 +1326,7 @@ private fun BottomActionBar(
                 Text(
                     if (saveSuccess) "已保存" else "保存配方",
                     color = if (saveSuccess) SuccessGreen else Color.White.copy(alpha = 0.6f),
-                    fontSize = 10.sp
+                    style = MaterialTheme.typography.labelSmall
                 )
             }
         }
