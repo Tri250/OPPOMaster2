@@ -45,11 +45,13 @@ build/
 captures/
 output.json
 
-# APK/AAB
+# APK/AAB (build outputs)
 *.apk
 *.aab
 *.ap_
 *.dex
+# 但允许 releases/ 目录中的 APK（用于分发）
+!releases/*.apk
 
 # 本地配置
 local.properties
