@@ -721,7 +721,7 @@ private fun LUTDetailDialog(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(DarkGray)
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text("#$tag", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
@@ -733,7 +733,7 @@ private fun LUTDetailDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         DetailInfoRow("格式", ".${lut.format.uppercase()}")

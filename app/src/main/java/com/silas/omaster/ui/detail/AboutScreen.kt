@@ -452,7 +452,7 @@ private fun AppInfoCard(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(DarkGray)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -767,7 +767,7 @@ private fun SettingsListCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.05f)
+            containerColor = DarkGray.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -858,7 +858,7 @@ private fun SettingsListItem(
     if (showDivider) {
         HorizontalDivider(
             modifier = Modifier.padding(start = 68.dp),
-            color = Color.White.copy(alpha = 0.05f)
+            color = DarkGray
         )
     }
 }

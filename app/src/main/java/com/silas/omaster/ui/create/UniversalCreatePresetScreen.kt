@@ -29,6 +29,8 @@ import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.PureBlack
 
 import java.io.File
 import kotlin.math.roundToInt
@@ -60,6 +62,7 @@ fun UniversalCreatePresetScreen(
     var editingItem by remember { mutableStateOf<PresetItem?>(null) }
 
     Scaffold(
+        containerColor = PureBlack,
         topBar = {
             TopAppBar(
                 title = { Text(if (uiState.isEditMode) stringResource(R.string.edit_preset_title) else stringResource(R.string.create_preset_title)) },
@@ -104,7 +107,7 @@ fun UniversalCreatePresetScreen(
             // 1. 基本信息
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(stringResource(R.string.section_basic), style = MaterialTheme.typography.titleMedium)
@@ -299,7 +302,7 @@ fun SectionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

@@ -630,7 +630,7 @@ private fun CameraEntryScreen(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(DarkGray)
                 ) {
                     Icon(Icons.Outlined.Image, null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
@@ -715,7 +715,7 @@ private fun AnalyzingProgressScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Row(
                         modifier = Modifier
@@ -755,7 +755,7 @@ private fun AnalyzingProgressScreen(
                                 .width(80.dp)
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(Color.White.copy(alpha = 0.1f))
+                                .background(DarkGray)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -883,7 +883,7 @@ private fun HasselbladCompareSlider(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Box(
             modifier = Modifier
@@ -990,7 +990,7 @@ private fun RecognitionResultCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -1061,7 +1061,7 @@ private fun HasselbladParamsDisplay(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -1149,7 +1149,7 @@ private fun ParamItem(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Row(
             modifier = Modifier
@@ -1178,7 +1178,7 @@ private fun MasterTipsCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

@@ -46,6 +46,7 @@ import coil.request.ImageRequest
 import com.silas.omaster.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,7 +65,7 @@ fun PresetStatsCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Row(
             modifier = Modifier
@@ -226,7 +227,7 @@ fun UserCommentsCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -257,7 +258,7 @@ fun UserCommentsCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color.White.copy(alpha = 0.05f))
+                            .background(DarkGray)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -372,7 +373,7 @@ private fun RelatedPresetItem(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         onClick = onClick
     ) {
         Column(
@@ -491,7 +492,7 @@ fun FavoriteButton(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f)
+    val backgroundColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else DarkGray
     val textColor = if (isFavorite) Color.Red else Color.White.copy(alpha = 0.8f)
     val borderColor = if (isFavorite) Color.Red.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f)
     

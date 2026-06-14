@@ -33,6 +33,8 @@ import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.PolicyItem
 import com.silas.omaster.ui.components.PolicySection
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.PureBlack
+import androidx.compose.foundation.background
 
 @Composable
 fun PrivacyPolicyScreen(
@@ -41,7 +43,9 @@ fun PrivacyPolicyScreen(
     val context = LocalContext.current
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PureBlack)
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.privacy_title),

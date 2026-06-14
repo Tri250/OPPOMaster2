@@ -381,7 +381,7 @@ private fun TimeRangeChip(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.05f)
+            containerColor = if (isSelected) HasselbladOrange else DarkGray
         )
     ) {
         Text(
@@ -449,7 +449,7 @@ private fun OverviewCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(
@@ -475,7 +475,7 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -522,7 +522,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -552,7 +552,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                                 .weight(1f)
                                 .height(24.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(DarkGray)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -590,7 +590,7 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -627,7 +627,7 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
                                 .weight(1f)
                                 .height(16.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(DarkGray)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -663,7 +663,7 @@ private fun MasterTipsCard(tips: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = DarkGray),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
