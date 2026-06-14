@@ -106,10 +106,10 @@ android {
             isEnable = true
             // 重置当前支持的 ABI 列表（如果不调用 reset()，include 会追加到默认列表）
             reset()
-            // 指定需要拆分的 ABI 类型，可根据项目实际支持的 ABI 调整
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            // 生成一个包含所有 ABI 的通用 APK（用于不支持拆分的场景）
-            isUniversalApk = true
+            // 沙箱环境内存限制，仅构建 arm64-v8a
+            include("arm64-v8a")
+            // 不生成通用 APK 以减少内存占用
+            isUniversalApk = false
         }
     }
 
@@ -149,15 +149,9 @@ android {
             isShrinkResources = false
         }
         release {
-            // 启用 R8 代码混淆（完整模式）
-            isMinifyEnabled = true
-            // 启用资源压缩
-            isShrinkResources = true
-            // 启用 R8 完整模式（更激进的优化，APK 更小、运行更快）
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // 沙箱环境内存不足，临时关闭 R8 混淆
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
             // 发布前关闭调试信息
             isDebuggable = false
