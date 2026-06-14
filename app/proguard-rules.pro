@@ -1,18 +1,8 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
 # ========================================
 # 基础配置
 # ========================================
-# 保留调试信息（便于排查崩溃）
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
-
-# 保留注解和签名（Gson/序列化需要）
 -keepattributes Signature
 -keepattributes *Annotation*
 -keepattributes InnerClasses
@@ -22,13 +12,14 @@
 # Kotlin 基础规则
 # ========================================
 -keep class kotlin.Metadata { *; }
--keep class kotlin.** { *; }
--keepclassmembers class kotlin.** { *; }
+-keepclassmembers class kotlin.Metadata { *; }
 -dontwarn kotlin.**
 
-# Kotlin 协程
--keep class kotlinx.coroutines.** { *; }
--keepclassmembers class kotlinx.coroutines.** { *; }
+# Kotlin 协程 — 收敛到字段级别
+-keepclassmembers class kotlinx.coroutines.** {
+    public <methods>;
+    public <fields>;
+}
 -keep class kotlin.coroutines.Continuation { *; }
 -keep class kotlin.coroutines.CoroutineContext { *; }
 -dontwarn kotlinx.coroutines.**
@@ -46,31 +37,25 @@
 # Jetpack Compose 相关规则
 # ========================================
 -keep class androidx.compose.** { *; }
--keep class androidx.compose.material.** { *; }
--keep class androidx.compose.material3.** { *; }
--keep class androidx.compose.foundation.** { *; }
--keep class androidx.compose.runtime.** { *; }
--keep class androidx.compose.ui.** { *; }
 -dontwarn androidx.compose.**
 
 # Composable 函数
--keep class **$$Composable { *; }
--keep class **$Composable { *; }
--keep class **$composer { *; }
--keep class **$Composer { *; }
 -keepclassmembers class * {
     @androidx.compose.runtime.Composable <methods>;
 }
+-keep class **$$Composable { *; }
+-keep class **$composer { *; }
+-keep class **$Composer { *; }
 -keepclassmembers class **$composer { *; }
 -keepclassmembers class **$Composer { *; }
--dontwarn **$$Composable
--dontwarn **$Composable
 
 # ========================================
 # AndroidX 基础库
 # ========================================
--keep class androidx.lifecycle.** { *; }
--keep class * extends androidx.lifecycle.ViewModel { *; }
+-keep class * extends androidx.lifecycle.ViewModel {
+    public <init>(...);
+    public <methods>;
+}
 -keep class androidx.navigation.** { *; }
 -keepclassmembers class androidx.navigation.** { *; }
 -keep class **$NavArgs { *; }
@@ -92,14 +77,12 @@
 # ========================================
 # Parcelable/Serializable 规则
 # ========================================
--keep class * implements android.os.Parcelable { *; }
 -keepclassmembers class * implements android.os.Parcelable {
     public static final ** CREATOR;
 }
 -keep class **$$Parcelable { *; }
 -keepclassmembers class **$$Parcelable { *; }
 
--keep class * implements java.io.Serializable { *; }
 -keepclassmembers class * implements java.io.Serializable {
     static final long serialVersionUID;
     private static final java.io.ObjectStreamField[] serialPersistentFields;
@@ -113,20 +96,19 @@
 # ========================================
 # TensorFlow Lite 相关规则
 # ========================================
--keep class org.tensorflow.** { *; }
--keep class org.tensorflow.lite.** { *; }
--keep class org.tensorflow.lite.support.** { *; }
--keep class org.tensorflow.lite.gpu.** { *; }
+-keep class org.tensorflow.lite.Interpreter { *; }
 -keepclassmembers class org.tensorflow.lite.Interpreter { *; }
+-keep class org.tensorflow.lite.support.common.FileUtil { *; }
 -keepclassmembers class org.tensorflow.lite.support.common.FileUtil { *; }
+-keep class org.tensorflow.lite.support.common.TensorOperator { *; }
 -keepclassmembers class org.tensorflow.lite.support.common.TensorOperator { *; }
+-keep class org.tensorflow.lite.gpu.** { *; }
 -dontwarn org.tensorflow.**
 
 # ========================================
 # ML Kit 人脸检测相关规则
 # ========================================
 -keep class com.google.mlkit.** { *; }
--keep class com.google.android.gms.internal.** { *; }
 -dontwarn com.google.mlkit.**
 -dontwarn com.google.android.gms.internal.**
 
@@ -135,8 +117,6 @@
 # ========================================
 -keep class io.ktor.** { *; }
 -keepclassmembers class io.ktor.** { *; }
--keep class kotlinx.serialization.json.** { *; }
--keepclassmembers class kotlinx.serialization.json.** { *; }
 -dontwarn io.ktor.**
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean
@@ -165,123 +145,89 @@
 # 项目特定规则（精细化）
 # ========================================
 
-# ===== 数据模型类（必须保留，用于序列化） =====
-# 保留所有 model 包下的类（JSON 序列化需要）
--keep class com.silas.omaster.model.** { *; }
--keepclassmembers class com.silas.omaster.model.** { *; }
+# ===== 数据模型类（JSON 序列化需要保留字段） =====
+-keep class com.silas.omaster.model.** {
+    <fields>;
+    <init>(...);
+}
 
-# ===== 数据仓库和本地存储（SharedPreferences 序列化） =====
-# 只保留序列化相关的类，其他类可以优化
--keep class com.silas.omaster.data.repository.Preset { *; }
--keep class com.silas.omaster.data.repository.PresetCategory { *; }
+# ===== 数据仓库和本地存储 =====
+-keep class com.silas.omaster.data.repository.Preset { <fields>; }
+-keep class com.silas.omaster.data.repository.PresetCategory { <fields>; }
 -keep class com.silas.omaster.data.local.SettingsManager { *; }
--keepclassmembers class com.silas.omaster.data.local.SettingsManager { *; }
--keep class com.silas.omaster.data.local.CustomPresetManager { *; }
--keepclassmembers class com.silas.omaster.data.local.CustomPresetManager { *; }
--keep class com.silas.omaster.data.local.RecipeHistoryManager { *; }
--keepclassmembers class com.silas.omaster.data.local.RecipeHistoryManager { *; }
+-keep class com.silas.omaster.data.local.CustomPresetManager { <fields>; <init>(...); }
+-keep class com.silas.omaster.data.local.RecipeHistoryManager { <fields>; <init>(...); }
 
-# ===== AI 和 TFLite 相关（模型推理需要） =====
-# 只保留与 TFLite 交互的核心类
--keep class com.silas.omaster.ai.AIEngine { *; }
--keepclassmembers class com.silas.omaster.ai.AIEngine { *; }
--keep class com.silas.omaster.ai.MasterInsightEngine { *; }
--keepclassmembers class com.silas.omaster.ai.MasterInsightEngine { *; }
--keep class com.silas.omaster.ai.SceneClassifier { *; }
--keepclassmembers class com.silas.omaster.ai.SceneClassifier { *; }
--keep class com.silas.omaster.ai.QualityAnalyzer { *; }
--keepclassmembers class com.silas.omaster.ai.QualityAnalyzer { *; }
--keep class com.silas.omaster.ai.ParamPredictor { *; }
--keepclassmembers class com.silas.omaster.ai.ParamPredictor { *; }
--keep class com.silas.omaster.tflite.TFLiteEngine { *; }
--keepclassmembers class com.silas.omaster.tflite.TFLiteEngine { *; }
+# ===== AI 和 TFLite 相关 =====
+-keep class com.silas.omaster.ai.MasterInsightEngine { <fields>; <init>(...); }
+-keep class com.silas.omaster.ai.MasterInferenceEngine { <fields>; <init>(...); }
+-keep class com.silas.omaster.ai.SceneRecognitionManager { <fields>; <init>(...); }
+-keep class com.silas.omaster.ai.AIFineTuneManager { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.TFLiteEngine { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.ImageQualityAnalyzer { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.SceneClassifier { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.ParamPredictor { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.ModelDownloadManager { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.ModelLoader { <fields>; <init>(...); }
+-keep class com.silas.omaster.tflite.InferenceResult { <fields>; }
+-keep class com.silas.omaster.tflite.models.** { <fields>; }
 
-# ===== 水印系统（JSON 配置序列化） =====
-# 只保留配置类，其他类可以优化
--keep class com.silas.omaster.watermark.WatermarkConfig { *; }
--keep class com.silas.omaster.watermark.WatermarkLayer { *; }
--keep class com.silas.omaster.watermark.WatermarkTemplate { *; }
--keep class com.silas.omaster.watermark.HasselbladMasterTemplates { *; }
--keepclassmembers class com.silas.omaster.watermark.HasselbladMasterTemplates { *; }
--keep class com.silas.omaster.watermark.ExifWatermarkProvider { *; }
--keepclassmembers class com.silas.omaster.watermark.ExifWatermarkProvider { *; }
+# ===== 水印系统 =====
+-keep class com.silas.omaster.watermark.WatermarkConfig { <fields>; }
+-keep class com.silas.omaster.watermark.WatermarkLayer { <fields>; }
+-keep class com.silas.omaster.watermark.WatermarkTemplate { <fields>; }
+-keep class com.silas.omaster.watermark.HasselbladMasterTemplates { <fields>; <init>(...); }
+-keep class com.silas.omaster.watermark.ExifWatermarkProvider { <fields>; <init>(...); }
 
-# ===== 云同步（网络请求序列化） =====
--keep class com.silas.omaster.cloud.CloudSyncManager { *; }
--keepclassmembers class com.silas.omaster.cloud.CloudSyncManager { *; }
--keep class com.silas.omaster.cloud.CloudPreset { *; }
--keep class com.silas.omaster.cloud.SyncState { *; }
+# ===== 云同步 =====
+-keep class com.silas.omaster.cloud.CloudSyncManager { <fields>; <init>(...); }
+-keep class com.silas.omaster.cloud.CloudPreset { <fields>; }
+-keep class com.silas.omaster.cloud.SyncState { <fields>; }
 
-# ===== GPU 渲染器（OpenGL ES 需要） =====
--keep class com.silas.omaster.renderer.GPURenderManager { *; }
--keepclassmembers class com.silas.omaster.renderer.GPURenderManager { *; }
--keep class com.silas.omaster.renderer.RenderConfig { *; }
+# ===== GPU 渲染器 =====
+-keep class com.silas.omaster.renderer.GPURenderManager { <fields>; <init>(...); }
+-keep class com.silas.omaster.renderer.ShaderProgram { <fields>; <init>(...); }
+-keep class com.silas.omaster.renderer.ImageShaderRenderer { <fields>; <init>(...); }
+-keep class com.silas.omaster.renderer.RenderParameters { <fields>; }
 
-# ===== 参数系统（JSON 序列化） =====
--keep class com.silas.omaster.param.RenderParams { *; }
--keep class com.silas.omaster.param.AdjustChannel { *; }
+# ===== 参数系统 =====
+-keep class com.silas.omaster.param.RenderParams { <fields>; }
+-keep class com.silas.omaster.param.AdjustChannel { <fields>; }
+-keep class com.silas.omaster.param.ParamAdjustmentManager { <fields>; <init>(...); }
 
-# ===== 场景识别（枚举和配置） =====
--keep class com.silas.omaster.scene.SceneType { *; }
--keep class com.silas.omaster.scene.SceneConfig { *; }
+# ===== 工具类 =====
+-keep class com.silas.omaster.util.JsonUtil { <methods>; }
+-keep class com.silas.omaster.util.SecurityCrypto { <methods>; <init>(...); }
 
-# ===== 工具类（反射使用） =====
--keep class com.silas.omaster.util.JsonUtil { *; }
--keepclassmembers class com.silas.omaster.util.JsonUtil { *; }
--keep class com.silas.omaster.util.SecurityCrypto { *; }
--keepclassmembers class com.silas.omaster.util.SecurityCrypto { *; }
-
-# ===== UI 组件（允许优化，只保留必要的） =====
-# Compose UI 组件会被 Compose 规则自动保留
-# 这里只保留 ViewModel 和导航相关的类
+# ===== ViewModel =====
 -keep class com.silas.omaster.ui.home.HomeViewModel { *; }
--keepclassmembers class com.silas.omaster.ui.home.HomeViewModel { *; }
 -keep class com.silas.omaster.ui.detail.DetailViewModel { *; }
--keepclassmembers class com.silas.omaster.ui.detail.DetailViewModel { *; }
+-keep class com.silas.omaster.ui.create.UniversalCreatePresetViewModel { *; }
 
-# ===== Application 和 Activity（AndroidManifest 引用） =====
+# ===== Application 和 Activity =====
 -keep class com.silas.omaster.OMasterApplication { *; }
 -keep class com.silas.omaster.MainActivity { *; }
 
 # ========================================
 # 优化配置
 # ========================================
-# 优化次数（5次通常足够）
 -optimizationpasses 5
-
-# 允许访问修饰符优化
 -allowaccessmodification
-
-# 积极合并接口
 -mergeinterfacesaggressively
-
-# 移除未使用的代码
 -shrink
 -optimize
-
-# 不警告缺失的类
--dontwarn java.lang.invoke.**
--dontwarn sun.misc.**
 
 # ========================================
 # 混淆配置
 # ========================================
-# 使用应用优化
 -useuniqueclassmembernames
 
-# 保留外部依赖的类名（避免反射问题）
 -keepclassmembernames class * {
     java.lang.Class class$(java.lang.String);
     java.lang.Class class$(java.lang.String, boolean);
 }
 
 # ========================================
-# 调试配置（发布时可关闭）
+# 精确 dontwarn（替代 -dontwarn **.**）
 # ========================================
-# 打印详细信息（调试用，发布时注释掉）
-# -printseeds
-# -printusage
-# -printmapping
-
-# 忽略警告（谨慎使用）
--dontwarn **.**
+-dontwarn java.lang.invoke.**
