@@ -35,9 +35,9 @@ build/
 !**/src/test/**/build/
 
 # Local Maven 仓库
-# 注：此目录的依赖必须提交到版本控制,以保证离线编译
-# 但 .jar/.aar 文件不受全局 *.jar 规则影响(下方有 !local-maven-repo 例外)
-!local-maven-repo/**/build/
+# 大型二进制依赖（5.9MB+），不应提交到版本控制
+# CI / 本地构建时通过 download-deps.sh 脚本下载
+local-maven-repo/
 
 # Android Studio
 *.iml
@@ -96,9 +96,6 @@ app/src/main/assets/models/*.h5
 # 其他
 # =====================
 *.class
-!local-maven-repo/**/*.jar
-!local-maven-repo/**/*.aar
-!local-maven-repo/**/*.pom
 *.war
 *.nar
 *.ear
@@ -114,3 +111,6 @@ app/src/main/assets/models/*.h5
 .env
 .env.local
 .env.*.local
+
+# 开发过程记录（不应提交到版本控制）
+WORKTREE_RECORD.md

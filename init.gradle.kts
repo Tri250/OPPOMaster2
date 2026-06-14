@@ -1,10 +1,10 @@
-// Gradle 初始化脚本 - 沙箱环境代理 + 国内镜像全局配置
+// Gradle 初始化脚本 - 国内镜像全局配置（可选）
 // 使用方法: ./gradlew -I init.gradle.kts <task>
 //
-// 沙箱网络环境要点：
-//   1. 直连外网全部超时（被沙箱网络策略阻断）
-//   2. 必须通过 127.0.0.1:18080 HTTP 代理访问外网
-//   3. 代理可达: mirrors.cloud.tencent.com / repo1.maven.org / plugins.gradle.org / dl.google.com / maven.aliyun.com
+// 网络环境要点：
+//   1. 默认配置走国内镜像（阿里云 / 腾讯云），不依赖外网代理
+//   2. 如需代理，请在用户级 ~/.gradle/gradle.properties 中配置 systemProp.http.proxyHost
+//   3. 主仓库 gradle.properties 不应包含代理配置（避免影响其他开发者/CI）
 
 allprojects {
     buildscript {
@@ -58,8 +58,6 @@ allprojects {
 }
 
 // 打印配置信息
-println("✅ Gradle 沙箱环境代理镜像配置已加载")
-println("   - HTTP 代理: 127.0.0.1:18080 (通过 gradle.properties 配置)")
-println("   - 阿里云镜像: 已启用 (走代理实测 10-20ms)")
-println("   - 腾讯云镜像: 已启用 (走代理实测 200-400ms)")
-println("   - 官方仓库 (google/mavenCentral/gradlePluginPortal): 已启用")
+println("✅ Gradle 国内镜像配置已加载（阿里云 + 腾讯云 + Google + Central）")
+println("   - 如需代理，请在用户级 ~/.gradle/gradle.properties 配置 systemProp.http.proxyHost")
+println("   - 主仓库 gradle.properties 已零代理硬编码（不影响其他开发者/CI）")

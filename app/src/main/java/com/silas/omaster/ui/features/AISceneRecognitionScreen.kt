@@ -237,6 +237,7 @@ fun AISceneRecognitionScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 顶部导航栏
         TopAppBar(

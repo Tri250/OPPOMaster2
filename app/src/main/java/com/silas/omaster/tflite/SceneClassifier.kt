@@ -195,12 +195,18 @@ class SceneClassifier(private val context: Context) {
      * 获取候选场景列表
      */
     private fun getTopCandidates(probabilities: FloatArray, topN: Int): List<SceneCandidate> {
+        // 边界检查：空数组或无效topN
+        if (probabilities.isEmpty() || topN <= 0) {
+            return emptyList()
+        }
+
         // 创建索引-概率对
         val indexedProbs = probabilities.indices.map { Pair(it, probabilities[it]) }
-        
-        // 按概率降序排序，取前N个
-        val sorted = indexedProbs.sortedByDescending { it.second }.take(topN)
-        
+
+        // 按概率降序排序，取前N个（不超过数组长度）
+        val effectiveTopN = minOf(topN, probabilities.size)
+        val sorted = indexedProbs.sortedByDescending { it.second }.take(effectiveTopN)
+
         // 转换为候选列表
         return sorted.map { (index, prob) ->
             val label = SCENE_LABELS[index] ?: SceneLabel("unknown", "未知", "")

@@ -9,9 +9,24 @@ plugins {
 }
 
 // ===== 安全配置读取 =====
-// 从 gradle.properties 读取友盟 AppKey（避免硬编码）
-val umengAppKey: String = project.findProperty("UMENG_APPKEY") as String? ?: "698938eb9a7f3764885bbdaa"
-val umengMessageSecret: String = project.findProperty("UMENG_MESSAGE_SECRET") as String? ?: ""
+// 友盟 AppKey 从 local.properties 读取（已 gitignore），不在版本控制中
+// 如未配置，构建时输出警告但不阻塞（debug 构建可用空值）
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
+val umengAppKey: String = localProperties.getProperty("UMENG_APPKEY")
+    ?: project.findProperty("UMENG_APPKEY") as String?
+    ?: ""
+val umengMessageSecret: String = localProperties.getProperty("UMENG_MESSAGE_SECRET")
+    ?: project.findProperty("UMENG_MESSAGE_SECRET") as String?
+    ?: ""
+
+if (umengAppKey.isEmpty()) {
+    println("⚠️ UMENG_APPKEY 未配置，友盟统计将不可用。请在 local.properties 中设置。")
+}
 
 // 读取签名配置
 // 优先级：1. gradle.properties 中的 RELEASE_* 配置
@@ -87,14 +102,12 @@ android {
                 keyPassword = finalKeyPassword!!
                 println("✅ Release 签名配置已加载: $finalStoreFile")
             } else {
-                // 回退到 debug 签名（仅用于开发测试）
-                // ⚠️ 正式发布前请配置真实的 release 签名！
-                println("⚠️ 未配置真实 Release 签名，使用 debug 签名（仅用于开发测试）")
-                println("⚠️ 请在 gradle.properties 或 keystore-release.properties 中配置 RELEASE_* 变量")
-                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
+                // ⚠️ 未配置真实 Release 签名时，构建直接失败而非静默回退
+                // 防止 debug 签名的 APK 被误发布（任何人都能伪造升级包）
+                throw GradleException(
+                    "❌ Release 签名未配置！请在 gradle.properties 或 keystore-release.properties 中设置 RELEASE_* 变量。\n" +
+                    "开发调试请使用 debug 构建类型：./gradlew assembleDebug"
+                )
             }
         }
     }
@@ -181,13 +194,12 @@ android {
         )
     }
 
-    // Lint 配置优化
+    // Lint 配置
     lint {
         // 只检查主要源代码，排除测试和生成的代码
         checkOnly.add("Interoperability")
-        // 发布前启用严格检查（开发阶段可关闭）
-        // ⚠️ 正式发布前请将 abortOnError 改为 true
-        abortOnError = false  // 发布前改为 true
+        // Release 构建强制 abortOnError，Debug 构建可容忍
+        abortOnError = (gradle.startParameter.taskNames.any { it.contains("Release") })
         // release 构建时检查
         checkReleaseBuilds = true
         // 忽略警告（谨慎使用）

@@ -268,15 +268,17 @@ fun CoreFeaturesScreen(
             Column(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
                 Text(
                     text = "核心功能",
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    letterSpacing = 1.sp
                 )
                 Text(
                     text = "点击进入功能操作界面",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(top = 2.dp)
+                    modifier = Modifier.padding(top = 2.dp),
+                    letterSpacing = 0.5.sp
                 )
             }
         }
@@ -599,15 +601,17 @@ private fun FeatureCard(
                 // 标题和副标题
                 Text(
                     text = feature.title,
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f)
+                    color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f),
+                    letterSpacing = 0.3.sp
                 )
                 Text(
                     text = feature.subtitle,
                     fontSize = 12.sp,
-                    color = if (isEnabled) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(top = 2.dp)
+                    color = if (isEnabled) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(top = 2.dp),
+                    letterSpacing = 0.2.sp
                 )
                 
                 // 描述和标签 - 同步Web端样式

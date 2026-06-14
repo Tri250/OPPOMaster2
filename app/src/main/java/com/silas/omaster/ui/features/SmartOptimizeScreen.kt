@@ -225,6 +225,7 @@ fun SmartOptimizeScreen(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
             title = { Text("智能优化", fontWeight = FontWeight.Bold) },

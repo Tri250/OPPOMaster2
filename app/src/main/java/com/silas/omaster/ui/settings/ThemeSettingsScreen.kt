@@ -57,6 +57,7 @@ fun ThemeSettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
         TopAppBar(

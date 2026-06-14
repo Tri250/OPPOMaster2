@@ -441,9 +441,11 @@ class ImageQualityAnalyzer(private val context: Context) {
      * 获取质量等级描述
      */
     fun getQualityLevel(score: Float): QualityLevel {
+        // 将score约束在有效范围内
+        val normalizedScore = score.coerceIn(0f, 100f)
         return when {
-            score >= HIGH_QUALITY_THRESHOLD -> QualityLevel.HIGH
-            score >= LOW_QUALITY_THRESHOLD -> QualityLevel.MEDIUM
+            normalizedScore >= HIGH_QUALITY_THRESHOLD -> QualityLevel.HIGH
+            normalizedScore >= LOW_QUALITY_THRESHOLD -> QualityLevel.MEDIUM
             else -> QualityLevel.LOW
         }
     }

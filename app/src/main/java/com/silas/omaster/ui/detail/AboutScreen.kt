@@ -431,8 +431,9 @@ private fun AppInfoCard(
                             append("Master")
                         }
                     },
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -440,8 +441,9 @@ private fun AppInfoCard(
                 // App Slogan
                 Text(
                     text = stringResource(R.string.app_slogan),
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.5f)
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.5f),
+                    letterSpacing = 0.5.sp
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))

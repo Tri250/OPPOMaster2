@@ -55,6 +55,7 @@ fun UpdateChannelScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(PureBlack)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
         TopAppBar(
