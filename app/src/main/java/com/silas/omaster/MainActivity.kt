@@ -65,6 +65,7 @@ import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.PresetSourceManagerScreen
+import com.silas.omaster.ui.settings.UpdateChannelScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
@@ -140,6 +141,9 @@ sealed class Screen {
     
     @Serializable
     data object PresetSourceManager : Screen()
+
+    @Serializable
+    data object UpdateChannel : Screen()
 }
 
 class MainActivity : ComponentActivity() {
@@ -498,7 +502,8 @@ fun MainApp(navController: NavHostController) {
                 SettingsScreen(
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
-                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) }
+                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) }
                 )
             }
 
@@ -661,6 +666,13 @@ fun MainApp(navController: NavHostController) {
             // 预设源管理页面
             composable<Screen.PresetSourceManager> {
                 PresetSourceManagerScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // 更新渠道页面
+            composable<Screen.UpdateChannel> {
+                UpdateChannelScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

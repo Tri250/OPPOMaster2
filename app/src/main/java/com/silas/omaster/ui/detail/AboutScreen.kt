@@ -49,8 +49,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -105,7 +103,6 @@ fun AboutScreen(
     currentVersionName: String = VersionInfo.VERSION_NAME
 ) {
     val scrollState = rememberScrollState()
-    var previousScrollValue by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -119,22 +116,21 @@ fun AboutScreen(
     var showDarkModeDialog by remember { mutableStateOf(false) }
     var showChannelDialog by remember { mutableStateOf(false) }
 
-    val isScrollingUp by remember {
-        derivedStateOf {
-            val currentScroll = scrollState.value
-            val isUp = currentScroll <= previousScrollValue
-            previousScrollValue = currentScroll
-            isUp
-        }
-    }
+    // 滚动方向检测（不在 derivedStateOf 内变更状态，避免触发无限重组）
+    var isScrollingUp by remember { mutableStateOf(false) }
+    var previousScrollValue by remember { mutableIntStateOf(0) }
 
     // 滚动到顶/底部震感
-    var lastScrollValue by remember { mutableIntStateOf(0) }
     var hasHapticAtTop by remember { mutableStateOf(false) }
     var hasHapticAtBottom by remember { mutableStateOf(false) }
 
     LaunchedEffect(scrollState.value) {
         val currentValue = scrollState.value
+        isScrollingUp = currentValue <= previousScrollValue
+        previousScrollValue = currentValue
+        onScrollStateChanged(isScrollingUp)
+
+        // 滚动到顶/底部震感
         val maxValue = scrollState.maxValue
 
         if (currentValue == 0 && !hasHapticAtTop) {
@@ -149,22 +145,17 @@ fun AboutScreen(
             hasHapticAtTop = false
             hasHapticAtBottom = false
         }
-        lastScrollValue = currentValue
     }
 
     var isChecking by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
     var checkError by remember { mutableStateOf<String?>(null) }
     var lastCheckTime by remember { mutableStateOf<Long?>(null) }
-    
+
     // 下载进度相关状态
     var downloadId by remember { mutableStateOf<Long>(-1L) }
     var downloadProgress by remember { mutableIntStateOf(0) }
     var isDownloading by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isScrollingUp) {
-        onScrollStateChanged(isScrollingUp)
-    }
 
     val checkFailedText = stringResource(R.string.version_check_failed)
 

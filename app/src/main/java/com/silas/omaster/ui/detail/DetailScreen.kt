@@ -216,7 +216,6 @@ fun DetailScreen(
                 val scrollState = rememberScrollState()
 
                 // 滚动到顶/底部震感
-                var lastScrollValue by remember { mutableIntStateOf(0) }
                 var hasHapticAtTop by remember { mutableStateOf(false) }
                 var hasHapticAtBottom by remember { mutableStateOf(false) }
 
@@ -236,7 +235,6 @@ fun DetailScreen(
                         hasHapticAtTop = false
                         hasHapticAtBottom = false
                     }
-                    lastScrollValue = currentValue
                 }
 
                 Column(

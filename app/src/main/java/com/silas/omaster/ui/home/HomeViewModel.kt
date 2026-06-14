@@ -13,16 +13,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 /**
- * Tab类型枚举（对齐Web端）
- */
-enum class TabType {
-    DISCOVER,   // 发现
-    FAVORITES,  // 收藏
-    HNCS,       // 哈苏
-    NEW         // 上新
-}
-
-/**
  * 排序类型枚举（对齐Web端）
  */
 enum class SortType {

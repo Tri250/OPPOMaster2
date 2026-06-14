@@ -22,9 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.*
-import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.renderer.RenderParameters
-import com.silas.omaster.tflite.InferenceResult
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -120,14 +118,12 @@ data class SmartOptimization(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIFineTuneScreen(
-    imageUri: String? = null,
     bitmap: Bitmap? = null,
     onBack: () -> Unit,
     onApply: (RenderParameters) -> Unit = {}
 ) {
     val context = LocalContext.current
     val aiManager = remember { AIFineTuneManager.getInstance(context) }
-    val settingsManager = remember { SettingsManager.getInstance(context) }
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 

@@ -60,7 +60,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,7 +95,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -649,7 +647,6 @@ private fun PresetGrid(
     })
 
     // 滚动状态检测
-    var isScrollingUp by remember { mutableStateOf(false) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousScrollOffset by remember { mutableIntStateOf(0) }
     var hasHapticAtTop by remember { mutableStateOf(false) }
@@ -661,7 +658,6 @@ private fun PresetGrid(
         }.collect { (currentIndex, currentOffset) ->
             val isUp = currentIndex < previousIndex ||
                        (currentIndex == previousIndex && currentOffset <= previousScrollOffset)
-            isScrollingUp = isUp
             previousIndex = currentIndex
             previousScrollOffset = currentOffset
             onScrollStateChanged(isUp)

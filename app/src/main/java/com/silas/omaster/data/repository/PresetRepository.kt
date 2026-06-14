@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -50,9 +49,6 @@ class PresetRepository private constructor(context: Context) {
 
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
-
-    // 预设版本缓存
-    private val _presetVersions = MutableStateFlow<Map<String, Int>>(loadVersions())
 
     // 设备型号（WM-003）
     private var deviceModel: String = Build.MODEL
@@ -838,25 +834,6 @@ class PresetRepository private constructor(context: Context) {
 
     private fun savePinned(pinned: Set<String>) {
         settingsManager.pinnedPresetIds = pinned.toList()
-    }
-
-    /**
-     * 加载预设版本信息（SharedPreferences 中以 JSON 形式持久化）
-     * - 首次启动：返回空 Map
-     * - 解析失败：返回空 Map，保留原始数据
-     */
-    private fun loadVersions(): Map<String, Int> {
-        return try {
-            val raw = settingsManager.presetVersionMapJson
-            if (raw.isBlank()) {
-                emptyMap()
-            } else {
-                json.decodeFromString<Map<String, Int>>(raw)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "加载预设版本缓存失败，返回空 Map", e)
-            emptyMap()
-        }
     }
 
     /**

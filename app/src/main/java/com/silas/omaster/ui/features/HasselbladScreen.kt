@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -369,7 +370,7 @@ fun HasselbladScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isApplied = true
                             scope.launch {
-                                kotlinx.coroutines.delay(2000)
+                                delay(2000)
                                 isApplied = false
                             }
                         },

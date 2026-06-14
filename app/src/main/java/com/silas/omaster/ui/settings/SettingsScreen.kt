@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Update
@@ -91,7 +92,8 @@ import android.widget.Toast
 fun SettingsScreen(
     onNavigateToNotificationSettings: (() -> Unit)? = null,
     onNavigateToTerms: (() -> Unit)? = null,
-    onNavigateToPresetSourceManager: (() -> Unit)? = null
+    onNavigateToPresetSourceManager: (() -> Unit)? = null,
+    onNavigateToUpdateChannel: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -415,6 +417,15 @@ fun SettingsScreen(
                     UpdateChannel.GITHUB -> "GitHub（国际）"
                 },
                 onClick = { showChannelDialog = true }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Download,
+                title = "更新渠道",
+                subtitle = "稳定版 / 测试版 / 开发版",
+                onClick = { onNavigateToUpdateChannel?.invoke() }
             )
         }
 

@@ -2,37 +2,95 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.hapticfeedback.*
-import androidx.compose.ui.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.unit.*
-import com.silas.omaster.ui.theme.*
-import com.silas.omaster.model.*
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.IOException
 
 /**
  * 智能优化页面
- * 
+ *
  * 功能：
  * - HDR 增强
  * - 降噪处理
  * - 锐化优化
  * - 自动曝光调整
  * - 智能色彩校正
- * 
+ * - 综合优化（一键全部 + 进度流程）
+ *
  * 对齐 Web 端 SmartOptimizePage.tsx
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,29 +101,38 @@ fun SmartOptimizeScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
-    
+    val scope = rememberCoroutineScope()
+
     // 预览图片状态
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    
+
     // 优化参数状态
     var hdrEnabled by remember { mutableStateOf(false) }
     var hdrStrength by remember { mutableFloatStateOf(50f) }
-    
+
     var noiseReductionEnabled by remember { mutableStateOf(false) }
     var noiseReductionStrength by remember { mutableFloatStateOf(30f) }
-    
+
     var sharpenEnabled by remember { mutableStateOf(true) }
     var sharpenStrength by remember { mutableFloatStateOf(25f) }
-    
+
     var exposureAuto by remember { mutableStateOf(false) }
     var exposureAdjustment by remember { mutableFloatStateOf(0f) }
-    
+
     var colorCorrectionEnabled by remember { mutableStateOf(true) }
     var colorCorrectionStrength by remember { mutableFloatStateOf(20f) }
-    
+
     // 预览模式
     var previewMode by remember { mutableStateOf("before") }
-    
+
+    // 优化进度
+    var isOptimizing by remember { mutableStateOf(false) }
+    var optimizationStep by remember { mutableStateOf(0) }
+    var optimizationTotalSteps by remember { mutableStateOf(0) }
+    var optimizationProgress by remember { mutableFloatStateOf(0f) }
+    var optimizationCurrentName by remember { mutableStateOf("") }
+    var optimizedOptions by remember { mutableStateListOf<String>() }
+
     // 从 assets 加载示例预览图
     LaunchedEffect(Unit) {
         try {
@@ -76,7 +143,60 @@ fun SmartOptimizeScreen(
             // 资源不存在时保持空，将显示占位提示
         }
     }
-    
+
+    // 已选中的优化项（用于进度流程）
+    val selectedOptimizeIds = remember(hdrEnabled, noiseReductionEnabled, sharpenEnabled, exposureAuto, colorCorrectionEnabled) {
+        buildList {
+            if (hdrEnabled) add("hdr")
+            if (noiseReductionEnabled) add("denoise")
+            if (sharpenEnabled) add("sharpen")
+            if (exposureAuto) add("exposure")
+            if (colorCorrectionEnabled) add("color")
+        }
+    }
+
+    val optimizeIdToName = mapOf(
+        "hdr" to "HDR 增强",
+        "denoise" to "智能降噪",
+        "sharpen" to "锐化增强",
+        "exposure" to "自动曝光",
+        "color" to "色彩校正"
+    )
+
+    // 顺序执行优化流程（对齐Web端handleOptimize + processStep）
+    fun runOptimizeWorkflow() {
+        if (selectedOptimizeIds.isEmpty()) return
+        scope.launch {
+            isOptimizing = true
+            optimizedOptions.clear()
+            optimizationTotalSteps = selectedOptimizeIds.size
+            optimizationStep = 0
+            optimizationProgress = 0f
+
+            for ((index, id) in selectedOptimizeIds.withIndex()) {
+                optimizationStep = index + 1
+                optimizationCurrentName = optimizeIdToName[id] ?: id
+                optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
+                delay(500) // 模拟每项处理耗时
+                optimizedOptions.add(id)
+            }
+            delay(300)
+            // 完成 - 应用参数
+            isOptimizing = false
+            onApply(OptimizeParams(
+                hdrEnabled = hdrEnabled,
+                hdrStrength = hdrStrength,
+                noiseReductionEnabled = noiseReductionEnabled,
+                noiseReductionStrength = noiseReductionStrength,
+                sharpenEnabled = sharpenEnabled,
+                sharpenStrength = sharpenStrength,
+                exposureAdjustment = exposureAdjustment,
+                colorCorrectionEnabled = colorCorrectionEnabled,
+                colorCorrectionStrength = colorCorrectionStrength
+            ))
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -106,20 +226,13 @@ fun SmartOptimizeScreen(
                     )
                 }
                 // 应用按钮
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onApply(OptimizeParams(
-                        hdrEnabled = hdrEnabled,
-                        hdrStrength = hdrStrength,
-                        noiseReductionEnabled = noiseReductionEnabled,
-                        noiseReductionStrength = noiseReductionStrength,
-                        sharpenEnabled = sharpenEnabled,
-                        sharpenStrength = sharpenStrength,
-                        exposureAdjustment = exposureAdjustment,
-                        colorCorrectionEnabled = colorCorrectionEnabled,
-                        colorCorrectionStrength = colorCorrectionStrength
-                    ))
-                }) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        runOptimizeWorkflow()
+                    },
+                    enabled = !isOptimizing
+                ) {
                     Icon(Icons.Default.Check, "应用", tint = HasselbladOrange)
                 }
             },
@@ -128,6 +241,57 @@ fun SmartOptimizeScreen(
                 titleContentColor = Color.White
             )
         )
+
+        // 优化进度条（与Web端isOptimizing + processStep对齐）
+        AnimatedVisibility(visible = isOptimizing) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = HasselbladOrange
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "正在优化 $optimizationStep/$optimizationTotalSteps",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "${(optimizationProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HasselbladOrange
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { optimizationProgress },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = HasselbladOrange,
+                        trackColor = HasselbladOrange.copy(alpha = 0.2f)
+                    )
+                    if (optimizationCurrentName.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "正在处理: $optimizationCurrentName",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+        }
 
         // 预览区域
         Box(
@@ -146,7 +310,7 @@ fun SmartOptimizeScreen(
                     colorFilter = if (previewMode == "after") {
                         // 模拟优化后效果：轻微提亮+暖色调
                         ColorFilter.colorMatrix(
-                            androidx.compose.ui.graphics.ColorMatrix(
+                            ColorMatrix(
                                 floatArrayOf(
                                     1.05f, 0f, 0f, 0f, 10f,
                                     0f, 1.02f, 0f, 0f, 6f,
@@ -165,7 +329,7 @@ fun SmartOptimizeScreen(
                         .padding(8.dp)
                         .background(
                             Color.Black.copy(alpha = 0.5f),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -206,6 +370,68 @@ fun SmartOptimizeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // 已完成的优化项（与Web端optimizedOptions对齐）
+            if (optimizedOptions.isNotEmpty() && !isOptimizing) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF4CAF50).copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "已完成 ${optimizedOptions.size} 项优化",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF4CAF50),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = optimizedOptions.joinToString(" · ") { optimizeIdToName[it] ?: it },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 综合优化（对齐Web端'id: enhance'选项）
+            item {
+                CompositeOptimizeCard(
+                    enabled = hdrEnabled && noiseReductionEnabled && sharpenEnabled && colorCorrectionEnabled,
+                    onEnable = {
+                        // 一键启用所有选项
+                        hdrEnabled = true
+                        noiseReductionEnabled = true
+                        sharpenEnabled = true
+                        exposureAuto = true
+                        colorCorrectionEnabled = true
+                    },
+                    onDisable = {
+                        hdrEnabled = false
+                        noiseReductionEnabled = false
+                        sharpenEnabled = false
+                        exposureAuto = false
+                        colorCorrectionEnabled = false
+                    },
+                    onStartOptimize = { runOptimizeWorkflow() },
+                    isOptimizing = isOptimizing,
+                    selectedCount = selectedOptimizeIds.size
+                )
+            }
+
             // HDR 增强
             item {
                 OptimizeOptionCard(
@@ -216,7 +442,9 @@ fun SmartOptimizeScreen(
                     onToggle = { hdrEnabled = it },
                     strength = hdrStrength,
                     onStrengthChange = { hdrStrength = it },
-                    color = HasselbladOrange
+                    color = HasselbladOrange,
+                    isOptimized = optimizedOptions.contains("hdr"),
+                    isProcessing = isOptimizing && optimizationCurrentName == "HDR 增强"
                 )
             }
 
@@ -230,7 +458,9 @@ fun SmartOptimizeScreen(
                     onToggle = { noiseReductionEnabled = it },
                     strength = noiseReductionStrength,
                     onStrengthChange = { noiseReductionStrength = it },
-                    color = Color(0xFF2196F3)
+                    color = Color(0xFF2196F3),
+                    isOptimized = optimizedOptions.contains("denoise"),
+                    isProcessing = isOptimizing && optimizationCurrentName == "智能降噪"
                 )
             }
 
@@ -244,7 +474,9 @@ fun SmartOptimizeScreen(
                     onToggle = { sharpenEnabled = it },
                     strength = sharpenStrength,
                     onStrengthChange = { sharpenStrength = it },
-                    color = Color(0xFFE91E63)
+                    color = Color(0xFFE91E63),
+                    isOptimized = optimizedOptions.contains("sharpen"),
+                    isProcessing = isOptimizing && optimizationCurrentName == "锐化增强"
                 )
             }
 
@@ -259,7 +491,9 @@ fun SmartOptimizeScreen(
                     strength = exposureAdjustment,
                     strengthRange = -50f..50f,
                     onStrengthChange = { exposureAdjustment = it },
-                    color = Color(0xFFFFEB3B)
+                    color = Color(0xFFFFEB3B),
+                    isOptimized = optimizedOptions.contains("exposure"),
+                    isProcessing = isOptimizing && optimizationCurrentName == "自动曝光"
                 )
             }
 
@@ -273,7 +507,9 @@ fun SmartOptimizeScreen(
                     onToggle = { colorCorrectionEnabled = it },
                     strength = colorCorrectionStrength,
                     onStrengthChange = { colorCorrectionStrength = it },
-                    color = HasselbladOrange
+                    color = HasselbladOrange,
+                    isOptimized = optimizedOptions.contains("color"),
+                    isProcessing = isOptimizing && optimizationCurrentName == "色彩校正"
                 )
             }
         }
@@ -299,6 +535,7 @@ fun SmartOptimizeScreen(
                     exposureAdjustment = 0f
                     colorCorrectionEnabled = true
                     colorCorrectionStrength = 20f
+                    optimizedOptions.clear()
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
@@ -309,23 +546,112 @@ fun SmartOptimizeScreen(
                 Text("重置")
             }
 
-            // 一键优化按钮
+            // 开始优化按钮（顺序处理所选项）
             Button(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    // 启用所有优化
-                    hdrEnabled = true
-                    noiseReductionEnabled = true
-                    sharpenEnabled = true
-                    colorCorrectionEnabled = true
+                    runOptimizeWorkflow()
                 },
+                enabled = !isOptimizing && selectedOptimizeIds.isNotEmpty(),
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
             ) {
                 Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("一键优化")
+                Text(if (isOptimizing) "处理中..." else "开始优化")
+            }
+        }
+    }
+}
+
+/**
+ * 综合优化卡片（对齐 Web 端"综合优化"选项）
+ * 一键启用所有优化项并触发顺序处理流程
+ */
+@Composable
+private fun CompositeOptimizeCard(
+    enabled: Boolean,
+    onEnable: () -> Unit,
+    onDisable: () -> Unit,
+    onStartOptimize: () -> Unit,
+    isOptimizing: Boolean,
+    selectedCount: Int
+) {
+    val haptic = LocalHapticFeedback.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) Color(0xFF4CAF50).copy(alpha = 0.15f) else Color(0xFF2A2A2A)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (enabled) Color(0xFF4CAF50).copy(alpha = 0.3f)
+                            else Color.White.copy(alpha = 0.1f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Bolt,
+                        null,
+                        tint = if (enabled) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "综合优化",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (enabled) Color(0xFF4CAF50) else Color.White
+                    )
+                    Text(
+                        text = "一键优化全部参数 · 已选 $selectedCount 项",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (it) onEnable() else onDisable()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFF4CAF50)
+                    )
+                )
+            }
+            if (enabled && selectedCount > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onStartOptimize()
+                    },
+                    enabled = !isOptimizing,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF4CAF50)
+                    )
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("一键顺序处理")
+                }
             }
         }
     }
@@ -341,7 +667,9 @@ private fun OptimizeOptionCard(
     strength: Float,
     strengthRange: ClosedFloatingPointRange<Float> = 0f..100f,
     onStrengthChange: (Float) -> Unit,
-    color: Color
+    color: Color,
+    isOptimized: Boolean = false,
+    isProcessing: Boolean = false
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -349,7 +677,11 @@ private fun OptimizeOptionCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) color.copy(alpha = 0.1f) else Color(0xFF2A2A2A)
+            containerColor = when {
+                isProcessing -> color.copy(alpha = 0.15f)
+                enabled -> color.copy(alpha = 0.1f)
+                else -> Color(0xFF2A2A2A)
+            }
         )
     ) {
         Column(
@@ -365,17 +697,35 @@ private fun OptimizeOptionCard(
                     Icon(
                         icon,
                         null,
-                        tint = if (enabled) color else Color.White.copy(alpha = 0.5f),
+                        tint = if (enabled || isProcessing) color else Color.White.copy(alpha = 0.5f),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (enabled) color else Color.White
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (enabled || isProcessing) color else Color.White
+                            )
+                            if (isProcessing) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 1.5.dp,
+                                    color = color
+                                )
+                            } else if (isOptimized) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
@@ -400,7 +750,7 @@ private fun OptimizeOptionCard(
             // 强度滑块（仅启用时显示）
             if (enabled) {
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -411,7 +761,7 @@ private fun OptimizeOptionCard(
                         color = Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.width(50.dp)
                     )
-                    
+
                     Slider(
                         value = strength,
                         onValueChange = onStrengthChange,
@@ -422,7 +772,7 @@ private fun OptimizeOptionCard(
                             activeTrackColor = color
                         )
                     )
-                    
+
                     Text(
                         text = "${strength.toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
