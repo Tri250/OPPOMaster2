@@ -255,7 +255,16 @@ fun MainApp(navController: NavHostController) {
 
     if (showMigrationDialog) {
         AlertDialog(
-            onDismissRequest = { /* Force user to decide */ },
+            onDismissRequest = {
+                // 允许用户取消，但显示警告提示
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "建议尽快迁移数据以避免功能异常",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                }
+                showMigrationDialog = false
+            },
             title = { Text("数据结构更新") },
             text = { Text("检测到预设数据版本过旧，需要迁移数据以支持新功能。\n\n点击“迁移数据”将重置内置预设（您的自定义预设和收藏不会丢失）。") },
             confirmButton = {
@@ -272,15 +281,11 @@ fun MainApp(navController: NavHostController) {
                 }
             },
             dismissButton = {
-                // Optional: Allow user to cancel and exit app?
-                // Or maybe just hide dialog and let them use potentially broken app?
-                // Given the request "check if version field exists and value is 2, otherwise pop up prompt",
-                // usually implies mandatory action.
-                // But for safety/UX, maybe allow cancel?
-                // If cancel, showMigrationDialog = false, but app might crash later if structure mismatch.
-                // Let's stick to mandatory for now or just allow dismiss.
-                // I'll leave dismissButton empty to force "Migrate" or back button (which onDismissRequest handles if we implemented logic).
-                // Actually, onDismissRequest handles back button.
+                TextButton(
+                    onClick = { showMigrationDialog = false }
+                ) {
+                    Text("稍后处理")
+                }
             }
         )
     }

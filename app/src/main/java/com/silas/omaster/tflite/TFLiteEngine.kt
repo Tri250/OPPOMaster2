@@ -271,7 +271,7 @@ class TFLiteEngine private constructor(private val context: Context) {
                 val inputStream = context.assets.open("models/$modelName")
                 val bytes = inputStream.readBytes()
                 inputStream.close()
-                
+
                 val buffer = ByteBuffer.allocateDirect(bytes.size)
                 buffer.order(ByteOrder.nativeOrder())
                 buffer.put(bytes)
@@ -281,7 +281,14 @@ class TFLiteEngine private constructor(private val context: Context) {
                 // 尝试从文件系统加载
                 val modelFile = File(context.filesDir, "models/$modelName")
                 if (modelFile.exists()) {
-                    FileUtil.loadMappedFile(context, "models/$modelName")
+                    // 使用FileUtil.loadMappedFile，并进行空值检查
+                    val loadedBuffer = FileUtil.loadMappedFile(context, "models/$modelName")
+                    if (loadedBuffer == null) {
+                        Log.w(TAG, "FileUtil.loadMappedFile返回null: $modelName")
+                        null
+                    } else {
+                        loadedBuffer
+                    }
                 } else {
                     Log.w(TAG, "模型文件不存在: $modelName，将使用启发式降级")
                     null

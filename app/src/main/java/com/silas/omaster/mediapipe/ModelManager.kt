@@ -229,18 +229,44 @@ class ModelManager private constructor(private val context: Context) {
      * 校验模型文件 SHA256
      */
     private fun verifyModelChecksum(file: File, modelName: String): Boolean {
-        // 实际校验需要真实的 SHA256 值
-        // 这里简化处理，只检查文件大小是否合理
-        val expectedSize = MODEL_SIZES[modelName] ?: 0L
-        val actualSize = file.length()
+        try {
+            // 获取预期校验值
+            val expectedChecksum = MODEL_CHECKSUMS[modelName]
+            if (expectedChecksum == null || expectedChecksum.contains("sha256") == false) {
+                // 没有真实校验值时，使用文件大小校验作为降级方案
+                val expectedSize = MODEL_SIZES[modelName] ?: 0L
+                val actualSize = file.length()
+                val tolerance = expectedSize * 0.1
+                val isValid = actualSize >= expectedSize - tolerance && actualSize <= expectedSize + tolerance
+                Log.d(TAG, "模型大小校验(降级): $modelName - 预期: $expectedSize, 实际: $actualSize, 有效: $isValid")
+                return isValid
+            }
 
-        // 允许 10% 的误差
-        val tolerance = expectedSize * 0.1
-        val isValid = actualSize >= expectedSize - tolerance && actualSize <= expectedSize + tolerance
+            // 计算实际 SHA256
+            val digest = MessageDigest.getInstance("SHA-256")
+            val buffer = ByteArray(8192)
+            file.inputStream().use { inputStream ->
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            val actualHash = digest.digest().joinToString("") { "%02x".format(it) }
 
-        Log.d(TAG, "模型大小校验: $modelName - 预期: $expectedSize, 实际: $actualSize, 有效: $isValid")
+            // 比较校验值（支持前缀匹配，因为预期值可能只包含部分hash）
+            val expectedHash = expectedChecksum.replace("sha256:", "").replace("_v1.2", "")
+            val isValid = actualHash.startsWith(expectedHash) || expectedHash.startsWith(actualHash)
 
-        return isValid
+            Log.d(TAG, "模型SHA256校验: $modelName - 预期: $expectedHash, 实际: $actualHash, 有效: $isValid")
+            return isValid
+        } catch (e: Exception) {
+            Log.e(TAG, "模型校验异常: $modelName", e)
+            // 异常时降级为大小校验
+            val expectedSize = MODEL_SIZES[modelName] ?: 0L
+            val actualSize = file.length()
+            val tolerance = expectedSize * 0.1
+            return actualSize >= expectedSize - tolerance && actualSize <= expectedSize + tolerance
+        }
     }
 
     /**
