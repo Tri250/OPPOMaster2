@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.silas.omaster.BuildConfig
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -136,12 +137,16 @@ fun DetailScreen(
                     onClick = {
                         preset?.let { p ->
                             val isFirstTime = guideManager.isFirstTimeUseFloatingWindow()
-                            android.util.Log.d("DetailScreen", "悬浮窗按钮点击，是否首次使用: $isFirstTime")
+                            if (BuildConfig.DEBUG) {
+                                android.util.Log.d("DetailScreen", "悬浮窗按钮点击，是否首次使用: $isFirstTime")
+                            }
                             // 检查是否是首次使用悬浮窗
                             if (isFirstTime) {
                                 showFloatingWindowGuide = true
                                 guideManager.markGuideShown()
-                                android.util.Log.d("DetailScreen", "显示悬浮窗引导对话框")
+                                if (BuildConfig.DEBUG) {
+                                    android.util.Log.d("DetailScreen", "显示悬浮窗引导对话框")
+                                }
                             } else {
                                 // 非首次使用，直接处理悬浮窗逻辑（预设列表已在 HomeScreen 中设置）
                                 handleFloatingWindowClick(context, p)

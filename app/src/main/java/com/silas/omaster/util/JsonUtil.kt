@@ -1,6 +1,7 @@
 package com.silas.omaster.util
 
 import android.content.Context
+import com.silas.omaster.BuildConfig
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
 import com.google.gson.Gson
@@ -61,7 +62,9 @@ object JsonUtil {
     fun loadPresets(context: Context, fileName: String = "presets.json"): List<MasterPreset> {
         // 如果已有缓存，直接返回缓存（性能优化）
         cachedPresets?.let {
-            android.util.Log.d("JsonUtil", "Returning cached presets, count: ${it.size}")
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("JsonUtil", "Returning cached presets, count: ${it.size}")
+            }
             return it
         }
 
@@ -69,7 +72,9 @@ object JsonUtil {
         // 如果存在，说明用户是从旧版本升级上来的，需要提示迁移
         val oldRemoteFile = java.io.File(context.filesDir, "presets_remote.json")
         if (oldRemoteFile.exists()) {
-            android.util.Log.d("JsonUtil", "Old remote presets file detected, triggering migration")
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("JsonUtil", "Old remote presets file detected, triggering migration")
+            }
             currentPresetsVersion = 1
         } else {
             // 如果不存在旧文件，默认设为当前最新版本
@@ -134,7 +139,9 @@ object JsonUtil {
         if (allPresets.isEmpty()) return emptyList()
 
         cachedPresets = allPresets
-        android.util.Log.d("JsonUtil", "Total presets loaded: ${allPresets.size}")
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("JsonUtil", "Total presets loaded: ${allPresets.size}")
+        }
         return allPresets
     }
 
@@ -218,7 +225,9 @@ object JsonUtil {
      */
     fun invalidateCache() {
         cachedPresets = null
-        android.util.Log.d("JsonUtil", "Cache invalidated")
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("JsonUtil", "Cache invalidated")
+        }
     }
 
     /**
@@ -229,7 +238,9 @@ object JsonUtil {
             val remoteFile = java.io.File(context.filesDir, "presets_remote.json")
             if (remoteFile.exists()) {
                 remoteFile.delete()
-                android.util.Log.d("JsonUtil", "Deleted remote presets file for migration")
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d("JsonUtil", "Deleted remote presets file for migration")
+                }
             }
             invalidateCache()
         } catch (e: Exception) {

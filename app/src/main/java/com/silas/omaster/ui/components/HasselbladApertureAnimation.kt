@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.silas.omaster.BuildConfig
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -232,10 +233,12 @@ fun HasselbladApertureAnimation(
 
         // 总耗时（包含真实分析与必要的视觉过渡）
         val totalMs = colorDuration + rotateDurationMs + AnimationSpecs.ApertureTransitionMillis + AnimationSpecs.ApertureTransitionMillis
-        android.util.Log.d(
-            "HasselbladAperture",
-            "analysis total=${totalMs}ms faceCount=$faceCount scene=${profile.id}"
-        )
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "HasselbladAperture",
+                "analysis total=${totalMs}ms faceCount=$faceCount scene=${profile.id}"
+            )
+        }
 
         onComplete()
     }
