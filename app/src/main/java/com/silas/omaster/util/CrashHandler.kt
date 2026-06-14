@@ -50,7 +50,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             val detailInfo = buildString {
                 append("==== Crash Report ====\n")
                 append("时间: ${getCurrentTime()}\n")
-                append("线程: ${thread.name} (id=${thread.id})\n")
+                append("线程: ${thread.name} (pid=${android.os.Process.myPid()})\n")
                 append("类型: $exceptionType\n")
                 append("消息: ${throwable.message}\n")
                 append("==== 堆栈 ====\n")

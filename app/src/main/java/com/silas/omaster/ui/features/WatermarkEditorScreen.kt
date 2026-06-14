@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.BasicTextField
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -452,7 +454,7 @@ fun WatermarkEditorScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White)
                 }
             },
             actions = {
@@ -553,7 +555,7 @@ fun WatermarkEditorScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(
-                            if (showBeforeAfter) Icons.Default.CompareArrows else Icons.Default.Compare,
+                            if (showBeforeAfter) Icons.AutoMirrored.Filled.CompareArrows else Icons.Default.Compare,
                             null,
                             modifier = Modifier.size(16.dp)
                         )

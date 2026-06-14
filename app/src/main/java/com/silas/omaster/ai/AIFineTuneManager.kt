@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import kotlin.math.abs
 
 /**
@@ -713,13 +714,8 @@ class AIFineTuneManager private constructor(context: Context) {
                     .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
                 
-                val requestBody = "application/json; charset=utf-8".toMediaType()
-                    .let { mediaType ->
-                        okhttp3.RequestBody.create(
-                            mediaType,
-                            toJsonString(params)
-                        )
-                    }
+                val requestBody = toJsonString(params)
+                    .toRequestBody("application/json; charset=utf-8".toMediaType())
                 
                 val request = okhttp3.Request.Builder()
                     .url(CLOUD_API_ENDPOINT)

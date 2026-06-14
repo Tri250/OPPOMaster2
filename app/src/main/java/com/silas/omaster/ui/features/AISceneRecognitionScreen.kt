@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -262,7 +264,7 @@ fun AISceneRecognitionScreen(
                         onBack()
                     }
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White.copy(alpha = 0.8f))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White.copy(alpha = 0.8f))
                 }
             },
             actions = {
@@ -940,8 +942,8 @@ private fun HasselbladCompareSlider(
                 contentAlignment = Alignment.Center
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.Black, modifier = Modifier.size(12.dp))
-                    Icon(Icons.Default.ArrowForward, null, tint = Color.Black, modifier = Modifier.size(12.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.Black, modifier = Modifier.size(12.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.Black, modifier = Modifier.size(12.dp))
                 }
             }
         }

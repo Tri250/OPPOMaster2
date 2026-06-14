@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -74,7 +75,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White)
                 }
             },
             actions = {
@@ -385,7 +386,7 @@ private fun ParamSliderCard(
                             onValueChange(it) 
                         },
                         valueRange = when (valueRange) {
-                            is ClosedFloatingPointRange<*> -> valueRange as ClosedFloatingPointRange<Float>
+                            is ClosedFloatingPointRange<*> -> @Suppress("UNCHECKED_CAST")(valueRange as ClosedFloatingPointRange<Float>)
                             else -> 0f..100f
                         },
                         colors = SliderDefaults.colors(

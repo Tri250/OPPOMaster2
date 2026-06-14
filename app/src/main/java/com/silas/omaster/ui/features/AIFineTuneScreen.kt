@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -183,7 +187,7 @@ fun AIFineTuneScreen(
                 RenderParameters(saturation = -10f, contrast = -10f, warmth = 5f, brightness = 10f, fade = 15f), "柔和粉彩风"),
             ColorStylePreset("dramatic", "戏剧", Icons.Default.Bolt, Color(0xFFFF5722),
                 RenderParameters(saturation = 15f, contrast = 35f, warmth = 5f, clarity = 20f, highlights = -20f), "戏剧性光影"),
-            ColorStylePreset("hdr", "HDR", Icons.Default.TrendingUp, Color(0xFF00BCD4),
+            ColorStylePreset("hdr", "HDR", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF00BCD4),
                 RenderParameters(saturation = 10f, contrast = 20f, highlights = -30f, shadows = 30f, clarity = 25f), "高动态范围")
         )
     }
@@ -217,13 +221,13 @@ fun AIFineTuneScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White)
                 }
             },
             actions = {
                 IconButton(onClick = { showCompare = !showCompare }) {
                     Icon(
-                        if (showCompare) Icons.Default.Compare else Icons.Default.CompareArrows,
+                        if (showCompare) Icons.Default.Compare else Icons.AutoMirrored.Filled.CompareArrows,
                         "对比",
                         tint = if (showCompare) HasselbladOrange else Color.White.copy(alpha = 0.6f)
                     )
@@ -1052,7 +1056,7 @@ private fun CurveAdjustCard(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ShowChart, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
+                    Icon(Icons.AutoMirrored.Filled.ShowChart, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
                     Text("曲线调整", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
                     Text("拖动曲线点进行精确调整", color = Color.White.copy(alpha = 0.3f), fontSize = 10.sp)
                 }
@@ -1089,7 +1093,7 @@ private fun CurveAdjustCard(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
-                                Icons.Default.TrendingUp,
+                                Icons.AutoMirrored.Filled.TrendingUp,
                                 null,
                                 tint = if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(20.dp)

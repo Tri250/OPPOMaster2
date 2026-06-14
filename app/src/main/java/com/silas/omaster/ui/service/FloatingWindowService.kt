@@ -156,7 +156,12 @@ class FloatingWindowService : Service() {
         val rawName = intent.getStringExtra(EXTRA_NAME) ?: getString(R.string.floating_preset)
         val name = PresetI18n.getLocalizedPresetName(this, rawName)
         
-        val sections = intent.getParcelableArrayListExtra<PresetSection>(EXTRA_SECTIONS) ?: arrayListOf()
+        val sections = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableArrayListExtra(EXTRA_SECTIONS, PresetSection::class.java) ?: arrayListOf()
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableArrayListExtra(EXTRA_SECTIONS) ?: arrayListOf()
+        }
 
         isExpanded = intent.getBooleanExtra(EXTRA_IS_EXPANDED, true)
         val savedX = intent.getIntExtra(EXTRA_POS_X, -1)
@@ -853,7 +858,14 @@ class FloatingWindowService : Service() {
                         }
                         
                         val metrics = DisplayMetrics()
-                        wm.defaultDisplay.getMetrics(metrics)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            val bounds = wm.currentWindowMetrics.bounds
+                            metrics.widthPixels = bounds.width()
+                            metrics.heightPixels = bounds.height()
+                        } else {
+                            @Suppress("DEPRECATION")
+                            wm.defaultDisplay.getMetrics(metrics)
+                        }
                         
                         params?.x = initialX + dx.toInt()
                         
@@ -888,7 +900,14 @@ class FloatingWindowService : Service() {
         val p = params ?: return
         
         val metrics = DisplayMetrics()
-        wm.defaultDisplay.getMetrics(metrics)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = wm.currentWindowMetrics.bounds
+            metrics.widthPixels = bounds.width()
+            metrics.heightPixels = bounds.height()
+        } else {
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getMetrics(metrics)
+        }
         val screenWidth = metrics.widthPixels
         val viewWidth = view.width
 

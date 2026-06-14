@@ -422,7 +422,7 @@ class GPURenderManager private constructor(private val context: Context) {
                 try {
                     val result = block()
                     if (continuation.isActive) {
-                        continuation.resume(result) {}
+                        continuation.resumeWith(Result.success(result))
                     }
                 } catch (e: Exception) {
                     if (continuation.isActive) {

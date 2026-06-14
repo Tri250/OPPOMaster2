@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -82,7 +84,7 @@ fun SceneRecognitionResultScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
                     }
                 },
                 actions = {
@@ -378,7 +380,7 @@ private fun BeforeAfterCompareSlider(
                             .border(2.dp, HasselbladOrange, RoundedCornerShape(20.dp))
                     ) {
                         Icon(
-                            Icons.Default.CompareArrows,
+                            Icons.AutoMirrored.Filled.CompareArrows,
                             null,
                             tint = HasselbladOrange,
                             modifier = Modifier

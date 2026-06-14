@@ -6,6 +6,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -422,7 +423,7 @@ private fun OverviewCards(habits: ShootingHabits) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OverviewCard(
-            icon = Icons.Default.TrendingUp,
+            icon = Icons.AutoMirrored.Filled.TrendingUp,
             label = "连续拍摄",
             value = "${habits.streakDays}天",
             modifier = Modifier.weight(1f)

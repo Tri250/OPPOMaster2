@@ -31,6 +31,7 @@ data class SceneProfile(
     val faceData: FaceData? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable {
+    @Suppress("DEPRECATION")
     constructor(parcel: Parcel) : this(
         id = parcel.readString() ?: "",
         name = parcel.readString() ?: "",
@@ -434,6 +435,7 @@ data class FaceInfo(
     val leftEyeOpen: Boolean,
     val rightEyeOpen: Boolean
 ) : Parcelable {
+    @Suppress("DEPRECATION")
     constructor(parcel: Parcel) : this(
         bounds = parcel.readParcelable(RectData::class.java.classLoader)
             ?: RectData(0f, 0f, 0f, 0f),

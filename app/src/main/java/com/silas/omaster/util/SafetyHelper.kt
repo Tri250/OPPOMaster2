@@ -28,7 +28,7 @@ object SafetyHelper {
      * @param default 默认值
      * @return 非空值
      */
-    inline fun <T> safeGet(value: T?, default: T): T = value ?: default
+    fun <T> safeGet(value: T?, default: T): T = value ?: default
 
     /**
      * 安全执行操作，捕获所有异常
@@ -108,7 +108,7 @@ object SafetyHelper {
      * @param default 默认值
      * @return 非空值
      */
-    inline fun <T> safeFlowValue(flow: StateFlow<T?>, default: T): T = flow.value ?: default
+    fun <T> safeFlowValue(flow: StateFlow<T?>, default: T): T = flow.value ?: default
 
     /**
      * 安全更新MutableStateFlow
@@ -150,7 +150,7 @@ object SafetyHelper {
      * @param index 索引
      * @return 是否在有效范围内
      */
-    inline fun <T> isValidIndex(array: Array<T>, index: Int): Boolean {
+    fun <T> isValidIndex(array: Array<T>, index: Int): Boolean {
         return index >= 0 && index < array.size
     }
 
@@ -160,7 +160,7 @@ object SafetyHelper {
      * @param index 索引
      * @return 是否在有效范围内
      */
-    inline fun <T> isValidIndex(list: List<T>, index: Int): Boolean {
+    fun <T> isValidIndex(list: List<T>, index: Int): Boolean {
         return index >= 0 && index < list.size
     }
 
@@ -171,7 +171,7 @@ object SafetyHelper {
      * @param default 默认值
      * @return 元素值，索引无效返回默认值
      */
-    inline fun <T> safeArrayGet(array: Array<T>, index: Int, default: T): T {
+    fun <T> safeArrayGet(array: Array<T>, index: Int, default: T): T {
         return if (isValidIndex(array, index)) array[index] else default
     }
 
@@ -182,7 +182,7 @@ object SafetyHelper {
      * @param default 默认值
      * @return 元素值，索引无效返回默认值
      */
-    inline fun <T> safeListGet(list: List<T>, index: Int, default: T): T {
+    fun <T> safeListGet(list: List<T>, index: Int, default: T): T {
         return if (isValidIndex(list, index)) list[index] else default
     }
 

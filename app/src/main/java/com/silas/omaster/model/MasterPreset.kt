@@ -222,6 +222,7 @@ data class MasterPreset(
     // ========== HNCS 认证相关 ==========
     val isHncs: Boolean = false           // 是否 HNCS 认证预设
 ) : Parcelable {
+    @Suppress("DEPRECATION")
     constructor(parcel: Parcel) : this(
         id = parcel.readString(),
         name = parcel.readString() ?: "",

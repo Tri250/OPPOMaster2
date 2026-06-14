@@ -275,10 +275,10 @@ class PresetRepository private constructor(context: Context) {
 
         val updated = preset.copy(
             name = updates["name"] as? String ?: preset.name,
-            params = updates["params"] as? Map<String, Int> ?: preset.params,
+            params = @Suppress("UNCHECKED_CAST")(updates["params"] as? Map<String, Int>) ?: preset.params,
             coverPath = updates["coverPath"] as? String ?: preset.coverPath,
             description = updates["description"] as? String ?: preset.description,
-            tags = updates["tags"] as? List<String> ?: preset.tags,
+            tags = @Suppress("UNCHECKED_CAST")(updates["tags"] as? List<String>) ?: preset.tags,
             updatedAt = System.currentTimeMillis()
         )
 

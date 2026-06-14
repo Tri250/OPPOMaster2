@@ -281,13 +281,13 @@ class SettingsManager private constructor(private val context: Context) {
         get() {
             val jsonStr = prefs.getString(KEY_CUSTOM_QUICK_PRESETS, null) ?: return emptyMap()
             return try {
-                kotlinx.serialization.json.Json.decodeFromString(jsonStr)
+                json.decodeFromString(jsonStr)
             } catch (e: Exception) {
                 emptyMap()
             }
         }
         set(value) {
-            val jsonStr = kotlinx.serialization.json.Json.encodeToString(value)
+            val jsonStr = json.encodeToString(value)
             prefs.edit().putString(KEY_CUSTOM_QUICK_PRESETS, jsonStr).apply()
         }
 
@@ -350,7 +350,7 @@ class SettingsManager private constructor(private val context: Context) {
     fun loadApiConfig(): ApiConfig {
         return try {
             val jsonStr = context.assets.open("api_config.json").bufferedReader().use { it.readText() }
-            val config = Json { ignoreUnknownKeys = true }.decodeFromString<ApiConfig>(jsonStr)
+            val config = json.decodeFromString<ApiConfig>(jsonStr)
             
             // 保存到 SharedPreferences
             prefs.edit().apply {
@@ -439,6 +439,8 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     companion object {
+        private val json = Json { ignoreUnknownKeys = true }
+
         // 云端API默认端点
         private const val DEFAULT_AI_API_ENDPOINT = "https://api.omaster.app/ai"
         private const val DEFAULT_PRESET_API_ENDPOINT = "https://api.omaster.app/presets"
