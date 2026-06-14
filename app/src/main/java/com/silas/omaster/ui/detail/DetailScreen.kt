@@ -119,7 +119,11 @@ fun DetailScreen(
     // 悬浮窗控制器（全局单例，已在 MainActivity 中注册）
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         OMasterTopAppBar(
             title = preset?.let { PresetI18n.getLocalizedPresetName(it.name) } ?: stringResource(R.string.detail_title),
             subtitle = preset?.author,
