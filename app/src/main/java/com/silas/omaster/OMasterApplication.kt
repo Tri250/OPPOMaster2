@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
+import com.silas.omaster.util.MemoryOptimizer
+import com.silas.omaster.util.PerformanceOptimizer
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
 
@@ -36,21 +38,30 @@ class OMasterApplication : Application() {
             android.util.Log.e("OMasterApplication", "CrashHandler安装失败", e)
         }
 
-        // 第 3 步: 初始化震动设置（fail-safe 模式,使用默认值兜底）
+        // 第 3 步: 初始化性能优化（严格模式等）
+        try {
+            PerformanceOptimizer.initStrictMode(BuildConfig.DEBUG)
+            // 注册内存优化回调
+            registerComponentCallbacks(MemoryOptimizer(this))
+        } catch (e: Throwable) {
+            android.util.Log.w("OMasterApplication", "性能优化初始化失败", e)
+        }
+
+        // 第 4 步: 初始化震动设置（fail-safe 模式,使用默认值兜底）
         try {
             HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled
         } catch (e: Throwable) {
             android.util.Log.w("OMasterApplication", "HapticSettings初始化失败,使用默认值", e)
         }
 
-        // 第 4 步: 预初始化友盟（不采集数据,任何异常都不应阻塞启动）
+        // 第 5 步: 预初始化友盟（不采集数据,任何异常都不应阻塞启动）
         try {
             preInitUMeng()
         } catch (e: Throwable) {
             android.util.Log.e("OMasterApplication", "友盟预初始化失败", e)
         }
 
-        // 第 5 步: 如果用户已同意隐私政策且统计开关开启,则正式初始化
+        // 第 6 步: 如果用户已同意隐私政策且统计开关开启,则正式初始化
         try {
             if (hasUserAgreed() && isAnalyticsEnabled()) {
                 initUMeng()
