@@ -1,5 +1,6 @@
 package com.silas.omaster.util
 
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.os.Build
 import android.os.StrictMode
@@ -218,8 +219,6 @@ fun LazyGridState.visibleStartIndex(): Int {
 /**
  * 内存优化组件回调
  */
-import android.content.ComponentCallbacks2
-
 class MemoryOptimizer(private val context: Context) : ComponentCallbacks2 {
 
     override fun onTrimMemory(level: Int) {

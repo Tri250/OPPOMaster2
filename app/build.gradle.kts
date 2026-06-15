@@ -240,9 +240,9 @@ android {
     }
 
     // Android 15+ (API 35+) 16KB 页面大小支持
-    // 确保原生库兼容 16KB 页面大小的设备
+    // 关闭 localeConfig 自动生成（避免需要 resources.properties）
     androidResources {
-        generateLocaleConfig = true
+        generateLocaleConfig = false
     }
 
     // ===== 排除 Web 前端资源，防止打包进 APK =====

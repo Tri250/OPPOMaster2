@@ -66,7 +66,7 @@ class SettingsViewModel(
 
     // 浮窗透明度
     private val _floatingWindowOpacity = MutableStateFlow(settingsManager.floatingWindowOpacity)
-    val floatingWindowOpacity: StateFlow<Float> = _floatingWindowOpacity.asStateFlow()
+    val floatingWindowOpacity: StateFlow<Int> = _floatingWindowOpacity.asStateFlow()
 
     // 缓存大小
     private val _cacheSize = MutableStateFlow("0 MB")
@@ -186,7 +186,7 @@ class SettingsViewModel(
     /**
      * 设置浮窗透明度
      */
-    fun setFloatingWindowOpacity(opacity: Float) {
+    fun setFloatingWindowOpacity(opacity: Int) {
         settingsManager.floatingWindowOpacity = opacity
         _floatingWindowOpacity.value = opacity
     }

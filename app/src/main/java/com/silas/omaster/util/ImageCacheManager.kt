@@ -3,6 +3,8 @@ package com.silas.omaster.util
 import android.content.Context
 import android.util.Log
 import androidx.core.net.toUri
+import coil.Coil
+import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.silas.omaster.model.MasterPreset
@@ -334,7 +336,7 @@ object ImageCacheManager {
      */
     fun trimCache(context: Context) {
         // 清理 Coil 内存缓存
-        coil.imageLoader(context).memoryCache?.clear()
+        Coil.imageLoader(context).memoryCache?.clear()
         Log.d(TAG, "内存缓存已清理")
     }
 
@@ -342,7 +344,7 @@ object ImageCacheManager {
      * 仅清理内存缓存，保留磁盘缓存
      */
     fun clearMemoryCache(context: Context) {
-        coil.imageLoader(context).memoryCache?.clear()
+        Coil.imageLoader(context).memoryCache?.clear()
         Log.d(TAG, "内存缓存已清空")
     }
 }
