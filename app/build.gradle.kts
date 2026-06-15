@@ -68,8 +68,8 @@ android {
         // versionName: 对外显示版本号，格式 主.次.修订
         // 正式版: 1.0, 1.0.1, 1.1.0, 2.0.0
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
-        versionCode = 10
-        versionName = "1.3.1"
+        versionCode = 11
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -237,6 +237,12 @@ android {
             excludes += "META-INF/kotlin-project-structure-metadata.json"
             excludes += "META-INF/versions/**"
         }
+    }
+
+    // Android 15+ (API 35+) 16KB 页面大小支持
+    // 确保原生库兼容 16KB 页面大小的设备
+    androidResources {
+        generateLocaleConfig = true
     }
 
     // ===== 排除 Web 前端资源，防止打包进 APK =====

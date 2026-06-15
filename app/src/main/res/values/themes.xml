@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.OMaster" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- 应用主题 - 支持深色模式 -->
+    <style name="Theme.OMaster" parent="android:Theme.Material.NoActionBar">
+        <!-- 窗口背景 -->
+        <item name="android:windowBackground">@color/pure_black</item>
+        <!-- 状态栏颜色 -->
+        <item name="android:statusBarColor">@color/pure_black</item>
+        <!-- 导航栏颜色 -->
+        <item name="android:navigationBarColor">@color/pure_black</item>
+        <!-- 状态栏图标颜色（浅色图标用于深色背景） -->
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- 导航栏图标颜色 -->
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
 </resources>
