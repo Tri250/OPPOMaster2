@@ -5,6 +5,7 @@ import HomeScreen from './pages/HomeScreen';
 import FeaturedScreen from './pages/FeaturedScreen';
 import FeaturesScreen from './pages/FeaturesScreen';
 import AboutScreen from './pages/AboutScreen';
+import AndroidAppShowcase from './pages/AndroidAppShowcase';
 
 // Sub pages
 import AISceneRecognitionPage from './pages/subpages/AISceneRecognitionPage';
@@ -80,6 +81,14 @@ const App: React.FC = () => {
         return <HomeScreen />;
     }
   };
+
+  // Check if we're in showcase mode (for web presentation)
+  const isShowcaseMode = window.location.pathname === '/showcase' || 
+                         window.location.search.includes('showcase');
+
+  if (isShowcaseMode) {
+    return <AndroidAppShowcase />;
+  }
 
   return (
     <PhoneMockup>
