@@ -16,7 +16,11 @@ pluginManagement {
         // ===== 腾讯云镜像（沙箱代理可达 200-400ms，全镜像合一）=====
         maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
 
-        // ===== 官方仓库（通过代理可达）=====
+        // ===== JetBrains 官方仓库（Kotlin 插件 - 使用 cache-redirector)=====
+        maven { url = uri("https://cache-redirector.jetbrains.com/maven.pkg.jetbrains.space/public/p/kotlin/kotlin-gradle-plugins") }
+        maven { url = uri("https://cache-redirector.jetbrains.com/gradlePluginPortal") }
+
+        // ===== 官方仓库（通过代理可达） =====
         gradlePluginPortal()
         google()
         mavenCentral()
