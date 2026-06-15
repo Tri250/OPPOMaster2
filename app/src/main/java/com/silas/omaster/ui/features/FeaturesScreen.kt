@@ -21,10 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sparkles
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -92,7 +92,7 @@ fun FeaturesScreen(
         FeatureSection(
             title = stringResource(R.string.section_ai_features),
             description = stringResource(R.string.section_ai_desc),
-            icon = Icons.Default.Sparkles,
+            icon = Icons.Default.AutoAwesome,
             count = 4
         ) {
             // AI 场景识别
@@ -176,7 +176,7 @@ fun FeaturesScreen(
         FeatureSection(
             title = stringResource(R.string.section_tools),
             description = stringResource(R.string.section_tools_desc),
-            icon = Icons.Default.Settings,
+            icon = Icons.Default.SettingsSuggest,
             count = 2
         ) {
             // 参数调节

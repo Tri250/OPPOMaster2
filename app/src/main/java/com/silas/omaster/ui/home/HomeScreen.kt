@@ -457,8 +457,7 @@ private fun TabBar(
                     .tabIndicatorOffset(tabPositions[selectedTab])
                     .height(3.dp)
                     .padding(horizontal = 8.dp),
-                color = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)
+                color = MaterialTheme.colorScheme.primary
             )
         },
         divider = {}

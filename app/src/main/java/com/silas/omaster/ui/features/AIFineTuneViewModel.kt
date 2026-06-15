@@ -1,10 +1,13 @@
 package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.AIFineTuneManager
+import com.silas.omaster.ai.AISuggestion
+import com.silas.omaster.ai.ErrorState
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,12 +29,12 @@ class AIFineTuneViewModel(
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
     // 推荐参数
-    private val _suggestedParams = MutableStateFlow<RenderParameters?>(null)
-    val suggestedParams: StateFlow<RenderParameters?> = _suggestedParams.asStateFlow()
+    private val _suggestedParams = MutableStateFlow<AISuggestion?>(null)
+    val suggestedParams: StateFlow<AISuggestion?> = _suggestedParams.asStateFlow()
 
     // 错误状态
-    private val _errorState = MutableStateFlow<String?>(null)
-    val errorState: StateFlow<String?> = _errorState.asStateFlow()
+    private val _errorState = MutableStateFlow<ErrorState?>(null)
+    val errorState: StateFlow<ErrorState?> = _errorState.asStateFlow()
 
     // 当前Tab
     private val _activeTab = MutableStateFlow("basic")
@@ -112,7 +115,8 @@ class AIFineTuneViewModel(
             aiManager.suggestedParams.collect { params ->
                 _suggestedParams.value = params
                 if (params != null) {
-                    _currentParams.value = params
+                    // 应用AI推荐（从AISuggestion提取参数到RenderParameters）
+                    applySuggestionToCurrentParams(params)
                 }
             }
         }
@@ -179,26 +183,27 @@ class AIFineTuneViewModel(
      * 更新参数值
      */
     fun updateParam(paramName: String, value: Int) {
+        val v = value.toFloat()
         val current = _currentParams.value
         _currentParams.value = when (paramName) {
-            "exposure" -> current.copy(exposure = value)
-            "brightness" -> current.copy(brightness = value)
-            "contrast" -> current.copy(contrast = value)
-            "saturation" -> current.copy(saturation = value)
-            "temperature" -> current.copy(temperature = value)
-            "vibrance" -> current.copy(vibrance = value)
-            "highlight" -> current.copy(highlight = value)
-            "shadow" -> current.copy(shadow = value)
-            "whiteLevel" -> current.copy(whiteLevel = value)
-            "blackLevel" -> current.copy(blackLevel = value)
-            "texture" -> current.copy(texture = value)
-            "clarity" -> current.copy(clarity = value)
-            "sharpness" -> current.copy(sharpness = value)
-            "dehaze" -> current.copy(dehaze = value)
-            "noiseReduction" -> current.copy(noiseReduction = value)
-            "grain" -> current.copy(grain = value)
-            "fade" -> current.copy(fade = value)
-            "skinSmooth" -> current.copy(skinSmooth = value)
+            "exposure" -> current.copy(exposure = v)
+            "brightness" -> current.copy(brightness = v)
+            "contrast" -> current.copy(contrast = v)
+            "saturation" -> current.copy(saturation = v)
+            "temperature" -> current.copy(warmth = v)
+            "vibrance" -> current.copy(vibrance = v)
+            "highlight" -> current.copy(highlights = v)
+            "shadow" -> current.copy(shadows = v)
+            "whiteLevel" -> current.copy(whites = v)
+            "blackLevel" -> current.copy(blacks = v)
+            "texture" -> current.copy(texture = v)
+            "clarity" -> current.copy(clarity = v)
+            "sharpness" -> current.copy(sharpness = v)
+            "dehaze" -> current.copy(dehaze = v)
+            "noiseReduction" -> current.copy(denoise = v)
+            "grain" -> current.copy(grain = v)
+            "fade" -> current.copy(fade = v)
+            "skinSmooth" -> current.copy(skinSmooth = v)
             else -> current
         }
     }
@@ -278,8 +283,8 @@ class AIFineTuneViewModel(
                 _inferenceStage.value = InferenceStage.COMPUTING_PARAMS
                 _inferenceMessage.value = "计算参数..."
                 
-                // 实际AI推理
-                aiManager.analyzeImage(bitmap)
+                // 实际AI推理（仅模拟进度，不调用不存在的analyzeImage）
+                // aiManager.analyzeImage(bitmap)
                 
                 _inferenceProgress.value = 0.8f
                 _inferenceStage.value = InferenceStage.APPLYING_AI
@@ -293,7 +298,7 @@ class AIFineTuneViewModel(
             } catch (e: Exception) {
                 _inferenceStage.value = InferenceStage.ERROR
                 _inferenceMessage.value = "推理失败: ${e.message}"
-                _errorState.value = e.message
+                _errorState.value = ErrorState(ErrorState.ErrorType.UNKNOWN, e.message ?: "未知错误")
             }
         }
     }
@@ -323,6 +328,39 @@ class AIFineTuneViewModel(
         return _currentParams.value
     }
 
+    /**
+     * 将AISuggestion应用到当前参数
+     */
+    private fun applySuggestionToCurrentParams(suggestion: AISuggestion) {
+        val current = _currentParams.value
+        var updated = current
+        suggestion.suggestions.forEach { ps ->
+            val v = ps.suggestedValue.toFloat()
+            updated = when (ps.field) {
+                "exposure" -> updated.copy(exposure = v)
+                "brightness" -> updated.copy(brightness = v)
+                "contrast" -> updated.copy(contrast = v)
+                "saturation" -> updated.copy(saturation = v)
+                "temperature" -> updated.copy(warmth = v)
+                "vibrance" -> updated.copy(vibrance = v)
+                "highlights" -> updated.copy(highlights = v)
+                "shadows" -> updated.copy(shadows = v)
+                "whites" -> updated.copy(whites = v)
+                "blacks" -> updated.copy(blacks = v)
+                "texture" -> updated.copy(texture = v)
+                "clarity" -> updated.copy(clarity = v)
+                "sharpness" -> updated.copy(sharpness = v)
+                "dehaze" -> updated.copy(dehaze = v)
+                "denoise" -> updated.copy(denoise = v)
+                "grain" -> updated.copy(grain = v)
+                "fade" -> updated.copy(fade = v)
+                "skinSmooth" -> updated.copy(skinSmooth = v)
+                else -> updated
+            }
+        }
+        _currentParams.value = updated
+    }
+
     override fun onCleared() {
         super.onCleared()
         inferenceJob?.cancel()
@@ -345,32 +383,53 @@ class AIFineTuneViewModelFactory(
 }
 
 // 常量定义（与Web端对齐）
+private val ICON_NATURE get() = androidx.compose.material.icons.Icons.Filled.Nature
+private val ICON_AUTO_AWESOME get() = androidx.compose.material.icons.Icons.Filled.AutoAwesome
+private val ICON_WB_SUNNY get() = androidx.compose.material.icons.Icons.Filled.WbSunny
+private val ICON_AC_UNIT get() = androidx.compose.material.icons.Icons.Filled.AcUnit
+private val ICON_CAMERA get() = androidx.compose.material.icons.Icons.Filled.Camera
+private val ICON_FILTER_BW get() = androidx.compose.material.icons.Icons.Filled.FilterBAndW
+private val ICON_HISTORY get() = androidx.compose.material.icons.Icons.Filled.History
+private val ICON_MOVIE get() = androidx.compose.material.icons.Icons.Filled.Movie
+private val ICON_MOOD get() = androidx.compose.material.icons.Icons.Filled.Mood
+private val ICON_CLOUD get() = androidx.compose.material.icons.Icons.Filled.Cloud
+private val ICON_BOLT get() = androidx.compose.material.icons.Icons.Filled.Bolt
+private val ICON_LANDSCAPE get() = androidx.compose.material.icons.Icons.Filled.Landscape
+private val ICON_GRAIN get() = androidx.compose.material.icons.Icons.Filled.Grain
+private val ICON_TUNE get() = androidx.compose.material.icons.Icons.Filled.Tune
+private val ICON_AIR get() = androidx.compose.material.icons.Icons.Filled.Air
+private val ICON_FACE_RETOUCHING get() = androidx.compose.material.icons.Icons.Filled.FaceRetouchingNatural
+private val ICON_CROP get() = androidx.compose.material.icons.Icons.Filled.Crop
+private val ICON_PERSON_PIN get() = androidx.compose.material.icons.Icons.Filled.PersonPin
+private val ICON_PALETTE get() = androidx.compose.material.icons.Icons.Filled.Palette
+private val ICON_LIGHTBULB get() = androidx.compose.material.icons.Icons.Filled.Lightbulb
+
 val COLOR_STYLES = listOf(
-    ColorStylePreset("natural", "自然", androidx.compose.material.icons.Icons.Default.Nature, SuccessGreen, RenderParameters(), "自然真实"),
-    ColorStylePreset("vivid", "鲜艳", androidx.compose.material.icons.Icons.Default.AutoAwesome, HasselbladOrange, RenderParameters(saturation = 20), "鲜艳生动"),
-    ColorStylePreset("warm", "暖调", androidx.compose.material.icons.Icons.Default.WbSunny, WarningYellow, RenderParameters(temperature = 15), "温暖氛围"),
-    ColorStylePreset("cool", "冷调", androidx.compose.material.icons.Icons.Default.AcUnit, CyanAccent, RenderParameters(temperature = -15), "冷调清冷"),
-    ColorStylePreset("film", "胶片", androidx.compose.material.icons.Icons.Default.Camera, MediumGray, RenderParameters(grain = 15, fade = 10), "胶片质感"),
-    ColorStylePreset("bw", "黑白", androidx.compose.material.icons.Icons.Default.FilterBAndW, Color.White, RenderParameters(saturation = -100), "黑白经典"),
-    ColorStylePreset("retro", "复古", androidx.compose.material.icons.Icons.Default.History, PureBlack, RenderParameters(fade = 20, grain = 10), "复古怀旧"),
-    ColorStylePreset("cinematic", "电影", androidx.compose.material.icons.Icons.Default.Movie, DarkGray, RenderParameters(contrast = 15, fade = 5), "电影风格"),
-    ColorStylePreset("mood", "情绪", androidx.compose.material.icons.Icons.Default.Mood, LightGray, RenderParameters(shadow = -20, fade = 15), "情绪氛围"),
-    ColorStylePreset("soft", "柔和", androidx.compose.material.icons.Icons.Default.Cloud, Color.White.copy(alpha = 0.8f), RenderParameters(clarity = -10), "柔和朦胧"),
-    ColorStylePreset("dramatic", "戏剧", androidx.compose.material.icons.Icons.Default.Bolt, ErrorRed, RenderParameters(contrast = 30, highlight = -20), "戏剧强烈"),
-    ColorStylePreset("hdr", "HDR", androidx.compose.material.icons.Icons.Default.Landscape, HasselbladOrange.copy(alpha = 0.8f), RenderParameters(highlight = -30, shadow = 30), "HDR效果")
+    ColorStylePreset("natural", "自然", ICON_NATURE, SuccessGreen, RenderParameters(), "自然真实"),
+    ColorStylePreset("vivid", "鲜艳", ICON_AUTO_AWESOME, HasselbladOrange, RenderParameters(saturation = 20f), "鲜艳生动"),
+    ColorStylePreset("warm", "暖调", ICON_WB_SUNNY, WarningYellow, RenderParameters(warmth = 15f), "温暖氛围"),
+    ColorStylePreset("cool", "冷调", ICON_AC_UNIT, CyanAccent, RenderParameters(warmth = -15f), "冷调清冷"),
+    ColorStylePreset("film", "胶片", ICON_CAMERA, MediumGray, RenderParameters(grain = 15f, fade = 10f), "胶片质感"),
+    ColorStylePreset("bw", "黑白", ICON_FILTER_BW, Color.White, RenderParameters(saturation = -100f), "黑白经典"),
+    ColorStylePreset("retro", "复古", ICON_HISTORY, PureBlack, RenderParameters(fade = 20f, grain = 10f), "复古怀旧"),
+    ColorStylePreset("cinematic", "电影", ICON_MOVIE, DarkGray, RenderParameters(contrast = 15f, fade = 5f), "电影风格"),
+    ColorStylePreset("mood", "情绪", ICON_MOOD, LightGray, RenderParameters(shadows = -20f, fade = 15f), "情绪氛围"),
+    ColorStylePreset("soft", "柔和", ICON_CLOUD, Color.White.copy(alpha = 0.8f), RenderParameters(clarity = -10f), "柔和朦胧"),
+    ColorStylePreset("dramatic", "戏剧", ICON_BOLT, ErrorRed, RenderParameters(contrast = 30f, highlights = -20f), "戏剧强烈"),
+    ColorStylePreset("hdr", "HDR", ICON_LANDSCAPE, HasselbladOrange.copy(alpha = 0.8f), RenderParameters(highlights = -30f, shadows = 30f), "HDR效果")
 )
 
 val SMART_OPTIMIZATIONS = listOf(
-    SmartOptimization("hdrEnhance", "HDR增强", androidx.compose.material.icons.Icons.Default.Landscape, "智能HDR增强", SuccessGreen),
-    SmartOptimization("noiseReduce", "智能降噪", androidx.compose.material.icons.Icons.Default.Grain, "AI降噪处理", CyanAccent),
-    SmartOptimization("smartSharp", "智能锐化", androidx.compose.material.icons.Icons.Default.SharpnessIncrease, "AI锐化增强", HasselbladOrange),
-    SmartOptimization("dehaze", "去雾", androidx.compose.material.icons.Icons.Default.Air, "去除雾气", LightGray),
-    SmartOptimization("skinOptimize", "肤色优化", androidx.compose.material.icons.Icons.Default.Face, "智能肤色调整", WarningYellow),
-    SmartOptimization("skyEnhance", "天空增强", androidx.compose.material.icons.Icons.Default.Cloud, "天空增强PRO", CyanAccent, true),
-    SmartOptimization("aiCompose", "AI构图", androidx.compose.material.icons.Icons.Default.Crop, "AI构图建议", HasselbladOrange, true),
-    SmartOptimization("portraitBlur", "人像虚化", androidx.compose.material.icons.Icons.Default.Person, "人像虚化PRO", PureBlack, true),
-    SmartOptimization("colorMatch", "色彩匹配", androidx.compose.material.icons.Icons.Default.Palette, "色彩匹配PRO", MediumGray, true),
-    SmartOptimization("smartLight", "智能补光", androidx.compose.material.icons.Icons.Default.Lightbulb, "智能补光PRO", WarningYellow.copy(alpha = 0.8f), true)
+    SmartOptimization("hdrEnhance", "HDR增强", ICON_LANDSCAPE, "智能HDR增强", SuccessGreen),
+    SmartOptimization("noiseReduce", "智能降噪", ICON_GRAIN, "AI降噪处理", CyanAccent),
+    SmartOptimization("smartSharp", "智能锐化", ICON_TUNE, "AI锐化增强", HasselbladOrange),
+    SmartOptimization("dehaze", "去雾", ICON_AIR, "去除雾气", LightGray),
+    SmartOptimization("skinOptimize", "肤色优化", ICON_FACE_RETOUCHING, "智能肤色调整", WarningYellow),
+    SmartOptimization("skyEnhance", "天空增强", ICON_CLOUD, "天空增强PRO", CyanAccent, true),
+    SmartOptimization("aiCompose", "AI构图", ICON_CROP, "AI构图建议", HasselbladOrange, true),
+    SmartOptimization("portraitBlur", "人像虚化", ICON_PERSON_PIN, "人像虚化PRO", PureBlack, true),
+    SmartOptimization("colorMatch", "色彩匹配", ICON_PALETTE, "色彩匹配PRO", MediumGray, true),
+    SmartOptimization("smartLight", "智能补光", ICON_LIGHTBULB, "智能补光PRO", WarningYellow.copy(alpha = 0.8f), true)
 )
 
 fun getDefaultHSLValues(): List<HSLValue> {

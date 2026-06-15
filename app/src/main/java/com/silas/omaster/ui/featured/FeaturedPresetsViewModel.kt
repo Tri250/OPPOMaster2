@@ -9,6 +9,7 @@ import com.silas.omaster.model.MasterPreset
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +64,7 @@ class FeaturedPresetsViewModel(
             _isLoading.value = true
             withContext(Dispatchers.IO) {
                 // 从仓库获取精选预设（HNCS或高评分预设）
-                val presets = repository.getAllPresetsOnce()
+                val presets = repository.getAllPresets().first()
                     .filter { it.isHncs || (it.rating ?: 0f) >= 4.5f }
                     .sortedByDescending { it.rating ?: 0f }
                 _featuredPresets.value = presets

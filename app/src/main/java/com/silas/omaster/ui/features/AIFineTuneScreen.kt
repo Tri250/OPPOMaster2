@@ -147,7 +147,7 @@ fun AIFineTuneScreen(
     var inferenceMessage by remember { mutableStateOf("") }
 
     // HSL和曲线
-    var hslValues by remember { mutableStateOf(getDefaultHSLValues()) }
+    val hslValues = remember { mutableStateOf<List<HSLValue>>(getDefaultHSLValues()) }
     var selectedHslId by remember { mutableStateOf("red") }
     var curveChannel by remember { mutableStateOf("rgb") }
 
@@ -435,11 +435,11 @@ fun AIFineTuneScreen(
 
                     item {
                         HSLSelectorCard(
-                            hslValues = hslValues,
+                            hslValues = hslValues.value,
                             selectedId = selectedHslId,
                             onSelect = { selectedHslId = it },
                             onValueChange = { id, field, value ->
-                                hslValues = hslValues.map { hsl ->
+                                hslValues.value = hslValues.value.map { hsl ->
                                     if (hsl.id == id) {
                                         when (field) {
                                             "hue" -> hsl.copy(hue = value)
@@ -493,7 +493,7 @@ fun AIFineTuneScreen(
                     renderParams = RenderParameters()
                     selectedStyleId = null
                     selectedOptimizations.clear()
-                    hslValues = getDefaultHSLValues()
+                    hslValues.value = getDefaultHSLValues()
                 }) {
                     Icon(Icons.Default.Refresh, null, tint = Color.White.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -1111,22 +1111,6 @@ private fun CurveAdjustCard(
             }
         }
     }
-}
-
-/**
- * 获取默认HSL值
- */
-private fun getDefaultHSLValues(): List<HSLValue> {
-    return listOf(
-        HSLValue("red", "红色", Color.Red),
-        HSLValue("orange", "橙色", Color(0xFFFF8000)),
-        HSLValue("yellow", "黄色", Color.Yellow),
-        HSLValue("green", "绿色", Color.Green),
-        HSLValue("cyan", "青色", Color.Cyan),
-        HSLValue("blue", "蓝色", Color.Blue),
-        HSLValue("purple", "紫色", Color(0xFF8000FF)),
-        HSLValue("magenta", "洋红", Color.Magenta)
-    )
 }
 
 /**

@@ -2,6 +2,7 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import java.io.IOException
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,12 +12,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +50,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -139,7 +145,7 @@ fun SmartOptimizeScreen(
     var optimizationTotalSteps by remember { mutableStateOf(0) }
     var optimizationProgress by remember { mutableFloatStateOf(0f) }
     var optimizationCurrentName by remember { mutableStateOf("") }
-    var optimizedOptions by remember { mutableStateListOf<String>() }
+    val optimizedOptions = remember { mutableListOf<String>() }
 
     // 从 assets 加载示例预览图
     LaunchedEffect(Unit) {

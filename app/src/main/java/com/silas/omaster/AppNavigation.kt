@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -377,7 +378,7 @@ private fun MigrationDialog(
         text = {
             Text(
                 "检测到预设数据版本过旧，需要迁移数据以支持新功能。\n\n" +
-                    "点击"迁移数据"将重置内置预设（您的自定义预设和收藏不会丢失）。"
+                    "点击「迁移数据」将重置内置预设（您的自定义预设和收藏不会丢失）。"
             )
         },
         confirmButton = {
@@ -463,7 +464,7 @@ private fun handleBottomNav(
 /**
  * 计算 NavHost 进入动画方向（底部导航栏之间用左右滑动，其他用默认方向）
  */
-private fun AnimatedContentTransitionScope<*>.navEnterTransition(
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.navEnterTransition(
     getNavIndex: (String?) -> Int,
     forward: Boolean
 ): EnterTransition {
@@ -475,7 +476,7 @@ private fun AnimatedContentTransitionScope<*>.navEnterTransition(
 /**
  * 计算 NavHost 退出动画方向
  */
-private fun AnimatedContentTransitionScope<*>.navExitTransition(
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.navExitTransition(
     getNavIndex: (String?) -> Int,
     forward: Boolean
 ): ExitTransition {
@@ -487,7 +488,7 @@ private fun AnimatedContentTransitionScope<*>.navExitTransition(
 /**
  * 根据当前路由和目标路由决定滑动方向
  */
-private fun AnimatedContentTransitionScope<*>.computeSlideDirection(
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.computeSlideDirection(
     getNavIndex: (String?) -> Int,
     forward: Boolean
 ): AnimatedContentTransitionScope.SlideDirection {
