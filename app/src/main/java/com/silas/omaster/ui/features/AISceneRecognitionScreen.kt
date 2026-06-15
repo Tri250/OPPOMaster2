@@ -352,7 +352,8 @@ fun AISceneRecognitionScreen(
                                 } finally {
                                     isOptimized = false
                                 }
-                            },
+                            }
+                        },
                         isSaving = isSaving,
                         saveSuccess = saveSuccess,
                         onSaveRecipe = {

@@ -214,8 +214,6 @@
 -optimizationpasses 5
 -allowaccessmodification
 -mergeinterfacesaggressively
--shrink
--optimize
 
 # ========================================
 # 混淆配置

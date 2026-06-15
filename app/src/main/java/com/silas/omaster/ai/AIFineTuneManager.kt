@@ -173,6 +173,14 @@ class AIFineTuneManager private constructor(context: Context) {
      * @param currentParams 当前调整参数
      * @return AI建议结果
      */
+    
+    /**
+     * AI 场景分析（委托给推理引擎）
+     */
+    suspend fun analyzeImage(bitmap: Bitmap, imagePath: String? = null): SceneProfile {
+        return inferenceEngine.analyzeImage(bitmap, imagePath)
+    }
+
     suspend fun generateAISuggestion(
         bitmap: Bitmap,
         currentParams: Map<String, Int>

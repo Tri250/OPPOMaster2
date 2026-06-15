@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +49,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -83,6 +88,7 @@ import com.silas.omaster.ui.theme.SurfaceElevated
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * 智能优化页面
@@ -139,7 +145,7 @@ fun SmartOptimizeScreen(
     var optimizationTotalSteps by remember { mutableStateOf(0) }
     var optimizationProgress by remember { mutableFloatStateOf(0f) }
     var optimizationCurrentName by remember { mutableStateOf("") }
-    var optimizedOptions by remember { mutableStateListOf<String>() }
+    var optimizedOptions = remember { mutableStateListOf<String>() }
 
     // 从 assets 加载示例预览图
     LaunchedEffect(Unit) {

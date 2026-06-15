@@ -25,14 +25,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Globe
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WbSunny
@@ -50,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -278,7 +281,7 @@ fun AboutScreen(
             actions = {
                 IconButton(onClick = onNavigateToSettings) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                        imageVector = Icons.Default.Settings,
                         contentDescription = stringResource(R.string.nav_settings),
                         tint = Color.White
                     )
@@ -728,7 +731,7 @@ private fun SettingsListCard(
             onClick = onDarkModeClick
         ),
         SettingsItem(
-            icon = Icons.Default.Globe,
+            icon = Icons.Default.Language,
             label = stringResource(R.string.update_channel_title),
             value = when (updateChannel) {
                 UpdateChannel.GITEE -> stringResource(R.string.update_channel_gitee)

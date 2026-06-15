@@ -34,6 +34,8 @@ import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.*
@@ -1833,7 +1835,7 @@ private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bit
 
     val shadowPaint = if (config.shadowEnabled) Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = config.textSize * result.width / 400f
-        color = android.graphics.Color.argb((config.opacity * 0.5f).coerceIn(0f, 1f), 0, 0, 0)
+        color = android.graphics.Color.argb(((config.opacity * 0.5f * 255).coerceIn(0f, 255f)).toInt(), 0, 0, 0)
         letterSpacing = config.letterSpacing
         maskFilter = BlurMaskFilter(config.shadowBlur * result.width / 400f, BlurMaskFilter.Blur.NORMAL)
         typeface = if (config.fontWeight >= FontWeight.Bold) {
@@ -1973,7 +1975,7 @@ private fun DrawScope.drawWatermarkText(
     scale: Float,
     offset: Offset
 ) {
-    val textPaint = Paint().asFrameworkPaint().apply {
+    val textPaint = androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
         color = config.textColor.toArgb()
         textSize = config.textSize * scale
         setShadowLayer(config.shadowBlur, 0f, 0f, Color.Black.toArgb())

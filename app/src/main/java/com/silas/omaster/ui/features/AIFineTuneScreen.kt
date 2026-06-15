@@ -147,7 +147,7 @@ fun AIFineTuneScreen(
     var inferenceMessage by remember { mutableStateOf("") }
 
     // HSL和曲线
-    var hslValues by remember { mutableStateOf(getDefaultHSLValues()) }
+    var hslValues: List<HSLValue> by remember { mutableStateOf(defaultHslValuesList()) }
     var selectedHslId by remember { mutableStateOf("red") }
     var curveChannel by remember { mutableStateOf("rgb") }
 
@@ -442,9 +442,9 @@ fun AIFineTuneScreen(
                                 hslValues = hslValues.map { hsl ->
                                     if (hsl.id == id) {
                                         when (field) {
-                                            "hue" -> hsl.copy(hue = value)
-                                            "saturation" -> hsl.copy(saturation = value)
-                                            "luminance" -> hsl.copy(luminance = value)
+                                            "hue" -> hsl.copy(hue = value.toInt())
+                                            "saturation" -> hsl.copy(saturation = value.toInt())
+                                            "luminance" -> hsl.copy(luminance = value.toInt())
                                             else -> hsl
                                         }
                                     } else hsl
@@ -493,7 +493,7 @@ fun AIFineTuneScreen(
                     renderParams = RenderParameters()
                     selectedStyleId = null
                     selectedOptimizations.clear()
-                    hslValues = getDefaultHSLValues()
+                    hslValues = defaultHslValuesList()
                 }) {
                     Icon(Icons.Default.Refresh, null, tint = Color.White.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -1116,7 +1116,7 @@ private fun CurveAdjustCard(
 /**
  * 获取默认HSL值
  */
-private fun getDefaultHSLValues(): List<HSLValue> {
+private fun defaultHslValuesList(): List<HSLValue> {
     return listOf(
         HSLValue("red", "红色", Color.Red),
         HSLValue("orange", "橙色", Color(0xFFFF8000)),
