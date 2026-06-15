@@ -270,7 +270,7 @@ fun AboutScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.about_title),
