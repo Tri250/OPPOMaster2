@@ -32,10 +32,6 @@ tensorflow-lite = "2.16.1"
 tensorflow-lite-gpu = "2.16.1"
 tensorflow-lite-support = "0.4.4"
 
-# ===== Analytics =====
-umeng-common = "9.8.9"
-umeng-asms = "1.8.7.2"
-
 # ===== Coroutines =====
 kotlinx-coroutines-play-services = "1.10.1"
 
@@ -76,11 +72,6 @@ ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref =
 ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
-
-# 友盟
-umeng-common = { group = "com.umeng.umsdk", name = "common", version.ref = "umeng-common" }
-umeng-asms = { group = "com.umeng.umsdk", name = "asms", version.ref = "umeng-asms" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 
 # ML Kit 人脸检测
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkit-face-detection" }

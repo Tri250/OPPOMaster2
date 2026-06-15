@@ -43,8 +43,8 @@ class ApplicationFullTestPart2 {
     }
 
     @Test
-    fun `OMasterApplication should init UMeng`() {
-        assertTrue("UMeng should be initialized", true)
+    fun `OMasterApplication should initialize without analytics SDK`() {
+        assertTrue("Application should initialize without third-party analytics", true)
     }
 
     @Test

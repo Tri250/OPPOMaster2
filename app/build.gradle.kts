@@ -8,26 +8,6 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
 }
 
-// ===== 安全配置读取 =====
-// 友盟 AppKey 从 local.properties 读取（已 gitignore），不在版本控制中
-// 如未配置，构建时输出警告但不阻塞（debug 构建可用空值）
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { localProperties.load(it) }
-}
-
-val umengAppKey: String = localProperties.getProperty("UMENG_APPKEY")
-    ?: project.findProperty("UMENG_APPKEY") as String?
-    ?: ""
-val umengMessageSecret: String = localProperties.getProperty("UMENG_MESSAGE_SECRET")
-    ?: project.findProperty("UMENG_MESSAGE_SECRET") as String?
-    ?: ""
-
-if (umengAppKey.isEmpty()) {
-    println("⚠️ UMENG_APPKEY 未配置，友盟统计将不可用。请在 local.properties 中设置。")
-}
-
 // 读取签名配置
 // 优先级：1. gradle.properties 中的 RELEASE_* 配置
 //        2. keystore-release.properties 文件（不应提交到版本控制）
@@ -75,11 +55,6 @@ android {
 
         // 资源优化：只保留需要的语言资源
         resourceConfigurations += listOf("en", "zh", "zh-rCN", "zh-rTW")
-        
-        // ===== 安全配置注入到 BuildConfig =====
-        // 友盟统计 AppKey（从 gradle.properties 读取，避免硬编码）
-        buildConfigField("String", "UMENG_APPKEY", "\"$umengAppKey\"")
-        buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
     }
 
     // 签名配置
@@ -286,11 +261,6 @@ dependencies {
     implementation(libs.gson)
 
     // Room 数据库已移除，使用 SharedPreferences 替代
-
-    // ⚠️ 替换友盟硬编码依赖
-// 友盟
-    implementation(libs.umeng.common)
-    implementation(libs.umeng.asms)
 
     // ML Kit 人脸检测
     implementation(libs.mlkit.face.detection)

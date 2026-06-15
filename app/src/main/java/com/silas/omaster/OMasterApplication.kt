@@ -6,8 +6,6 @@ import android.content.SharedPreferences
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
-import com.umeng.commonsdk.UMConfigure
-import com.umeng.analytics.MobclickAgent
 
 class OMasterApplication : Application() {
     companion object {
@@ -42,43 +40,6 @@ class OMasterApplication : Application() {
         } catch (e: Throwable) {
             android.util.Log.w("OMasterApplication", "HapticSettings初始化失败,使用默认值", e)
         }
-
-        // 第 4 步: 预初始化友盟（不采集数据,任何异常都不应阻塞启动）
-        try {
-            preInitUMeng()
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "友盟预初始化失败", e)
-        }
-
-        // 第 5 步: 如果用户已同意隐私政策且统计开关开启,则正式初始化
-        try {
-            if (hasUserAgreed() && isAnalyticsEnabled()) {
-                initUMeng()
-            }
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "友盟正式初始化失败", e)
-        }
-    }
-
-    /**
-     * 预初始化友盟
-     * 不会采集设备信息，也不会上报数据
-     * 必须在 Application.onCreate 中调用
-     */
-    private fun preInitUMeng() {
-        UMConfigure.setLogEnabled(false)
-        // 使用 BuildConfig 中的 AppKey（从 gradle.properties 注入，避免硬编码）
-        UMConfigure.preInit(this, BuildConfig.UMENG_APPKEY, "default")
-    }
-
-    /**
-     * 正式初始化友盟
-     * 用户同意隐私政策后才能调用
-     * 此时才会采集设备信息并上报数据
-     */
-    fun initUMeng() {
-        // 使用 BuildConfig 中的 AppKey（从 gradle.properties 注入，避免硬编码）
-        UMConfigure.init(this, BuildConfig.UMENG_APPKEY, "default", UMConfigure.DEVICE_TYPE_PHONE, null)
     }
 
     fun hasUserAgreed(): Boolean {
@@ -87,27 +48,5 @@ class OMasterApplication : Application() {
 
     fun setUserAgreed(agreed: Boolean) {
         prefs.edit().putBoolean(KEY_USER_AGREED, agreed).apply()
-    }
-
-    /**
-     * 检查统计开关是否开启
-     */
-    private fun isAnalyticsEnabled(): Boolean {
-        return SettingsManager.getInstance(this).isAnalyticsEnabled
-    }
-
-    /**
-     * 根据当前开关状态重新初始化或禁用友盟统计
-     * 在设置页面切换开关后调用
-     */
-    fun updateAnalyticsState() {
-        if (isAnalyticsEnabled() && hasUserAgreed()) {
-            // 开启统计，执行初始化
-            initUMeng()
-        } else {
-            // 关闭统计，禁用数据上报
-            // 注意：友盟SDK不支持完全停止，但可以通过以下方式减少数据收集
-            MobclickAgent.disable()
-        }
     }
 }

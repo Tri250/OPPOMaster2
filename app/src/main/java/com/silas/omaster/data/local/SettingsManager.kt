@@ -140,7 +140,7 @@ class SettingsManager private constructor(private val context: Context) {
             prefs.edit().putString(KEY_UPDATE_CHANNEL, value.name).apply()
         }
 
-    // 友盟统计开关（默认开启，因为用户首次已同意隐私政策）
+    // 使用统计开关（默认开启）
     var isAnalyticsEnabled: Boolean
         get() = prefs.getBoolean(KEY_ANALYTICS_ENABLED, true)
         set(value) {

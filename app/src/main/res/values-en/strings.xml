@@ -51,7 +51,7 @@
     <string name="settings_theme_title">Theme Color</string>
     <string name="settings_theme_dialog_title">Select Theme Color</string>
     <string name="floating_window_opacity">Floating Window Opacity</string>
-    <string name="analytics_enabled">Use Umeng Analytics</string>
+    <string name="analytics_enabled">Usage Statistics</string>
     <string name="analytics_restart_hint">Restart app to apply</string>
     <string name="clear_cache">Clear Image Cache</string>
     <string name="clear_cache_desc">Free up storage space, images will be re-downloaded on next browse</string>
@@ -350,14 +350,14 @@
     <string name="features_title">Features</string>
     <string name="features_list">• View Master Mode color grading parameters\n• Support multiple preset styles\n• Pure local operation, data stored locally\n• No internet required</string>
     <string name="data_collection_title">Data Collection</string>
-    <string name="data_collection_desc">To provide better service, we use Umeng Analytics SDK to collect app usage data.</string>
-    <string name="sdk_info_title">Umeng SDK Info</string>
+    <string name="data_collection_desc">We respect your privacy and do not collect your personal data. App usage data is stored locally on your device only.</string>
+    <string name="sdk_info_title">Third-party SDK Info</string>
     <string name="sdk_name_label">SDK Name</string>
-    <string name="sdk_name">Umeng SDK</string>
+    <string name="sdk_name">None</string>
     <string name="service_type_label">Service Type</string>
-    <string name="service_type">Analytics</string>
+    <string name="service_type">-</string>
     <string name="collect_info_label">Personal Info Collected</string>
-    <string name="collect_info">Device info (MAC/Android ID/IDFA/GUID/IP, etc.)</string>
+    <string name="collect_info">No personal information collected</string>
     <string name="privacy_link_label">Privacy Policy Link:</string>
     <string name="user_rights_title">User Rights</string>
     <string name="user_rights_desc">You have the right to access, correct, and delete your personal information. To exercise these rights, please contact us through the in-app contact information.</string>
@@ -391,7 +391,7 @@
     <string name="feature_3_title">Local Storage</string>
     <string name="feature_3_desc">Pure local operation, data stored locally</string>
     <string name="agree_prefix">I have read and agree to</string>
-    <string name="umeng_notice">• We use Umeng SDK for analytics\n• Collect device info to optimize app experience</string>
+    <string name="umeng_notice">• We respect your privacy, no personal data collected\n• All data stored locally on your device</string>
     <string name="privacy_hint">Tap User Agreement &amp; Privacy Policy to view details</string>
     <string name="disagree">Disagree</string>
     <string name="agree_and_start">Agree &amp; Start</string>

@@ -77,7 +77,6 @@ class MainActivity : ComponentActivity() {
                                 navController = navController,
                                 onAgree = {
                                     OMasterApplication.getInstance().setUserAgreed(true)
-                                    OMasterApplication.getInstance().initUMeng()
                                     showWelcomeFlow = false
                                 },
                                 onDisagree = {

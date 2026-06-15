@@ -199,19 +199,8 @@ for f in \
   download "$group" "$file" || true
 done
 
-# ===== 7. Umeng（沙箱不可达，标记） =====
-echo ""
-echo "[7/8] Umeng (沙箱可能不可达)..."
-for f in \
-  "com/umeng/analytics/9.8.9/analytics-9.8.9.pom" \
-  "com/umeng/analytics/9.8.9/analytics-9.8.9.aar" \
-  "com/umeng/umeng-common/9.8.9/umeng-common-9.8.9.pom" \
-  "com/umeng/umeng-common/9.8.9/umeng-common-9.8.9.aar" \
-  ; do
-  group=$(dirname "$f")
-  file=$(basename "$f")
-  download "$group" "$file" || true
-done
+# ===== 7. Umeng（已移除） =====
+# 友盟 SDK 已从项目中移除，跳过下载
 
 # ===== 8. Gradle Plugin 核心 =====
 echo ""

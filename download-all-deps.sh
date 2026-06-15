@@ -21,7 +21,7 @@ pick_repo() {
         org.jetbrains.*|org.jetbrains.kotlinx*)
             echo "$ALIYUN_PUBLIC $TENCENT $MVN_CENTRAL"
             ;;
-        com.google.*|io.ktor*|io.coil-kt*|com.umeng.*|io.mockk*)
+        com.google.*|io.ktor*|io.coil-kt*|io.mockk*)
             echo "$ALIYUN_PUBLIC $TENCENT $MVN_CENTRAL"
             ;;
         junit)
@@ -227,13 +227,6 @@ download_aar org.tensorflow tensorflow-lite-gpu 2.16.1
 download_aar org.tensorflow tensorflow-lite-support 0.4.4
 download_aar org.tensorflow tensorflow-lite-support-library 0.4.4
 download_aar org.tensorflow tensorflow-lite-api 2.16.1
-
-# 友盟
-echo "===== 友盟 ====="
-download_aar com.umeng.umsdk common 9.8.9
-download_aar com.umeng.umsdk asms 1.8.7.2
-download_aar com.umeng.umsdk utdid 1.2.4
-download_aar com.umeng.umsdk uverify 1.0.1
 
 # Testing
 echo "===== Testing ====="

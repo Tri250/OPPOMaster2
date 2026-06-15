@@ -60,7 +60,7 @@ pick_mirrors() {
         org.jetbrains.*|org.jetbrains.kotlinx*)
             echo "${CENTRAL_MIRRORS[@]}"
             ;;
-        com.google.*|io.ktor*|io.coil-kt*|com.umeng.*|io.mockk*|junit)
+        com.google.*|io.ktor*|io.coil-kt*|io.mockk*|junit)
             echo "${CENTRAL_MIRRORS[@]}"
             ;;
         *)
@@ -416,16 +416,6 @@ download_artifact "org.tensorflow" "tensorflow-lite-gpu" "2.16.1" "aar"
 download_artifact "org.tensorflow" "tensorflow-lite-support" "0.4.4" "aar"
 download_artifact "org.tensorflow" "tensorflow-lite-support-library" "0.4.4" "aar"
 download_artifact "org.tensorflow" "tensorflow-lite-api" "2.16.1" "aar"
-
-# ========================================
-# Umeng
-# ========================================
-echo ""
-log_info "=== Umeng ==="
-download_artifact "com.umeng.umsdk" "common" "9.8.9" "aar"
-download_artifact "com.umeng.umsdk" "asms" "1.8.7.2" "aar"
-download_artifact "com.umeng.umsdk" "utdid" "1.2.4" "aar"
-download_artifact "com.umeng.umsdk" "uverify" "1.0.1" "aar"
 
 # ========================================
 # Testing

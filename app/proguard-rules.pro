@@ -128,14 +128,6 @@
 -dontwarn coil.**
 
 # ========================================
-# 友盟 SDK
-# ========================================
--keep class com.umeng.** { *; }
--keep class com.uc.** { *; }
--dontwarn com.umeng.**
--dontwarn com.uc.**
-
-# ========================================
 # SLF4J 日志框架
 # ========================================
 -dontwarn org.slf4j.impl.StaticLoggerBinder

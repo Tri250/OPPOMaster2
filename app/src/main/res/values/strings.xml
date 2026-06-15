@@ -51,7 +51,7 @@
     <string name="settings_theme_title">主题颜色</string>
     <string name="settings_theme_dialog_title">选择主题颜色</string>
     <string name="floating_window_opacity">悬浮窗透明度</string>
-    <string name="analytics_enabled">使用友盟统计</string>
+    <string name="analytics_enabled">使用统计</string>
     <string name="analytics_restart_hint">重启应用后生效</string>
     <string name="clear_cache">清理图片缓存</string>
     <string name="clear_cache_desc">释放存储空间，下次浏览时重新下载</string>
@@ -371,14 +371,14 @@
     <string name="features_title">功能介绍</string>
     <string name="features_list">• 查看大师模式调色参数\n• 支持多种预设风格\n• 无需联网即可使用</string>
     <string name="data_collection_title">数据收集说明</string>
-    <string name="data_collection_desc">为了提供更好的服务，我们使用了友盟统计分析 SDK 来收集应用使用数据。</string>
-    <string name="sdk_info_title">友盟 SDK 信息</string>
+    <string name="data_collection_desc">我们尊重您的隐私，不会收集您的个人数据。应用使用数据仅存储在本地设备上。</string>
+    <string name="sdk_info_title">第三方 SDK 信息</string>
     <string name="sdk_name_label">使用 SDK 名称</string>
-    <string name="sdk_name">友盟 SDK</string>
+    <string name="sdk_name">无</string>
     <string name="service_type_label">服务类型</string>
-    <string name="service_type">统计分析</string>
+    <string name="service_type">-</string>
     <string name="collect_info_label">收集个人信息类型</string>
-    <string name="collect_info">设备信息（MAC/Android ID/IDFA/GUID/IP信息等）</string>
+    <string name="collect_info">不收集个人信息</string>
     <string name="privacy_link_label">隐私权政策链接：</string>
     <string name="user_rights_title">用户权利</string>
     <string name="user_rights_desc">您有权访问、更正、删除您的个人信息。如需行使这些权利，请通过应用内的联系方式与我们联系。</string>
@@ -412,7 +412,7 @@
     <string name="feature_3_title">无需联网</string>
     <string name="feature_3_desc">无需联网即可使用</string>
     <string name="agree_prefix">我已阅读并同意</string>
-    <string name="umeng_notice">• 我们使用友盟 SDK 进行统计分析\n• 收集设备信息以优化应用体验</string>
+    <string name="umeng_notice">• 我们尊重您的隐私，不收集个人数据\n• 所有数据仅存储在本地设备上</string>
     <string name="privacy_hint">点击《用户协议和隐私政策》查看详细信息</string>
     <string name="disagree">不同意</string>
     <string name="agree_and_start">同意并开始</string>
