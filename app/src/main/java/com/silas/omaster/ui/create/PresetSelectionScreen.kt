@@ -27,6 +27,8 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.home.HomeViewModel
 import com.silas.omaster.ui.home.HomeViewModelFactory
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.PureBlack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,9 +45,14 @@ fun PresetSelectionScreen(
     val presets by repository.getAllPresets().collectAsState(initial = emptyList())
 
     Scaffold(
+        containerColor = PureBlack,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.select_template)) },
+                title = { Text(stringResource(R.string.select_template), color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = PureBlack,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -61,19 +68,19 @@ fun PresetSelectionScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .clickable { onPresetSelected(null) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Row(
                     modifier = Modifier.padding(24.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         stringResource(R.string.start_from_scratch),
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 }

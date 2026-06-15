@@ -1,6 +1,8 @@
 package com.silas.omaster.ui.create
 
 import android.net.Uri
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.PureBlack
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -60,9 +62,14 @@ fun UniversalCreatePresetScreen(
     var editingItem by remember { mutableStateOf<PresetItem?>(null) }
 
     Scaffold(
+        containerColor = PureBlack,
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEditMode) stringResource(R.string.edit_preset_title) else stringResource(R.string.create_preset_title)) },
+                title = { Text(if (uiState.isEditMode) stringResource(R.string.edit_preset_title) else stringResource(R.string.create_preset_title), color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = PureBlack,
+                    navigationIconContentColor = Color.White
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Text(stringResource(R.string.cancel), color = Color.Gray)
@@ -104,7 +111,7 @@ fun UniversalCreatePresetScreen(
             // 1. 基本信息
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(stringResource(R.string.section_basic), style = MaterialTheme.typography.titleMedium)
@@ -116,7 +123,7 @@ fun UniversalCreatePresetScreen(
                                 .fillMaxWidth()
                                 .height(200.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.DarkGray)
+                                .background(DarkGray)
                                 .clickable { imagePicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
@@ -299,7 +306,7 @@ fun SectionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -324,7 +331,7 @@ fun SectionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                        .background(DarkGray, RoundedCornerShape(4.dp))
                         .clickable { onEditItem(index, item) }
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
