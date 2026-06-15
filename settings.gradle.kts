@@ -3,23 +3,22 @@ pluginManagement {
         // ===== 本地 Maven 仓库（优先级最高，沙箱内已下载的依赖）=====
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
 
-        // ===== 阿里云镜像（沙箱走代理后实测 10-20ms 极速响应）=====
-        // gradle-plugin 子路径 → 插件（含 Kotlin / AGP）
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        // public 子路径 → Maven Central 镜像
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // google 子路径 → Google Android Maven 镜像
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        // central 子路径 → 备用 Maven Central 镜像
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
-
-        // ===== 腾讯云镜像（沙箱代理可达 200-400ms，全镜像合一）=====
-        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-
-        // ===== 官方仓库（通过代理可达）=====
+        // ===== 官方仓库 =====
         gradlePluginPortal()
         google()
         mavenCentral()
+
+        // ===== JetBrains Compose =====
+        maven { url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev") }
+
+        // ===== 阿里云镜像（国内环境可用）=====
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+
+        // ===== 腾讯云镜像 =====
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
     }
 }
 
@@ -29,23 +28,24 @@ dependencyResolutionManagement {
         // ===== 本地 Maven 仓库（优先级最高）=====
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
 
-        // ===== 阿里云镜像（实测 10-20ms，优先使用）=====
+        // ===== 官方仓库 =====
+        google()
+        mavenCentral()
+
+        // ===== JetBrains Compose =====
+        maven { url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev") }
+
+        // ===== JitPack（第三方库）=====
+        maven { url = uri("https://jitpack.io") }
+
+        // ===== 阿里云镜像（国内环境可用）=====
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/central") }
         maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
 
-        // ===== 腾讯云镜像（聚合镜像，含 Google + Central + Plugin）=====
+        // ===== 腾讯云镜像 =====
         maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
-
-        // ===== Google Android Maven 官方（沙箱代理可达）=====
-        google()
-
-        // ===== Maven Central 官方（沙箱代理可达）=====
-        mavenCentral()
-
-        // ===== JitPack（第三方库）=====
-        maven { url = uri("https://jitpack.io") }
     }
 }
 
