@@ -364,12 +364,56 @@
     <string name="footer_local"></string>
     <string name="privacy_policy">《用户协议和隐私政策》</string>
 
+    <!-- 功能中心 - 与Web端一致 -->
+    <string name="features_title">核心功能</string>
+    <string name="features_subtitle">点击进入功能操作界面</string>
+    <string name="section_ai_features">AI 智能功能</string>
+    <string name="section_ai_desc">智能识别与自动优化</string>
+    <string name="section_tools">专业工具</string>
+    <string name="section_tools_desc">精细调节与创作工具</string>
+    <string name="section_brand">品牌特色</string>
+    <string name="section_brand_desc">哈苏影像系统专属功能</string>
+
+    <!-- AI 功能 -->
+    <string name="feature_ai_scene">AI 场景识别</string>
+    <string name="feature_ai_scene_subtitle">智能识别拍摄场景</string>
+    <string name="feature_ai_scene_desc">支持36+拍摄场景智能识别</string>
+    <string name="feature_ai_fine_tune">AI 智能调参</string>
+    <string name="feature_ai_fine_tune_subtitle">自动优化照片参数</string>
+    <string name="feature_ai_fine_tune_desc">一键智能微调，精准控制色彩风格</string>
+    <string name="feature_smart_optimize">智能优化</string>
+    <string name="feature_smart_optimize_subtitle">HDR增强与降噪</string>
+    <string name="feature_smart_optimize_desc">HDR增强、智能降噪、锐化增强</string>
+    <string name="feature_watermark">水印编辑</string>
+    <string name="feature_watermark_subtitle">专业水印制作工具</string>
+    <string name="feature_watermark_desc">14+专业水印模板，品牌认证水印</string>
+
+    <!-- 专业工具 -->
+    <string name="feature_param_adjust">参数调节</string>
+    <string name="feature_param_adjust_subtitle">精细调整各项参数</string>
+    <string name="feature_param_adjust_desc">ISO、快门、光圈、白平衡精确控制</string>
+    <string name="feature_preset_manager">预设管理</string>
+    <string name="feature_preset_manager_subtitle">云端预设库管理</string>
+    <string name="feature_preset_manager_desc">云端预设库，收藏、创建、分享</string>
+
+    <!-- 品牌特色 -->
+    <string name="feature_lut_share">LUT 分享</string>
+    <string name="feature_lut_share_subtitle">预设分享社区</string>
+    <string name="feature_lut_share_desc">20+专业 LUT 滤镜，一键下载使用</string>
+    <string name="feature_hasselblad">哈苏影像</string>
+    <string name="feature_hasselblad_subtitle">HNCS 自然色彩</string>
+    <string name="feature_hasselblad_desc">HNCS 3.0 自然色彩解决方案</string>
+    <string name="feature_cloud_sync">云同步</string>
+    <string name="feature_cloud_sync_subtitle">多设备数据同步</string>
+    <string name="feature_cloud_sync_desc">多平台云同步，数据永不丢失</string>
+
     <!-- 隐私政策页 -->
     <string name="privacy_title">用户协议和隐私政策</string>
     <string name="welcome_title">欢迎使用 OMaster</string>
     <string name="welcome_desc">OMaster 是一款专为 OPPO/一加/Realme 手机摄影爱好者设计的调色参数管理工具。在这里，您可以查看、收藏和复现大师模式的摄影调色参数。</string>
-    <string name="features_title">功能介绍</string>
-    <string name="features_list">• 查看大师模式调色参数\n• 支持多种预设风格\n• 无需联网即可使用</string>
+    <string name="features_list">• 查看大师模式调色参数
+• 支持多种预设风格
+• 无需联网即可使用</string>
     <string name="data_collection_title">数据收集说明</string>
     <string name="data_collection_desc">为了提供更好的服务，我们使用了友盟统计分析 SDK 来收集应用使用数据。</string>
     <string name="sdk_info_title">友盟 SDK 信息</string>
