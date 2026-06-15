@@ -439,7 +439,7 @@ fun WatermarkEditorScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
@@ -450,7 +450,7 @@ fun WatermarkEditorScreen(
                     Text(
                         "专业水印设计 · ${WATERMARK_TEMPLATES.size}+模板",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
             },
@@ -459,7 +459,7 @@ fun WatermarkEditorScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -493,8 +493,8 @@ fun WatermarkEditorScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -503,7 +503,7 @@ fun WatermarkEditorScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.55f)
-                .background(DarkGray)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
@@ -534,7 +534,7 @@ fun WatermarkEditorScreen(
                     Text(
                         text = "水印",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Switch(
@@ -593,7 +593,7 @@ fun WatermarkEditorScreen(
                     Text(
                         text = "选择图片开始编辑",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
@@ -895,7 +895,7 @@ private fun SearchBar(
             value = query,
             onValueChange = onQueryChange,
             textStyle = TextStyle(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = MaterialTheme.typography.bodyMedium.fontSize
             ),
             singleLine = true,
@@ -906,7 +906,7 @@ private fun SearchBar(
                 if (query.isEmpty()) {
                     Text(
                         "搜索水印模板...",
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -1108,7 +1108,7 @@ private fun CustomTextInput(
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(DarkGray)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart
@@ -1117,7 +1117,7 @@ private fun CustomTextInput(
                     value = value,
                     onValueChange = onValueChange,
                     textStyle = TextStyle(
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = MaterialTheme.typography.bodyMedium.fontSize
                     ),
                     singleLine = true,
@@ -1264,7 +1264,7 @@ private fun WatermarkElementRow(
         Text(
             text = name,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            colortint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.width(50.dp)
         )
 
@@ -1274,7 +1274,7 @@ private fun WatermarkElementRow(
                     .weight(1f)
                     .height(32.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(DarkGray)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -1289,7 +1289,7 @@ private fun WatermarkElementRow(
                         value = text,
                         onValueChange = onTextChange,
                         textStyle = TextStyle(
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = MaterialTheme.typography.bodySmall.fontSize
                         ),
                         singleLine = true,
@@ -1301,7 +1301,7 @@ private fun WatermarkElementRow(
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1337,7 +1337,7 @@ private fun WatermarkVignetteRow(
         Text(
             text = "暗角",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            colortint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.width(50.dp)
         )
 
@@ -1638,7 +1638,7 @@ private fun WatermarkStyleSection(
                     Text(
                         text = "模糊",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f),
+                        colortint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.width(40.dp)
                     )
                     Slider(
@@ -1681,7 +1681,7 @@ private fun StyleSlider(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            colortint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.width(70.dp)
         )
         Slider(

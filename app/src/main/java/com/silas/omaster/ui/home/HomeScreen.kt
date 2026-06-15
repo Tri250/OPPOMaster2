@@ -171,7 +171,7 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header（对齐Web端）
@@ -321,7 +321,7 @@ private fun HeaderSection(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             // 哈苏大师标签（对齐Web端）
             Box(
@@ -341,13 +341,13 @@ private fun HeaderSection(
                     Text(
                         text = "👑",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = stringResource(R.string.hasselblad_master),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -361,7 +361,7 @@ private fun HeaderSection(
             Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = stringResource(R.string.refresh),
-                tint = Color.White.copy(alpha = 0.7f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -381,12 +381,12 @@ private fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color.White.copy(alpha = 0.05f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(24.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.1f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(24.dp)
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -398,7 +398,7 @@ private fun SearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = stringResource(R.string.search_hint),
-                tint = Color.White.copy(alpha = 0.4f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.size(16.dp)
             )
             
@@ -409,7 +409,7 @@ private fun SearchBar(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { }),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 ),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth(),
@@ -418,7 +418,7 @@ private fun SearchBar(
                         Text(
                             text = stringResource(R.string.search_placeholder),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                     }
                     innerTextField()
@@ -565,12 +565,12 @@ private fun BrandAndSortFilter(
                 Text(
                     text = sortOptions.find { it.first == sortType }?.second ?: stringResource(R.string.sort_newest),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.4f),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -843,7 +843,7 @@ private fun PresetCardWebStyle(
             .hapticClickable { onClick() }
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.05f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(16.dp)
             ),
         shape = RoundedCornerShape(16.dp),
@@ -903,13 +903,13 @@ private fun PresetCardWebStyle(
                         Text(
                             text = "👑",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = stringResource(R.string.badge_hncs),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -934,13 +934,13 @@ private fun PresetCardWebStyle(
                         Text(
                             text = "✨",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = stringResource(R.string.badge_new),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -992,7 +992,7 @@ private fun PresetCardWebStyle(
                     text = PresetI18n.getLocalizedPresetName(preset.name),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1000,7 +1000,7 @@ private fun PresetCardWebStyle(
                 Text(
                     text = preset.author,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1016,7 +1016,7 @@ private fun PresetCardWebStyle(
                         Text(
                             text = "⭐ ${String.format("%.1f", rating)}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         )
                     }
                     // 下载量（仅在有数据时展示）
@@ -1029,7 +1029,7 @@ private fun PresetCardWebStyle(
                         Text(
                             text = "📥 $downloadsText",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         )
                     }
                     // 品牌
@@ -1037,7 +1037,7 @@ private fun PresetCardWebStyle(
                         Text(
                             text = brand,
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                             modifier = Modifier.padding(start = 4.dp)
                         )
                     }
@@ -1071,7 +1071,7 @@ private fun EmptyState(tabIndex: Int) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
             if (subMessage.isNotEmpty()) {

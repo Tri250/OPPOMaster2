@@ -93,7 +93,7 @@ fun SubscriptionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             OMasterTopAppBar(
@@ -104,7 +104,7 @@ fun SubscriptionScreen(
             Box(modifier = Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
                 if (subscriptions.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = stringResource(R.string.sub_empty), color = Color.Gray)
+                        Text(text = stringResource(R.string.sub_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     LazyColumn(
@@ -140,7 +140,7 @@ fun SubscriptionScreen(
         FloatingActionButton(
             onClick = { showAddDialog = true },
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -266,7 +266,7 @@ fun SubscriptionItem(
                 color = if (sub.isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else CardBorderLight,
                 shape = RoundedCornerShape(16.dp)
             ),
-        colors = CardDefaults.cardColors(containerColor = DarkGray),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -280,21 +280,21 @@ fun SubscriptionItem(
                         text = if (sub.name.isNotEmpty()) sub.name else stringResource(R.string.sub_no_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (sub.isEnabled) Color.White else Color.Gray,
+                        color = if (sub.isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "作者: ${sub.author} | Build: ${sub.build}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = sub.url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -320,7 +320,7 @@ fun SubscriptionItem(
                 Text(
                     text = stringResource(R.string.sub_preset_count, sub.presetCount),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 
                 if (sub.lastUpdateTime > 0) {
@@ -328,7 +328,7 @@ fun SubscriptionItem(
                     Text(
                         text = stringResource(R.string.sub_last_update, sdf.format(Date(sub.lastUpdateTime))),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.4f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -350,10 +350,10 @@ fun SubscriptionDetailBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = DarkGray,
-        contentColor = Color.White,
-        scrimColor = Color.Black.copy(alpha = 0.5f),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        scrimColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
     ) {
         Column(
             modifier = Modifier
@@ -371,7 +371,7 @@ fun SubscriptionDetailBottomSheet(
             // Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = PureBlack.copy(alpha = 0.5f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -446,11 +446,11 @@ fun SubscriptionDetailBottomSheet(
 @Composable
 fun DetailRow(label: String, value: String, isLink: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isLink) MaterialTheme.colorScheme.primary else Color.White,
+            color = if (isLink) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
             maxLines = if (isLink) 2 else 1,
             overflow = TextOverflow.Ellipsis
         )

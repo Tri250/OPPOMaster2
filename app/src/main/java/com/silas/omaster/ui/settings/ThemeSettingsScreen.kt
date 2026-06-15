@@ -56,7 +56,7 @@ fun ThemeSettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
@@ -67,7 +67,7 @@ fun ThemeSettingsScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -83,8 +83,8 @@ fun ThemeSettingsScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -98,7 +98,7 @@ fun ThemeSettingsScreen(
                 text = "品牌主题",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -120,7 +120,7 @@ fun ThemeSettingsScreen(
 
         Divider(
             modifier = Modifier.padding(horizontal = 16.dp),
-            color = Color.White.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
         )
 
         // 深色模式设置
@@ -133,7 +133,7 @@ fun ThemeSettingsScreen(
                 text = "深色模式",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -188,7 +188,7 @@ fun ThemeSettingsScreen(
 
         Divider(
             modifier = Modifier.padding(horizontal = 16.dp),
-            color = Color.White.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
         )
 
         // 自定义颜色
@@ -201,7 +201,7 @@ fun ThemeSettingsScreen(
                 text = "自定义强调色",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -248,7 +248,7 @@ fun ThemeSettingsScreen(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkGray)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -257,7 +257,7 @@ fun ThemeSettingsScreen(
                 Text(
                     text = "主题预览",
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -326,7 +326,7 @@ private fun ThemeOptionCard(
                     Text(
                         text = theme.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
             }
