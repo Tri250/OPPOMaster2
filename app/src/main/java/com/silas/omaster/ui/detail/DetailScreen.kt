@@ -72,6 +72,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
 
 @Composable
 fun DetailScreen(
@@ -122,7 +123,7 @@ fun DetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(PureBlack)
     ) {
         OMasterTopAppBar(
             title = preset?.let { PresetI18n.getLocalizedPresetName(it.name) } ?: stringResource(R.string.detail_title),
