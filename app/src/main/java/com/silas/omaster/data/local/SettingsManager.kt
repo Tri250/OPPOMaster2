@@ -347,6 +347,15 @@ class SettingsManager private constructor(private val context: Context) {
             putBoolean(KEY_HAS_APPLIED_PRESET, false)
         }.apply()
     }
+
+    // 迁移对话框处理状态
+    fun getMigrationHandled(): Boolean {
+        return prefs.getBoolean(KEY_MIGRATION_HANDLED, false)
+    }
+
+    fun setMigrationHandled(handled: Boolean) {
+        prefs.edit().putBoolean(KEY_MIGRATION_HANDLED, handled).apply()
+    }
     
     // ==================== 云端API配置方法 ====================
     
@@ -493,6 +502,7 @@ class SettingsManager private constructor(private val context: Context) {
         private const val KEY_APPLIED_CLARITY = "applied_clarity"
         private const val KEY_APPLIED_BRIGHTNESS = "applied_brightness"
         private const val KEY_HAS_APPLIED_PRESET = "has_applied_preset"
+        private const val KEY_MIGRATION_HANDLED = "migration_handled"
 
         @Volatile
         private var instance: SettingsManager? = null

@@ -69,6 +69,10 @@ app/release.jks
 app/keystore-release.properties
 keystore-release.properties
 
+# 签名配置模板（占位符文件，可提交）
+# app/keystore.properties 是模板文件，允许提交
+# 但真实密钥应放在 keystore-release.properties
+
 # 其他签名相关文件
 *.pem
 *.pk8

@@ -1,8 +1,8 @@
 # Consumer ProGuard Rules
 # 这些规则会被依赖此库的应用自动应用
 
-# 保留公开 API
--keep public class com.silas.omaster.** {
+# 保留公开 API（仅保留必要的公开接口）
+-keep public class com.silas.omaster.model.** {
     public *;
 }
 

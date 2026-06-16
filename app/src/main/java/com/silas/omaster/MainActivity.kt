@@ -1,16 +1,19 @@
 package com.silas.omaster
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,9 +52,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 初始化并注册全局悬浮窗控制器
+        // 初始化悬浮窗控制器（延迟注册，等待权限检查）
         floatingWindowController = FloatingWindowController.getInstance(this)
-        floatingWindowController.register()
+        // 仅在已有悬浮窗权限时注册，否则延迟到用户主动启用悬浮窗功能时
+        if (Settings.canDrawOverlays(this)) {
+            floatingWindowController.register()
+        }
 
         setContent {
             CompositionLocalProvider(LocalActivity provides this) {

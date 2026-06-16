@@ -94,21 +94,15 @@
 }
 
 # ========================================
-# TensorFlow Lite 相关规则
+# TensorFlow Lite 相关规则（精简）
 # ========================================
 -keep class org.tensorflow.lite.Interpreter { *; }
--keepclassmembers class org.tensorflow.lite.Interpreter { *; }
--keep class org.tensorflow.lite.support.common.FileUtil { *; }
--keepclassmembers class org.tensorflow.lite.support.common.FileUtil { *; }
--keep class org.tensorflow.lite.support.common.TensorOperator { *; }
--keepclassmembers class org.tensorflow.lite.support.common.TensorOperator { *; }
--keep class org.tensorflow.lite.gpu.** { *; }
 -dontwarn org.tensorflow.**
 
 # ========================================
-# ML Kit 人脸检测相关规则
+# ML Kit 人脸检测相关规则（精简）
 # ========================================
--keep class com.google.mlkit.** { *; }
+-keep class com.google.mlkit.vision.face.FaceDetector { *; }
 -dontwarn com.google.mlkit.**
 -dontwarn com.google.android.gms.internal.**
 
@@ -128,10 +122,10 @@
 -dontwarn coil.**
 
 # ========================================
-# 友盟 SDK
+# 友盟 SDK（精简）
 # ========================================
--keep class com.umeng.** { *; }
--keep class com.uc.** { *; }
+-keep class com.umeng.analytics.** { *; }
+-keep class com.umeng.commonsdk.** { *; }
 -dontwarn com.umeng.**
 -dontwarn com.uc.**
 
@@ -142,71 +136,19 @@
 -dontwarn sun.misc.**
 
 # ========================================
-# 项目特定规则（精细化）
+# 项目特定规则（仅保留必要的数据模型字段）
 # ========================================
 
-# ===== 数据模型类（JSON 序列化需要保留字段） =====
--keep class com.silas.omaster.model.** {
+# 数据模型类（JSON 序列化需要保留字段名）
+-keepclassmembers class com.silas.omaster.model.** {
     <fields>;
-    <init>(...);
 }
 
-# ===== 数据仓库和本地存储 =====
--keep class com.silas.omaster.data.repository.Preset { <fields>; }
--keep class com.silas.omaster.data.repository.PresetCategory { <fields>; }
--keep class com.silas.omaster.data.local.SettingsManager { *; }
--keep class com.silas.omaster.data.local.CustomPresetManager { <fields>; <init>(...); }
--keep class com.silas.omaster.data.local.RecipeHistoryManager { <fields>; <init>(...); }
-
-# ===== AI 和 TFLite 相关 =====
--keep class com.silas.omaster.ai.MasterInsightEngine { <fields>; <init>(...); }
--keep class com.silas.omaster.ai.MasterInferenceEngine { <fields>; <init>(...); }
--keep class com.silas.omaster.ai.SceneRecognitionManager { <fields>; <init>(...); }
--keep class com.silas.omaster.ai.AIFineTuneManager { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.TFLiteEngine { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.ImageQualityAnalyzer { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.SceneClassifier { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.ParamPredictor { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.ModelDownloadManager { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.ModelLoader { <fields>; <init>(...); }
--keep class com.silas.omaster.tflite.InferenceResult { <fields>; }
--keep class com.silas.omaster.tflite.models.** { <fields>; }
-
-# ===== 水印系统 =====
--keep class com.silas.omaster.watermark.WatermarkConfig { <fields>; }
--keep class com.silas.omaster.watermark.WatermarkLayer { <fields>; }
--keep class com.silas.omaster.watermark.WatermarkTemplate { <fields>; }
--keep class com.silas.omaster.watermark.HasselbladMasterTemplates { <fields>; <init>(...); }
--keep class com.silas.omaster.watermark.ExifWatermarkProvider { <fields>; <init>(...); }
-
-# ===== 云同步 =====
--keep class com.silas.omaster.cloud.CloudSyncManager { <fields>; <init>(...); }
--keep class com.silas.omaster.cloud.CloudPreset { <fields>; }
--keep class com.silas.omaster.cloud.SyncState { <fields>; }
-
-# ===== GPU 渲染器 =====
--keep class com.silas.omaster.renderer.GPURenderManager { <fields>; <init>(...); }
--keep class com.silas.omaster.renderer.ShaderProgram { <fields>; <init>(...); }
--keep class com.silas.omaster.renderer.ImageShaderRenderer { <fields>; <init>(...); }
--keep class com.silas.omaster.renderer.RenderParameters { <fields>; }
-
-# ===== 参数系统 =====
--keep class com.silas.omaster.param.RenderParams { <fields>; }
--keep class com.silas.omaster.param.AdjustChannel { <fields>; }
--keep class com.silas.omaster.param.ParamAdjustmentManager { <fields>; <init>(...); }
-
-# ===== 工具类 =====
--keep class com.silas.omaster.util.JsonUtil { <methods>; }
--keep class com.silas.omaster.util.SecurityCrypto { <methods>; <init>(...); }
-
-# ===== ViewModel =====
--keep class com.silas.omaster.ui.home.HomeViewModel { *; }
--keep class com.silas.omaster.ui.detail.DetailViewModel { *; }
--keep class com.silas.omaster.ui.create.UniversalCreatePresetViewModel { *; }
-
-# ===== Application 和 Activity =====
--keep class com.silas.omaster.OMasterApplication { *; }
--keep class com.silas.omaster.MainActivity { *; }
+# 数据模型类名（Gson 反序列化需要）
+-keep class com.silas.omaster.model.MasterPreset { *; }
+-keep class com.silas.omaster.model.PresetList { *; }
+-keep class com.silas.omaster.model.PresetItem { *; }
+-keep class com.silas.omaster.model.PresetSection { *; }
 
 # ========================================
 # 优化配置

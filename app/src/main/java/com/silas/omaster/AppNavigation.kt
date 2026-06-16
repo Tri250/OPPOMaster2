@@ -52,6 +52,7 @@ import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
+import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
@@ -81,13 +82,16 @@ fun MainApp(navController: NavHostController) {
 
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
+    val settingsManager = remember { SettingsManager.getInstance(context) }
     var showMigrationDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    // 迁移对话框：仅在首次检测到旧版本数据时显示一次
     LaunchedEffect(Unit) {
-        if (JsonUtil.currentPresetsVersion != 2) {
+        val hasMigrationBeenHandled = settingsManager.getMigrationHandled()
+        if (!hasMigrationBeenHandled && JsonUtil.currentPresetsVersion != 2) {
             showMigrationDialog = true
         }
     }
@@ -97,9 +101,14 @@ fun MainApp(navController: NavHostController) {
             onMigrate = {
                 JsonUtil.deleteRemotePresets(context)
                 coroutineScope.launch { repository.reloadDefaultPresets() }
+                settingsManager.setMigrationHandled(true)
                 showMigrationDialog = false
             },
-            onPostpone = { showMigrationDialog = false },
+            onPostpone = {
+                // 标记为已处理，不再反复弹出
+                settingsManager.setMigrationHandled(true)
+                showMigrationDialog = false
+            },
             onDismiss = {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(
@@ -107,6 +116,8 @@ fun MainApp(navController: NavHostController) {
                         duration = SnackbarDuration.Short
                     )
                 }
+                // 标记为已处理，不再反复弹出
+                settingsManager.setMigrationHandled(true)
                 showMigrationDialog = false
             }
         )
@@ -312,17 +323,17 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.ParamAdjustment> {
-                SmartOptimizeScreen(
+                ParamAdjustScreen(
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
                         val settingsManager = SettingsManager.getInstance(context)
                         settingsManager.applyPresetParams(
-                            saturation = params.colorCorrectionStrength.toInt(),
-                            contrast = params.sharpenStrength.toInt(),
-                            warmth = 0,
-                            sharpness = params.sharpenStrength.toInt(),
-                            clarity = params.hdrStrength.toInt(),
-                            brightness = params.exposureAdjustment.toInt()
+                            saturation = params.saturation,
+                            contrast = params.contrast,
+                            warmth = params.warmth,
+                            sharpness = params.sharpness,
+                            clarity = params.clarity,
+                            brightness = params.brightness
                         )
                         navController.popBackStack()
                     }
