@@ -68,6 +68,10 @@ android {
         // versionName: 对外显示版本号，格式 主.次.修订
         // 正式版: 1.0, 1.0.1, 1.1.0, 2.0.0
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
+        //
+        // 版本号与 Git Tag 同步规则：
+        // - Git Tag 格式: v{versionName}，如 v1.3.1
+        // - CI 构建时会自动从 Tag 提取版本号
         versionCode = 10
         versionName = "1.3.1"
 
