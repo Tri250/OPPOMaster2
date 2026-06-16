@@ -51,7 +51,9 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val redDominance: Float,       // 红色通道主导度
         val skinToneRatio: Float,      // 肤色占比（YCbCr检测）
         val darkPixelRatio: Float,     // 暗部像素占比
-        val highlightRatio: Float      // 高光像素占比
+        val highlightRatio: Float,     // 高光像素占比
+        val skyBlueRatio: Float = 0f,  // 天空区域蓝色主导度
+        val groundWarmthRatio: Float = 0f  // 地面区域暖色调占比
     )
 
     /**
@@ -131,37 +133,98 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
     /**
      * 颜色直方图采样
-     * 采样策略：取中心区域，避免边缘干扰
+     * 采样策略：上中下分3个采样区（各占30%高度），按"天空优先"和"地面优先"做加权
+     * 改善：不再只采中心60%，而是覆盖天空、主体、地面三个区域
      */
     private fun sampleColorProfile(bitmap: Bitmap, sampleRatio: Float): ColorProfile {
         val width = bitmap.width
         val height = bitmap.height
-        val startX = (width * (1 - sampleRatio) / 2).toInt()
-        val startY = (height * (1 - sampleRatio) / 2).toInt()
-        val sampleW = (width * sampleRatio).toInt()
-        val sampleH = (height * sampleRatio).toInt()
-
-        var totalR = 0L; var totalG = 0L; var totalB = 0L
-        var warmPixels = 0; var coldPixels = 0
-        var skinPixels = 0; var darkPixels = 0; var highlightPixels = 0
-        var totalPixels = 0
 
         // 采样步长：根据图片大小动态调整
         val step = when {
-            sampleW > 1000 -> 8
-            sampleW > 500 -> 4
+            width > 1000 -> 8
+            width > 500 -> 4
             else -> 2
         }
 
-        for (y in startY until startY + sampleH step step) {
-            for (x in startX until startX + sampleW step step) {
+        // 上中下三个采样区（各占30%高度，中间有10%重叠）
+        val regionHeight = (height * 0.3).toInt()
+        val topRegion = 0 to regionHeight                    // 天空区域
+        val midRegion = (height * 0.35).toInt() to (height * 0.65).toInt()  // 主体区域
+        val botRegion = (height - regionHeight) to height    // 地面区域
+
+        // 分别采样三个区域
+        val topProfile = sampleRegion(bitmap, 0, width, topRegion.first, topRegion.second, step, weight = 1.0f)
+        val midProfile = sampleRegion(bitmap, 0, width, midRegion.first, midRegion.second, step, weight = 1.5f)
+        val botProfile = sampleRegion(bitmap, 0, width, botRegion.first, botRegion.second, step, weight = 1.0f)
+
+        // 加权合并三个区域的采样结果
+        val totalWeight = topProfile.pixelCount * 1.0f + midProfile.pixelCount * 1.5f + botProfile.pixelCount * 1.0f
+
+        val avgR = ((topProfile.totalR * 1.0 + midProfile.totalR * 1.5 + botProfile.totalR * 1.0) / totalWeight).toInt()
+        val avgG = ((topProfile.totalG * 1.0 + midProfile.totalG * 1.5 + botProfile.totalG * 1.0) / totalWeight).toInt()
+        val avgB = ((topProfile.totalB * 1.0 + midProfile.totalB * 1.5 + botProfile.totalB * 1.0) / totalWeight).toInt()
+
+        val totalPixels = topProfile.pixelCount + midProfile.pixelCount + botProfile.pixelCount
+        val warmthRatio = (topProfile.warmPixels + midProfile.warmPixels + botProfile.warmPixels).toFloat() / totalPixels
+        val coldRatio = (topProfile.coldPixels + midProfile.coldPixels + botProfile.coldPixels).toFloat() / totalPixels
+        val skinToneRatio = (topProfile.skinPixels + midProfile.skinPixels + botProfile.skinPixels).toFloat() / totalPixels
+        val darkPixelRatio = (topProfile.darkPixels + midProfile.darkPixels + botProfile.darkPixels).toFloat() / totalPixels
+        val highlightRatio = (topProfile.highlightPixels + midProfile.highlightPixels + botProfile.highlightPixels).toFloat() / totalPixels
+
+        val avgTotal = (avgR + avgG + avgB) / 3f
+
+        return ColorProfile(
+            avgRed = avgR,
+            avgGreen = avgG,
+            avgBlue = avgB,
+            warmthRatio = warmthRatio,
+            greenDominance = if (avgTotal > 0) avgG / avgTotal else 1f,
+            blueDominance = if (avgTotal > 0) avgB / avgTotal else 1f,
+            redDominance = if (avgTotal > 0) avgR / avgTotal else 1f,
+            skinToneRatio = skinToneRatio,
+            darkPixelRatio = darkPixelRatio,
+            highlightRatio = highlightRatio,
+            // 新增：天空和地面特征
+            skyBlueRatio = topProfile.blueDominance,
+            groundWarmthRatio = botProfile.warmthRatio
+        )
+    }
+
+    /**
+     * 采样指定区域的颜色特征
+     */
+    private data class RegionSample(
+        val totalR: Long, val totalG: Long, val totalB: Long,
+        val warmPixels: Int, val coldPixels: Int,
+        val skinPixels: Int, val darkPixels: Int, val highlightPixels: Int,
+        val pixelCount: Int,
+        val blueDominance: Float, val warmthRatio: Float
+    )
+
+    private fun sampleRegion(
+        bitmap: Bitmap, startX: Int, endX: Int, startY: Int, endY: Int,
+        step: Int, weight: Float
+    ): RegionSample {
+        var totalR = 0L; var totalG = 0L; var totalB = 0L
+        var warmPixels = 0; var coldPixels = 0
+        var skinPixels = 0; var darkPixels = 0; var highlightPixels = 0
+        var pixelCount = 0
+        var blueSum = 0.0
+
+        for (y in startY.coerceAtLeast(0) until endY.coerceAtMost(bitmap.height) step step) {
+            for (x in startX.coerceAtLeast(0) until endX.coerceAtMost(bitmap.width) step step) {
                 val pixel = bitmap.getPixel(x, y)
                 val r = Color.red(pixel)
                 val g = Color.green(pixel)
                 val b = Color.blue(pixel)
 
                 totalR += r; totalG += g; totalB += b
-                totalPixels++
+                pixelCount++
+
+                // 蓝色主导度计算（用于天空检测）
+                val avg = (r + g + b) / 3.0
+                if (avg > 0) blueSum += b / avg
 
                 // 暖色调判定：R > B + 20 且 R > G
                 if (r > b + 20 && r > g) warmPixels++
@@ -181,34 +244,31 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             }
         }
 
-        val avgR = (totalR / totalPixels).toInt()
-        val avgG = (totalG / totalPixels).toInt()
-        val avgB = (totalB / totalPixels).toInt()
-        val avgTotal = (avgR + avgG + avgB) / 3f
+        val avgTotal = ((totalR + totalG + totalB) / 3.0).coerceAtLeast(1.0)
+        val blueDominance = if (pixelCount > 0) (blueSum / pixelCount).toFloat() else 1f
+        val warmthRatio = if (pixelCount > 0) warmPixels.toFloat() / pixelCount else 0f
 
-        val warmthRatio = warmPixels.toFloat() / totalPixels
-        val coldRatio = coldPixels.toFloat() / totalPixels
-        val skinToneRatio = skinPixels.toFloat() / totalPixels
-        val darkPixelRatio = darkPixels.toFloat() / totalPixels
-        val highlightRatio = highlightPixels.toFloat() / totalPixels
-
-        return ColorProfile(
-            avgRed = avgR,
-            avgGreen = avgG,
-            avgBlue = avgB,
-            warmthRatio = warmthRatio,
-            greenDominance = if (avgTotal > 0) avgG / avgTotal else 1f,
-            blueDominance = if (avgTotal > 0) avgB / avgTotal else 1f,
-            redDominance = if (avgTotal > 0) avgR / avgTotal else 1f,
-            skinToneRatio = skinToneRatio,
-            darkPixelRatio = darkPixelRatio,
-            highlightRatio = highlightRatio
+        return RegionSample(
+            totalR = (totalR * weight).toLong(),
+            totalG = (totalG * weight).toLong(),
+            totalB = (totalB * weight).toLong(),
+            warmPixels = (warmPixels * weight).toInt(),
+            coldPixels = (coldPixels * weight).toInt(),
+            skinPixels = (skinPixels * weight).toInt(),
+            darkPixels = (darkPixels * weight).toInt(),
+            highlightPixels = (highlightPixels * weight).toInt(),
+            pixelCount = (pixelCount * weight).toInt(),
+            blueDominance = blueDominance,
+            warmthRatio = warmthRatio
         )
     }
 
     /**
      * 肤色检测（YCbCr 色彩空间）
-     * 基于肤色在 YCbCr 空间的典型范围
+     * 改善：收窄范围并增加饱和度检查，减少误识别
+     * - cb: 85-125 (原77-127)
+     * - cr: 140-165 (原133-173)
+     * - 新增饱和度下限 > 0.15
      */
     private fun isSkinTone(r: Int, g: Int, b: Int): Boolean {
         // RGB → YCbCr 转换
@@ -216,10 +276,16 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val cb = 128 - 0.148 * r - 0.291 * g + 0.439 * b
         val cr = 128 + 0.439 * r - 0.368 * g - 0.071 * b
 
-        // 肤色典型范围（适用于多种肤色）
+        // 计算饱和度（避免低饱和度颜色如奶油色、浅黄色被误判）
+        val maxVal = maxOf(r, g, b)
+        val minVal = minOf(r, g, b)
+        val saturation = if (maxVal > 0) (maxVal - minVal).toFloat() / maxVal else 0f
+
+        // 收窄后的肤色范围 + 饱和度检查
         return y in 80.0..230.0 &&
-               cb in 77.0..127.0 &&
-               cr in 133.0..173.0
+               cb in 85.0..125.0 &&
+               cr in 140.0..165.0 &&
+               saturation > 0.15f  // 新增：饱和度下限过滤
     }
 
     /**
@@ -294,38 +360,69 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     /**
      * 计算边缘密度（纹理分析）
      * 使用 Sobel 算子检测边缘
+     * 改善：分两级采样 — 中心 200×200 跑精扫，外部 100×100 跑粗扫
      */
     private fun computeEdgeDensity(bitmap: Bitmap): Float {
         val width = bitmap.width
         val height = bitmap.height
 
-        // 缩小采样区域以提高效率
-        val sampleSize = 100
-        val scaledBitmap = if (width > sampleSize || height > sampleSize) {
-            Bitmap.createScaledBitmap(bitmap, sampleSize, sampleSize, true)
+        // 计算中心区域（占图像中心40%）
+        val centerWidth = (width * 0.4).toInt()
+        val centerHeight = (height * 0.4).toInt()
+        val centerStartX = (width - centerWidth) / 2
+        val centerStartY = (height - centerHeight) / 2
+
+        // 提取中心区域并缩放到 200×200 进行精扫
+        val centerBitmap = Bitmap.createBitmap(bitmap, centerStartX, centerStartY, centerWidth, centerHeight)
+        val fineBitmap = if (centerWidth > 200 || centerHeight > 200) {
+            Bitmap.createScaledBitmap(centerBitmap, 200, 200, true)
+        } else {
+            centerBitmap
+        }
+
+        // 整体缩放到 100×100 进行粗扫
+        val coarseBitmap = if (width > 100 || height > 100) {
+            Bitmap.createScaledBitmap(bitmap, 100, 100, true)
         } else {
             bitmap
         }
 
-        val w = scaledBitmap.width
-        val h = scaledBitmap.height
+        // 精扫中心区域（权重 2.0）
+        val fineEdgeDensity = computeSobelEdgeDensity(fineBitmap, threshold = 40)
+
+        // 粗扫整体（权重 1.0）
+        val coarseEdgeDensity = computeSobelEdgeDensity(coarseBitmap, threshold = 50)
+
+        // 回收临时 bitmap
+        if (centerBitmap !== bitmap) centerBitmap.recycle()
+        if (fineBitmap !== centerBitmap) fineBitmap.recycle()
+        if (coarseBitmap !== bitmap) coarseBitmap.recycle()
+
+        // 加权合并：精扫结果权重更高
+        return (fineEdgeDensity * 2.0f + coarseEdgeDensity * 1.0f) / 3.0f
+    }
+
+    /**
+     * 对指定 bitmap 执行 Sobel 边缘检测
+     */
+    private fun computeSobelEdgeDensity(bitmap: Bitmap, threshold: Int): Float {
+        val w = bitmap.width
+        val h = bitmap.height
         var edgeCount = 0
         var totalPixels = 0
 
-        // Sobel 算子
         for (y in 1 until h - 1) {
             for (x in 1 until w - 1) {
-                val gx = sobelX(scaledBitmap, x, y)
-                val gy = sobelY(scaledBitmap, x, y)
+                val gx = sobelX(bitmap, x, y)
+                val gy = sobelY(bitmap, x, y)
                 val gradient = sqrt(gx * gx + gy * gy)
 
-                // 边缘阈值：梯度 > 50
-                if (gradient > 50) edgeCount++
+                if (gradient > threshold) edgeCount++
                 totalPixels++
             }
         }
 
-        return edgeCount.toFloat() / totalPixels
+        return if (totalPixels > 0) edgeCount.toFloat() / totalPixels else 0f
     }
 
     /**

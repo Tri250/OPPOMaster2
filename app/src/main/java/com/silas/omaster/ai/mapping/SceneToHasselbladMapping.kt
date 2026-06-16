@@ -544,6 +544,7 @@ object SceneToHasselbladMapping {
 
     /**
      * 根据场景ID推断类别
+     * 改善：fallback 改为 UNKNOWN + 走"通用胶片"分支，避免未识别场景一律当人像
      */
     private fun inferCategory(sceneId: String): SceneCategory = when {
         sceneId.startsWith("portrait") -> SceneCategory.PORTRAIT
@@ -554,7 +555,7 @@ object SceneToHasselbladMapping {
         sceneId.startsWith("still") -> SceneCategory.STILL_LIFE
         sceneId.startsWith("macro") -> SceneCategory.MACRO
         sceneId.startsWith("event") -> SceneCategory.EVENT
-        else -> SceneCategory.PORTRAIT
+        else -> SceneCategory.UNKNOWN  // 改善：改为 UNKNOWN 而非默认 PORTRAIT
     }
 
     /**

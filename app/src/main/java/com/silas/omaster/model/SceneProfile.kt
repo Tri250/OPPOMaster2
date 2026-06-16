@@ -94,7 +94,8 @@ enum class SceneCategory(val displayName: String, val icon: String, val color: L
     URBAN("城市", "🏢", 0xFF9C27B0),        // 城市紫
     STILL_LIFE("静物", "🍃", 0xFF00BCD4),   // 静物青
     MACRO("微距", "🔍", 0xFFE91E63),        // 微距粉
-    EVENT("活动", "🎉", 0xFFFF5722)         // 活动红
+    EVENT("活动", "🎉", 0xFFFF5722),        // 活动红
+    UNKNOWN("未知", "❓", 0xFF9E9E9E)       // 未知/通用 - 用于fallback
 }
 
 /**
