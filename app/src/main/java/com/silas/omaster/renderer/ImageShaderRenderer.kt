@@ -217,9 +217,8 @@ class ImageShaderRenderer(private val context: Context) {
             GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
         } catch (e: OutOfMemoryError) {
             Log.e(TAG, "纹理上传OOM", e)
-            GLES30.glDeleteTextures(1, intArrayOf(inputTextureId), 0)
-            inputTextureId = 0
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+            // 完全释放资源避免泄漏
+            release()
             return 0
         }
 
@@ -411,10 +410,17 @@ class ImageShaderRenderer(private val context: Context) {
 
         } catch (e: OutOfMemoryError) {
             Log.e(TAG, "渲染OOM", e)
+            // OOM时完全释放资源
+            release()
             return RenderResult.Error("Out of memory: ${e.message}", e)
         } catch (e: Exception) {
             Log.e(TAG, "Render failed", e)
             return RenderResult.Error("Render failed: ${e.message}", e)
+        } finally {
+            // 确保解绑所有GL资源
+            GLES30.glBindVertexArray(0)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+            GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
         }
     }
     

@@ -532,16 +532,15 @@ private fun BrandAndSortFilter(
 
     var showSortMenu by remember { mutableStateOf(false) }
 
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // 品牌筛选按钮（水平滚动）
+        // 品牌筛选按钮（水平滚动，全宽）
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            modifier = Modifier.weight(1f)
+            contentPadding = PaddingValues(horizontal = 0.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             items(brands) { (key, label) ->
                 BrandFilterButton(
@@ -553,7 +552,7 @@ private fun BrandAndSortFilter(
         }
 
         // 排序下拉菜单
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier.align(Alignment.End)) {
             Row(
                 modifier = Modifier
                     .hapticClickable { showSortMenu = true }

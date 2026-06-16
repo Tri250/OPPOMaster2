@@ -160,15 +160,32 @@ fun AboutScreen(
 
     val checkFailedText = stringResource(R.string.version_check_failed)
 
-    // 版本更新功能已暂停 - 不再自动检查更新
-    // LaunchedEffect(Unit) { ... }
+    // 版本更新检查 - 仅在用户手动触发时检查
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
-    // 版本更新功能已暂停
-    /* old checkForUpdate lambda removed */
-
-    // 版本更新功能已暂停
-    // 监听下载进度 - 已暂停
-    /* LaunchedEffect(isDownloading, downloadId) { ... } */
+    // 监听下载进度
+    LaunchedEffect(isDownloading, downloadId) {
+        if (isDownloading && downloadId != -1L) {
+            val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager
+            while (isActive && isDownloading) {
+                val query = DownloadManager.Query().setFilterById(downloadId)
+                val cursor = downloadManager.query(query)
+                if (cursor.moveToFirst()) {
+                    val bytesDownloaded = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                    val bytesTotal = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    if (bytesTotal > 0) {
+                        downloadProgress = (bytesDownloaded * 100 / bytesTotal)
+                    }
+                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                    if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
+                        isDownloading = false
+                    }
+                }
+                cursor.close()
+                delay(500)
+            }
+        }
+    }
 
     // Dialogs
     if (showThemeDialog) {
@@ -352,7 +369,7 @@ private fun AppInfoCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Version Badge
+                // Version Badge - 显示当前版本和构建类型
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
@@ -372,8 +389,15 @@ private fun AppInfoCard(
                             .clip(CircleShape)
                             .background(currentTheme.primaryColor)
                     )
+                    // 根据版本号判断显示"最新版"或"开发版"
+                    val isReleaseVersion = !currentVersionName.contains("dev") &&
+                                          !currentVersionName.contains("alpha") &&
+                                          !currentVersionName.contains("beta")
                     Text(
-                        text = stringResource(R.string.version_latest_badge),
+                        text = if (isReleaseVersion)
+                            stringResource(R.string.version_latest_badge)
+                        else
+                            "开发版",
                         fontSize = 12.sp,
                         color = currentTheme.primaryColor
                     )

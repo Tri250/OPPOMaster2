@@ -821,7 +821,16 @@ private fun startPreview(
     val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
 
     val surfaceTexture = textureView.surfaceTexture ?: return
-    val previewSize = Size(textureView.width.coerceAtLeast(1), textureView.height.coerceAtLeast(1))
+
+    // 获取最佳预览尺寸，优先使用16:9或4:3比例
+    val outputSizes = map.getOutputSizes(SurfaceTexture::class.java)
+    val previewSize = outputSizes?.filter {
+        val ratio = it.width.toFloat() / it.height
+        ratio in 1.3f..1.8f // 4:3 到 16:9 之间
+    }?.maxByOrNull { it.width * it.height }
+        ?: outputSizes?.firstOrNull()
+        ?: Size(1920, 1080)
+
     surfaceTexture.setDefaultBufferSize(previewSize.width, previewSize.height)
 
     val previewSurface = Surface(surfaceTexture)
@@ -838,6 +847,9 @@ private fun startPreview(
                     try {
                         val requestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
                         requestBuilder.addTarget(previewSurface)
+                        // 自动对焦和自动曝光
+                        requestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                        requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
                         session.setRepeatingRequest(requestBuilder.build(), null, handler)
                     } catch (e: Exception) {
                         Log.e("Camera2Preview", "Preview request failed", e)

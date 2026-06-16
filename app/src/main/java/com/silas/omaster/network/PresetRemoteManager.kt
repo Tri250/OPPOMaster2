@@ -44,6 +44,11 @@ object PresetRemoteManager {
     suspend fun fetchPresets(url: String): PresetList? {
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
+            // SSRF防护：验证URL
+            validateUrl(url)?.let { error ->
+                Log.e("PresetRemoteManager", "URL validation failed: $error")
+                return null
+            }
             val response: HttpResponse = client.get(url)
             // Some servers (GitHub raw) may return Content-Type: text/plain; charset=utf-8
             // which prevents Ktor's content-negotiation from selecting the JSON transformer.

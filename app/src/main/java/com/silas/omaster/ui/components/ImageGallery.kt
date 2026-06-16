@@ -137,7 +137,7 @@ fun ImageGallery(
                         .memoryCachePolicy(CachePolicy.ENABLED)
                         .diskCachePolicy(CachePolicy.ENABLED)
                         .build(),
-                    contentDescription = null,
+                    contentDescription = "预设图片 ${page + 1}/${images.size}",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -220,7 +220,7 @@ private fun GalleryNavigationButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = if (icon == Icons.AutoMirrored.Filled.KeyboardArrowLeft) "上一张" else "下一张",
             modifier = Modifier.size(24.dp)
         )
     }

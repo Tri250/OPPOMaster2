@@ -76,8 +76,12 @@ fun PillNavBar(
         NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
     )
 
-    // 固定显示底部导航栏，不使用动画隐藏
-    if (!visible) return
+    // 使用动画控制底部导航栏显示/隐藏，不直接return避免导航消失
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(initialOffsetY = { it }),
+        exit = slideOutVertically(targetOffsetY = { it })
+    ) {
 
     Box(
         modifier = modifier
@@ -85,6 +89,8 @@ fun PillNavBar(
             .padding(bottom = 16.dp),
         contentAlignment = Alignment.Center
     ) {
+        // 使用 fillMaxWidth(0.9f) 替代固定 maxWidth，适配不同屏幕
+        val navBarModifier = Modifier.fillMaxWidth(0.92f)
         // 外层阴影效果
         Box(
             modifier = Modifier
@@ -98,8 +104,8 @@ fun PillNavBar(
             // 磨砂玻璃背景层 - 使用自适应宽度
             Box(
                 modifier = Modifier
-                    .fillMaxWidth().widthIn(max = 600.dp)
-                    .height(64.dp)
+                    .then(navBarModifier)
+                .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
                         brush = Brush.verticalGradient(
@@ -114,8 +120,8 @@ fun PillNavBar(
             // 顶部高光线条
             Box(
                 modifier = Modifier
-                    .fillMaxWidth().widthIn(max = 600.dp)
-                    .height(64.dp)
+                    .then(navBarModifier)
+                .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
                         brush = Brush.verticalGradient(
@@ -131,8 +137,8 @@ fun PillNavBar(
             // 边框
             Box(
                 modifier = Modifier
-                    .fillMaxWidth().widthIn(max = 600.dp)
-                    .height(64.dp)
+                    .then(navBarModifier)
+                .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
                         brush = Brush.verticalGradient(
@@ -164,7 +170,7 @@ fun PillNavBar(
             // 导航项
             Row(
                 modifier = Modifier
-                    .fillMaxWidth().widthIn(max = 600.dp)
+                    .then(navBarModifier)
                     .height(64.dp)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -181,6 +187,7 @@ fun PillNavBar(
                 }
             }
         }
+    }
     }
 }
 
