@@ -30,7 +30,12 @@ dist-ssr
 # Gradle
 .gradle/
 build/
+
+# Gradle Wrapper JAR（必须提交，用于 CI/新环境构建）
+# 注意：此规则必须在 build/ ignore 之后，确保 wrapper jar 不被忽略
 !gradle/wrapper/gradle-wrapper.jar
+
+# 保留 src 目录下的 build 文件夹（某些测试配置需要）
 !**/src/main/**/build/
 !**/src/test/**/build/
 

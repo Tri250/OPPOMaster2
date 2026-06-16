@@ -545,6 +545,11 @@ class PresetRepository private constructor(context: Context) {
      * - 返回转换后的 PresetItem 列表
      */
     private suspend fun fetchBrandFromCDN(brand: String, url: String): List<PresetItem> {
+        // SSRF 防护：验证 URL 安全性
+        validateCloudUrl(url)?.let { errorMsg ->
+            throw SecurityException("[$brand] $errorMsg")
+        }
+
         val response = httpClient.get(url)
         val status = response.status
         if (status.value !in 200..299) {
@@ -834,6 +839,51 @@ class PresetRepository private constructor(context: Context) {
 
     private fun savePinned(pinned: Set<String>) {
         settingsManager.pinnedPresetIds = pinned.toList()
+    }
+
+    /**
+     * SSRF 防护：验证云端 URL 安全性
+     * @param url 待验证的 URL
+     * @return 错误信息，如果验证通过返回 null
+     */
+    private fun validateCloudUrl(url: String): String? {
+        if (url.isBlank()) return "URL 不能为空"
+        if (!url.lowercase().startsWith("https://")) return "仅支持 HTTPS 协议"
+
+        // 防止 SSRF：禁止访问内网地址
+        val lower = url.lowercase()
+        val hostStart = lower.indexOf("https://") + 8
+        val hostEnd = lower.indexOf('/', startIndex = hostStart).let { if (it < 0) lower.length else it }
+        val host = lower.substring(hostStart, hostEnd)
+
+        // 检查端口（只允许标准 HTTPS 端口 443）
+        val portIndex = host.indexOf(':')
+        if (portIndex != -1) {
+            val port = host.substring(portIndex + 1).toIntOrNull()
+            if (port != null && port != 443) {
+                return "仅允许标准 HTTPS 端口 (443)"
+            }
+        }
+
+        // 禁止访问内网和本地地址
+        val blockedPrefixes = listOf(
+            "localhost", "127.", "0.0.0.0", "::1",
+            "10.", "192.168.", "172.16.", "172.17.", "172.18.", "172.19.",
+            "172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
+            "172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
+            "172.30.", "172.31.", "169.254.", "fc00:", "fe80:"
+        )
+
+        if (blockedPrefixes.any { host.startsWith(it) || host == it.trimEnd('.') }) {
+            return "禁止访问内网或本地地址"
+        }
+
+        // 验证域名格式（防止 IP 地址绕过）
+        if (host.matches(Regex("^\\d+\\.\\d+\\.\\d+\\.\\d+\\$"))) {
+            return "禁止直接使用 IP 地址"
+        }
+
+        return null
     }
 
     /**
