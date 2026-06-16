@@ -444,6 +444,16 @@ private fun CameraEntryScreen(
             // Camera2 实时预览
             Camera2Preview(
                 cameraFacing = cameraFacing,
+                onCapture = { bitmap ->
+                    // 保存拍照的图片并进入分析流程
+                    scope.launch {
+                        val savedPath = saveBitmapToCache(context, bitmap)
+                        if (savedPath != null) {
+                            flowState = RecognitionFlowState.ANALYZING
+                            // 触发分析
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -641,10 +651,12 @@ private fun CameraEntryScreen(
 
 /**
  * Camera2 实时预览组件（使用内置 Camera2 API，无需额外依赖）
+ * 支持拍照功能
  */
 @Composable
 private fun Camera2Preview(
     cameraFacing: CameraFacing,
+    onCapture: (Bitmap) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -653,6 +665,7 @@ private fun Camera2Preview(
     val cameraHandler = remember { Handler(cameraThread.looper) }
     var cameraDevice by remember { mutableStateOf<CameraDevice?>(null) }
     var captureSession by remember { mutableStateOf<CameraCaptureSession?>(null) }
+    var imageReader by remember { mutableStateOf<android.media.ImageReader?>(null) }
 
     DisposableEffect(cameraFacing) {
         val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
@@ -663,10 +676,20 @@ private fun Camera2Preview(
                 if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA)
                     == android.content.pm.PackageManager.PERMISSION_GRANTED
                 ) {
+                    // 创建ImageReader用于拍照
+                    val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                    val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                    val largest = map?.getOutputSizes(android.graphics.ImageFormat.JPEG)?.maxByOrNull { it.width * it.height }
+                        ?: Size(1920, 1080)
+                    imageReader = android.media.ImageReader.newInstance(
+                        largest.width, largest.height,
+                        android.graphics.ImageFormat.JPEG, 2
+                    )
+
                     cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                         override fun onOpened(camera: CameraDevice) {
                             cameraDevice = camera
-                            startPreview(camera, textureView, cameraManager, cameraId, cameraHandler)
+                            startPreview(camera, textureView, imageReader?.surface, cameraManager, cameraId, cameraHandler)
                         }
                         override fun onDisconnected(camera: CameraDevice) {
                             camera.close()
@@ -688,20 +711,93 @@ private fun Camera2Preview(
         onDispose {
             captureSession?.close()
             cameraDevice?.close()
+            imageReader?.close()
             cameraThread.quitSafely()
         }
     }
 
-    AndroidView(
-        factory = { textureView },
-        modifier = modifier.clip(RoundedCornerShape(16.dp)),
-        update = { view ->
-            view.layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { textureView },
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp)),
+            update = { view ->
+                view.layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        )
+
+        // 拍照按钮
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .border(4.dp, HasselbladOrange, CircleShape)
+                .clickable {
+                    captureImage(cameraDevice, captureSession, imageReader, cameraHandler, onCapture)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(HasselbladOrange)
             )
         }
-    )
+    }
+}
+
+/**
+ * 拍照并保存图片
+ */
+private fun captureImage(
+    cameraDevice: CameraDevice?,
+    captureSession: CameraCaptureSession?,
+    imageReader: android.media.ImageReader?,
+    handler: Handler,
+    onCapture: (Bitmap) -> Unit
+) {
+    if (cameraDevice == null || captureSession == null || imageReader == null) return
+
+    try {
+        val captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
+            addTarget(imageReader.surface)
+            set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+            set(CaptureRequest.JPEG_ORIENTATION, 90) // 竖屏拍照
+        }
+
+        imageReader.setOnImageAvailableListener({ reader ->
+            val image = reader.acquireLatestImage()
+            val buffer = image.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+            image.close()
+
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            if (bitmap != null) {
+                onCapture(bitmap)
+            }
+        }, handler)
+
+        captureSession.capture(captureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
+            override fun onCaptureCompleted(
+                session: CameraCaptureSession,
+                request: CaptureRequest,
+                result: TotalCaptureResult
+            ) {
+                Log.d("Camera2Preview", "Photo captured")
+            }
+        }, handler)
+    } catch (e: Exception) {
+        Log.e("Camera2Preview", "Capture failed", e)
+    }
 }
 
 private fun getCameraId(manager: CameraManager, facing: CameraFacing): String? {
@@ -716,6 +812,7 @@ private fun getCameraId(manager: CameraManager, facing: CameraFacing): String? {
 private fun startPreview(
     camera: CameraDevice,
     textureView: TextureView,
+    imageReaderSurface: Surface?,
     manager: CameraManager,
     cameraId: String,
     handler: Handler
@@ -727,16 +824,20 @@ private fun startPreview(
     val previewSize = Size(textureView.width.coerceAtLeast(1), textureView.height.coerceAtLeast(1))
     surfaceTexture.setDefaultBufferSize(previewSize.width, previewSize.height)
 
-    val surface = Surface(surfaceTexture)
+    val previewSurface = Surface(surfaceTexture)
+    val surfaces = mutableListOf<Surface>().apply {
+        add(previewSurface)
+        imageReaderSurface?.let { add(it) }
+    }
 
     try {
         camera.createCaptureSession(
-            listOf(surface),
+            surfaces,
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
                         val requestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                        requestBuilder.addTarget(surface)
+                        requestBuilder.addTarget(previewSurface)
                         session.setRepeatingRequest(requestBuilder.build(), null, handler)
                     } catch (e: Exception) {
                         Log.e("Camera2Preview", "Preview request failed", e)
@@ -1589,6 +1690,27 @@ private fun buildRecipeShareText(result: SceneProfile): String {
     builder.appendLine()
     builder.appendLine("—— 用哈苏之眼，记录每一刻的光影 ——")
     return builder.toString()
+}
+
+/**
+ * 保存Bitmap到应用缓存目录
+ * @return 保存的文件路径，失败返回null
+ */
+private suspend fun saveBitmapToCache(context: android.content.Context, bitmap: Bitmap): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val cacheDir = context.cacheDir
+            val fileName = "capture_${System.currentTimeMillis()}.jpg"
+            val file = java.io.File(cacheDir, fileName)
+            file.outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            }
+            file.absolutePath
+        } catch (e: Exception) {
+            Log.e("AISceneRecognition", "Save bitmap to cache failed", e)
+            null
+        }
+    }
 }
 
 /**

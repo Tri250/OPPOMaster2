@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -288,14 +290,16 @@ fun AIFineTuneScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (selectedImageUri != null) {
-                    // 显示已选图片作为实时预览
+                    // 显示已选图片作为实时预览（应用ColorMatrix滤镜）
+                    val colorMatrix = remember(renderParams) { renderParams.toColorMatrix() }
                     AsyncImage(
                         model = selectedImageUri,
                         contentDescription = "预览图片",
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.colorMatrix(colorMatrix)
                     )
                     // 导出按钮
                     IconButton(
@@ -1290,6 +1294,79 @@ private fun updateRenderParam(params: RenderParameters, key: String, value: Floa
         "skinSmooth" -> params.copy(skinSmooth = value)
         else -> params
     }
+}
+
+/**
+ * 根据渲染参数生成ColorMatrix（实时预览效果）
+ * 将RenderParameters转换为Compose可用的ColorMatrix
+ */
+private fun RenderParameters.toColorMatrix(): ColorMatrix {
+    // 归一化参数到 [-1, 1] 或 [0, 1] 范围
+    val sat = 1f + (saturation / 100f)  // 0.0 ~ 2.0
+    val con = 1f + (contrast / 100f)    // 0.0 ~ 2.0
+    val bri = brightness / 100f         // -1.0 ~ 1.0
+    val war = warmth / 100f             // -1.0 ~ 1.0
+
+    // 饱和度矩阵
+    val saturationMatrix = ColorMatrix().apply {
+        setToSaturation(sat.coerceIn(0f, 2f))
+    }
+
+    // 对比度矩阵
+    val contrastMatrix = ColorMatrix(
+        floatArrayOf(
+            con, 0f, 0f, 0f, (1f - con) * 128f,
+            0f, con, 0f, 0f, (1f - con) * 128f,
+            0f, 0f, con, 0f, (1f - con) * 128f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+
+    // 亮度矩阵
+    val brightnessMatrix = ColorMatrix(
+        floatArrayOf(
+            1f, 0f, 0f, 0f, bri * 255f,
+            0f, 1f, 0f, 0f, bri * 255f,
+            0f, 0f, 1f, 0f, bri * 255f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+
+    // 色温矩阵（暖色/冷色调整）
+    val warmthMatrix = ColorMatrix().apply {
+        if (war > 0) {
+            // 暖色调：增加红色，减少蓝色
+            val warmFactor = war * 0.3f
+            set(
+                floatArrayOf(
+                    1f + warmFactor, 0f, 0f, 0f, 0f,
+                    0f, 1f, 0f, 0f, 0f,
+                    0f, 0f, 1f - warmFactor, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            )
+        } else if (war < 0) {
+            // 冷色调：减少红色，增加蓝色
+            val coolFactor = -war * 0.3f
+            set(
+                floatArrayOf(
+                    1f - coolFactor, 0f, 0f, 0f, 0f,
+                    0f, 1f, 0f, 0f, 0f,
+                    0f, 0f, 1f + coolFactor, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            )
+        }
+    }
+
+    // 合并所有矩阵（按顺序应用）
+    val result = ColorMatrix()
+    result.set(saturationMatrix)
+    result.timesAssign(contrastMatrix)
+    result.timesAssign(brightnessMatrix)
+    result.timesAssign(warmthMatrix)
+
+    return result
 }
 
 /**
