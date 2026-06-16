@@ -123,7 +123,7 @@ fun CloudSyncScreen(
             title = { Text("云同步", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -180,7 +180,7 @@ fun CloudSyncScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                haptic.perform(HapticFeedbackType.LongPress)
                                 scope.launch {
                                     try {
                                         syncManager.sync()
@@ -252,12 +252,12 @@ fun CloudSyncScreen(
                         CloudProviderCard(
                             provider = cp,
                             onConnect = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                haptic.perform(HapticFeedbackType.LongPress)
                                 selectedProviderType = cp.type
                                 showConnectDialog = true
                             },
                             onDisconnect = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                haptic.perform(HapticFeedbackType.LongPress)
                                 cloudProviders = cloudProviders.map {
                                     if (it.type == cp.type) it.copy(isConnected = false, apiKey = "")
                                     else it

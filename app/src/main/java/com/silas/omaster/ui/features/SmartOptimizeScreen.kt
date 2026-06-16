@@ -235,7 +235,7 @@ fun SmartOptimizeScreen(
             title = { Text("智能优化", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
@@ -244,7 +244,7 @@ fun SmartOptimizeScreen(
             actions = {
                 // 预览切换
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     previewMode = if (previewMode == "before") "after" else "before"
                 }) {
                     Icon(
@@ -256,7 +256,7 @@ fun SmartOptimizeScreen(
                 // 应用按钮
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         runOptimizeWorkflow()
                     },
                     enabled = !isOptimizing
@@ -552,7 +552,7 @@ fun SmartOptimizeScreen(
             // 重置按钮
             OutlinedButton(
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     hdrEnabled = false
                     hdrStrength = 50f
                     noiseReductionEnabled = false
@@ -577,7 +577,7 @@ fun SmartOptimizeScreen(
             // 开始优化按钮（顺序处理所选项）
             Button(
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     runOptimizeWorkflow()
                 },
                 enabled = !isOptimizing && selectedOptimizeIds.isNotEmpty(),
@@ -653,7 +653,7 @@ private fun CompositeOptimizeCard(
                 Switch(
                     checked = enabled,
                     onCheckedChange = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         if (it) onEnable() else onDisable()
                     },
                     colors = SwitchDefaults.colors(
@@ -666,7 +666,7 @@ private fun CompositeOptimizeCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         onStartOptimize()
                     },
                     enabled = !isOptimizing,
@@ -765,7 +765,7 @@ private fun OptimizeOptionCard(
                 Switch(
                     checked = enabled,
                     onCheckedChange = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.perform(HapticFeedbackType.LongPress)
                         onToggle(it)
                     },
                     colors = SwitchDefaults.colors(

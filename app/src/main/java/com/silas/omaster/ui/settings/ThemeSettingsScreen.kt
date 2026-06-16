@@ -64,7 +64,7 @@ fun ThemeSettingsScreen(
             title = { Text("主题设置", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
@@ -72,7 +72,7 @@ fun ThemeSettingsScreen(
             },
             actions = {
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onApply(ThemeSettings(
                         theme = selectedTheme,
                         customColor = customColor,
@@ -109,7 +109,7 @@ fun ThemeSettingsScreen(
                     theme = theme,
                     selected = selectedTheme == theme.id,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        haptic.perform(HapticFeedbackType.TextHandleMove)
                         selectedTheme = theme.id
                         customColor = theme.color
                     }
@@ -152,7 +152,7 @@ fun ThemeSettingsScreen(
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
                             .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptic.perform(HapticFeedbackType.TextHandleMove)
                                 darkMode = mode
                             }
                             .padding(12.dp),
@@ -234,7 +234,7 @@ fun ThemeSettingsScreen(
                                 CircleShape
                             )
                             .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                haptic.perform(HapticFeedbackType.TextHandleMove)
                                 customColor = color
                             }
                     )

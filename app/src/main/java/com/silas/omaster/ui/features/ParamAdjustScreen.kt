@@ -72,7 +72,7 @@ fun ParamAdjustScreen(
             title = { Text("参数精细调节", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
@@ -81,7 +81,7 @@ fun ParamAdjustScreen(
             actions = {
                 // 重置按钮
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     iso = 100
                     shutterSpeed = 125f
                     aperture = 2.8f
@@ -94,7 +94,7 @@ fun ParamAdjustScreen(
                 }
                 // 应用按钮
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onApply(CameraParams(
                         iso = iso,
                         shutterSpeed = shutterSpeed,
@@ -124,7 +124,7 @@ fun ParamAdjustScreen(
                 label = "人像",
                 selected = selectedPreset == "portrait",
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     selectedPreset = "portrait"
                     iso = 200
                     shutterSpeed = 125f
@@ -136,7 +136,7 @@ fun ParamAdjustScreen(
                 label = "风景",
                 selected = selectedPreset == "landscape",
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     selectedPreset = "landscape"
                     iso = 100
                     shutterSpeed = 60f
@@ -148,7 +148,7 @@ fun ParamAdjustScreen(
                 label = "夜景",
                 selected = selectedPreset == "night",
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     selectedPreset = "night"
                     iso = 3200
                     shutterSpeed = 30f
@@ -160,7 +160,7 @@ fun ParamAdjustScreen(
                 label = "运动",
                 selected = selectedPreset == "sports",
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     selectedPreset = "sports"
                     iso = 800
                     shutterSpeed = 500f
@@ -365,7 +365,7 @@ private fun ParamSliderCard(
                     Slider(
                         value = value.toFloat(),
                         onValueChange = { 
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             onValueChange(it.toInt()) 
                         },
                         valueRange = when (valueRange) {
@@ -382,7 +382,7 @@ private fun ParamSliderCard(
                     Slider(
                         value = value,
                         onValueChange = { 
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
                             onValueChange(it) 
                         },
                         valueRange = when (valueRange) {
@@ -411,7 +411,7 @@ private fun ParamSliderCard(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    haptic.perform(HapticFeedbackType.LongPress)
                                     // 解析选项值
                                     val parsedValue = when (value) {
                                         is Int -> option.filter { it.isDigit() }.toIntOrNull() ?: value

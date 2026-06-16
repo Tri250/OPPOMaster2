@@ -158,7 +158,7 @@ fun HasselbladScreen(
             title = { Text("哈苏色彩科学", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
@@ -251,7 +251,7 @@ fun HasselbladScreen(
                             mode = mode,
                             isSelected = selectedMode == mode.id,
                             onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                haptic.perform(HapticFeedbackType.LongPress)
                                 selectMode(mode.id)
                             }
                         )
@@ -361,7 +361,7 @@ fun HasselbladScreen(
                 ) {
                     Button(
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             resetParams()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline),
@@ -372,7 +372,7 @@ fun HasselbladScreen(
                     }
                     Button(
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            haptic.perform(HapticFeedbackType.LongPress)
                             isApplied = true
                             scope.launch {
                                 // 通过推理引擎应用哈苏色彩参数
