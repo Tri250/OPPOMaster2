@@ -25,7 +25,12 @@ val umengMessageSecret: String = localProperties.getProperty("UMENG_MESSAGE_SECR
     ?: ""
 
 if (umengAppKey.isEmpty()) {
-    println("⚠️ UMENG_APPKEY 未配置，友盟统计将不可用。请在 local.properties 中设置。")
+    val isReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release") }
+    if (isReleaseBuild) {
+        println("⚠️ [严重] UMENG_APPKEY 未配置！Release 构建中友盟统计将不可用。请在 local.properties 中设置 UMENG_APPKEY=你的key")
+    } else {
+        println("⚠️ UMENG_APPKEY 未配置，友盟统计将不可用。请在 local.properties 中设置。")
+    }
 }
 
 // 读取签名配置

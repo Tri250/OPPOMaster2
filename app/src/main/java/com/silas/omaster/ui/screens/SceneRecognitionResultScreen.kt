@@ -77,20 +77,20 @@ fun SceneRecognitionResultScreen(
                         text = "AI 出片",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, null, tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 actions = {
                     IconButton(onClick = onShare) {
-                        Icon(Icons.Default.Share, null, tint = Color.White.copy(alpha = 0.7f))
+                        Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                     }
                     IconButton(onClick = onSave) {
-                        Icon(Icons.Default.Save, null, tint = Color.White.copy(alpha = 0.7f))
+                        Icon(Icons.Default.Save, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -238,7 +238,7 @@ private fun SceneInfoHeader(
                     text = sceneProfile.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = sceneProfile.category.displayName,
@@ -249,7 +249,7 @@ private fun SceneInfoHeader(
                 Text(
                     text = sceneProfile.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     maxLines = 2
                 )
             }
@@ -286,13 +286,13 @@ private fun BeforeAfterCompareSlider(
                     text = "效果对比",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Row {
                     Text(
                         text = "原图",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
@@ -346,7 +346,7 @@ private fun BeforeAfterCompareSlider(
                         Text(
                             text = "原图",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }

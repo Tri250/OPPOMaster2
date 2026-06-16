@@ -96,7 +96,12 @@ fun PresetSelectionScreen(
                 items(presets) { preset ->
                     PresetCard(
                         preset = preset,
-                        onClick = { onPresetSelected(preset.id) }
+                        onClick = { onPresetSelected(preset.id) },
+                        showFavoriteButton = false,
+                        showGradientOverlay = false,
+                        showAuthorInfo = false,
+                        showBadges = false,
+                        showStats = false
                     )
                 }
             }

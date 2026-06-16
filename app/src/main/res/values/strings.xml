@@ -123,6 +123,7 @@
     <string name="empty_no_favorites">暂无收藏预设</string>
     <string name="empty_no_custom">暂无自定义预设</string>
     <string name="empty_no_data">暂无数据</string>
+    <string name="image_load_failed">图片加载失败</string>
     <string name="empty_hint_add_presets">请调整筛选条件</string>
     <string name="empty_hint_favorite">点击心形图标收藏预设</string>
     <string name="empty_hint_create">点击右下角按钮创建预设</string>

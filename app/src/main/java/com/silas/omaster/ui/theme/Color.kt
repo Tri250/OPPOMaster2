@@ -50,3 +50,14 @@ val CardBorderHighlight = Color(0xFFFF6600).copy(alpha = 0.3f)
 val SurfaceElevated = Color(0xFF222222)
 val GradientOrangeStart = Color(0xFFFF6600)
 val GradientOrangeEnd = Color(0xFFFF8533)
+
+/**
+ * 语义化文字颜色（WCAG 4.5:1 对比度合规）
+ * 在 #0A0A0A 背景上:
+ * - alpha 0.87: 对比度 ~14:1 (主要文字)
+ * - alpha 0.70: 对比度 ~9:1 (次要文字)
+ * - alpha 0.50: 对比度 ~5.5:1 (辅助文字，刚好达标)
+ */
+val TextHighEmphasis = Color.White.copy(alpha = 0.87f)
+val TextMediumEmphasis = Color.White.copy(alpha = 0.70f)
+val TextLowEmphasis = Color.White.copy(alpha = 0.50f)

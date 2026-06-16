@@ -80,7 +80,7 @@ class GPURenderManager private constructor(private val context: Context) {
     val renderQueueSize: StateFlow<Int> = _renderQueueSize.asStateFlow()
     
     // 渲染队列（用于异步渲染）
-    private val renderChannel = Channel<RenderRequest>(capacity = Channel.UNLIMITED)
+    private val renderChannel = Channel<RenderRequest>(capacity = 64)
     
     // 协程作用域
     private var renderScope: CoroutineScope? = null
@@ -358,7 +358,13 @@ class GPURenderManager private constructor(private val context: Context) {
         resultCallback: ((RenderResult) -> Unit)? = null
     ): String {
         val requestId = generateRequestId()
-        
+
+        val scope = renderScope
+        if (scope == null || !scope.isActive) {
+            resultCallback?.invoke(RenderResult.Error("RenderManager not initialized or already released"))
+            return requestId
+        }
+
         val request = RenderRequest(
             id = requestId,
             inputBitmap = inputBitmap,
@@ -366,12 +372,17 @@ class GPURenderManager private constructor(private val context: Context) {
             quality = quality,
             resultCallback = resultCallback
         )
-        
-        renderScope?.launch {
-            renderChannel.send(request)
-            _renderQueueSize.value += 1
+
+        scope.launch {
+            try {
+                renderChannel.send(request)
+                _renderQueueSize.value += 1
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to enqueue render request", e)
+                resultCallback?.invoke(RenderResult.Error("Failed to enqueue: ${e.message}"))
+            }
         }
-        
+
         return requestId
     }
     
@@ -475,8 +486,8 @@ class GPURenderManager private constructor(private val context: Context) {
         // 停止渲染协程
         renderScope?.cancel()
         renderScope = null
-        
-        // 清空队列
+
+        // 先清空队列，再关闭channel
         clearQueue()
         renderChannel.close()
         

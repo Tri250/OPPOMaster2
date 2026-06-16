@@ -97,7 +97,8 @@ fun PillNavBar(
             // 磨砂玻璃背景层 - 使用自适应宽度
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -113,7 +114,8 @@ fun PillNavBar(
             // 顶部高光线条
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -130,7 +132,8 @@ fun PillNavBar(
             // 边框
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -163,7 +166,8 @@ fun PillNavBar(
             // 导航项
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .height(64.dp)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -175,7 +179,8 @@ fun PillNavBar(
                     NavItemButton(
                         item = item,
                         selected = selected,
-                        onClick = { onNavigate(item.route) }
+                        onClick = { onNavigate(item.route) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -188,7 +193,8 @@ fun PillNavBar(
 private fun NavItemButton(
     item: NavItem,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -223,8 +229,7 @@ private fun NavItemButton(
     )
 
     Column(
-        modifier = Modifier
-            .width(80.dp)
+        modifier = modifier
             .height(48.dp)
             .scale(scale)
             .clip(RoundedCornerShape(24.dp))

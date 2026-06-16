@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.pm.ServiceInfo
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -67,10 +68,21 @@ class FloatingWindowService : Service() {
         return Color.rgb(r, g, b)
     }
 
-    private val cardBackground = Color.parseColor("#26FFFFFF")  // 卡片背景
-    private val textPrimary = Color.parseColor("#FFFFFF")       // 主文字
-    private val textSecondary = Color.parseColor("#B3FFFFFF")   // 次要文字
-    private val textMuted = Color.parseColor("#80FFFFFF")       // 弱化文字
+    private fun getCardBackgroundColor(context: Context): Int {
+        return Color.argb(38, 255, 255, 255) // #26FFFFFF
+    }
+
+    private fun getTextPrimaryColor(context: Context): Int {
+        return Color.parseColor("#FFFFFF")
+    }
+
+    private fun getTextSecondaryColor(context: Context): Int {
+        return Color.argb(179, 255, 255, 255) // #B3FFFFFF
+    }
+
+    private fun getTextMutedColor(context: Context): Int {
+        return Color.argb(128, 255, 255, 255) // #80FFFFFF
+    }
 
     // 背景颜色根据设置动态计算
     private fun getBackgroundColor(context: Context): Int {
@@ -155,7 +167,12 @@ class FloatingWindowService : Service() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        val notification = buildNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
         instance = this
     }
 
@@ -679,12 +696,12 @@ class FloatingWindowService : Service() {
         return TextView(this).apply {
             text = icon
             textSize = 14f
-            setTextColor(textSecondary)
+            setTextColor(getTextSecondaryColor(context))
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(8).toFloat()
-                setColor(cardBackground)
+                setColor(getCardBackgroundColor(context))
             }
             setOnClickListener { onClick() }
         }
@@ -697,7 +714,7 @@ class FloatingWindowService : Service() {
         return TextView(this).apply {
             text = title
             textSize = 11f
-            setTextColor(textMuted)
+            setTextColor(getTextMutedColor(context))
             setPadding(0, dpToPx(12), 0, dpToPx(8))
         }
     }
@@ -736,7 +753,7 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = label
                 textSize = 13f
-                setTextColor(textSecondary)
+                setTextColor(getTextSecondaryColor(context))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
 
@@ -769,7 +786,7 @@ class FloatingWindowService : Service() {
             setPadding(dpToPx(8), dpToPx(6), dpToPx(8), dpToPx(6))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(8).toFloat()
-                setColor(cardBackground)
+                setColor(getCardBackgroundColor(context))
             }
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 setMargins(0, 0, dpToPx(4), 0)
@@ -786,13 +803,13 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = "$label "
                 textSize = 11f
-                setTextColor(textMuted)
+                setTextColor(getTextMutedColor(context))
             })
 
             addView(TextView(context).apply {
                 text = value
                 textSize = 12f
-                setTextColor(textPrimary)
+                setTextColor(getTextPrimaryColor(context))
                 // 设置 Tag 方便查找更新
                 if (valueTag != null) {
                     tag = valueTag

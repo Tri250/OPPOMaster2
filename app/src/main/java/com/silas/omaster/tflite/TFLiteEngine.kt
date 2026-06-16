@@ -326,17 +326,20 @@ class TFLiteEngine private constructor(private val context: Context) {
             val interpreter = loadModel(modelName)
             
             if (interpreter == null) {
-                // 模型不存在，使用启发式降级策略
-                Log.d(TAG, "模型不存在，使用启发式降级策略: $modelName")
-                
+                // 模型不存在
+                Log.w(TAG, "模型文件不存在: $modelName，AI推理不可用")
+
                 // 如果输入是Bitmap，使用基于图像特征的启发式推理
                 val heuristicResult = if (input is Bitmap) {
                     getHeuristicResultFromBitmap(modelName, input)
                 } else {
-                    // 否则使用默认启发式结果
-                    getSimulatedResult(modelName)
+                    // 非Bitmap输入且无模型，返回失败而非假数据
+                    Log.e(TAG, "模型不可用且输入类型不支持启发式降级: $modelName")
+                    return@withContext Result.failure(
+                        IllegalStateException("AI模型($modelName)不可用，请确保模型文件已正确部署")
+                    )
                 }
-                
+
                 @Suppress("UNCHECKED_CAST")
                 return@withContext Result.success(heuristicResult as T)
             }

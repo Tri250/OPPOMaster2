@@ -39,6 +39,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -487,7 +489,7 @@ private fun CameraEntryScreen(
                             FlashMode.ON -> Icons.Default.FlashOn
                             FlashMode.AUTO -> Icons.Outlined.FlashAuto
                         },
-                        null,
+                        "闪光灯",
                         tint = when (flashMode) {
                             FlashMode.ON -> Color(0xFFFFB800)
                             else -> Color.White.copy(alpha = 0.8f)
@@ -509,7 +511,7 @@ private fun CameraEntryScreen(
                 ) {
                     Icon(
                         Icons.Default.Refresh,
-                        null,
+                        "切换摄像头",
                         tint = Color.White.copy(alpha = 0.8f)
                     )
                 }
@@ -606,6 +608,7 @@ private fun CameraEntryScreen(
                 Box(
                     modifier = Modifier
                         .size(80.dp)
+                        .semantics { contentDescription = "拍照" }
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onTakePhoto()
@@ -642,7 +645,7 @@ private fun CameraEntryScreen(
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White.copy(alpha = 0.1f))
                 ) {
-                    Icon(Icons.Outlined.Image, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Outlined.Image, "选择图片", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -666,6 +669,7 @@ private fun Camera2Preview(
     var cameraDevice by remember { mutableStateOf<CameraDevice?>(null) }
     var captureSession by remember { mutableStateOf<CameraCaptureSession?>(null) }
     var imageReader by remember { mutableStateOf<android.media.ImageReader?>(null) }
+    var sensorOrientation by remember { mutableStateOf(90) }
 
     DisposableEffect(cameraFacing) {
         val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
@@ -689,6 +693,9 @@ private fun Camera2Preview(
                     cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
                         override fun onOpened(camera: CameraDevice) {
                             cameraDevice = camera
+                            // 获取传感器方向
+                            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                            sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
                             startPreview(camera, textureView, imageReader?.surface, cameraManager, cameraId, cameraHandler)
                         }
                         override fun onDisconnected(camera: CameraDevice) {
@@ -709,9 +716,19 @@ private fun Camera2Preview(
         }
 
         onDispose {
-            captureSession?.close()
-            cameraDevice?.close()
-            imageReader?.close()
+            try {
+                captureSession?.close()
+                cameraDevice?.close()
+                imageReader?.close()
+            } catch (e: Exception) {
+                Log.e("Camera2Preview", "Error closing camera resources", e)
+            }
+        }
+    }
+
+    // 线程生命周期与Composable绑定，不随cameraFacing变化而销毁
+    DisposableEffect(Unit) {
+        onDispose {
             cameraThread.quitSafely()
         }
     }
@@ -740,7 +757,7 @@ private fun Camera2Preview(
                 .background(Color.White)
                 .border(4.dp, HasselbladOrange, CircleShape)
                 .clickable {
-                    captureImage(cameraDevice, captureSession, imageReader, cameraHandler, onCapture)
+                    captureImage(cameraDevice, captureSession, imageReader, cameraHandler, sensorOrientation, onCapture)
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -762,6 +779,7 @@ private fun captureImage(
     captureSession: CameraCaptureSession?,
     imageReader: android.media.ImageReader?,
     handler: Handler,
+    sensorOrientation: Int,
     onCapture: (Bitmap) -> Unit
 ) {
     if (cameraDevice == null || captureSession == null || imageReader == null) return
@@ -770,7 +788,7 @@ private fun captureImage(
         val captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
             addTarget(imageReader.surface)
             set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
-            set(CaptureRequest.JPEG_ORIENTATION, 90) // 竖屏拍照
+            set(CaptureRequest.JPEG_ORIENTATION, sensorOrientation)
         }
 
         imageReader.setOnImageAvailableListener({ reader ->
@@ -821,8 +839,19 @@ private fun startPreview(
     val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
 
     val surfaceTexture = textureView.surfaceTexture ?: return
-    val previewSize = Size(textureView.width.coerceAtLeast(1), textureView.height.coerceAtLeast(1))
-    surfaceTexture.setDefaultBufferSize(previewSize.width, previewSize.height)
+
+    // 选择最优预览尺寸而非使用TextureView尺寸（避免TextureView尺寸为0时黑屏）
+    val previewSizes = map.getOutputSizes(SurfaceTexture::class.java)
+    val optimalSize = previewSizes.maxByOrNull { it.width * it.height }
+        ?.let { big ->
+            // 限制最大尺寸为1920x1080以保证性能
+            if (big.width > 1920 || big.height > 1080) {
+                previewSizes.filter { it.width <= 1920 && it.height <= 1080 }
+                    .maxByOrNull { it.width * it.height } ?: big
+            } else big
+        } ?: Size(1920, 1080)
+
+    surfaceTexture.setDefaultBufferSize(optimalSize.width, optimalSize.height)
 
     val previewSurface = Surface(surfaceTexture)
     val surfaces = mutableListOf<Surface>().apply {

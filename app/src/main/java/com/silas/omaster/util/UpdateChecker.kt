@@ -11,14 +11,17 @@ import android.os.Environment
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.silas.omaster.data.local.UpdateChannel
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
-import java.math.BigInteger
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -41,6 +44,12 @@ object UpdateChecker {
     private const val GITEE_OWNER = "Tri250"
     private const val GITEE_REPO = "OPPOMaster2"
     private const val GITEE_API_URL = "https://gitee.com/api/v5/repos/$GITEE_OWNER/$GITEE_REPO/releases/latest"
+
+    private val httpClient = HttpClient(CIO) {
+        engine {
+            requestTimeout = 15_000
+        }
+    }
 
     data class UpdateInfo(
         val versionName: String,
@@ -83,30 +92,28 @@ object UpdateChecker {
     }
 
     /**
-     * 通用 API 检查逻辑
+     * 通用 API 检查逻辑（使用 Ktor，带重试机制）
      */
-    private fun checkUpdateFromApi(
+    private suspend fun checkUpdateFromApi(
         context: Context,
         currentVersionCode: Int,
         apiUrl: String,
         isGitee: Boolean
     ): UpdateInfo? {
-        try {
-            val url = URL(apiUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.apply {
-                requestMethod = "GET"
-                connectTimeout = 15000
-                readTimeout = 15000
-                // GitHub 需要特殊请求头
-                if (!isGitee) {
-                    setRequestProperty("Accept", "application/vnd.github.v3+json")
-                }
-            }
+        var retryCount = 0
+        val maxRetries = 2
 
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(response)
+        while (retryCount <= maxRetries) {
+            try {
+                val response = httpClient.get(apiUrl) {
+                    if (!isGitee) {
+                        header("Accept", "application/vnd.github.v3+json")
+                    }
+                }
+                val text = response.bodyAsText()
+
+                // 解析JSON
+                val json = JSONObject(text)
 
                 val tagName = json.getString("tag_name")
                 val versionName = tagName.removePrefix("v")
@@ -134,14 +141,17 @@ object UpdateChecker {
                     releaseNotes = releaseNotes,
                     isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
                 )
-            } else {
-                Log.e(TAG, "检查更新失败，HTTP 状态码: ${connection.responseCode}")
-                return null
+            } catch (e: Exception) {
+                retryCount++
+                Log.w(TAG, "Update check failed (attempt $retryCount/$maxRetries) [${if (isGitee) "Gitee" else "GitHub"}]", e)
+                if (retryCount > maxRetries) {
+                    return null
+                }
+                // 指数退避
+                delay(1000L * retryCount)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "检查更新出错 [${if (isGitee) "Gitee" else "GitHub"}]", e)
-            return null
         }
+        return null
     }
 
     /**

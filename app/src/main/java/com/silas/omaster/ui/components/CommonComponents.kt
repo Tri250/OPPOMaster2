@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,8 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.CachePolicy
+import coil.imageloader
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.AnimationSpecs
@@ -257,6 +260,13 @@ fun ModeBadge(
 }
 
 /**
+ * 图片加载状态
+ */
+enum class ImageLoadState {
+    LOADING, SUCCESS, ERROR
+}
+
+/**
  * 预设图片组件
  * 支持 assets、内部存储和网络图片（带本地缓存）
  * 优化：使用更短的 crossfade 动画时长，优先加载本地缓存，带下载状态
@@ -266,7 +276,8 @@ fun PresetImage(
     preset: MasterPreset,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    showDownloadIndicator: Boolean = true
+    showDownloadIndicator: Boolean = true,
+    onLoadState: ((ImageLoadState) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
@@ -303,14 +314,29 @@ fun PresetImage(
         }
     }
 
+    val painter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(context)
+            .data(imageUri)
+            .crossfade(AnimationSpecs.FastTween.durationMillis)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .build()
+    )
+
+    // 监听图片加载状态
+    val painterState = painter.state
+    LaunchedEffect(painterState) {
+        when (painterState) {
+            is coil.compose.AsyncImagePainter.State.Loading -> onLoadState?.invoke(ImageLoadState.LOADING)
+            is coil.compose.AsyncImagePainter.State.Success -> onLoadState?.invoke(ImageLoadState.SUCCESS)
+            is coil.compose.AsyncImagePainter.State.Error -> onLoadState?.invoke(ImageLoadState.ERROR)
+            else -> {}
+        }
+    }
+
     Box(modifier = modifier) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(imageUri)
-                .crossfade(AnimationSpecs.FastTween.durationMillis)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .build(),
+        Image(
+            painter = painter,
             contentDescription = preset.name,
             contentScale = contentScale,
             modifier = Modifier.fillMaxSize()
