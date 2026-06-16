@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -242,7 +243,7 @@ fun HasselbladApertureAnimation(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0A0A))
+            .background(PureBlack)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

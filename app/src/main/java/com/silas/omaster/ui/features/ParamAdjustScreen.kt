@@ -257,7 +257,7 @@ fun ParamAdjustScreen(
                     valueRange = -3f..3f,
                     onValueChange = { exposureCompensation = it as Float },
                     unit = "EV",
-                    color = Color(0xFF4CAF50)
+                    color = SuccessGreen
                 )
             }
         }
@@ -410,7 +410,7 @@ private fun ParamSliderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color(0xFF1A1A1A))
+                                .background(DarkGray)
                                 .clickable {
                                     haptic.perform(HapticFeedbackType.LongPress)
                                     // 解析选项值

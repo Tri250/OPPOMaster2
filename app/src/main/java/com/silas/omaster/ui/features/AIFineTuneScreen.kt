@@ -39,6 +39,7 @@ import coil.request.ImageRequest
 import com.silas.omaster.ai.*
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.PerformanceHelper
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -155,12 +156,17 @@ fun AIFineTuneScreen(
     ) { uri: Uri? ->
         uri?.let {
             selectedImageUri = it
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                selectedBitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                try {
+                    val bitmap = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(it)?.use { stream ->
+                            PerformanceHelper.safeLoadBitmapFromStream(stream)
+                        }
+                    }
+                    selectedBitmap = bitmap
+                } catch (e: Exception) {
+                    Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -217,7 +223,7 @@ fun AIFineTuneScreen(
                 RenderParameters(saturation = -10f, contrast = -10f, warmth = 5f, brightness = 10f, fade = 15f), "柔和粉彩风"),
             ColorStylePreset("dramatic", "戏剧", Icons.Default.Bolt, Color(0xFFFF5722),
                 RenderParameters(saturation = 15f, contrast = 35f, warmth = 5f, clarity = 20f, highlights = -20f), "戏剧性光影"),
-            ColorStylePreset("hdr", "HDR", Icons.Default.TrendingUp, Color(0xFF00BCD4),
+            ColorStylePreset("hdr", "HDR", Icons.Default.TrendingUp, CyanAccent,
                 RenderParameters(saturation = 10f, contrast = 20f, highlights = -30f, shadows = 30f, clarity = 25f), "高动态范围")
         )
     }
@@ -225,12 +231,12 @@ fun AIFineTuneScreen(
     // 智能优化选项（与Web端SMART_OPTIMIZATIONS完全对齐 - 10项）
     val smartOptimizations = remember {
         listOf(
-            SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", Color(0xFFFF6B35)),
+            SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", HasselbladOrange),
             SmartOptimization("denoise", "智能降噪", Icons.Default.WaterDrop, "减少噪点，保持细节", SuccessGreen),
             SmartOptimization("sharpen", "智能锐化", Icons.Default.Visibility, "增强边缘清晰度", Color(0xFF2196F3)),
             SmartOptimization("dehaze", "去雾", Icons.Default.WbSunny, "去除雾气，提升通透感", Color(0xFF9C27B0)),
             SmartOptimization("skin", "肤色优化", Icons.Default.Face, "智能美化肤色", Color(0xFFE91E63)),
-            SmartOptimization("sky", "天空增强", Icons.Default.Cloud, "增强天空色彩和细节", Color(0xFF00BCD4), true),
+            SmartOptimization("sky", "天空增强", Icons.Default.Cloud, "增强天空色彩和细节", CyanAccent, true),
             SmartOptimization("ai-composition", "AI构图", Icons.Default.Crop, "智能裁剪优化构图", Color(0xFFFF9800), true),
             SmartOptimization("portrait-bokeh", "人像虚化", Icons.Default.Circle, "模拟大光圈虚化效果", Color(0xFF795548), true),
             SmartOptimization("color-match", "色彩匹配", Icons.Default.Palette, "匹配参考图色彩风格", Color(0xFF607D8B), true),
@@ -544,7 +550,7 @@ fun AIFineTuneScreen(
                         Text("智能优化", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
                     }
 
-                    items(smartOptimizations.chunked(2)) { optPair ->
+                    items(smartOptimizations.chunked(2), key = { it.first().id }) { optPair ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -745,7 +751,7 @@ private fun QuickPresetsSection(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(basePresets) { preset ->
+            items(basePresets, key = { it.first }) { preset ->
                 Card(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))

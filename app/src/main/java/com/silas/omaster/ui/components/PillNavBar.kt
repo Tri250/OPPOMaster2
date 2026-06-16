@@ -49,11 +49,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
+import com.silas.omaster.ui.theme.DarkGray
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 
-private val NavBarBackground = Color(0xFF1A1A1A)
+private val NavBarBackground = DarkGray
 private val NavBarBorder = Color(0xFF2A2A2A)
 
 data class NavItem(

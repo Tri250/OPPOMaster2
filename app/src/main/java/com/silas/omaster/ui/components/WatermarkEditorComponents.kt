@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.perform
 import com.silas.omaster.watermark.WatermarkEditorManager
@@ -174,7 +175,7 @@ private fun WatermarkTemplateSection(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(templates) { template ->
+            items(templates, key = { it.id }) { template ->
                 WatermarkTemplateItem(
                     template = template,
                     isSelected = template.id == selectedId,
@@ -598,7 +599,7 @@ fun SaveAsTemplateDialog(
                 Text("取消")
             }
         },
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = DarkGray,
         titleContentColor = Color.White,
         textContentColor = Color.White
     )

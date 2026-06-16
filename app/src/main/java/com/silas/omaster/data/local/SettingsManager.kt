@@ -599,60 +599,92 @@ class SettingsManager private constructor(private val context: Context) {
      */
     private fun setDataSync(key: Preferences.Key<String>, value: String) {
         cache[key.name] = value
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs[key] = value }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs[key] = value }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "写入DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     private fun setDataSync(key: Preferences.Key<Boolean>, value: Boolean) {
         cache[key.name] = value
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs[key] = value }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs[key] = value }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "写入DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     private fun setDataSync(key: Preferences.Key<Int>, value: Int) {
         cache[key.name] = value
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs[key] = value }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs[key] = value }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "写入DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     private fun setDataSync(key: Preferences.Key<Long>, value: Long) {
         cache[key.name] = value
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs[key] = value }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs[key] = value }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "写入DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     private fun setDataSetSync(key: Preferences.Key<Set<String>>, value: Set<String>) {
         cache[key.name] = value
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs[key] = value }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs[key] = value }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "写入DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     /**
      * 同步删除数据（同时清除缓存）
      */
     private fun removeDataSync(key: Preferences.Key<String>) {
         cache.remove(key.name)
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs.remove(key) }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs.remove(key) }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "删除DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     private fun removeDataSync(key: Preferences.Key<Int>) {
         cache.remove(key.name)
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs.remove(key) }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs.remove(key) }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "删除DataStore失败 key=${key.name}", e)
         }
     }
-    
+
     private fun removeDataSync(key: Preferences.Key<Boolean>) {
         cache.remove(key.name)
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs.remove(key) }
+        try {
+            runBlocking {
+                context.dataStore.edit { prefs -> prefs.remove(key) }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "删除DataStore失败 key=${key.name}", e)
         }
     }
 

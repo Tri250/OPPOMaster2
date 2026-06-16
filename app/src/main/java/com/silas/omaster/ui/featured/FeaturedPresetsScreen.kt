@@ -365,7 +365,7 @@ private fun SceneFilterRow(
             )
         }
 
-        items(scenes.size) { index ->
+        items(scenes.size, key = { scenes[it] }) { index ->
             FilterChip(
                 selected = selectedScene == scenes[index],
                 onClick = { onSceneSelected(scenes[index]) },

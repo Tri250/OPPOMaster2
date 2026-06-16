@@ -275,7 +275,7 @@ fun LUTShareScreen(
             }
 
             // LUT 网格列表
-            items(filteredLuts.chunked(2)) { rowItems ->
+            items(filteredLuts.chunked(2), key = { it.first().id }) { rowItems ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)

@@ -78,7 +78,7 @@ fun FilmRecommendationStrip(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(films) { film ->
+            items(films, key = { it.id }) { film ->
                 FilmCard(
                     film = film,
                     selected = film.id == selectedId,
@@ -132,7 +132,7 @@ private fun FilmCard(
                     .background(
                         when (film.series) {
                             FilmSeries.CLASSIC -> Color(0xFFD4AF37) // 金色
-                            FilmSeries.EMOTION -> Color(0xFF4CAF50) // 绿色
+                            FilmSeries.EMOTION -> SuccessGreen // 绿色
                             FilmSeries.STRUCTURE -> Color(0xFF808080) // 灰色
                             FilmSeries.DIGITAL -> Color(0xFF9C27B0) // 紫色
                             else -> HasselbladOrange
@@ -146,7 +146,7 @@ private fun FilmCard(
                     fontWeight = FontWeight.Bold,
                     color = when (film.series) {
                         FilmSeries.CLASSIC -> Color(0xFFD4AF37)
-                        FilmSeries.EMOTION -> Color(0xFF4CAF50)
+                        FilmSeries.EMOTION -> SuccessGreen
                         FilmSeries.STRUCTURE -> Color(0xFF808080)
                         FilmSeries.DIGITAL -> Color(0xFF9C27B0)
                         else -> HasselbladOrange
@@ -221,7 +221,7 @@ fun FilmDetailDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(16.dp),
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = DarkGray,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(

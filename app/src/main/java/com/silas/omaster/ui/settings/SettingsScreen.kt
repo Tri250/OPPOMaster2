@@ -948,7 +948,7 @@ fun DarkModeDialog(
         },
         text = {
             LazyColumn {
-                items(modes) { (pair, desc) ->
+                items(modes, key = { it.first.first }) { (pair, desc) ->
                     val (mode, name) = pair
                     Row(
                         modifier = Modifier

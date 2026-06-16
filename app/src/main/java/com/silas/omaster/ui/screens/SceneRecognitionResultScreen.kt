@@ -70,7 +70,7 @@ fun SceneRecognitionResultScreen(
     val selectedFilm = sceneProfile.recommendedFilm.find { it.id == selectedFilmId }
     
     Scaffold(
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = PureBlack,
         topBar = {
             TopAppBar(
                 title = {
@@ -95,7 +95,7 @@ fun SceneRecognitionResultScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A)
+                    containerColor = DarkGray
                 )
             )
         }
@@ -274,7 +274,7 @@ private fun BeforeAfterCompareSlider(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -432,7 +432,7 @@ private fun ImagePreviewCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -480,7 +480,7 @@ private fun ConfidenceVisualization(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -570,7 +570,7 @@ private fun HasselbladParamsDisplay(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -784,7 +784,7 @@ private fun MasterTipsSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

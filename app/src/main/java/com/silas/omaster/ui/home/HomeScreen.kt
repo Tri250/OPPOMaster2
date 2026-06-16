@@ -541,7 +541,7 @@ private fun BrandAndSortFilter(
             contentPadding = PaddingValues(horizontal = 0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(brands) { (key, label) ->
+            items(brands, key = { it.first }) { (key, label) ->
                 BrandFilterButton(
                     label = label,
                     isSelected = selectedBrand == key,

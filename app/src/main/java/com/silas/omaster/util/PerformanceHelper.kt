@@ -207,6 +207,52 @@ object PerformanceHelper {
     }
 
     /**
+     * 安全从 InputStream 加载 Bitmap（带下采样）
+     * @param inputStream 输入流（调用方负责关闭）
+     * @param maxDimension 最大边长，默认 2048
+     * @return Bitmap 或 null
+     */
+    fun safeLoadBitmapFromStream(inputStream: InputStream, maxDimension: Int = 2048): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            BitmapFactory.decodeStream(inputStream, null, options)
+
+            val sampleSize = calculateSampleSize(options.outWidth, options.outHeight, maxDimension, maxDimension)
+            options.inJustDecodeBounds = false
+            options.inSampleSize = sampleSize
+            options.inPreferredConfig = Bitmap.Config.RGB_565
+            BitmapFactory.decodeStream(inputStream, null, options)
+        } catch (e: Exception) {
+            Log.e(TAG, "从流加载大图失败: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * 安全从文件路径加载 Bitmap（带下采样）
+     * @param imagePath 文件路径
+     * @param maxDimension 最大边长，默认 2048
+     * @return Bitmap 或 null
+     */
+    fun safeLoadBitmapFromFile(imagePath: String, maxDimension: Int = 2048): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            BitmapFactory.decodeFile(imagePath, options)
+
+            val sampleSize = calculateSampleSize(options.outWidth, options.outHeight, maxDimension, maxDimension)
+            options.inJustDecodeBounds = false
+            options.inSampleSize = sampleSize
+            options.inPreferredConfig = Bitmap.Config.RGB_565
+            BitmapFactory.decodeFile(imagePath, options)
+        } catch (e: Exception) {
+            Log.e(TAG, "从文件加载大图失败: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
      * 创建安全的协程作用域
      * @param name 作用域名称
      * @return CoroutineScope

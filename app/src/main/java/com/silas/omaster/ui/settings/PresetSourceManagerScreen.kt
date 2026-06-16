@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
@@ -242,7 +243,7 @@ private fun PresetSourceCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (isEditing) {

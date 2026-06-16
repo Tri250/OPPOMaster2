@@ -16,6 +16,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
@@ -128,7 +129,7 @@ fun NotificationSettingsScreen(
                 )
             }
 
-            items(notificationSettings.size) { index ->
+            items(notificationSettings.size, key = { notificationSettings[it].title }) { index ->
                 val item = notificationSettings[index]
                 NotificationSettingCard(
                     title = item.title,
@@ -155,7 +156,7 @@ fun NotificationSettingsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -235,7 +236,7 @@ private fun NotificationSettingCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Row(
             modifier = Modifier

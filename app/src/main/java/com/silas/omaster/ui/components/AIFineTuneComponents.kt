@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestion
 import com.silas.omaster.ai.ParamComparison
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
@@ -201,7 +202,7 @@ fun AIFineTuneDialog(
                 Text("取消")
             }
         },
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = DarkGray,
         titleContentColor = Color.White,
         textContentColor = Color.White
     )

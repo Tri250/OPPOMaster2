@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.PerformanceHelper
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import java.io.*
@@ -283,7 +284,7 @@ fun WatermarkEditorScreen(
                 isLoading = true
                 try {
                     val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)
+                        PerformanceHelper.safeLoadBitmapFromStream(stream)
                     }
                     originalBitmap = bitmap
 
@@ -363,7 +364,7 @@ fun WatermarkEditorScreen(
         isLoading = true
         try {
             val bitmap = if (imagePath != null) {
-                BitmapFactory.decodeFile(imagePath)
+                PerformanceHelper.safeLoadBitmapFromFile(imagePath)
             } else {
                 null
             }
@@ -1408,7 +1409,7 @@ private fun WatermarkStyleSection(
         Color.White to "白色",
         Color.Black to "黑色",
         Color(0xFFFFD700) to "金色",
-        Color(0xFFFF6B35) to "橙色",
+        HasselbladOrange to "橙色",
         CyanAccent to "青色",
         Color(0xFFFF6B9D) to "粉色",
         SuccessGreen to "绿色",
@@ -1434,7 +1435,7 @@ private fun WatermarkStyleSection(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(FontOption.entries) { font ->
+            items(FontOption.entries, key = { it.name }) { font ->
                 val isSelected = font == selectedFont
                 Box(
                     modifier = Modifier

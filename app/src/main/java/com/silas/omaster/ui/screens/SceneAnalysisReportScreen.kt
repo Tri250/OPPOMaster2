@@ -790,7 +790,7 @@ private fun calculateStreakDays(dates: List<String>): Int {
 private fun getSceneColor(index: Int): Color {
     return when (index) {
         0 -> HasselbladOrange
-        1 -> Color(0xFF4CAF50)
+        1 -> SuccessGreen
         2 -> Color(0xFFFF9800)
         3 -> Color(0xFF2196F3)
         4 -> Color(0xFF9C27B0)

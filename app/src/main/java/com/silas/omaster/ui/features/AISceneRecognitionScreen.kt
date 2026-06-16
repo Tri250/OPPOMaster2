@@ -52,6 +52,7 @@ import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.PerformanceHelper
 import com.silas.omaster.util.ShareExportUtils
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
@@ -173,7 +174,7 @@ fun AISceneRecognitionScreen(
             // 1. 加载 Bitmap
             val bitmap: Bitmap? = withContext(Dispatchers.IO) {
                 try {
-                    BitmapFactory.decodeFile(imageUrl)
+                    PerformanceHelper.safeLoadBitmapFromFile(imageUrl)
                 } catch (e: Exception) {
                     null
                 }
@@ -781,10 +782,19 @@ private fun captureImage(
             buffer.get(bytes)
             image.close()
 
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            if (bitmap != null) {
-                onCapture(bitmap)
+            // 下采样防止 OOM，限制最大边为 2048px
+            val fullBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@ImageReader.OnImageAvailableListener
+            val bitmap = if (fullBitmap.width > 2048 || fullBitmap.height > 2048) {
+                val scale = 2048f / maxOf(fullBitmap.width, fullBitmap.height)
+                val scaledW = (fullBitmap.width * scale).toInt()
+                val scaledH = (fullBitmap.height * scale).toInt()
+                val scaled = Bitmap.createScaledBitmap(fullBitmap, scaledW, scaledH, true)
+                if (scaled != fullBitmap) fullBitmap.recycle()
+                scaled
+            } else {
+                fullBitmap
             }
+            onCapture(bitmap)
         }, handler)
 
         captureSession.capture(captureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
@@ -819,7 +829,8 @@ private fun startPreview(
     handler: Handler
 ) {
     val characteristics = manager.getCameraCharacteristics(cameraId)
-    val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
+    val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as? StreamConfigurationMap
+        ?: return
 
     val surfaceTexture = textureView.surfaceTexture ?: return
 
@@ -1455,7 +1466,7 @@ private fun RecognitionHistoryStrip(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(history) { scene ->
+            items(history, key = { it.id }) { scene ->
                 Card(
                     modifier = Modifier
                         .size(64.dp)

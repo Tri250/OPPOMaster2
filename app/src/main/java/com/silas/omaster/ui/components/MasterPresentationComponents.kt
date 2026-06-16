@@ -244,7 +244,7 @@ fun FilmRecipePreviewBar(
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(films) { film ->
+            items(films, key = { it.id }) { film ->
                 FilmRecipeItem(
                     film = film,
                     isSelected = film == selectedFilm,
@@ -569,7 +569,7 @@ fun ConfidenceIndicator(
     modifier: Modifier = Modifier
 ) {
     val color = when {
-        confidence >= 0.9f -> Color(0xFF4CAF50) // 绿色
+        confidence >= 0.9f -> SuccessGreen // 绿色
         confidence >= 0.7f -> HasselbladOrange
         else -> Color(0xFFFF9800) // 橙色
     }

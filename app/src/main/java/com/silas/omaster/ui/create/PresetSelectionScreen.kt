@@ -93,7 +93,7 @@ fun PresetSelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(presets) { preset ->
+                items(presets, key = { it.id }) { preset ->
                     PresetCard(
                         preset = preset,
                         onClick = { onPresetSelected(preset.id) },
