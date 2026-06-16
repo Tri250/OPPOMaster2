@@ -32,6 +32,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # 配置友盟 AppKey（从 GitHub Secrets 注入）
+      - name: Configure UMENG AppKey
+        run: |
+          if [ -n "${{ secrets.UMENG_APPKEY }}" ]; then
+            echo "UMENG_APPKEY=${{ secrets.UMENG_APPKEY }}" >> local.properties
+            echo "UMENG_MESSAGE_SECRET=${{ secrets.UMENG_MESSAGE_SECRET }}" >> local.properties
+            echo "✅ UMENG AppKey 已配置"
+          else
+            echo "⚠️ UMENG_APPKEY 未在 Secrets 中配置，友盟统计将不可用"
+          fi
+
       # Kotlin 代码风格检查
       - name: Run Kotlin Linter (ktlint)
         run: ./gradlew ktlintCheck --no-daemon || true

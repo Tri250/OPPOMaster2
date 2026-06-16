@@ -2,7 +2,9 @@
 # 批量下载 libs.versions.toml 中所有依赖
 # 使用多镜像回退：阿里云 > 腾讯云 > 官方
 
-LOCAL_REPO="/workspace/local-maven-repo"
+# 获取脚本所在目录的绝对路径
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_REPO="$SCRIPT_DIR/local-maven-repo"
 # 镜像源
 ALIYUN_PUBLIC="https://maven.aliyun.com/repository/public"
 ALIYUN_GOOGLE="https://maven.aliyun.com/repository/google"
