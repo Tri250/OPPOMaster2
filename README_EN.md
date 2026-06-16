@@ -14,19 +14,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/iCurrer/OMaster/releases">
-    <img src="https://img.shields.io/github/v/release/iCurrer/OMaster" alt="Version"/>
+  <a href="https://github.com/Tri250/OPPOMaster2/releases">
+    <img src="https://img.shields.io/github/v/release/Tri250/OPPOMaster2" alt="Version"/>
   </a>
   <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh">
     <img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-orange.svg?style=flat-square" alt="License"/>
   </a>
   <img src="https://img.shields.io/badge/Platform-Android%206+-brightgreen.svg?style=flat-square" alt="Platform"/>
   <img src="https://img.shields.io/badge/Tech-Jetpack%20Compose-4285F4.svg?style=flat-square" alt="Tech"/>
-  <img src="https://img.shields.io/github/actions/workflow/status/iCurrer/OMaster/beta-release.yml" alt="Build"/>
+  <img src="https://img.shields.io/github/actions/workflow/status/Tri250/OPPOMaster2/beta-release.yml" alt="Build"/>
 </p>
 
 <p align="center">
-  <a href="https://github.com/iCurrer/OMaster/releases">
+  <a href="https://github.com/Tri250/OPPOMaster2/releases">
     <b>⬇️ Download Latest Version</b>
   </a>
 </p>

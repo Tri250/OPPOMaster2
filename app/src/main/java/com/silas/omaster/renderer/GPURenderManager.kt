@@ -317,9 +317,10 @@ class GPURenderManager private constructor(private val context: Context) {
     }
     
     /**
-     * CPU降级渲染
+     * CPU降级渲染（异步）
+     * 修复 P0-5: 改为suspend函数，避免在主线程执行
      */
-    private fun renderWithCPU(request: RenderRequest): RenderResult {
+    private suspend fun renderWithCPU(request: RenderRequest): RenderResult {
         val startTime = System.currentTimeMillis()
         
         try {
@@ -467,7 +468,8 @@ class GPURenderManager private constructor(private val context: Context) {
     
     /**
      * 释放资源
-     * 注意：此方法使用runBlocking确保资源完全释放，适用于生命周期结束时的清理操作
+     * 修复 P0-5: 移除双重runBlocking，改为在渲染线程直接执行
+     * 避免在已经取消的协程作用域中使用runBlocking导致死锁
      */
     fun release() {
         // 停止渲染协程
@@ -478,9 +480,9 @@ class GPURenderManager private constructor(private val context: Context) {
         clearQueue()
         renderChannel.close()
         
-        // 在渲染线程释放资源（使用runBlocking确保同步完成）
-        runBlocking {
-            runOnRenderThreadBlocking {
+        // 在渲染线程直接执行释放（避免runBlocking嵌套）
+        renderHandler?.post {
+            try {
                 imageRenderer?.release()
                 imageRenderer = null
                 
@@ -511,11 +513,27 @@ class GPURenderManager private constructor(private val context: Context) {
                     EGL14.eglTerminate(currentDisplay)
                     eglDisplay = null
                 }
+                
+                Log.d(TAG, "EGL resources released on render thread")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error releasing EGL resources", e)
             }
         }
         
-        // 停止渲染线程
-        renderThread?.quitSafely()
+        // 等待渲染线程处理完释放任务（带超时）
+        renderThread?.let { thread ->
+            try {
+                thread.quitSafely()
+                // 最多等待2秒
+                thread.join(2000)
+                if (thread.isAlive) {
+                    Log.w(TAG, "Render thread did not terminate in time, forcing quit")
+                    thread.interrupt()
+                }
+            } catch (e: InterruptedException) {
+                Log.e(TAG, "Interrupted while waiting for render thread", e)
+            }
+        }
         renderThread = null
         renderHandler = null
         
@@ -540,90 +558,175 @@ data class RenderRequest(
 /**
  * CPU降级渲染器
  * 当GPU不可用时的备用渲染方案
+ * 
+ * 修复 P0-5: 改为异步渲染，避免在主线程处理大图片导致ANR
  */
 class CPURenderer {
     
     /**
-     * CPU渲染实现
+     * CPU渲染实现（异步）
      * 使用像素级处理实现基本效果
+     * 修复：改为suspend函数，在后台线程执行
      */
-    fun render(inputBitmap: Bitmap, params: RenderParameters): Bitmap? {
+    suspend fun render(inputBitmap: Bitmap, params: RenderParameters): Bitmap? = withContext(Dispatchers.Default) {
         try {
+            // 大图片分块处理，避免单次处理时间过长
             val outputBitmap = inputBitmap.copy(Bitmap.Config.ARGB_8888, true)
             val width = outputBitmap.width
             val height = outputBitmap.height
+            val totalPixels = width * height
             
-            // 获取像素数组
-            val pixels = IntArray(width * height)
-            outputBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+            // 如果像素数超过阈值，使用分块处理
+            val chunkSize = 500_000 // 每次处理50万像素
             
-            // 应用参数调整
-            for (i in pixels.indices) {
-                var pixel = pixels[i]
-                
-                // 解析RGBA
-                var r = (pixel shr 16) and 0xFF
-                var g = (pixel shr 8) and 0xFF
-                var b = pixel and 0xFF
-                
-                // 应用亮度
-                if (params.brightness != 0f) {
-                    val brightnessOffset = params.brightness * 2.55f
-                    r = (r + brightnessOffset).toInt().coerceIn(0, 255)
-                    g = (g + brightnessOffset).toInt().coerceIn(0, 255)
-                    b = (b + brightnessOffset).toInt().coerceIn(0, 255)
-                }
-                
-                // 应用对比度
-                if (params.contrast != 0f) {
-                    val contrastFactor = 1f + params.contrast / 100f
-                    r = ((r - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
-                    g = ((g - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
-                    b = ((b - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
-                }
-                
-                // 应用饱和度
-                if (params.saturation != 0f) {
-                    val gray = 0.299f * r + 0.587f * g + 0.114f * b
-                    val saturationFactor = 1f + params.saturation / 100f
-                    r = (gray + (r - gray) * saturationFactor).toInt().coerceIn(0, 255)
-                    g = (gray + (g - gray) * saturationFactor).toInt().coerceIn(0, 255)
-                    b = (gray + (b - gray) * saturationFactor).toInt().coerceIn(0, 255)
-                }
-                
-                // 应用色温
-                if (params.warmth != 0f) {
-                    val warmthFactor = params.warmth / 100f
-                    if (warmthFactor > 0) {
-                        // 暖色调：增加红色，减少蓝色
-                        r = (r + warmthFactor * 20).toInt().coerceIn(0, 255)
-                        b = (b - warmthFactor * 20).toInt().coerceIn(0, 255)
-                    } else {
-                        // 冷色调：减少红色，增加蓝色
-                        r = (r + warmthFactor * 20).toInt().coerceIn(0, 255)
-                        b = (b - warmthFactor * 20).toInt().coerceIn(0, 255)
-                    }
-                }
-                
-                // 应用曝光
-                if (params.exposure != 0f) {
-                    val exposureFactor = Math.pow(2.0, (params.exposure / 50f).toDouble()).toFloat()
-                    r = (r * exposureFactor).toInt().coerceIn(0, 255)
-                    g = (g * exposureFactor).toInt().coerceIn(0, 255)
-                    b = (b * exposureFactor).toInt().coerceIn(0, 255)
-                }
-                
-                // 组合像素
-                pixels[i] = (pixel and 0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
+            if (totalPixels > chunkSize) {
+                // 分块异步处理
+                renderInChunks(outputBitmap, width, height, params, chunkSize)
+            } else {
+                // 小图片直接处理
+                renderFullImage(outputBitmap, width, height, params)
             }
             
-            // 设置输出像素
-            outputBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
-            
-            return outputBitmap
-            
         } catch (e: Exception) {
-            return null
+            Log.e("CPURenderer", "CPU渲染失败", e)
+            null
+        }
+    }
+    
+    /**
+     * 分块渲染，避免ANR
+     */
+    private suspend fun renderInChunks(
+        outputBitmap: Bitmap,
+        width: Int,
+        height: Int,
+        params: RenderParameters,
+        chunkSize: Int
+    ): Bitmap? {
+        val totalPixels = width * height
+        val numChunks = (totalPixels + chunkSize - 1) / chunkSize
+        
+        for (chunkIndex in 0 until numChunks) {
+            // 每处理一块就yield，让出线程
+            yield()
+            
+            val startPixel = chunkIndex * chunkSize
+            val endPixel = minOf(startPixel + chunkSize, totalPixels)
+            
+            processPixelChunk(outputBitmap, width, height, params, startPixel, endPixel)
+        }
+        
+        return outputBitmap
+    }
+    
+    /**
+     * 处理指定范围的像素块
+     */
+    private fun processPixelChunk(
+        outputBitmap: Bitmap,
+        width: Int,
+        height: Int,
+        params: RenderParameters,
+        startPixel: Int,
+        endPixel: Int
+    ) {
+        val pixels = IntArray(endPixel - startPixel)
+        
+        // 将线性索引转换为二维坐标
+        for (i in pixels.indices) {
+            val pixelIndex = startPixel + i
+            val x = pixelIndex % width
+            val y = pixelIndex / width
+            pixels[i] = outputBitmap.getPixel(x, y)
+        }
+        
+        // 处理像素
+        processPixels(pixels, params)
+        
+        // 写回
+        for (i in pixels.indices) {
+            val pixelIndex = startPixel + i
+            val x = pixelIndex % width
+            val y = pixelIndex / width
+            outputBitmap.setPixel(x, y, pixels[i])
+        }
+    }
+    
+    /**
+     * 完整图片渲染（小图片）
+     */
+    private fun renderFullImage(
+        outputBitmap: Bitmap,
+        width: Int,
+        height: Int,
+        params: RenderParameters
+    ): Bitmap {
+        val pixels = IntArray(width * height)
+        outputBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        processPixels(pixels, params)
+        outputBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+        return outputBitmap
+    }
+    
+    /**
+     * 处理像素数组
+     */
+    private fun processPixels(pixels: IntArray, params: RenderParameters) {
+        for (i in pixels.indices) {
+            var pixel = pixels[i]
+            
+            // 解析RGBA
+            var r = (pixel shr 16) and 0xFF
+            var g = (pixel shr 8) and 0xFF
+            var b = pixel and 0xFF
+            
+            // 应用亮度
+            if (params.brightness != 0f) {
+                val brightnessOffset = params.brightness * 2.55f
+                r = (r + brightnessOffset).toInt().coerceIn(0, 255)
+                g = (g + brightnessOffset).toInt().coerceIn(0, 255)
+                b = (b + brightnessOffset).toInt().coerceIn(0, 255)
+            }
+            
+            // 应用对比度
+            if (params.contrast != 0f) {
+                val contrastFactor = 1f + params.contrast / 100f
+                r = ((r - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
+                g = ((g - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
+                b = ((b - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
+            }
+            
+            // 应用饱和度
+            if (params.saturation != 0f) {
+                val gray = 0.299f * r + 0.587f * g + 0.114f * b
+                val saturationFactor = 1f + params.saturation / 100f
+                r = (gray + (r - gray) * saturationFactor).toInt().coerceIn(0, 255)
+                g = (gray + (g - gray) * saturationFactor).toInt().coerceIn(0, 255)
+                b = (gray + (b - gray) * saturationFactor).toInt().coerceIn(0, 255)
+            }
+            
+            // 应用色温
+            if (params.warmth != 0f) {
+                val warmthFactor = params.warmth / 100f
+                if (warmthFactor > 0) {
+                    r = (r + warmthFactor * 20).toInt().coerceIn(0, 255)
+                    b = (b - warmthFactor * 20).toInt().coerceIn(0, 255)
+                } else {
+                    r = (r + warmthFactor * 20).toInt().coerceIn(0, 255)
+                    b = (b - warmthFactor * 20).toInt().coerceIn(0, 255)
+                }
+            }
+            
+            // 应用曝光
+            if (params.exposure != 0f) {
+                val exposureFactor = kotlin.math.pow(2.0, (params.exposure / 50f).toDouble()).toFloat()
+                r = (r * exposureFactor).toInt().coerceIn(0, 255)
+                g = (g * exposureFactor).toInt().coerceIn(0, 255)
+                b = (b * exposureFactor).toInt().coerceIn(0, 255)
+            }
+            
+            // 组合像素
+            pixels[i] = (pixel and 0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
         }
     }
 }

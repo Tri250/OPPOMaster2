@@ -33,13 +33,13 @@ object UpdateChecker {
     private const val TAG = "UpdateChecker"
 
     // GitHub 配置
-    private const val GITHUB_OWNER = "iCurrer"
-    private const val GITHUB_REPO = "OMaster"
+    private const val GITHUB_OWNER = "Tri250"
+    private const val GITHUB_REPO = "OPPOMaster2"
     private const val GITHUB_API_URL = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
 
     // Gitee 配置
-    private const val GITEE_OWNER = "qiublog"
-    private const val GITEE_REPO = "OMaster"
+    private const val GITEE_OWNER = "Tri250"
+    private const val GITEE_REPO = "OPPOMaster2"
     private const val GITEE_API_URL = "https://gitee.com/api/v5/repos/$GITEE_OWNER/$GITEE_REPO/releases/latest"
 
     data class UpdateInfo(

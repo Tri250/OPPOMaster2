@@ -71,7 +71,7 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 # ===== 新增硬编码依赖 =====
-# Compose Material（用于 pull-to-refresh）
+# Compose Material（用于 pull-to-refresh）- 后续迁移到 Material3
 androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "material" }
 
 # Ktor 全家桶

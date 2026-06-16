@@ -120,8 +120,8 @@ android {
             // 重置当前支持的 ABI 列表（如果不调用 reset()，include 会追加到默认列表）
             reset()
             // 指定需要拆分的 ABI 类型
-            // 仅包含 ARM 架构（实际设备），x86/x86_64 仅用于模拟器调试
-            include("armeabi-v7a", "arm64-v8a")
+            // 包含 ARM 架构（实际设备）和 x86/x86_64（平板、Chrome OS、模拟器）
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             // 生成一个包含所有 ABI 的通用 APK（用于不支持拆分的场景）
             isUniversalApk = true
         }

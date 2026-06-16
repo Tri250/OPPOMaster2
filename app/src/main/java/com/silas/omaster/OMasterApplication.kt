@@ -3,6 +3,7 @@ package com.silas.omaster
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.util.CrashHandler

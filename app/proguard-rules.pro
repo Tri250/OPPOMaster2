@@ -34,20 +34,16 @@
 -dontwarn kotlinx.serialization.**
 
 # ========================================
-# Jetpack Compose 相关规则
+# Jetpack Compose 相关规则（精简）
 # ========================================
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
-
-# Composable 函数
+# 仅保留 Composable 函数，不保留整个 compose 包
 -keepclassmembers class * {
     @androidx.compose.runtime.Composable <methods>;
 }
--keep class **$$Composable { *; }
--keep class **$composer { *; }
--keep class **$Composer { *; }
--keepclassmembers class **$composer { *; }
--keepclassmembers class **$Composer { *; }
+-keepclassmembers class * {
+    @androidx.compose.runtime.Composable <fields>;
+}
+-dontwarn androidx.compose.**
 
 # ========================================
 # AndroidX 基础库
@@ -63,12 +59,12 @@
 -dontwarn androidx.**
 
 # ========================================
-# Gson 序列化规则
+# Gson 序列化规则（精简）
 # ========================================
--keep class com.google.gson.** { *; }
--keep class * implements com.google.gson.TypeAdapter
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
+# 仅保留必要的 Gson 类型适配器接口
+-keep class * implements com.google.gson.TypeAdapter { *; }
+-keep class * implements com.google.gson.JsonSerializer { *; }
+-keep class * implements com.google.gson.JsonDeserializer { *; }
 -keepclassmembers class * implements com.google.gson.TypeAdapterFactory {
     <init>(...);
 }
@@ -107,18 +103,21 @@
 -dontwarn com.google.android.gms.internal.**
 
 # ========================================
-# Ktor 客户端相关规则
+# Ktor 客户端相关规则（精简）
 # ========================================
--keep class io.ktor.** { *; }
--keepclassmembers class io.ktor.** { *; }
+# Ktor 内部使用反射，但大部分可以混淆
+-keep class io.ktor.client.** { *; }
+-keepclassmembers class io.ktor.client.** { *; }
 -dontwarn io.ktor.**
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean
 
 # ========================================
-# Coil 图片加载
+# Coil 图片加载（精简）
 # ========================================
--keep class coil.** { *; }
+# Coil 使用注解处理器，大部分可以混淆
+-keep class coil.request.ImageRequest$Builder { *; }
+-keep class coil.ImageLoader { *; }
 -dontwarn coil.**
 
 # ========================================
