@@ -387,7 +387,8 @@ private fun RelatedPresetItem(
                 if (preset.coverPath.isNotBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(preset.coverPath)
+                            .data(if (preset.coverPath.startsWith("http")) preset.coverPath
+                                  else "file:///android_asset/${preset.coverPath}")
                             .crossfade(true)
                             .build(),
                         contentDescription = preset.name,

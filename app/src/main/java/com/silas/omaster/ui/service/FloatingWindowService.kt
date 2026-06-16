@@ -1,6 +1,10 @@
 package com.silas.omaster.ui.service
 
 import android.animation.ValueAnimator
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -22,6 +26,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.silas.omaster.MainActivity
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.PresetItem
@@ -64,6 +69,8 @@ class FloatingWindowService : Service() {
 
     companion object {
         private const val TAG = "FloatingWindowService"
+        private const val NOTIFICATION_ID = 1001
+        private const val CHANNEL_ID = "floating_window_channel"
         private const val EXTRA_NAME = "name"
         private const val EXTRA_SECTIONS = "sections"
         private const val EXTRA_PRESET_ID = "preset_id"
@@ -135,7 +142,51 @@ class FloatingWindowService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        createNotificationChannel()
+        startForeground(NOTIFICATION_ID, buildNotification())
         instance = this
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "悬浮窗服务",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "用于在后台显示悬浮窗"
+                setSound(null, null)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(): Notification {
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, CHANNEL_ID)
+                .setContentTitle("OMaster 悬浮窗")
+                .setContentText("预设参数悬浮窗正在运行")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+                .setContentTitle("OMaster 悬浮窗")
+                .setContentText("预设参数悬浮窗正在运行")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .build()
+        }
     }
 
     override fun onDestroy() {

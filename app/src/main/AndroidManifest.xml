@@ -47,7 +47,8 @@
 
         <service
             android:name=".ui.service.FloatingWindowService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
 
         <activity
             android:name=".MainActivity"

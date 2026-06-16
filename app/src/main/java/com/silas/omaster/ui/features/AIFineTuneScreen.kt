@@ -1,6 +1,15 @@
 package com.silas.omaster.ui.features
 
+import android.content.ContentValues
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -16,15 +25,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.silas.omaster.ai.*
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * AI微调功能页面 - 与Web端AIFineTunePage.tsx完全对齐
@@ -127,6 +142,25 @@ fun AIFineTuneScreen(
     val aiManager = remember { AIFineTuneManager.getInstance(context) }
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+
+    // 图片选择相关
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedBitmap by remember { mutableStateOf<Bitmap?>(bitmap) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                selectedBitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+            } catch (e: Exception) {
+                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // 状态
     val isProcessing by aiManager.isProcessing.collectAsState()
@@ -238,6 +272,108 @@ fun AIFineTuneScreen(
                 titleContentColor = Color.White
             )
         )
+
+        // 图片预览区域 + 上传按钮
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selectedImageUri != null) {
+                    // 显示已选图片作为实时预览
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "预览图片",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                    // 导出按钮
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    val saved = saveImageToGallery(context, selectedBitmap)
+                                    if (saved) {
+                                        Toast.makeText(context, "图片已导出到相册", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "导出失败", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(PureBlack.copy(alpha = 0.7f))
+                    ) {
+                        Icon(
+                            Icons.Default.SaveAlt,
+                            "导出",
+                            tint = HasselbladOrange,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    // 更换图片按钮
+                    IconButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(PureBlack.copy(alpha = 0.7f))
+                    ) {
+                        Icon(
+                            Icons.Default.SwapHoriz,
+                            "更换",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    // 上传图片区域
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { imagePickerLauncher.launch("image/*") }
+                    ) {
+                        Spacer(modifier = Modifier.width(0.dp).height(0.dp)) // workaround
+                        Icon(
+                            Icons.Default.AddPhotoAlternate,
+                            null,
+                            tint = Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "点击上传图片",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            "支持 JPG/PNG/WebP 格式",
+                            color = Color.White.copy(alpha = 0.3f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
 
         // 推理进度条
         if (isProcessing) {
@@ -1153,5 +1289,52 @@ private fun updateRenderParam(params: RenderParameters, key: String, value: Floa
         "fade" -> params.copy(fade = value)
         "skinSmooth" -> params.copy(skinSmooth = value)
         else -> params
+    }
+}
+
+/**
+ * 保存图片到系统相册
+ */
+private suspend fun saveImageToGallery(context: android.content.Context, bitmap: Bitmap?): Boolean {
+    if (bitmap == null) return false
+    return withContext(Dispatchers.IO) {
+        try {
+            val filename = "omaster_ai_${System.currentTimeMillis()}.jpg"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster")
+                }
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
+                uri?.let {
+                    context.contentResolver.openOutputStream(it)?.use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    }
+                    true
+                } ?: false
+            } else {
+                @Suppress("DEPRECATION")
+                val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val file = java.io.File(dir, "OMaster/$filename")
+                file.parentFile?.mkdirs()
+                file.outputStream().use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                // 通知相册扫描
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DATA, file.absolutePath)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                }
+                context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                true
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AIFineTune", "Save image failed", e)
+            false
+        }
     }
 }

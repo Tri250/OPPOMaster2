@@ -5,7 +5,16 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
+import android.graphics.SurfaceTexture
+import android.hardware.camera2.*
+import android.hardware.camera2.params.StreamConfigurationMap
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
+import android.util.Size
+import android.view.Surface
+import android.view.TextureView
+import android.view.ViewGroup
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -34,7 +43,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ShareCompat
+import androidx.core.content.ContextCompat
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
@@ -43,6 +54,7 @@ import com.silas.omaster.util.ShareExportUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Collections
 
 /**
  * Layer 3: 大师呈现层 - 「哈苏大师之眼」AI 场景识别页
@@ -427,26 +439,11 @@ private fun CameraEntryScreen(
                 .weight(1f)
                 .background(DarkGray)
         ) {
-            // 模拟相机预览
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Outlined.CameraAlt,
-                        null,
-                        tint = Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "相机预览",
-                        color = Color.White.copy(alpha = 0.4f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
+            // Camera2 实时预览
+            Camera2Preview(
+                cameraFacing = cameraFacing,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 顶部控制栏
             Row(
@@ -637,6 +634,120 @@ private fun CameraEntryScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Camera2 实时预览组件（使用内置 Camera2 API，无需额外依赖）
+ */
+@Composable
+private fun Camera2Preview(
+    cameraFacing: CameraFacing,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val textureView = remember { TextureView(context) }
+    val cameraThread = remember { HandlerThread("Camera2Thread").apply { start() } }
+    val cameraHandler = remember { Handler(cameraThread.looper) }
+    var cameraDevice by remember { mutableStateOf<CameraDevice?>(null) }
+    var captureSession by remember { mutableStateOf<CameraCaptureSession?>(null) }
+
+    DisposableEffect(cameraFacing) {
+        val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
+        val cameraId = getCameraId(cameraManager, cameraFacing)
+
+        if (cameraId != null) {
+            try {
+                if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA)
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+                        override fun onOpened(camera: CameraDevice) {
+                            cameraDevice = camera
+                            startPreview(camera, textureView, cameraManager, cameraId, cameraHandler)
+                        }
+                        override fun onDisconnected(camera: CameraDevice) {
+                            camera.close()
+                            cameraDevice = null
+                        }
+                        override fun onError(camera: CameraDevice, error: Int) {
+                            camera.close()
+                            cameraDevice = null
+                        }
+                    }, cameraHandler)
+                }
+            } catch (e: SecurityException) {
+                Log.e("Camera2Preview", "Camera permission denied", e)
+            } catch (e: Exception) {
+                Log.e("Camera2Preview", "Camera open failed", e)
+            }
+        }
+
+        onDispose {
+            captureSession?.close()
+            cameraDevice?.close()
+            cameraThread.quitSafely()
+        }
+    }
+
+    AndroidView(
+        factory = { textureView },
+        modifier = modifier.clip(RoundedCornerShape(16.dp)),
+        update = { view ->
+            view.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+    )
+}
+
+private fun getCameraId(manager: CameraManager, facing: CameraFacing): String? {
+    val lensFacing = if (facing == CameraFacing.FRONT) CameraCharacteristics.LENS_FACING_FRONT
+                     else CameraCharacteristics.LENS_FACING_BACK
+    return manager.cameraIdList.firstOrNull { id ->
+        val characteristics = manager.getCameraCharacteristics(id)
+        characteristics.get(CameraCharacteristics.LENS_FACING) == lensFacing
+    }
+}
+
+private fun startPreview(
+    camera: CameraDevice,
+    textureView: TextureView,
+    manager: CameraManager,
+    cameraId: String,
+    handler: Handler
+) {
+    val characteristics = manager.getCameraCharacteristics(cameraId)
+    val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
+
+    val surfaceTexture = textureView.surfaceTexture ?: return
+    val previewSize = Size(textureView.width.coerceAtLeast(1), textureView.height.coerceAtLeast(1))
+    surfaceTexture.setDefaultBufferSize(previewSize.width, previewSize.height)
+
+    val surface = Surface(surfaceTexture)
+
+    try {
+        camera.createCaptureSession(
+            listOf(surface),
+            object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    try {
+                        val requestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                        requestBuilder.addTarget(surface)
+                        session.setRepeatingRequest(requestBuilder.build(), null, handler)
+                    } catch (e: Exception) {
+                        Log.e("Camera2Preview", "Preview request failed", e)
+                    }
+                }
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    Log.e("Camera2Preview", "CaptureSession configure failed")
+                }
+            },
+            handler
+        )
+    } catch (e: Exception) {
+        Log.e("Camera2Preview", "Create capture session failed", e)
     }
 }
 

@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.request.ImageRequest
 import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
@@ -835,6 +836,7 @@ private fun PresetCardWebStyle(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     Card(
         modifier = modifier
@@ -858,7 +860,11 @@ private fun PresetCardWebStyle(
         ) {
             // 图片
             AsyncImage(
-                model = preset.coverPath,
+                model = ImageRequest.Builder(context)
+                    .data(if (preset.coverPath.startsWith("http")) preset.coverPath 
+                          else "file:///android_asset/${preset.coverPath}")
+                    .crossfade(true)
+                    .build(),
                 contentDescription = preset.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

@@ -300,6 +300,12 @@ dependencies {
     implementation(libs.tensorflow.lite.gpu)
     implementation(libs.tensorflow.lite.support)
 
+    // CameraX 实时相机预览 - 使用内置 Camera2 替代
+    // implementation(libs.camerax.core)
+    // implementation(libs.camerax.camera2)
+    // implementation(libs.camerax.lifecycle)
+    // implementation(libs.camerax.view)
+
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
 
