@@ -47,7 +47,9 @@ import coil.request.ImageRequest
 import com.silas.omaster.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -135,11 +137,7 @@ fun ShootingTipsDetailCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(Color(0xFF1A1A2E), Color(0xFF0F0F1A))
-                    )
-                )
+                .background(DarkGray)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -384,7 +382,7 @@ private fun RelatedPresetItem(
             Card(
                 modifier = Modifier.size(96.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 if (preset.coverPath.isNotBlank()) {
                     AsyncImage(
@@ -400,7 +398,7 @@ private fun RelatedPresetItem(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xFF1A1A1A)),
+                            .background(DarkGray),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

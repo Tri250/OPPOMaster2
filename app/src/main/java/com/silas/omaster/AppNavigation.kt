@@ -52,6 +52,7 @@ import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
+import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
@@ -292,11 +293,40 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.SmartOptimize> {
-                AIFineTuneScreen(onBack = { navController.popBackStack() })
+                SmartOptimizeScreen(
+                    onBack = { navController.popBackStack() },
+                    onApply = { params ->
+                        // 应用优化参数到设置
+                        val settingsManager = SettingsManager.getInstance(context)
+                        settingsManager.applyPresetParams(
+                            saturation = params.colorCorrectionStrength.toInt(),
+                            contrast = params.sharpenStrength.toInt(),
+                            warmth = 0,
+                            sharpness = params.sharpenStrength.toInt(),
+                            clarity = params.hdrStrength.toInt(),
+                            brightness = params.exposureAdjustment.toInt()
+                        )
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable<Screen.ParamAdjustment> {
-                AIFineTuneScreen(onBack = { navController.popBackStack() })
+                SmartOptimizeScreen(
+                    onBack = { navController.popBackStack() },
+                    onApply = { params ->
+                        val settingsManager = SettingsManager.getInstance(context)
+                        settingsManager.applyPresetParams(
+                            saturation = params.colorCorrectionStrength.toInt(),
+                            contrast = params.sharpenStrength.toInt(),
+                            warmth = 0,
+                            sharpness = params.sharpenStrength.toInt(),
+                            clarity = params.hdrStrength.toInt(),
+                            brightness = params.exposureAdjustment.toInt()
+                        )
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable<Screen.LUTShare> {
@@ -333,7 +363,7 @@ fun MainApp(navController: NavHostController) {
 
         if (showBottomNav) {
             PillNavBar(
-                visible = isHomeScrollingUp,
+                visible = true,
                 currentRoute = when {
                     currentRoute?.contains("Home") == true -> "home"
                     currentRoute?.contains("Subscription") == true -> "subscription"

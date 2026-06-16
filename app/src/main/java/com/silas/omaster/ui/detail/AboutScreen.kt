@@ -164,72 +164,15 @@ fun AboutScreen(
 
     val checkFailedText = stringResource(R.string.version_check_failed)
 
-    LaunchedEffect(Unit) {
-        delay(500)
-        if (updateInfo == null && checkError == null) {
-            isChecking = true
-            checkError = null
-            try {
-                val result = UpdateChecker.checkUpdate(context, currentVersionCode, updateChannel)
-                if (result != null) {
-                    updateInfo = result
-                    lastCheckTime = System.currentTimeMillis()
-                } else {
-                    checkError = checkFailedText
-                }
-            } catch (e: Exception) {
-                checkError = e.message ?: checkFailedText
-            } finally {
-                isChecking = false
-            }
-        }
-    }
+    // 版本更新功能已暂停 - 不再自动检查更新
+    // LaunchedEffect(Unit) { ... }
 
-    val checkForUpdate = {
-        scope.launch {
-            isChecking = true
-            checkError = null
-            try {
-                val result = UpdateChecker.checkUpdate(context, currentVersionCode, updateChannel)
-                if (result != null) {
-                    updateInfo = result
-                    lastCheckTime = System.currentTimeMillis()
-                } else {
-                    checkError = checkFailedText
-                }
-            } catch (e: Exception) {
-                checkError = e.message ?: checkFailedText
-            } finally {
-                isChecking = false
-            }
-        }
-    }
+    // 版本更新功能已暂停
+    /* old checkForUpdate lambda removed */
 
-    // 监听下载进度
-    LaunchedEffect(isDownloading, downloadId) {
-        if (isDownloading && downloadId != -1L) {
-            while (isActive) {
-                val (status, progress) = UpdateChecker.queryDownloadProgress(context, downloadId)
-                downloadProgress = progress
-                
-                when (status) {
-                    DownloadManager.STATUS_SUCCESSFUL -> {
-                        isDownloading = false
-                        downloadProgress = 100
-                        break
-                    }
-                    DownloadManager.STATUS_FAILED -> {
-                        isDownloading = false
-                        downloadProgress = -1
-                        break
-                    }
-                }
-                
-                if (!isDownloading) break
-                delay(500)
-            }
-        }
-    }
+    // 版本更新功能已暂停
+    // 监听下载进度 - 已暂停
+    /* LaunchedEffect(isDownloading, downloadId) { ... } */
 
     // Dialogs
     if (showThemeDialog) {
@@ -296,36 +239,10 @@ fun AboutScreen(
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // App Info Card - Logo + Version
+            // App Info Card - Logo + Version (版本更新功能已暂停)
             AppInfoCard(
                 currentVersionName = currentVersionName,
-                currentTheme = currentTheme,
-                isChecking = isChecking,
-                updateInfo = updateInfo,
-                checkError = checkError,
-                lastCheckTime = lastCheckTime,
-                isDownloading = isDownloading,
-                downloadProgress = downloadProgress,
-                onCheckClick = { checkForUpdate() },
-                onDownloadClick = {
-                    updateInfo?.let { info ->
-                        downloadId = UpdateChecker.downloadAndInstall(context, info.downloadUrl, info.versionName)
-                        isDownloading = true
-                        downloadProgress = 0
-                    }
-                },
-                onCancelDownload = {
-                    if (downloadId != -1L) {
-                        UpdateChecker.cancelDownload(context, downloadId)
-                        isDownloading = false
-                        downloadProgress = 0
-                        downloadId = -1L
-                    }
-                },
-                onRetryClick = {
-                    checkError = null
-                    checkForUpdate()
-                }
+                currentTheme = currentTheme
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -357,20 +274,8 @@ fun AboutScreen(
 @Composable
 private fun AppInfoCard(
     currentVersionName: String,
-    currentTheme: BrandTheme,
-    isChecking: Boolean,
-    updateInfo: UpdateChecker.UpdateInfo?,
-    checkError: String?,
-    lastCheckTime: Long?,
-    isDownloading: Boolean,
-    downloadProgress: Int,
-    onCheckClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onCancelDownload: () -> Unit,
-    onRetryClick: () -> Unit
+    currentTheme: BrandTheme
 ) {
-    val hasUpdate = updateInfo?.isNewer == true
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -471,224 +376,10 @@ private fun AppInfoCard(
                             .clip(CircleShape)
                             .background(currentTheme.primaryColor)
                     )
-                    if (hasUpdate) {
-                        Text(
-                            text = stringResource(R.string.version_new_available),
-                            fontSize = 12.sp,
-                            color = currentTheme.primaryColor
-                        )
-                    } else if (!isChecking && updateInfo != null && !updateInfo.isNewer) {
-                        Text(
-                            text = stringResource(R.string.version_latest_badge),
-                            fontSize = 12.sp,
-                            color = currentTheme.primaryColor
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Update Status Section
-                UpdateStatusSection(
-                    isChecking = isChecking,
-                    updateInfo = updateInfo,
-                    checkError = checkError,
-                    lastCheckTime = lastCheckTime,
-                    isDownloading = isDownloading,
-                    downloadProgress = downloadProgress,
-                    onCheckClick = onCheckClick,
-                    onDownloadClick = onDownloadClick,
-                    onCancelDownload = onCancelDownload,
-                    onRetryClick = onRetryClick
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun UpdateStatusSection(
-    isChecking: Boolean,
-    updateInfo: UpdateChecker.UpdateInfo?,
-    checkError: String?,
-    lastCheckTime: Long?,
-    isDownloading: Boolean,
-    downloadProgress: Int,
-    onCheckClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onCancelDownload: () -> Unit,
-    onRetryClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        when {
-            isChecking -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = stringResource(R.string.checking),
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-            updateInfo != null -> {
-                if (updateInfo.isNewer) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "v${updateInfo.versionName}",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            
-                            if (isDownloading) {
-                                Column(
-                                    horizontalAlignment = Alignment.End
-                                ) {
-                                    Text(
-                                        text = "$downloadProgress%",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    LinearProgressIndicator(
-                                        progress = { downloadProgress / 100f },
-                                        modifier = Modifier.width(120.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                        drawStopIndicator = {}
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = stringResource(R.string.cancel),
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                        modifier = Modifier.clickable { onCancelDownload() }
-                                    )
-                                }
-                            } else {
-                                Button(
-                                    onClick = onDownloadClick,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    ),
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.version_download_btn),
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        }
-                        
-                        if (updateInfo.releaseNotes.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = stringResource(R.string.update_notes_title),
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = updateInfo.releaseNotes,
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f),
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = SuccessGreen,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.version_is_latest),
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-            checkError != null -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onRetryClick() },
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = ErrorRed,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.version_retry),
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            else -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onCheckClick() },
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.version_check),
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.5f)
+                        text = stringResource(R.string.version_latest_badge),
+                        fontSize = 12.sp,
+                        color = currentTheme.primaryColor
                     )
                 }
             }
