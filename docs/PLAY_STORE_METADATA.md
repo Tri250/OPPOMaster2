@@ -216,9 +216,11 @@ Download now and start your master-level photography journey!
 
 | 项目 | 内容 |
 |------|------|
-| 开发者网站 | [填写开发者网站] |
-| 支持邮箱 | [填写支持邮箱] |
-| 隐私政策链接 | [填写隐私政策URL] |
+| 开发者网站 | https://omaster.app |
+| 支持邮箱 | support@omaster.app |
+| 隐私政策链接 | https://omaster.app/privacy |
+
+> **注意**: 以上为示例联系信息，正式发布前请替换为真实的联系方式。 |
 
 ---
 

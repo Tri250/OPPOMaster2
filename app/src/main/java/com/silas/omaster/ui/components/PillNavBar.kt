@@ -75,8 +75,8 @@ fun PillNavBar(
         NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
     )
 
-    // 固定显示底部导航栏，不使用动画隐藏
-    if (!visible) return
+    // 底部导航栏始终固定显示，不随滚动隐藏
+    // 移除原来的 visible 条件判断，确保导航栏始终可见
 
     Box(
         modifier = modifier
