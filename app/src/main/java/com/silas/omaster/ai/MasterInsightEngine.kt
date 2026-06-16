@@ -290,15 +290,8 @@ class MasterInsightEngine private constructor(context: Context) {
     }
 
     private fun generateNarrative(profile: SceneProfile): String {
-        val scene = profile.name
-        val film = profile.recommendedFilm.firstOrNull()?.name ?: "CC 经典负片"
-
-        return buildString {
-            append("这是一幅$scene 作品，")
-            append("采用 $film 胶片配方，")
-            append("呈现出${inferMood(profile).description}的影像氛围。")
-            append("${generateStory(profile)}")
-        }
+        // 修复：直接调用 generateStory，避免重复拼接
+        return generateStory(profile)
     }
 
     private fun calculateFilmMatchScore(
@@ -657,7 +650,8 @@ class MasterInsightEngine private constructor(context: Context) {
             "contrast" to baseParams.formatParamValue(baseParams.contrast + (adjustments["contrast"] ?: 0)),
             "colorTemp" to baseParams.formatParamValue(baseParams.colorTemp + (adjustments["colorTemp"] ?: 0)),
             "sharpness" to baseParams.formatParamValue(baseParams.sharpness + (adjustments["sharpness"] ?: 0)),
-            "vignette" to baseParams.formatParamValue(baseParams.vignette + (adjustments["vignette"] ?: 0))
+            "vignette" to baseParams.formatParamValue(baseParams.vignette + (adjustments["vignette"] ?: 0)),
+            "cyanMagenta" to baseParams.formatParamValue(baseParams.cyanMagenta + (adjustments["cyanMagenta"] ?: 0))
         )
     }
 
