@@ -297,7 +297,9 @@ dependencies {
     // Gson（已使用 catalog）
     implementation(libs.gson)
 
-    // Room 数据库已移除，使用 SharedPreferences 替代
+    // Room 数据库已移除，使用 DataStore 替代 SharedPreferences
+    // DataStore - 异步配置存储，避免 SP 主线程 ANR
+    implementation(libs.androidx.datastore.preferences)
 
     // ⚠️ 替换友盟硬编码依赖
 // 友盟

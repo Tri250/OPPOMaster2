@@ -2,12 +2,27 @@ package com.silas.omaster.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import com.silas.omaster.ui.theme.BrandTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+
+// DataStore 扩展属性
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
 /**
  * 工具函数：安全的枚举反序列化（性能优化：基于 enumConstants 缓存）
@@ -64,115 +79,148 @@ data class ApiConfig(
     val apiVersion: String = "v1"
 )
 
+/**
+ * 设置管理器 - 使用 DataStore 替代 SharedPreferences
+ * 
+ * 优势：
+ * 1. 异步 IO，避免主线程 ANR
+ * 2. 类型安全的数据存储
+ * 3. 支持 Flow 观察，自动响应变化
+ * 4. 数据一致性保证
+ * 
+ * 向后兼容：
+ * - 首次启动时自动迁移 SharedPreferences 数据到 DataStore
+ * - 迁移完成后清除旧数据
+ */
 class SettingsManager private constructor(private val context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+    
+    // 旧版 SharedPreferences（仅用于迁移）
+    private val legacyPrefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+    
+    // 迁移标记
+    private var migrationCompleted: Boolean = false
     
     // ==================== 云端API配置 ====================
     
     // 云端AI推理API端点
     val aiApiEndpoint: String
-        get() = prefs.getString(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT) ?: DEFAULT_AI_API_ENDPOINT
+        get() = getDataSync(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT)
     
     // 预设同步API端点
     val presetApiEndpoint: String
-        get() = prefs.getString(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT) ?: DEFAULT_PRESET_API_ENDPOINT
+        get() = getDataSync(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT)
     
     // 用户认证API端点
     val authApiEndpoint: String
-        get() = prefs.getString(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT) ?: DEFAULT_AUTH_API_ENDPOINT
+        get() = getDataSync(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT)
     
     // API版本
     val apiVersion: String
-        get() = prefs.getString(KEY_API_VERSION, "v1") ?: "v1"
+        get() = getDataSync(KEY_API_VERSION, "v1")
     
     // 是否已加载API配置
     val isApiConfigLoaded: Boolean
-        get() = prefs.getBoolean(KEY_API_CONFIG_LOADED, false)
+        get() = getDataSync(KEY_API_CONFIG_LOADED, false)
 
+    // 震动开关（使用 Flow）
+    private val _isVibrationEnabledFlow = MutableStateFlow(true)
+    val isVibrationEnabledFlow: StateFlow<Boolean> = _isVibrationEnabledFlow.asStateFlow()
+    
     var isVibrationEnabled: Boolean
-        get() = prefs.getBoolean(KEY_VIBRATION_ENABLED, true)
+        get() = _isVibrationEnabledFlow.value
         set(value) {
-            prefs.edit().putBoolean(KEY_VIBRATION_ENABLED, value).apply()
+            setDataSync(KEY_VIBRATION_ENABLED, value)
+            _isVibrationEnabledFlow.value = value
         }
 
+    // 主题设置（使用 Flow）
     private val _themeFlow: MutableStateFlow<BrandTheme>
     val themeFlow: StateFlow<BrandTheme>
 
+    // 深色模式（使用 Flow）
     private val _darkModeFlow: MutableStateFlow<DarkMode>
     val darkModeFlow: StateFlow<DarkMode>
 
     init {
-        val themeId = prefs.getString(KEY_THEME_ID, BrandTheme.Hasselblad.id) ?: BrandTheme.Hasselblad.id
+        // 首次启动时迁移旧数据
+        runBlocking {
+            migrateFromSharedPreferences()
+        }
+        
+        // 初始化 Flow
+        val themeId = getDataSync(KEY_THEME_ID, BrandTheme.Hasselblad.id)
         _themeFlow = MutableStateFlow(BrandTheme.fromId(themeId))
         themeFlow = _themeFlow.asStateFlow()
 
-        _darkModeFlow = MutableStateFlow(
-            safeValueOf(prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name), DarkMode.SYSTEM)
-        )
+        val darkModeValue = getDataSync(KEY_DARK_MODE, DarkMode.SYSTEM.name)
+        _darkModeFlow = MutableStateFlow(safeValueOf(darkModeValue, DarkMode.SYSTEM))
         darkModeFlow = _darkModeFlow.asStateFlow()
+        
+        // 初始化震动设置
+        _isVibrationEnabledFlow.value = getDataSync(KEY_VIBRATION_ENABLED, true)
     }
 
     var currentTheme: BrandTheme
         get() = _themeFlow.value
         set(value) {
-            prefs.edit().putString(KEY_THEME_ID, value.id).apply()
+            setDataSync(KEY_THEME_ID, value.id)
             _themeFlow.value = value
         }
 
     // 悬浮窗透明度 (30-70%，默认56%)
     var floatingWindowOpacity: Int
-        get() = prefs.getInt(KEY_FLOATING_WINDOW_OPACITY, 56)
+        get() = getDataSync(KEY_FLOATING_WINDOW_OPACITY, 56)
         set(value) {
-            prefs.edit().putInt(KEY_FLOATING_WINDOW_OPACITY, value.coerceIn(30, 70)).apply()
+            setDataSync(KEY_FLOATING_WINDOW_OPACITY, value.coerceIn(30, 70))
         }
 
     // 默认启动 Tab (0=发现, 1=收藏, 2=哈苏, 3=上新，默认0)
     var defaultStartTab: Int
-        get() = prefs.getInt(KEY_DEFAULT_START_TAB, 0)
+        get() = getDataSync(KEY_DEFAULT_START_TAB, 0)
         set(value) {
-            prefs.edit().putInt(KEY_DEFAULT_START_TAB, value.coerceIn(0, 3)).apply()
+            setDataSync(KEY_DEFAULT_START_TAB, value.coerceIn(0, 3))
         }
 
     // 更新渠道（默认 Gitee）
     var updateChannel: UpdateChannel
-        get() = safeValueOf(prefs.getString(KEY_UPDATE_CHANNEL, UpdateChannel.GITEE.name), UpdateChannel.GITEE)
+        get() = safeValueOf(getDataSync(KEY_UPDATE_CHANNEL, UpdateChannel.GITEE.name), UpdateChannel.GITEE)
         set(value) {
-            prefs.edit().putString(KEY_UPDATE_CHANNEL, value.name).apply()
+            setDataSync(KEY_UPDATE_CHANNEL, value.name)
         }
 
     // 友盟统计开关（默认开启，因为用户首次已同意隐私政策）
     var isAnalyticsEnabled: Boolean
-        get() = prefs.getBoolean(KEY_ANALYTICS_ENABLED, true)
+        get() = getDataSync(KEY_ANALYTICS_ENABLED, true)
         set(value) {
-            prefs.edit().putBoolean(KEY_ANALYTICS_ENABLED, value).apply()
+            setDataSync(KEY_ANALYTICS_ENABLED, value)
         }
 
     // ==================== 新增功能 ====================
 
     // 深色模式设置
     var darkMode: DarkMode
-        get() = safeValueOf(prefs.getString(KEY_DARK_MODE, DarkMode.SYSTEM.name), DarkMode.SYSTEM)
+        get() = safeValueOf(getDataSync(KEY_DARK_MODE, DarkMode.SYSTEM.name), DarkMode.SYSTEM)
         set(value) {
-            prefs.edit().putString(KEY_DARK_MODE, value.name).apply()
+            setDataSync(KEY_DARK_MODE, value.name)
             _darkModeFlow.value = value
         }
 
     // 上次使用的水印模板
     var lastWatermarkTemplate: String?
-        get() = prefs.getString(KEY_LAST_WATERMARK_TEMPLATE, null)
+        get() = getDataSyncOrNull(KEY_LAST_WATERMARK_TEMPLATE)
         set(value) {
             if (value != null) {
-                prefs.edit().putString(KEY_LAST_WATERMARK_TEMPLATE, value).apply()
+                setDataSync(KEY_LAST_WATERMARK_TEMPLATE, value)
             } else {
-                prefs.edit().remove(KEY_LAST_WATERMARK_TEMPLATE).apply()
+                removeDataSync(KEY_LAST_WATERMARK_TEMPLATE)
             }
         }
 
     // 云同步开关（默认开启）
     var isCloudSyncEnabled: Boolean
-        get() = prefs.getBoolean(KEY_CLOUD_SYNC_ENABLED, true)
+        get() = getDataSync(KEY_CLOUD_SYNC_ENABLED, true)
         set(value) {
-            prefs.edit().putBoolean(KEY_CLOUD_SYNC_ENABLED, value).apply()
+            setDataSync(KEY_CLOUD_SYNC_ENABLED, value)
         }
 
     // 云端预设数据源 URL
@@ -186,120 +234,128 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 云同步状态
     var cloudSyncStatus: CloudSyncStatus
-        get() = safeValueOf(prefs.getString(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.DISABLED.name), CloudSyncStatus.DISABLED)
+        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.DISABLED.name), CloudSyncStatus.DISABLED)
         set(value) {
-            prefs.edit().putString(KEY_CLOUD_SYNC_STATUS, value.name).apply()
+            setDataSync(KEY_CLOUD_SYNC_STATUS, value.name)
         }
 
     // 最后同步时间
     var lastSyncTime: Long
-        get() = prefs.getLong(KEY_LAST_SYNC_TIME, 0)
+        get() = getDataSync(KEY_LAST_SYNC_TIME, 0L)
         set(value) {
-            prefs.edit().putLong(KEY_LAST_SYNC_TIME, value).apply()
+            setDataSync(KEY_LAST_SYNC_TIME, value)
         }
 
     // 用户ID（用于云同步）
     var userId: String?
-        get() = prefs.getString(KEY_USER_ID, null)
+        get() = getDataSyncOrNull(KEY_USER_ID)
         set(value) {
-            prefs.edit().putString(KEY_USER_ID, value).apply()
+            if (value != null) {
+                setDataSync(KEY_USER_ID, value)
+            } else {
+                removeDataSync(KEY_USER_ID)
+            }
         }
 
     // 云端API密钥（用于云端AI推理）
     var cloudApiKey: String?
-        get() = prefs.getString(KEY_CLOUD_API_KEY, null)
+        get() = getDataSyncOrNull(KEY_CLOUD_API_KEY)
         set(value) {
-            prefs.edit().putString(KEY_CLOUD_API_KEY, value).apply()
+            if (value != null) {
+                setDataSync(KEY_CLOUD_API_KEY, value)
+            } else {
+                removeDataSync(KEY_CLOUD_API_KEY)
+            }
         }
 
     // 哈苏之眼开关（带 StateFlow 支持）
-    private val _isAISceneRecognitionEnabledFlow = MutableStateFlow(prefs.getBoolean(KEY_AI_SCENE_ENABLED, true))
+    private val _isAISceneRecognitionEnabledFlow = MutableStateFlow(getDataSync(KEY_AI_SCENE_ENABLED, true))
     val isAISceneRecognitionEnabledFlow: StateFlow<Boolean> = _isAISceneRecognitionEnabledFlow.asStateFlow()
 
     var isAISceneRecognitionEnabled: Boolean
         get() = _isAISceneRecognitionEnabledFlow.value
         set(value) {
-            prefs.edit().putBoolean(KEY_AI_SCENE_ENABLED, value).apply()
+            setDataSync(KEY_AI_SCENE_ENABLED, value)
             _isAISceneRecognitionEnabledFlow.value = value
         }
 
     // AI 微调开关
     var isAIFineTuneEnabled: Boolean
-        get() = prefs.getBoolean(KEY_AI_FINE_TUNE_ENABLED, true)
+        get() = getDataSync(KEY_AI_FINE_TUNE_ENABLED, true)
         set(value) {
-            prefs.edit().putBoolean(KEY_AI_FINE_TUNE_ENABLED, value).apply()
+            setDataSync(KEY_AI_FINE_TUNE_ENABLED, value)
         }
 
     // 智能优化开关
     var isSmartOptimizeEnabled: Boolean
-        get() = prefs.getBoolean(KEY_SMART_OPTIMIZE_ENABLED, true)
+        get() = getDataSync(KEY_SMART_OPTIMIZE_ENABLED, true)
         set(value) {
-            prefs.edit().putBoolean(KEY_SMART_OPTIMIZE_ENABLED, value).apply()
+            setDataSync(KEY_SMART_OPTIMIZE_ENABLED, value)
         }
 
     // 水印编辑器开关
     var isWatermarkEditorEnabled: Boolean
-        get() = prefs.getBoolean(KEY_WATERMARK_EDITOR_ENABLED, true)
+        get() = getDataSync(KEY_WATERMARK_EDITOR_ENABLED, true)
         set(value) {
-            prefs.edit().putBoolean(KEY_WATERMARK_EDITOR_ENABLED, value).apply()
+            setDataSync(KEY_WATERMARK_EDITOR_ENABLED, value)
         }
 
     // 哈苏色彩科学开关
     var isHasselbladColorEnabled: Boolean
-        get() = prefs.getBoolean(KEY_HASSELBLAD_COLOR_ENABLED, true)
+        get() = getDataSync(KEY_HASSELBLAD_COLOR_ENABLED, true)
         set(value) {
-            prefs.edit().putBoolean(KEY_HASSELBLAD_COLOR_ENABLED, value).apply()
+            setDataSync(KEY_HASSELBLAD_COLOR_ENABLED, value)
         }
 
     // 自定义设备型号（WM-003）
     var customDeviceModel: String
-        get() = prefs.getString(KEY_CUSTOM_DEVICE_MODEL, "") ?: ""
+        get() = getDataSync(KEY_CUSTOM_DEVICE_MODEL, "")
         set(value) {
-            prefs.edit().putString(KEY_CUSTOM_DEVICE_MODEL, value).apply()
+            setDataSync(KEY_CUSTOM_DEVICE_MODEL, value)
         }
 
     // 预设版本映射（JSON 字符串），用于云端增量更新对比
     var presetVersionMapJson: String
-        get() = prefs.getString(KEY_PRESET_VERSION_MAP, "") ?: ""
+        get() = getDataSync(KEY_PRESET_VERSION_MAP, "")
         set(value) {
-            prefs.edit().putString(KEY_PRESET_VERSION_MAP, value).apply()
+            setDataSync(KEY_PRESET_VERSION_MAP, value)
         }
 
     // 收藏的预设ID列表（PM-003）
     var favoritePresetIds: List<String>
-        get() = prefs.getStringSet(KEY_FAVORITE_PRESET_IDS, emptySet())?.toList() ?: emptyList()
+        get() = getDataSetSync(KEY_FAVORITE_PRESET_IDS, emptySet()).toList()
         set(value) {
-            prefs.edit().putStringSet(KEY_FAVORITE_PRESET_IDS, value.toSet()).apply()
+            setDataSetSync(KEY_FAVORITE_PRESET_IDS, value.toSet())
         }
 
     // 置顶的预设ID列表（PM-008）
     var pinnedPresetIds: List<String>
-        get() = prefs.getStringSet(KEY_PINNED_PRESET_IDS, emptySet())?.toList() ?: emptyList()
+        get() = getDataSetSync(KEY_PINNED_PRESET_IDS, emptySet()).toList()
         set(value) {
-            prefs.edit().putStringSet(KEY_PINNED_PRESET_IDS, value.toSet()).apply()
+            setDataSetSync(KEY_PINNED_PRESET_IDS, value.toSet())
         }
 
     // 手动修改的参数（PP-005）
     var manuallyModifiedParams: List<String>
-        get() = prefs.getStringSet(KEY_MANUALLY_MODIFIED_PARAMS, emptySet())?.toList() ?: emptyList()
+        get() = getDataSetSync(KEY_MANUALLY_MODIFIED_PARAMS, emptySet()).toList()
         set(value) {
-            prefs.edit().putStringSet(KEY_MANUALLY_MODIFIED_PARAMS, value.toSet()).apply()
+            setDataSetSync(KEY_MANUALLY_MODIFIED_PARAMS, value.toSet())
         }
 
     // 自定义快捷档位（PP-004）
     // 注意：需要JSON序列化存储
     var customQuickPresets: Map<String, Map<String, Int>>
         get() {
-            val jsonStr = prefs.getString(KEY_CUSTOM_QUICK_PRESETS, null) ?: return emptyMap()
+            val jsonStr = getDataSyncOrNull(KEY_CUSTOM_QUICK_PRESETS) ?: return emptyMap()
             return try {
-                kotlinx.serialization.json.Json.decodeFromString(jsonStr)
+                Json.decodeFromString(jsonStr)
             } catch (e: Exception) {
                 emptyMap()
             }
         }
         set(value) {
-            val jsonStr = kotlinx.serialization.json.Json.encodeToString(value)
-            prefs.edit().putString(KEY_CUSTOM_QUICK_PRESETS, jsonStr).apply()
+            val jsonStr = Json.encodeToString(value)
+            setDataSync(KEY_CUSTOM_QUICK_PRESETS, jsonStr)
         }
 
     // 应用预设参数（精选推荐功能）
@@ -311,54 +367,50 @@ class SettingsManager private constructor(private val context: Context) {
         clarity: Int = 0,
         brightness: Int = 0
     ) {
-        prefs.edit().apply {
-            putInt(KEY_APPLIED_SATURATION, saturation)
-            putInt(KEY_APPLIED_CONTRAST, contrast)
-            putInt(KEY_APPLIED_WARMTH, warmth)
-            putInt(KEY_APPLIED_SHARPNESS, sharpness)
-            putInt(KEY_APPLIED_CLARITY, clarity)
-            putInt(KEY_APPLIED_BRIGHTNESS, brightness)
-            putBoolean(KEY_HAS_APPLIED_PRESET, true)
-        }.apply()
+        setDataSync(KEY_APPLIED_SATURATION, saturation)
+        setDataSync(KEY_APPLIED_CONTRAST, contrast)
+        setDataSync(KEY_APPLIED_WARMTH, warmth)
+        setDataSync(KEY_APPLIED_SHARPNESS, sharpness)
+        setDataSync(KEY_APPLIED_CLARITY, clarity)
+        setDataSync(KEY_APPLIED_BRIGHTNESS, brightness)
+        setDataSync(KEY_HAS_APPLIED_PRESET, true)
     }
 
     // 获取已应用的预设参数
     fun getAppliedPresetParams(): Map<String, Int> {
         return mapOf(
-            "saturation" to prefs.getInt(KEY_APPLIED_SATURATION, 0),
-            "contrast" to prefs.getInt(KEY_APPLIED_CONTRAST, 0),
-            "warmth" to prefs.getInt(KEY_APPLIED_WARMTH, 0),
-            "sharpness" to prefs.getInt(KEY_APPLIED_SHARPNESS, 0),
-            "clarity" to prefs.getInt(KEY_APPLIED_CLARITY, 0),
-            "brightness" to prefs.getInt(KEY_APPLIED_BRIGHTNESS, 0)
+            "saturation" to getDataSync(KEY_APPLIED_SATURATION, 0),
+            "contrast" to getDataSync(KEY_APPLIED_CONTRAST, 0),
+            "warmth" to getDataSync(KEY_APPLIED_WARMTH, 0),
+            "sharpness" to getDataSync(KEY_APPLIED_SHARPNESS, 0),
+            "clarity" to getDataSync(KEY_APPLIED_CLARITY, 0),
+            "brightness" to getDataSync(KEY_APPLIED_BRIGHTNESS, 0)
         )
     }
 
     // 是否已应用预设
     fun hasAppliedPreset(): Boolean {
-        return prefs.getBoolean(KEY_HAS_APPLIED_PRESET, false)
+        return getDataSync(KEY_HAS_APPLIED_PRESET, false)
     }
 
     // 清除已应用的预设
     fun clearAppliedPreset() {
-        prefs.edit().apply {
-            remove(KEY_APPLIED_SATURATION)
-            remove(KEY_APPLIED_CONTRAST)
-            remove(KEY_APPLIED_WARMTH)
-            remove(KEY_APPLIED_SHARPNESS)
-            remove(KEY_APPLIED_CLARITY)
-            remove(KEY_APPLIED_BRIGHTNESS)
-            putBoolean(KEY_HAS_APPLIED_PRESET, false)
-        }.apply()
+        removeDataSync(KEY_APPLIED_SATURATION)
+        removeDataSync(KEY_APPLIED_CONTRAST)
+        removeDataSync(KEY_APPLIED_WARMTH)
+        removeDataSync(KEY_APPLIED_SHARPNESS)
+        removeDataSync(KEY_APPLIED_CLARITY)
+        removeDataSync(KEY_APPLIED_BRIGHTNESS)
+        setDataSync(KEY_HAS_APPLIED_PRESET, false)
     }
 
     // 迁移对话框处理状态
     fun getMigrationHandled(): Boolean {
-        return prefs.getBoolean(KEY_MIGRATION_HANDLED, false)
+        return getDataSync(KEY_MIGRATION_HANDLED, false)
     }
 
     fun setMigrationHandled(handled: Boolean) {
-        prefs.edit().putBoolean(KEY_MIGRATION_HANDLED, handled).apply()
+        setDataSync(KEY_MIGRATION_HANDLED, handled)
     }
     
     // ==================== 云端API配置方法 ====================
@@ -372,14 +424,12 @@ class SettingsManager private constructor(private val context: Context) {
             val jsonStr = context.assets.open("api_config.json").bufferedReader().use { it.readText() }
             val config = Json { ignoreUnknownKeys = true }.decodeFromString<ApiConfig>(jsonStr)
             
-            // 保存到 SharedPreferences
-            prefs.edit().apply {
-                putString(KEY_AI_API_ENDPOINT, config.aiApiEndpoint)
-                putString(KEY_PRESET_API_ENDPOINT, config.presetApiEndpoint)
-                putString(KEY_AUTH_API_ENDPOINT, config.authApiEndpoint)
-                putString(KEY_API_VERSION, config.apiVersion)
-                putBoolean(KEY_API_CONFIG_LOADED, true)
-            }.apply()
+            // 保存到 DataStore
+            setDataSync(KEY_AI_API_ENDPOINT, config.aiApiEndpoint)
+            setDataSync(KEY_PRESET_API_ENDPOINT, config.presetApiEndpoint)
+            setDataSync(KEY_AUTH_API_ENDPOINT, config.authApiEndpoint)
+            setDataSync(KEY_API_VERSION, config.apiVersion)
+            setDataSync(KEY_API_CONFIG_LOADED, true)
             
             config
         } catch (e: Exception) {
@@ -440,22 +490,178 @@ class SettingsManager private constructor(private val context: Context) {
         presetEndpoint: String? = null,
         authEndpoint: String? = null
     ) {
-        prefs.edit().apply {
-            aiEndpoint?.let { putString(KEY_AI_API_ENDPOINT, it) }
-            presetEndpoint?.let { putString(KEY_PRESET_API_ENDPOINT, it) }
-            authEndpoint?.let { putString(KEY_AUTH_API_ENDPOINT, it) }
-        }.apply()
+        aiEndpoint?.let { setDataSync(KEY_AI_API_ENDPOINT, it) }
+        presetEndpoint?.let { setDataSync(KEY_PRESET_API_ENDPOINT, it) }
+        authEndpoint?.let { setDataSync(KEY_AUTH_API_ENDPOINT, it) }
     }
     
     /**
      * 重置 API 端点为默认值
      */
     fun resetApiEndpoints() {
-        prefs.edit().apply {
-            putString(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT)
-            putString(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT)
-            putString(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT)
-        }.apply()
+        setDataSync(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT)
+        setDataSync(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT)
+        setDataSync(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT)
+    }
+
+    // ==================== DataStore 操作方法 ====================
+    
+    /**
+     * 同步获取 String 数据（阻塞调用，仅在初始化或必须同步的场景使用）
+     * 注意：DataStore 本身是异步的，这里使用 runBlocking 包装
+     * 生产环境建议使用 Flow 观察或 suspend 函数
+     */
+    private fun getDataSync(key: Preferences.Key<String>, defaultValue: String): String {
+        return runBlocking {
+            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        }
+    }
+    
+    private fun getDataSyncOrNull(key: Preferences.Key<String>): String? {
+        return runBlocking {
+            context.dataStore.data.map { prefs -> prefs[key] }.first()
+        }
+    }
+    
+    private fun getDataSync(key: Preferences.Key<Boolean>, defaultValue: Boolean): Boolean {
+        return runBlocking {
+            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        }
+    }
+    
+    private fun getDataSync(key: Preferences.Key<Int>, defaultValue: Int): Int {
+        return runBlocking {
+            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        }
+    }
+    
+    private fun getDataSync(key: Preferences.Key<Long>, defaultValue: Long): Long {
+        return runBlocking {
+            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        }
+    }
+    
+    private fun getDataSetSync(key: Preferences.Key<Set<String>>, defaultValue: Set<String>): Set<String> {
+        return runBlocking {
+            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        }
+    }
+    
+    /**
+     * 同步设置数据（阻塞调用）
+     */
+    private fun setDataSync(key: Preferences.Key<String>, value: String) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+    
+    private fun setDataSync(key: Preferences.Key<Boolean>, value: Boolean) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+    
+    private fun setDataSync(key: Preferences.Key<Int>, value: Int) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+    
+    private fun setDataSync(key: Preferences.Key<Long>, value: Long) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+    
+    private fun setDataSetSync(key: Preferences.Key<Set<String>>, value: Set<String>) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+    
+    /**
+     * 同步删除数据
+     */
+    private fun removeDataSync(key: Preferences.Key<String>) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs.remove(key) }
+        }
+    }
+    
+    private fun removeDataSync(key: Preferences.Key<Int>) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs.remove(key) }
+        }
+    }
+    
+    private fun removeDataSync(key: Preferences.Key<Boolean>) {
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs.remove(key) }
+        }
+    }
+
+    // ==================== SharedPreferences 迁移 ====================
+    
+    /**
+     * 从 SharedPreferences 迁移数据到 DataStore
+     * 仅在首次启动时执行一次
+     */
+    private suspend fun migrateFromSharedPreferences() {
+        // 检查是否已迁移
+        val alreadyMigrated = context.dataStore.data.map { prefs ->
+            prefs[KEY_MIGRATION_COMPLETED] ?: false
+        }.first()
+        
+        if (alreadyMigrated) {
+            migrationCompleted = true
+            return
+        }
+        
+        // 执行迁移
+        try {
+            val legacyKeys = listOf(
+                KEY_VIBRATION_ENABLED, KEY_THEME_ID, KEY_FLOATING_WINDOW_OPACITY,
+                KEY_DEFAULT_START_TAB, KEY_UPDATE_CHANNEL, KEY_ANALYTICS_ENABLED,
+                KEY_DARK_MODE, KEY_CLOUD_SYNC_ENABLED, KEY_CLOUD_SYNC_STATUS,
+                KEY_LAST_SYNC_TIME, KEY_USER_ID, KEY_CLOUD_API_KEY, KEY_AI_SCENE_ENABLED,
+                KEY_LAST_WATERMARK_TEMPLATE, KEY_AI_FINE_TUNE_ENABLED, KEY_SMART_OPTIMIZE_ENABLED,
+                KEY_WATERMARK_EDITOR_ENABLED, KEY_HASSELBLAD_COLOR_ENABLED, KEY_CUSTOM_DEVICE_MODEL,
+                KEY_PRESET_VERSION_MAP, KEY_FAVORITE_PRESET_IDS, KEY_PINNED_PRESET_IDS,
+                KEY_MANUALLY_MODIFIED_PARAMS, KEY_CUSTOM_QUICK_PRESETS, KEY_API_CONFIG_LOADED,
+                KEY_AI_API_ENDPOINT, KEY_PRESET_API_ENDPOINT, KEY_AUTH_API_ENDPOINT, KEY_API_VERSION,
+                KEY_APPLIED_SATURATION, KEY_APPLIED_CONTRAST, KEY_APPLIED_WARMTH,
+                KEY_APPLIED_SHARPNESS, KEY_APPLIED_CLARITY, KEY_APPLIED_BRIGHTNESS,
+                KEY_HAS_APPLIED_PRESET, KEY_MIGRATION_HANDLED
+            )
+            
+            context.dataStore.edit { prefs ->
+                // 迁移所有数据
+                legacyPrefs.all.forEach { (key, value) ->
+                    when (value) {
+                        is String -> prefs[stringPreferencesKey(key)] = value
+                        is Boolean -> prefs[booleanPreferencesKey(key)] = value
+                        is Int -> prefs[intPreferencesKey(key)] = value
+                        is Long -> prefs[longPreferencesKey(key)] = value
+                        is Set<*> -> {
+                            @Suppress("UNCHECKED_CAST")
+                            prefs[stringSetPreferencesKey(key)] = value as Set<String>
+                        }
+                    }
+                }
+                
+                // 标记迁移完成
+                prefs[KEY_MIGRATION_COMPLETED] = true
+            }
+            
+            // 清除旧 SharedPreferences（可选，保留作为备份）
+            // legacyPrefs.edit().clear().apply()
+            
+            migrationCompleted = true
+            android.util.Log.i("SettingsManager", "SharedPreferences → DataStore 迁移完成")
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsManager", "迁移失败，继续使用默认值", e)
+        }
     }
 
     companion object {
@@ -464,49 +670,51 @@ class SettingsManager private constructor(private val context: Context) {
         private const val DEFAULT_PRESET_API_ENDPOINT = "https://api.omaster.app/presets"
         private const val DEFAULT_AUTH_API_ENDPOINT = "https://api.omaster.app/auth"
         
-        private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
-        private const val KEY_THEME_ID = "theme_id"
-        private const val KEY_FLOATING_WINDOW_OPACITY = "floating_window_opacity"
-        private const val KEY_DEFAULT_START_TAB = "default_start_tab"
-        private const val KEY_UPDATE_CHANNEL = "update_channel"
-        private const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
+        // DataStore Preferences Keys
+        private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        private val KEY_THEME_ID = stringPreferencesKey("theme_id")
+        private val KEY_FLOATING_WINDOW_OPACITY = intPreferencesKey("floating_window_opacity")
+        private val KEY_DEFAULT_START_TAB = intPreferencesKey("default_start_tab")
+        private val KEY_UPDATE_CHANNEL = stringPreferencesKey("update_channel")
+        private val KEY_ANALYTICS_ENABLED = booleanPreferencesKey("analytics_enabled")
+        private val KEY_MIGRATION_COMPLETED = booleanPreferencesKey("migration_completed")
 
         // 新增功能 Key
-        private const val KEY_DARK_MODE = "dark_mode"
-        private const val KEY_CLOUD_SYNC_ENABLED = "cloud_sync_enabled"
-        private const val KEY_CLOUD_SYNC_STATUS = "cloud_sync_status"
-        private const val KEY_LAST_SYNC_TIME = "last_sync_time"
-        private const val KEY_USER_ID = "user_id"
-        private const val KEY_CLOUD_API_KEY = "cloud_api_key"
-        private const val KEY_AI_SCENE_ENABLED = "ai_scene_enabled"
-        private const val KEY_LAST_WATERMARK_TEMPLATE = "last_watermark_template"
-        private const val KEY_AI_FINE_TUNE_ENABLED = "ai_fine_tune_enabled"
-        private const val KEY_SMART_OPTIMIZE_ENABLED = "smart_optimize_enabled"
-        private const val KEY_WATERMARK_EDITOR_ENABLED = "watermark_editor_enabled"
-        private const val KEY_HASSELBLAD_COLOR_ENABLED = "hasselblad_color_enabled"
-        private const val KEY_CUSTOM_DEVICE_MODEL = "custom_device_model"
-        private const val KEY_PRESET_VERSION_MAP = "preset_version_map"
-        private const val KEY_FAVORITE_PRESET_IDS = "favorite_preset_ids"
-        private const val KEY_PINNED_PRESET_IDS = "pinned_preset_ids"
-        private const val KEY_MANUALLY_MODIFIED_PARAMS = "manually_modified_params"
-        private const val KEY_CUSTOM_QUICK_PRESETS = "custom_quick_presets"
+        private val KEY_DARK_MODE = stringPreferencesKey("dark_mode")
+        private val KEY_CLOUD_SYNC_ENABLED = booleanPreferencesKey("cloud_sync_enabled")
+        private val KEY_CLOUD_SYNC_STATUS = stringPreferencesKey("cloud_sync_status")
+        private val KEY_LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
+        private val KEY_USER_ID = stringPreferencesKey("user_id")
+        private val KEY_CLOUD_API_KEY = stringPreferencesKey("cloud_api_key")
+        private val KEY_AI_SCENE_ENABLED = booleanPreferencesKey("ai_scene_enabled")
+        private val KEY_LAST_WATERMARK_TEMPLATE = stringPreferencesKey("last_watermark_template")
+        private val KEY_AI_FINE_TUNE_ENABLED = booleanPreferencesKey("ai_fine_tune_enabled")
+        private val KEY_SMART_OPTIMIZE_ENABLED = booleanPreferencesKey("smart_optimize_enabled")
+        private val KEY_WATERMARK_EDITOR_ENABLED = booleanPreferencesKey("watermark_editor_enabled")
+        private val KEY_HASSELBLAD_COLOR_ENABLED = booleanPreferencesKey("hasselblad_color_enabled")
+        private val KEY_CUSTOM_DEVICE_MODEL = stringPreferencesKey("custom_device_model")
+        private val KEY_PRESET_VERSION_MAP = stringPreferencesKey("preset_version_map")
+        private val KEY_FAVORITE_PRESET_IDS = stringSetPreferencesKey("favorite_preset_ids")
+        private val KEY_PINNED_PRESET_IDS = stringSetPreferencesKey("pinned_preset_ids")
+        private val KEY_MANUALLY_MODIFIED_PARAMS = stringSetPreferencesKey("manually_modified_params")
+        private val KEY_CUSTOM_QUICK_PRESETS = stringPreferencesKey("custom_quick_presets")
         
         // 云端API配置 Key
-        private const val KEY_API_CONFIG_LOADED = "api_config_loaded"
-        private const val KEY_AI_API_ENDPOINT = "ai_api_endpoint"
-        private const val KEY_PRESET_API_ENDPOINT = "preset_api_endpoint"
-        private const val KEY_AUTH_API_ENDPOINT = "auth_api_endpoint"
-        private const val KEY_API_VERSION = "api_version"
+        private val KEY_API_CONFIG_LOADED = booleanPreferencesKey("api_config_loaded")
+        private val KEY_AI_API_ENDPOINT = stringPreferencesKey("ai_api_endpoint")
+        private val KEY_PRESET_API_ENDPOINT = stringPreferencesKey("preset_api_endpoint")
+        private val KEY_AUTH_API_ENDPOINT = stringPreferencesKey("auth_api_endpoint")
+        private val KEY_API_VERSION = stringPreferencesKey("api_version")
 
         // 应用预设参数 Key
-        private const val KEY_APPLIED_SATURATION = "applied_saturation"
-        private const val KEY_APPLIED_CONTRAST = "applied_contrast"
-        private const val KEY_APPLIED_WARMTH = "applied_warmth"
-        private const val KEY_APPLIED_SHARPNESS = "applied_sharpness"
-        private const val KEY_APPLIED_CLARITY = "applied_clarity"
-        private const val KEY_APPLIED_BRIGHTNESS = "applied_brightness"
-        private const val KEY_HAS_APPLIED_PRESET = "has_applied_preset"
-        private const val KEY_MIGRATION_HANDLED = "migration_handled"
+        private val KEY_APPLIED_SATURATION = intPreferencesKey("applied_saturation")
+        private val KEY_APPLIED_CONTRAST = intPreferencesKey("applied_contrast")
+        private val KEY_APPLIED_WARMTH = intPreferencesKey("applied_warmth")
+        private val KEY_APPLIED_SHARPNESS = intPreferencesKey("applied_sharpness")
+        private val KEY_APPLIED_CLARITY = intPreferencesKey("applied_clarity")
+        private val KEY_APPLIED_BRIGHTNESS = intPreferencesKey("applied_brightness")
+        private val KEY_HAS_APPLIED_PRESET = booleanPreferencesKey("has_applied_preset")
+        private val KEY_MIGRATION_HANDLED = booleanPreferencesKey("migration_handled")
 
         @Volatile
         private var instance: SettingsManager? = null
