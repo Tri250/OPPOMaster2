@@ -9,6 +9,10 @@ import androidx.compose.ui.unit.sp
 /**
  * OMaster Typography 字体系统
  * 基于 Material3 设计规范，统一管理应用内所有字体样式
+ *
+ * TODO: 生产发布前应添加品牌字体（Brand Font），替换 FontFamily.Default 为自定义字体族，
+ * 以建立统一的品牌视觉识别。需要将字体文件（.ttf/.otf）放入 res/font 目录，
+ * 并通过 FontFamily() 定义品牌字体族，再在各 TextStyle 中引用。
  */
 val Typography = Typography(
     // 大标题 - 用于页面主标题

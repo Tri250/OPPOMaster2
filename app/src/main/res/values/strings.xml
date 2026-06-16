@@ -349,6 +349,17 @@
     <string name="privacy_policy_title">隐私政策</string>
     <string name="user_agreement_title">用户协议</string>
     
+    <!-- 高级设置 -->
+    <string name="settings_section_advanced">高级</string>
+    <string name="api_config_title">API 配置</string>
+    <string name="api_config_desc">配置云端 API 端点地址</string>
+    <string name="api_endpoint_ai">AI 推理端点</string>
+    <string name="api_endpoint_preset">预设同步端点</string>
+    <string name="api_endpoint_auth">用户认证端点</string>
+    <string name="api_config_saved">API 配置已保存</string>
+    <string name="api_config_reset">重置为默认</string>
+    <string name="api_config_reset_confirm">确定要重置所有 API 端点为默认值吗？</string>
+
     <!-- 底部开发者信息 -->
     <string name="developer_footer">Developed by Silas</string>
     <string name="copyright_footer">© 2026 OMaster. All rights reserved.</string>
@@ -419,6 +430,7 @@
     <string name="recent_recognition">最近识别</string>
     <string name="retake">重拍</string>
     <string name="apply_params">应用参数</string>
+    <string name="view_online_privacy_policy">查看在线隐私政策</string>
     <string name="contact_title">联系我们</string>
     <string name="contact_info">如果您对本隐私政策有任何疑问，请联系：\n开发者：Silas \n邮箱：iboy66lee@qq.com</string>
     <string name="last_updated">最后更新日期：%1$s</string>

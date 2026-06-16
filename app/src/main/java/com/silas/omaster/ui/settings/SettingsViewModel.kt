@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.settings
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,7 @@ import java.util.Locale
  * 管理所有设置状态：主题、深色模式、振动、云同步等
  */
 class SettingsViewModel(
+    private val application: Application,
     private val settingsManager: SettingsManager,
     private val presetRepository: PresetRepository
 ) : ViewModel() {
@@ -197,8 +199,8 @@ class SettingsViewModel(
     fun updateCacheSize() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                // 需要Context，这里暂时用占位符
-                _cacheSize.value = "计算中..."
+                val sizeMb = ImageCacheManager.getCacheSize(application)
+                _cacheSize.value = String.format("%.2f MB", sizeMb)
             }
         }
     }
@@ -209,9 +211,9 @@ class SettingsViewModel(
     fun clearCache(onComplete: () -> Unit) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                // 清除缓存逻辑
+                ImageCacheManager.clearCache(application)
             }
-            _cacheSize.value = "0 MB"
+            _cacheSize.value = "0.00 MB"
             onComplete()
         }
     }
@@ -233,13 +235,14 @@ class SettingsViewModel(
  * SettingsViewModel 工厂
  */
 class SettingsViewModelFactory(
+    private val application: Application,
     private val settingsManager: SettingsManager,
     private val presetRepository: PresetRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-            return SettingsViewModel(settingsManager, presetRepository) as T
+            return SettingsViewModel(application, settingsManager, presetRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

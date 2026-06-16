@@ -599,7 +599,7 @@ private fun CameraEntryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 占位
+                // 占位：与右侧选择图片按钮对称，保持拍摄按钮居中
                 Box(modifier = Modifier.size(56.dp))
 
                 // 主拍摄按钮
@@ -884,7 +884,7 @@ private fun AnalyzingProgressScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    // 占位图片
+                    // 图片占位图标：无图片时显示
                     Icon(
                         Icons.Outlined.Image,
                         null,

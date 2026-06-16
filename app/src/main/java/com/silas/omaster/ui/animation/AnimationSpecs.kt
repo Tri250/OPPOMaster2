@@ -3,11 +3,15 @@ package com.silas.omaster.ui.animation
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 
 /**
  * 全局动画配置
  * 统一管理应用内所有动画规格，确保一致性和性能
+ *
+ * 注意：Spring 动画在低端设备上应使用较低的 stiffness 值以避免卡顿。
+ * 使用 adaptiveSpringSpec() 可根据设备性能等级自动选择合适的动画参数。
  */
 object AnimationSpecs {
 
@@ -153,3 +157,49 @@ val ListItemFadeInSpec = spring<Float>(
     stiffness = Spring.StiffnessMedium,
     visibilityThreshold = 0.01f
 )
+
+/**
+ * 设备性能等级
+ */
+enum class PerformanceTier {
+    LOW, MEDIUM, HIGH
+}
+
+/**
+ * 根据设备性能等级返回自适应的 Spring 动画规格。
+ * 低端设备使用较低的 stiffness 以减少动画计算压力，避免卡顿；
+ * 高端设备使用标准参数以获得更流畅的弹性效果。
+ *
+ * @param dampingRatio 阻尼比，默认中等弹性
+ * @param visibilityThreshold 可见性阈值
+ * @return 根据设备性能调整后的 SpringSpec
+ */
+@Composable
+fun adaptiveSpringSpec(
+    dampingRatio: Float = Spring.DampingRatioMediumBouncy,
+    visibilityThreshold: Float = 0.01f
+): SpringSpec<Float> {
+    val context = LocalContext.current
+    val tier = remember {
+        val activityManager = context.getSystemService(android.app.ActivityManager::class.java)
+        val isLowRam = activityManager?.isLowRamDevice == true
+        val memInfo = android.app.ActivityManager.MemoryInfo()
+        activityManager?.getMemoryInfo(memInfo)
+        val totalMemGb = memInfo.totalMem / (1024 * 1024 * 1024)
+        when {
+            isLowRam || totalMemGb < 3 -> PerformanceTier.LOW
+            totalMemGb < 6 -> PerformanceTier.MEDIUM
+            else -> PerformanceTier.HIGH
+        }
+    }
+    val stiffness = when (tier) {
+        PerformanceTier.LOW -> Spring.StiffnessHigh
+        PerformanceTier.MEDIUM -> Spring.StiffnessMedium
+        PerformanceTier.HIGH -> Spring.StiffnessMediumLow
+    }
+    return spring(
+        dampingRatio = dampingRatio,
+        stiffness = stiffness,
+        visibilityThreshold = visibilityThreshold
+    )
+}

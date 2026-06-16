@@ -1081,6 +1081,8 @@ data class PresetItem(
         return MasterPreset(
             id = id,
             name = name,
+            // 无自定义封面时使用内置占位图（assets/images/placeholder.webp）
+            // 若占位图不存在，UI 层应兜底显示纯色/图标，不可因此崩溃
             coverPath = coverPath ?: "images/placeholder.webp",
             galleryImages = galleryImages,  // 对齐Web端
             brand = brand,
@@ -1178,8 +1180,10 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
     tone?.let { paramsMap["contrast"] = it } // tone 在本应用中等同于 contrast
     warmCool?.let { paramsMap["warmth"] = it }
     sharpness?.let { paramsMap["sharpness"] = it }
-    // 以下字段在当前模型中尚无对应值，存 0 占位
+    // 以下字段云端模型暂不直接提供，使用默认值 0（即"无调整"）
+    // clarity（清晰度）范围 [0, 100]，0 表示不增强，与 RenderParameters.DEFAULT 一致
     paramsMap.putIfAbsent("clarity", 0)
+    // brightness（亮度）范围 [-100, 100]，0 表示不调整，与 RenderParameters.DEFAULT 一致
     paramsMap.putIfAbsent("brightness", 0)
     // 额外保存原值字段（保证导入导出无损）
     cyanMagenta?.let { paramsMap["cyan_magenta"] = it }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -97,7 +98,7 @@ fun PillNavBar(
             // 磨砂玻璃背景层 - 使用自适应宽度
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth().widthIn(max = 600.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -113,7 +114,7 @@ fun PillNavBar(
             // 顶部高光线条
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth().widthIn(max = 600.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -130,7 +131,7 @@ fun PillNavBar(
             // 边框
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth().widthIn(max = 600.dp)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -163,7 +164,7 @@ fun PillNavBar(
             // 导航项
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth().widthIn(max = 600.dp)
                     .height(64.dp)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,

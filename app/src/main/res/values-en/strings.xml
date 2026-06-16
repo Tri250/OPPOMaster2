@@ -126,6 +126,10 @@
     <string name="empty_hint_add_presets">Please add data to assets/presets.json</string>
     <string name="empty_hint_favorite">Tap the heart icon to favorite presets</string>
     <string name="empty_hint_create">Tap the bottom right button to create a preset</string>
+    <string name="empty_no_featured">No featured presets</string>
+    <string name="empty_hint_filter">Adjust filters</string>
+    <string name="filter_result_count">%1$d filtered</string>
+    <string name="clear_filter">Clear filter</string>
     <string name="load_more_hint">More coming soon · Stay tuned</string>
     <string name="loading_more">Loading more…</string>
     <string name="no_more_data">No more data</string>
@@ -313,15 +317,19 @@
     <!-- About Page -->
     <string name="about_title">About</string>
     <string name="version_current">Current Version: v%1$s</string>
+    <string name="version_format">Version %1$s</string>
     <string name="version_check">Tap to check for updates</string>
     <string name="version_checking">Checking for updates…</string>
     <string name="version_new_found">New version found v%1$s</string>
+    <string name="version_new_available">Update available</string>
     <string name="version_latest">Already up to date</string>
+    <string name="version_latest_badge">Latest</string>
     <string name="version_check_failed">Check failed</string>
     <string name="version_download">Download</string>
     <string name="version_download_btn">Update</string>
     <string name="version_is_latest">Up to date</string>
     <string name="version_retry">Tap to retry</string>
+    <string name="update_notes_title">What\'s New</string>
     <string name="last_check">Last checked: %1$s</string>
     <string name="time_just_now">Just now</string>
     <string name="time_minutes_ago">%1$d min ago</string>
@@ -376,6 +384,7 @@
     <string name="guide_tip">Tip: After removing restrictions, please ensure only "Floating Window" permission is granted</string>
     <string name="guide_btn_open">Open Permission</string>
     <string name="guide_later">Maybe Later</string>
+    <string name="view_online_privacy_policy">View Online Privacy Policy</string>
     <string name="contact_title">Contact Us</string>
     <string name="contact_info">If you have any questions about this privacy policy, please contact:\nDeveloper: Silas\nEmail: iboy66lee@qq.com</string>
     <string name="last_updated">Last Updated: %1$s</string>

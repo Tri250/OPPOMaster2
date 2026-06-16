@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -20,10 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.cloud.SyncState
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.LightGray
-import com.silas.omaster.ui.theme.MediumGray
+
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
@@ -95,15 +92,13 @@ fun CloudSyncScreen(
         val presetCount = cloudPresets.size
         listOf(
             SyncItem("预设同步", presetCount > 0, lastSyncTimeText, presetCount),
-            SyncItem("LUT 资源同步", false, "从未同步", 0),
-            SyncItem("设置同步", false, "从未同步", 0),
         )
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
@@ -152,15 +147,15 @@ fun CloudSyncScreen(
                                 else -> if (lastSyncTimestamp > 0) "自动同步已开启" else "尚未同步"
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
                             Text(
                                 text = "最后同步：$lastSyncTimeText",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -182,7 +177,7 @@ fun CloudSyncScreen(
                             if (isSyncing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     strokeWidth = 2.dp
                                 )
                             } else {
@@ -202,14 +197,22 @@ fun CloudSyncScreen(
                         text = "云服务提供商",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         providers.forEach { provider ->
-                            ProviderCard(provider = provider)
+                            ProviderCard(
+                                provider = provider,
+                                onConnect = {
+                                    scope.launch {
+                                        // TODO: 实现云服务提供商连接逻辑
+                                        syncManager.sync()
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -221,7 +224,7 @@ fun CloudSyncScreen(
                     text = "同步内容",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -230,36 +233,6 @@ fun CloudSyncScreen(
                     syncItems.forEach { item ->
                         SyncItemCard(item = item)
                     }
-                }
-            }
-
-            // 同步特性
-            item {
-                Text(
-                    text = "同步特性",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
-
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FeatureCard(
-                        icon = Icons.Default.Shield,
-                        title = "端到端加密",
-                        description = "您的数据完全加密，安全可靠"
-                    )
-                    FeatureCard(
-                        icon = Icons.Default.Wifi,
-                        title = "Wi-Fi 自动同步",
-                        description = "仅在 Wi-Fi 下自动同步，节省流量"
-                    )
-                    FeatureCard(
-                        icon = Icons.Default.Schedule,
-                        title = "历史版本",
-                        description = "保留 30 天历史版本，随时回退"
-                    )
                 }
             }
 
@@ -285,12 +258,12 @@ data class SyncItem(
 )
 
 @Composable
-private fun ProviderCard(provider: ProviderInfo) {
+private fun ProviderCard(provider: ProviderInfo, onConnect: () -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkGray)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -313,21 +286,19 @@ private fun ProviderCard(provider: ProviderInfo) {
                         text = "${provider.name} Cloud",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = if (provider.connected) "已连接" else "未连接",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (provider.connected) SuccessGreen else LightGray
+                        color = if (provider.connected) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             if (provider.connected) {
                 Icon(Icons.Default.Check, null, tint = SuccessGreen)
             } else {
-                TextButton(onClick = {
-                    // 触发同步以建立连接
-                }) {
+                TextButton(onClick = onConnect) {
                     Text("连接", color = HasselbladOrange)
                 }
             }
@@ -341,7 +312,7 @@ private fun SyncItemCard(item: SyncItem) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkGray)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -364,72 +335,21 @@ private fun SyncItemCard(item: SyncItem) {
                         text = item.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = if (item.count > 0) "最后同步：${item.lastSync} (${item.count}条)" else "最后同步：${item.lastSync}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
             }
             Box(
                 modifier = Modifier
-                    .width(50.dp)
-                    .height(30.dp)
-                    .clip(RoundedCornerShape(15.dp))
-                    .background(if (item.enabled) SuccessGreen else MediumGray),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeatureCard(
-    icon: ImageVector,
-    title: String,
-    description: String
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkGray)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SuccessGreen.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = SuccessGreen)
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-            }
+                    .size(12.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (item.enabled) SuccessGreen else MaterialTheme.colorScheme.outline),
+            )
         }
     }
 }

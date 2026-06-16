@@ -1,5 +1,6 @@
 package com.silas.omaster.viewmodel
 
+import android.app.Application
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
@@ -40,6 +41,9 @@ class SettingsViewModelTest {
     @Mock
     private lateinit var presetRepository: PresetRepository
 
+    @Mock
+    private lateinit var application: Application
+
     private lateinit var viewModel: SettingsViewModel
 
     private val themeFlow = MutableStateFlow(BrandTheme.Hasselblad)
@@ -60,7 +64,7 @@ class SettingsViewModelTest {
         whenever(settingsManager.updateChannel).thenReturn(UpdateChannel.STABLE)
         whenever(settingsManager.floatingWindowOpacity).thenReturn(0.9f)
         
-        viewModel = SettingsViewModel(settingsManager, presetRepository)
+        viewModel = SettingsViewModel(application, settingsManager, presetRepository)
     }
 
     @After
