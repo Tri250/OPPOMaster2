@@ -778,7 +778,7 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = icon
                 textSize = 12f
-                setTextColor(primaryColor)
+                setTextColor(getPrimaryColor(context))
             })
 
             addView(createSpacing(dpToPx(4)))
