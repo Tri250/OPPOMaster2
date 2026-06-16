@@ -1,8 +1,10 @@
 [versions]
 # ===== Android Gradle Plugin =====
-agp = "8.9.1"
+# 使用本地仓库可用版本 8.7.3
+agp = "8.7.3"
 
 # ===== Kotlin =====
+# 使用本地仓库可用版本 2.1.20
 kotlin = "2.1.20"
 
 # ===== AndroidX Core =====

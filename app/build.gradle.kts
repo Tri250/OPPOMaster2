@@ -72,8 +72,8 @@ android {
         // 版本号与 Git Tag 同步规则：
         // - Git Tag 格式: v{versionName}，如 v1.3.1
         // - CI 构建时会自动从 Tag 提取版本号
-        versionCode = 10
-        versionName = "1.3.1"
+        versionCode = 11
+        versionName = "1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
