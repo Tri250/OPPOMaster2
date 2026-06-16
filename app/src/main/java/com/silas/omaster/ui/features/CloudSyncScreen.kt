@@ -286,6 +286,39 @@ fun CloudSyncScreen(
                 }
             }
 
+            // 同步特性
+            item {
+                Text(
+                    text = "同步特性",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FeatureCard(
+                        icon = Icons.Default.Shield,
+                        iconColor = SuccessGreen,
+                        title = "端到端加密",
+                        description = "您的数据完全加密，安全可靠"
+                    )
+                    FeatureCard(
+                        icon = Icons.Default.Wifi,
+                        iconColor = Color(0xFF9C27B0),
+                        title = "Wi-Fi 自动同步",
+                        description = "仅在 Wi-Fi 下自动同步，节省流量"
+                    )
+                    FeatureCard(
+                        icon = Icons.Default.History,
+                        iconColor = HasselbladOrange,
+                        title = "历史版本",
+                        description = "保留 30 天历史版本，随时回退"
+                    )
+                }
+            }
+
             // 底部间距
             item {
                 Spacer(modifier = Modifier.height(80.dp))
@@ -537,6 +570,50 @@ private fun CloudProviderCard(
                 TextButton(onClick = onConnect) {
                     Text("连接", color = HasselbladOrange)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeatureCard(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    description: String
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(iconColor.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
             }
         }
     }

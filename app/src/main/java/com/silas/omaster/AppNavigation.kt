@@ -45,6 +45,7 @@ import com.silas.omaster.ui.create.UniversalCreatePresetViewModel
 import com.silas.omaster.ui.create.UniversalCreatePresetViewModelFactory
 import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
+import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.featured.FeaturedPresetsScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.AISceneRecognitionScreen
@@ -364,6 +365,10 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.Terms> {
                 TermsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.PrivacyPolicy> {
+                PrivacyPolicyScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.PresetSourceManager> {
