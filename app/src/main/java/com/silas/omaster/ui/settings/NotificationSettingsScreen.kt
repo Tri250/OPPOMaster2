@@ -43,7 +43,7 @@ fun NotificationSettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏
@@ -95,12 +95,12 @@ fun NotificationSettingsScreen(
                                     text = "接收推送通知",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
                                     text = "开启后接收重要通知",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.6f)
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                 )
                             }
                         }
@@ -124,7 +124,7 @@ fun NotificationSettingsScreen(
                     text = "通知类型",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -147,7 +147,7 @@ fun NotificationSettingsScreen(
                     text = "免打扰设置",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -174,7 +174,7 @@ fun NotificationSettingsScreen(
                                 Text(
                                     text = "夜间免打扰",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
                             Switch(
@@ -199,12 +199,12 @@ fun NotificationSettingsScreen(
                             Text(
                                 text = "免打扰时段",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                             )
                             Text(
                                 text = "22:00 - 08:00",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                         }
                     }
@@ -249,12 +249,12 @@ private fun NotificationSettingCard(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }

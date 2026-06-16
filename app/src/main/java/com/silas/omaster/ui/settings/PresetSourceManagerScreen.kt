@@ -19,10 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.MediumGray
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.perform
@@ -71,7 +69,7 @@ fun PresetSourceManagerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏
@@ -97,14 +95,14 @@ fun PresetSourceManagerScreen(
                 }) {
                     Icon(
                         Icons.Default.Refresh, "刷新",
-                        tint = if (isLoading) HasselbladOrange else Color.White
+                        tint = if (isLoading) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                     )
                 }
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     showAddDialog = true
                 }) {
-                    Icon(Icons.Default.Add, "添加", tint = Color.White)
+                    Icon(Icons.Default.Add, "添加", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -119,7 +117,7 @@ fun PresetSourceManagerScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkGray)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Row(
                 modifier = Modifier
@@ -137,7 +135,7 @@ fun PresetSourceManagerScreen(
                     Text(
                         text = "已启用",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -145,12 +143,12 @@ fun PresetSourceManagerScreen(
                         text = "${sources.size}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = "预设源",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -163,7 +161,7 @@ fun PresetSourceManagerScreen(
                     Text(
                         text = "已加载预设",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -251,13 +249,13 @@ private fun PresetSourceCard(
                 OutlinedTextField(
                     value = editName,
                     onValueChange = { editName = it },
-                    label = { Text("名称", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("名称", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                         cursorColor = HasselbladOrange
                     ),
                     singleLine = true
@@ -266,13 +264,13 @@ private fun PresetSourceCard(
                 OutlinedTextField(
                     value = editUrl,
                     onValueChange = { editUrl = it },
-                    label = { Text("URL", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("URL", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                         cursorColor = HasselbladOrange
                     ),
                     singleLine = true,
@@ -284,7 +282,7 @@ private fun PresetSourceCard(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onCancel) {
-                        Text("取消", color = Color.White.copy(alpha = 0.6f))
+                        Text("取消", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -305,12 +303,12 @@ private fun PresetSourceCard(
                             text = source.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = source.url,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             maxLines = 1
                         )
                     }
@@ -338,7 +336,7 @@ private fun PresetSourceCard(
                     IconButton(onClick = onEdit) {
                         Icon(
                             Icons.Default.Edit, "编辑",
-                            tint = Color.White.copy(alpha = 0.6f)
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
                     }
                     IconButton(onClick = onDelete) {
@@ -363,22 +361,22 @@ private fun AddSourceDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MediumGray,
+        containerColor = MaterialTheme.colorScheme.outline,
         title = {
-            Text("添加预设源", color = Color.White)
+            Text("添加预设源", color = MaterialTheme.colorScheme.onBackground)
         },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("名称", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
                     ),
                     singleLine = true
                 )
@@ -386,13 +384,13 @@ private fun AddSourceDialog(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("URL", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
                     ),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
@@ -410,7 +408,7 @@ private fun AddSourceDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消", color = Color.White.copy(alpha = 0.6f))
+                Text("取消", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
             }
         }
     )

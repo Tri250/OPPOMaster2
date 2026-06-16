@@ -80,7 +80,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ai.MasterInferenceEngine
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -229,7 +228,7 @@ fun SmartOptimizeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
@@ -239,7 +238,7 @@ fun SmartOptimizeScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -251,7 +250,7 @@ fun SmartOptimizeScreen(
                     Icon(
                         if (previewMode == "after") Icons.Default.Visibility else Icons.Default.Compare,
                         "预览",
-                        tint = if (previewMode == "after") HasselbladOrange else Color.White
+                        tint = if (previewMode == "after") HasselbladOrange else MaterialTheme.colorScheme.onBackground
                     )
                 }
                 // 应用按钮
@@ -278,7 +277,7 @@ fun SmartOptimizeScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkGray)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
@@ -294,7 +293,7 @@ fun SmartOptimizeScreen(
                         Text(
                             text = "正在优化 $optimizationStep/$optimizationTotalSteps",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
@@ -315,7 +314,7 @@ fun SmartOptimizeScreen(
                         Text(
                             text = "正在处理: $optimizationCurrentName",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -327,7 +326,7 @@ fun SmartOptimizeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(DarkGray)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             previewBitmap?.let { bitmap ->
                 // 显示预览图片（带优化后效果模拟滤镜）
@@ -365,7 +364,7 @@ fun SmartOptimizeScreen(
                 ) {
                     Text(
                         text = if (previewMode == "after") "优化后" else "原图",
-                        color = if (previewMode == "after") HasselbladOrange else Color.White,
+                        color = if (previewMode == "after") HasselbladOrange else MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -378,14 +377,14 @@ fun SmartOptimizeScreen(
                     Icon(
                         Icons.Default.Image,
                         null,
-                        tint = Color.White.copy(alpha = 0.5f),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = if (previewMode == "after") "优化后预览" else "原图预览",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -429,7 +428,7 @@ fun SmartOptimizeScreen(
                             Text(
                                 text = optimizedOptions.joinToString(" · ") { optimizeIdToName[it] ?: it },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -568,7 +567,7 @@ fun SmartOptimizeScreen(
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
             ) {
                 Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -626,14 +625,14 @@ private fun CompositeOptimizeCard(
                         .clip(RoundedCornerShape(10.dp))
                         .background(
                             if (enabled) SuccessGreen.copy(alpha = 0.3f)
-                            else Color.White.copy(alpha = 0.1f)
+                            else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Bolt,
                         null,
-                        tint = if (enabled) SuccessGreen else Color.White.copy(alpha = 0.6f),
+                        tint = if (enabled) SuccessGreen else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -643,12 +642,12 @@ private fun CompositeOptimizeCard(
                         text = "综合优化",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (enabled) SuccessGreen else Color.White
+                        color = if (enabled) SuccessGreen else MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = "一键优化全部参数 · 已选 $selectedCount 项",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
                 Switch(
@@ -726,7 +725,7 @@ private fun OptimizeOptionCard(
                     Icon(
                         icon,
                         null,
-                        tint = if (enabled || isProcessing) color else Color.White.copy(alpha = 0.5f),
+                        tint = if (enabled || isProcessing) color else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -736,7 +735,7 @@ private fun OptimizeOptionCard(
                                 text = title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (enabled || isProcessing) color else Color.White
+                                color = if (enabled || isProcessing) color else MaterialTheme.colorScheme.onBackground
                             )
                             if (isProcessing) {
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -758,7 +757,7 @@ private fun OptimizeOptionCard(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -787,7 +786,7 @@ private fun OptimizeOptionCard(
                     Text(
                         text = "强度",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.width(50.dp)
                     )
 

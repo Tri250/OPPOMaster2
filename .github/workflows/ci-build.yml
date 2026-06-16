@@ -45,11 +45,11 @@ jobs:
 
       # Kotlin 代码风格检查
       - name: Run Kotlin Linter (ktlint)
-        run: ./gradlew ktlintCheck --no-daemon || true
+        run: ./gradlew ktlintCheck --no-daemon
 
       # Android Lint 检查
       - name: Run Android Lint
-        run: ./gradlew lintDebug --no-daemon || true
+        run: ./gradlew lintDebug --no-daemon
 
       # 编译检查
       - name: Compile Check
@@ -124,7 +124,7 @@ jobs:
 
       # 运行测试覆盖率
       - name: Run Test Coverage
-        run: ./gradlew jacocoTestReport --no-daemon || ./gradlew createDebugCoverageReport --no-daemon || true
+        run: ./gradlew jacocoTestReport --no-daemon || ./gradlew createDebugCoverageReport --no-daemon
 
       # 上传覆盖率报告
       - name: Upload Coverage Reports
@@ -273,7 +273,7 @@ jobs:
 
       # 依赖版本检查
       - name: Check Dependency Updates
-        run: ./gradlew dependencyUpdates --no-daemon || true
+        run: ./gradlew dependencyUpdates --no-daemon
 
       # 生成依赖报告
       - name: Generate Dependency Report

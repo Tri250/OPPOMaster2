@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
@@ -32,12 +34,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -68,18 +66,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.request.ImageRequest
-import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.repository.PresetRepository
@@ -88,12 +82,11 @@ import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.animation.ListItemFadeInSpec
 import com.silas.omaster.ui.animation.ListItemPlacementSpec
 import com.silas.omaster.ui.animation.calculateStaggerDelay
-import com.silas.omaster.ui.components.PresetImage
+import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
-import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -103,7 +96,6 @@ import kotlinx.coroutines.delay
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import com.silas.omaster.util.PresetI18n
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
@@ -545,13 +537,19 @@ private fun BrandAndSortFilter(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 品牌筛选按钮
-        brands.forEach { (key, label) ->
-            BrandFilterButton(
-                label = label,
-                isSelected = selectedBrand == key,
-                onClick = { onBrandSelected(key) }
-            )
+        // 品牌筛选按钮（水平滚动）
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            items(brands) { (key, label) ->
+                BrandFilterButton(
+                    label = label,
+                    isSelected = selectedBrand == key,
+                    onClick = { onBrandSelected(key) }
+                )
+            }
         }
 
         // 排序下拉菜单
@@ -570,7 +568,7 @@ private fun BrandAndSortFilter(
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = null,
+                    contentDescription = "排序",
                     tint = Color.White.copy(alpha = 0.4f),
                     modifier = Modifier.size(14.dp)
                 )
@@ -810,242 +808,18 @@ private fun PresetCardItem(
                 this.shadowElevation = if (alpha > 0.9f) 4f else 0f
             }
     ) {
-        PresetCardWebStyle(
+        PresetCard(
             preset = preset,
-            onClick = { 
+            onClick = {
                 haptic.perform(HapticFeedbackType.LongPress)
-                onNavigateToDetail(preset) 
+                onNavigateToDetail(preset)
             },
-            onFavoriteClick = { 
+            onFavoriteClick = {
                 haptic.perform(HapticFeedbackType.LongPress)
-                preset.id?.let { onToggleFavorite(it) } 
+                preset.id?.let { onToggleFavorite(it) }
             },
             imageHeight = imageHeight
         )
-    }
-}
-
-/**
- * 预设卡片（对齐Web端样式）
- */
-@Composable
-private fun PresetCardWebStyle(
-    preset: MasterPreset,
-    onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    imageHeight: Int,
-    modifier: Modifier = Modifier
-) {
-    val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .hapticClickable { onClick() }
-            .border(
-                width = 1.dp,
-                color = Color.White.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkGray
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(imageHeight.dp)
-        ) {
-            // 图片 - 使用 PresetImage 组件确保正确加载
-            PresetImage(
-                preset = preset,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop,
-                showDownloadIndicator = true
-            )
-
-            // 渐变遮罩（对齐Web端）
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.2f),
-                                Color.Black.copy(alpha = 0.8f)
-                            )
-                        )
-                    )
-            )
-
-            // HNCS角标（对齐Web端：橙色渐变）
-            if (preset.isHncs) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(HasselbladOrange, WarningYellow)
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "👑",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
-                        )
-                        Text(
-                            text = stringResource(R.string.badge_hncs),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            // NEW角标（对齐Web端：绿色）
-            if (preset.isNew && !preset.isHncs) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .background(
-                            color = SuccessGreen,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "✨",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
-                        )
-                        Text(
-                            text = stringResource(R.string.badge_new),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            // 收藏按钮（对齐Web端：右上角）
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(32.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .background(
-                            color = if (preset.isFavorite)
-                                Color.Red.copy(alpha = 0.2f)
-                            else
-                                Color.Black.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(14.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (preset.isFavorite)
-                            Icons.Filled.Favorite
-                        else
-                            Icons.Outlined.FavoriteBorder,
-                        contentDescription = if (preset.isFavorite) 
-                            stringResource(R.string.preset_favorited) 
-                        else 
-                            stringResource(R.string.preset_favorite),
-                        tint = if (preset.isFavorite) Color.Red else Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // 内容信息（对齐Web端：底部）
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = PresetI18n.getLocalizedPresetName(preset.name),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = preset.author,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.6f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // 统计数据（对齐Web端，仅展示真实数据）
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 评分（仅在有数据时展示）
-                    preset.rating?.let { rating ->
-                        Text(
-                            text = "⭐ ${String.format("%.1f", rating)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.5f)
-                        )
-                    }
-                    // 下载量（仅在有数据时展示）
-                    preset.downloads?.let { downloads ->
-                        val downloadsText = if (downloads >= 10000) {
-                            "${(downloads / 10000).toInt()}w"
-                        } else {
-                            "$downloads"
-                        }
-                        Text(
-                            text = "📥 $downloadsText",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.5f)
-                        )
-                    }
-                    // 品牌
-                    preset.brand?.let { brand ->
-                        Text(
-                            text = brand,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.4f),
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

@@ -8,10 +8,12 @@
         </trust-anchors>
     </base-config>
 
-    <!-- 生产环境 CDN 域名白名单（仅 HTTPS） -->
+    <!-- 生产环境域名白名单（仅 HTTPS） -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">silas-omaster.com</domain>
-        <domain includeSubdomains="true">cdn.silas-omaster.com</domain>
+        <domain includeSubdomains="true">omaster.app</domain>
+        <domain includeSubdomains="true">jsdelivr.net</domain>
+        <domain includeSubdomains="true">unsplash.com</domain>
     </domain-config>
 
     <!-- Debug 模式允许本地网络和友盟统计（仅在 debug build 中生效） -->

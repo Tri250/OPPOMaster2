@@ -64,7 +64,7 @@ fun ParamAdjustScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
@@ -75,7 +75,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -90,7 +90,7 @@ fun ParamAdjustScreen(
                     exposureCompensation = 0f
                     selectedPreset = null
                 }) {
-                    Icon(Icons.Default.Refresh, "重置", tint = Color.White)
+                    Icon(Icons.Default.Refresh, "重置", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 // 应用按钮
                 IconButton(onClick = {
@@ -301,7 +301,7 @@ private fun ParamPresetChip(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
+            color = if (selected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
     }
 }
@@ -341,7 +341,7 @@ private fun ParamSliderCard(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
 
@@ -425,7 +425,7 @@ private fun ParamSliderCard(
                             Text(
                                 text = option,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -441,7 +441,7 @@ private fun ParamSummaryItem(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Text(
             text = value,

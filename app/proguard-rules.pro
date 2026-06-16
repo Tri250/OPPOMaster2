@@ -150,53 +150,53 @@
 -dontwarn sun.misc.**
 
 # ========================================
-# 项目特定规则（仅保留必要的数据模型字段）
+# 项目特定规则 — kotlinx.serialization 数据模型
 # ========================================
+# [优化] 替换原先的 -keep class ... { *; } 和 -keepclassmembers ... { <fields>; } 规则
+# 原规则过于宽泛，保留了所有类和所有字段，阻碍 R8 优化并增大 APK 体积。
+# 现改为 kotlinx.serialization 官方推荐规则，仅保留序列化器必需的成员，
+# 让 R8 可正常混淆和移除未使用的非序列化字段。
 
-# 数据模型类（JSON 序列化需要保留字段名）
+-dontnote kotlinx.serialization.AnnotationsKt
+
+# kotlinx.serialization 核心 JSON 序列化器
+-keepclassmembers class kotlinx.serialization.json.** { ***; }
+
+# @Serializable 类的 $$serializer（编译器插件生成，反序列化入口）
+-keep class com.silas.omaster.model.**$$serializer { *; }
+-keep class com.silas.omaster.data.model.**$$serializer { *; }
+-keep class com.silas.omaster.renderer.**$$serializer { *; }
+-keep class com.silas.omaster.watermark.**$$serializer { *; }
+
+# @Serializable 类的 Companion 对象（提供 serializer() 函数入口）
 -keepclassmembers class com.silas.omaster.model.** {
-    <fields>;
+    *** Companion;
 }
 -keepclassmembers class com.silas.omaster.data.model.** {
-    <fields>;
+    *** Companion;
 }
 -keepclassmembers class com.silas.omaster.renderer.** {
-    <fields>;
+    *** Companion;
 }
 -keepclassmembers class com.silas.omaster.watermark.** {
-    <fields>;
+    *** Companion;
 }
 
-# 数据模型类名（Gson / Kotlinx Serialization 反序列化需要）
--keep class com.silas.omaster.model.MasterPreset { *; }
--keep class com.silas.omaster.model.PresetList { *; }
--keep class com.silas.omaster.model.PresetItem { *; }
--keep class com.silas.omaster.model.PresetSection { *; }
--keep class com.silas.omaster.model.PresetComment { *; }
--keep class com.silas.omaster.model.PresetDescription { *; }
--keep class com.silas.omaster.model.SceneProfile { *; }
--keep class com.silas.omaster.model.HasselbladParams { *; }
--keep class com.silas.omaster.model.FilmPreset { *; }
--keep class com.silas.omaster.model.CameraParams { *; }
--keep class com.silas.omaster.model.ExifData { *; }
--keep class com.silas.omaster.model.HistogramData { *; }
--keep class com.silas.omaster.model.FaceData { *; }
--keep class com.silas.omaster.model.FaceInfo { *; }
--keep class com.silas.omaster.model.RectData { *; }
--keep class com.silas.omaster.model.Subscription { *; }
--keep class com.silas.omaster.model.SubscriptionList { *; }
--keep class com.silas.omaster.data.model.PresetSource { *; }
--keep class com.silas.omaster.data.model.PresetSourceConfig { *; }
--keep class com.silas.omaster.data.model.PresetSourceResponse { *; }
--keep class com.silas.omaster.renderer.RenderParameters { *; }
--keep class com.silas.omaster.renderer.ParamMetadata { *; }
--keep class com.silas.omaster.watermark.WatermarkLayerDef { *; }
--keep class com.silas.omaster.watermark.OffsetData { *; }
--keep class com.silas.omaster.watermark.WatermarkLayerStyle { *; }
--keep class com.silas.omaster.watermark.WatermarkTemplateDef { *; }
--keep class com.silas.omaster.watermark.WatermarkConfigDef { *; }
+# 保留包含 serializer() 方法的类及其成员（确保序列化字段名不被混淆）
+-keepclasseswithmembers class com.silas.omaster.model.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.silas.omaster.data.model.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.silas.omaster.renderer.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.silas.omaster.watermark.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
-# Kotlin Serialization 枚举需要保留
+# Kotlin Serialization 枚举需要保留（枚举值按名称序列化）
 -keepclassmembers enum com.silas.omaster.model.SceneCategory { *; }
 -keepclassmembers enum com.silas.omaster.model.SoftLightMode { *; }
 -keepclassmembers enum com.silas.omaster.model.FilmSeries { *; }
@@ -204,28 +204,6 @@
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkLayerType { *; }
 -keepclassmembers enum com.silas.omaster.watermark.ContentSource { *; }
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkPosition { *; }
-
-# Kotlinx Serialization 生成的 serializer 需要保留
--keep class com.silas.omaster.model.**$$serializer { *; }
--keep class com.silas.omaster.data.model.**$$serializer { *; }
--keep class com.silas.omaster.renderer.**$$serializer { *; }
--keep class com.silas.omaster.watermark.**$$serializer { *; }
--keepclassmembers class com.silas.omaster.model.** {
-    @kotlinx.serialization.Serializable <fields>;
-    @kotlinx.serialization.Serializable <methods>;
-}
--keepclassmembers class com.silas.omaster.data.model.** {
-    @kotlinx.serialization.Serializable <fields>;
-    @kotlinx.serialization.Serializable <methods>;
-}
--keepclassmembers class com.silas.omaster.renderer.** {
-    @kotlinx.serialization.Serializable <fields>;
-    @kotlinx.serialization.Serializable <methods>;
-}
--keepclassmembers class com.silas.omaster.watermark.** {
-    @kotlinx.serialization.Serializable <fields>;
-    @kotlinx.serialization.Serializable <methods>;
-}
 
 # ========================================
 # 优化配置（修复 P2-12: 降低激进程度，避免 NPE 风险）

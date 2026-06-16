@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -80,8 +81,6 @@ import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
-import com.silas.omaster.ui.theme.DarkGray
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
@@ -93,7 +92,8 @@ fun SettingsScreen(
     onNavigateToNotificationSettings: (() -> Unit)? = null,
     onNavigateToTerms: (() -> Unit)? = null,
     onNavigateToPresetSourceManager: (() -> Unit)? = null,
-    onNavigateToUpdateChannel: (() -> Unit)? = null
+    onNavigateToUpdateChannel: (() -> Unit)? = null,
+    onNavigateToApiConfig: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -180,7 +180,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
     ) {
         OMasterTopAppBar(
@@ -207,7 +207,7 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             // Default Start Tab Setting
             SettingsClickableItem(
@@ -240,7 +240,7 @@ fun SettingsScreen(
                 onClick = { showDarkModeDialog = true }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             // Theme Setting
             SettingsClickableItem(
@@ -279,7 +279,7 @@ fun SettingsScreen(
                     Text(
                         text = stringResource(R.string.floating_window_opacity),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = "$floatingWindowOpacity%",
@@ -352,7 +352,7 @@ fun SettingsScreen(
             )
 
             if (cloudSyncEnabled) {
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
                 SettingsClickableItem(
                     icon = Icons.Default.Cloud,
@@ -365,7 +365,7 @@ fun SettingsScreen(
                     }
                 )
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
                 val lastSyncText = if (lastSyncTime > 0) {
                     val diff = System.currentTimeMillis() - lastSyncTime
@@ -419,7 +419,7 @@ fun SettingsScreen(
                 onClick = { showChannelDialog = true }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             SettingsClickableItem(
                 icon = Icons.Default.Download,
@@ -451,7 +451,7 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             SettingsClickableItem(
                 icon = Icons.Default.Notifications,
@@ -460,7 +460,7 @@ fun SettingsScreen(
                 onClick = { onNavigateToNotificationSettings?.invoke() }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             SettingsClickableItem(
                 icon = Icons.Default.Storage,
@@ -469,7 +469,7 @@ fun SettingsScreen(
                 onClick = { onNavigateToPresetSourceManager?.invoke() }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             SettingsClickableItem(
                 icon = Icons.Default.Description,
@@ -494,6 +494,20 @@ fun SettingsScreen(
                     stringResource(R.string.clear_cache_desc)
                 },
                 onClick = { showClearCacheDialog = true }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Advanced Section
+        SettingsSectionCard {
+            SettingsSectionTitle(title = stringResource(R.string.settings_section_advanced))
+
+            SettingsClickableItem(
+                icon = Icons.Default.SettingsEthernet,
+                title = stringResource(R.string.api_config_title),
+                subtitle = stringResource(R.string.api_config_desc),
+                onClick = { onNavigateToApiConfig?.invoke() }
             )
         }
 
@@ -529,8 +543,8 @@ fun SettingsScreen(
                         Text(stringResource(R.string.cancel))
                     }
                 },
-                containerColor = DarkGray,
-                textContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                textContentColor = MaterialTheme.colorScheme.onBackground
             )
         }
 
@@ -548,7 +562,7 @@ private fun SettingsSectionCard(
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -579,7 +593,7 @@ private fun SettingsSwitchItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
         },
         supportingContent = subtitle?.let {
@@ -629,7 +643,7 @@ private fun SettingsClickableItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
         },
         supportingContent = subtitle?.let {
@@ -737,8 +751,8 @@ fun ThemeSelectionDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-        containerColor = DarkGray,
-        textContentColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -768,16 +782,16 @@ private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
                         Text(
                             text = source.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = source.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                 }
             }
         },
@@ -786,8 +800,8 @@ private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
                 Text("关闭")
             }
         },
-        containerColor = DarkGray,
-        textContentColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -832,7 +846,7 @@ fun TabSelectionDialog(
                         Text(
                             text = name,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -843,8 +857,8 @@ fun TabSelectionDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-        containerColor = DarkGray,
-        textContentColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -887,7 +901,7 @@ fun UpdateChannelDialog(
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
                                 text = when (channel) {
@@ -907,8 +921,8 @@ fun UpdateChannelDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-        containerColor = DarkGray,
-        textContentColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -953,7 +967,7 @@ fun DarkModeDialog(
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
                                 text = desc,
@@ -970,7 +984,7 @@ fun DarkModeDialog(
                 Text(stringResource(R.string.cancel))
             }
         },
-        containerColor = DarkGray,
-        textContentColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }

@@ -22,9 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.MediumGray
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
@@ -153,7 +151,7 @@ fun HasselbladScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
@@ -163,7 +161,7 @@ fun HasselbladScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -205,29 +203,29 @@ fun HasselbladScreen(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.2f)),
+                                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Camera, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.Camera, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(32.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
                                     "HNCS 3.0",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     "哈苏自然色彩解决方案",
-                                    color = Color.White.copy(alpha = 0.9f),
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
                                     fontSize = 14.sp
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     "还原真实色彩，呈现自然之美",
-                                    color = Color.White.copy(alpha = 0.7f),
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                                     fontSize = 12.sp
                                 )
                             }
@@ -242,7 +240,7 @@ fun HasselbladScreen(
                     text = "色彩模式",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -267,7 +265,7 @@ fun HasselbladScreen(
                     text = "精细调节",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -275,7 +273,7 @@ fun HasselbladScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkGray)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         listOf(
@@ -294,7 +292,7 @@ fun HasselbladScreen(
                                 Text(
                                     text = label,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.width(60.dp)
                                 )
                                 Slider(
@@ -328,7 +326,7 @@ fun HasselbladScreen(
                     text = "核心特性",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -366,11 +364,11 @@ fun HasselbladScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             resetParams()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = MediumGray),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("重置", color = Color.White)
+                        Text("重置", color = MaterialTheme.colorScheme.onBackground)
                     }
                     Button(
                         onClick = {
@@ -395,13 +393,13 @@ fun HasselbladScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         if (isApplied) {
-                            Icon(Icons.Default.Check, null, tint = Color.White)
+                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onBackground)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("已应用", color = Color.White)
+                            Text("已应用", color = MaterialTheme.colorScheme.onBackground)
                         } else {
-                            Icon(Icons.Default.CameraAlt, null, tint = Color.White)
+                            Icon(Icons.Default.CameraAlt, null, tint = MaterialTheme.colorScheme.onBackground)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("应用色彩", color = Color.White)
+                            Text("应用色彩", color = MaterialTheme.colorScheme.onBackground)
                         }
                     }
                 }
@@ -429,17 +427,17 @@ private fun ColorModeCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else DarkGray
+                if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
             ),
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else DarkGray
+            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
         ),
         border = if (isSelected) {
             androidx.compose.foundation.BorderStroke(2.dp, HasselbladOrange)
         } else {
-            androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
         }
     ) {
         Row(
@@ -461,13 +459,13 @@ private fun ColorModeCard(
                     text = mode.name,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isSelected) HasselbladOrange else Color.White
+                    color = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = mode.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
             }
             if (isSelected) {
@@ -495,7 +493,7 @@ private fun FeatureItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkGray)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -516,13 +514,13 @@ private fun FeatureItem(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
             }
         }

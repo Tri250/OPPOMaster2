@@ -29,27 +29,29 @@ class ModelDownloadManager(private val context: Context) {
         private const val MODEL_VERSION = "1.2.0"
         
         // 模型文件名
+        // ⚠️ 重要：checksum 在生产发布前必须替换为真实的 SHA256 校验值！
+        // 空字符串 "" 表示校验值尚未提供，仅用于开发阶段，生产环境绝不允许为空。
         val MODEL_FILES = listOf(
             ModelFile(
                 name = "scene_classifier.tflite",
                 displayName = "场景分类模型",
                 description = "36类场景智能识别",
                 expectedSize = 700 * 1024,  // 700KB
-                checksum = "sha256:g7h8i9j0k1l2..."  // 实际发布时替换为真实校验值
+                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值，格式为 "sha256:<hex>"
             ),
             ModelFile(
                 name = "quality_analyzer.tflite",
                 displayName = "质量分析模型",
                 description = "图像质量智能评估",
                 expectedSize = 500 * 1024,  // 500KB
-                checksum = "sha256:h8i9j0k1l2m3..."
+                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值，格式为 "sha256:<hex>"
             ),
             ModelFile(
                 name = "param_predictor.tflite",
                 displayName = "参数预测模型",
                 description = "哈苏调校参数推荐",
                 expectedSize = 200 * 1024,  // 200KB
-                checksum = "sha256:i9j0k1l2m3n4..."
+                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值，格式为 "sha256:<hex>"
             )
         )
         
@@ -267,22 +269,28 @@ class ModelDownloadManager(private val context: Context) {
                 return@withContext Result.failure(Exception("下载文件大小不足: ${tempFile.length()} < ${modelFile.expectedSize}"))
             }
 
-            // 校验 SHA256（如果提供了校验值）
-            if (modelFile.checksum.startsWith("sha256:") && modelFile.checksum.length > 7) {
-                val expectedHash = modelFile.checksum.substring(7)
-                // 防御性：跳过 placeholder 校验值
-                if (!expectedHash.contains("...") && !expectedHash.endsWith("...")) {
-                    val actualHash = calculateSHA256(tempFile)
+            // 校验 SHA256
+            // ⚠️ 重要：生产发布前，所有模型的 checksum 必须提供真实的 SHA256 校验值！
+            // - checksum 为空或 "sha256:" 后无内容：仅记录警告，允许通过（开发阶段兼容）
+            // - checksum 已提供且有效：严格校验，不匹配则失败（防止篡改）
+            val expectedHash = if (modelFile.checksum.startsWith("sha256:")) {
+                modelFile.checksum.substring(7)
+            } else {
+                modelFile.checksum
+            }
 
-                    if (actualHash != expectedHash) {
-                        Log.w(TAG, "模型校验失败: ${modelFile.name}, 预期=$expectedHash, 实际=$actualHash")
-                        tempFile.delete()
-                        return@withContext Result.failure(SecurityException("SHA256 校验失败"))
-                    } else {
-                        Log.i(TAG, "模型校验成功: ${modelFile.name}")
-                    }
+            if (expectedHash.isEmpty()) {
+                // 校验值未提供，仅警告（开发阶段允许，生产环境绝不允许）
+                Log.w(TAG, "⚠️ 模型 ${modelFile.name} 未提供 SHA256 校验值，跳过完整性验证！生产发布前必须提供校验值！")
+            } else {
+                // 校验值已提供，严格验证
+                val actualHash = calculateSHA256(tempFile)
+                if (actualHash != expectedHash) {
+                    Log.e(TAG, "模型校验失败: ${modelFile.name}, 预期=$expectedHash, 实际=$actualHash")
+                    tempFile.delete()
+                    return@withContext Result.failure(SecurityException("SHA256 校验失败: 模型文件可能已被篡改"))
                 } else {
-                    Log.w(TAG, "跳过校验（使用占位符校验值）")
+                    Log.i(TAG, "模型校验成功: ${modelFile.name}")
                 }
             }
 

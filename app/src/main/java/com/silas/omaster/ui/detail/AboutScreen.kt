@@ -76,10 +76,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
-import com.silas.omaster.ui.theme.DarkGray
-import com.silas.omaster.ui.theme.ErrorRed
-import com.silas.omaster.ui.theme.PureBlack
-import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.UpdateChannel
@@ -216,7 +212,7 @@ fun AboutScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.about_title),
@@ -226,7 +222,7 @@ fun AboutScreen(
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = stringResource(R.string.nav_settings),
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -281,7 +277,7 @@ private fun AppInfoCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -335,7 +331,7 @@ private fun AppInfoCard(
                         withStyle(style = SpanStyle(color = currentTheme.primaryColor)) {
                             append("O")
                         }
-                        withStyle(style = SpanStyle(color = Color.White)) {
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onBackground)) {
                             append("Master")
                         }
                     },
@@ -350,7 +346,7 @@ private fun AppInfoCard(
                 Text(
                     text = stringResource(R.string.app_slogan),
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     letterSpacing = 0.5.sp
                 )
 
@@ -360,7 +356,7 @@ private fun AppInfoCard(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -368,7 +364,7 @@ private fun AppInfoCard(
                     Text(
                         text = stringResource(R.string.version_format, currentVersionName),
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                     Box(
                         modifier = Modifier
@@ -461,7 +457,7 @@ private fun SettingsListCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.05f)
+            containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -525,7 +521,7 @@ private fun SettingsListItem(
                 text = item.label,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
         
@@ -537,13 +533,13 @@ private fun SettingsListItem(
                 Text(
                     text = item.value,
                     fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.3f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -552,7 +548,7 @@ private fun SettingsListItem(
     if (showDivider) {
         HorizontalDivider(
             modifier = Modifier.padding(start = 68.dp),
-            color = Color.White.copy(alpha = 0.05f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
         )
     }
 }
@@ -567,13 +563,13 @@ private fun DeveloperFooter() {
         Text(
             text = stringResource(R.string.developer_footer),
             fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
         )
         
         Text(
             text = stringResource(R.string.copyright_footer),
             fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.2f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
         )
     }
 }

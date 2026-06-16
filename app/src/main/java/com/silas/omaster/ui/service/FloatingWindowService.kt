@@ -816,7 +816,7 @@ class FloatingWindowService : Service() {
                 }
                 addView(right)
             } else {
-                // 占位
+                // 占位：当无右侧参数时，添加空 View 占据 weight 空间，使左侧参数填满整行
                 addView(View(context).apply {
                     layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
                 })

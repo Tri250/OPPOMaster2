@@ -1,5 +1,8 @@
 package com.silas.omaster.ui.features
 
+import android.content.Context
+import android.os.Environment
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -11,14 +14,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.silas.omaster.data.model.LUTResource
 import com.silas.omaster.data.repository.LUTResourceRepository
 import com.silas.omaster.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
 import java.util.Locale
 
 /**
@@ -41,6 +54,8 @@ fun LUTShareScreen(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val repo = LUTResourceRepository
 
     // 分类选择 - 对齐 Web 端 LUT_CATEGORIES
@@ -85,14 +100,14 @@ fun LUTShareScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         TopAppBar(
             title = {
                 Column {
                     Text("LUT 资源库", fontWeight = FontWeight.Bold)
-                    Text("视频调色LUT下载", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
+                    Text("视频调色LUT下载", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
             },
             navigationIcon = {
@@ -100,14 +115,14 @@ fun LUTShareScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
                 Text(
                     text = "${repo.RESOURCES.size} 个LUT",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.padding(end = 16.dp)
                 )
             },
@@ -124,18 +139,18 @@ fun LUTShareScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp),
-            placeholder = { Text("搜索LUT名称、风格...", color = Color.White.copy(alpha = 0.4f)) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.White.copy(alpha = 0.4f)) },
+            placeholder = { Text("搜索LUT名称、风格...", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
+            leadingIcon = { Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
+                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                 focusedBorderColor = HasselbladOrange,
-                unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
                 cursorColor = HasselbladOrange,
-                focusedContainerColor = DarkGray,
-                unfocusedContainerColor = DarkGray
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
 
@@ -152,7 +167,7 @@ fun LUTShareScreen(
                         .clip(RoundedCornerShape(20.dp))
                         .background(
                             if (category.key == selectedCategory) HasselbladOrange
-                            else DarkGray
+                            else MaterialTheme.colorScheme.surfaceVariant
                         )
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -164,7 +179,7 @@ fun LUTShareScreen(
                         text = "${category.icon} ${category.label}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (category.key == selectedCategory) FontWeight.Bold else FontWeight.Normal,
-                        color = if (category.key == selectedCategory) Color.White else Color.White.copy(alpha = 0.7f)
+                        color = if (category.key == selectedCategory) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -177,7 +192,7 @@ fun LUTShareScreen(
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.FilterList, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+            Icon(Icons.Default.FilterList, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             SortChip("最多下载", sortBy == SortType.DOWNLOADS) { sortBy = SortType.DOWNLOADS }
             Spacer(modifier = Modifier.width(6.dp))
@@ -253,7 +268,7 @@ fun LUTShareScreen(
                 Text(
                     text = "${filteredLuts.size} 个 LUT  ·  ${filteredLuts.count { it.isFree }} 个免费",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                 )
             }
@@ -276,9 +291,35 @@ fun LUTShareScreen(
                             onDownload = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 downloadingId = lut.id
-                                onDownload(lut)
-                                if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
-                                downloadingId = null
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        if (!lut.downloadUrl.startsWith("https://")) {
+                                            withContext(Dispatchers.Main) {
+                                                downloadingId = null
+                                                Toast.makeText(context, "下载地址无效", Toast.LENGTH_SHORT).show()
+                                            }
+                                            return@launch
+                                        }
+                                        val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
+                                        if (!dir.exists()) dir.mkdirs()
+                                        val file = File(dir, "${lut.nameEn}.${lut.format}")
+                                        URL(lut.downloadUrl).openStream().use { input ->
+                                            FileOutputStream(file).use { output ->
+                                                input.copyTo(output)
+                                            }
+                                        }
+                                        withContext(Dispatchers.Main) {
+                                            if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
+                                            downloadingId = null
+                                            Toast.makeText(context, "LUT 已下载: ${lut.name}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        withContext(Dispatchers.Main) {
+                                            downloadingId = null
+                                            Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
                         )
                     }
@@ -299,12 +340,12 @@ fun LUTShareScreen(
                         Icon(
                             Icons.Default.Description,
                             null,
-                            tint = Color.White.copy(alpha = 0.2f),
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("未找到匹配的LUT", color = Color.White.copy(alpha = 0.5f))
-                        Text("请调整搜索条件", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.3f))
+                        Text("未找到匹配的LUT", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                        Text("请调整搜索条件", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
                     }
                 }
             }
@@ -322,9 +363,35 @@ fun LUTShareScreen(
             onDownload = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 downloadingId = lut.id
-                onDownload(lut)
-                if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
-                downloadingId = null
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        if (!lut.downloadUrl.startsWith("https://")) {
+                            withContext(Dispatchers.Main) {
+                                downloadingId = null
+                                Toast.makeText(context, "下载地址无效", Toast.LENGTH_SHORT).show()
+                            }
+                            return@launch
+                        }
+                        val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
+                        if (!dir.exists()) dir.mkdirs()
+                        val file = File(dir, "${lut.nameEn}.${lut.format}")
+                        URL(lut.downloadUrl).openStream().use { input ->
+                            FileOutputStream(file).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
+                            downloadingId = null
+                            Toast.makeText(context, "LUT 已下载: ${lut.name}", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            downloadingId = null
+                            Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             },
             onDismiss = { selectedLUT = null }
         )
@@ -345,7 +412,7 @@ private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
             .background(if (selected) HasselbladOrange.copy(alpha = 0.2f) else Color.Transparent)
             .border(
                 width = 1.dp,
-                color = if (selected) HasselbladOrange else Color.White.copy(alpha = 0.15f),
+                color = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable { onClick() }
@@ -354,7 +421,7 @@ private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = if (selected) HasselbladOrange else Color.White.copy(alpha = 0.6f)
+            color = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
     }
 }
@@ -377,7 +444,7 @@ private fun LUTPosterCard(
                 onClick()
             },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkGray)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
             Box(
@@ -386,13 +453,28 @@ private fun LUTPosterCard(
                     .height(100.dp)
                     .background(HasselbladOrange.copy(alpha = 0.2f))
             ) {
-                Text(
-                    text = lut.name.firstOrNull()?.toString() ?: "",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = HasselbladOrange,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                if (lut.previewImage.isNotBlank()) {
+                    val context = LocalContext.current
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(lut.previewImage)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = lut.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        error = rememberVectorPainter(Icons.Default.Image),
+                        fallback = rememberVectorPainter(Icons.Default.Image)
+                    )
+                } else {
+                    Text(
+                        text = lut.name.firstOrNull()?.toString() ?: "",
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = HasselbladOrange,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .padding(6.dp)
@@ -400,7 +482,7 @@ private fun LUTPosterCard(
                         .background(badgeColor)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(badge, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(badge, color = MaterialTheme.colorScheme.onBackground, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
                 IconButton(
                     onClick = onLike,
@@ -411,8 +493,8 @@ private fun LUTPosterCard(
                 ) {
                     Icon(
                         if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        null,
-                        tint = if (isLiked) ErrorRed else Color.White.copy(alpha = 0.7f),
+                        "收藏",
+                        tint = if (isLiked) ErrorRed else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -422,7 +504,7 @@ private fun LUTPosterCard(
                     text = lut.name,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -430,7 +512,7 @@ private fun LUTPosterCard(
                     text = "${LUTResourceRepository.formatDownloads(lut.downloads)}下载",
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 10.sp,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             }
         }
@@ -455,7 +537,7 @@ private fun LUTGridCard(
             onClick()
         },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkGray)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
             // 预览
@@ -465,13 +547,28 @@ private fun LUTGridCard(
                     .height(90.dp)
                     .background(HasselbladOrange.copy(alpha = 0.2f))
             ) {
-                Text(
-                    text = lut.name.firstOrNull()?.toString() ?: "",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = HasselbladOrange,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                if (lut.previewImage.isNotBlank()) {
+                    val context = LocalContext.current
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(lut.previewImage)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = lut.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        error = rememberVectorPainter(Icons.Default.Image),
+                        fallback = rememberVectorPainter(Icons.Default.Image)
+                    )
+                } else {
+                    Text(
+                        text = lut.name.firstOrNull()?.toString() ?: "",
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = HasselbladOrange,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
                 // 徽标
                 Row(
                     modifier = Modifier
@@ -486,7 +583,7 @@ private fun LUTGridCard(
                                 .background(SuccessGreen)
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
-                            Text("NEW", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text("NEW", color = MaterialTheme.colorScheme.onBackground, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     if (lut.isHot && !lut.isNew) {
@@ -496,7 +593,7 @@ private fun LUTGridCard(
                                 .background(HasselbladOrange)
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
-                            Text("HOT", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text("HOT", color = MaterialTheme.colorScheme.onBackground, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -511,7 +608,7 @@ private fun LUTGridCard(
                 ) {
                     Text(
                         text = ".${lut.format}",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 9.sp
                     )
                 }
@@ -525,8 +622,8 @@ private fun LUTGridCard(
                 ) {
                     Icon(
                         if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        null,
-                        tint = if (isLiked) ErrorRed else Color.White.copy(alpha = 0.7f),
+                        "收藏",
+                        tint = if (isLiked) ErrorRed else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -537,14 +634,14 @@ private fun LUTGridCard(
                     text = lut.name,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = lut.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -560,7 +657,7 @@ private fun LUTGridCard(
                             text = "#$tag",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 9.sp,
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -579,23 +676,23 @@ private fun LUTGridCard(
                         text = String.format(Locale.US, "%.1f", lut.rating),
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 10.sp,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Default.Download, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(10.dp))
+                    Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), modifier = Modifier.size(10.dp))
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = LUTResourceRepository.formatDownloads(lut.downloads),
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 10.sp,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
                         text = "${lut.size}x${lut.size}",
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 10.sp,
-                        color = Color.White.copy(alpha = 0.4f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                     )
                 }
                 // 下载按钮
@@ -650,7 +747,7 @@ private fun LUTDetailDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkGray,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         title = null,
         text = {
             Column(
@@ -666,20 +763,35 @@ private fun LUTDetailDialog(
                         .clip(RoundedCornerShape(12.dp))
                         .background(HasselbladOrange.copy(alpha = 0.2f))
                 ) {
-                    Text(
-                        text = lut.name.firstOrNull()?.toString() ?: "",
-                        style = MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = HasselbladOrange,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    if (lut.previewImage.isNotBlank()) {
+                        val context = LocalContext.current
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(lut.previewImage)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = lut.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                            error = rememberVectorPainter(Icons.Default.Image),
+                            fallback = rememberVectorPainter(Icons.Default.Image)
+                        )
+                    } else {
+                        Text(
+                            text = lut.name.firstOrNull()?.toString() ?: "",
+                            style = MaterialTheme.typography.displayLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = HasselbladOrange,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(4.dp)
                     ) {
-                        Icon(Icons.Default.Close, "关闭", tint = Color.White)
+                        Icon(Icons.Default.Close, "关闭", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -690,8 +802,8 @@ private fun LUTDetailDialog(
                     verticalAlignment = Alignment.Top
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(lut.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text(lut.nameEn, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
+                        Text(lut.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                        Text(lut.nameEn, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                     }
                     Row(
                         modifier = Modifier
@@ -705,12 +817,12 @@ private fun LUTDetailDialog(
                         Text(
                             text = String.format(Locale.US, "%.1f", lut.rating),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(lut.description, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+                Text(lut.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                 Spacer(modifier = Modifier.height(8.dp))
                 // 标签
                 Row(
@@ -721,10 +833,10 @@ private fun LUTDetailDialog(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("#$tag", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                            Text("#$tag", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                         }
                     }
                 }
@@ -733,7 +845,7 @@ private fun LUTDetailDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         DetailInfoRow("格式", ".${lut.format.uppercase()}")
@@ -744,7 +856,7 @@ private fun LUTDetailDialog(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 // 适用场景
-                Text("适用场景", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.4f))
+                Text("适用场景", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -771,7 +883,7 @@ private fun LUTDetailDialog(
                         onClick = onLike,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (isLiked) ErrorRed else Color.White.copy(alpha = 0.7f)
+                            contentColor = if (isLiked) ErrorRed else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                     ) {
                         Icon(
@@ -798,7 +910,7 @@ private fun LUTDetailDialog(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("下载中...", fontSize = 12.sp)
@@ -811,7 +923,7 @@ private fun LUTDetailDialog(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 // 作者
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -830,7 +942,7 @@ private fun LUTDetailDialog(
                     ) {
                         Text(
                             text = lut.author.firstOrNull()?.uppercase() ?: "O",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -840,13 +952,13 @@ private fun LUTDetailDialog(
                             text = lut.author,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = lut.createdAt,
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                     }
                 }
@@ -865,8 +977,8 @@ private fun DetailInfoRow(label: String, value: String) {
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.4f))
-        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = Color.White)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
     }
 }
 

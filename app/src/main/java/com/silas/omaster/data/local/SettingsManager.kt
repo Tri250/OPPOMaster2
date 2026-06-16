@@ -94,6 +94,9 @@ data class ApiConfig(
  */
 class SettingsManager private constructor(private val context: Context) {
     
+    // 内存缓存层：避免在主线程调用 runBlocking 读取 DataStore 时因磁盘 I/O 导致 ANR
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Any>()
+    
     // 旧版 SharedPreferences（仅用于迁移）
     private val legacyPrefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
     
@@ -507,97 +510,169 @@ class SettingsManager private constructor(private val context: Context) {
     // ==================== DataStore 操作方法 ====================
     
     /**
-     * 同步获取 String 数据（阻塞调用，仅在初始化或必须同步的场景使用）
-     * 注意：DataStore 本身是异步的，这里使用 runBlocking 包装
-     * 生产环境建议使用 Flow 观察或 suspend 函数
+     * 同步获取 String 数据（带内存缓存，避免主线程 ANR）
+     * 优先从缓存读取；缓存未命中时使用 runBlocking 读取 DataStore，
+     * 若读取失败则返回默认值，成功后写入缓存。
      */
     private fun getDataSync(key: Preferences.Key<String>, defaultValue: String): String {
-        return runBlocking {
-            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as String }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+            }
+        } catch (e: Exception) {
+            defaultValue
         }
+        cache[key.name] = value
+        return value
     }
     
     private fun getDataSyncOrNull(key: Preferences.Key<String>): String? {
-        return runBlocking {
-            context.dataStore.data.map { prefs -> prefs[key] }.first()
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as String? }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] }.first()
+            }
+        } catch (e: Exception) {
+            null
         }
+        if (value != null) cache[key.name] = value
+        return value
     }
     
     private fun getDataSync(key: Preferences.Key<Boolean>, defaultValue: Boolean): Boolean {
-        return runBlocking {
-            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as Boolean }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+            }
+        } catch (e: Exception) {
+            defaultValue
         }
+        cache[key.name] = value
+        return value
     }
     
     private fun getDataSync(key: Preferences.Key<Int>, defaultValue: Int): Int {
-        return runBlocking {
-            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as Int }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+            }
+        } catch (e: Exception) {
+            defaultValue
         }
+        cache[key.name] = value
+        return value
     }
     
     private fun getDataSync(key: Preferences.Key<Long>, defaultValue: Long): Long {
-        return runBlocking {
-            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as Long }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+            }
+        } catch (e: Exception) {
+            defaultValue
         }
+        cache[key.name] = value
+        return value
     }
     
     private fun getDataSetSync(key: Preferences.Key<Set<String>>, defaultValue: Set<String>): Set<String> {
-        return runBlocking {
-            context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as Set<String> }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+            }
+        } catch (e: Exception) {
+            defaultValue
         }
+        cache[key.name] = value
+        return value
     }
     
     /**
-     * 同步设置数据（阻塞调用）
+     * 同步设置数据（先更新缓存再写入 DataStore，避免后续读取时阻塞）
      */
     private fun setDataSync(key: Preferences.Key<String>, value: String) {
+        cache[key.name] = value
         runBlocking {
             context.dataStore.edit { prefs -> prefs[key] = value }
         }
     }
     
     private fun setDataSync(key: Preferences.Key<Boolean>, value: Boolean) {
+        cache[key.name] = value
         runBlocking {
             context.dataStore.edit { prefs -> prefs[key] = value }
         }
     }
     
     private fun setDataSync(key: Preferences.Key<Int>, value: Int) {
+        cache[key.name] = value
         runBlocking {
             context.dataStore.edit { prefs -> prefs[key] = value }
         }
     }
     
     private fun setDataSync(key: Preferences.Key<Long>, value: Long) {
+        cache[key.name] = value
         runBlocking {
             context.dataStore.edit { prefs -> prefs[key] = value }
         }
     }
     
     private fun setDataSetSync(key: Preferences.Key<Set<String>>, value: Set<String>) {
+        cache[key.name] = value
         runBlocking {
             context.dataStore.edit { prefs -> prefs[key] = value }
         }
     }
     
     /**
-     * 同步删除数据
+     * 同步删除数据（同时清除缓存）
      */
     private fun removeDataSync(key: Preferences.Key<String>) {
+        cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
         }
     }
     
     private fun removeDataSync(key: Preferences.Key<Int>) {
+        cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
         }
     }
     
     private fun removeDataSync(key: Preferences.Key<Boolean>) {
+        cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
+        }
+    }
+
+    /**
+     * 预加载缓存：在应用启动时（如 Application.onCreate 的协程中）调用，
+     * 将所有设置项从 DataStore 一次性读入内存，避免后续主线程读取时阻塞。
+     */
+    suspend fun preloadCache() {
+        try {
+            context.dataStore.data.first().let { prefs ->
+                prefs.asMap().forEach { (key, value) ->
+                    cache[key.name] = value
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsManager", "预加载缓存失败，将在首次访问时逐项加载", e)
         }
     }
 

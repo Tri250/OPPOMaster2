@@ -1,4 +1,26 @@
+import java.util.Base64
 import java.util.Properties
+
+// ===== AppKey 运行时混淆密钥 =====
+// 构建时使用此密钥对 AppKey 做 XOR+Base64 混淆，运行时在 OMasterApplication 中解混淆
+// 防止 APK 反编译后直接提取明文 AppKey
+// 注意：此为中间安全方案，生产环境建议将 AppKey 迁移至后端代理或 NDK 层
+const val OBFUSCATION_KEY = "Oma5terK3y2024!X"
+
+/**
+ * XOR + Base64 混淆：将明文与固定密钥逐字节 XOR 后 Base64 编码
+ * 运行时使用相同密钥 XOR 即可还原
+ */
+fun obfuscateXor(input: String, key: String): String {
+    if (input.isEmpty()) return ""
+    val keyBytes = key.toByteArray(Charsets.UTF_8)
+    val inputBytes = input.toByteArray(Charsets.UTF_8)
+    val result = ByteArray(inputBytes.size)
+    for (i in inputBytes.indices) {
+        result[i] = (inputBytes[i].toInt() xor keyBytes[i % keyBytes.size].toInt()).toByte()
+    }
+    return Base64.getEncoder().encodeToString(result)
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -81,8 +103,9 @@ android {
         resourceConfigurations += listOf("en", "zh", "zh-rCN", "zh-rTW")
         
         // ===== 安全配置注入到 BuildConfig =====
-        // 友盟统计 AppKey（从 gradle.properties 读取，避免硬编码）
-        buildConfigField("String", "UMENG_APPKEY", "\"$umengAppKey\"")
+        // 友盟统计 AppKey：构建时混淆后注入，运行时在 OMasterApplication 中解混淆
+        // 防止 APK 反编译后直接提取明文 AppKey
+        buildConfigField("String", "UMENG_APPKEY", "\"${obfuscateXor(umengAppKey, OBFUSCATION_KEY)}\"")
         buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
     }
 

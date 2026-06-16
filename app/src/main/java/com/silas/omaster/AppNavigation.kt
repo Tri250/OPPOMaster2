@@ -61,6 +61,7 @@ import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.UpdateChannelScreen
+import com.silas.omaster.ui.settings.ApiConfigScreen
 import com.silas.omaster.util.JsonUtil
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.CoroutineScope
@@ -158,7 +159,7 @@ fun MainApp(navController: NavHostController) {
                     },
                     onNavigateToSceneRecognition = { navController.navigate(Screen.SceneRecognition) },
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
-                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor) },
+                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
@@ -241,7 +242,8 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
                     onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
-                    onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) }
+                    onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) },
+                    onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) }
                 )
             }
 
@@ -275,7 +277,7 @@ fun MainApp(navController: NavHostController) {
                 CoreFeaturesScreen(
                     onNavigateToSceneRecognition = { navController.navigate(Screen.SceneRecognition) },
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
-                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor) },
+                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
@@ -294,9 +296,10 @@ fun MainApp(navController: NavHostController) {
                 AISceneRecognitionScreen(onBack = { navController.popBackStack() })
             }
 
-            composable<Screen.WatermarkEditor> {
+            composable<Screen.WatermarkEditor> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.WatermarkEditor>()
                 WatermarkEditorScreen(
-                    imagePath = null,
+                    imagePath = route.imagePath,
                     onBack = { navController.popBackStack() },
                     onSave = { navController.popBackStack() },
                     onExport = { _, _ -> navController.popBackStack() }
@@ -369,6 +372,10 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.UpdateChannel> {
                 UpdateChannelScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.ApiConfig> {
+                ApiConfigScreen(onBack = { navController.popBackStack() })
             }
         }
 

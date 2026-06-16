@@ -41,7 +41,7 @@ sealed class Screen {
     data object SceneRecognition : Screen()
 
     @Serializable
-    data object WatermarkEditor : Screen()
+    data class WatermarkEditor(val imagePath: String? = null) : Screen()
 
     @Serializable
     data object SmartOptimize : Screen()
@@ -72,4 +72,7 @@ sealed class Screen {
 
     @Serializable
     data object UpdateChannel : Screen()
+
+    @Serializable
+    data object ApiConfig : Screen()
 }

@@ -3,6 +3,7 @@ package com.silas.omaster
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
 import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
@@ -17,9 +18,37 @@ class OMasterApplication : Application() {
         private const val PREFS_NAME = "omaster_prefs"
         private const val KEY_USER_AGREED = "user_agreed_to_policy"
 
+        // 与 build.gradle.kts 中的 OBFUSCATION_KEY 保持一致
+        private const val OBFUSCATION_KEY = "Oma5terK3y2024!X"
+
         @Volatile
         private var instance: OMasterApplication? = null
         private lateinit var prefs: SharedPreferences
+
+        /**
+         * 运行时解混淆：Base64 解码 + XOR 还原明文 AppKey
+         *
+         * 防止 APK 反编译后直接提取明文 AppKey。
+         * 此为中间安全方案，XOR 混淆可防止简单字符串提取，
+         * 但无法抵御针对性逆向分析。生产环境建议：
+         * 1. 将 AppKey 迁移至后端代理，通过 API 动态获取
+         * 2. 使用 NDK/C++ 层存储密钥（需添加 native 代码）
+         */
+        private fun deobfuscateKey(obfuscated: String, key: String): String {
+            if (obfuscated.isEmpty()) return ""
+            return try {
+                val decoded = Base64.decode(obfuscated, Base64.DEFAULT)
+                val keyBytes = key.toByteArray(Charsets.UTF_8)
+                val result = ByteArray(decoded.size)
+                for (i in decoded.indices) {
+                    result[i] = (decoded[i].toInt() xor keyBytes[i % keyBytes.size].toInt()).toByte()
+                }
+                String(result, Charsets.UTF_8)
+            } catch (e: Exception) {
+                Log.e("OMasterApplication", "AppKey 解混淆失败", e)
+                ""
+            }
+        }
 
         /**
          * 获取 Application 实例
@@ -89,8 +118,9 @@ class OMasterApplication : Application() {
 
         try {
             UMConfigure.setLogEnabled(false)
-            // 使用 BuildConfig 中的 AppKey（从 gradle.properties 注入，避免硬编码）
-            UMConfigure.init(this, BuildConfig.UMENG_APPKEY, "default", UMConfigure.DEVICE_TYPE_PHONE, null)
+            // 使用解混淆后的 AppKey（BuildConfig 中存储的是 XOR+Base64 混淆值）
+            val appKey = deobfuscateKey(BuildConfig.UMENG_APPKEY, OBFUSCATION_KEY)
+            UMConfigure.init(this, appKey, "default", UMConfigure.DEVICE_TYPE_PHONE, null)
             android.util.Log.i("OMasterApplication", "友盟统计初始化成功")
         } catch (e: Throwable) {
             android.util.Log.e("OMasterApplication", "友盟初始化失败", e)
