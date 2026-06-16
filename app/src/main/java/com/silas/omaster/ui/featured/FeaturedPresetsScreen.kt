@@ -182,7 +182,7 @@ fun FeaturedPresetsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "已筛选 ${filteredPresets.size} 条",
+                    text = stringResource(R.string.filter_result_count, filteredPresets.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = HasselbladOrange
                 )
@@ -194,7 +194,7 @@ fun FeaturedPresetsScreen(
                     searchQuery = ""
                 }) {
                     Text(
-                        text = "清空筛选",
+                        text = stringResource(R.string.clear_filter),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray
                     )
@@ -546,19 +546,19 @@ private fun EmptyState(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "暂无精选预设",
+            text = stringResource(R.string.empty_no_featured),
             style = MaterialTheme.typography.titleMedium,
             color = Color.White
         )
         Text(
-            text = "请调整筛选条件",
+            text = stringResource(R.string.empty_hint_filter),
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
         OutlinedButton(onClick = onRetry) {
-            Text("重试", color = HasselbladOrange)
+            Text(stringResource(R.string.retry), color = HasselbladOrange)
         }
     }
 }

@@ -126,6 +126,10 @@
     <string name="empty_hint_add_presets">请调整筛选条件</string>
     <string name="empty_hint_favorite">点击心形图标收藏预设</string>
     <string name="empty_hint_create">点击右下角按钮创建预设</string>
+    <string name="empty_no_featured">暂无精选预设</string>
+    <string name="empty_hint_filter">请调整筛选条件</string>
+    <string name="filter_result_count">已筛选 %1$d 条</string>
+    <string name="clear_filter">清空筛选</string>
     <string name="load_more_hint">持续更新 敬请期待</string>
     <string name="loading_more">正在加载更多...</string>
     <string name="no_more_data">没有更多数据了</string>
@@ -397,6 +401,24 @@
     <string name="guide_tip">提示：解除限制后，请确保只授予「悬浮窗」权限</string>
     <string name="guide_btn_open">去开启权限</string>
     <string name="guide_later">以后再说</string>
+
+    <!-- AI场景识别 -->
+    <string name="analysis_failed">分析失败，请重试</string>
+    <string name="ai_smart_shoot">AI 智能拍摄</string>
+    <string name="scene_recognition_50plus">50+ 精细场景识别</string>
+    <string name="one_click_optimize">一键参数优化</string>
+    <string name="ai_analyzing">AI 场景分析中...</string>
+    <string name="processed">处理后</string>
+    <string name="original">原图</string>
+    <string name="before">Before</string>
+    <string name="after">After</string>
+    <string name="hasselblad_master_recognition">哈苏大师识别</string>
+    <string name="auto_matched_params">已自动匹配最佳参数</string>
+    <string name="hasselblad_master_params">哈苏大师参数</string>
+    <string name="master_tips_title">大师建议</string>
+    <string name="recent_recognition">最近识别</string>
+    <string name="retake">重拍</string>
+    <string name="apply_params">应用参数</string>
     <string name="contact_title">联系我们</string>
     <string name="contact_info">如果您对本隐私政策有任何疑问，请联系：\n开发者：Silas \n邮箱：iboy66lee@qq.com</string>
     <string name="last_updated">最后更新日期：%1$s</string>
