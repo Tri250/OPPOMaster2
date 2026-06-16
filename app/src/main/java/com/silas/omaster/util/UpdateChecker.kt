@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -14,8 +15,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
+import java.math.BigInteger
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import com.silas.omaster.R
 
 /**
@@ -211,6 +217,195 @@ object UpdateChecker {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         downloadManager.remove(downloadId)
     }
+
+    /**
+     * 计算文件的 SHA-256 哈希值
+     * @param file 目标文件
+     * @return SHA-256 哈希字符串（小写十六进制）
+     */
+    fun calculateFileSha256(file: File): String? {
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            FileInputStream(file).use { fis ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (fis.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            val hashBytes = digest.digest()
+            hashBytes.joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            Log.e(TAG, "计算文件 SHA-256 失败", e)
+            null
+        }
+    }
+
+    /**
+     * 获取当前安装 APK 的签名证书 SHA-256 指纹
+     * @param context 上下文
+     * @return 签名指纹字符串，失败返回 null
+     */
+    fun getCurrentAppSignature(context: Context): String? {
+        return try {
+            val packageName = context.packageName
+            val packageManager = context.packageManager
+
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                ).signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.GET_SIGNATURES
+                ).signatures
+            }
+
+            signatures?.firstOrNull()?.let { signature ->
+                val certFactory = CertificateFactory.getInstance("X.509")
+                val cert = certFactory.generateCertificate(
+                    java.io.ByteArrayInputStream(signature.toByteArray())
+                ) as X509Certificate
+
+                val digest = MessageDigest.getInstance("SHA-256")
+                val certHash = digest.digest(cert.encoded)
+                certHash.joinToString("") { "%02x".format(it) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "获取应用签名失败", e)
+            null
+        }
+    }
+
+    /**
+     * 验证 APK 文件的签名是否与当前应用一致
+     * @param context 上下文
+     * @param apkFile 待验证的 APK 文件
+     * @return 验证结果：true=签名一致，false=签名不一致或验证失败
+     */
+    fun verifyApkSignature(context: Context, apkFile: File): Boolean {
+        return try {
+            // 获取当前应用的签名
+            val currentSignature = getCurrentAppSignature(context)
+            if (currentSignature == null) {
+                Log.e(TAG, "无法获取当前应用签名")
+                return false
+            }
+
+            // 获取 APK 文件的签名
+            val packageManager = context.packageManager
+            val packageArchiveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageManager.getPackageArchiveInfo(
+                    apkFile.absolutePath,
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageArchiveInfo(
+                    apkFile.absolutePath,
+                    PackageManager.GET_SIGNATURES
+                )
+            }
+
+            val apkSignatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageArchiveInfo?.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageArchiveInfo?.signatures
+            }
+
+            val apkSignature = apkSignatures?.firstOrNull()?.let { signature ->
+                val certFactory = CertificateFactory.getInstance("X.509")
+                val cert = certFactory.generateCertificate(
+                    java.io.ByteArrayInputStream(signature.toByteArray())
+                ) as X509Certificate
+
+                val digest = MessageDigest.getInstance("SHA-256")
+                val certHash = digest.digest(cert.encoded)
+                certHash.joinToString("") { "%02x".format(it) }
+            }
+
+            if (apkSignature == null) {
+                Log.e(TAG, "无法获取 APK 文件签名")
+                return false
+            }
+
+            // 比较签名
+            val isValid = currentSignature.equals(apkSignature, ignoreCase = true)
+            if (isValid) {
+                Log.i(TAG, "APK 签名验证通过")
+            } else {
+                Log.e(TAG, "APK 签名验证失败：签名不匹配")
+                Log.e(TAG, "当前应用签名: $currentSignature")
+                Log.e(TAG, "APK 文件签名: $apkSignature")
+            }
+            isValid
+        } catch (e: Exception) {
+            Log.e(TAG, "验证 APK 签名时出错", e)
+            false
+        }
+    }
+
+    /**
+     * 安全安装 APK（带签名验证）
+     * @param context 上下文
+     * @param apkFile APK 文件
+     * @param skipSignatureVerify 是否跳过签名验证（仅用于调试）
+     * @return 是否成功启动安装
+     */
+    fun installApkSecurely(
+        context: Context,
+        apkFile: File,
+        skipSignatureVerify: Boolean = false
+    ): Boolean {
+        // 验证签名
+        if (!skipSignatureVerify) {
+            if (!verifyApkSignature(context, apkFile)) {
+                Log.e(TAG, "APK 签名验证失败，拒绝安装")
+                // 删除不安全的文件
+                apkFile.delete()
+                return false
+            }
+        } else {
+            Log.w(TAG, "跳过签名验证（调试模式）")
+        }
+
+        // 计算并记录文件哈希
+        val fileHash = calculateFileSha256(apkFile)
+        Log.i(TAG, "APK 文件 SHA-256: $fileHash")
+
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+                } else {
+                    Uri.fromFile(apkFile)
+                }
+
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+
+            if (intent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(intent)
+                Log.i(TAG, "已启动安装界面")
+                true
+            } else {
+                Log.e(TAG, "没有找到可以处理安装的应用")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "安装失败: ${e.message}", e)
+            false
+        }
+    }
 }
 
 /**
@@ -250,7 +445,11 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     }
 
                     if (apkFile != null && apkFile.exists()) {
-                        installApk(context, apkFile)
+                        // 使用带签名验证的安全安装
+                        val installSuccess = UpdateChecker.installApkSecurely(context, apkFile)
+                        if (!installSuccess) {
+                            Log.e("DownloadReceiver", "APK 安装失败：签名验证未通过或安装出错")
+                        }
                     } else {
                         Log.e("DownloadReceiver", "APK 文件不存在")
                     }
@@ -290,34 +489,4 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun installApk(context: Context, apkFile: File) {
-        try {
-            Log.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
-
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
-                } else {
-                    Uri.fromFile(apkFile)
-                }
-
-                setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-            }
-
-            // 检查是否有应用可以处理这个 intent
-            if (intent.resolveActivity(context.packageManager) != null) {
-                context.startActivity(intent)
-                Log.d("DownloadReceiver", "已启动安装界面")
-            } else {
-                Log.e("DownloadReceiver", "没有找到可以处理安装的应用")
-            }
-        } catch (e: Exception) {
-            Log.e("DownloadReceiver", "安装失败: ${e.message}", e)
-        }
-    }
 }
