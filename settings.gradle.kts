@@ -3,6 +3,9 @@ pluginManagement {
         // ===== 本地 Maven 仓库（优先级最高，沙箱内已下载的依赖）=====
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
 
+        // ===== 系统 Maven 仓库（Debian/Ubuntu 系统级依赖）=====
+        maven { url = uri("file:///usr/share/maven-repo") }
+
         // ===== 阿里云镜像（沙箱走代理后实测 10-20ms 极速响应）=====
         // gradle-plugin 子路径 → 插件（含 Kotlin / AGP）
         maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
@@ -32,6 +35,9 @@ dependencyResolutionManagement {
     repositories {
         // ===== 本地 Maven 仓库（优先级最高）=====
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+
+        // ===== 系统 Maven 仓库（Debian/Ubuntu 系统级依赖）=====
+        maven { url = uri("file:///usr/share/maven-repo") }
 
         // ===== 阿里云镜像（实测 10-20ms，优先使用）=====
         maven { url = uri("https://maven.aliyun.com/repository/google") }
