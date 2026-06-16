@@ -103,11 +103,26 @@
 -dontwarn com.google.android.gms.internal.**
 
 # ========================================
-# Ktor 客户端相关规则（精简）
+# Ktor 客户端相关规则（精简优化版）
 # ========================================
-# Ktor 内部使用反射，但大部分可以混淆
--keep class io.ktor.client.** { *; }
--keepclassmembers class io.ktor.client.** { *; }
+# 只保留必要的序列化/反射入口，大幅减小APK体积
+# 保留核心引擎和插件接口
+-keep class io.ktor.client.HttpClient { *; }
+-keep class io.ktor.client.engine.** { *; }
+-keep class io.ktor.client.plugins.** { *; }
+
+# 保留序列化相关类（用于JSON解析）
+-keepclassmembers class io.ktor.client.call.HttpClientCall {
+    public <methods>;
+}
+-keepclassmembers class io.ktor.client.statement.HttpResponse {
+    public <methods>;
+}
+
+# 保留内容协商插件（用于JSON序列化）
+-keep class io.ktor.serialization.kotlinx.json.** { *; }
+
+# 抑制警告
 -dontwarn io.ktor.**
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean

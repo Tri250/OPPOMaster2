@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
@@ -128,7 +129,7 @@ class OMasterApplication : Application() {
 
     /**
      * 应用终止时释放资源
-     * 释放 ML Kit FaceDetector 单例资源
+     * 释放 ML Kit FaceDetector 单例资源和 Ktor HttpClient
      */
     override fun onTerminate() {
         super.onTerminate()
@@ -137,6 +138,14 @@ class OMasterApplication : Application() {
             android.util.Log.i("OMasterApplication", "FaceDetectorSingleton 已释放")
         } catch (e: Exception) {
             android.util.Log.e("OMasterApplication", "释放 FaceDetectorSingleton 失败", e)
+        }
+
+        // 关闭 Ktor HttpClient，释放连接池和线程资源
+        try {
+            PresetRepository.getInstance(this).close()
+            android.util.Log.i("OMasterApplication", "PresetRepository HttpClient 已关闭")
+        } catch (e: Exception) {
+            android.util.Log.e("OMasterApplication", "关闭 PresetRepository HttpClient 失败", e)
         }
     }
 }

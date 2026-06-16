@@ -102,12 +102,23 @@ android {
                 keyPassword = finalKeyPassword!!
                 println("✅ Release 签名配置已加载: $finalStoreFile")
             } else {
-                // ⚠️ 未配置真实 Release 签名时，构建直接失败而非静默回退
-                // 防止 debug 签名的 APK 被误发布（任何人都能伪造升级包）
-                throw GradleException(
-                    "❌ Release 签名未配置！请在 gradle.properties 或 keystore-release.properties 中设置 RELEASE_* 变量。\n" +
-                    "开发调试请使用 debug 构建类型：./gradlew assembleDebug"
-                )
+                // CI 环境：使用 debug 签名回退，确保 CI 可以构建 release 包进行测试
+                // 生产发布时必须配置真实签名
+                val isCI = System.getenv("CI") == "true"
+                if (isCI) {
+                    println("⚠️ CI 环境检测到，Release 构建使用 debug 签名回退")
+                    storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                } else {
+                    // 本地开发：未配置签名时给出明确错误
+                    throw GradleException(
+                        "❌ Release 签名未配置！请在 gradle.properties 或 keystore-release.properties 中设置 RELEASE_* 变量。\n" +
+                        "开发调试请使用 debug 构建类型：./gradlew assembleDebug\n" +
+                        "CI 环境会自动使用 debug 签名回退。"
+                    )
+                }
             }
         }
     }

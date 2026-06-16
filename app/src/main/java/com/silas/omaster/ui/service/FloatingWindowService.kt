@@ -16,11 +16,11 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.WindowMetrics
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -52,14 +52,26 @@ class FloatingWindowService : Service() {
     private var params: WindowManager.LayoutParams? = null
     private var isExpanded = true
 
-    // 配色方案
-    private val primaryColor = Color.parseColor("#FF6B35")      // 品牌橙色
-    private val primaryDark = Color.parseColor("#E55A2B")       // 深橙色
+    // 配色方案 - 从 SettingsManager 动态读取主题色
+    private fun getPrimaryColor(context: Context): Int {
+        val theme = SettingsManager.getInstance(context).currentTheme
+        return theme.primaryColor.toInt()
+    }
+
+    private fun getPrimaryDarkColor(context: Context): Int {
+        val primary = getPrimaryColor(context)
+        // 将主题色变暗约10%
+        val r = (Color.red(primary) * 0.9).toInt().coerceIn(0, 255)
+        val g = (Color.green(primary) * 0.9).toInt().coerceIn(0, 255)
+        val b = (Color.blue(primary) * 0.9).toInt().coerceIn(0, 255)
+        return Color.rgb(r, g, b)
+    }
+
     private val cardBackground = Color.parseColor("#26FFFFFF")  // 卡片背景
     private val textPrimary = Color.parseColor("#FFFFFF")       // 主文字
     private val textSecondary = Color.parseColor("#B3FFFFFF")   // 次要文字
     private val textMuted = Color.parseColor("#80FFFFFF")       // 弱化文字
-    
+
     // 背景颜色根据设置动态计算
     private fun getBackgroundColor(context: Context): Int {
         val opacity = SettingsManager.getInstance(context).floatingWindowOpacity
@@ -528,7 +540,7 @@ class FloatingWindowService : Service() {
             // 外发光效果 - 品牌色外溢
             val glowView = View(context).apply {
                 layoutParams = FrameLayout.LayoutParams(size, size)
-                background = createGlowBackground()
+                background = createGlowBackground(context)
             }
 
             // 主按钮容器 - 圆形边框
@@ -608,10 +620,16 @@ class FloatingWindowService : Service() {
             val titleView = TextView(context).apply {
                 text = name
                 textSize = if (name.length > 8) 15f else 18f
+                val primary = getPrimaryColor(context)
+                val lighter = Color.rgb(
+                    (Color.red(primary) + 60).coerceAtMost(255),
+                    (Color.green(primary) + 60).coerceAtMost(255),
+                    (Color.blue(primary) + 60).coerceAtMost(255)
+                )
                 paint.shader = LinearGradient(
                     0f, 0f, 200f, 0f,
-                    primaryColor,
-                    Color.parseColor("#FFB347"),
+                    primary,
+                    lighter,
                     Shader.TileMode.CLAMP
                 )
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -694,8 +712,9 @@ class FloatingWindowService : Service() {
             setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
             background = GradientDrawable().apply {
                 cornerRadius = dpToPx(12).toFloat()
-                setColor(Color.parseColor("#20FF6B35"))
-                setStroke(dpToPx(1), Color.parseColor("#40FF6B35"))
+                val primary = getPrimaryColor(context)
+                setColor(Color.argb(32, Color.red(primary), Color.green(primary), Color.blue(primary)))
+                setStroke(dpToPx(1), Color.argb(64, Color.red(primary), Color.green(primary), Color.blue(primary)))
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -708,7 +727,7 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = icon
                 textSize = 16f
-                setTextColor(primaryColor)
+                setTextColor(getPrimaryColor(context))
             })
 
             addView(createSpacing(dpToPx(8)))
@@ -725,11 +744,12 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = value
                 textSize = 14f
-                setTextColor(primaryColor)
+                val primary = getPrimaryColor(context)
+                setTextColor(primary)
                 setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
                 background = GradientDrawable().apply {
                     cornerRadius = dpToPx(6).toFloat()
-                    setColor(Color.parseColor("#30FF6B35"))
+                    setColor(Color.argb(48, Color.red(primary), Color.green(primary), Color.blue(primary)))
                 }
                 // 设置 Tag 方便查找更新
                 if (valueTag != null) {
@@ -807,10 +827,12 @@ class FloatingWindowService : Service() {
     /**
      * 创建渐变圆形背景（收起按钮）
      */
-    private fun createGradientCircleBackground(): GradientDrawable {
+    private fun createGradientCircleBackground(context: Context): GradientDrawable {
+        val primary = getPrimaryColor(context)
+        val dark = getPrimaryDarkColor(context)
         return GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            colors = intArrayOf(primaryColor, primaryDark)
+            colors = intArrayOf(primary, dark)
             gradientType = GradientDrawable.RADIAL_GRADIENT
             gradientRadius = dpToPx(24).toFloat()
         }
@@ -819,12 +841,13 @@ class FloatingWindowService : Service() {
     /**
      * 创建外发光效果
      */
-    private fun createGlowBackground(): GradientDrawable {
+    private fun createGlowBackground(context: Context): GradientDrawable {
+        val primary = getPrimaryColor(context)
         return GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             colors = intArrayOf(
-                Color.parseColor("#40FF6B35"),
-                Color.parseColor("#20FF6B35"),
+                Color.argb(64, Color.red(primary), Color.green(primary), Color.blue(primary)),
+                Color.argb(32, Color.red(primary), Color.green(primary), Color.blue(primary)),
                 Color.TRANSPARENT
             )
             gradientType = GradientDrawable.RADIAL_GRADIENT
@@ -910,19 +933,25 @@ class FloatingWindowService : Service() {
                         if (kotlin.math.abs(dx) > clickThreshold || kotlin.math.abs(dy) > clickThreshold) {
                             isClick = false
                         }
-                        
-                        val metrics = DisplayMetrics()
-                        wm.defaultDisplay.getMetrics(metrics)
-                        
+
+                        // 使用 WindowMetrics API 替代废弃的 DisplayMetrics (API 30+)
+                        val screenHeight = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            val windowMetrics: WindowMetrics = wm.currentWindowMetrics
+                            windowMetrics.bounds.height()
+                        } else {
+                            @Suppress("DEPRECATION")
+                            wm.defaultDisplay.height
+                        }
+
                         pendingX = initialX + dx.toInt()
-                        
+
                         // 垂直方向限制，防止超出屏幕
                         val newY = initialY + dy.toInt()
-                        val maxY = metrics.heightPixels - (floatingView?.height ?: 0)
+                        val maxY = screenHeight - (floatingView?.height ?: 0)
                         pendingY = newY.coerceIn(0, maxY)
-                        
+
                         hasPendingUpdate = true
-                        
+
                         // Throttle: 限制 updateViewLayout 调用频率
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastUpdateTime >= updateIntervalMs) {
@@ -972,9 +1001,14 @@ class FloatingWindowService : Service() {
         val view = floatingView ?: return
         val p = params ?: return
         
-        val metrics = DisplayMetrics()
-        wm.defaultDisplay.getMetrics(metrics)
-        val screenWidth = metrics.widthPixels
+        // 使用 WindowMetrics API 替代废弃的 DisplayMetrics (API 30+)
+        val screenWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowMetrics: WindowMetrics = wm.currentWindowMetrics
+            windowMetrics.bounds.width()
+        } else {
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.width
+        }
         val viewWidth = view.width
 
         // 计算目标位置：左边(0)或右边(screenWidth - viewWidth)

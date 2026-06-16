@@ -1,6 +1,6 @@
 [versions]
 # ===== Android Gradle Plugin =====
-agp = "8.7.3"
+agp = "8.9.1"
 
 # ===== Kotlin =====
 kotlin = "2.1.20"

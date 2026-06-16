@@ -14,12 +14,16 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -93,41 +97,32 @@ class PresetRepository private constructor(context: Context) {
         }
     }
 
+    // 协程作用域用于结构化并发
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     init {
-        // 在后台线程初始化本地预设，避免阻塞主线程
-        // 优化：守护线程 + 指数退避重试 + 中断检测
-        Thread {
+        // 使用协程替代原始 Thread，实现结构化并发
+        // 优势：可取消、异常处理更完善、与生命周期更好绑定
+        repositoryScope.launch {
             var attempts = 0
             val maxAttempts = 3
             while (attempts < maxAttempts) {
                 try {
                     loadLocalPresets()
                     Log.i(TAG, "本地预设初始化完成: ${_presets.value.size} 条")
-                    return@Thread
-                } catch (e: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    return@Thread
+                    return@launch
                 } catch (e: Exception) {
                     attempts++
                     Log.e(TAG, "本地预设初始化失败 (尝试 $attempts/$maxAttempts)", e)
                     if (attempts < maxAttempts) {
-                        try {
-                            Thread.sleep(2000L * attempts)  // 指数退避
-                        } catch (ie: InterruptedException) {
-                            Thread.currentThread().interrupt()
-                            return@Thread
-                        }
+                        delay(2000L * attempts)  // 指数退避
                     } else {
                         Log.e(TAG, "本地预设初始化彻底失败,使用空列表")
                         _presets.value = emptyList()
                     }
                 }
             }
-        }.apply {
-            name = "PresetRepository-Init"
-            isDaemon = true
-            priority = Thread.MIN_PRIORITY  // 低优先级,不抢占主线程
-        }.start()
+        }
     }
 
     /**

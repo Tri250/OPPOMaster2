@@ -5,7 +5,7 @@
  * 所有版本号统一在 gradle/libs.versions.toml 中管理
  *
  * 关键版本约束：
- * - AGP (Android Gradle Plugin): 8.7.3
+ * - AGP (Android Gradle Plugin): 8.9.1
  * - Kotlin: 2.1.20
  * - Compose BOM: 2025.01.01
  * - Java: 17
