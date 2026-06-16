@@ -61,6 +61,13 @@ import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.ImageDownloadCallback
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import java.io.File
 
 /**
@@ -82,7 +89,7 @@ fun OMasterTopAppBar(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
                 subtitle?.let {
                     Text(
@@ -99,7 +106,7 @@ fun OMasterTopAppBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back),
-                        tint = Color.White
+                        tint = OnSurfacePrimary
                     )
                 }
             } ?: Box {}
@@ -107,7 +114,7 @@ fun OMasterTopAppBar(
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = PureBlack,
-            titleContentColor = Color.White
+            titleContentColor = OnSurfacePrimary
         ),
         modifier = modifier
     )
@@ -148,7 +155,7 @@ fun FeatureCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -156,7 +163,7 @@ fun FeatureCard(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = OnSurfacePrimary.copy(alpha = 0.7f)
                 )
             }
         }
@@ -179,14 +186,14 @@ fun ParameterItem(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f)
+            color = OnSurfaceSecondary0.6f)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = OnSurfacePrimary
         )
     }
 }
@@ -248,7 +255,7 @@ fun ModeBadge(
                 Text(
                     text = tag,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
+                    color = OnSurfacePrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -387,7 +394,7 @@ fun ParameterCard(
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 0.5.dp,
-            color = Color.White.copy(alpha = 0.08f)
+            color = OnSurfaceSecondary0.08f)
         )
     ) {
         Column(
@@ -399,14 +406,14 @@ fun ParameterCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f)
+                color = OnSurfaceSecondary0.6f)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
         }
     }
@@ -475,7 +482,7 @@ fun DescriptionCard(
                     Text(
                         text = line.trim(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = OnSurfacePrimary.copy(alpha = 0.9f),
                         lineHeight = 22.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))

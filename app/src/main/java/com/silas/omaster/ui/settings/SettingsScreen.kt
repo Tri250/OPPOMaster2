@@ -81,6 +81,10 @@ import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
@@ -207,7 +211,7 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = DividerColor)
 
             // Default Start Tab Setting
             SettingsClickableItem(
@@ -240,7 +244,7 @@ fun SettingsScreen(
                 onClick = { showDarkModeDialog = true }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = DividerColor)
 
             // Theme Setting
             SettingsClickableItem(
@@ -279,7 +283,7 @@ fun SettingsScreen(
                     Text(
                         text = stringResource(R.string.floating_window_opacity),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White
+                        color = OnSurfacePrimary
                     )
                     Text(
                         text = "$floatingWindowOpacity%",
@@ -318,12 +322,12 @@ fun SettingsScreen(
                     Text(
                         text = "30%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = OutlineVariant
                     )
                     Text(
                         text = "70%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = OutlineVariant
                     )
                 }
             }
@@ -352,7 +356,7 @@ fun SettingsScreen(
             )
 
             if (cloudSyncEnabled) {
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = DividerColor)
 
                 SettingsClickableItem(
                     icon = Icons.Default.Cloud,
@@ -365,7 +369,7 @@ fun SettingsScreen(
                     }
                 )
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = DividerColor)
 
                 val lastSyncText = if (lastSyncTime > 0) {
                     val diff = System.currentTimeMillis() - lastSyncTime
@@ -419,7 +423,7 @@ fun SettingsScreen(
                 onClick = { showChannelDialog = true }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = DividerColor)
 
             SettingsClickableItem(
                 icon = Icons.Default.Download,
@@ -451,7 +455,7 @@ fun SettingsScreen(
                 }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = DividerColor)
 
             SettingsClickableItem(
                 icon = Icons.Default.Notifications,
@@ -460,7 +464,7 @@ fun SettingsScreen(
                 onClick = { onNavigateToNotificationSettings?.invoke() }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = DividerColor)
 
             SettingsClickableItem(
                 icon = Icons.Default.Storage,
@@ -469,7 +473,7 @@ fun SettingsScreen(
                 onClick = { onNavigateToPresetSourceManager?.invoke() }
             )
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            HorizontalDivider(color = DividerColor)
 
             SettingsClickableItem(
                 icon = Icons.Default.Description,
@@ -530,7 +534,7 @@ fun SettingsScreen(
                     }
                 },
                 containerColor = DarkGray,
-                textContentColor = Color.White
+                textContentColor = OnSurfacePrimary
             )
         }
 
@@ -579,7 +583,7 @@ private fun SettingsSwitchItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White
+                color = OnSurfacePrimary
             )
         },
         supportingContent = subtitle?.let {
@@ -587,7 +591,7 @@ private fun SettingsSwitchItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = OutlineVariant
                 )
             }
         },
@@ -629,7 +633,7 @@ private fun SettingsClickableItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White
+                color = OnSurfacePrimary
             )
         },
         supportingContent = subtitle?.let {
@@ -637,7 +641,7 @@ private fun SettingsClickableItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
+                    color = OutlineVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -655,7 +659,7 @@ private fun SettingsClickableItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Color.Gray
+                tint = OutlineVariant
             )
         },
         modifier = Modifier.clickable(onClick = onClick),
@@ -702,7 +706,7 @@ fun ThemeSelectionDialog(
                             onClick = { onThemeSelected(theme) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = theme.primaryColor,
-                                unselectedColor = Color.Gray
+                                unselectedColor = OutlineVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -738,7 +742,7 @@ fun ThemeSelectionDialog(
             }
         },
         containerColor = DarkGray,
-        textContentColor = Color.White
+        textContentColor = OnSurfacePrimary
     )
 }
 
@@ -768,16 +772,16 @@ private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
                         Text(
                             text = source.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
+                            color = OnSurfacePrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = source.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = OnSurfacePrimary.copy(alpha = 0.7f)
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = DividerColor)
                 }
             }
         },
@@ -787,7 +791,7 @@ private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
             }
         },
         containerColor = DarkGray,
-        textContentColor = Color.White
+        textContentColor = OnSurfacePrimary
     )
 }
 
@@ -825,14 +829,14 @@ fun TabSelectionDialog(
                             onClick = { onTabSelected(index) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary,
-                                unselectedColor = Color.Gray
+                                unselectedColor = OutlineVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
                             text = name,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
+                            color = OnSurfacePrimary
                         )
                     }
                 }
@@ -844,7 +848,7 @@ fun TabSelectionDialog(
             }
         },
         containerColor = DarkGray,
-        textContentColor = Color.White
+        textContentColor = OnSurfacePrimary
     )
 }
 
@@ -879,7 +883,7 @@ fun UpdateChannelDialog(
                             onClick = { onChannelSelected(channel) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary,
-                                unselectedColor = Color.Gray
+                                unselectedColor = OutlineVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -887,7 +891,7 @@ fun UpdateChannelDialog(
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
+                                color = OnSurfacePrimary
                             )
                             Text(
                                 text = when (channel) {
@@ -895,7 +899,7 @@ fun UpdateChannelDialog(
                                     UpdateChannel.GITHUB -> "国际访问，国内可能需要代理"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = OutlineVariant
                             )
                         }
                     }
@@ -908,7 +912,7 @@ fun UpdateChannelDialog(
             }
         },
         containerColor = DarkGray,
-        textContentColor = Color.White
+        textContentColor = OnSurfacePrimary
     )
 }
 
@@ -945,7 +949,7 @@ fun DarkModeDialog(
                             onClick = { onModeSelected(mode) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary,
-                                unselectedColor = Color.Gray
+                                unselectedColor = OutlineVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -953,12 +957,12 @@ fun DarkModeDialog(
                             Text(
                                 text = name,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
+                                color = OnSurfacePrimary
                             )
                             Text(
                                 text = desc,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = OutlineVariant
                             )
                         }
                     }
@@ -971,6 +975,6 @@ fun DarkModeDialog(
             }
         },
         containerColor = DarkGray,
-        textContentColor = Color.White
+        textContentColor = OnSurfacePrimary
     )
 }

@@ -44,6 +44,13 @@ import coil.request.CachePolicy
 import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.util.ImageCacheManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -215,7 +222,7 @@ private fun GalleryNavigationButton(
             .size(40.dp),
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = DarkGray.copy(alpha = 0.7f),
-            contentColor = Color.White
+            contentColor = OnSurfacePrimary
         )
     ) {
         Icon(
@@ -250,7 +257,7 @@ private fun GalleryIndicators(
                         .size(if (isSelected) 8.dp else 6.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f)
+                            if (isSelected) MaterialTheme.colorScheme.primary else OnSurfaceTertiary
                         )
                 )
             if (index < pageCount - 1) {

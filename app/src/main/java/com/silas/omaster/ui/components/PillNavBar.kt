@@ -51,6 +51,13 @@ import com.silas.omaster.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 
 private val NavBarBackground = Color(0xFF1A1A1A)
 private val NavBarBorder = Color(0xFF2A2A2A)
@@ -90,8 +97,8 @@ fun PillNavBar(
                 .shadow(
                     elevation = 20.dp,
                     shape = RoundedCornerShape(32.dp),
-                    ambientColor = Color.Black.copy(alpha = 0.5f),
-                    spotColor = Color.Black.copy(alpha = 0.8f)
+                    ambientColor = OnSurfaceInverse,
+                    spotColor = OnSurfaceInverse.copy(alpha = 0.8f)
                 )
         ) {
             // 磨砂玻璃背景层 - 使用自适应宽度
@@ -119,9 +126,9 @@ fun PillNavBar(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.15f),
-                                Color.White.copy(alpha = 0.05f),
-                                Color.Transparent
+                                OnSurfaceSecondary.copy(alpha = 0.15f / 0.7f),
+                                OnSurfaceTertiary.copy(alpha = 0.05f / 0.5f),
+                                androidx.compose.ui.graphics.Color.Transparent
                             )
                         )
                     )
@@ -205,12 +212,12 @@ private fun NavItemButton(
 
     val backgroundColor = when {
         selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-        else -> Color.Transparent
+        else -> androidx.compose.ui.graphics.Color.Transparent
     }
 
     val contentColor = when {
         selected -> MaterialTheme.colorScheme.primary
-        else -> Color.White.copy(alpha = 0.5f)
+        else -> OnSurfaceTertiary
     }
 
     val iconScale by animateFloatAsState(

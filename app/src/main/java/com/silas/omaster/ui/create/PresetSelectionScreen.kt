@@ -27,6 +27,13 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.home.HomeViewModel
 import com.silas.omaster.ui.home.HomeViewModelFactory
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +90,7 @@ fun PresetSelectionScreen(
                 stringResource(R.string.or_choose_template),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = Color.Gray
+                color = OutlineVariant
             )
 
             // Option 2: Select from existing

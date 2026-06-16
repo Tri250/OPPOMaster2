@@ -14,7 +14,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
-import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.PureBlack
 
 /**
  * 主题设置页面
@@ -67,7 +72,7 @@ fun ThemeSettingsScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = OnSurfacePrimary)
                 }
             },
             actions = {
@@ -84,7 +89,7 @@ fun ThemeSettingsScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
 
@@ -98,7 +103,7 @@ fun ThemeSettingsScreen(
                 text = "品牌主题",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -120,7 +125,7 @@ fun ThemeSettingsScreen(
 
         Divider(
             modifier = Modifier.padding(horizontal = 16.dp),
-            color = Color.White.copy(alpha = 0.1f)
+            color = DividerColor
         )
 
         // 深色模式设置
@@ -133,7 +138,7 @@ fun ThemeSettingsScreen(
                 text = "深色模式",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -167,7 +172,7 @@ fun ThemeSettingsScreen(
                                     else -> Icons.Default.Settings
                                 },
                                 null,
-                                tint = if (darkMode == mode) Color.White else Color.White.copy(alpha = 0.6f)
+                                tint = if (darkMode == mode) OnSurfacePrimary else OnSurfaceSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -178,7 +183,7 @@ fun ThemeSettingsScreen(
                                     else -> mode
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (darkMode == mode) Color.White else Color.White.copy(alpha = 0.6f)
+                                color = if (darkMode == mode) OnSurfacePrimary else OnSurfaceSecondary
                             )
                         }
                     }
@@ -188,7 +193,7 @@ fun ThemeSettingsScreen(
 
         Divider(
             modifier = Modifier.padding(horizontal = 16.dp),
-            color = Color.White.copy(alpha = 0.1f)
+            color = DividerColor
         )
 
         // 自定义颜色
@@ -201,7 +206,7 @@ fun ThemeSettingsScreen(
                 text = "自定义强调色",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -230,7 +235,7 @@ fun ThemeSettingsScreen(
                             .background(color)
                             .border(
                                 2.dp,
-                                if (customColor == color) Color.White else Color.Transparent,
+                                if (customColor == color) OnSurfacePrimary else androidx.compose.ui.graphics.Color.Transparent,
                                 CircleShape
                             )
                             .clickable {
@@ -257,7 +262,7 @@ fun ThemeSettingsScreen(
                 Text(
                     text = "主题预览",
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = OnSurfaceSecondary
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -321,12 +326,12 @@ private fun ThemeOptionCard(
                         text = theme.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (selected) theme.color else Color.White
+                        color = if (selected) theme.color else OnSurfacePrimary
                     )
                     Text(
                         text = theme.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = OnSurfaceSecondary
                     )
                 }
             }

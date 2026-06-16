@@ -82,6 +82,13 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.LightGray
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
@@ -196,7 +203,7 @@ fun FeaturedPresetsScreen(
                     Text(
                         text = stringResource(R.string.clear_filter),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.Gray
+                        color = OutlineVariant
                     )
                 }
             }
@@ -280,12 +287,12 @@ private fun FeaturedHeader(
                 text = "精选推荐",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
             Text(
                 text = "大师级影像参数库",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = OnSurfaceTertiary
             )
         }
 
@@ -293,12 +300,12 @@ private fun FeaturedHeader(
 
         // 搜索按钮
         IconButton(onClick = onFilterClick) {
-            Icon(Icons.Default.Search, "搜索", tint = Color.White)
+            Icon(Icons.Default.Search, "搜索", tint = OnSurfacePrimary)
         }
 
         // 筛选按钮
         IconButton(onClick = onFilterClick) {
-            Icon(Icons.Default.FilterList, "筛选", tint = Color.White)
+            Icon(Icons.Default.FilterList, "筛选", tint = OnSurfacePrimary)
         }
     }
 }
@@ -321,7 +328,7 @@ private fun BrandFilterRow(
                 label = { Text("全部品牌") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange,
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = OnSurfacePrimary
                 )
             )
         }
@@ -333,7 +340,7 @@ private fun BrandFilterRow(
                 label = { Text(brands[index]) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange,
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = OnSurfacePrimary
                 )
             )
         }
@@ -359,7 +366,7 @@ private fun SceneFilterRow(
                 label = { Text("全部场景") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange.copy(alpha = 0.7f),
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = OnSurfacePrimary
                 )
             )
         }
@@ -371,7 +378,7 @@ private fun SceneFilterRow(
                 label = { Text(scenes[index]) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange.copy(alpha = 0.7f),
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = OnSurfacePrimary
                 )
             )
         }
@@ -435,7 +442,7 @@ private fun FeaturedPresetCard(
                             text = "NEW",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = OnSurfacePrimary
                         )
                     }
                 }
@@ -448,12 +455,12 @@ private fun FeaturedPresetCard(
                         .padding(4.dp)
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(OnSurfaceInverse)
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "收藏",
-                        tint = if (isFavorite) HasselbladOrange else Color.White
+                        tint = if (isFavorite) HasselbladOrange else OnSurfacePrimary
                     )
                 }
             }
@@ -466,7 +473,7 @@ private fun FeaturedPresetCard(
                     text = preset.name,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = OnSurfacePrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -541,19 +548,19 @@ private fun EmptyState(
         Icon(
             Icons.Default.Info,
             null,
-            tint = Color.Gray,
+            tint = OutlineVariant,
             modifier = Modifier.size(64.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.empty_no_featured),
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White
+            color = OnSurfacePrimary
         )
         Text(
             text = stringResource(R.string.empty_hint_filter),
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
+            color = OutlineVariant,
             modifier = Modifier.padding(top = 4.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -664,12 +671,12 @@ private fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color.White.copy(alpha = 0.05f),
+                color = OnSurfaceDisabled,
                 shape = RoundedCornerShape(24.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.1f),
+                color = DividerColor,
                 shape = RoundedCornerShape(24.dp)
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -681,7 +688,7 @@ private fun SearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "搜索",
-                tint = Color.White.copy(alpha = 0.4f),
+                tint = OnSurfaceTertiary,
                 modifier = Modifier.size(16.dp)
             )
             androidx.compose.foundation.text.BasicTextField(
@@ -689,7 +696,7 @@ private fun SearchBar(
                 onValueChange = onQueryChange,
                 singleLine = true,
                 textStyle = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.White
+                    color = OnSurfacePrimary
                 ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(HasselbladOrange),
                 modifier = Modifier.fillMaxWidth(),
@@ -698,7 +705,7 @@ private fun SearchBar(
                         Text(
                             text = "搜索精选预设...",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = OnSurfaceTertiary
                         )
                     }
                     innerTextField()
@@ -730,9 +737,9 @@ private fun LoadingMoreTip() {
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                Color.Transparent,
+                                androidx.compose.ui.graphics.Color.Transparent,
                                 HasselbladOrange.copy(alpha = 0.5f),
-                                Color.Transparent
+                                androidx.compose.ui.graphics.Color.Transparent
                             )
                         )
                     )
@@ -751,9 +758,9 @@ private fun LoadingMoreTip() {
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                Color.Transparent,
+                                androidx.compose.ui.graphics.Color.Transparent,
                                 HasselbladOrange.copy(alpha = 0.5f),
-                                Color.Transparent
+                                androidx.compose.ui.graphics.Color.Transparent
                             )
                         )
                     )

@@ -51,7 +51,20 @@ import com.silas.omaster.R
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.*
 import com.silas.omaster.ui.components.FilmRecommendationStrip
-import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.HasselbladOrangeDark
+import com.silas.omaster.ui.theme.HasselbladOrangeLight
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
+import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.ShareExportUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -276,7 +289,7 @@ fun AISceneRecognitionScreen(
                         onBack()
                     }
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White.copy(alpha = 0.8f))
+                    Icon(Icons.Default.ArrowBack, "返回", tint = OnSurfaceSecondary)
                 }
             },
             actions = {
@@ -292,7 +305,7 @@ fun AISceneRecognitionScreen(
                             }
                         }
                     }) {
-                        Icon(Icons.Default.Download, "导出", tint = Color.White.copy(alpha = 0.6f))
+                        Icon(Icons.Default.Download, "导出", tint = OnSurfaceSecondary)
                     }
                     IconButton(onClick = {
                         val result = analysisResult
@@ -408,7 +421,7 @@ fun AISceneRecognitionScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(stringResource(R.string.analysis_failed), color = Color.White.copy(alpha = 0.6f))
+                        Text(stringResource(R.string.analysis_failed), color = OnSurfaceSecondary)
                     }
                 }
             }
@@ -469,7 +482,7 @@ private fun CameraEntryScreen(
                     },
                     modifier = Modifier
                         .size(40.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        .background(OnSurfaceInverse, CircleShape)
                 ) {
                     Icon(
                         when (flashMode) {
@@ -480,7 +493,7 @@ private fun CameraEntryScreen(
                         null,
                         tint = when (flashMode) {
                             FlashMode.ON -> Color(0xFFFFB800)
-                            else -> Color.White.copy(alpha = 0.8f)
+                            else -> OnSurfaceSecondary
                         }
                     )
                 }
@@ -495,12 +508,12 @@ private fun CameraEntryScreen(
                     },
                     modifier = Modifier
                         .size(40.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        .background(OnSurfaceInverse, CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Refresh,
                         null,
-                        tint = Color.White.copy(alpha = 0.8f)
+                        tint = OnSurfaceSecondary
                     )
                 }
             }
@@ -512,7 +525,7 @@ private fun CameraEntryScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp)
                     .align(Alignment.BottomCenter),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.6f))
+                colors = CardDefaults.cardColors(containerColor = OnSurfaceInverse)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -527,14 +540,14 @@ private fun CameraEntryScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Camera, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Camera, null, tint = OnSurfacePrimary, modifier = Modifier.size(20.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(stringResource(R.string.ai_smart_shoot), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.ai_smart_shoot), color = OnSurfacePrimary, fontWeight = FontWeight.Bold)
                             Text(
                                 "拍摄后自动识别场景并匹配最佳参数",
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = OnSurfaceSecondary,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -555,7 +568,7 @@ private fun CameraEntryScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.scene_recognition_50plus), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.scene_recognition_50plus), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
                         }
                         
                         // 一键参数优化
@@ -567,7 +580,7 @@ private fun CameraEntryScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.one_click_optimize), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.one_click_optimize), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -579,7 +592,7 @@ private fun CameraEntryScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(128.dp)
-                .background(Color.Black.copy(alpha = 0.8f))
+                .background(PureBlack.copy(alpha = 0.8f))
         ) {
             Row(
                 modifier = Modifier
@@ -630,9 +643,9 @@ private fun CameraEntryScreen(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(DividerColor)
                 ) {
-                    Icon(Icons.Outlined.Image, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Outlined.Image, null, tint = OnSurfacePrimary, modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -787,7 +800,7 @@ private fun AnalyzingProgressScreen(
                     Icon(
                         Icons.Outlined.Image,
                         null,
-                        tint = Color.White.copy(alpha = 0.3f),
+                        tint = OnSurfaceDisabled,
                         modifier = Modifier.size(48.dp)
                     )
                     
@@ -795,7 +808,7 @@ private fun AnalyzingProgressScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .background(OnSurfaceInverse),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -805,7 +818,7 @@ private fun AnalyzingProgressScreen(
                                 strokeWidth = 3.dp
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(stringResource(R.string.ai_analyzing), color = Color.White, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.ai_analyzing), color = OnSurfacePrimary, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
@@ -829,7 +842,7 @@ private fun AnalyzingProgressScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+                    colors = CardDefaults.cardColors(containerColor = DividerColor)
                 ) {
                     Row(
                         modifier = Modifier
@@ -858,7 +871,7 @@ private fun AnalyzingProgressScreen(
                         // 步骤名称
                         Text(
                             step.name,
-                            color = Color.White,
+                            color = OnSurfacePrimary,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )
@@ -869,7 +882,7 @@ private fun AnalyzingProgressScreen(
                                 .width(80.dp)
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(Color.White.copy(alpha = 0.1f))
+                                .background(DividerColor)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -893,7 +906,7 @@ private fun AnalyzingProgressScreen(
         // 提示文字
         Text(
             "识别颜色 · 分析光线 · 匹配胶片",
-            color = Color.White.copy(alpha = 0.4f),
+            color = OnSurfaceDisabled,
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center
         )
@@ -997,7 +1010,7 @@ private fun HasselbladCompareSlider(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = DividerColor)
     ) {
         Box(
             modifier = Modifier
@@ -1019,10 +1032,10 @@ private fun HasselbladCompareSlider(
                     Icon(
                         Icons.Outlined.Image,
                         null,
-                        tint = Color.White.copy(alpha = 0.3f),
+                        tint = OnSurfaceDisabled,
                         modifier = Modifier.size(48.dp)
                     )
-                    Text(stringResource(R.string.processed), color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.processed), color = OnSurfaceTertiary, style = MaterialTheme.typography.labelSmall)
                 }
             }
 
@@ -1040,10 +1053,10 @@ private fun HasselbladCompareSlider(
                     Icon(
                         Icons.Outlined.Image,
                         null,
-                        tint = Color.White.copy(alpha = 0.2f),
+                        tint = OnSurfaceDisabled,
                         modifier = Modifier.size(48.dp)
                     )
-                    Text(stringResource(R.string.original), color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.original), color = OnSurfaceDisabled, style = MaterialTheme.typography.labelSmall)
                 }
             }
 
@@ -1052,8 +1065,8 @@ private fun HasselbladCompareSlider(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(2.dp)
-                    .background(Color.White)
-                    .align(Alignment.CenterStart)
+                    .background(OnSurfacePrimary)
+                        .align(Alignment.CenterStart)
                     .offset { IntOffset((sliderPosition * (containerWidth - 2.dp.toPx())).toInt(), 0) }
             )
 
@@ -1062,8 +1075,8 @@ private fun HasselbladCompareSlider(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
-                    .align(Alignment.CenterStart)
+                    .background(OnSurfacePrimary)
+                        .align(Alignment.CenterStart)
                     .offset { IntOffset((sliderPosition * (containerWidth - 32.dp.toPx())).toInt(), 0) }
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
@@ -1075,8 +1088,8 @@ private fun HasselbladCompareSlider(
                 contentAlignment = Alignment.Center
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.Black, modifier = Modifier.size(12.dp))
-                    Icon(Icons.Default.ArrowForward, null, tint = Color.Black, modifier = Modifier.size(12.dp))
+                    Icon(Icons.Default.ArrowBack, null, tint = OnSurfaceInverse, modifier = Modifier.size(12.dp))
+                        Icon(Icons.Default.ArrowForward, null, tint = OnSurfaceInverse, modifier = Modifier.size(12.dp))
                 }
             }
         }
@@ -1088,7 +1101,7 @@ private fun HasselbladCompareSlider(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(stringResource(R.string.before), color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.before), color = OnSurfaceTertiary, style = MaterialTheme.typography.labelSmall)
             Text(stringResource(R.string.after), color = HasselbladOrange, style = MaterialTheme.typography.labelSmall)
         }
     }
@@ -1104,15 +1117,15 @@ private fun RecognitionResultCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = DividerColor),
+                border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 标题
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.hasselblad_master_recognition), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.hasselblad_master_recognition), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1123,7 +1136,7 @@ private fun RecognitionResultCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     result.name,
-                    color = Color.White,
+                    color = OnSurfacePrimary,
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -1143,7 +1156,7 @@ private fun RecognitionResultCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
+                    .background(DividerColor)
             ) {
                 Box(
                     modifier = Modifier
@@ -1159,7 +1172,7 @@ private fun RecognitionResultCard(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-            Text(stringResource(R.string.auto_matched_params), color = Color.White.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.auto_matched_params), color = OnSurfaceTertiary, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -1175,14 +1188,14 @@ private fun HasselbladParamsDisplay(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = DividerColor),
+                border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Palette, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.hasselblad_master_params), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.hasselblad_master_params), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1206,7 +1219,7 @@ private fun HasselbladParamsDisplay(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(name, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                            Text(name, color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
                             Text(
                                 params.formatParamValue(value),
                                 color = HasselbladOrange,
@@ -1223,7 +1236,7 @@ private fun HasselbladParamsDisplay(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.param_vignette), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.param_vignette), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
                             Text(params.formatParamValue(params.vignette), color = HasselbladOrange, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -1263,7 +1276,7 @@ private fun ParamItem(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = DividerColor)
     ) {
         Row(
             modifier = Modifier
@@ -1271,10 +1284,10 @@ private fun ParamItem(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(name, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+            Text(name, color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             Text(
                 if (value >= 0) "+$value" else "$value",
-                color = Color.White,
+                color = OnSurfacePrimary,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium
             )
@@ -1292,14 +1305,14 @@ private fun MasterTipsCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = DividerColor),
+                border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lightbulb, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.master_tips_title), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.master_tips_title), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1313,7 +1326,7 @@ private fun MasterTipsCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         tip,
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = OnSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
                         lineHeight = MaterialTheme.typography.bodySmall.fontSize * 1.5
                     )
@@ -1335,7 +1348,7 @@ private fun RecognitionHistoryStrip(
     val haptic = LocalHapticFeedback.current
 
     Column {
-        Text(stringResource(R.string.recent_recognition), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.recent_recognition), color = OnSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
         Spacer(modifier = Modifier.height(8.dp))
         
         LazyRow(
@@ -1399,8 +1412,8 @@ private fun BottomActionBar(
                     onRetake()
                 }
             ) {
-                Icon(Icons.Default.Refresh, null, tint = Color.White.copy(alpha = 0.6f))
-                Text(stringResource(R.string.retake), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+                Icon(Icons.Default.Refresh, null, tint = OnSurfaceSecondary)
+                Text(stringResource(R.string.retake), color = OnSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
             }
 
             // 一键哈苏优化按钮
@@ -1412,13 +1425,13 @@ private fun BottomActionBar(
                 )
             ) {
                 if (isOptimized) {
-                    Icon(Icons.Default.Check, null, tint = Color.White)
+                    Icon(Icons.Default.Check, null, tint = OnSurfacePrimary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.apply_params), color = Color.White, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.apply_params), color = OnSurfacePrimary, fontWeight = FontWeight.Medium)
                 } else {
-                    Icon(Icons.Default.AutoAwesome, null, tint = Color.White)
+                    Icon(Icons.Default.AutoAwesome, null, tint = OnSurfacePrimary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.apply_params), color = Color.White, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.apply_params), color = OnSurfacePrimary, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -1435,11 +1448,11 @@ private fun BottomActionBar(
                 Icon(
                     if (saveSuccess) Icons.Default.Check else Icons.Default.Save,
                     null,
-                    tint = if (saveSuccess) SuccessGreen else Color.White.copy(alpha = 0.6f)
+                    tint = if (saveSuccess) SuccessGreen else OnSurfaceSecondary
                 )
                 Text(
                     if (saveSuccess) "已保存" else "保存配方",
-                    color = if (saveSuccess) SuccessGreen else Color.White.copy(alpha = 0.6f),
+                    color = if (saveSuccess) SuccessGreen else OnSurfaceSecondary,
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -1482,7 +1495,7 @@ private fun buildRecipeCardBitmap(
     canvas.drawColor(AndroidColor.parseColor("#0A0A0A"))
 
     val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.WHITE
+        color = AndroidColor.parseColor("#FFFFFFFF")
         textSize = 64f
         isFakeBoldText = true
     }

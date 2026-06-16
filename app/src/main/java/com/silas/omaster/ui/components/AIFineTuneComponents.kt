@@ -62,6 +62,13 @@ import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestion
 import com.silas.omaster.ai.ParamComparison
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
 
@@ -202,8 +209,8 @@ fun AIFineTuneDialog(
             }
         },
         containerColor = Color(0xFF1A1A1A),
-        titleContentColor = Color.White,
-        textContentColor = Color.White
+        titleContentColor = OnSurfacePrimary,
+        textContentColor = OnSurfacePrimary
     )
 }
 
@@ -223,13 +230,13 @@ private fun LoadingSection(progress: Float, text: String) {
             modifier = Modifier.size(64.dp),
             color = HasselbladOrange,
             strokeWidth = 4.dp,
-            trackColor = Color.Gray.copy(alpha = 0.3f)
+            trackColor = OutlineVariant.copy(alpha = 0.3f)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.8f)
+            color = OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f)
         )
         Spacer(modifier = Modifier.height(8.dp))
         LinearProgressIndicator(
@@ -239,13 +246,13 @@ private fun LoadingSection(progress: Float, text: String) {
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp)),
             color = HasselbladOrange,
-            trackColor = Color.Gray.copy(alpha = 0.3f)
+            trackColor = OutlineVariant.copy(alpha = 0.3f)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "基于基础预设派生建议参数",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
+            color = OutlineVariant
         )
     }
 }
@@ -275,12 +282,12 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
                 text = "来自: ${suggestion.basePresetName}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
             Text(
                 text = "${suggestion.suggestions.size} 项参数建议",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = OutlineVariant
             )
         }
     }
@@ -300,7 +307,7 @@ private fun ParamComparisonTable(
             text = "建议参数",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f)
+            color = OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f)
         )
 
         suggestions.forEach { param ->
@@ -331,8 +338,8 @@ private fun ParamComparisonRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .border(2.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-            .background(if (isSelected) HasselbladOrange.copy(alpha = 0.1f) else Color.Transparent)
+            .border(2.dp, DividerColor, RoundedCornerShape(8.dp))
+            .background(if (isSelected) HasselbladOrange.copy(alpha = 0.1f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable { onToggle() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -342,15 +349,15 @@ private fun ParamComparisonRow(
             modifier = Modifier
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(if (isSelected) HasselbladOrange else Color.Transparent)
-                .border(2.dp, if (isSelected) HasselbladOrange else Color.Gray, CircleShape),
+                .background(if (isSelected) HasselbladOrange else androidx.compose.ui.graphics.Color.Transparent)
+                .border(2.dp, if (isSelected) HasselbladOrange else OutlineVariant, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = OnSurfacePrimary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -362,7 +369,7 @@ private fun ParamComparisonRow(
         Text(
             text = param.displayName,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
+            color = OnSurfacePrimary,
             modifier = Modifier.weight(1f)
         )
 
@@ -372,7 +379,7 @@ private fun ParamComparisonRow(
                 Text(
                     text = "${param.currentValue}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = OutlineVariant
                 )
                 Icon(
                     imageVector = Icons.Default.Check,

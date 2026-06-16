@@ -80,6 +80,14 @@ import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.UpdateChannel
@@ -226,7 +234,7 @@ fun AboutScreen(
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = stringResource(R.string.nav_settings),
-                        tint = Color.White
+                        tint = OnSurfacePrimary
                     )
                 }
             }
@@ -293,7 +301,7 @@ private fun AppInfoCard(
                         colors = listOf(
                             currentTheme.primaryColor.copy(alpha = 0.2f),
                             currentTheme.primaryColor.copy(alpha = 0.1f),
-                            Color.Transparent
+                            androidx.compose.ui.graphics.Color.Transparent
                         )
                     )
                 )
@@ -322,7 +330,7 @@ private fun AppInfoCard(
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = OnSurfacePrimary,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -335,7 +343,7 @@ private fun AppInfoCard(
                         withStyle(style = SpanStyle(color = currentTheme.primaryColor)) {
                             append("O")
                         }
-                        withStyle(style = SpanStyle(color = Color.White)) {
+                        withStyle(style = SpanStyle(color = OnSurfacePrimary)) {
                             append("Master")
                         }
                     },
@@ -350,7 +358,7 @@ private fun AppInfoCard(
                 Text(
                     text = stringResource(R.string.app_slogan),
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = OnSurfaceTertiary,
                     letterSpacing = 0.5.sp
                 )
 
@@ -360,7 +368,7 @@ private fun AppInfoCard(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(OnSurfaceDisabled)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -368,7 +376,7 @@ private fun AppInfoCard(
                     Text(
                         text = stringResource(R.string.version_format, currentVersionName),
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = OnSurfacePrimary.copy(alpha = 0.7f)
                     )
                     Box(
                         modifier = Modifier
@@ -461,7 +469,7 @@ private fun SettingsListCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.05f)
+            containerColor = OnSurfaceDisabled
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -525,7 +533,7 @@ private fun SettingsListItem(
                 text = item.label,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.White
+                color = OnSurfacePrimary
             )
         }
         
@@ -537,13 +545,13 @@ private fun SettingsListItem(
                 Text(
                     text = item.value,
                     fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = OnSurfaceDisabled0.5f)
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.3f),
+                tint = OnSurfaceTertiary,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -552,7 +560,7 @@ private fun SettingsListItem(
     if (showDivider) {
         HorizontalDivider(
             modifier = Modifier.padding(start = 68.dp),
-            color = Color.White.copy(alpha = 0.05f)
+            color = OnSurfaceDisabled
         )
     }
 }
@@ -567,13 +575,13 @@ private fun DeveloperFooter() {
         Text(
             text = stringResource(R.string.developer_footer),
             fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.3f)
+            color = OnSurfaceDisabled0.3f)
         )
         
         Text(
             text = stringResource(R.string.copyright_footer),
             fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.2f)
+            color = OnSurfaceDisabled0.2f)
         )
     }
 }

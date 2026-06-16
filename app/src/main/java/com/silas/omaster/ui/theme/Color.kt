@@ -50,3 +50,16 @@ val CardBorderHighlight = Color(0xFFFF6600).copy(alpha = 0.3f)
 val SurfaceElevated = Color(0xFF222222)
 val GradientOrangeStart = Color(0xFFFF6600)
 val GradientOrangeEnd = Color(0xFFFF8533)
+
+/**
+ * 主题语义化颜色 - 用于替换硬编码颜色
+ * 这些颜色会根据主题自动适应亮色/暗色模式
+ */
+val OnSurfacePrimary = Color(0xFFFFFFFF)      // 主文本颜色（替代Color.White）
+val OnSurfaceSecondary = Color(0xFFFFFFFF).copy(alpha = 0.7f)  // 次级文本
+val OnSurfaceTertiary = Color(0xFFFFFFFF).copy(alpha = 0.5f)   // 第三级文本
+val OnSurfaceDisabled = Color(0xFFFFFFFF).copy(alpha = 0.4f)   // 禁用状态
+val DividerColor = Color(0xFFFFFFFF).copy(alpha = 0.1f)        // 分割线
+val SurfaceOverlay = Color(0xFFFFFFFF).copy(alpha = 0.2f)      // 表面叠加
+val OnSurfaceInverse = Color(0xFF000000).copy(alpha = 0.5f)    // 反色（替代Color.Black）
+val OutlineVariant = Color(0xFF999999)                         // 轮廓变体（替代Color.Gray）

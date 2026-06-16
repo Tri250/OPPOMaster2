@@ -69,7 +69,14 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.ui.theme.DividerColor
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
 
@@ -270,12 +277,12 @@ fun CoreFeaturesScreen(
                     text = "核心功能",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
                 Text(
-                    text = "点击进入功能操作界面",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f),
+                    text = "哈苏大师级影像体验",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceTertiary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -460,26 +467,28 @@ private fun SectionHeader(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
             Text(
-                text = description,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                text = feature.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurfaceTertiary
             )
         }
+    }
+}
         
         // 数量标签
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(DividerColor)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
                 text = count.toString(),
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = OnSurfaceTertiary
             )
         }
     }
@@ -519,7 +528,7 @@ private fun FeatureCard(
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
+            containerColor = androidx.compose.ui.graphics.Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -548,13 +557,13 @@ private fun FeatureCard(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = feature.icon,
-                            contentDescription = null,
-                            tint = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
+                            .background(DividerColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = if (isEnabled) OnSurfacePrimary else OnSurfaceTertiary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -565,10 +574,10 @@ private fun FeatureCard(
                             checked = isEnabled,
                             onCheckedChange = onToggle,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color.White.copy(alpha = 0.5f),
-                                uncheckedThumbColor = Color.Gray,
-                                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                checkedThumbColor = OnSurfacePrimary,
+                                checkedTrackColor = OnSurfaceTertiary,
+                                uncheckedThumbColor = OutlineVariant,
+                                uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)
                             )
                         )
                     } else {
@@ -579,7 +588,7 @@ private fun FeatureCard(
                                 .clip(CircleShape)
                                 .border(
                                     1.dp,
-                                    Color.White.copy(alpha = 0.3f),
+                                    OnSurfaceDisabled,
                                     CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -587,7 +596,7 @@ private fun FeatureCard(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.7f),
+                                tint = OnSurfaceSecondary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -601,12 +610,12 @@ private fun FeatureCard(
                     text = feature.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f)
+                    color = if (isEnabled) OnSurfacePrimary else OnSurfaceSecondary
                 )
                 Text(
                     text = feature.subtitle,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isEnabled) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f),
+                    color = if (isEnabled) OnSurfaceSecondary else OnSurfaceDisabled,
                     modifier = Modifier.padding(top = 2.dp)
                 )
                 
@@ -617,7 +626,7 @@ private fun FeatureCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(DividerColor)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     
@@ -625,7 +634,7 @@ private fun FeatureCard(
                     Text(
                         text = feature.description.desc,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = OnSurfaceTertiary
                     )
                     
                     // 标签列表 - 同步Web端tips样式
@@ -639,13 +648,13 @@ private fun FeatureCard(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(50))
-                                        .background(Color.White.copy(alpha = 0.1f))
+                                        .background(DividerColor)
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = tip,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.7f)
+                                        color = OnSurfaceSecondary
                                     )
                                 }
                             }

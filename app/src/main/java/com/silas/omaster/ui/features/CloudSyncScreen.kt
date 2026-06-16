@@ -24,6 +24,12 @@ import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.LightGray
 import com.silas.omaster.ui.theme.MediumGray
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
@@ -118,7 +124,7 @@ fun CloudSyncScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
 
@@ -152,15 +158,15 @@ fun CloudSyncScreen(
                                 else -> if (lastSyncTimestamp > 0) "自动同步已开启" else "尚未同步"
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = OnSurfaceSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Schedule, null, tint = OnSurfaceTertiary, modifier = Modifier.size(14.dp))
                             Text(
                                 text = "最后同步：$lastSyncTimeText",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = OnSurfaceTertiary,
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -182,7 +188,7 @@ fun CloudSyncScreen(
                             if (isSyncing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = Color.White,
+                                    color = OnSurfacePrimary,
                                     strokeWidth = 2.dp
                                 )
                             } else {
@@ -202,7 +208,7 @@ fun CloudSyncScreen(
                         text = "云服务提供商",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = OnSurfacePrimary
                     )
                 }
 
@@ -217,13 +223,13 @@ fun CloudSyncScreen(
 
             // 同步内容
             item {
-                Text(
-                    text = "同步内容",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
+                    Text(
+                        text = "同步内容",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OnSurfacePrimary
+                    )
+                }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -235,13 +241,13 @@ fun CloudSyncScreen(
 
             // 同步特性
             item {
-                Text(
-                    text = "同步特性",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
+                    Text(
+                        text = "同步特性",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OnSurfacePrimary
+                    )
+                }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -313,7 +319,7 @@ private fun ProviderCard(provider: ProviderInfo) {
                         text = "${provider.name} Cloud",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = OnSurfacePrimary
                     )
                     Text(
                         text = if (provider.connected) "已连接" else "未连接",
@@ -364,12 +370,12 @@ private fun SyncItemCard(item: SyncItem) {
                         text = item.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = OnSurfacePrimary
                     )
                     Text(
                         text = if (item.count > 0) "最后同步：${item.lastSync} (${item.count}条)" else "最后同步：${item.lastSync}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = OnSurfaceTertiary
                     )
                 }
             }
@@ -385,7 +391,7 @@ private fun SyncItemCard(item: SyncItem) {
                     modifier = Modifier
                         .size(24.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White),
+                        .background(OnSurfacePrimary),
                 )
             }
         }
@@ -422,12 +428,12 @@ private fun FeatureCard(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = OnSurfaceSecondary
                 )
             }
         }

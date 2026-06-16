@@ -25,6 +25,13 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -257,7 +264,7 @@ fun HasselbladApertureAnimation(
                 modifier = Modifier
                     .size(128.dp)
                     .clip(CircleShape)
-                    .background(Color.Transparent)
+                    .background(androidx.compose.ui.graphics.Color.Transparent)
                     .then(
                         Modifier.drawBehind {
                             drawCircle(
@@ -293,7 +300,7 @@ fun HasselbladApertureAnimation(
         // 当前状态文字
         Text(
             text = currentMessage,
-            color = Color.White.copy(alpha = 0.7f),
+            color = OnSurfaceSecondary,
             fontSize = 14.sp
         )
 
@@ -305,7 +312,7 @@ fun HasselbladApertureAnimation(
                 .fillMaxWidth(0.8f)
                 .height(8.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(DividerColor)
         ) {
             Box(
                 modifier = Modifier
@@ -332,7 +339,7 @@ fun HasselbladApertureAnimation(
         ) {
             Text(
                 text = "分析进度",
-                color = Color.White.copy(alpha = 0.4f),
+                color = OnSurfaceDisabled,
                 fontSize = 12.sp
             )
             Text(
@@ -360,7 +367,7 @@ fun HasselbladApertureAnimation(
         // 底部品牌标识
         Text(
             text = "HNCS · HASSELBLAD NATURAL COLOR SOLUTION",
-            color = Color.White.copy(alpha = 0.3f),
+            color = OnSurfaceTertiary.copy(alpha = 0.3f / 0.5f),
             fontSize = 10.sp,
             letterSpacing = 2.sp
         )
@@ -432,14 +439,14 @@ private fun ApertureBlades(
 private fun AnalysisStepItem(step: AnalysisStep) {
     val backgroundColor = when (step.status) {
         AnalysisStatus.COMPLETED -> HasselbladOrange.copy(alpha = 0.1f)
-        AnalysisStatus.PROCESSING -> Color.White.copy(alpha = 0.05f)
-        AnalysisStatus.PENDING -> Color.Transparent
+        AnalysisStatus.PROCESSING -> OnSurfaceTertiary.copy(alpha = 0.05f / 0.5f)
+        AnalysisStatus.PENDING -> androidx.compose.ui.graphics.Color.Transparent
     }
 
     val textColor = when (step.status) {
         AnalysisStatus.COMPLETED -> HasselbladOrange
-        AnalysisStatus.PROCESSING -> Color.White.copy(alpha = 0.8f)
-        AnalysisStatus.PENDING -> Color.White.copy(alpha = 0.4f)
+        AnalysisStatus.PROCESSING -> OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f)
+        AnalysisStatus.PENDING -> OnSurfaceDisabled
     }
 
     Row(
@@ -474,11 +481,11 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                     modifier = Modifier
                         .size(16.dp)
                         .clip(CircleShape)
-                        .background(Color.Transparent)
+                        .background(androidx.compose.ui.graphics.Color.Transparent)
                         .then(
                             Modifier.drawBehind {
                                 drawCircle(
-                                    color = Color.White.copy(alpha = 0.2f),
+                                    color = OnSurfaceDisabled.copy(alpha = 0.2f / 0.4f),
                                     radius = size.minDimension / 2,
                                     style = Stroke(width = 1.dp.toPx())
                                 )

@@ -37,6 +37,13 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.silas.omaster.model.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import kotlinx.coroutines.launch
 
 /**
@@ -107,7 +114,7 @@ fun BeforeAfterSlider(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(2.dp)
-                .background(Color.White)
+                .background(OnSurfacePrimary)
                 .offset(x = with(LocalDensity.current) { (componentWidth * sliderPosition).toDp() - 1.dp })
         )
 
@@ -119,7 +126,7 @@ fun BeforeAfterSlider(
                     x = with(LocalDensity.current) { (componentWidth * sliderPosition).toDp() - 24.dp },
                     y = with(LocalDensity.current) { ((componentWidth * 3 / 4) / 2).toDp() - 24.dp }
                 )
-                .background(Color.White, CircleShape)
+                .background(OnSurfacePrimary, CircleShape)
                 .border(2.dp, HasselbladOrange, CircleShape),
             contentAlignment = Alignment.Center
         ) {
@@ -154,15 +161,15 @@ fun BeforeAfterSlider(
             Text(
                 text = "原图",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White,
+                color = OnSurfacePrimary,
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                    .background(OnSurfaceInverse.copy(alpha = 0.6f / 0.5f), RoundedCornerShape(4.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )
             Text(
                 text = "大师调色",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White,
+                color = OnSurfacePrimary,
                 modifier = Modifier
                     .background(HasselbladOrange.copy(alpha = 0.8f), RoundedCornerShape(4.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -187,7 +194,7 @@ fun HNCSWatermark(
 
     Box(
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+            .background(OnSurfaceInverse.copy(alpha = 0.7f / 0.5f), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -204,7 +211,7 @@ fun HNCSWatermark(
                 style = TextStyle(
                     fontSize = if (style == WatermarkStyle.FULL) 8.sp else 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = OnSurfacePrimary,
                     letterSpacing = 1.sp,
                     lineHeight = 10.sp
                 ),
@@ -235,7 +242,7 @@ fun FilmRecipePreviewBar(
         Text(
             text = "胶片配方",
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
+            color = OnSurfacePrimary,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
@@ -261,7 +268,7 @@ private fun FilmRecipeItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.2f)
+    val borderColor = if (isSelected) HasselbladOrange else OnSurfaceSecondary.copy(alpha = 0.2f / 0.7f)
     val backgroundColor = if (isSelected) HasselbladOrange.copy(alpha = 0.1f) else DarkGray
 
     Column(
@@ -278,7 +285,7 @@ private fun FilmRecipeItem(
         Text(
             text = film.series.displayName.firstOrNull()?.toString() ?: "",
             style = MaterialTheme.typography.headlineMedium,
-            color = if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.6f),
+            color = if (isSelected) HasselbladOrange else OnSurfaceSecondary.copy(alpha = 0.6f / 0.7f),
             fontWeight = FontWeight.Bold
         )
 
@@ -288,7 +295,7 @@ private fun FilmRecipeItem(
         Text(
             text = film.series.displayName,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.5f)
+            color = OnSurfaceTertiary
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -326,7 +333,7 @@ fun XPANAspectRatioIndicator(
 
     Box(
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(4.dp))
+            .background(OnSurfaceInverse.copy(alpha = 0.8f / 0.5f), RoundedCornerShape(4.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Row(
@@ -406,7 +413,7 @@ fun MasterParamCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = OnSurfaceSecondary
                 )
                 Text(
                     text = value,
@@ -420,7 +427,7 @@ fun MasterParamCard(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = OnSurfaceTertiary
                 )
             }
         }
@@ -529,13 +536,13 @@ private fun SceneBadge(
 ) {
     val backgroundColor = when {
         isPrimary -> HasselbladOrange.copy(alpha = 0.2f)
-        isFine -> Color.White.copy(alpha = 0.05f)
-        else -> Color.White.copy(alpha = 0.1f)
+        isFine -> OnSurfaceTertiary.copy(alpha = 0.05f / 0.5f)
+        else -> OnSurfaceSecondary.copy(alpha = 0.1f / 0.7f)
     }
 
     val textColor = when {
         isPrimary -> HasselbladOrange
-        else -> Color.White.copy(alpha = 0.8f)
+        else -> OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f)
     }
 
     Row(
@@ -584,7 +591,7 @@ fun ConfidenceIndicator(
             modifier = Modifier
                 .width(60.dp)
                 .height(4.dp)
-                .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
+                .background(OnSurfaceDisabled.copy(alpha = 0.2f / 0.4f), RoundedCornerShape(2.dp))
         ) {
             Box(
                 modifier = Modifier

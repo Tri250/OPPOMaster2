@@ -16,6 +16,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 
 /**
  * 参数精细调节页面
@@ -75,7 +82,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = OnSurfacePrimary)
                 }
             },
             actions = {
@@ -90,7 +97,7 @@ fun ParamAdjustScreen(
                     exposureCompensation = 0f
                     selectedPreset = null
                 }) {
-                    Icon(Icons.Default.Refresh, "重置", tint = Color.White)
+                    Icon(Icons.Default.Refresh, "重置", tint = OnSurfacePrimary)
                 }
                 // 应用按钮
                 IconButton(onClick = {
@@ -109,7 +116,7 @@ fun ParamAdjustScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
 
@@ -301,7 +308,7 @@ private fun ParamPresetChip(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) Color.White else Color.White.copy(alpha = 0.7f)
+            color = if (selected) OnSurfacePrimary else OnSurfaceSecondary
         )
     }
 }
@@ -341,7 +348,7 @@ private fun ParamSliderCard(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = OnSurfaceTertiary
                     )
                 }
 
@@ -425,7 +432,7 @@ private fun ParamSliderCard(
                             Text(
                                 text = option,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = OnSurfaceSecondary
                             )
                         }
                     }
@@ -441,7 +448,7 @@ private fun ParamSummaryItem(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f)
+            color = OnSurfaceTertiary
         )
         Text(
             text = value,

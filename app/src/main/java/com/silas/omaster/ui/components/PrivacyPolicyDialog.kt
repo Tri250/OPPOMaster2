@@ -22,6 +22,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.NearBlack
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 
 @Composable
 fun PrivacyPolicyDialog(
@@ -53,7 +60,7 @@ fun PrivacyPolicyDialog(
                         text = stringResource(R.string.privacy_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = OnSurfacePrimary
                     )
                 }
 
@@ -68,7 +75,7 @@ fun PrivacyPolicyDialog(
                         .padding(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
+                        contentColor = OnSurfacePrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {

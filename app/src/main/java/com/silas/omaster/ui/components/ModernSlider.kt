@@ -27,6 +27,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.util.perform
 
 /**
@@ -55,7 +62,7 @@ fun ModernSlider(
         ) {
             Text(
                 text = label,
-                color = Color.White.copy(alpha = 0.7f),
+                color = OnSurfaceSecondary,
                 fontSize = 14.sp
             )
             Surface(
@@ -86,8 +93,8 @@ fun ModernSlider(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = DarkGray.copy(alpha = 0.5f),
-                activeTickColor = Color.Transparent,
-                inactiveTickColor = Color.Transparent
+                activeTickColor = androidx.compose.ui.graphics.Color.Transparent,
+                inactiveTickColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             modifier = Modifier.height(24.dp)
         )
@@ -116,7 +123,7 @@ fun ModernSliderWithStep(
         ) {
             Text(
                 text = label,
-                color = Color.White.copy(alpha = 0.7f),
+                color = OnSurfaceSecondary,
                 fontSize = 14.sp
             )
             Surface(
@@ -142,8 +149,8 @@ fun ModernSliderWithStep(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = DarkGray.copy(alpha = 0.5f),
-                activeTickColor = Color.Transparent,
-                inactiveTickColor = Color.Transparent
+                activeTickColor = androidx.compose.ui.graphics.Color.Transparent,
+                inactiveTickColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             modifier = Modifier.height(24.dp)
         )

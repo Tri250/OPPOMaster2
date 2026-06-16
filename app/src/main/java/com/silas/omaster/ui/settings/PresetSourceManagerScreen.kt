@@ -20,9 +20,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.DividerColor
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.MediumGray
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.perform
@@ -97,19 +104,19 @@ fun PresetSourceManagerScreen(
                 }) {
                     Icon(
                         Icons.Default.Refresh, "刷新",
-                        tint = if (isLoading) HasselbladOrange else Color.White
+                        tint = if (isLoading) HasselbladOrange else OnSurfacePrimary
                     )
                 }
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     showAddDialog = true
                 }) {
-                    Icon(Icons.Default.Add, "添加", tint = Color.White)
+                    Icon(Icons.Default.Add, "添加", tint = OnSurfacePrimary)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
         
@@ -137,7 +144,7 @@ fun PresetSourceManagerScreen(
                     Text(
                         text = "已启用",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = OnSurfaceSecondary
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -145,12 +152,12 @@ fun PresetSourceManagerScreen(
                         text = "${sources.size}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = OnSurfacePrimary
                     )
                     Text(
                         text = "预设源",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = OnSurfaceSecondary
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -163,7 +170,7 @@ fun PresetSourceManagerScreen(
                     Text(
                         text = "已加载预设",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = OnSurfaceSecondary
                     )
                 }
             }
@@ -251,13 +258,13 @@ private fun PresetSourceCard(
                 OutlinedTextField(
                     value = editName,
                     onValueChange = { editName = it },
-                    label = { Text("名称", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("名称", color = OnSurfaceSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = OnSurfacePrimary,
+                        unfocusedTextColor = OnSurfacePrimary,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = OnSurfaceTertiary,
                         cursorColor = HasselbladOrange
                     ),
                     singleLine = true
@@ -266,13 +273,13 @@ private fun PresetSourceCard(
                 OutlinedTextField(
                     value = editUrl,
                     onValueChange = { editUrl = it },
-                    label = { Text("URL", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("URL", color = OnSurfaceSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = OnSurfacePrimary,
+                        unfocusedTextColor = OnSurfacePrimary,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = OnSurfaceTertiary,
                         cursorColor = HasselbladOrange
                     ),
                     singleLine = true,
@@ -284,7 +291,7 @@ private fun PresetSourceCard(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onCancel) {
-                        Text("取消", color = Color.White.copy(alpha = 0.6f))
+                        Text("取消", color = OnSurfaceSecondary)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -305,12 +312,12 @@ private fun PresetSourceCard(
                             text = source.name,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = OnSurfacePrimary
                         )
                         Text(
                             text = source.url,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = OnSurfaceTertiary,
                             maxLines = 1
                         )
                     }
@@ -320,10 +327,10 @@ private fun PresetSourceCard(
                         checked = source.enabled,
                         onCheckedChange = onToggle,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = OnSurfacePrimary,
                             checkedTrackColor = SuccessGreen,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                            uncheckedThumbColor = OutlineVariant,
+                            uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)
                         )
                     )
                 }
@@ -338,7 +345,7 @@ private fun PresetSourceCard(
                     IconButton(onClick = onEdit) {
                         Icon(
                             Icons.Default.Edit, "编辑",
-                            tint = Color.White.copy(alpha = 0.6f)
+                            tint = OnSurfaceSecondary
                         )
                     }
                     IconButton(onClick = onDelete) {
@@ -365,20 +372,20 @@ private fun AddSourceDialog(
         onDismissRequest = onDismiss,
         containerColor = MediumGray,
         title = {
-            Text("添加预设源", color = Color.White)
+            Text("添加预设源", color = OnSurfacePrimary)
         },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("名称", color = OnSurfaceSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = OnSurfacePrimary,
+                        unfocusedTextColor = OnSurfacePrimary,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        unfocusedBorderColor = OnSurfaceTertiary
                     ),
                     singleLine = true
                 )
@@ -386,13 +393,13 @@ private fun AddSourceDialog(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL", color = Color.White.copy(alpha = 0.6f)) },
+                    label = { Text("URL", color = OnSurfaceSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = OnSurfacePrimary,
+                        unfocusedTextColor = OnSurfacePrimary,
                         focusedBorderColor = HasselbladOrange,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        unfocusedBorderColor = OnSurfaceTertiary
                     ),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
@@ -410,7 +417,7 @@ private fun AddSourceDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消", color = Color.White.copy(alpha = 0.6f))
+                Text("取消", color = OnSurfaceSecondary)
             }
         }
     )

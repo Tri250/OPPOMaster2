@@ -17,6 +17,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
 
@@ -59,7 +63,7 @@ fun NotificationSettingsScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
 
@@ -95,12 +99,12 @@ fun NotificationSettingsScreen(
                                     text = "接收推送通知",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
+                                    color = OnSurfacePrimary
                                 )
                                 Text(
                                     text = "开启后接收重要通知",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.6f)
+                                    color = OnSurfacePrimary.copy(alpha = 0.6f)
                                 )
                             }
                         }
@@ -108,10 +112,10 @@ fun NotificationSettingsScreen(
                             checked = true,
                             onCheckedChange = {},
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
+                                checkedThumbColor = OnSurfacePrimary,
                                 checkedTrackColor = HasselbladOrange,
-                                uncheckedThumbColor = Color.Gray,
-                                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                uncheckedThumbColor = OutlineVariant,
+                                uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)
                             )
                         )
                     }
@@ -124,7 +128,7 @@ fun NotificationSettingsScreen(
                     text = "通知类型",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
             }
 
@@ -147,7 +151,7 @@ fun NotificationSettingsScreen(
                     text = "免打扰设置",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
             }
 
@@ -174,17 +178,17 @@ fun NotificationSettingsScreen(
                                 Text(
                                     text = "夜间免打扰",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White
+                                    color = OnSurfacePrimary
                                 )
                             }
                             Switch(
                                 checked = false,
                                 onCheckedChange = {},
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
+                                    checkedThumbColor = OnSurfacePrimary,
                                     checkedTrackColor = Color(0xFF9C27B0),
-                                    uncheckedThumbColor = Color.Gray,
-                                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                    uncheckedThumbColor = OutlineVariant,
+                                    uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)
                                 )
                             )
                         }
@@ -199,12 +203,12 @@ fun NotificationSettingsScreen(
                             Text(
                                 text = "免打扰时段",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = OnSurfacePrimary.copy(alpha = 0.7f)
                             )
                             Text(
                                 text = "22:00 - 08:00",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
+                                color = OnSurfacePrimary
                             )
                         }
                     }
@@ -249,12 +253,12 @@ private fun NotificationSettingCard(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = OnSurfaceTertiary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -263,10 +267,10 @@ private fun NotificationSettingCard(
                 checked = isEnabled,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
+                    checkedThumbColor = OnSurfacePrimary,
                     checkedTrackColor = HasselbladOrange,
-                    uncheckedThumbColor = Color.Gray,
-                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                    uncheckedThumbColor = OutlineVariant,
+                    uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)
                 )
             )
         }

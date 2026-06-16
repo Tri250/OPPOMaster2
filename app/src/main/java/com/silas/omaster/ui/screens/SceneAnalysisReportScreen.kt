@@ -24,6 +24,13 @@ import androidx.core.app.ShareCompat
 import com.silas.omaster.data.local.RecipeHistoryManager
 import com.silas.omaster.data.local.RecipeRecord
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -211,7 +218,7 @@ fun SceneAnalysisReportScreen(
                 title = {
                     Text(
                         text = "拍摄分析报告",
-                        color = Color.White,
+                        color = OnSurfacePrimary,
                         fontWeight = FontWeight.Medium
                     )
                 },
@@ -220,7 +227,7 @@ fun SceneAnalysisReportScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = Color.White.copy(alpha = 0.8f)
+                            tint = OnSurfaceSecondary
                         )
                     }
                 },
@@ -255,7 +262,7 @@ fun SceneAnalysisReportScreen(
                             }
                         }
                     }) {
-                        Icon(Icons.Default.Download, "导出", tint = Color.White.copy(alpha = 0.6f))
+                        Icon(Icons.Default.Download, "导出", tint = OnSurfaceTertiary)
                     }
                     IconButton(onClick = {
                         // 分享报告文本
@@ -290,8 +297,8 @@ fun SceneAnalysisReportScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "正在分析你的拍摄数据...",
-                        color = Color.White.copy(alpha = 0.6f),
+                      text = "正在分析你的拍摄数据...",
+                        color = OnSurfaceTertiary,
                         fontSize = 14.sp
                     )
                 }
@@ -355,9 +362,9 @@ fun SceneAnalysisReportScreen(
                         shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                     ) {
-                        Icon(Icons.Default.Visibility, null, tint = Color.White)
+                        Icon(Icons.Default.Visibility, null, tint = OnSurfacePrimary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("查看详细数据", color = Color.White, fontWeight = FontWeight.Medium)
+                        Text("查看详细数据", color = OnSurfacePrimary, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -381,12 +388,12 @@ private fun TimeRangeChip(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.05f)
+            containerColor = if (isSelected) HasselbladOrange else OnSurfaceDisabled
         )
     ) {
         Text(
             text = label,
-            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+            color = if (isSelected) OnSurfacePrimary else OnSurfaceTertiary,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -449,8 +456,8 @@ private fun OverviewCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = OnSurfaceDisabled),
+        border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -459,10 +466,10 @@ private fun OverviewCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = HasselbladOrange, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(label, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                Text(label, color = OnSurfaceTertiary, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(value, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(value, color = OnSurfacePrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -475,11 +482,11 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = OnSurfaceDisabled),
+        border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("拍摄偏好", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text("拍摄偏好", color = OnSurfaceSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -487,8 +494,8 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("最爱场景", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                Text(habits.favoriteScene, color = Color.White, fontSize = 14.sp)
+                Text("最爱场景", color = OnSurfaceTertiary, fontSize = 12.sp)
+                Text(habits.favoriteScene, color = OnSurfacePrimary, fontSize = 14.sp)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -497,8 +504,8 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("最爱胶片", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                Text(habits.favoriteFilm, color = Color.White, fontSize = 14.sp)
+                Text("最爱胶片", color = OnSurfaceTertiary, fontSize = 12.sp)
+                Text(habits.favoriteFilm, color = OnSurfacePrimary, fontSize = 14.sp)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -507,8 +514,8 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("最后拍摄", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-                Text(habits.lastShootDate, color = Color.White, fontSize = 14.sp)
+                Text("最后拍摄", color = OnSurfaceTertiary, fontSize = 12.sp)
+                Text(habits.lastShootDate, color = OnSurfacePrimary, fontSize = 14.sp)
             }
         }
     }
@@ -522,14 +529,14 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = OnSurfaceDisabled),
+        border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Camera, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("场景分布", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("场景分布", color = OnSurfaceSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -542,7 +549,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                     ) {
                         Text(
                             scene.name,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = OnSurfaceSecondary,
                             fontSize = 12.sp,
                             modifier = Modifier.width(48.dp)
                         )
@@ -552,7 +559,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                                 .weight(1f)
                                 .height(24.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(OnSurfaceDisabled)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -564,7 +571,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
 
                             Text(
                                 "${scene.count} (${scene.percentage}%)",
-                                color = Color.White.copy(alpha = 0.8f),
+                                color = OnSurfaceSecondary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier
@@ -576,7 +583,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             } else {
-                Text("暂无场景数据", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+                Text("暂无场景数据", color = OnSurfaceTertiary, fontSize = 14.sp)
             }
         }
     }
@@ -590,14 +597,14 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = OnSurfaceDisabled),
+        border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Movie, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("胶片使用排行", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("胶片使用排行", color = OnSurfaceSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -610,14 +617,14 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
                     ) {
                         Text(
                             "${index + 1}",
-                            color = Color.White.copy(alpha = 0.3f),
+                            color = OnSurfaceDisabled,
                             fontSize = 12.sp,
                             modifier = Modifier.width(24.dp)
                         )
 
                         Text(
                             film.name,
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = OnSurfaceTertiary,
                             fontSize = 12.sp,
                             modifier = Modifier.width(96.dp)
                         )
@@ -627,7 +634,7 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
                                 .weight(1f)
                                 .height(16.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(OnSurfaceDisabled)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -644,12 +651,12 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        Text("${film.count}次", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                        Text("${film.count}次", color = OnSurfaceTertiary, fontSize = 12.sp)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             } else {
-                Text("暂无胶片使用数据", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+                Text("暂无胶片使用数据", color = OnSurfaceTertiary, fontSize = 14.sp)
             }
         }
     }
@@ -663,14 +670,14 @@ private fun MasterTipsCard(tips: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = OnSurfaceDisabled),
+        border = BorderStroke(1.dp, DividerColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lightbulb, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("大师建议", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text("大师建议", color = OnSurfaceSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -685,7 +692,7 @@ private fun MasterTipsCard(tips: List<String>) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             tip,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = OnSurfaceSecondary,
                             fontSize = 13.sp,
                             lineHeight = 18.sp
                         )
@@ -693,7 +700,7 @@ private fun MasterTipsCard(tips: List<String>) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             } else {
-                Text("开始拍摄你的第一张照片，哈苏大师将为你提供个性化建议。", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+                Text("开始拍摄你的第一张照片，哈苏大师将为你提供个性化建议。", color = OnSurfaceTertiary, fontSize = 14.sp)
             }
         }
     }

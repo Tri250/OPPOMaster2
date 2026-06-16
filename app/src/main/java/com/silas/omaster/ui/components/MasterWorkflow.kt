@@ -22,6 +22,13 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -270,7 +277,7 @@ fun MasterWorkflow(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "哈苏大师工作流",
-                color = Color.White,
+                color = OnSurfacePrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp
             )
@@ -280,7 +287,7 @@ fun MasterWorkflow(
 
         Text(
             text = "场景 → 胶片 → 参数 → 建议 → 配方",
-            color = Color.White.copy(alpha = 0.5f),
+                color = OnSurfaceTertiary,
             fontSize = 12.sp
         )
 
@@ -340,18 +347,18 @@ fun MasterWorkflow(
                             Icon(
                                 imageVector = Icons.Default.Camera,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.5f),
+                                tint = OnSurfaceTertiary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "场景：",
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = OnSurfaceSecondary,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = result.sceneName,
-                                color = Color.White,
+                                color = OnSurfacePrimary,
                                 fontSize = 14.sp
                             )
                             Text(
@@ -367,18 +374,18 @@ fun MasterWorkflow(
                             Icon(
                                 imageVector = Icons.Default.Movie,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.5f),
+                                tint = OnSurfaceTertiary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "胶片：",
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = OnSurfaceSecondary,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = result.recommendedFilm,
-                                color = Color.White,
+                                color = OnSurfacePrimary,
                                 fontSize = 14.sp
                             )
                         }
@@ -389,18 +396,18 @@ fun MasterWorkflow(
                             Icon(
                                 imageVector = Icons.Default.Tune,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.5f),
+                                tint = OnSurfaceTertiary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "参数：",
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = OnSurfaceSecondary,
                                 fontSize = 14.sp
                             )
                             Text(
                                 text = "影调${result.hasselbladParams["tone"]} 饱和度+${result.hasselbladParams["saturation"]}",
-                                color = Color.White,
+                                color = OnSurfacePrimary,
                                 fontSize = 12.sp
                             )
                         }
@@ -414,7 +421,7 @@ fun MasterWorkflow(
         // 底部品牌标识
         Text(
             text = "HNCS · HASSELBLAD NATURAL COLOR SOLUTION",
-            color = Color.White.copy(alpha = 0.3f),
+            color = OnSurfaceTertiary.copy(alpha = 0.3f / 0.5f),
             fontSize = 10.sp,
             letterSpacing = 2.sp
         )
@@ -432,26 +439,26 @@ private fun WorkflowStepItem(
 ) {
     val backgroundColor = when (step.status) {
         WorkflowStatus.COMPLETED -> HasselbladOrange.copy(alpha = 0.1f)
-        WorkflowStatus.PROCESSING -> Color.White.copy(alpha = 0.05f)
-        WorkflowStatus.PENDING -> Color.White.copy(alpha = 0.05f)
+        WorkflowStatus.PROCESSING -> OnSurfaceTertiary.copy(alpha = 0.05f / 0.5f)
+        WorkflowStatus.PENDING -> OnSurfaceTertiary.copy(alpha = 0.05f / 0.5f)
     }
 
     val borderColor = when (step.status) {
         WorkflowStatus.COMPLETED -> HasselbladOrange.copy(alpha = 0.3f)
         WorkflowStatus.PROCESSING -> HasselbladOrange.copy(alpha = 0.5f)
-        WorkflowStatus.PENDING -> Color.White.copy(alpha = 0.05f)
+        WorkflowStatus.PENDING -> DividerColor
     }
 
     val iconColor = when (step.status) {
         WorkflowStatus.COMPLETED -> HasselbladOrange
-        WorkflowStatus.PROCESSING -> Color.White
-        WorkflowStatus.PENDING -> Color.White.copy(alpha = 0.5f)
+        WorkflowStatus.PROCESSING -> OnSurfacePrimary
+        WorkflowStatus.PENDING -> OnSurfaceTertiary
     }
 
     val textColor = when (step.status) {
         WorkflowStatus.COMPLETED -> HasselbladOrange
-        WorkflowStatus.PROCESSING -> Color.White
-        WorkflowStatus.PENDING -> Color.White.copy(alpha = 0.5f)
+        WorkflowStatus.PROCESSING -> OnSurfacePrimary
+        WorkflowStatus.PENDING -> OnSurfaceTertiary
     }
 
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -465,7 +472,7 @@ private fun WorkflowStepItem(
                     .height(12.dp)
                     .background(
                         if (step.status == WorkflowStatus.COMPLETED) HasselbladOrange
-                        else Color.White.copy(alpha = 0.1f)
+                        else DividerColor
                     )
             )
         }
@@ -489,7 +496,7 @@ private fun WorkflowStepItem(
                             when (step.status) {
                                 WorkflowStatus.COMPLETED -> HasselbladOrange
                                 WorkflowStatus.PROCESSING -> HasselbladOrange.copy(alpha = 0.3f)
-                                WorkflowStatus.PENDING -> Color.White.copy(alpha = 0.1f)
+                                WorkflowStatus.PENDING -> OnSurfaceDisabled
                             }
                         ),
                     contentAlignment = Alignment.Center
@@ -498,7 +505,7 @@ private fun WorkflowStepItem(
                         WorkflowStatus.COMPLETED -> Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = OnSurfacePrimary,
                             modifier = Modifier.size(16.dp)
                         )
                         WorkflowStatus.PROCESSING -> CircularProgressIndicator(
@@ -510,7 +517,7 @@ private fun WorkflowStepItem(
                         )
                         WorkflowStatus.PENDING -> Text(
                             text = "${index + 1}",
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = OnSurfaceDisabled,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -541,7 +548,7 @@ private fun WorkflowStepItem(
 
                     Text(
                         text = step.description,
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = OnSurfaceDisabled,
                         fontSize = 12.sp
                     )
 
@@ -559,7 +566,7 @@ private fun WorkflowStepItem(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "· ${duration}ms",
-                                    color = Color.White.copy(alpha = 0.4f),
+                                    color = OnSurfaceDisabled,
                                     fontSize = 11.sp
                                 )
                             }

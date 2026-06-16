@@ -70,6 +70,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.util.perform
 import com.silas.omaster.watermark.WatermarkEditorManager
 import com.silas.omaster.watermark.WatermarkElement
@@ -167,7 +174,7 @@ private fun WatermarkTemplateSection(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f),
+            color = OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -194,7 +201,7 @@ private fun WatermarkTemplateItem(
     onEdit: () -> Unit
 ) {
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) HasselbladOrange else Color.Transparent,
+        targetValue = if (isSelected) HasselbladOrange else androidx.compose.ui.graphics.Color.Transparent,
         label = "border"
     )
 
@@ -225,14 +232,14 @@ private fun WatermarkTemplateItem(
                         com.silas.omaster.watermark.WatermarkType.CUSTOM -> Icons.Default.Add
                     },
                     contentDescription = null,
-                    tint = if (isSelected) HasselbladOrange else Color.White,
+                    tint = if (isSelected) HasselbladOrange else OnSurfacePrimary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = template.name,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) HasselbladOrange else Color.White,
+                    color = if (isSelected) HasselbladOrange else OnSurfacePrimary,
                     maxLines = 1
                 )
             }
@@ -278,7 +285,7 @@ fun WatermarkElementConfigPanel(
             text = "显示元素",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = OnSurfacePrimary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -339,7 +346,7 @@ fun WatermarkElementConfigPanel(
             text = "元素位置",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = OnSurfacePrimary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -359,7 +366,7 @@ fun WatermarkElementConfigPanel(
             text = "透明度调整",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = OnSurfacePrimary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -432,10 +439,10 @@ private fun ElementToggleRow(
             checked = isEnabled,
             onCheckedChange = { onToggle() },
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = OnSurfacePrimary,
                 checkedTrackColor = HasselbladOrange,
-                uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                uncheckedThumbColor = OutlineVariant,
+                uncheckedTrackColor = OutlineVariant.copy(alpha = 0.3f)
             )
         )
     }
@@ -487,7 +494,7 @@ private fun PositionButton(
             )
             .border(
                 1.dp,
-                if (isSelected) HasselbladOrange else Color.Gray,
+                if (isSelected) HasselbladOrange else OutlineVariant,
                 RoundedCornerShape(4.dp)
             )
             .clickable { onClick() }
@@ -509,7 +516,7 @@ private fun AlphaSlider(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f),
+            color = OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f),
             modifier = Modifier.width(60.dp)
         )
 
@@ -521,14 +528,14 @@ private fun AlphaSlider(
             colors = SliderDefaults.colors(
                 thumbColor = HasselbladOrange,
                 activeTrackColor = HasselbladOrange,
-                inactiveTrackColor = Color.Gray.copy(alpha = 0.3f)
+                inactiveTrackColor = OutlineVariant.copy(alpha = 0.3f)
             )
         )
 
         Text(
             text = "${(value * 100).toInt()}%",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
+            color = OutlineVariant,
             modifier = Modifier.width(40.dp)
         )
     }
@@ -559,7 +566,7 @@ fun SaveAsTemplateDialog(
                 Text(
                     text = "请输入模板名称",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = OnSurfaceSecondary.copy(alpha = 0.8f / 0.7f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 androidx.compose.material3.OutlinedTextField(
@@ -573,7 +580,7 @@ fun SaveAsTemplateDialog(
                 Text(
                     text = "模板名不允许与系统模板同名",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = OutlineVariant
                 )
             }
         },
@@ -599,8 +606,8 @@ fun SaveAsTemplateDialog(
             }
         },
         containerColor = Color(0xFF1A1A1A),
-        titleContentColor = Color.White,
-        textContentColor = Color.White
+        titleContentColor = OnSurfacePrimary,
+        textContentColor = OnSurfacePrimary
     )
 }
 

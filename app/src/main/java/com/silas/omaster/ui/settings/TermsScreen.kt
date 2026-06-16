@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
 
@@ -52,7 +55,7 @@ fun TermsScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
 
@@ -75,14 +78,14 @@ fun TermsScreen(
                         Icon(
                             Icons.Default.Schedule,
                             null,
-                            tint = Color.White.copy(alpha = 0.5f),
+                            tint = OnSurfaceTertiary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "最后更新：2026年6月1日",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = OnSurfaceTertiary
                         )
                     }
                 }
@@ -110,12 +113,12 @@ fun TermsScreen(
                             text = "欢迎使用我们的服务",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = OnSurfacePrimary
                         )
                         Text(
                             text = "使用我们的应用即表示您同意本用户协议和隐私政策",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = OnSurfacePrimary.copy(alpha = 0.7f),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -128,7 +131,7 @@ fun TermsScreen(
                     text = "重要条款",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
             }
 
@@ -163,7 +166,7 @@ fun TermsScreen(
                     text = "完整协议",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
             }
 
@@ -251,12 +254,12 @@ private fun KeyTermItem(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = OnSurfaceSecondary
                 )
             }
         }
@@ -282,7 +285,7 @@ private fun TermSection(
                     text = number,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = OnSurfacePrimary
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -290,13 +293,13 @@ private fun TermSection(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = OnSurfacePrimary
             )
         }
         Text(
             text = content,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            color = OnSurfaceSecondary,
             modifier = Modifier.padding(top = 8.dp, start = 32.dp)
         )
     }

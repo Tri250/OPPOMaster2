@@ -43,6 +43,13 @@ import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -85,7 +92,7 @@ fun WelcomeDialog(
                         text = stringResource(R.string.welcome_dialog_title),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = OnSurfacePrimary,
                         textAlign = TextAlign.Center
                     )
 
@@ -94,7 +101,7 @@ fun WelcomeDialog(
                     Text(
                         text = stringResource(R.string.welcome_version),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = OnSurfaceSecondary.copy(alpha = 0.6f / 0.7f),
                         textAlign = TextAlign.Center
                     )
 
@@ -142,7 +149,7 @@ fun WelcomeDialog(
                                     onCheckedChange = { agreedToPolicy = it },
                                     colors = CheckboxDefaults.colors(
                                         checkedColor = MaterialTheme.colorScheme.primary,
-                                        uncheckedColor = Color.White.copy(alpha = 0.5f)
+                                        uncheckedColor = OnSurfaceTertiary
                                     )
                                 )
 
@@ -151,7 +158,7 @@ fun WelcomeDialog(
                                 Text(
                                     text = stringResource(R.string.agree_prefix),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White
+                                    color = OnSurfacePrimary
                                 )
 
                                 Text(
@@ -170,7 +177,7 @@ fun WelcomeDialog(
                             Text(
                                 text = stringResource(R.string.umeng_notice),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = OnSurfaceSecondary.copy(alpha = 0.6f / 0.7f),
                                 lineHeight = 18.sp
                             )
                         }
@@ -207,7 +214,7 @@ fun WelcomeDialog(
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = DarkGray,
-                            contentColor = Color.White
+                            contentColor = OnSurfacePrimary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -232,9 +239,9 @@ fun WelcomeDialog(
                         enabled = agreedToPolicy,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White,
+                            contentColor = OnSurfacePrimary,
                             disabledContainerColor = DarkGray,
-                            disabledContentColor = Color.White.copy(alpha = 0.5f)
+                            disabledContentColor = OnSurfaceTertiary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {

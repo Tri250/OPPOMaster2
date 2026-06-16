@@ -29,6 +29,14 @@ import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
+import com.silas.omaster.ui.theme.ErrorRed
 
 import java.io.File
 import kotlin.math.roundToInt
@@ -65,7 +73,7 @@ fun UniversalCreatePresetScreen(
                 title = { Text(if (uiState.isEditMode) stringResource(R.string.edit_preset_title) else stringResource(R.string.create_preset_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text(stringResource(R.string.cancel), color = Color.Gray)
+                        Text(stringResource(R.string.cancel), color = OutlineVariant)
                     }
                 },
                 actions = {
@@ -80,7 +88,7 @@ fun UniversalCreatePresetScreen(
                         },
                         enabled = isSaveEnabled
                     ) {
-                        Text(stringResource(R.string.save), color = if (isSaveEnabled) MaterialTheme.colorScheme.primary else Color.Gray)
+                        Text(stringResource(R.string.save), color = if (isSaveEnabled) MaterialTheme.colorScheme.primary else OutlineVariant)
                     }
                 }
             )
@@ -116,7 +124,7 @@ fun UniversalCreatePresetScreen(
                                 .fillMaxWidth()
                                 .height(200.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.DarkGray)
+                                .background(OnSurfaceDisabled)
                                 .clickable { imagePicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
@@ -152,11 +160,11 @@ fun UniversalCreatePresetScreen(
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = OnSurfacePrimary,
                                         modifier = Modifier.size(48.dp)
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(stringResource(R.string.upload_cover_hint), color = Color.White)
+                                    Text(stringResource(R.string.upload_cover_hint), color = OnSurfacePrimary)
                                 }
                             }
                         }
@@ -313,7 +321,7 @@ fun SectionCard(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onRemoveSection) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.remove_section), tint = Color.Red)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.remove_section), tint = ErrorRed)
                 }
             }
             

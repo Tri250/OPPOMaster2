@@ -45,6 +45,13 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 import kotlinx.coroutines.delay
 
 /**
@@ -83,7 +90,7 @@ fun FloatingWindowGuideDialog(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.8f)),
+                .background(OnSurfaceInverse.copy(alpha = 0.8f / 0.5f)),
             contentAlignment = Alignment.Center
         ) {
             Card(
@@ -144,7 +151,7 @@ fun FloatingWindowGuideDialog(
                         text = stringResource(R.string.guide_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = OnSurfacePrimary,
                         textAlign = TextAlign.Center
                     )
 
@@ -154,7 +161,7 @@ fun FloatingWindowGuideDialog(
                     Text(
                         text = stringResource(R.string.guide_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = OnSurfaceSecondary,
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
                     )
@@ -218,7 +225,7 @@ fun FloatingWindowGuideDialog(
                         Text(
                             text = stringResource(R.string.guide_tip),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = OnSurfaceTertiary,
                             lineHeight = 16.sp
                         )
                     }
@@ -244,9 +251,9 @@ fun FloatingWindowGuideDialog(
                             enabled = canClick,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White,
+                                contentColor = OnSurfacePrimary,
                                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                disabledContentColor = Color.White.copy(alpha = 0.5f)
+                                disabledContentColor = OnSurfaceTertiary
                             ),
                             shape = RoundedCornerShape(14.dp)
                         ) {
@@ -265,14 +272,14 @@ fun FloatingWindowGuideDialog(
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.2f)),
+                                            .background(OnSurfacePrimary.copy(alpha = 0.2f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = "${countdown}s",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            color = OnSurfacePrimary
                                         )
                                     }
                                 }
@@ -289,7 +296,7 @@ fun FloatingWindowGuideDialog(
                         ) {
                             Text(
                                 text = stringResource(R.string.guide_later),
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = OnSurfaceTertiary,
                                 fontSize = 14.sp
                             )
                         }
@@ -334,7 +341,7 @@ private fun GuideStep(
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.85f),
+            color = OnSurfacePrimary.copy(alpha = 0.85f),
             lineHeight = 18.sp
         )
     }

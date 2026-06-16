@@ -33,6 +33,13 @@ import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.PolicyItem
 import com.silas.omaster.ui.components.PolicySection
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OnSurfaceDisabled
+import com.silas.omaster.ui.theme.DividerColor
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OutlineVariant
 
 @Composable
 fun PrivacyPolicyScreen(
@@ -116,7 +123,7 @@ fun PrivacyPolicyScreen(
                         Text(
                             text = stringResource(R.string.privacy_link_label),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = OnSurfaceSecondary
                         )
                         Text(
                             text = "https://www.umeng.com/page/policy",
@@ -153,7 +160,7 @@ fun PrivacyPolicyScreen(
             Text(
                 text = stringResource(R.string.last_updated, "2026-02-09"),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.4f),
+                color = OnSurfaceTertiary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )

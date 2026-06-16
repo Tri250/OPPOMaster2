@@ -22,8 +22,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.DividerColor
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.OnSurfaceInverse
+import com.silas.omaster.ui.theme.OnSurfacePrimary
+import com.silas.omaster.ui.theme.OnSurfaceSecondary
+import com.silas.omaster.ui.theme.OnSurfaceTertiary
+import com.silas.omaster.ui.theme.OutlineVariant
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SurfaceOverlay
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.perform
 
@@ -73,12 +80,12 @@ fun UpdateChannelScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = OnSurfacePrimary)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = OnSurfacePrimary
             )
         )
 
@@ -103,7 +110,7 @@ fun UpdateChannelScreen(
                         text = "更新渠道",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = OnSurfacePrimary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     channels.forEach { channel ->
@@ -130,7 +137,7 @@ fun UpdateChannelScreen(
                         text = "更新选项",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = OnSurfacePrimary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     UpdateOptionRow(
@@ -141,7 +148,7 @@ fun UpdateChannelScreen(
                             autoCheckEnabled = it
                         }
                     )
-                    Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+                    Divider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
                     UpdateOptionRow(
                         title = "仅 Wi-Fi 下下载",
                         checked = wifiOnlyEnabled,
@@ -150,7 +157,7 @@ fun UpdateChannelScreen(
                             wifiOnlyEnabled = it
                         }
                     )
-                    Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+                    Divider(color = DividerColor, modifier = Modifier.padding(vertical = 4.dp))
                     UpdateOptionRow(
                         title = "夜间自动安装",
                         checked = autoInstallEnabled,
@@ -173,7 +180,7 @@ fun UpdateChannelScreen(
                         text = "v3.2.0 更新内容",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = OnSurfacePrimary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     ReleaseNoteItem("全新 LUT 资源下载功能，20+ 专业滤镜")
@@ -194,7 +201,7 @@ private fun CurrentVersionCard() {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
+            containerColor = androidx.compose.ui.graphics.Color.Transparent
         )
     ) {
         Box(
@@ -213,10 +220,10 @@ private fun CurrentVersionCard() {
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.2f)),
+                            .background(SurfaceOverlay),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.Check, null, tint = OnSurfacePrimary, modifier = Modifier.size(28.dp))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -224,12 +231,12 @@ private fun CurrentVersionCard() {
                             text = "已是最新版本",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = OnSurfacePrimary
                         )
                         Text(
                             text = "v3.2.0 (20260608)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.8f)
+                            color = OnSurfacePrimary.copy(alpha = 0.8f)
                         )
                     }
                 }
@@ -238,14 +245,14 @@ private fun CurrentVersionCard() {
                     Icon(
                         Icons.Default.Schedule,
                         null,
-                        tint = Color.White.copy(alpha = 0.6f),
+                        tint = OnSurfaceSecondary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "最后检查：刚刚",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = OnSurfaceSecondary
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -253,8 +260,8 @@ private fun CurrentVersionCard() {
                     onClick = { /* 检查更新 */ },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.2f),
-                        contentColor = Color.White
+                        containerColor = SurfaceOverlay,
+                        contentColor = OnSurfacePrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -277,7 +284,7 @@ private fun ChannelOptionRow(
             .clip(RoundedCornerShape(12.dp))
             .background(
                 if (isSelected) HasselbladOrange.copy(alpha = 0.1f)
-                else Color.Transparent
+                else androidx.compose.ui.graphics.Color.Transparent
             )
             .clickable(onClick = onClick)
             .padding(12.dp),
@@ -298,12 +305,12 @@ private fun ChannelOptionRow(
                 text = channel.name,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isSelected) HasselbladOrange else Color.White
+                color = if (isSelected) HasselbladOrange else OnSurfacePrimary
             )
             Text(
                 text = channel.description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = OnSurfaceTertiary
             )
         }
         if (isSelected) {
@@ -328,13 +335,13 @@ private fun UpdateOptionRow(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.7f)
+            color = OnSurfaceSecondary
         )
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = OnSurfacePrimary,
                 checkedTrackColor = HasselbladOrange
             )
         )
@@ -358,7 +365,7 @@ private fun ReleaseNoteItem(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f)
+            color = OnSurfaceSecondary
         )
     }
 }
