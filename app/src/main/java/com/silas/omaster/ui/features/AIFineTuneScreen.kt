@@ -39,6 +39,7 @@ import coil.request.ImageRequest
 import com.silas.omaster.ai.*
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

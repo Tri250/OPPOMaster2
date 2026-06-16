@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import java.io.*
 import kotlin.math.*

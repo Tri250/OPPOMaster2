@@ -32,6 +32,7 @@ import com.silas.omaster.model.*
 import kotlin.math.roundToInt
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import java.io.File
 
 /**

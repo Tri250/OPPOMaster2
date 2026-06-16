@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.cloud.SyncState
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.util.perform
 
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
