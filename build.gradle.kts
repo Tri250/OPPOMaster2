@@ -11,7 +11,7 @@
  * - Java: 17
  *
  * 版本兼容性：
- * - Kotlin 2.1.20 与 AGP 8.7.3 完全兼容
+ * - Kotlin 2.1.20 与 AGP 8.9.1 完全兼容
  * - Compose Compiler 由 Kotlin 插件自动管理（kotlin-compose plugin）
  * - 最低 SDK: 24, 目标 SDK: 36
  */

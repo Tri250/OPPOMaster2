@@ -157,12 +157,75 @@
 -keepclassmembers class com.silas.omaster.model.** {
     <fields>;
 }
+-keepclassmembers class com.silas.omaster.data.model.** {
+    <fields>;
+}
+-keepclassmembers class com.silas.omaster.renderer.** {
+    <fields>;
+}
+-keepclassmembers class com.silas.omaster.watermark.** {
+    <fields>;
+}
 
-# 数据模型类名（Gson 反序列化需要）
+# 数据模型类名（Gson / Kotlinx Serialization 反序列化需要）
 -keep class com.silas.omaster.model.MasterPreset { *; }
 -keep class com.silas.omaster.model.PresetList { *; }
 -keep class com.silas.omaster.model.PresetItem { *; }
 -keep class com.silas.omaster.model.PresetSection { *; }
+-keep class com.silas.omaster.model.PresetComment { *; }
+-keep class com.silas.omaster.model.PresetDescription { *; }
+-keep class com.silas.omaster.model.SceneProfile { *; }
+-keep class com.silas.omaster.model.HasselbladParams { *; }
+-keep class com.silas.omaster.model.FilmPreset { *; }
+-keep class com.silas.omaster.model.CameraParams { *; }
+-keep class com.silas.omaster.model.ExifData { *; }
+-keep class com.silas.omaster.model.HistogramData { *; }
+-keep class com.silas.omaster.model.FaceData { *; }
+-keep class com.silas.omaster.model.FaceInfo { *; }
+-keep class com.silas.omaster.model.RectData { *; }
+-keep class com.silas.omaster.model.Subscription { *; }
+-keep class com.silas.omaster.model.SubscriptionList { *; }
+-keep class com.silas.omaster.data.model.PresetSource { *; }
+-keep class com.silas.omaster.data.model.PresetSourceConfig { *; }
+-keep class com.silas.omaster.data.model.PresetSourceResponse { *; }
+-keep class com.silas.omaster.renderer.RenderParameters { *; }
+-keep class com.silas.omaster.renderer.ParamMetadata { *; }
+-keep class com.silas.omaster.watermark.WatermarkLayerDef { *; }
+-keep class com.silas.omaster.watermark.OffsetData { *; }
+-keep class com.silas.omaster.watermark.WatermarkLayerStyle { *; }
+-keep class com.silas.omaster.watermark.WatermarkTemplateDef { *; }
+-keep class com.silas.omaster.watermark.WatermarkConfigDef { *; }
+
+# Kotlin Serialization 枚举需要保留
+-keepclassmembers enum com.silas.omaster.model.SceneCategory { *; }
+-keepclassmembers enum com.silas.omaster.model.SoftLightMode { *; }
+-keepclassmembers enum com.silas.omaster.model.FilmSeries { *; }
+-keepclassmembers enum com.silas.omaster.renderer.RenderQuality { *; }
+-keepclassmembers enum com.silas.omaster.watermark.WatermarkLayerType { *; }
+-keepclassmembers enum com.silas.omaster.watermark.ContentSource { *; }
+-keepclassmembers enum com.silas.omaster.watermark.WatermarkPosition { *; }
+
+# Kotlinx Serialization 生成的 serializer 需要保留
+-keep class com.silas.omaster.model.**$$serializer { *; }
+-keep class com.silas.omaster.data.model.**$$serializer { *; }
+-keep class com.silas.omaster.renderer.**$$serializer { *; }
+-keep class com.silas.omaster.watermark.**$$serializer { *; }
+-keepclassmembers class com.silas.omaster.model.** {
+    @kotlinx.serialization.Serializable <fields>;
+    @kotlinx.serialization.Serializable <methods>;
+}
+-keepclassmembers class com.silas.omaster.data.model.** {
+    @kotlinx.serialization.Serializable <fields>;
+    @kotlinx.serialization.Serializable <methods>;
+}
+-keepclassmembers class com.silas.omaster.renderer.** {
+    @kotlinx.serialization.Serializable <fields>;
+    @kotlinx.serialization.Serializable <methods>;
+}
+-keepclassmembers class com.silas.omaster.watermark.** {
+    @kotlinx.serialization.Serializable <fields>;
+    @kotlinx.serialization.Serializable <methods>;
+}
 
 # ========================================
 # 优化配置（修复 P2-12: 降低激进程度，避免 NPE 风险）
