@@ -72,7 +72,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 
 @Composable
 fun DetailScreen(
