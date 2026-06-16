@@ -28,30 +28,37 @@ class ModelDownloadManager(private val context: Context) {
         private const val BASE_URL = "https://releases.omaster.app/models"
         private const val MODEL_VERSION = "1.2.0"
         
-        // 模型文件名
-        // ⚠️ 重要：checksum 在生产发布前必须替换为真实的 SHA256 校验值！
-        // 空字符串 "" 表示校验值尚未提供，仅用于开发阶段，生产环境绝不允许为空。
+        // ===== 模型文件配置 =====
+        // ⚠️ 生产环境安全要求：
+        // 所有 checksum 必须提供真实的 SHA256 校验值，格式为 "sha256:<hex>"
+        // 正式发布前，请使用以下命令生成校验值：
+        //   sha256sum scene_classifier.tflite quality_analyzer.tflite param_predictor.tflite
+        //
+        // 运行时校验策略：
+        // - checksum 为空且 BuildConfig.DEBUG=true：仅警告，允许通过（开发阶段）
+        // - checksum 为空且 BuildConfig.DEBUG=false：拒绝下载，强制要求校验值（生产安全）
+        // - checksum 已提供：严格校验，不匹配则拒绝加载（防篡改）
         val MODEL_FILES = listOf(
             ModelFile(
                 name = "scene_classifier.tflite",
                 displayName = "场景分类模型",
                 description = "36类场景智能识别",
                 expectedSize = 700 * 1024,  // 700KB
-                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值，格式为 "sha256:<hex>"
+                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值
             ),
             ModelFile(
                 name = "quality_analyzer.tflite",
                 displayName = "质量分析模型",
                 description = "图像质量智能评估",
                 expectedSize = 500 * 1024,  // 500KB
-                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值，格式为 "sha256:<hex>"
+                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值
             ),
             ModelFile(
                 name = "param_predictor.tflite",
                 displayName = "参数预测模型",
                 description = "哈苏调校参数推荐",
                 expectedSize = 200 * 1024,  // 200KB
-                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值，格式为 "sha256:<hex>"
+                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值
             )
         )
         
@@ -280,8 +287,16 @@ class ModelDownloadManager(private val context: Context) {
             }
 
             if (expectedHash.isEmpty()) {
-                // 校验值未提供，仅警告（开发阶段允许，生产环境绝不允许）
-                Log.w(TAG, "⚠️ 模型 ${modelFile.name} 未提供 SHA256 校验值，跳过完整性验证！生产发布前必须提供校验值！")
+                // 校验值未提供
+                if (com.silas.omaster.BuildConfig.DEBUG) {
+                    // 开发阶段允许跳过校验
+                    Log.w(TAG, "⚠️ 模型 ${modelFile.name} 未提供 SHA256 校验值（仅开发模式允许），生产发布前必须配置！")
+                } else {
+                    // 生产环境：拒绝无校验值的模型下载
+                    Log.e(TAG, "❌ 生产环境拒绝下载无校验值的模型: ${modelFile.name}")
+                    tempFile.delete()
+                    return@withContext Result.failure(SecurityException("生产环境禁止下载无SHA256校验值的模型: ${modelFile.name}"))
+                }
             } else {
                 // 校验值已提供，严格验证
                 val actualHash = calculateSHA256(tempFile)

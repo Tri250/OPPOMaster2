@@ -11,6 +11,7 @@ import android.os.Environment
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.silas.omaster.data.local.UpdateChannel
+import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -35,12 +36,12 @@ object UpdateChecker {
     // GitHub 配置
     private const val GITHUB_OWNER = "Tri250"
     private const val GITHUB_REPO = "OPPOMaster2"
-    private const val GITHUB_API_URL = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
+    private const val GITHUB_API_URL = UrlConstants.GITHUB_API_RELEASES
 
     // Gitee 配置
     private const val GITEE_OWNER = "Tri250"
     private const val GITEE_REPO = "OPPOMaster2"
-    private const val GITEE_API_URL = "https://gitee.com/api/v5/repos/$GITEE_OWNER/$GITEE_REPO/releases/latest"
+    private const val GITEE_API_URL = UrlConstants.GITEE_API_RELEASES
 
     data class UpdateInfo(
         val versionName: String,

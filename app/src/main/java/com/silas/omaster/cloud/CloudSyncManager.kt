@@ -4,26 +4,48 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.silas.omaster.BuildConfig
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetDescription
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.client.statement.HttpResponse
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.URL
 import java.util.UUID
 
 /**
  * 云同步管理器
  * 负责从 CDN 同步预设数据到本地 SharedPreferences
+ * 
+ * 使用 Ktor HttpClient 统一网络层，与 PresetRemoteManager 保持一致
  */
 class CloudSyncManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
     private val appContext = context.applicationContext
+
+    // 使用 Ktor HttpClient（与 PresetRemoteManager 统一的网络层）
+    private val httpClient: HttpClient by lazy {
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+            engine {
+                requestTimeout = 30_000
+            }
+        }
+    }
 
     // 使用SharedPreferences存储云端预设
     private val prefs: SharedPreferences = appContext.getSharedPreferences(
@@ -129,7 +151,7 @@ class CloudSyncManager private constructor(context: Context) {
     }
 
     /**
-     * 同步单个品牌的预设
+     * 同步单个品牌的预设（使用 Ktor HttpClient）
      */
     private suspend fun syncBrandPresets(brand: String, urlString: String): BrandSyncResult = withContext(Dispatchers.IO) {
         // 严格验证URL协议：忽略大小写，必须是 https://
@@ -138,33 +160,19 @@ class CloudSyncManager private constructor(context: Context) {
             throw SecurityException("仅支持 HTTPS 协议: $urlString")
         }
 
-        val url = URL(normalizedUrl)
-        val connection = url.openConnection() as java.net.HttpURLConnection
-        var success = false
-        try {
-            connection.apply {
-                requestMethod = "GET"
-                setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "OMaster/${com.silas.omaster.BuildConfig.VERSION_NAME}")
-                connectTimeout = 10000
-                readTimeout = 15000
-                instanceFollowRedirects = false  // 不自动跟随重定向，避免跳转到HTTP
-            }
+        val response: HttpResponse = httpClient.get(normalizedUrl)
+        val responseCode = response.status.value
 
-            // 验证响应码
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                throw java.io.IOException("HTTP $responseCode")
-            }
+        if (responseCode !in 200..299) {
+            throw java.io.IOException("HTTP $responseCode")
+        }
 
-            val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
-            success = true
-
-            val jsonObject = JSONObject(jsonString)
-            val version = jsonObject.optInt("version", 1)
-            val build = jsonObject.optInt("build", 1)
-            // 防御性：getJSONArray 可能在缺失时抛 JSONException
-            val presetsArray = jsonObject.optJSONArray("presets") ?: return@withContext BrandSyncResult(0, 0, emptyList())
+        val jsonString: String = response.body()
+        val jsonObject = JSONObject(jsonString)
+        val version = jsonObject.optInt("version", 1)
+        val build = jsonObject.optInt("build", 1)
+        // 防御性：getJSONArray 可能在缺失时抛 JSONException
+        val presetsArray = jsonObject.optJSONArray("presets") ?: return@withContext BrandSyncResult(0, 0, emptyList())
 
             var newCount = 0
             var updatedCount = 0
@@ -195,17 +203,6 @@ class CloudSyncManager private constructor(context: Context) {
             }
 
             BrandSyncResult(newCount, updatedCount, brandPresets)
-        } finally {
-            // 无论成功失败，都释放连接
-            try {
-                if (!success) {
-                    // 失败时尝试读取错误流以重置连接
-                    connection.errorStream?.close()
-                }
-                connection.disconnect()
-            } catch (e: Exception) {
-                android.util.Log.w("CloudSyncManager", "关闭连接异常", e)
-            }
         }
     }
 

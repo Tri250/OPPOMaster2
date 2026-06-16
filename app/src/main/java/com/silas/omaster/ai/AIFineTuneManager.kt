@@ -12,6 +12,7 @@ import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
+import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -1229,7 +1230,7 @@ class AIFineTuneManager private constructor(context: Context) {
         private const val TAG = "AIFineTuneManager"
         
         // 云端API配置
-        private const val CLOUD_API_ENDPOINT = "https://api.omaster.ai/v1/scene/analyze"
+        private val CLOUD_API_ENDPOINT = UrlConstants.API_CLOUD_SCENE_ANALYZE
         private const val CLOUD_API_TIMEOUT_MS = 5000L // 5秒超时
         private const val MAX_IMAGE_SIZE_BYTES = 500000 // 最大500KB图像数据
 

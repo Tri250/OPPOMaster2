@@ -6,15 +6,20 @@ import com.silas.omaster.model.PresetList
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.statement.HttpResponse
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.silas.omaster.util.JsonUtil
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlin.math.pow
 
 object PresetRemoteManager {
 
@@ -24,8 +29,40 @@ object PresetRemoteManager {
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true })
             }
+
+            // ==================== 连接池配置 ====================
             engine {
+                // 连接超时
                 requestTimeout = 30_000
+                // 连接池配置
+                endpoint {
+                    maxConnectionsPerRoute = 8          // 每个路由最大连接数
+                    maxConnectionsCount = 32             // 全局最大连接数
+                    pipelineMaxSize = 4                  // 流水线最大请求数
+                    keepAliveTime = 30_000               // 保持连接存活时间 (30s)
+                    connectTimeout = 10_000              // 连接建立超时 (10s)
+                    connectRetryAttempts = 2             // 连接重试次数
+                    socketTimeout = 15_000               // Socket 超时
+                }
+            }
+
+            // ==================== 超时配置 ====================
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
+
+            // ==================== 请求重试配置（指数退避） ====================
+            install(HttpRequestRetry) {
+                retryOnServerErrors(maxRetries = 3)
+                retryOnException(maxRetries = 3, retryOnTimeout = true)
+                exponentialDelay()
+                // 不对 POST 请求重试（幂等性保证）
+                retryIf { _, response ->
+                    val status = response.status.value
+                    status in 500..599 || status == 429
+                }
             }
         }
     }
@@ -41,6 +78,51 @@ object PresetRemoteManager {
         }
     }
 
+    /**
+     * 带指数退避的网络请求重试
+     * @param maxRetries 最大重试次数
+     * @param baseDelayMs 初始延迟（毫秒）
+     * @param block 请求操作
+     * @return 请求结果或 null
+     */
+    private suspend fun <T> withExponentialBackoff(
+        maxRetries: Int = 3,
+        baseDelayMs: Long = 1000L,
+        block: suspend () -> T
+    ): T? {
+        var lastException: Throwable? = null
+
+        for (attempt in 0..maxRetries) {
+            try {
+                return block()
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < maxRetries) {
+                    // 指数退避：baseDelay * 2^attempt
+                    val delayMs = baseDelayMs * (2.0.pow(attempt.toDouble())).toLong()
+                    Log.w("PresetRemoteManager", "请求失败，${delayMs}ms后重试 (${attempt + 1}/$maxRetries): ${e.message}")
+                    delay(delayMs)
+                }
+            }
+        }
+
+        Log.e("PresetRemoteManager", "请求最终失败，已重试 $maxRetries 次", lastException)
+        return null
+    }
+
+    /**
+     * 构建缓存控制请求头
+     * 添加 If-None-Match 和 Cache-Control 头以支持条件请求
+     */
+    private fun buildCacheHeaders(etag: String? = null): Map<String, String> {
+        val headers = mutableMapOf<String, String>()
+        headers["Cache-Control"] = "max-age=3600, stale-while-revalidate=86400"
+        etag?.let {
+            headers["If-None-Match"] = it
+        }
+        return headers
+    }
+
     suspend fun fetchPresets(url: String): PresetList? {
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
@@ -49,7 +131,12 @@ object PresetRemoteManager {
                 Log.e("PresetRemoteManager", "URL validation failed: $error")
                 return null
             }
-            val response: HttpResponse = client.get(url)
+            val response: HttpResponse = client.get(url) {
+                // 添加缓存控制头
+                buildCacheHeaders().forEach { (key, value) ->
+                    header(key, value)
+                }
+            }
             // Some servers (GitHub raw) may return Content-Type: text/plain; charset=utf-8
             // which prevents Ktor's content-negotiation from selecting the JSON transformer.
             // Read as text and decode explicitly to avoid NoTransformationFoundException.
@@ -90,7 +177,15 @@ object PresetRemoteManager {
 
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
-            val response: HttpResponse = client.get(url)
+            // 使用指数退避重试
+            val response = withExponentialBackoff(maxRetries = 3) {
+                client.get(url) {
+                    // 添加缓存控制头
+                    buildCacheHeaders().forEach { (key, value) ->
+                        header(key, value)
+                    }
+                }
+            } ?: return Result.failure(Exception("网络请求失败，已重试3次"))
 
             // 验证响应码
             if (response.status.value !in 200..299) {

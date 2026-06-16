@@ -83,6 +83,7 @@ import com.silas.omaster.ui.theme.LightGray
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.ImageCacheManager
+import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -572,7 +573,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_1",
             name = "清新人像",
-            coverPath = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/samples/portrait_fresh.jpg",
+            coverPath = UrlConstants.getSampleImageUrl("portrait_fresh.jpg"),
             author = "@OPPO影像",
             brand = "OPPO",
             tags = listOf("人像", "清新"),
@@ -586,7 +587,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_2",
             name = "夜景霓虹",
-            coverPath = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/samples/night_neon.jpg",
+            coverPath = UrlConstants.getSampleImageUrl("night_neon.jpg"),
             author = "@Find摄影",
             brand = "OPPO",
             tags = listOf("夜景", "霓虹"),
@@ -600,7 +601,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_3",
             name = "美食暖调",
-            coverPath = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/samples/food_warm.jpg",
+            coverPath = UrlConstants.getSampleImageUrl("food_warm.jpg"),
             author = "@美食摄影师",
             brand = "realme",
             tags = listOf("美食", "暖调"),
@@ -613,7 +614,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_4",
             name = "街拍黑白",
-            coverPath = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/samples/street_bw.jpg",
+            coverPath = UrlConstants.getSampleImageUrl("street_bw.jpg"),
             author = "@街拍大师",
             brand = "vivo",
             tags = listOf("街拍", "黑白"),
@@ -625,7 +626,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_5",
             name = "风景通透",
-            coverPath = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/samples/landscape_clear.jpg",
+            coverPath = UrlConstants.getSampleImageUrl("landscape_clear.jpg"),
             author = "@风光摄影",
             brand = "荣耀",
             tags = listOf("风景", "通透"),
@@ -639,7 +640,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_6",
             name = "建筑几何",
-            coverPath = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/samples/architecture.jpg",
+            coverPath = UrlConstants.getSampleImageUrl("architecture.jpg"),
             author = "@建筑摄影",
             brand = "小米",
             tags = listOf("建筑", "几何"),

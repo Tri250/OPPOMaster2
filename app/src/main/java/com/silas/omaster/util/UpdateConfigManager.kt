@@ -1,12 +1,13 @@
 package com.silas.omaster.util
 
 import android.content.Context
+import com.silas.omaster.util.UrlConstants
 
 object UpdateConfigManager {
     private const val PREFS_NAME = "omaster_update_prefs"
     private const val KEY_PRESET_URL = "preset_update_url"
 
-    const val DEFAULT_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json"
+    const val DEFAULT_PRESET_URL = UrlConstants.PRESET_OPPO
 
     fun getPresetUrl(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

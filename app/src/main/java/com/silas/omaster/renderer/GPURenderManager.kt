@@ -1,6 +1,8 @@
 package com.silas.omaster.renderer
 
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.opengl.EGL14
 import android.opengl.EGLConfig
@@ -11,6 +13,7 @@ import android.opengl.GLES30
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -20,6 +23,218 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+
+/**
+ * Bitmap 对象池，减少 GC 压力
+ * 复用相同尺寸的 Bitmap，避免频繁分配和回收
+ */
+class BitmapPool(private val maxPoolSize: Int = 8) {
+    private val pool = java.util.LinkedList<Bitmap>()
+
+    @Synchronized
+    fun obtain(width: Int, height: Int, config: Bitmap.Config = Bitmap.Config.ARGB_8888): Bitmap {
+        val iterator = pool.iterator()
+        while (iterator.hasNext()) {
+            val bitmap = iterator.next()
+            if (bitmap.width == width && bitmap.height == height && bitmap.config == config) {
+                iterator.remove()
+                bitmap.eraseColor(0)
+                return bitmap
+            }
+        }
+        return Bitmap.createBitmap(width, height, config)
+    }
+
+    @Synchronized
+    fun recycle(bitmap: Bitmap) {
+        if (bitmap.isRecycled) return
+        if (pool.size < maxPoolSize) {
+            pool.add(bitmap)
+        } else {
+            bitmap.recycle()
+        }
+    }
+
+    @Synchronized
+    fun clear() {
+        pool.forEach { it.recycle() }
+        pool.clear()
+    }
+
+    @Synchronized
+    fun size(): Int = pool.size
+}
+
+/**
+ * 帧时序指标
+ * 追踪渲染帧的处理时间，用于性能分析和优化
+ */
+object FrameTimingMetrics {
+    private const val MAX_SAMPLES = 120
+    private val frameTimes = ArrayDeque<Long>(MAX_SAMPLES)
+    private var lastFrameTime: Long = 0L
+    private var frameCount: Long = 0L
+
+    fun recordFrame(processingTimeMs: Long) {
+        synchronized(frameTimes) {
+            frameTimes.addLast(processingTimeMs)
+            if (frameTimes.size > MAX_SAMPLES) {
+                frameTimes.removeFirst()
+            }
+        }
+        lastFrameTime = processingTimeMs
+        frameCount++
+    }
+
+    fun getAverageFrameTime(): Double {
+        synchronized(frameTimes) {
+            if (frameTimes.isEmpty()) return 0.0
+            return frameTimes.average()
+        }
+    }
+
+    fun getP95FrameTime(): Long {
+        synchronized(frameTimes) {
+            if (frameTimes.isEmpty()) return 0L
+            val sorted = frameTimes.sorted()
+            val index = (sorted.size * 0.95).toInt().coerceIn(0, sorted.size - 1)
+            return sorted[index]
+        }
+    }
+
+    fun getLastFrameTime(): Long = lastFrameTime
+    fun getFrameCount(): Long = frameCount
+
+    fun getReport(): String {
+        synchronized(frameTimes) {
+            val avg = if (frameTimes.isEmpty()) 0.0 else frameTimes.average()
+            val max = frameTimes.maxOrNull() ?: 0L
+            val min = frameTimes.minOrNull() ?: 0L
+            return "帧时序: 平均=${"%.1f".format(avg)}ms, " +
+                    "P95=${getP95FrameTime()}ms, " +
+                    "最大=${max}ms, 最小=${min}ms, " +
+                    "总帧数=$frameCount"
+        }
+    }
+
+    fun reset() {
+        synchronized(frameTimes) {
+            frameTimes.clear()
+            lastFrameTime = 0L
+            frameCount = 0L
+        }
+    }
+}
+
+/**
+ * 渲染质量自适应管理器
+ * 根据内存压力自动降级渲染质量
+ */
+class RenderQualityManager(private val context: Context) : ComponentCallbacks2 {
+
+    /** 当前渲染质量等级 */
+    @Volatile
+    var currentQuality: RenderQuality = RenderQuality.STANDARD
+        private set
+
+    /** 是否允许自适应降级 */
+    @Volatile
+    var adaptiveQualityEnabled: Boolean = true
+
+    /** 最低渲染质量（不会低于此级别） */
+    @Volatile
+    var minQuality: RenderQuality = RenderQuality.PREVIEW
+
+    /** 质量预设对应的位图最大尺寸 */
+    data class QualityPreset(
+        val quality: RenderQuality,
+        val maxWidth: Int,
+        val maxHeight: Int,
+        val sampleSize: Int
+    )
+
+    @Volatile
+    var qualityPresets: Map<RenderQuality, QualityPreset> = mapOf(
+        RenderQuality.ULTRA to QualityPreset(RenderQuality.ULTRA, 4096, 4096, 1),
+        RenderQuality.HIGH to QualityPreset(RenderQuality.HIGH, 2048, 2048, 1),
+        RenderQuality.STANDARD to QualityPreset(RenderQuality.STANDARD, 1024, 1024, 2),
+        RenderQuality.PREVIEW to QualityPreset(RenderQuality.PREVIEW, 512, 512, 4)
+    )
+
+    init {
+        registerMemoryCallbacks()
+    }
+
+    private var registered = false
+
+    private fun registerMemoryCallbacks() {
+        if (!registered) {
+            context.applicationContext.registerComponentCallbacks(this)
+            registered = true
+        }
+    }
+
+    fun unregister() {
+        if (registered) {
+            context.applicationContext.unregisterComponentCallbacks(this)
+            registered = false
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {}
+
+    override fun onLowMemory() {
+        if (adaptiveQualityEnabled) {
+            downgradeQuality(RenderQuality.PREVIEW)
+            Log.w("RenderQualityManager", "onLowMemory: 降级到 PREVIEW")
+        }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        if (!adaptiveQualityEnabled) return
+
+        when (level) {
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                downgradeQuality(RenderQuality.PREVIEW)
+            }
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                downgradeQuality(RenderQuality.STANDARD)
+            }
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE -> {
+                if (currentQuality == RenderQuality.ULTRA) {
+                    downgradeQuality(RenderQuality.HIGH)
+                }
+            }
+            ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
+                downgradeQuality(RenderQuality.PREVIEW)
+            }
+            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+            ComponentCallbacks2.TRIM_MEMORY_MODERATE,
+            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+                downgradeQuality(RenderQuality.PREVIEW)
+            }
+        }
+    }
+
+    private fun downgradeQuality(target: RenderQuality) {
+        val targetQuality = if (target.ordinal < minQuality.ordinal) minQuality else target
+        if (currentQuality.ordinal < targetQuality.ordinal) {
+            currentQuality = targetQuality
+            Log.w("RenderQualityManager", "质量降级: $currentQuality → $targetQuality")
+        }
+    }
+
+    fun restoreQuality() {
+        if (adaptiveQualityEnabled) {
+            currentQuality = RenderQuality.STANDARD
+            Log.d("RenderQualityManager", "质量恢复: STANDARD")
+        }
+    }
+
+    fun getCurrentPreset(): QualityPreset {
+        return qualityPresets[currentQuality] ?: qualityPresets.getValue(RenderQuality.STANDARD)
+    }
+}
 
 /**
  * GPU渲染管理器
@@ -87,6 +302,14 @@ class GPURenderManager private constructor(private val context: Context) {
     
     // CPU降级渲染器（备用）
     private var cpuFallbackRenderer: CPURenderer? = null
+
+    // ==================== 性能优化组件 ====================
+
+    /** Bitmap 对象池，减少 GC 压力 */
+    val bitmapPool: BitmapPool = BitmapPool(maxPoolSize = 8)
+
+    /** 渲染质量自适应管理器 */
+    val qualityManager: RenderQualityManager = RenderQualityManager(context)
     
     /**
      * 初始化GPU渲染管理器
@@ -149,15 +372,16 @@ class GPURenderManager private constructor(private val context: Context) {
         return runOnRenderThreadBlocking {
             try {
                 // 获取EGL显示
-                eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
-                if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
+                val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+                if (display == EGL14.EGL_NO_DISPLAY) {
                     Log.e(TAG, "Failed to get EGL display")
                     return@runOnRenderThreadBlocking false
                 }
+                eglDisplay = display
                 
                 // 初始化EGL
                 val version = IntArray(2)
-                if (!EGL14.eglInitialize(eglDisplay!!, version, 0, version, 1)) {
+                if (!EGL14.eglInitialize(display, version, 0, version, 1)) {
                     Log.e(TAG, "Failed to initialize EGL")
                     return@runOnRenderThreadBlocking false
                 }
@@ -177,7 +401,7 @@ class GPURenderManager private constructor(private val context: Context) {
                 val numConfigs = IntArray(1)
                 
                 if (!EGL14.eglChooseConfig(
-                    eglDisplay!!,
+                    display,
                     configSpec, 0,
                     configs, 0, 1,
                     numConfigs, 0
@@ -185,47 +409,54 @@ class GPURenderManager private constructor(private val context: Context) {
                     Log.e(TAG, "Failed to choose EGL config")
                     return@runOnRenderThreadBlocking false
                 }
-                
-                eglConfig = configs[0]
-                
+
+                val config = configs[0]
+                if (config == null) {
+                    Log.e(TAG, "EGL config is null")
+                    return@runOnRenderThreadBlocking false
+                }
+                eglConfig = config
+
                 // 创建EGL上下文
                 val contextAttribs = intArrayOf(
                     EGL14.EGL_CONTEXT_CLIENT_VERSION, 3,
                     EGL14.EGL_NONE
                 )
-                
-                eglContext = EGL14.eglCreateContext(
-                    eglDisplay!!,
-                    eglConfig!!,
+
+                val context = EGL14.eglCreateContext(
+                    display,
+                    config,
                     EGL14.EGL_NO_CONTEXT,
                     contextAttribs, 0
                 )
-                
-                if (eglContext == null || eglContext == EGL14.EGL_NO_CONTEXT) {
+
+                if (context == null || context == EGL14.EGL_NO_CONTEXT) {
                     Log.e(TAG, "Failed to create EGL context")
                     return@runOnRenderThreadBlocking false
                 }
-                
+                eglContext = context
+
                 // 创建PBuffer表面（离屏渲染）
                 val surfaceAttribs = intArrayOf(
                     EGL14.EGL_WIDTH, 1,
                     EGL14.EGL_HEIGHT, 1,
                     EGL14.EGL_NONE
                 )
-                
-                eglSurface = EGL14.eglCreatePbufferSurface(
-                    eglDisplay!!,
-                    eglConfig!!,
+
+                val surface = EGL14.eglCreatePbufferSurface(
+                    display,
+                    config,
                     surfaceAttribs, 0
                 )
-                
-                if (eglSurface == null || eglSurface == EGL14.EGL_NO_SURFACE) {
+
+                if (surface == null || surface == EGL14.EGL_NO_SURFACE) {
                     Log.e(TAG, "Failed to create EGL surface")
                     return@runOnRenderThreadBlocking false
                 }
-                
+                eglSurface = surface
+
                 // 绑定上下文
-                if (!EGL14.eglMakeCurrent(eglDisplay!!, eglSurface!!, eglSurface!!, eglContext!!)) {
+                if (!EGL14.eglMakeCurrent(display, surface, surface, context)) {
                     Log.e(TAG, "Failed to make EGL context current")
                     return@runOnRenderThreadBlocking false
                 }
@@ -284,22 +515,32 @@ class GPURenderManager private constructor(private val context: Context) {
     private suspend fun renderWithGPU(request: RenderRequest): RenderResult {
         return runOnRenderThreadBlocking {
             try {
-                val startTime = System.currentTimeMillis()
-                
+                val startTime = SystemClock.elapsedRealtime()
+
+                // 使用自适应质量（如果启用）
+                val effectiveQuality = if (qualityManager.adaptiveQualityEnabled) {
+                    qualityManager.currentQuality
+                } else {
+                    request.quality
+                }
+
                 // 更新输入纹理
                 imageRenderer?.updateInputTexture(request.inputBitmap)
-                
+
                 // 渲染
-                val renderResult = imageRenderer?.render(request.params, request.quality)
-                
-                val processingTime = System.currentTimeMillis() - startTime
-                
+                val renderResult = imageRenderer?.render(request.params, effectiveQuality)
+
+                val processingTime = SystemClock.elapsedRealtime() - startTime
+
+                // 记录帧时序
+                FrameTimingMetrics.recordFrame(processingTime)
+
                 when (renderResult) {
                     is RenderResult.Success -> {
                         // 读取输出
                         val outputBitmap = imageRenderer?.readOutputToBitmap()
                         if (outputBitmap != null) {
-                            RenderResult.Success(renderResult.outputTextureId, processingTime, request.quality)
+                            RenderResult.Success(renderResult.outputTextureId, processingTime, effectiveQuality)
                         } else {
                             RenderResult.Error("Failed to read output bitmap")
                         }
@@ -307,7 +548,7 @@ class GPURenderManager private constructor(private val context: Context) {
                     is RenderResult.Error -> renderResult
                     else -> RenderResult.Error("Unknown render result")
                 }
-                
+
             } catch (e: Exception) {
                 Log.e(TAG, "GPU render failed", e)
                 // 尝试CPU降级
@@ -321,7 +562,7 @@ class GPURenderManager private constructor(private val context: Context) {
      * 修复 P0-5: 改为suspend函数，避免在主线程执行
      */
     private suspend fun renderWithCPU(request: RenderRequest): RenderResult {
-        val startTime = System.currentTimeMillis()
+        val startTime = SystemClock.elapsedRealtime()
         
         try {
             val outputBitmap = cpuFallbackRenderer?.render(
@@ -329,7 +570,10 @@ class GPURenderManager private constructor(private val context: Context) {
                 request.params
             )
             
-            val processingTime = System.currentTimeMillis() - startTime
+            val processingTime = SystemClock.elapsedRealtime() - startTime
+
+            // 记录帧时序
+            FrameTimingMetrics.recordFrame(processingTime)
             
             return if (outputBitmap != null) {
                 RenderResult.FallbackToCPU("GPU unavailable or failed", processingTime)
@@ -479,6 +723,12 @@ class GPURenderManager private constructor(private val context: Context) {
         // 清空队列
         clearQueue()
         renderChannel.close()
+        
+        // 清理 BitmapPool
+        bitmapPool.clear()
+        
+        // 注销质量管理器
+        qualityManager.unregister()
         
         // 在渲染线程直接执行释放（避免runBlocking嵌套）
         renderHandler?.post {

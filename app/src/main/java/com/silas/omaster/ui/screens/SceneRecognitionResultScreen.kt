@@ -182,9 +182,10 @@ fun SceneRecognitionResultScreen(
         }
         
         // 胶片详情弹窗
-        if (showFilmDetail != null) {
+        val filmDetail = showFilmDetail
+        if (filmDetail != null) {
             FilmDetailDialog(
-                film = showFilmDetail!!,
+                film = filmDetail,
                 onDismiss = { showFilmDetail = null },
                 onApply = {
                     selectedFilmId = showFilmDetail?.id

@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -228,12 +229,7 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 云端预设数据源 URL
     val cloudPresetUrls: Map<String, String>
-        get() = mapOf(
-            "oppo" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json",
-            "realme" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json",
-            "vivo" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json",
-            "honor" to "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json"
-        )
+        get() = UrlConstants.PRESET_SOURCE_URLS
 
     // 云同步状态
     var cloudSyncStatus: CloudSyncStatus
@@ -741,9 +737,9 @@ class SettingsManager private constructor(private val context: Context) {
 
     companion object {
         // 云端API默认端点
-        private const val DEFAULT_AI_API_ENDPOINT = "https://api.omaster.app/ai"
-        private const val DEFAULT_PRESET_API_ENDPOINT = "https://api.omaster.app/presets"
-        private const val DEFAULT_AUTH_API_ENDPOINT = "https://api.omaster.app/auth"
+        private val DEFAULT_AI_API_ENDPOINT = UrlConstants.API_AI_ENDPOINT
+        private val DEFAULT_PRESET_API_ENDPOINT = UrlConstants.API_PRESET_ENDPOINT
+        private val DEFAULT_AUTH_API_ENDPOINT = UrlConstants.API_AUTH_ENDPOINT
         
         // DataStore Preferences Keys
         private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")

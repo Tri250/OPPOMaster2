@@ -79,12 +79,12 @@ val finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseK
 
 android {
     namespace = "com.silas.omaster"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.silas.omaster"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         // 版本号规范：
         // versionCode: 内部版本号，每次发布必须递增
         // versionName: 对外显示版本号，格式 主.次.修订
@@ -92,10 +92,10 @@ android {
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
         //
         // 版本号与 Git Tag 同步规则：
-        // - Git Tag 格式: v{versionName}，如 v1.3.1
+        // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
-        versionCode = 10
-        versionName = "1.3.1"
+        versionCode = 100
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -217,6 +217,33 @@ android {
             isPseudoLocalesEnabled = false
             // 启用资源去重与混淆
             resValue("string", "build_type", "release")
+        }
+    }
+
+    // ===== ProGuard Mapping 文件管理 =====
+    // Release 构建后，mapping 文件位于：
+    //   app/build/outputs/mapping/release/mapping.txt
+    //
+    // 发布流程：
+    // 1. 每次发布构建后，将 mapping.txt 备份到 app/mapping/ 目录
+    // 2. 命名格式：mapping-{versionName}-{versionCode}.txt（如 mapping-1.0.0-100.txt）
+    // 3. 将 mapping 文件提交到版本控制或上传到 Crash 分析平台
+    // 4. 线上 Crash 堆栈反混淆需要对应的 mapping 文件
+    // 5. 如使用 Firebase Crashlytics 或 Sentry，可自动上传 mapping 文件
+    //
+    // 自动备份 mapping 文件（Release 构建后执行）
+    afterEvaluate {
+        tasks.matching { it.name == "assembleRelease" }.configureEach {
+            doLast {
+                val mappingFile = file("${project.buildDir}/outputs/mapping/release/mapping.txt")
+                if (mappingFile.exists()) {
+                    val backupDir = file("${project.projectDir}/mapping")
+                    if (!backupDir.exists()) backupDir.mkdirs()
+                    val targetFile = file("${backupDir}/mapping-${android.defaultConfig.versionName}-${android.defaultConfig.versionCode}.txt")
+                    mappingFile.copyTo(targetFile, overwrite = true)
+                    println("✅ ProGuard mapping 文件已备份: ${targetFile.name}")
+                }
+            }
         }
     }
 

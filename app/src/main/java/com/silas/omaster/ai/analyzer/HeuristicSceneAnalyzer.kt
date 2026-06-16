@@ -906,7 +906,7 @@ object FaceDetectorSingleton {
                 .build()
             faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(options)
         }
-        return faceDetector!!
+        return faceDetector ?: throw IllegalStateException("FaceDetector 初始化失败，请检查 ML Kit 依赖")
     }
 
     suspend fun detect(inputImage: com.google.mlkit.vision.common.InputImage): List<com.google.mlkit.vision.face.Face> {

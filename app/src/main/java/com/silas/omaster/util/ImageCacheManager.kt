@@ -1,7 +1,12 @@
 package com.silas.omaster.util
 
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
+import android.util.LruCache
 import androidx.core.net.toUri
 import coil.request.ImageRequest
 import coil.request.CachePolicy
@@ -15,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.security.MessageDigest
 
 /**
@@ -39,13 +45,79 @@ sealed class DownloadResult {
 /**
  * 图片缓存管理器
  * 管理网络图片的本地缓存，减少对象存储流量费用
+ *
+ * 内存管理增强：
+ * - LRU 内存缓存（可配置大小限制）
+ * - 磁盘缓存大小限制
+ * - 基于内存压力的自动缓存清理（ComponentCallbacks2）
  */
-object ImageCacheManager {
+class ImageCacheManager private constructor(private val context: Context) : ComponentCallbacks2 {
+
+    companion object {
+        private const val TAG = "ImageCacheManager"
+
+        @Volatile
+        private var instance: ImageCacheManager? = null
+
+        fun getInstance(context: Context): ImageCacheManager {
+            return instance ?: synchronized(this) {
+                instance ?: ImageCacheManager(context.applicationContext).also { instance = it }
+            }
+        }
+    }
 
     private const val CACHE_DIR = "presets/images"
     private const val TIMEOUT_MS = 30000L
     private const val MAX_RETRIES = 3
-    private const val TAG = "ImageCacheManager"
+
+    // ==================== LRU 内存缓存 ====================
+
+    /** 默认最大内存缓存大小：可用内存的 1/8 */
+    private val defaultMemoryCacheSize: Int by lazy {
+        val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+        maxMemory / 8
+    }
+
+    /** 可配置的最大内存缓存大小（KB） */
+    @Volatile
+    var maxMemoryCacheSizeKB: Int = 0
+        set(value) {
+            field = value
+            if (value > 0) {
+                resizeMemoryCache(value)
+            }
+        }
+
+    /** LRU 内存缓存 */
+    private var memoryCache: LruCache<String, Bitmap> = LruCache(defaultMemoryCacheSize)
+
+    private fun resizeMemoryCache(sizeKB: Int) {
+        synchronized(memoryCache) {
+            val newCache = LruCache<String, Bitmap>(sizeKB) {
+                override fun sizeOf(key: String, bitmap: Bitmap): Int {
+                    return bitmap.byteCount / 1024
+                }
+            }
+            memoryCache = newCache
+        }
+    }
+
+    init {
+        if (maxMemoryCacheSizeKB > 0) {
+            resizeMemoryCache(maxMemoryCacheSizeKB)
+        }
+    }
+
+    // ==================== 磁盘缓存大小限制 ====================
+
+    /** 默认最大磁盘缓存大小：50MB */
+    private const val DEFAULT_MAX_DISK_CACHE_BYTES = 50L * 1024 * 1024
+
+    /** 可配置的最大磁盘缓存大小（字节） */
+    @Volatile
+    var maxDiskCacheBytes: Long = DEFAULT_MAX_DISK_CACHE_BYTES
+
+    // ==================== HTTP 客户端 ====================
 
     private val client: HttpClient by lazy {
         HttpClient(CIO) {
@@ -60,6 +132,156 @@ object ImageCacheManager {
     // 记录失败的下载，用于后台重试
     // 线程安全：使用 Collections.synchronizedSet 包裹
     private val failedDownloads = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    // ==================== ComponentCallbacks2 ====================
+
+    private var registeredForCallbacks = false
+
+    fun registerMemoryCallbacks() {
+        if (!registeredForCallbacks) {
+            context.registerComponentCallbacks(this)
+            registeredForCallbacks = true
+            Log.d(TAG, "已注册 ComponentCallbacks2")
+        }
+    }
+
+    fun unregisterMemoryCallbacks() {
+        if (registeredForCallbacks) {
+            context.unregisterComponentCallbacks(this)
+            registeredForCallbacks = false
+            Log.d(TAG, "已注销 ComponentCallbacks2")
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        // 无需处理
+    }
+
+    override fun onLowMemory() {
+        Log.w(TAG, "onLowMemory: 清空内存缓存")
+        synchronized(memoryCache) {
+            memoryCache.evictAll()
+        }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        Log.w(TAG, "onTrimMemory: level=$level")
+        when (level) {
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE,
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW,
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                // 应用在前台但内存紧张，清空一半缓存
+                trimMemoryCache(0.5f)
+            }
+            ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
+                // 应用进入后台，清空缓存
+                trimMemoryCache(0.0f)
+            }
+            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+            ComponentCallbacks2.TRIM_MEMORY_MODERATE,
+            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+                // 后台且内存紧张，清空全部缓存
+                synchronized(memoryCache) {
+                    memoryCache.evictAll()
+                }
+                // 清理磁盘缓存
+                trimDiskCache()
+            }
+        }
+    }
+
+    private fun trimMemoryCache(keepFraction: Float) {
+        synchronized(memoryCache) {
+            val currentSize = memoryCache.size()
+            val targetSize = (currentSize * keepFraction).toInt()
+            if (targetSize < currentSize) {
+                memoryCache.trimToSize(targetSize)
+            }
+        }
+    }
+
+    private fun trimDiskCache() {
+        try {
+            val cacheDir = File(context.filesDir, CACHE_DIR)
+            if (!cacheDir.exists()) return
+            val files = cacheDir.listFiles() ?: return
+            // 按最后修改时间排序，删除最旧的文件
+            files.sortedBy { it.lastModified() }.forEach { it.delete() }
+            Log.d(TAG, "已清理磁盘缓存: ${files.size} 个文件")
+        } catch (e: Exception) {
+            Log.w(TAG, "清理磁盘缓存失败", e)
+        }
+    }
+
+    // ==================== 内存缓存操作 ====================
+
+    /**
+     * 将 Bitmap 放入内存缓存
+     */
+    fun putBitmap(key: String, bitmap: Bitmap) {
+        synchronized(memoryCache) {
+            if (memoryCache.get(key) == null) {
+                memoryCache.put(key, bitmap)
+            }
+        }
+    }
+
+    /**
+     * 从内存缓存获取 Bitmap
+     */
+    fun getBitmap(key: String): Bitmap? {
+        synchronized(memoryCache) {
+            return memoryCache.get(key)
+        }
+    }
+
+    /**
+     * 获取内存缓存统计信息
+     */
+    fun getMemoryCacheStats(): String {
+        synchronized(memoryCache) {
+            return "内存缓存: ${memoryCache.size()}/${memoryCache.maxSize()}KB, " +
+                    "命中=${memoryCache.hitCount()}, 未命中=${memoryCache.missCount()}"
+        }
+    }
+
+    // ==================== 磁盘缓存管理 ====================
+
+    /**
+     * 确保磁盘缓存大小在限制范围内
+     */
+    private fun enforceDiskCacheLimit() {
+        try {
+            val cacheDir = File(context.filesDir, CACHE_DIR)
+            if (!cacheDir.exists()) return
+
+            var totalSize = 0L
+            val files = cacheDir.listFiles()?.sortedBy { it.lastModified() } ?: return
+
+            for (file in files) {
+                totalSize += file.length()
+            }
+
+            // 超出限制时删除最旧的文件
+            var currentSize = totalSize
+            val iterator = files.iterator()
+            while (currentSize > maxDiskCacheBytes && iterator.hasNext()) {
+                val file = iterator.next()
+                val fileSize = file.length()
+                if (file.delete()) {
+                    currentSize -= fileSize
+                }
+            }
+
+            if (totalSize > maxDiskCacheBytes) {
+                Log.d(TAG, "磁盘缓存清理: ${(totalSize - currentSize) / 1024}KB 释放")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "磁盘缓存限制检查失败", e)
+        }
+    }
+
+    // ==================== 公共 API ====================
 
     /**
      * 获取图片的本地缓存路径
@@ -121,6 +343,8 @@ object ImageCacheManager {
         // 已存在则直接返回
         if (localFile.exists()) {
             failedDownloads.remove(url)  // 从失败列表移除
+            // 尝试加载到内存缓存
+            cacheToMemoryIfNeeded(url, localFile)
             return DownloadResult.Success(localFile)
         }
 
@@ -134,8 +358,8 @@ object ImageCacheManager {
                     if (attempt > 0) {
                         callback?.onRetry(url, attempt)
                         Log.d(TAG, "第${attempt + 1}次重试下载: $url")
-                        // 指数退避：1s, 2s, 3s
-                        delay(1000L * attempt)
+                        // 指数退避：1s, 2s, 4s
+                        delay(1000L * (1 shl (attempt - 1)))
                     }
 
                     // 创建目录
@@ -154,6 +378,12 @@ object ImageCacheManager {
                     callback?.onSuccess(url, localFile)
                     Log.d(TAG, "下载成功: $url (${bytes.size / 1024}KB)")
 
+                    // 检查磁盘缓存大小限制
+                    enforceDiskCacheLimit()
+
+                    // 加载到内存缓存
+                    cacheToMemoryIfNeeded(url, localFile)
+
                     return@withContext DownloadResult.Success(localFile)
 
                 } catch (e: Exception) {
@@ -171,6 +401,51 @@ object ImageCacheManager {
 
             DownloadResult.Error(lastException ?: Exception("未知错误"), maxRetries)
         }
+    }
+
+    /**
+     * 将本地文件加载到内存缓存（如果尚未缓存）
+     */
+    private fun cacheToMemoryIfNeeded(url: String, localFile: File) {
+        try {
+            val cacheKey = generateFileName(url)
+            if (getBitmap(cacheKey) == null) {
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeFile(localFile.absolutePath, options)
+                // 仅缓存小于 4MB 的图片到内存
+                val estimatedSizeKB = (options.outWidth * options.outHeight * 4) / 1024
+                if (estimatedSizeKB < 4 * 1024) {
+                    options.inJustDecodeBounds = false
+                    options.inSampleSize = calculateInSampleSize(options, 512, 512)
+                    val bitmap = BitmapFactory.decodeFile(localFile.absolutePath, options)
+                    if (bitmap != null) {
+                        putBitmap(cacheKey, bitmap)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // 静默失败，不影响主流程
+        }
+    }
+
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Int {
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 
     /**
@@ -286,9 +561,25 @@ object ImageCacheManager {
      * 清除所有缓存
      */
     fun clearCache(context: Context) {
+        // 清空内存缓存
+        synchronized(memoryCache) {
+            memoryCache.evictAll()
+        }
+        // 清空磁盘缓存
         File(context.filesDir, CACHE_DIR).deleteRecursively()
         failedDownloads.clear()
+        unregisterMemoryCallbacks()
         Log.d(TAG, "缓存已清空")
+    }
+
+    /**
+     * 释放资源
+     */
+    fun release() {
+        synchronized(memoryCache) {
+            memoryCache.evictAll()
+        }
+        unregisterMemoryCallbacks()
     }
 
     /**

@@ -168,9 +168,10 @@ class UniversalCreatePresetViewModel(
                 state.originalCoverPath ?: return false
             }
 
-            if (editingPresetId != null) {
+            val presetId = editingPresetId
+            if (presetId != null) {
                 repository.updateCustomPreset(
-                    editingPresetId!!,
+                    presetId,
                     mapOf(
                         "name" to state.name,
                         "coverPath" to coverPath,

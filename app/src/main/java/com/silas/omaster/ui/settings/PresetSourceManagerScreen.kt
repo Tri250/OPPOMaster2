@@ -23,6 +23,7 @@ import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
@@ -418,25 +419,25 @@ private fun getDefaultSources(): List<PresetSource> = listOf(
     PresetSource(
         id = "oppo",
         name = "OPPO 预设库",
-        url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json",
+        url = UrlConstants.PRESET_OPPO,
         enabled = true
     ),
     PresetSource(
         id = "realme",
         name = "realme 预设库",
-        url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json",
+        url = UrlConstants.PRESET_REALME,
         enabled = true
     ),
     PresetSource(
         id = "vivo",
         name = "vivo 预设库",
-        url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json",
+        url = UrlConstants.PRESET_VIVO,
         enabled = true
     ),
     PresetSource(
         id = "honor",
         name = "荣耀 预设库",
-        url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json",
+        url = UrlConstants.PRESET_HONOR,
         enabled = true
     )
 )

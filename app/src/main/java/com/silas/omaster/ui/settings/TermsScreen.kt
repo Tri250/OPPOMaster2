@@ -24,6 +24,7 @@ import com.silas.omaster.R
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
 
 /**
@@ -68,7 +69,7 @@ fun TermsScreen(
             // 查看在线隐私政策
             item {
                 TextButton(onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://omaster.app/privacy-policy"))
+                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(UrlConstants.PRIVACY_POLICY_URL))
                     context.startActivity(intent)
                 }) {
                     Text(stringResource(R.string.view_online_privacy_policy))

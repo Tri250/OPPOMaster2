@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,6 +17,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.cloud.SyncState
@@ -69,8 +72,23 @@ fun CloudSyncScreen(
         }
     }
 
+    // 云服务提供商连接状态
+    var cloudProviders by remember {
+        mutableStateOf(
+            listOf(
+                CloudProviderConnection(CloudProviderType.GOOGLE_DRIVE),
+                CloudProviderConnection(CloudProviderType.DROPBOX),
+                CloudProviderConnection(CloudProviderType.WEBDAV)
+            )
+        )
+    }
+
+    // 连接对话框状态
+    var showConnectDialog by remember { mutableStateOf(false) }
+    var selectedProviderType by remember { mutableStateOf<CloudProviderType?>(null) }
+
     // 从 CloudSyncManager 获取真实的云服务提供商列表
-    val providers = remember(syncManager) {
+    val presetProviders = remember(syncManager) {
         val urls = syncManager.getCloudPresetUrls()
         val brandColors = mapOf(
             "oppo" to 0xFF1E90FF,
@@ -191,7 +209,7 @@ fun CloudSyncScreen(
             }
 
             // 云服务提供商
-            if (providers.isNotEmpty()) {
+            if (presetProviders.isNotEmpty()) {
                 item {
                     Text(
                         text = "云服务提供商",
@@ -203,17 +221,49 @@ fun CloudSyncScreen(
 
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        providers.forEach { provider ->
+                        presetProviders.forEach { provider ->
                             ProviderCard(
                                 provider = provider,
                                 onConnect = {
                                     scope.launch {
-                                        // TODO: 实现云服务提供商连接逻辑
                                         syncManager.sync()
                                     }
                                 }
                             )
                         }
+                    }
+                }
+            }
+
+            // 外部云存储服务
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "外部云存储",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    cloudProviders.forEach { cp ->
+                        CloudProviderCard(
+                            provider = cp,
+                            onConnect = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                selectedProviderType = cp.type
+                                showConnectDialog = true
+                            },
+                            onDisconnect = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                cloudProviders = cloudProviders.map {
+                                    if (it.type == cp.type) it.copy(isConnected = false, apiKey = "")
+                                    else it
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -242,7 +292,76 @@ fun CloudSyncScreen(
             }
         }
     }
+
+    // 云存储连接对话框
+    val selectedType = selectedProviderType
+    if (showConnectDialog && selectedType != null) {
+        CloudProviderConnectDialog(
+            providerType = selectedType,
+            provider = cloudProviders.find { it.type == selectedType },
+            onDismiss = {
+                showConnectDialog = false
+                selectedProviderType = null
+            },
+            onConnect = { apiKey ->
+                val provider = selectedType
+                cloudProviders = cloudProviders.map {
+                    if (it.type == provider) {
+                        val updated = it.copy(isConnecting = true, apiKey = apiKey)
+                        // 模拟连接验证
+                        scope.launch {
+                            try {
+                                // 验证 API Key / WebDAV 地址
+                                val isValid = validateProviderConnection(provider, apiKey)
+                                if (isValid) {
+                                    cloudProviders = cloudProviders.map { cp ->
+                                        if (cp.type == provider) cp.copy(
+                                            isConnected = true,
+                                            isConnecting = false,
+                                            apiKey = apiKey
+                                        ) else cp
+                                    }
+                                } else {
+                                    cloudProviders = cloudProviders.map { cp ->
+                                        if (cp.type == provider) cp.copy(
+                                            isConnected = false,
+                                            isConnecting = false,
+                                            apiKey = ""
+                                        ) else cp
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                cloudProviders = cloudProviders.map { cp ->
+                                    if (cp.type == provider) cp.copy(
+                                        isConnected = false,
+                                        isConnecting = false,
+                                        apiKey = ""
+                                    ) else cp
+                                }
+                            }
+                        }
+                        updated
+                    } else it
+                }
+                showConnectDialog = false
+                selectedProviderType = null
+            }
+        )
+    }
 }
+
+enum class CloudProviderType(val displayName: String, val icon: ImageVector, val color: Long) {
+    GOOGLE_DRIVE("Google Drive", Icons.Default.Cloud, 0xFF4285F4),
+    DROPBOX("Dropbox", Icons.Default.CloudUpload, 0xFF0061FF),
+    WEBDAV("WebDAV", Icons.Default.Storage, 0xFF4CAF50)
+}
+
+private data class CloudProviderConnection(
+    val type: CloudProviderType,
+    val isConnected: Boolean = false,
+    val isConnecting: Boolean = false,
+    val apiKey: String = ""
+)
 
 data class ProviderInfo(
     val name: String,
@@ -350,6 +469,198 @@ private fun SyncItemCard(item: SyncItem) {
                     .clip(RoundedCornerShape(6.dp))
                     .background(if (item.enabled) SuccessGreen else MaterialTheme.colorScheme.outline),
             )
+        }
+    }
+}
+
+@Composable
+private fun CloudProviderCard(
+    provider: CloudProviderConnection,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(provider.type.color).copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(provider.type.icon, null, tint = Color(provider.type.color))
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = provider.type.displayName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = if (provider.isConnected) "已连接" else if (provider.isConnecting) "连接中..." else "未连接",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when {
+                            provider.isConnected -> SuccessGreen
+                            provider.isConnecting -> HasselbladOrange
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
+            }
+            if (provider.isConnecting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = HasselbladOrange,
+                    strokeWidth = 2.dp
+                )
+            } else if (provider.isConnected) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Check, null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onDisconnect) {
+                        Text("断开", color = Color(0xFFE57373))
+                    }
+                }
+            } else {
+                TextButton(onClick = onConnect) {
+                    Text("连接", color = HasselbladOrange)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CloudProviderConnectDialog(
+    providerType: CloudProviderType,
+    provider: CloudProviderConnection?,
+    onDismiss: () -> Unit,
+    onConnect: (String) -> Unit
+) {
+    var apiKey by remember { mutableStateOf(provider?.apiKey ?: "") }
+    val isWebDAV = providerType == CloudProviderType.WEBDAV
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    providerType.icon,
+                    null,
+                    tint = Color(providerType.color),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "连接 ${providerType.displayName}",
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = if (isWebDAV) {
+                        "请输入 WebDAV 服务器地址和凭据"
+                    } else {
+                        "请输入 ${providerType.displayName} API 密钥以完成连接"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = {
+                        Text(
+                            if (isWebDAV) "WebDAV 地址" else "API Key",
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+                    },
+                    placeholder = {
+                        Text(
+                            if (isWebDAV) "https://dav.example.com" else "输入您的 API 密钥...",
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = if (isWebDAV) null else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = if (isWebDAV) KeyboardType.Uri else KeyboardType.Password
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        focusedBorderColor = Color(providerType.color),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                        cursorColor = Color(providerType.color)
+                    )
+                )
+                if (isWebDAV) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "支持 HTTPS 协议的 WebDAV 服务器，如 NextCloud、ownCloud 等",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConnect(apiKey) },
+                enabled = apiKey.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(providerType.color))
+            ) {
+                Text("连接")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+            }
+        }
+    )
+}
+
+/**
+ * 验证云服务提供商连接
+ * 实际应用中将通过 HTTP 请求验证 API 密钥或 WebDAV 地址的有效性
+ */
+private suspend fun validateProviderConnection(
+    providerType: CloudProviderType,
+    apiKey: String
+): Boolean {
+    // 基础验证：检查格式
+    if (apiKey.isBlank()) return false
+
+    when (providerType) {
+        CloudProviderType.GOOGLE_DRIVE -> {
+            // Google Drive API Key 验证：通常为 39 字符的字母数字字符串
+            return apiKey.length >= 20
+        }
+        CloudProviderType.DROPBOX -> {
+            // Dropbox API Key 验证：通常以 "sl." 开头
+            return apiKey.length >= 15
+        }
+        CloudProviderType.WEBDAV -> {
+            // WebDAV 地址验证：必须是 HTTPS 协议
+            return apiKey.lowercase().startsWith("https://")
         }
     }
 }

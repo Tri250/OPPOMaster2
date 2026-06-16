@@ -120,13 +120,13 @@ fun ImageGallery(
             ) { page ->
                 // 使用 ImageCacheManager 获取加载路径（优先本地缓存）
                 val imagePath = images[page]
-                val imageUri = ImageCacheManager.getImageLoadPath(context, imagePath)
+                val imageUri = ImageCacheManager.getInstance(context).getImageLoadPath(context, imagePath)
 
                 // 如果是网络图片且未缓存，后台下载
                 LaunchedEffect(imagePath) {
                     if (imagePath.startsWith("http") &&
-                        !ImageCacheManager.isImageCached(context, imagePath)) {
-                        ImageCacheManager.downloadAndCacheImage(context, imagePath)
+                        !ImageCacheManager.getInstance(context).isImageCached(context, imagePath)) {
+                        ImageCacheManager.getInstance(context).downloadAndCacheImage(context, imagePath)
                     }
                 }
 

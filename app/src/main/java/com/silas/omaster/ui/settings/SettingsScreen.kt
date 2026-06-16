@@ -83,6 +83,7 @@ import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
+import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
 import android.widget.Toast
@@ -106,7 +107,7 @@ fun SettingsScreen(
     var updateChannel by remember { mutableStateOf(settingsManager.updateChannel) }
     var showChannelDialog by remember { mutableStateOf(false) }
     var analyticsEnabled by remember { mutableStateOf(settingsManager.isAnalyticsEnabled) }
-    var cacheSize by remember { mutableStateOf(ImageCacheManager.getCacheSize(context)) }
+    var cacheSize by remember { mutableStateOf(ImageCacheManager.getInstance(context).getCacheSize(context)) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
 
@@ -528,7 +529,7 @@ fun SettingsScreen(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            ImageCacheManager.clearCache(context)
+                            ImageCacheManager.getInstance(context).clearCache(context)
                             cacheSize = 0.0
                             showClearCacheDialog = false
                             haptic.perform(HapticFeedbackType.LongPress)
@@ -762,10 +763,10 @@ fun ThemeSelectionDialog(
 @Composable
 private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
     val dataSources = listOf(
-        DataSourceInfo("OPPO", "一加/OPPO 大师模式官方预设", "https://gitee.com/silas/omaster-presets/opporealme"),
-        DataSourceInfo("realme", "realme GT 大师模式官方预设", "https://gitee.com/silas/omaster-presets/realme"),
-        DataSourceInfo("vivo", "vivo 蔡司自然色彩官方预设", "https://gitee.com/silas/omaster-presets/vivo"),
-        DataSourceInfo("honor", "荣耀 Magic 影像官方预设", "https://gitee.com/silas/omaster-presets/honor")
+        DataSourceInfo("OPPO", "一加/OPPO 大师模式官方预设", UrlConstants.PRESET_OPPO),
+        DataSourceInfo("realme", "realme GT 大师模式官方预设", UrlConstants.PRESET_REALME),
+        DataSourceInfo("vivo", "vivo 蔡司自然色彩官方预设", UrlConstants.PRESET_VIVO),
+        DataSourceInfo("honor", "荣耀 Magic 影像官方预设", UrlConstants.PRESET_HONOR)
     )
 
     AlertDialog(

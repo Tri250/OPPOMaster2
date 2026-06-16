@@ -3,6 +3,7 @@ package com.silas.omaster.model
 import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
+import androidx.compose.runtime.Stable
 import com.silas.omaster.R
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
@@ -13,6 +14,7 @@ import kotlinx.serialization.Transient
  * 预设评论
  * 对应 Web 端的 PresetComment
  */
+@Stable
 @Serializable
 data class PresetComment(
     val id: String,
@@ -56,6 +58,7 @@ data class PresetComment(
     }
 }
 
+@Stable
 @Serializable
 data class PresetDescription(
     val title: String,
@@ -84,6 +87,7 @@ data class PresetDescription(
     }
 }
 
+@Stable
 @Serializable
 data class PresetItem(
     val label: String,
@@ -117,6 +121,7 @@ data class PresetItem(
     }
 }
 
+@Stable
 @Serializable
 data class PresetSection(
     val title: String? = null,
@@ -177,6 +182,7 @@ data class PresetSection(
  * @param shootingTips 拍摄建议，包含环境及场景建议（已废弃，仅用于兼容旧版本自定义预设）
  * @param sections 动态参数分组列表，用于替代硬编码的参数显示
  */
+@Stable
 @Serializable
 data class MasterPreset(
     val id: String? = null,
@@ -462,6 +468,7 @@ data class MasterPreset(
  * 预设列表包装类
  * 用于 Gson 解析 JSON 数据
  */
+@Stable
 @Serializable
 data class PresetList(
     val name: String? = null,

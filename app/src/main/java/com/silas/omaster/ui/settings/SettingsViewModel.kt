@@ -199,7 +199,7 @@ class SettingsViewModel(
     fun updateCacheSize() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val sizeMb = ImageCacheManager.getCacheSize(application)
+                val sizeMb = ImageCacheManager.getInstance(application).getCacheSize(application)
                 _cacheSize.value = String.format("%.2f MB", sizeMb)
             }
         }
@@ -211,7 +211,7 @@ class SettingsViewModel(
     fun clearCache(onComplete: () -> Unit) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                ImageCacheManager.clearCache(application)
+                ImageCacheManager.getInstance(application).clearCache(application)
             }
             _cacheSize.value = "0.00 MB"
             onComplete()
