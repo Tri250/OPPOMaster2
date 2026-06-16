@@ -33,6 +33,7 @@ tensorflow-lite-gpu = "2.16.1"
 tensorflow-lite-support = "0.4.4"
 
 # ===== CameraX =====
+# 修复 P2-6: CameraX 当前未使用（使用 Camera2 替代），保留版本定义以备将来启用
 camerax = "1.4.0"
 
 # ===== Analytics =====

@@ -7,35 +7,37 @@ import com.silas.omaster.R
 /**
  * 预设数据本地化工具
  * 用于将存储在 presets.json 中的中文字符串转换为当前语言的字符串
+ * 
+ * 修复 P2-5: 使用 Map 替代 when 表达式，提高维护性
  */
 object PresetI18n {
+
+    // 滤镜名称映射表
+    private val FILTER_NAME_MAP = mapOf(
+        "标准" to R.string.filter_standard,
+        "霓虹" to R.string.filter_neon,
+        "清新" to R.string.filter_fresh,
+        "复古" to R.string.filter_vintage,
+        "通透" to R.string.filter_clear,
+        "明艳" to R.string.filter_vivid,
+        "童话" to R.string.filter_fairy,
+        "人文" to R.string.filter_humanities,
+        "自然" to R.string.filter_natural,
+        "美味" to R.string.filter_delicious,
+        "冷调" to R.string.filter_cool,
+        "暖调" to R.string.filter_warm,
+        "浓郁" to R.string.filter_rich,
+        "高级灰" to R.string.filter_advanced_gray,
+        "黑白" to R.string.filter_bw,
+        "单色" to R.string.filter_mono,
+        "赛博朋克" to R.string.filter_cyberpunk,
+        "原图" to R.string.floating_original
+    )
 
     /**
      * 获取滤镜名称对应的资源 ID
      */
-    fun getFilterResId(name: String): Int? {
-        return when (name) {
-            "标准" -> R.string.filter_standard
-            "霓虹" -> R.string.filter_neon
-            "清新" -> R.string.filter_fresh
-            "复古" -> R.string.filter_vintage
-            "通透" -> R.string.filter_clear
-            "明艳" -> R.string.filter_vivid
-            "童话" -> R.string.filter_fairy
-            "人文" -> R.string.filter_humanities
-            "自然" -> R.string.filter_natural
-            "美味" -> R.string.filter_delicious
-            "冷调" -> R.string.filter_cool
-            "暖调" -> R.string.filter_warm
-            "浓郁" -> R.string.filter_rich
-            "高级灰" -> R.string.filter_advanced_gray
-            "黑白" -> R.string.filter_bw
-            "单色" -> R.string.filter_mono
-            "赛博朋克" -> R.string.filter_cyberpunk
-            "原图" -> R.string.floating_original
-            else -> null
-        }
-    }
+    fun getFilterResId(name: String): Int? = FILTER_NAME_MAP[name]
 
     /**
      * 获取本地化的滤镜名称
@@ -95,18 +97,18 @@ object PresetI18n {
         return if (resId != null) context.getString(resId) else filterName
     }
 
+    // 柔光名称映射表
+    private val SOFT_LIGHT_MAP = mapOf(
+        "无" to R.string.soft_none,
+        "柔美" to R.string.soft_gentle,
+        "梦幻" to R.string.soft_dreamy,
+        "朦胧" to R.string.soft_hazy
+    )
+
     /**
      * 获取柔光名称对应的资源 ID
      */
-    fun getSoftLightResId(softLight: String): Int? {
-        return when (softLight) {
-            "无" -> R.string.soft_none
-            "柔美" -> R.string.soft_gentle
-            "梦幻" -> R.string.soft_dreamy
-            "朦胧" -> R.string.soft_hazy
-            else -> null
-        }
-    }
+    fun getSoftLightResId(softLight: String): Int? = SOFT_LIGHT_MAP[softLight]
 
     /**
      * 获取本地化的柔光名称
@@ -125,16 +127,16 @@ object PresetI18n {
         return if (resId != null) context.getString(resId) else softLight
     }
 
+    // 暗角开关映射表
+    private val VIGNETTE_MAP = mapOf(
+        "开" to R.string.vignette_on,
+        "关" to R.string.vignette_off
+    )
+
     /**
      * 获取暗角开关状态对应的资源 ID
      */
-    fun getVignetteResId(vignette: String): Int? {
-        return when (vignette) {
-            "开" -> R.string.vignette_on
-            "关" -> R.string.vignette_off
-            else -> null
-        }
-    }
+    fun getVignetteResId(vignette: String): Int? = VIGNETTE_MAP[vignette]
 
     /**
      * 获取本地化的暗角开关状态
@@ -153,48 +155,48 @@ object PresetI18n {
         return if (resId != null) context.getString(resId) else vignette
     }
 
+    // 拍摄模式映射表
+    private val MODE_MAP = mapOf(
+        "auto" to R.string.mode_auto,
+        "pro" to R.string.mode_pro
+    )
+
     /**
      * 获取拍摄模式对应的资源 ID
      */
-    fun getModeResId(mode: String): Int? {
-        return when (mode.lowercase()) {
-            "auto" -> R.string.mode_auto
-            "pro" -> R.string.mode_pro
-            else -> null
-        }
-    }
+    fun getModeResId(mode: String): Int? = MODE_MAP[mode.lowercase()]
+
+    // 预设名称映射表
+    private val PRESET_NAME_MAP = mapOf(
+        "富士胶片" to R.string.preset_fuji_film,
+        "胶片感" to R.string.preset_film_feel,
+        "童话" to R.string.preset_fairy_tale,
+        "高对比黑白" to R.string.preset_high_contrast_bw,
+        "理光绿" to R.string.preset_ricoh_green,
+        "理光蓝" to R.string.preset_ricoh_blue,
+        "蓝调时刻" to R.string.preset_blue_hour,
+        "梦幻黑柔" to R.string.preset_dreamy_blackmist,
+        "富士NC" to R.string.preset_fuji_nc,
+        "人文" to R.string.preset_humanities,
+        "清新人文" to R.string.preset_fresh_humanities,
+        "氛围雪夜" to R.string.preset_snowy_night,
+        "美味流芳" to R.string.preset_delicious,
+        "手机徕卡" to R.string.preset_mobile_leica,
+        "梦幻富士" to R.string.preset_dreamy_fuji,
+        "哈苏浓郁" to R.string.preset_hasselblad_rich,
+        "假日清新" to R.string.preset_holiday_fresh,
+        "梦幻黑白" to R.string.preset_dreamy_bw,
+        "美味梦境" to R.string.preset_delicious_dream,
+        "蓝调通透" to R.string.preset_blue_clear,
+        "晴天复古" to R.string.preset_sunny_vintage,
+        "霓虹灯" to R.string.preset_neon_lights,
+        "复古怀旧" to R.string.preset_retro_nostalgia
+    )
 
     /**
      * 获取预设名称对应的资源 ID
      */
-    fun getPresetNameResId(name: String): Int? {
-        return when (name) {
-            "富士胶片" -> R.string.preset_fuji_film
-            "胶片感" -> R.string.preset_film_feel
-            "童话" -> R.string.preset_fairy_tale
-            "高对比黑白" -> R.string.preset_high_contrast_bw
-            "理光绿" -> R.string.preset_ricoh_green
-            "理光蓝" -> R.string.preset_ricoh_blue
-            "蓝调时刻" -> R.string.preset_blue_hour
-            "梦幻黑柔" -> R.string.preset_dreamy_blackmist
-            "富士NC" -> R.string.preset_fuji_nc
-            "人文" -> R.string.preset_humanities
-            "清新人文" -> R.string.preset_fresh_humanities
-            "氛围雪夜" -> R.string.preset_snowy_night
-            "美味流芳" -> R.string.preset_delicious
-            "手机徕卡" -> R.string.preset_mobile_leica
-            "梦幻富士" -> R.string.preset_dreamy_fuji
-            "哈苏浓郁" -> R.string.preset_hasselblad_rich
-            "假日清新" -> R.string.preset_holiday_fresh
-            "梦幻黑白" -> R.string.preset_dreamy_bw
-            "美味梦境" -> R.string.preset_delicious_dream
-            "蓝调通透" -> R.string.preset_blue_clear
-            "晴天复古" -> R.string.preset_sunny_vintage
-            "霓虹灯" -> R.string.preset_neon_lights
-            "复古怀旧" -> R.string.preset_retro_nostalgia
-            else -> null
-        }
-    }
+    fun getPresetNameResId(name: String): Int? = PRESET_NAME_MAP[name]
 
     /**
      * 获取本地化的预设名称
@@ -260,37 +262,37 @@ object PresetI18n {
         return if (resId != null) context.getString(resId) else mode
     }
 
+    // 拍摄建议映射表
+    private val SHOOTING_TIPS_MAP = mapOf(
+        "富士胶片" to R.string.tips_fuji_film,
+        "胶片感" to R.string.tips_film_feel,
+        "童话" to R.string.tips_fairy_tale,
+        "高对比黑白" to R.string.tips_high_contrast_bw,
+        "理光绿" to R.string.tips_ricoh_green,
+        "理光蓝" to R.string.tips_ricoh_blue,
+        "蓝调时刻" to R.string.tips_blue_hour,
+        "梦幻黑柔" to R.string.tips_dreamy_blackmist,
+        "富士NC" to R.string.tips_fuji_nc,
+        "人文" to R.string.tips_humanities,
+        "清新人文" to R.string.tips_fresh_humanities,
+        "氛围雪夜" to R.string.tips_snowy_night,
+        "美味流芳" to R.string.tips_delicious,
+        "手机徕卡" to R.string.tips_mobile_leica,
+        "梦幻富士" to R.string.tips_dreamy_fuji,
+        "哈苏浓郁" to R.string.tips_hasselblad_rich,
+        "假日清新" to R.string.tips_holiday_fresh,
+        "梦幻黑白" to R.string.tips_dreamy_bw,
+        "美味梦境" to R.string.tips_delicious_dream,
+        "蓝调通透" to R.string.tips_blue_clear,
+        "晴天复古" to R.string.tips_sunny_vintage,
+        "霓虹灯" to R.string.tips_neon_lights,
+        "复古怀旧" to R.string.tips_retro_nostalgia
+    )
+
     /**
      * 获取拍摄建议对应的资源 ID
      */
-    fun getShootingTipsResId(presetName: String): Int? {
-        return when (presetName) {
-            "富士胶片" -> R.string.tips_fuji_film
-            "胶片感" -> R.string.tips_film_feel
-            "童话" -> R.string.tips_fairy_tale
-            "高对比黑白" -> R.string.tips_high_contrast_bw
-            "理光绿" -> R.string.tips_ricoh_green
-            "理光蓝" -> R.string.tips_ricoh_blue
-            "蓝调时刻" -> R.string.tips_blue_hour
-            "梦幻黑柔" -> R.string.tips_dreamy_blackmist
-            "富士NC" -> R.string.tips_fuji_nc
-            "人文" -> R.string.tips_humanities
-            "清新人文" -> R.string.tips_fresh_humanities
-            "氛围雪夜" -> R.string.tips_snowy_night
-            "美味流芳" -> R.string.tips_delicious
-            "手机徕卡" -> R.string.tips_mobile_leica
-            "梦幻富士" -> R.string.tips_dreamy_fuji
-            "哈苏浓郁" -> R.string.tips_hasselblad_rich
-            "假日清新" -> R.string.tips_holiday_fresh
-            "梦幻黑白" -> R.string.tips_dreamy_bw
-            "美味梦境" -> R.string.tips_delicious_dream
-            "蓝调通透" -> R.string.tips_blue_clear
-            "晴天复古" -> R.string.tips_sunny_vintage
-            "霓虹灯" -> R.string.tips_neon_lights
-            "复古怀旧" -> R.string.tips_retro_nostalgia
-            else -> null
-        }
-    }
+    fun getShootingTipsResId(presetName: String): Int? = SHOOTING_TIPS_MAP[presetName]
 
     /**
      * 获取本地化的拍摄建议
@@ -308,6 +310,21 @@ object PresetI18n {
         val resId = getShootingTipsResId(presetName)
         return if (resId != null) context.getString(resId) else (defaultTips ?: "")
     }
+
+    // 白平衡映射表
+    private val WHITE_BALANCE_MAP = mapOf(
+        "阴天" to R.string.white_balance_cloudy,
+        "日光" to R.string.white_balance_daylight,
+        "荧光灯" to R.string.white_balance_fluorescent,
+        "白炽灯" to R.string.white_balance_incandescent,
+        "自动" to R.string.white_balance_auto
+    )
+
+    // 色调风格映射表
+    private val COLOR_TONE_MAP = mapOf(
+        "暖调" to R.string.tone_warm,
+        "冷调" to R.string.tone_cool
+    )
 
     /**
      * 解析参数值，将其中的中文字符串转换为本地化字符串
@@ -339,27 +356,10 @@ object PresetI18n {
         }
 
         // 处理白平衡值（如 "2000K" 中的 "阴天"、"日光" 等）
-        val whiteBalanceResId = when (value) {
-            "阴天" -> R.string.white_balance_cloudy
-            "日光" -> R.string.white_balance_daylight
-            "荧光灯" -> R.string.white_balance_fluorescent
-            "白炽灯" -> R.string.white_balance_incandescent
-            "自动" -> R.string.white_balance_auto
-            else -> null
-        }
-        if (whiteBalanceResId != null) {
-            return context.getString(whiteBalanceResId)
-        }
+        WHITE_BALANCE_MAP[value]?.let { return context.getString(it) }
 
         // 处理色调风格值
-        val colorToneResId = when (value) {
-            "暖调" -> R.string.tone_warm
-            "冷调" -> R.string.tone_cool
-            else -> null
-        }
-        if (colorToneResId != null) {
-            return context.getString(colorToneResId)
-        }
+        COLOR_TONE_MAP[value]?.let { return context.getString(it) }
 
         // 无法识别的值，直接返回原值
         return value

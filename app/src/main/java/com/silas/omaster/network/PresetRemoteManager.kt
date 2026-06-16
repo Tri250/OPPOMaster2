@@ -72,7 +72,8 @@ object PresetRemoteManager {
         val hostStart = lower.indexOf("https://") + 8
         val hostEnd = lower.indexOf('/', startIndex = hostStart).let { if (it < 0) lower.length else it }
         val host = lower.substring(hostStart, hostEnd)
-        if (blockedPrefixes.any { host.startsWith(it) || host == it.trimEnd('.') }) {
+        // 修复 P2-13: 移除死代码 trimEnd('.')，因为 startsWith 已覆盖所有情况
+        if (blockedPrefixes.any { host.startsWith(it) }) {
             return "禁止访问内网地址"
         }
         return null

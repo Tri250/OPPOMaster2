@@ -380,10 +380,8 @@ object ShareExportUtils {
         val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(result)
 
-        // 设备/EXIF 数据：当前没有可用的图片路径，因此使用 ExifWatermarkProvider 的兜底实现
-        val exifData = ExifWatermarkProvider(context).extractFromUri(
-            Uri.fromFile(File(context.cacheDir, "watermark_fallback.tmp"))
-        )
+        // 修复 P2-14: 使用公开的 getFallbackData() 方法，避免使用不存在的文件
+        val exifData = ExifWatermarkProvider(context).getFallbackData()
 
         // 直接使用 getVisibleLayers()，内部已经按 sortOrder 降序排序
         val visibleLayers = config.getVisibleLayers()

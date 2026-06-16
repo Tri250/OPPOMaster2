@@ -437,8 +437,10 @@ class ExifWatermarkProvider(private val context: Context) {
 
     /**
      * 获取后备数据（无EXIF时）
+     * 
+     * 修复 P2-14: 提供公开方法，避免使用不存在的文件
      */
-    private fun getFallbackData(): ExifWatermarkData {
+    fun getFallbackData(): ExifWatermarkData {
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         

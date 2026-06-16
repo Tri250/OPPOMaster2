@@ -150,11 +150,14 @@
 -keep class com.silas.omaster.model.PresetSection { *; }
 
 # ========================================
-# 优化配置
+# 优化配置（修复 P2-12: 降低激进程度，避免 NPE 风险）
 # ========================================
--optimizationpasses 5
+# 优化轮次降低，减少内联和重排导致的运行时问题
+-optimizationpasses 3
+# 允许修改访问修饰符（但保持谨慎）
 -allowaccessmodification
--mergeinterfacesaggressively
+# 禁用激进接口合并（可能导致 NPE）
+# -mergeinterfacesaggressively
 
 # ========================================
 # 混淆配置

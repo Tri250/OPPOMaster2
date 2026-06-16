@@ -886,6 +886,13 @@ class FloatingWindowService : Service() {
             private var touchY = 0f
             private var isClick = false
             private val clickThreshold = 20f
+            
+            // 修复 P2-4: 添加 throttle 防止高频调用 updateViewLayout
+            private var lastUpdateTime = 0L
+            private val updateIntervalMs = 16L // 约 60fps
+            private var pendingX = 0
+            private var pendingY = 0
+            private var hasPendingUpdate = false
 
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 when (event.action) {
@@ -895,31 +902,38 @@ class FloatingWindowService : Service() {
                         touchX = event.rawX
                         touchY = event.rawY
                         isClick = true
+                        hasPendingUpdate = false
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val dx = event.rawX - touchX
                         val dy = event.rawY - touchY
-                        if (Math.abs(dx) > clickThreshold || Math.abs(dy) > clickThreshold) {
+                        if (kotlin.math.abs(dx) > clickThreshold || kotlin.math.abs(dy) > clickThreshold) {
                             isClick = false
                         }
                         
                         val metrics = DisplayMetrics()
                         wm.defaultDisplay.getMetrics(metrics)
                         
-                        params?.x = initialX + dx.toInt()
+                        pendingX = initialX + dx.toInt()
                         
                         // 垂直方向限制，防止超出屏幕
                         val newY = initialY + dy.toInt()
                         val maxY = metrics.heightPixels - (floatingView?.height ?: 0)
-                        params?.y = newY.coerceIn(0, maxY)
+                        pendingY = newY.coerceIn(0, maxY)
                         
-                        floatingView?.let { view ->
-                            params?.let { p ->
-                                wm.updateViewLayout(view, p)
-                            }
+                        hasPendingUpdate = true
+                        
+                        // Throttle: 限制 updateViewLayout 调用频率
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastUpdateTime >= updateIntervalMs) {
+                            applyPendingUpdate(wm)
                         }
                     }
                     MotionEvent.ACTION_UP -> {
+                        // 确保最后的更新被应用
+                        if (hasPendingUpdate) {
+                            applyPendingUpdate(wm)
+                        }
                         if (!isClick) {
                             // 实现贴边收纳逻辑
                             snapToEdge(wm)
@@ -927,6 +941,26 @@ class FloatingWindowService : Service() {
                     }
                 }
                 return false
+            }
+            
+            private fun applyPendingUpdate(wm: WindowManager) {
+                if (!hasPendingUpdate) return
+                
+                params?.x = pendingX
+                params?.y = pendingY
+                
+                floatingView?.let { view ->
+                    params?.let { p ->
+                        try {
+                            wm.updateViewLayout(view, p)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "updateViewLayout failed", e)
+                        }
+                    }
+                }
+                
+                lastUpdateTime = System.currentTimeMillis()
+                hasPendingUpdate = false
             }
         })
     }

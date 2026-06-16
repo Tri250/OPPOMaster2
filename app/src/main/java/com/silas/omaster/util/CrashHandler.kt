@@ -116,6 +116,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 
     /**
      * 持久化崩溃报告到文件
+     * 修复 P2-9: 隐私保护 - 不存储可能包含敏感信息的路径/IP
      */
     private fun persistCrashReport(content: String, type: String) {
         val ctx = appContext ?: return
@@ -123,15 +124,33 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             val crashDir = File(ctx.filesDir, "crash_logs")
             if (!crashDir.exists()) crashDir.mkdirs()
 
+            // 隐私保护：过滤敏感信息
+            val sanitizedContent = sanitizeCrashReport(content)
+
             val fileName = "crash_${getCurrentTime().replace(":", "-").replace(" ", "_")}_$type.log"
             val crashFile = File(crashDir, fileName)
-            crashFile.writeText(content)
+            crashFile.writeText(sanitizedContent)
 
             // 清理旧日志（只保留最近 10 个）
             cleanupOldCrashLogs(crashDir, keepCount = 10)
         } catch (e: Throwable) {
             Log.w(TAG, "持久化崩溃日志失败", e)
         }
+    }
+
+    /**
+     * 清理崩溃报告中的敏感信息
+     * 移除：文件路径、IP地址、可能的凭证信息
+     */
+    private fun sanitizeCrashReport(content: String): String {
+        return content
+            // 移除文件路径（保留文件名）
+            .replace(Regex("/data/data/[a-zA-Z0-9._-]+/[a-zA-Z0-9/_-]+", RegexOption.MULTILINE), "[PATH_REDACTED]")
+            .replace(Regex("/storage/emulated/[0-9]+/[a-zA-Z0-9/_-]+", RegexOption.MULTILINE), "[PATH_REDACTED]")
+            // 移除 IP 地址
+            .replace(Regex("\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}\\b"), "[IP_REDACTED]")
+            // 移除可能的 token/key（简单启发式）
+            .replace(Regex("(token|key|secret|password|credential)\\s*[=:]\\s*\\S+", RegexOption.IGNORE_CASE), "$1=[REDACTED]")
     }
 
     /**
