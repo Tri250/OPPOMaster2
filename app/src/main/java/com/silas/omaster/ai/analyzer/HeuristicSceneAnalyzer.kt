@@ -105,8 +105,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         candidates.addAll(voteByBrightness(brightnessLevel, colorProfile))
         // 人脸投票
         if (faceCount > 0) candidates.addAll(voteByFace(faceCount, colorProfile))
-        // EXIF 投票
-        if (exif != null) candidates.addAll(voteByExif(exif, brightnessLevel))
+        // EXIF 投票（修复 #16：EXIF 缺失时走简化流程，避免整段白跑）
+        if (exif != null && hasEnoughExif(exif)) {
+            candidates.addAll(voteByExif(exif, brightnessLevel))
+        } else {
+            // 修复 #16：EXIF 缺失/字段不全时 fallback 到「场景已确定 + 亮度判断」二步简化流程
+            candidates.addAll(voteByExifFallback(brightnessLevel, colorProfile))
+        }
         // 纹理投票
         candidates.addAll(voteByTexture(edgeDensity, colorProfile))
 
@@ -605,7 +610,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
     /**
      * EXIF→场景投票
-     * 
+     *
      * 规则：
      * ├── ISO > 800 → 暗光/夜景
      * ├── 闪光灯=开 → 室内/夜景人像
@@ -651,6 +656,47 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             }
         }
 
+        return votes
+    }
+
+    /**
+     * 修复 #16：判定 EXIF 是否提供足够信息以跑完整 EXIF 投票
+     * 当 ISO / 焦距 / 光圈 全部为 null 时视为 EXIF 缺失（典型的大师模式自动档场景），
+     * 此时调用方走 voteByExifFallback 简化流程，避免整段代码空跑
+     */
+    private fun hasEnoughExif(exif: ExifData): Boolean {
+        return exif.iso != null || exif.focalLength != null || exif.fNumber != null
+    }
+
+    /**
+     * 修复 #16：EXIF 缺失时的简化投票流程
+     * 思路：场景已通过颜色直方图/亮度分析初步确定，这里只补"亮度 → 场景" 的二次强化
+     * 比直接跳过 EXIF 投票更激进，但比跑无字段的 voteByExif 更有效
+     */
+    private fun voteByExifFallback(
+        brightness: BrightnessLevel,
+        colorProfile: ColorProfile
+    ): List<SceneCandidate> {
+        val votes = mutableListOf<SceneCandidate>()
+        // 用亮度做二段强化
+        when (brightness) {
+            BrightnessLevel.VERY_DARK -> {
+                votes.add(SceneCandidate("night-city", 0.55f, "exif-fallback"))
+                votes.add(SceneCandidate("night-neon", 0.50f, "exif-fallback"))
+            }
+            BrightnessLevel.DARK -> {
+                votes.add(SceneCandidate("night-candle", 0.45f, "exif-fallback"))
+            }
+            BrightnessLevel.VERY_BRIGHT -> {
+                votes.add(SceneCandidate("landscape-snow", 0.40f, "exif-fallback"))
+                votes.add(SceneCandidate("landscape-beach", 0.40f, "exif-fallback"))
+            }
+            else -> { /* 中间亮度不补充 */ }
+        }
+        // 用色调倾向做轻量补偿
+        if (colorProfile.warmthRatio > 0.55f) {
+            votes.add(SceneCandidate("landscape-sunset", 0.35f, "exif-fallback"))
+        }
         return votes
     }
 

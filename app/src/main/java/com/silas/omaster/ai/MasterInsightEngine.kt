@@ -1,6 +1,7 @@
 package com.silas.omaster.ai
 
 import android.content.Context
+import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
@@ -307,9 +308,19 @@ class MasterInsightEngine private constructor(context: Context) {
     ): Float {
         var score = film.matchScore
 
-        // 基于用户偏好调整
+        // 修复 #11：用户偏好系列权重 0.1 → 0.25
         if (preferences.preferredSeries.contains(film.series)) {
-            score += 0.1f
+            score += 0.25f
+        }
+
+        // 修复 #11：加入"用户历史收藏偏好"权重
+        if (preferences.favoriteSeries.contains(film.series)) {
+            score += 0.15f
+        }
+
+        // 修复 #11：历史收藏的具体胶片 ID 直接命中再额外加分
+        if (preferences.favoriteFilmIds.contains(film.id)) {
+            score += 0.10f
         }
 
         return score.coerceIn(0f, 1f)
@@ -337,11 +348,100 @@ class MasterInsightEngine private constructor(context: Context) {
     }
 
     private fun generateStory(profile: SceneProfile): String {
-        val tips = profile.masterTips
-        return if (tips.isNotEmpty()) {
-            tips.first()
+        // 修复：不再偷懒只返回 masterTips.first()，而是综合 3 个维度拼出真正描述这张图的叙事
+        val histogram = profile.histogramData
+        val exif = profile.exifData
+        val sceneName = profile.name
+        val filmName = profile.recommendedFilm.firstOrNull()?.name ?: "CC 经典负片"
+
+        // 维度 1：直方图分布 → 曝光叙事
+        val exposurePhrase = describeExposureFromHistogram(histogram)
+
+        // 维度 2：EXIF GPS 纬度 + 拍摄月份 → 季节 / 位置叙事
+        val locationPhrase = describeLocationAndSeason(exif)
+
+        // 维度 3：亮度等级 → 整体光感氛围
+        val lightPhrase = describeLightMood(histogram, profile)
+
+        return buildString {
+            append("这是一幅$sceneName 作品，")
+            if (locationPhrase.isNotEmpty()) append(locationPhrase)
+            if (exposurePhrase.isNotEmpty()) append(exposurePhrase)
+            append("采用 $filmName 胶片配方，")
+            if (lightPhrase.isNotEmpty()) append(lightPhrase)
+            append("呈现${inferMood(profile).description}的影像氛围。")
+        }
+    }
+
+    /**
+     * 直方图 → 曝光叙事
+     * 通过 meanLuminance + shadowClipping + highlightClipping 三个信号综合描述当前曝光状态
+     */
+    private fun describeExposureFromHistogram(histogram: HistogramData?): String {
+        if (histogram == null) return ""
+        val mean = histogram.meanLuminance
+        val hasShadowClip = histogram.shadowClipping
+        val hasHighlightClip = histogram.highlightClipping
+        return when {
+            hasShadowClip && hasHighlightClip -> "高动态范围场景，暗部与高光并存，"
+            hasShadowClip -> "整体偏暗调，阴影细节有所损失，"
+            hasHighlightClip -> "高光区域有过曝倾向，"
+            mean < 64 -> "画面偏暗，"
+            mean > 192 -> "画面偏亮通透，"
+            mean < 100 -> "以暗调为主，"
+            mean > 160 -> "以亮调为主，"
+            else -> "曝光均衡，"
+        }
+    }
+
+    /**
+     * EXIF GPS + 时间 → 季节 / 位置叙事
+     * 没有 EXIF 时返回空串，不强行编造
+     */
+    private fun describeLocationAndSeason(exif: ExifData?): String {
+        if (exif == null) return ""
+        val lat = exif.gpsLatitude
+        val month = extractMonth(exif.dateTime) ?: return ""
+        val season = inferSeason(month, lat)
+        val hemisphere = when {
+            lat == null -> ""
+            lat >= 0 -> "北半球"
+            else -> "南半球"
+        }
+        return if (hemisphere.isNotEmpty()) {
+            "拍摄于$hemisphere$season时节，"
         } else {
-            "当前场景光线条件良好，建议根据主体特点调整参数以达到最佳效果。"
+            "拍摄于$season时节，"
+        }
+    }
+
+    private fun extractMonth(dateTime: String?): Int? {
+        if (dateTime.isNullOrBlank()) return null
+        // 兼容 EXIF 标准格式 "2024:08:15 14:30:00"
+        val parts = dateTime.split(":", " ", "-", "/")
+        val monthStr = parts.getOrNull(1) ?: return null
+        return monthStr.toIntOrNull()?.takeIf { it in 1..12 }
+    }
+
+    private fun inferSeason(month: Int, lat: Double?): String = when (month) {
+        3, 4, 5 -> if (lat != null && lat < 0) "秋" else "春"
+        6, 7, 8 -> if (lat != null && lat < 0) "冬" else "夏"
+        9, 10, 11 -> if (lat != null && lat < 0) "春" else "秋"
+        else -> if (lat != null && lat < 0) "夏" else "冬"
+    }
+
+    /**
+     * 亮度 / 直方图 → 光感氛围叙事
+     */
+    private fun describeLightMood(histogram: HistogramData?, profile: SceneProfile): String {
+        if (histogram == null) {
+            return "光线${profile.category.displayName}风格，"
+        }
+        val mean = histogram.meanLuminance
+        return when {
+            mean < 80 -> "光感沉静内敛，"
+            mean > 170 -> "光感明亮通透，"
+            else -> "光感自然柔和，"
         }
     }
 
@@ -381,25 +481,9 @@ class MasterInsightEngine private constructor(context: Context) {
     ): FinalParams {
         val baseParams = profile.hasselbladParams
 
-        // 根据胶片特性微调
-        val filmAdjustments = when (selectedFilm.id) {
-            "portra" -> mapOf(
-                "saturation" to -5,
-                "contrast" to -10,
-                "colorTemp" to 5
-            )
-            "rdp3" -> mapOf(
-                "saturation" to 15,
-                "contrast" to 5,
-                "sharpness" to 10
-            )
-            "tx400" -> mapOf(
-                "saturation" to -30,
-                "contrast" to 20,
-                "tone" to -10
-            )
-            else -> emptyMap()
-        }
+        // 修复 #14：把原本硬编码的 3 种胶片调整表抽到 FilmAdjustments 配置表，
+        // 这里仅做 lookup，让每种胶片都有真正的 adjustments map。
+        val filmAdjustments = FilmAdjustments.get(selectedFilm.id)
 
         return FinalParams(
             baseParams = baseParams,
@@ -514,8 +598,37 @@ class MasterInsightEngine private constructor(context: Context) {
     }
 
     private fun checkRuleOfThirds(faceData: FaceData?): Boolean {
-        // 简化检查：如果有人脸，假设遵循三分法则
-        return faceData?.hasFace ?: false
+        // 修复 #12：原先「有人脸 = 遵循三分法」是错的——人脸在画面中心时反而是中心构图
+        // 正确做法：取最大人脸的中心点，判断横纵坐标是否落在 33% ± 10% 的三分线邻域
+        if (faceData == null || !faceData.hasFace) return false
+
+        // 选面积最大的人脸作为构图主体
+        val primaryFace = faceData.faces.maxByOrNull { face ->
+            val b = face.bounds
+            (b.right - b.left) * (b.bottom - b.top)
+        } ?: return false
+
+        val bounds = primaryFace.bounds
+        val centerX = (bounds.left + bounds.right) / 2f
+        val centerY = (bounds.top + bounds.bottom) / 2f
+
+        // 三分法：横纵坐标距离画面 1/3 处 ± 10% 范围内算遵循
+        // 画面坐标系为 0-1 归一化空间
+        val lowerX = 0.23f  // 0.33 - 0.10
+        val upperX = 0.43f  // 0.33 + 0.10
+        val lowerY = 0.23f
+        val upperY = 0.43f
+        val mirrorLowerX = 0.57f  // 0.67 - 0.10
+        val mirrorUpperX = 0.77f  // 0.67 + 0.10
+        val mirrorLowerY = 0.57f
+        val mirrorUpperY = 0.77f
+
+        val onLeftThird = centerX in lowerX..upperX
+        val onRightThird = centerX in mirrorLowerX..mirrorUpperX
+        val onUpperThird = centerY in lowerY..upperY
+        val onLowerThird = centerY in mirrorLowerY..mirrorUpperY
+
+        return (onLeftThird || onRightThird) && (onUpperThird || onLowerThird)
     }
 
     private fun detectLeadingLines(profile: SceneProfile): Boolean {
@@ -651,14 +764,23 @@ data class FinalParams(
 data class FilmPreferences(
     val preferredSeries: List<FilmSeries> = emptyList(),
     val preferredISO: IntRange = 100..400,
-    val preferColor: Boolean = true
+    val preferColor: Boolean = true,
+    // 修复 #11：新增"用户历史收藏偏好"字段
+    val favoriteSeries: List<FilmSeries> = emptyList(),
+    val favoriteFilmIds: List<String> = emptyList()
 )
 
 data class UserPreferences(
     val stylePreference: String = "natural",
-    val experienceLevel: ExperienceLevel = ExperienceLevel.INTERMEDIATE
+    val experienceLevel: ExperienceLevel = ExperienceLevel.INTERMEDIATE,
+    // 修复 #11：透传历史收藏数据
+    val favoriteSeries: List<FilmSeries> = emptyList(),
+    val favoriteFilmIds: List<String> = emptyList()
 ) {
-    fun toFilmPreferences(): FilmPreferences = FilmPreferences()
+    fun toFilmPreferences(): FilmPreferences = FilmPreferences(
+        favoriteSeries = favoriteSeries,
+        favoriteFilmIds = favoriteFilmIds
+    )
 }
 
 // ==================== 枚举定义 ====================

@@ -391,125 +391,151 @@ object SceneToHasselbladMapping {
 
     /**
      * 根据场景ID获取哈苏大师拍摄建议
-     * 每个场景提供4条专业建议
+     *
+     * 修复 #13：原 getMasterTips 是 35 个场景全模板的 4 句同一结构拼接
+     * 现在拆为 4 个独立方法按场景 ID 真正定制：
+     *  - compositionTips：构图建议（按场景定制）
+     *  - lightingTips：光线建议（夜景与日落完全不同的内容）
+     *  - colorTips：色彩建议（按场景的胶片/色调方向给差异化文案）
+     *  - filmTip：胶片建议（与 recommendFilms 联动）
      */
-    fun getMasterTips(sceneId: String): List<String> = when {
-        // 人像系列建议
-        sceneId.startsWith("portrait") -> listOf(
-            "📐 使用 2× 或 3× 长焦避免广角畸变，让人脸比例更自然",
-            "☀️ 寻找柔和的侧光或窗户光，哈苏风格偏爱自然光影",
-            "🎨 肤色还原是 HNCS 的核心——不过度美白，保留真实肤色",
-            "📷 试试 Portra 400 胶片风格，温柔叙事感拉满"
-        )
-        // 逆光人像特殊建议
-        sceneId == "portrait-backlit" -> listOf(
-            "🌅 逆光拍摄保留高光细节，使用 HDR 或手动提升阴影",
-            "✨ 柔光模式让轮廓光更加梦幻，哈苏特色效果",
-            "📐 对焦眼睛，让逆光产生柔和的轮廓光效果",
-            "📷 Portra 400 + 暗角 +20，逆光人像完美配方"
-        )
-        // 黑白人像特殊建议
-        sceneId == "portrait-bw" -> listOf(
-            "⚫ 关注光影对比，黑白人像的核心是明暗层次",
-            "📐 简化背景元素，让人物轮廓更加突出",
-            "☀️ 寻找硬光或侧光，增强黑白对比效果",
-            "📷 TX400 胶片风格，经典黑白颗粒质感"
-        )
-        // 风景系列建议
-        sceneId.startsWith("landscape") -> listOf(
-            "🌅 黄金时刻（日出后/日落前 30 分钟）出片率最高",
-            "📐 利用前景（岩石/树枝/花草）增加画面层次感",
-            "🖼️ 试试 XPAN 宽幅模式，电影感构图一步到位",
-            "🎨 浓郁胶片风格让蓝天更澄澈、绿植更鲜活"
-        )
-        // 日落特殊建议
-        sceneId == "landscape-sunset" -> listOf(
-            "☀️ 等待太阳接触地平线的瞬间，色彩最丰富",
-            "📐 使用渐变滤镜平衡天空与地面曝光",
-            "🎨 色温 +20 + 饱和度 +25，日落完美配方",
-            "📷 RDP3 正片风格，反转片质感让日落更壮观"
-        )
-        // 夜景系列建议
-        sceneId.startsWith("night") -> listOf(
-            "📷 ISO 控制在 400 以内，手持拍摄找支撑点",
-            "💡 寻找点光源（路灯/霓虹/橱窗）作为画面视觉锚点",
-            "🌊 寻找水面拍摄，倒影让夜景层次翻倍",
-            "🎞️ 800T 胶片专为夜景优化——不糊不噪"
-        )
-        // 星空特殊建议
-        sceneId == "night-starry" -> listOf(
-            "📍 远离城市光污染，寻找暗夜保护区",
-            "📷 使用三脚架 + 高 ISO + 长曝光（15-30秒）",
-            "🎨 对比度 +30 + 锐度 +25，星空细节最大化",
-            "🎞️ TX400 黑白风格，星空摄影的经典选择"
-        )
-        // 美食系列建议
-        sceneId.startsWith("food") -> listOf(
-            "📐 45° 俯拍或平视 0° 特写，两种角度切换拍",
-            "💡 寻找自然光或暖光，避免顶光造成难看的阴影",
-            "🎨 暖 CCD 胶片风格让食物更有食欲",
-            "📷 对焦在食物的纹理细节上——肉汁、糖霜、气泡"
-        )
-        // 街拍/建筑系列建议
-        sceneId.startsWith("urban-street") || sceneId == "street" -> listOf(
-            "🚶 等待决定性瞬间——一个人、一束光、一个故事",
-            "⚫ TX400 黑白胶片让街头故事感翻倍",
-            "📐 寻找几何线条和光影对比，哈苏黑白风格强调明暗反差",
-            "🎯 预设对焦点在画面 1/3 处，抬手即拍"
-        )
-        sceneId.startsWith("urban-architecture") || sceneId == "architecture" -> listOf(
-            "📐 寻找建筑的几何线条和对称结构",
-            "☀️ 等待光线创造阴影，增强建筑立体感",
-            "⚫ TX400 黑白风格让建筑更有力量感",
-            "🎯 对比度 +25 + 锐度 +28，建筑细节最大化"
-        )
-        // 咖啡馆/博物馆特殊建议
-        sceneId == "urban-cafe" -> listOf(
-            "☕ 捕捉咖啡馆的氛围——咖啡杯、书本、光影",
-            "💡 利用窗户光线，创造柔和温馨的氛围",
-            "🎨 暖 CCD + 柔光模式，咖啡馆完美配方",
-            "📷 45° 角度拍摄，展现空间层次"
-        )
-        // 静物系列建议
-        sceneId.startsWith("still") -> listOf(
-            "📐 简化背景，让主体更加突出",
-            "💡 使用柔和的侧光或逆光，增强质感",
-            "🎨 NC 自然风格保留静物的真实色彩",
-            "📷 关注细节纹理——花瓣、叶片、质感"
-        )
-        // 微距系列建议
-        sceneId.startsWith("macro") -> listOf(
-            "🔍 使用微距镜头或长焦 + 近摄滤镜",
-            "💡 柔和光线避免过曝，保留细节层次",
-            "🎨 锐度 +25 + 对比度 +15，细节最大化",
-            "📷 景深很浅，注意对焦精度"
-        )
-        // 活动系列建议
-        sceneId.startsWith("event-wedding") -> listOf(
-            "💒 捕捉重要瞬间——仪式、誓言、亲吻",
-            "💡 注意光线柔和，避免硬光",
-            "🎨 Portra 400 + 柔光，婚礼完美配方",
-            "📷 多拍细节——戒指、花束、表情"
-        )
-        sceneId.startsWith("event-concert") -> listOf(
-            "🎤 使用快速镜头 + 高 ISO，捕捉动态",
-            "💡 注意舞台灯光变化，预判高潮时刻",
-            "⚫ TX400 黑白风格让舞台更有戏剧感",
-            "📷 连拍模式，捕捉最佳瞬间"
-        )
-        sceneId.startsWith("event") -> listOf(
-            "🎉 捕捉欢乐瞬间——笑容、互动、氛围",
-            "💡 注意光线变化，随时调整参数",
-            "🎨 CC 经典负片风格，活动记录首选",
-            "📷 多拍人物互动，记录真实情感"
-        )
-        // 默认建议
-        else -> listOf(
-            "📷 哈苏大师模式让每一张照片都有故事",
-            "🎨 试试不同胶片风格，找到你的专属配方",
-            "💡 关注光影变化，哈苏风格偏爱自然光",
-            "📐 注意构图，三分法则永不过时"
-        )
+    fun getMasterTips(sceneId: String): List<String> {
+        val composition = getCompositionTips(sceneId)
+        val lighting = getLightingTips(sceneId)
+        val color = getColorTips(sceneId)
+        val film = getFilmTip(sceneId)
+        return listOf(composition, lighting, color, film)
+    }
+
+    /**
+     * 构图建议（按场景定制）
+     */
+    fun getCompositionTips(sceneId: String): String = when {
+        // 逆光人像 / 黑白人像特殊
+        sceneId == "portrait-backlit" -> "🌅 对焦眼睛，让逆光产生柔和的轮廓光效果"
+        sceneId == "portrait-bw" -> "📐 简化背景元素，让人物轮廓更加突出"
+        // 多人 / 合影
+        sceneId == "portrait-group" || sceneId == "portrait-couple" -> "📐 三角构图或对称布局，让画面平衡稳定"
+        // 风景
+        sceneId.startsWith("landscape") -> "📐 利用前景（岩石/树枝/花草）增加画面层次感"
+        sceneId == "landscape-sunset" -> "📐 使用渐变滤镜平衡天空与地面曝光"
+        // 夜景
+        sceneId.startsWith("night") -> "📐 寻找点光源（路灯/霓虹/橱窗）作为画面视觉锚点"
+        sceneId == "night-starry" -> "📐 借助三脚架，构图时给地面前景留 1/3"
+        sceneId == "night-moon" -> "📐 月亮置于黄金分割点，前景用剪影增强戏剧性"
+        // 美食
+        sceneId.startsWith("food") -> "📐 45° 俯拍或平视 0° 特写，两种角度切换拍"
+        // 街拍 / 建筑
+        sceneId == "urban-street" || sceneId == "street" -> "🚶 等待决定性瞬间——一个人、一束光、一个故事"
+        sceneId.startsWith("urban-architecture") || sceneId == "architecture" -> "📐 寻找建筑的几何线条和对称结构"
+        sceneId == "urban-cafe" -> "📐 45° 角度拍摄咖啡杯与桌面互动，展现空间层次"
+        // 静物
+        sceneId.startsWith("still") -> "📐 简化背景，让主体更加突出"
+        // 微距
+        sceneId.startsWith("macro") -> "🔍 使用微距镜头或长焦 + 近摄滤镜，景深很浅注意对焦精度"
+        // 活动
+        sceneId.startsWith("event-wedding") -> "💒 捕捉重要瞬间——仪式、誓言、亲吻"
+        sceneId.startsWith("event-concert") -> "🎤 寻找舞台上的瞬间戏剧感"
+        sceneId.startsWith("event") -> "🎉 捕捉欢乐瞬间——笑容、互动、氛围"
+        // 人像默认
+        sceneId.startsWith("portrait") -> "📐 使用 2× 或 3× 长焦避免广角畸变，让人脸比例更自然"
+        else -> "📐 运用三分法构图，把主体放在画面 1/3 处"
+    }
+
+    /**
+     * 光线建议（夜景 / 日落 / 逆光 / 室内等场景内容完全独立）
+     */
+    fun getLightingTips(sceneId: String): String = when {
+        // 夜景分支：强调高 ISO / 找支撑 / 慢快门
+        sceneId == "night-city" -> "💡 ISO 控制在 400 以内，找栏杆/三脚架等支撑点防抖"
+        sceneId == "night-neon" -> "💡 借霓虹灯本身做主光源，避免补光破坏氛围"
+        sceneId == "night-starry" -> "💡 三脚架 + 高 ISO + 长曝光（15-30秒），让星轨自然形成"
+        sceneId == "night-candle" -> "🕯️ 借烛光作为暖色主光，脸部补光用白色卡片反射"
+        sceneId == "night-fireworks" -> "💡 用 2-4 秒长曝光捕捉烟花轨迹，三脚架必备"
+        sceneId == "night-moon" -> "🌙 利用月光作为弱主光，前景剪影提对比"
+        sceneId == "night-bridge" -> "💡 桥体自身灯光即主光，等待行人与车流形成动线"
+        sceneId.startsWith("night") -> "💡 ISO 控制在 400 以内，手持拍摄找支撑点"
+        // 逆光 / 日落 / 黄金时刻
+        sceneId == "landscape-sunset" -> "☀️ 等待太阳接触地平线的瞬间，色彩最丰富"
+        sceneId == "portrait-backlit" -> "🌅 逆光拍摄保留高光细节，使用 HDR 或手动提升阴影"
+        // 风景
+        sceneId == "landscape-forest" -> "☀️ 寻找林间透光的丁达尔光束（晨雾/雨后更明显）"
+        sceneId == "landscape-snow" -> "☀️ 雪地反射强，曝光补偿 +0.7 ~ +1.3 EV"
+        sceneId == "landscape-beach" -> "☀️ 避开正午顶光，黄昏侧光让沙纹与水波立体"
+        sceneId.startsWith("landscape") -> "🌅 黄金时刻（日出后/日落前 30 分钟）出片率最高"
+        // 美食
+        sceneId.startsWith("food") -> "💡 寻找自然光或暖光，避免顶光造成难看的阴影"
+        // 街拍
+        sceneId == "urban-street" || sceneId == "street" -> "💡 街灯、橱窗、车灯都是天然主光，弱光下大胆提高 ISO"
+        sceneId.startsWith("urban-architecture") || sceneId == "architecture" -> "☀️ 等待侧光创造阴影，增强建筑立体感"
+        sceneId == "urban-cafe" -> "💡 利用窗户光线，创造柔和温馨的氛围"
+        sceneId == "urban-museum" -> "💡 室内混合光复杂，关闭自动白平衡，尝试钨丝灯模式"
+        // 静物 / 微距
+        sceneId.startsWith("still") -> "💡 使用柔和的侧光或逆光，增强质感"
+        sceneId.startsWith("macro") -> "💡 使用环形灯或柔光罩避免金属反光，保留细节层次"
+        // 活动
+        sceneId.startsWith("event-wedding") -> "💡 室内弱光下 RAW 拍摄 + 高 ISO，闪光灯柔化"
+        sceneId.startsWith("event-concert") -> "💡 注意舞台灯光变化，预判高潮时刻"
+        sceneId.startsWith("event") -> "💡 室内弱光利用舞台灯/手机补光，避免顶光"
+        // 人像默认
+        sceneId == "portrait-bw" -> "☀️ 寻找硬光或侧光，增强黑白对比效果"
+        sceneId.startsWith("portrait") -> "☀️ 寻找柔和的侧光或窗户光，哈苏风格偏爱自然光影"
+        else -> "💡 关注光影变化，哈苏风格偏爱自然光"
+    }
+
+    /**
+     * 色彩建议（按场景的胶片/色调方向给差异化文案）
+     */
+    fun getColorTips(sceneId: String): String = when {
+        // 人像
+        sceneId == "portrait-backlit" -> "✨ 柔光模式让轮廓光更加梦幻，哈苏特色效果"
+        sceneId == "portrait-bw" -> "⚫ 关注光影对比，黑白人像的核心是明暗层次"
+        sceneId == "portrait-studio" -> "🎨 棚拍保持肤色中性，避免偏色"
+        sceneId == "portrait-senior" -> "🎨 保留皮肤纹理细节，避免过度磨皮"
+        sceneId.startsWith("portrait") -> "🎨 肤色还原是 HNCS 的核心——不过度美白，保留真实肤色"
+        // 风景
+        sceneId == "landscape-sunset" -> "🎨 色温 +20 + 饱和度 +25，日落完美配方"
+        sceneId == "landscape-autumn" -> "🍁 强调暖橙色调，让黄叶更浓郁"
+        sceneId == "landscape-snow" -> "❄️ 降低饱和度，保留白雪的纯净高对比"
+        sceneId == "landscape-forest" -> "🌲 强化绿色通道，让林间层次更分明"
+        sceneId == "landscape-sky" -> "☁️ 提升蓝色饱和度但避免过深，保留云的层次"
+        sceneId.startsWith("landscape") -> "🖼️ 浓郁胶片风格让蓝天更澄澈、绿植更鲜活"
+        // 夜景
+        sceneId.startsWith("night") -> "🌊 寻找水面拍摄，倒影让夜景层次翻倍"
+        // 美食
+        sceneId.startsWith("food") -> "🎨 暖 CCD 胶片风格让食物更有食欲"
+        // 街拍 / 建筑
+        sceneId == "urban-street" || sceneId == "street" -> "⚫ TX400 黑白胶片让街头故事感翻倍"
+        sceneId.startsWith("urban-architecture") || sceneId == "architecture" -> "⚫ TX400 黑白风格让建筑更有力量感"
+        sceneId == "urban-cafe" -> "🎨 暖 CCD + 柔光模式，咖啡馆完美配方"
+        sceneId == "urban-museum" -> "🎨 保留展品原色调，白平衡锁定"
+        // 静物 / 微距
+        sceneId.startsWith("still") -> "🎨 NC 自然风格保留静物的真实色彩"
+        sceneId.startsWith("macro") -> "🎨 锐度 +25 + 对比度 +15，细节最大化"
+        // 活动
+        sceneId.startsWith("event-wedding") -> "🎨 Portra 400 + 柔光，婚礼完美配方"
+        sceneId.startsWith("event-concert") -> "⚫ TX400 黑白风格让舞台更有戏剧感"
+        sceneId.startsWith("event") -> "🎨 CC 经典负片风格，活动记录首选"
+        else -> "🎨 试试不同胶片风格，找到你的专属配方"
+    }
+
+    /**
+     * 胶片建议（与 getRecommendedFilms 联动）
+     */
+    fun getFilmTip(sceneId: String): String {
+        val topFilm = getRecommendedFilms(sceneId).firstOrNull()
+        val name = topFilm?.name ?: "CC 经典负片"
+        return when {
+            sceneId.startsWith("portrait") -> "📷 试试 $name 胶片风格，温柔叙事感拉满"
+            sceneId.startsWith("landscape") -> "📷 $name 风格，让自然色彩更通透"
+            sceneId.startsWith("night") -> "🎞️ $name 专为夜景优化——不糊不噪"
+            sceneId.startsWith("food") -> "📷 对焦在食物的纹理细节上，配 $name 风味更佳"
+            sceneId == "urban-street" || sceneId == "street" -> "🎯 预设对焦点在画面 1/3 处，配 $name 抬手即拍"
+            sceneId.startsWith("urban-architecture") || sceneId == "architecture" -> "🎯 对比度 +25 + 锐度 +28，配 $name 建筑细节最大化"
+            sceneId.startsWith("macro") -> "📷 景深很浅，$name 帮你保留每一处细节"
+            sceneId.startsWith("event") -> "📷 多拍人物互动，$name 记录真实情感"
+            else -> "📷 哈苏大师模式 + $name 让每一张照片都有故事"
+        }
     }
 
     // ==================== 辅助方法 ====================
