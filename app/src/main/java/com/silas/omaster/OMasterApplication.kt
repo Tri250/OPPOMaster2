@@ -3,6 +3,7 @@ package com.silas.omaster
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
@@ -121,6 +122,20 @@ class OMasterApplication : Application() {
             // 关闭统计，禁用数据上报
             // 注意：友盟SDK不支持完全停止，但可以通过以下方式减少数据收集
             MobclickAgent.disable()
+        }
+    }
+
+    /**
+     * 应用终止时释放资源
+     * 释放 ML Kit FaceDetector 单例资源
+     */
+    override fun onTerminate() {
+        super.onTerminate()
+        try {
+            FaceDetectorSingleton.release()
+            android.util.Log.i("OMasterApplication", "FaceDetectorSingleton 已释放")
+        } catch (e: Exception) {
+            android.util.Log.e("OMasterApplication", "释放 FaceDetectorSingleton 失败", e)
         }
     }
 }

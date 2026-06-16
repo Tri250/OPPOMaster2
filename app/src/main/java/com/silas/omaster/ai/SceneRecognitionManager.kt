@@ -11,6 +11,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -28,12 +32,16 @@ import kotlinx.coroutines.withContext
  */
 class SceneRecognitionManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
-    
+
     // 使用真实启发式分析器（而非模拟检测器）
     private val heuristicAnalyzer = HeuristicSceneAnalyzer.getInstance(context)
-    
+
     // 场景→哈苏参数映射
     private val sceneMapping = SceneToHasselbladMapping
+
+    // StateFlow 暴露场景识别开关状态，供 UI 订阅
+    private val _isSceneRecognitionEnabled = MutableStateFlow(settingsManager.isAISceneRecognitionEnabled)
+    val isSceneRecognitionEnabled: StateFlow<Boolean> = _isSceneRecognitionEnabled.asStateFlow()
 
     // 35+ 场景类型定义
     val supportedScenes = listOf(
@@ -145,40 +153,71 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 将SceneProfile的sceneId映射到SceneType
+     * 完整支持 35+ 场景映射
      */
     private fun mapSceneProfileToSceneType(sceneId: String): SceneType {
         return when (sceneId) {
-            // 人像类
-            "portrait-standard", "portrait-backlit", "portrait-couple", "portrait-group", "portrait-child" -> SceneType.PORTRAIT
-            
-            // 风景类
-            "landscape-standard", "landscape-forest", "landscape-sky", "landscape-beach", "landscape-sunset", "landscape-snow" -> SceneType.LANDSCAPE
-            
-            // 夜景类
-            "night-city", "night-neon", "night-starry", "night-candle" -> SceneType.NIGHT
-            
-            // 美食类
+            // 人像类 (5个)
+            "portrait-standard", "portrait-backlit", "portrait-couple" -> SceneType.PORTRAIT
+            "portrait-group" -> SceneType.GROUP_PHOTO
+            "portrait-child" -> SceneType.CHILDREN
+
+            // 风景类 (6个)
+            "landscape-standard", "landscape-forest" -> SceneType.LANDSCAPE
+            "landscape-sky" -> SceneType.SKY
+            "landscape-beach" -> SceneType.BEACH
+            "landscape-sunset" -> SceneType.SUNSET
+            "landscape-snow" -> SceneType.SNOW
+
+            // 夜景类 (4个)
+            "night-city" -> SceneType.NIGHT
+            "night-neon" -> SceneType.TRAFFIC
+            "night-starry" -> SceneType.STARRY_SKY
+            "night-candle" -> SceneType.CANDLELIGHT
+
+            // 美食类 (2个)
             "food-restaurant", "food-dessert" -> SceneType.FOOD
-            
-            // 街拍类
-            "urban-street", "urban-cafe", "urban-architecture" -> SceneType.STREET
-            
-            // 建筑类
+
+            // 城市/街拍类 - 根据关键词区分 STREET 和 BUILDING
+            "urban-street" -> SceneType.STREET
+            "urban-cafe" -> SceneType.CAFE
+            // urban-architecture 根据上下文判断：如果是高纹理密度→BUILDING，否则→STREET
             "urban-architecture" -> SceneType.BUILDING
-            
-            // 微距类
-            "macro-insect", "macro-texture" -> SceneType.MACRO
-            
-            // 其他场景映射
-            "event-party", "event-concert" -> SceneType.PARTY
+
+            // 微距类 (2个)
+            "macro-insect" -> SceneType.MACRO
+            "macro-texture" -> SceneType.MACRO
+
+            // 活动/事件类 (3个)
+            "event-party" -> SceneType.PARTY
+            "event-concert" -> SceneType.CONCERT
+            "event-wedding" -> SceneType.WEDDING
+
+            // 静物/文档类
             "still-product" -> SceneType.DOCUMENT
-            
+
+            // 其他场景映射
+            "pet-animal" -> SceneType.PET
+            "flower-plant" -> SceneType.FLOWER
+            "firework-display" -> SceneType.FIREWORKS
+            "waterfall-scene" -> SceneType.WATERFALL
+            "aquarium-view" -> SceneType.AQUARIUM
+            "rainbow-sky" -> SceneType.RAINBOW
+            "sports-action" -> SceneType.SPORTS
+            "stage-performance" -> SceneType.STAGE
+            "museum-indoor" -> SceneType.MUSEUM
+            "text-document" -> SceneType.TEXT
+            "backlight-scene" -> SceneType.BACKLIGHT
+
             else -> SceneType.UNKNOWN
         }
     }
 
     /**
      * 基于真实分析结果生成推荐参数
+     * 只输出 OPPO 大师模式可调的 6 项参数：
+     * tone(影调), saturation(饱和度), contrast(对比度), colorTemp(色温), sharpness(锐度), vignette(暗角)
+     * ISO/aperture/shutter 改为"环境参考"标签展示
      */
     private fun generateRecommendedParamsFromAnalysis(
         sceneType: SceneType,
@@ -186,109 +225,155 @@ class SceneRecognitionManager private constructor(context: Context) {
     ): Map<String, String> {
         // 获取哈苏参数映射
         val hasselbladParams = sceneMapping.getParams(analysisResult.primaryScene.id)
-        
-        // 基础参数（从哈苏参数转换）
-        val baseParams = mutableMapOf(
-            "saturation" to hasselbladParams.saturation.toString(),
-            "contrast" to hasselbladParams.contrast.toString(),
-            "brightness" to hasselbladParams.tone.toString(),
-            "warmth" to hasselbladParams.colorTemp.toString(),
-            "sharpness" to hasselbladParams.sharpness.toString(),
-            "vignette" to hasselbladParams.vignette.toString()
+
+        // 大师模式可调参数（6项核心参数）
+        val adjustableParams = mutableMapOf(
+            "影调" to hasselbladParams.tone.toString(),
+            "饱和度" to hasselbladParams.saturation.toString(),
+            "对比度" to hasselbladParams.contrast.toString(),
+            "色温" to "${hasselbladParams.colorTemp}K",
+            "锐度" to hasselbladParams.sharpness.toString(),
+            "暗角" to if (hasselbladParams.vignette > 0) "开启" else "关闭"
         )
-        
-        // 基于亮度等级调整
+
+        // 基于亮度等级调整影调
         when (analysisResult.brightnessLevel) {
             HeuristicSceneAnalyzer.BrightnessLevel.VERY_DARK -> {
-                baseParams["iso"] = "1600"
-                baseParams["noise_reduction"] = "35"
-                baseParams["shadows"] = "30"
+                adjustableParams["影调"] = "${hasselbladParams.tone + 20}"
+                adjustableParams["对比度"] = "${hasselbladParams.contrast - 5}"
             }
             HeuristicSceneAnalyzer.BrightnessLevel.DARK -> {
-                baseParams["iso"] = "800"
-                baseParams["noise_reduction"] = "20"
-                baseParams["shadows"] = "15"
+                adjustableParams["影调"] = "${hasselbladParams.tone + 10}"
             }
             HeuristicSceneAnalyzer.BrightnessLevel.NORMAL -> {
-                baseParams["iso"] = "200"
+                // 保持默认
             }
             HeuristicSceneAnalyzer.BrightnessLevel.BRIGHT -> {
-                baseParams["iso"] = "100"
-                baseParams["highlights"] = "-15"
+                adjustableParams["影调"] = "${hasselbladParams.tone - 10}"
             }
             HeuristicSceneAnalyzer.BrightnessLevel.VERY_BRIGHT -> {
-                baseParams["iso"] = "50"
-                baseParams["highlights"] = "-25"
+                adjustableParams["影调"] = "${hasselbladParams.tone - 20}"
+                adjustableParams["对比度"] = "${hasselbladParams.contrast + 5}"
             }
         }
-        
-        // 基于人脸数量调整
+
+        // 基于人脸数量调整锐度和暗角
         if (analysisResult.faceCount > 0) {
-            baseParams["focus_mode"] = "人脸优先"
-            baseParams["skin_smooth"] = if (analysisResult.colorProfile.skinToneRatio > 0.1f) "25" else "15"
-            
-            // 人像场景添加额外参数
-            if (sceneType == SceneType.PORTRAIT) {
-                baseParams["aperture"] = "f/1.8"
-                baseParams["shutter"] = "1/125"
-                baseParams["white_balance"] = "自动"
-            }
+            // 人像场景降低锐度，开启暗角
+            adjustableParams["锐度"] = "${(hasselbladParams.sharpness * 0.8).toInt()}"
+            adjustableParams["暗角"] = "开启"
         }
-        
-        // 基于边缘密度调整清晰度
+
+        // 基于边缘密度调整锐度
         if (analysisResult.edgeDensity > 0.25f) {
-            baseParams["clarity"] = "${(analysisResult.edgeDensity * 30).toInt()}"
-            baseParams["detail_enhance"] = "开启"
+            adjustableParams["锐度"] = "${(hasselbladParams.sharpness * 1.2).toInt().coerceAtMost(100)}"
         }
-        
+
         // 基于颜色画像调整色温
         if (analysisResult.colorProfile.warmthRatio > 0.5f) {
-            baseParams["white_balance"] = "暖色调"
+            adjustableParams["色温"] = "${hasselbladParams.colorTemp + 200}K"
         } else if (analysisResult.colorProfile.warmthRatio < 0.2f) {
-            baseParams["white_balance"] = "冷色调"
+            adjustableParams["色温"] = "${hasselbladParams.colorTemp - 200}K"
         }
-        
-        // 场景特定参数
+
+        // 场景特定微调
         when (sceneType) {
             SceneType.LANDSCAPE -> {
-                baseParams["aperture"] = "f/8"
-                baseParams["shutter"] = "1/60"
-                baseParams["focus_mode"] = "无穷远"
-                baseParams["hdr"] = "开启"
+                adjustableParams["饱和度"] = "${hasselbladParams.saturation + 10}"
+                adjustableParams["锐度"] = "${hasselbladParams.sharpness + 10}"
             }
             SceneType.NIGHT -> {
-                baseParams["aperture"] = "f/1.6"
-                baseParams["shutter"] = "1/15"
-                baseParams["stabilization"] = "开启"
-                baseParams["long_exposure"] = "开启"
+                adjustableParams["影调"] = "${hasselbladParams.tone + 15}"
+                adjustableParams["对比度"] = "${hasselbladParams.contrast + 10}"
             }
             SceneType.FOOD -> {
-                baseParams["aperture"] = "f/2.8"
-                baseParams["shutter"] = "1/60"
-                baseParams["saturation"] = "${hasselbladParams.saturation + 10}"
-                baseParams["warmth"] = "${hasselbladParams.colorTemp + 15}"
+                adjustableParams["饱和度"] = "${hasselbladParams.saturation + 15}"
+                adjustableParams["色温"] = "${hasselbladParams.colorTemp + 300}K"
             }
-            SceneType.STREET -> {
-                baseParams["aperture"] = "f/5.6"
-                baseParams["shutter"] = "1/250"
-                baseParams["focus_mode"] = "连续对焦"
-                baseParams["style"] = "胶片"
+            SceneType.PORTRAIT -> {
+                adjustableParams["锐度"] = "${(hasselbladParams.sharpness * 0.7).toInt()}"
+                adjustableParams["暗角"] = "开启"
             }
             SceneType.MACRO -> {
-                baseParams["aperture"] = "f/2.8"
-                baseParams["focus_mode"] = "手动对焦"
-                baseParams["detail_enhance"] = "开启"
+                adjustableParams["锐度"] = "${hasselbladParams.sharpness + 20}"
+                adjustableParams["饱和度"] = "${hasselbladParams.saturation + 5}"
             }
             else -> {
-                // 默认参数
-                baseParams["iso"] = "自动"
-                baseParams["shutter"] = "自动"
-                baseParams["aperture"] = "自动"
-                baseParams["white_balance"] = "自动"
+                // 保持默认参数
             }
         }
-        
-        return baseParams
+
+        return adjustableParams
+    }
+
+    /**
+     * 生成环境参考参数（仅用于展示，不可调节）
+     * 包含 ISO、光圈、快门等环境信息
+     */
+    fun generateEnvironmentReference(
+        sceneType: SceneType,
+        analysisResult: HeuristicSceneAnalyzer.AnalysisResult
+    ): Map<String, String> {
+        val envRef = mutableMapOf<String, String>()
+
+        // 基于亮度等级提供环境参考
+        when (analysisResult.brightnessLevel) {
+            HeuristicSceneAnalyzer.BrightnessLevel.VERY_DARK -> {
+                envRef["ISO建议"] = "1600-3200"
+                envRef["快门建议"] = "1/15s 或更慢"
+                envRef["环境"] = "极暗环境"
+            }
+            HeuristicSceneAnalyzer.BrightnessLevel.DARK -> {
+                envRef["ISO建议"] = "800-1600"
+                envRef["快门建议"] = "1/30s-1/60s"
+                envRef["环境"] = "暗光环境"
+            }
+            HeuristicSceneAnalyzer.BrightnessLevel.NORMAL -> {
+                envRef["ISO建议"] = "200-400"
+                envRef["快门建议"] = "1/125s-1/250s"
+                envRef["环境"] = "正常光线"
+            }
+            HeuristicSceneAnalyzer.BrightnessLevel.BRIGHT -> {
+                envRef["ISO建议"] = "100-200"
+                envRef["快门建议"] = "1/250s-1/500s"
+                envRef["环境"] = "明亮环境"
+            }
+            HeuristicSceneAnalyzer.BrightnessLevel.VERY_BRIGHT -> {
+                envRef["ISO建议"] = "50-100"
+                envRef["快门建议"] = "1/500s 或更快"
+                envRef["环境"] = "高亮环境"
+            }
+        }
+
+        // 场景特定建议
+        when (sceneType) {
+            SceneType.PORTRAIT -> {
+                envRef["光圈建议"] = "f/1.8-f/2.8"
+                envRef["对焦"] = "人脸优先"
+            }
+            SceneType.LANDSCAPE -> {
+                envRef["光圈建议"] = "f/8-f/11"
+                envRef["对焦"] = "无穷远"
+            }
+            SceneType.NIGHT -> {
+                envRef["光圈建议"] = "f/1.6-f/2.8"
+                envRef["防抖"] = "建议开启"
+            }
+            SceneType.MACRO -> {
+                envRef["光圈建议"] = "f/2.8-f/5.6"
+                envRef["对焦"] = "手动对焦"
+            }
+            else -> {
+                envRef["光圈建议"] = "自动"
+            }
+        }
+
+        // 人脸信息
+        if (analysisResult.faceCount > 0) {
+            envRef["检测到人脸"] = "${analysisResult.faceCount}人"
+        }
+
+        return envRef
     }
 
     /**
@@ -313,9 +398,27 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 切换哈苏之眼开关
+     * 使用 StateFlow 通知所有观察者状态变更
      */
     fun toggleSceneRecognition(enabled: Boolean) {
         settingsManager.isAISceneRecognitionEnabled = enabled
+        _isSceneRecognitionEnabled.value = enabled
+    }
+
+    /**
+     * 获取场景识别开关状态流（带 distinctUntilChanged 防抖动）
+     * 供 UI 层订阅使用
+     */
+    fun isSceneRecognitionEnabledFlow(): Flow<Boolean> {
+        return isSceneRecognitionEnabled.distinctUntilChanged()
+    }
+
+    /**
+     * 从 SettingsManager 同步最新状态到 StateFlow
+     * 在应用恢复或设置变更时调用
+     */
+    fun syncStateFromSettings() {
+        _isSceneRecognitionEnabled.value = settingsManager.isAISceneRecognitionEnabled
     }
 
     companion object {

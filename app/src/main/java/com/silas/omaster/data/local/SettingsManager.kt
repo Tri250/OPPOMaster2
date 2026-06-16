@@ -212,11 +212,15 @@ class SettingsManager private constructor(private val context: Context) {
             prefs.edit().putString(KEY_CLOUD_API_KEY, value).apply()
         }
 
-    // 哈苏之眼开关
+    // 哈苏之眼开关（带 StateFlow 支持）
+    private val _isAISceneRecognitionEnabledFlow = MutableStateFlow(prefs.getBoolean(KEY_AI_SCENE_ENABLED, true))
+    val isAISceneRecognitionEnabledFlow: StateFlow<Boolean> = _isAISceneRecognitionEnabledFlow.asStateFlow()
+
     var isAISceneRecognitionEnabled: Boolean
-        get() = prefs.getBoolean(KEY_AI_SCENE_ENABLED, true)
+        get() = _isAISceneRecognitionEnabledFlow.value
         set(value) {
             prefs.edit().putBoolean(KEY_AI_SCENE_ENABLED, value).apply()
+            _isAISceneRecognitionEnabledFlow.value = value
         }
 
     // AI 微调开关
