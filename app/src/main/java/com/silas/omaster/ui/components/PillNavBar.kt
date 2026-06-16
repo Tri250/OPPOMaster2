@@ -75,118 +75,108 @@ fun PillNavBar(
         NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
     )
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(
-            initialOffsetY = { it },
-            animationSpec = tween(durationMillis = 300)
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = tween(durationMillis = 300)
-        ),
+    // 固定显示底部导航栏，不使用动画隐藏
+    if (!visible) return
+
+    Box(
         modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        contentAlignment = Alignment.Center
     ) {
+        // 外层阴影效果
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp),
-            contentAlignment = Alignment.Center
+                .shadow(
+                    elevation = 20.dp,
+                    shape = RoundedCornerShape(32.dp),
+                    ambientColor = Color.Black.copy(alpha = 0.5f),
+                    spotColor = Color.Black.copy(alpha = 0.8f)
+                )
         ) {
-            // 外层阴影效果
+            // 磨砂玻璃背景层
             Box(
                 modifier = Modifier
-                    .shadow(
-                        elevation = 20.dp,
-                        shape = RoundedCornerShape(32.dp),
-                        ambientColor = Color.Black.copy(alpha = 0.5f),
-                        spotColor = Color.Black.copy(alpha = 0.8f)
+                    .width(320.dp)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                NavBarBackground.copy(alpha = 0.85f),
+                                NavBarBackground.copy(alpha = 0.75f)
+                            )
+                        )
                     )
+            )
+
+            // 顶部高光线条
+            Box(
+                modifier = Modifier
+                    .width(320.dp)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.15f),
+                                Color.White.copy(alpha = 0.05f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // 边框
+            Box(
+                modifier = Modifier
+                    .width(320.dp)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                NavBarBorder.copy(alpha = 0.5f),
+                                NavBarBorder.copy(alpha = 0.2f)
+                            )
+                        )
+                    )
+                    .padding(1.dp)
             ) {
-                // 磨砂玻璃背景层
+                // 内部背景
                 Box(
                     modifier = Modifier
-                        .width(320.dp)
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(32.dp))
+                        .fillMaxWidth()
+                        .height(62.dp)
+                        .clip(RoundedCornerShape(31.dp))
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    NavBarBackground.copy(alpha = 0.85f),
-                                    NavBarBackground.copy(alpha = 0.75f)
+                                    NavBarBackground.copy(alpha = 0.9f),
+                                    NavBarBackground.copy(alpha = 0.8f)
                                 )
                             )
                         )
                 )
+            }
 
-                // 顶部高光线条
-                Box(
-                    modifier = Modifier
-                        .width(320.dp)
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.15f),
-                                    Color.White.copy(alpha = 0.05f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
+            // 导航项
+            Row(
+                modifier = Modifier
+                    .width(320.dp)
+                    .height(64.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                navItems.forEach { item ->
+                    val selected = currentRoute == item.route
 
-                // 边框
-                Box(
-                    modifier = Modifier
-                        .width(320.dp)
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    NavBarBorder.copy(alpha = 0.5f),
-                                    NavBarBorder.copy(alpha = 0.2f)
-                                )
-                            )
-                        )
-                        .padding(1.dp)
-                ) {
-                    // 内部背景
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(62.dp)
-                            .clip(RoundedCornerShape(31.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        NavBarBackground.copy(alpha = 0.9f),
-                                        NavBarBackground.copy(alpha = 0.8f)
-                                    )
-                                )
-                            )
+                    NavItemButton(
+                        item = item,
+                        selected = selected,
+                        onClick = { onNavigate(item.route) }
                     )
-                }
-
-                // 导航项
-                Row(
-                    modifier = Modifier
-                        .width(320.dp)
-                        .height(64.dp)
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    navItems.forEach { item ->
-                        val selected = currentRoute == item.route
-
-                        NavItemButton(
-                            item = item,
-                            selected = selected,
-                            onClick = { onNavigate(item.route) }
-                        )
-                    }
                 }
             }
         }

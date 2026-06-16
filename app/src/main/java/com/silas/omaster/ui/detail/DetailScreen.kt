@@ -122,7 +122,7 @@ fun DetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(PureBlack)
     ) {
         OMasterTopAppBar(
             title = preset?.let { PresetI18n.getLocalizedPresetName(it.name) } ?: stringResource(R.string.detail_title),
@@ -434,6 +434,23 @@ private fun DynamicParameters(
     sections: List<PresetSection>,
     presetName: String
 ) {
+    // 如果没有参数数据，显示提示
+    if (sections.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "暂无调色参数",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.5f)
+            )
+        }
+        return
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         sections.forEach { section ->
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

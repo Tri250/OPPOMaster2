@@ -88,6 +88,7 @@ import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.animation.ListItemFadeInSpec
 import com.silas.omaster.ui.animation.ListItemPlacementSpec
 import com.silas.omaster.ui.animation.calculateStaggerDelay
+import com.silas.omaster.ui.components.PresetImage
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -858,18 +859,14 @@ private fun PresetCardWebStyle(
                 .fillMaxWidth()
                 .height(imageHeight.dp)
         ) {
-            // 图片
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(if (preset.coverPath.startsWith("http")) preset.coverPath 
-                          else "file:///android_asset/${preset.coverPath}")
-                    .crossfade(true)
-                    .build(),
-                contentDescription = preset.name,
-                contentScale = ContentScale.Crop,
+            // 图片 - 使用 PresetImage 组件确保正确加载
+            PresetImage(
+                preset = preset,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop,
+                showDownloadIndicator = true
             )
 
             // 渐变遮罩（对齐Web端）
