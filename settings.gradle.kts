@@ -28,7 +28,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         // ===== 本地 Maven 仓库（优先级最高）=====
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
