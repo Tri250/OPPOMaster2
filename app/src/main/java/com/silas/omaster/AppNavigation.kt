@@ -162,7 +162,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
-                    onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
@@ -240,6 +239,7 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.Settings> {
                 SettingsScreen(
+                    onBack = { navController.popBackStack() },
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
                     onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },

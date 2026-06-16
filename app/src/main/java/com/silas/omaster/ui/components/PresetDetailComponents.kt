@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -447,7 +448,7 @@ fun ApplyPresetButton(
     val coroutineScope = rememberCoroutineScope()
     
     val buttonColor by animateColorAsState(
-        targetValue = if (applied) Color(0xFF4CAF50) else HasselbladOrange,
+        targetValue = if (applied) SuccessGreen else HasselbladOrange,
         animationSpec = tween(durationMillis = 300),
         label = "buttonColor"
     )

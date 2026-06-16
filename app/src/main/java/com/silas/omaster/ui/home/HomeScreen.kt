@@ -106,7 +106,6 @@ fun HomeScreen(
     onNavigateToAIFineTune: () -> Unit = {},
     onNavigateToWatermarkEditor: () -> Unit = {},
     onNavigateToSmartOptimize: () -> Unit = {},
-    onNavigateToPresetManager: () -> Unit = {},
     onNavigateToParamAdjustment: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,

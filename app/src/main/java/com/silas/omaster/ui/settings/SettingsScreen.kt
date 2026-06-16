@@ -90,6 +90,7 @@ import android.widget.Toast
 
 @Composable
 fun SettingsScreen(
+    onBack: (() -> Unit)? = null,
     onNavigateToNotificationSettings: (() -> Unit)? = null,
     onNavigateToTerms: (() -> Unit)? = null,
     onNavigateToPresetSourceManager: (() -> Unit)? = null,
@@ -186,6 +187,7 @@ fun SettingsScreen(
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.settings_title),
+            onBack = onBack,
             modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
         )
 
