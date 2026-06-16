@@ -307,9 +307,19 @@ class MasterInsightEngine private constructor(context: Context) {
     ): Float {
         var score = film.matchScore
 
-        // 基于用户偏好调整
+        // 基于用户偏好调整（权重提升到 0.25）
         if (preferences.preferredSeries.contains(film.series)) {
-            score += 0.1f
+            score += 0.25f
+        }
+
+        // 用户历史收藏偏好权重
+        if (preferences.favoriteFilms.contains(film.id)) {
+            score += 0.20f
+        }
+
+        // 用户最近使用过的胶片偏好
+        if (preferences.recentFilms.contains(film.id)) {
+            score += 0.10f
         }
 
         return score.coerceIn(0f, 1f)
@@ -337,11 +347,46 @@ class MasterInsightEngine private constructor(context: Context) {
     }
 
     private fun generateStory(profile: SceneProfile): String {
-        val tips = profile.masterTips
-        return if (tips.isNotEmpty()) {
-            tips.first()
-        } else {
-            "当前场景光线条件良好，建议根据主体特点调整参数以达到最佳效果。"
+        val histogram = profile.histogramData
+        val exif = profile.exifData
+        val brightnessLevel = histogram?.meanLuminance ?: 128f
+
+        // 从直方图分析光影分布
+        val lightDistribution = when {
+            histogram?.shadowClipping == true -> "暗部细节丰富，呈现出深邃的影调层次"
+            histogram?.highlightClipping == true -> "高光处略带过曝，营造出梦幻的氛围感"
+            brightnessLevel < 80 -> "整体偏暗的影调，带来沉稳内敛的视觉感受"
+            brightnessLevel > 180 -> "明亮通透的画面，充满清新自然的气质"
+            else -> "均衡的光影分布，保留了丰富的细节层次"
+        }
+
+        // 从GPS位置推断季节/地点特征
+        val locationContext = when {
+            exif?.gpsLatitude == null -> ""
+            exif.gpsLatitude > 35.0 -> "北国风光的辽阔与苍茫"
+            exif.gpsLatitude in 23.5..35.0 -> "温带地区的四季分明"
+            exif.gpsLatitude < 23.5 -> "热带阳光下的明媚与热情"
+            else -> ""
+        }
+
+        // 从亮度等级推断光感氛围
+        val lightMood = when {
+            brightnessLevel < 60 -> "在低光环境下，画面呈现出独特的氛围感"
+            brightnessLevel in 60f..100f -> "柔和的光线为画面增添了温暖的质感"
+            brightnessLevel in 100f..160f -> "自然光线下，色彩还原真实而细腻"
+            brightnessLevel in 160f..200f -> "明亮的光线让画面充满活力与生机"
+            else -> "充足的光照条件下，细节表现清晰锐利"
+        }
+
+        return buildString {
+            append(lightMood)
+            append("。")
+            append(lightDistribution)
+            if (locationContext.isNotEmpty()) {
+                append("，")
+                append(locationContext)
+            }
+            append("。")
         }
     }
 
@@ -381,25 +426,8 @@ class MasterInsightEngine private constructor(context: Context) {
     ): FinalParams {
         val baseParams = profile.hasselbladParams
 
-        // 根据胶片特性微调
-        val filmAdjustments = when (selectedFilm.id) {
-            "portra" -> mapOf(
-                "saturation" to -5,
-                "contrast" to -10,
-                "colorTemp" to 5
-            )
-            "rdp3" -> mapOf(
-                "saturation" to 15,
-                "contrast" to 5,
-                "sharpness" to 10
-            )
-            "tx400" -> mapOf(
-                "saturation" to -30,
-                "contrast" to 20,
-                "tone" to -10
-            )
-            else -> emptyMap()
-        }
+        // 从配置文件获取胶片调整参数（支持所有9种胶片）
+        val filmAdjustments = FilmAdjustments.getAdjustments(selectedFilm.id)
 
         return FinalParams(
             baseParams = baseParams,
@@ -513,9 +541,32 @@ class MasterInsightEngine private constructor(context: Context) {
         }
     }
 
-    private fun checkRuleOfThirds(faceData: FaceData?): Boolean {
-        // 简化检查：如果有人脸，假设遵循三分法则
-        return faceData?.hasFace ?: false
+    private fun checkRuleOfThirds(faceData: FaceData?, imageWidth: Float = 1080f, imageHeight: Float = 1920f): Boolean {
+        if (faceData?.hasFace != true) return false
+
+        // 获取第一个人脸的中心点位置
+        val face = faceData.faces.firstOrNull() ?: return false
+        val faceCenterX = (face.bounds.left + face.bounds.right) / 2f
+        val faceCenterY = (face.bounds.top + face.bounds.bottom) / 2f
+
+        // 计算人脸中心相对于画面的比例位置 (0.0 - 1.0)
+        val relativeX = faceCenterX / imageWidth
+        val relativeY = faceCenterY / imageHeight
+
+        // 三分法交点位置：约 33% 和 66%
+        val thirdLines = listOf(0.33f, 0.66f)
+        val tolerance = 0.10f  // ±10% 容差范围
+
+        // 检查人脸中心是否落在三分线附近（水平或垂直方向）
+        val nearVerticalThird = thirdLines.any { line ->
+            kotlin.math.abs(relativeX - line) <= tolerance
+        }
+        val nearHorizontalThird = thirdLines.any { line ->
+            kotlin.math.abs(relativeY - line) <= tolerance
+        }
+
+        // 人脸在画面1/3处才算遵循三分法，在中心不算
+        return nearVerticalThird || nearHorizontalThird
     }
 
     private fun detectLeadingLines(profile: SceneProfile): Boolean {
@@ -651,7 +702,9 @@ data class FinalParams(
 data class FilmPreferences(
     val preferredSeries: List<FilmSeries> = emptyList(),
     val preferredISO: IntRange = 100..400,
-    val preferColor: Boolean = true
+    val preferColor: Boolean = true,
+    val favoriteFilms: List<String> = emptyList(),  // 用户收藏的胶片ID列表
+    val recentFilms: List<String> = emptyList()     // 用户最近使用的胶片ID列表
 )
 
 data class UserPreferences(

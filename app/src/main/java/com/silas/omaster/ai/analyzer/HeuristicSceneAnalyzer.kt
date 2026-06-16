@@ -99,15 +99,24 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 5. 多特征投票
         val candidates = mutableListOf<SceneCandidate>()
 
-        // 颜色投票
+        // 颜色投票（核心依据，始终执行）
         candidates.addAll(voteByColor(colorProfile))
-        // 亮度投票
+
+        // 亮度投票（核心依据，始终执行）
         candidates.addAll(voteByBrightness(brightnessLevel, colorProfile))
-        // 人脸投票
+
+        // 人脸投票（如果有检测到人脸）
         if (faceCount > 0) candidates.addAll(voteByFace(faceCount, colorProfile))
-        // EXIF 投票
-        if (exif != null) candidates.addAll(voteByExif(exif, brightnessLevel))
-        // 纹理投票
+
+        // EXIF 投票（EXIF完整时执行，否则fallback到亮度推断）
+        if (exif != null && hasValidExifData(exif)) {
+            candidates.addAll(voteByExif(exif, brightnessLevel))
+        } else {
+            // EXIF缺失时fallback：基于亮度+场景已确定做简化推断
+            candidates.addAll(voteByExifFallback(brightnessLevel, colorProfile))
+        }
+
+        // 纹理投票（始终执行）
         candidates.addAll(voteByTexture(edgeDensity, colorProfile))
 
         // 6. 加权融合
@@ -648,6 +657,68 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             }
             if (aperture > 8f) {
                 votes.add(SceneCandidate("landscape-standard", 0.55f, "exif"))
+            }
+        }
+
+        return votes
+    }
+
+    /**
+     * 检查EXIF数据是否包含有效信息
+     * 大师模式自动档时焦距/光圈可能没值
+     */
+    private fun hasValidExifData(exif: ExifData): Boolean {
+        // 至少需要一个关键参数有值才算有效EXIF
+        return exif.focalLength != null ||
+               exif.fNumber != null ||
+               exif.iso != null ||
+               exif.exposureTime != null
+    }
+
+    /**
+     * EXIF缺失时的fallback投票
+     * 基于亮度+颜色特征做简化场景推断
+     */
+    private fun voteByExifFallback(
+        brightness: BrightnessLevel,
+        cp: ColorProfile
+    ): List<SceneCandidate> {
+        val votes = mutableListOf<SceneCandidate>()
+
+        // 基于亮度等级推断（替代ISO判断）
+        when (brightness) {
+            BrightnessLevel.VERY_DARK -> {
+                // 极暗场景 → 夜景
+                votes.add(SceneCandidate("night-city", 0.65f, "exif_fallback"))
+                votes.add(SceneCandidate("night-starry", 0.55f, "exif_fallback"))
+            }
+            BrightnessLevel.DARK -> {
+                // 暗调场景 → 夜景或室内
+                votes.add(SceneCandidate("night-candle", 0.55f, "exif_fallback"))
+                votes.add(SceneCandidate("urban-cafe", 0.50f, "exif_fallback"))
+                if (cp.warmthRatio > 0.4f) {
+                    votes.add(SceneCandidate("night-candle", 0.60f, "exif_fallback"))
+                }
+            }
+            else -> {
+                // 正常亮度不添加特定投票
+            }
+        }
+
+        // 基于颜色特征推断（替代焦距判断）
+        when {
+            // 高肤色占比 → 人像（替代长焦判断）
+            cp.skinToneRatio > 0.08f -> {
+                votes.add(SceneCandidate("portrait-standard", 0.60f, "exif_fallback"))
+            }
+            // 蓝色主导 → 风景/天空（替代广角判断）
+            cp.blueDominance > 1.3f -> {
+                votes.add(SceneCandidate("landscape-sky", 0.55f, "exif_fallback"))
+                votes.add(SceneCandidate("landscape-beach", 0.50f, "exif_fallback"))
+            }
+            // 绿色主导 → 自然风景
+            cp.greenDominance > 1.3f -> {
+                votes.add(SceneCandidate("landscape-forest", 0.55f, "exif_fallback"))
             }
         }
 
