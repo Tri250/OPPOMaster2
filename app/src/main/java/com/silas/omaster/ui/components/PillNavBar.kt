@@ -94,10 +94,10 @@ fun PillNavBar(
                     spotColor = Color.Black.copy(alpha = 0.8f)
                 )
         ) {
-            // 磨砂玻璃背景层
+            // 磨砂玻璃背景层 - 使用自适应宽度
             Box(
                 modifier = Modifier
-                    .width(320.dp)
+                    .fillMaxWidth(0.9f)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -113,7 +113,7 @@ fun PillNavBar(
             // 顶部高光线条
             Box(
                 modifier = Modifier
-                    .width(320.dp)
+                    .fillMaxWidth(0.9f)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -130,7 +130,7 @@ fun PillNavBar(
             // 边框
             Box(
                 modifier = Modifier
-                    .width(320.dp)
+                    .fillMaxWidth(0.9f)
                     .height(64.dp)
                     .clip(RoundedCornerShape(32.dp))
                     .background(
@@ -163,7 +163,7 @@ fun PillNavBar(
             // 导航项
             Row(
                 modifier = Modifier
-                    .width(320.dp)
+                    .fillMaxWidth(0.9f)
                     .height(64.dp)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,

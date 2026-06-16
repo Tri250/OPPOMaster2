@@ -72,6 +72,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.PureBlack
 
 @Composable
 fun DetailScreen(
@@ -119,10 +120,12 @@ fun DetailScreen(
     // 悬浮窗控制器（全局单例，已在 MainActivity 中注册）
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
 
+    val colorScheme = MaterialTheme.colorScheme
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(colorScheme.background)
     ) {
         OMasterTopAppBar(
             title = preset?.let { PresetI18n.getLocalizedPresetName(it.name) } ?: stringResource(R.string.detail_title),
@@ -167,10 +170,10 @@ fun DetailScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = stringResource(R.string.edit),
-                            tint = Color.White
-                        )
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.edit),
+                        tint = colorScheme.onBackground
+                    )
                     }
                 }
 
@@ -185,7 +188,7 @@ fun DetailScreen(
                         else
                             Icons.Outlined.FavoriteBorder,
                         contentDescription = if (isFavorite) stringResource(R.string.preset_favorited) else stringResource(R.string.preset_favorite),
-                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White
+                        tint = if (isFavorite) colorScheme.primary else colorScheme.onBackground
                     )
                 }
             },
@@ -203,7 +206,7 @@ fun DetailScreen(
                     Text(
                         text = stringResource(R.string.detail_load_failed),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
             } else {
@@ -252,11 +255,11 @@ fun DetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = PresetI18n.getLocalizedPresetName(it.name),
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            text = PresetI18n.getLocalizedPresetName(it.name),
+                            color = colorScheme.onBackground,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                             if (it.isHncs) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -272,7 +275,7 @@ fun DetailScreen(
                         
                         Text(
                             text = "@${it.author}",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = colorScheme.onBackground.copy(alpha = 0.5f),
                             fontSize = 14.sp
                         )
                         
@@ -285,11 +288,11 @@ fun DetailScreen(
                             it.tags?.forEach { tag ->
                                 Text(
                                     text = "#$tag",
-                                    color = Color.White.copy(alpha = 0.6f),
+                                    color = colorScheme.onBackground.copy(alpha = 0.6f),
                                     fontSize = 10.sp,
                                     modifier = Modifier
                                         .background(
-                                            color = Color.White.copy(alpha = 0.05f),
+                                            color = colorScheme.onBackground.copy(alpha = 0.05f),
                                             shape = RoundedCornerShape(4.dp)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -445,7 +448,7 @@ private fun DynamicParameters(
             Text(
                 text = "暂无调色参数",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
         return
