@@ -130,18 +130,21 @@ fun AISceneRecognitionScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // 当前待分析的图片路径（支持传入或相机拍照）
+    var analysisImageUrl by remember { mutableStateOf(imageUrl) }
+
     // 流程状态
-    var flowState by remember { mutableStateOf(if (imageUrl != null) RecognitionFlowState.ANALYZING else RecognitionFlowState.CAMERA) }
-    
+    var flowState by remember { mutableStateOf(if (analysisImageUrl != null) RecognitionFlowState.ANALYZING else RecognitionFlowState.CAMERA) }
+
     // 相机控制状态
     var flashMode by remember { mutableStateOf(FlashMode.OFF) }
     var cameraFacing by remember { mutableStateOf(CameraFacing.BACK) }
-    
+
     // 分析状态
-    var isAnalyzing by remember { mutableStateOf(imageUrl != null) }
+    var isAnalyzing by remember { mutableStateOf(analysisImageUrl != null) }
     var analysisProgress by remember { mutableStateOf(0f) }
     var currentStepIndex by remember { mutableStateOf(0) }
-    
+
     // 结果状态
     var isOptimized by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
@@ -149,10 +152,10 @@ fun AISceneRecognitionScreen(
     var sliderPosition by remember { mutableStateOf(0.5f) }
     var selectedFilmId by remember { mutableStateOf<String?>(null) }
     var showParams by remember { mutableStateOf(false) }
-    
+
     // 分析结果
     var analysisResult by remember { mutableStateOf<SceneProfile?>(null) }
-    
+
     // 历史记录
     var recognitionHistory by remember { mutableStateOf<List<SceneProfile>>(emptyList()) }
 
@@ -167,12 +170,12 @@ fun AISceneRecognitionScreen(
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
     // 真实 AI 分析过程
-    LaunchedEffect(imageUrl, flowState) {
-        if (imageUrl != null && flowState == RecognitionFlowState.ANALYZING) {
+    LaunchedEffect(analysisImageUrl, flowState) {
+        if (analysisImageUrl != null && flowState == RecognitionFlowState.ANALYZING) {
             // 1. 加载 Bitmap
             val bitmap: Bitmap? = withContext(Dispatchers.IO) {
                 try {
-                    BitmapFactory.decodeFile(imageUrl)
+                    BitmapFactory.decodeFile(analysisImageUrl)
                 } catch (e: Exception) {
                     null
                 }
@@ -330,18 +333,19 @@ fun AISceneRecognitionScreen(
                         scope.launch {
                             val savedPath = saveBitmapToCache(context, bitmap)
                             if (savedPath != null) {
+                                analysisImageUrl = savedPath
                                 flowState = RecognitionFlowState.ANALYZING
-                                // 触发分析
+                                isAnalyzing = true
                             }
                         }
                     }
                 )
             }
-            
+
             RecognitionFlowState.ANALYZING -> {
                 // 分析中状态
                 AnalyzingProgressScreen(
-                    imageUrl = imageUrl,
+                    imageUrl = analysisImageUrl,
                     steps = analysisSteps,
                     currentStepIndex = currentStepIndex,
                     progress = analysisProgress
@@ -442,6 +446,7 @@ private fun CameraEntryScreen(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val captureTrigger = remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -455,6 +460,7 @@ private fun CameraEntryScreen(
             // Camera2 实时预览
             Camera2Preview(
                 cameraFacing = cameraFacing,
+                captureTrigger = captureTrigger,
                 onCapture = onCapture,
                 modifier = Modifier.fillMaxSize()
             )
@@ -611,6 +617,7 @@ private fun CameraEntryScreen(
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onTakePhoto()
+                            captureTrigger.value = true
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -658,6 +665,7 @@ private fun CameraEntryScreen(
 @Composable
 private fun Camera2Preview(
     cameraFacing: CameraFacing,
+    captureTrigger: MutableState<Boolean>,
     onCapture: (Bitmap) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -668,6 +676,14 @@ private fun Camera2Preview(
     var cameraDevice by remember { mutableStateOf<CameraDevice?>(null) }
     var captureSession by remember { mutableStateOf<CameraCaptureSession?>(null) }
     var imageReader by remember { mutableStateOf<android.media.ImageReader?>(null) }
+
+    // 响应外部拍摄触发
+    LaunchedEffect(captureTrigger.value) {
+        if (captureTrigger.value) {
+            captureImage(cameraDevice, captureSession, imageReader, cameraHandler, onCapture)
+            captureTrigger.value = false
+        }
+    }
 
     DisposableEffect(cameraFacing) {
         val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
@@ -731,28 +747,6 @@ private fun Camera2Preview(
                 )
             }
         )
-
-        // 拍照按钮
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp)
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .border(4.dp, HasselbladOrange, CircleShape)
-                .clickable {
-                    captureImage(cameraDevice, captureSession, imageReader, cameraHandler, onCapture)
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(HasselbladOrange)
-            )
-        }
     }
 }
 

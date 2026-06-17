@@ -531,11 +531,17 @@ private fun DeveloperFooter() {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
+            text = "开发者：带娃的小陈工",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+        )
+
+        Text(
             text = stringResource(R.string.developer_footer),
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
         )
-        
+
         Text(
             text = stringResource(R.string.copyright_footer),
             fontSize = 12.sp,

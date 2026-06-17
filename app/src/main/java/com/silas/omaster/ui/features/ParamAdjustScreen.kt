@@ -38,9 +38,9 @@ fun ParamAdjustScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     
-    // 相机参数状态
+    // 相机参数状态（快门速度以实际曝光时间秒为单位）
     var iso by remember { mutableIntStateOf(100) }
-    var shutterSpeed by remember { mutableFloatStateOf(125f) }
+    var shutterSpeed by remember { mutableFloatStateOf(1f / 125f) }
     var aperture by remember { mutableFloatStateOf(2.8f) }
     var whiteBalance by remember { mutableIntStateOf(5500) }
     var focalLength by remember { mutableIntStateOf(23) }
@@ -52,8 +52,27 @@ fun ParamAdjustScreen(
     // ISO 选项
     val isoOptions = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800)
     
-    // 快门速度选项
-    val shutterOptions = listOf("1/4000", "1/2000", "1/1000", "1/500", "1/250", "1/125", "1/60", "1/30", "1/15", "1/8", "1/4", "1/2", "1s", "2s", "4s", "8s", "15s", "30s")
+    // 快门速度选项（以实际曝光时间秒为单位）
+    val shutterOptions = listOf(
+        "1/4000" to 1f / 4000f,
+        "1/2000" to 1f / 2000f,
+        "1/1000" to 1f / 1000f,
+        "1/500" to 1f / 500f,
+        "1/250" to 1f / 250f,
+        "1/125" to 1f / 125f,
+        "1/60" to 1f / 60f,
+        "1/30" to 1f / 30f,
+        "1/15" to 1f / 15f,
+        "1/8" to 1f / 8f,
+        "1/4" to 1f / 4f,
+        "1/2" to 1f / 2f,
+        "1s" to 1f,
+        "2s" to 2f,
+        "4s" to 4f,
+        "8s" to 8f,
+        "15s" to 15f,
+        "30s" to 30f
+    )
     
     // 光圈选项
     val apertureOptions = listOf(1.4f, 1.8f, 2.0f, 2.8f, 4.0f, 5.6f, 8.0f, 11f, 16f, 22f)
@@ -83,7 +102,7 @@ fun ParamAdjustScreen(
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     iso = 100
-                    shutterSpeed = 125f
+                    shutterSpeed = 1f / 125f
                     aperture = 2.8f
                     whiteBalance = 5500
                     focalLength = 23
@@ -127,7 +146,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "portrait"
                     iso = 200
-                    shutterSpeed = 125f
+                    shutterSpeed = 1f / 125f
                     aperture = 2.8f
                     whiteBalance = 5500
                 }
@@ -139,7 +158,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "landscape"
                     iso = 100
-                    shutterSpeed = 60f
+                    shutterSpeed = 1f / 60f
                     aperture = 8.0f
                     whiteBalance = 5600
                 }
@@ -163,7 +182,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     selectedPreset = "sports"
                     iso = 800
-                    shutterSpeed = 500f
+                    shutterSpeed = 1f / 500f
                     aperture = 4.0f
                     whiteBalance = 5500
                 }
@@ -185,7 +204,7 @@ fun ParamAdjustScreen(
                     subtitle = "感光度，影响噪点和曝光",
                     value = iso,
                     valueRange = 50..12800,
-                    options = isoOptions.map { it.toString() },
+                    options = isoOptions.map { it.toString() to it },
                     onValueChange = { iso = it as Int },
                     unit = "",
                     color = Color(0xFF9C27B0)
@@ -197,10 +216,11 @@ fun ParamAdjustScreen(
                 ParamSliderCard(
                     title = "快门",
                     subtitle = "曝光时间，影响运动模糊",
-                    value = shutterSpeed.toInt(),
-                    valueRange = 1..30000,
+                    value = shutterSpeed,
+                    valueRange = 1f / 8000f..30f,
                     displayValue = formatShutterSpeed(shutterSpeed),
-                    onValueChange = { shutterSpeed = (it as Int).toFloat() },
+                    options = shutterOptions,
+                    onValueChange = { shutterSpeed = it as Float },
                     unit = "",
                     color = Color(0xFF2196F3)
                 )
@@ -213,7 +233,7 @@ fun ParamAdjustScreen(
                     subtitle = "景深控制，影响背景虚化",
                     value = aperture,
                     valueRange = 1.4f..22f,
-                    options = apertureOptions.map { it.toString() },
+                    options = apertureOptions.map { it.toString() to it },
                     onValueChange = { aperture = it as Float },
                     unit = "f/",
                     color = HasselbladOrange
@@ -227,7 +247,7 @@ fun ParamAdjustScreen(
                     subtitle = "色温调节，影响色彩冷暖",
                     value = whiteBalance,
                     valueRange = 2800..9000,
-                    options = wbOptions.map { "${it}K" },
+                    options = wbOptions.map { "${it}K" to it },
                     onValueChange = { whiteBalance = it as Int },
                     unit = "K",
                     color = Color(0xFFFFEB3B)
@@ -313,7 +333,7 @@ private fun ParamSliderCard(
     value: Any,
     valueRange: Any,
     displayValue: String? = null,
-    options: List<String>? = null,
+    options: List<Pair<String, Any>>? = null,
     onValueChange: (Any) -> Unit,
     unit: String,
     color: Color
@@ -400,30 +420,24 @@ private fun ParamSliderCard(
             // 快速选项（如果有）
             if (options != null && options.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    options.take(6).forEach { option ->
+                    options.take(6).forEach { (label, optionValue) ->
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFF1A1A1A))
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    // 解析选项值
-                                    val parsedValue = when (value) {
-                                        is Int -> option.filter { it.isDigit() }.toIntOrNull() ?: value
-                                        is Float -> option.filter { it.isDigit() || it == '.' }.toFloatOrNull() ?: value
-                                        else -> value
-                                    }
-                                    onValueChange(parsedValue)
+                                    onValueChange(optionValue)
                                 }
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = option,
+                                text = label,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                             )
@@ -454,12 +468,15 @@ private fun ParamSummaryItem(label: String, value: String) {
 
 /**
  * 格式化快门速度
+ * speed 为实际曝光时间（秒），>=1 显示为秒，<1 显示为分母
  */
 private fun formatShutterSpeed(speed: Float): String {
     return when {
-        speed >= 1000 -> "1/${(speed / 1000).toInt()}s"
-        speed >= 1 -> "${speed.toInt()}s"
-        else -> "1/${speed.toInt()}s"
+        speed >= 1f -> "${speed.toInt()}s"
+        else -> {
+            val denominator = (1f / speed).roundToInt().coerceAtLeast(1)
+            "1/${denominator}s"
+        }
     }
 }
 
