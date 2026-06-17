@@ -69,7 +69,7 @@ fun SceneRecognitionResultScreen(
     val selectedFilm = sceneProfile.recommendedFilm.find { it.id == selectedFilmId }
     
     Scaffold(
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -77,24 +77,24 @@ fun SceneRecognitionResultScreen(
                         text = "AI 出片",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, null, tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 actions = {
                     IconButton(onClick = onShare) {
-                        Icon(Icons.Default.Share, null, tint = Color.White.copy(alpha = 0.7f))
+                        Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                     }
                     IconButton(onClick = onSave) {
-                        Icon(Icons.Default.Save, null, tint = Color.White.copy(alpha = 0.7f))
+                        Icon(Icons.Default.Save, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A)
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
         }
@@ -239,7 +239,7 @@ private fun SceneInfoHeader(
                     text = sceneProfile.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = sceneProfile.category.displayName,
@@ -250,7 +250,7 @@ private fun SceneInfoHeader(
                 Text(
                     text = sceneProfile.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     maxLines = 2
                 )
             }
@@ -273,7 +273,7 @@ private fun BeforeAfterCompareSlider(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -287,13 +287,13 @@ private fun BeforeAfterCompareSlider(
                     text = "效果对比",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Row {
                     Text(
                         text = "原图",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
@@ -342,12 +342,12 @@ private fun BeforeAfterCompareSlider(
                             .padding(8.dp)
                             .align(Alignment.TopStart),
                         shape = RoundedCornerShape(4.dp),
-                        color = Color.Black.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)
                     ) {
                         Text(
                             text = "原图",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -359,7 +359,7 @@ private fun BeforeAfterCompareSlider(
                         .fillMaxHeight()
                         .width(4.dp)
                         .offset { IntOffset((sliderPosition * containerWidthPx - 2.dp.toPx()).roundToInt(), 0) }
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.onBackground)
                         .pointerInput(Unit) {
                             detectHorizontalDragGestures { change, dragAmount ->
                                 change.consume()
@@ -375,7 +375,7 @@ private fun BeforeAfterCompareSlider(
                             .align(Alignment.Center)
                             .offset { IntOffset(0, 0) }
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.onBackground)
                             .border(2.dp, HasselbladOrange, RoundedCornerShape(20.dp))
                     ) {
                         Icon(
@@ -400,7 +400,7 @@ private fun BeforeAfterCompareSlider(
                     Text(
                         text = "优化后",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
@@ -412,7 +412,7 @@ private fun BeforeAfterCompareSlider(
             Text(
                 text = "← 拖动滑块对比效果 →",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -431,7 +431,7 @@ private fun ImagePreviewCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -440,7 +440,7 @@ private fun ImagePreviewCard(
                 text = label,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -479,7 +479,7 @@ private fun ConfidenceVisualization(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -501,7 +501,7 @@ private fun ConfidenceVisualization(
                         text = "识别置信度",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 
@@ -512,7 +512,7 @@ private fun ConfidenceVisualization(
                     color = when {
                         animatedConfidence >= 0.9f -> HasselbladGreen
                         animatedConfidence >= 0.7f -> HasselbladOrange
-                        else -> Color.White.copy(alpha = 0.7f)
+                        else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     }
                 )
             }
@@ -525,7 +525,7 @@ private fun ConfidenceVisualization(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
             ) {
                 Box(
                     modifier = Modifier
@@ -536,7 +536,7 @@ private fun ConfidenceVisualization(
                             when {
                                 animatedConfidence >= 0.9f -> HasselbladGreen
                                 animatedConfidence >= 0.7f -> HasselbladOrange
-                                else -> Color.White.copy(alpha = 0.5f)
+                                else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             }
                         )
                 )
@@ -552,7 +552,7 @@ private fun ConfidenceVisualization(
                     else -> "低置信度：场景特征不明显，建议手动调整"
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
         }
     }
@@ -569,7 +569,7 @@ private fun HasselbladParamsDisplay(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -592,7 +592,7 @@ private fun HasselbladParamsDisplay(
                         text = "哈苏大师参数",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 
@@ -674,16 +674,16 @@ private fun HasselbladParamsDisplay(
                     Text(
                         text = "柔光模式",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = if (params.softLight != SoftLightMode.NONE) HasselbladOrange.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.1f)
+                        color = if (params.softLight != SoftLightMode.NONE) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                     ) {
                         Text(
                             text = params.softLight.displayName,
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (params.softLight != SoftLightMode.NONE) HasselbladOrange else Color.White.copy(alpha = 0.6f),
+                            color = if (params.softLight != SoftLightMode.NONE) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -712,7 +712,7 @@ private fun HasselbladParamsDisplay(
                     Text(
                         text = "HNCS理念：克制使用饱和度，±15为舒适区",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -737,7 +737,7 @@ private fun ParamRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
         
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -749,8 +749,8 @@ private fun ParamRow(
                 color = when {
                     value > 15 -> HasselbladOrange
                     value < -15 -> Color(0xFF2196F3)
-                    value != 0 -> Color.White
-                    else -> Color.White.copy(alpha = 0.5f)
+                    value != 0 -> MaterialTheme.colorScheme.onBackground
+                    else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 }
             )
             
@@ -759,12 +759,12 @@ private fun ParamRow(
             // 描述
             Surface(
                 shape = RoundedCornerShape(4.dp),
-                color = Color.White.copy(alpha = 0.1f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
             ) {
                 Text(
                     text = description,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                 )
             }
@@ -783,7 +783,7 @@ private fun MasterTipsSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -801,7 +801,7 @@ private fun MasterTipsSection(
                     text = "大师建议",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
             
@@ -835,7 +835,7 @@ private fun MasterTipsSection(
                         Text(
                             text = tip,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.8f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -862,7 +862,7 @@ private fun MasterTipsSection(
                     Text(
                         text = "${category.displayName}场景专属建议：${getCategoryTip(category)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -911,7 +911,7 @@ private fun ActionButtonsRow(
             },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
         ) {
             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
@@ -926,7 +926,7 @@ private fun ActionButtonsRow(
             },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
         ) {
             Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
@@ -941,7 +941,7 @@ private fun ActionButtonsRow(
             },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
         ) {
             Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))

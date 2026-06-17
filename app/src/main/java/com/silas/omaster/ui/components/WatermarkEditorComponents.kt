@@ -167,7 +167,7 @@ private fun WatermarkTemplateSection(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -225,14 +225,14 @@ private fun WatermarkTemplateItem(
                         com.silas.omaster.watermark.WatermarkType.CUSTOM -> Icons.Default.Add
                     },
                     contentDescription = "图片",
-                    tint = if (isSelected) HasselbladOrange else Color.White,
+                    tint = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = template.name,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) HasselbladOrange else Color.White,
+                    color = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground,
                     maxLines = 1
                 )
             }
@@ -278,7 +278,7 @@ fun WatermarkElementConfigPanel(
             text = "显示元素",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -339,7 +339,7 @@ fun WatermarkElementConfigPanel(
             text = "元素位置",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -359,7 +359,7 @@ fun WatermarkElementConfigPanel(
             text = "透明度调整",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -426,13 +426,13 @@ private fun ElementToggleRow(
         Text(
             text = name,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
         )
         Switch(
             checked = isEnabled,
             onCheckedChange = { onToggle() },
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                 checkedTrackColor = HasselbladOrange,
                 uncheckedThumbColor = Color.Gray,
                 uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
@@ -509,7 +509,7 @@ private fun AlphaSlider(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
             modifier = Modifier.width(60.dp)
         )
 
@@ -559,7 +559,7 @@ fun SaveAsTemplateDialog(
                 Text(
                     text = "请输入模板名称",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 androidx.compose.material3.OutlinedTextField(
@@ -599,8 +599,8 @@ fun SaveAsTemplateDialog(
             }
         },
         containerColor = Color(0xFF1A1A1A),
-        titleContentColor = Color.White,
-        textContentColor = Color.White
+        titleContentColor = MaterialTheme.colorScheme.onBackground,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
 

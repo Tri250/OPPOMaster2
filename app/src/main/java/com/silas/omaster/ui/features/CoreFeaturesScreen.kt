@@ -70,7 +70,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
 
 /**
@@ -258,7 +257,7 @@ fun CoreFeaturesScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars),
         state = listState,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
@@ -270,12 +269,12 @@ fun CoreFeaturesScreen(
                     text = "核心功能",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "点击进入功能操作界面",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -460,12 +459,12 @@ private fun SectionHeader(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
         
@@ -473,13 +472,13 @@ private fun SectionHeader(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
                 text = count.toString(),
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
     }
@@ -548,13 +547,13 @@ private fun FeatureCard(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.15f)),
+                            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = feature.icon,
                             contentDescription = "功能图标",
-                            tint = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
+                            tint = if (isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -565,8 +564,8 @@ private fun FeatureCard(
                             checked = isEnabled,
                             onCheckedChange = onToggle,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color.White.copy(alpha = 0.5f),
+                                checkedThumbColor = MaterialTheme.colorScheme.onBackground,
+                                checkedTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 uncheckedThumbColor = Color.Gray,
                                 uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
                             )
@@ -579,7 +578,7 @@ private fun FeatureCard(
                                 .clip(CircleShape)
                                 .border(
                                     1.dp,
-                                    Color.White.copy(alpha = 0.3f),
+                                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                                     CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -587,7 +586,7 @@ private fun FeatureCard(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "功能图标",
-                                tint = Color.White.copy(alpha = 0.7f),
+                                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -601,12 +600,12 @@ private fun FeatureCard(
                     text = feature.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.7f)
+                    color = if (isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 )
                 Text(
                     text = feature.subtitle,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isEnabled) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f),
+                    color = if (isEnabled) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.padding(top = 2.dp)
                 )
                 
@@ -617,7 +616,7 @@ private fun FeatureCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     
@@ -625,7 +624,7 @@ private fun FeatureCard(
                     Text(
                         text = feature.description.desc,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     
                     // 标签列表 - 同步Web端tips样式
@@ -639,13 +638,13 @@ private fun FeatureCard(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(50))
-                                        .background(Color.White.copy(alpha = 0.1f))
+                                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = tip,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.7f)
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                                     )
                                 }
                             }

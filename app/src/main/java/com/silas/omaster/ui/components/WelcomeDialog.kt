@@ -34,15 +34,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
-import com.silas.omaster.ui.theme.DarkGray
-import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -60,7 +57,7 @@ fun WelcomeDialog(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         AnimatedVisibility(
             visible = isVisible,
@@ -85,7 +82,7 @@ fun WelcomeDialog(
                         text = stringResource(R.string.welcome_dialog_title),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center
                     )
 
@@ -94,7 +91,7 @@ fun WelcomeDialog(
                     Text(
                         text = stringResource(R.string.welcome_version),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center
                     )
 
@@ -127,7 +124,7 @@ fun WelcomeDialog(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = DarkGray
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
                         Column(
@@ -142,7 +139,7 @@ fun WelcomeDialog(
                                     onCheckedChange = { agreedToPolicy = it },
                                     colors = CheckboxDefaults.colors(
                                         checkedColor = MaterialTheme.colorScheme.primary,
-                                        uncheckedColor = Color.White.copy(alpha = 0.5f)
+                                        uncheckedColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                                     )
                                 )
 
@@ -151,7 +148,7 @@ fun WelcomeDialog(
                                 Text(
                                     text = stringResource(R.string.agree_prefix),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
 
                                 Text(
@@ -170,7 +167,7 @@ fun WelcomeDialog(
                             Text(
                                 text = stringResource(R.string.umeng_notice),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                 lineHeight = 18.sp
                             )
                         }
@@ -206,8 +203,8 @@ fun WelcomeDialog(
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DarkGray,
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onBackground
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -232,9 +229,9 @@ fun WelcomeDialog(
                         enabled = agreedToPolicy,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White,
-                            disabledContainerColor = DarkGray,
-                            disabledContentColor = Color.White.copy(alpha = 0.5f)
+                            contentColor = MaterialTheme.colorScheme.onBackground,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            disabledContentColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {

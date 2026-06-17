@@ -61,14 +61,14 @@ fun FilmRecommendationStrip(
                     text = "胶片推荐",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                 )
             }
             
             Text(
                 text = "${films.size} 款胶片",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
 
@@ -104,7 +104,7 @@ private fun FilmCard(
     )
     
     val borderColor by animateColorAsState(
-        targetValue = if (selected) HasselbladOrange else Color.White.copy(alpha = 0.1f),
+        targetValue = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
         label = "border"
     )
 
@@ -159,7 +159,7 @@ private fun FilmCard(
                     Icon(
                         Icons.Default.Check,
                         null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier
                             .size(16.dp)
                             .align(Alignment.TopEnd)
@@ -175,7 +175,7 @@ private fun FilmCard(
                 text = film.name,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) HasselbladOrange else Color.White,
+                color = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
@@ -191,7 +191,7 @@ private fun FilmCard(
                     text = "${(film.matchScore * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (selected) HasselbladOrange else Color.White.copy(alpha = 0.6f)
+                    color = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 
                 Spacer(modifier = Modifier.width(2.dp))
@@ -199,7 +199,7 @@ private fun FilmCard(
                 Icon(
                     Icons.Default.Star,
                     null,
-                    tint = if (selected) HasselbladOrange else Color.White.copy(alpha = 0.4f),
+                    tint = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.size(12.dp)
                 )
             }
@@ -221,7 +221,7 @@ fun FilmDetailDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(16.dp),
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -246,7 +246,7 @@ fun FilmDetailDialog(
                         text = film.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = film.series.displayName,
@@ -266,7 +266,7 @@ fun FilmDetailDialog(
                     Text(
                         text = "匹配度",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                     Text(
                         text = "${(film.matchScore * 100).toInt()}%",
@@ -282,7 +282,7 @@ fun FilmDetailDialog(
                 Text(
                     text = film.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -292,7 +292,7 @@ fun FilmDetailDialog(
                     text = "胶片特性",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -322,7 +322,7 @@ fun FilmDetailDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
             ) {
                 Text("取消")
             }
@@ -344,12 +344,12 @@ private fun FilmCharacteristicRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }

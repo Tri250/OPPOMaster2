@@ -97,8 +97,8 @@ fun PillNavBar(
                 .shadow(
                     elevation = 20.dp,
                     shape = RoundedCornerShape(32.dp),
-                    ambientColor = Color.Black.copy(alpha = 0.5f),
-                    spotColor = Color.Black.copy(alpha = 0.8f)
+                    ambientColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
+                    spotColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.8f)
                 )
         ) {
             // 磨砂玻璃背景层 - 使用自适应宽度
@@ -126,8 +126,8 @@ fun PillNavBar(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.15f),
-                                Color.White.copy(alpha = 0.05f),
+                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
+                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                                 Color.Transparent
                             )
                         )

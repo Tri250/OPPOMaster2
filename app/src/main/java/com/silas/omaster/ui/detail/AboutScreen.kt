@@ -281,7 +281,7 @@ private fun AppInfoCard(
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
                         contentDescription = "应用图标",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(36.dp)
                     )
                 }

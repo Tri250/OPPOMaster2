@@ -24,7 +24,6 @@ import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.cloud.SyncState
 import com.silas.omaster.ui.theme.HasselbladOrange
 
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -131,8 +130,8 @@ fun CloudSyncScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 

@@ -84,7 +84,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
 import kotlinx.coroutines.Dispatchers
@@ -294,8 +293,8 @@ fun SmartOptimizeScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -373,7 +372,7 @@ fun SmartOptimizeScreen(
                         .align(Alignment.TopStart)
                         .padding(8.dp)
                         .background(
-                            Color.Black.copy(alpha = 0.5f),
+                            MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -393,12 +392,12 @@ fun SmartOptimizeScreen(
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                         .size(36.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.AddPhotoAlternate,
                         contentDescription = "选择图片",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -693,7 +692,7 @@ private fun CompositeOptimizeCard(
                         if (it) onEnable() else onDisable()
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                         checkedTrackColor = SuccessGreen
                     )
                 )
@@ -805,7 +804,7 @@ private fun OptimizeOptionCard(
                         onToggle(it)
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                         checkedTrackColor = color
                     )
                 )

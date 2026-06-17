@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
 
 /**
@@ -138,8 +137,8 @@ fun NotificationSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PureBlack,
-                    titleContentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -207,7 +206,7 @@ fun NotificationSettingsScreen(
                                 }
                             },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
+                                checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                                 checkedTrackColor = HasselbladOrange,
                                 uncheckedThumbColor = Color.Gray,
                                 uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
@@ -358,7 +357,7 @@ fun NotificationSettingsScreen(
                                 checked = dndEnabled,
                                 onCheckedChange = { dndEnabled = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
+                                    checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                                     checkedTrackColor = Color(0xFF9C27B0),
                                     uncheckedThumbColor = Color.Gray,
                                     uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
@@ -434,7 +433,7 @@ private fun NotificationSettingCard(
                 checked = isEnabled,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
+                    checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                     checkedTrackColor = HasselbladOrange,
                     uncheckedThumbColor = Color.Gray,
                     uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)

@@ -18,7 +18,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
-import com.silas.omaster.ui.theme.DarkGray
 
 @Composable
 fun PrivacyPolicyContent(
@@ -65,7 +64,7 @@ fun PrivacyPolicyContent(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = DarkGray
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(

@@ -77,10 +77,8 @@ import com.silas.omaster.data.local.FavoriteManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.PresetImage
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.LightGray
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.UrlConstants
@@ -139,7 +137,7 @@ fun FeaturedPresetsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏（对齐Web端）
@@ -281,12 +279,12 @@ private fun FeaturedHeader(
                 text = "精选推荐",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = "大师级影像参数库",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
 
@@ -294,12 +292,12 @@ private fun FeaturedHeader(
 
         // 搜索按钮
         IconButton(onClick = onFilterClick) {
-            Icon(Icons.Default.Search, "搜索", tint = Color.White)
+            Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onBackground)
         }
 
         // 筛选按钮
         IconButton(onClick = onFilterClick) {
-            Icon(Icons.Default.FilterList, "筛选", tint = Color.White)
+            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onBackground)
         }
     }
 }
@@ -322,7 +320,7 @@ private fun BrandFilterRow(
                 label = { Text("全部品牌") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange,
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -334,7 +332,7 @@ private fun BrandFilterRow(
                 label = { Text(brands[index]) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange,
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -360,7 +358,7 @@ private fun SceneFilterRow(
                 label = { Text("全部场景") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange.copy(alpha = 0.7f),
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -372,7 +370,7 @@ private fun SceneFilterRow(
                 label = { Text(scenes[index]) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = HasselbladOrange.copy(alpha = 0.7f),
-                    selectedLabelColor = Color.White
+                    selectedLabelColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -405,7 +403,7 @@ private fun FeaturedPresetCard(
                 onClick = onClick
             ),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkGray),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
@@ -436,7 +434,7 @@ private fun FeaturedPresetCard(
                             text = "NEW",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -449,12 +447,12 @@ private fun FeaturedPresetCard(
                         .padding(4.dp)
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f))
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "收藏",
-                        tint = if (isFavorite) HasselbladOrange else Color.White
+                        tint = if (isFavorite) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -467,7 +465,7 @@ private fun FeaturedPresetCard(
                     text = preset.name,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -549,7 +547,7 @@ private fun EmptyState(
         Text(
             text = stringResource(R.string.empty_no_featured),
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = stringResource(R.string.empty_hint_filter),
@@ -665,12 +663,12 @@ private fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color.White.copy(alpha = 0.05f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(24.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.1f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(24.dp)
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -682,7 +680,7 @@ private fun SearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "搜索",
-                tint = Color.White.copy(alpha = 0.4f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.size(16.dp)
             )
             androidx.compose.foundation.text.BasicTextField(
@@ -690,7 +688,7 @@ private fun SearchBar(
                 onValueChange = onQueryChange,
                 singleLine = true,
                 textStyle = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(HasselbladOrange),
                 modifier = Modifier.fillMaxWidth(),
@@ -699,7 +697,7 @@ private fun SearchBar(
                         Text(
                             text = "搜索精选预设...",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                     }
                     innerTextField()

@@ -36,14 +36,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
 import kotlinx.coroutines.delay
 
@@ -83,7 +81,7 @@ fun FloatingWindowGuideDialog(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.8f)),
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.8f)),
             contentAlignment = Alignment.Center
         ) {
             Card(
@@ -144,7 +142,7 @@ fun FloatingWindowGuideDialog(
                         text = stringResource(R.string.guide_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center
                     )
 
@@ -154,7 +152,7 @@ fun FloatingWindowGuideDialog(
                     Text(
                         text = stringResource(R.string.guide_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
                     )
@@ -166,7 +164,7 @@ fun FloatingWindowGuideDialog(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = DarkGray.copy(alpha = 0.5f)
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         ),
                         border = androidx.compose.foundation.BorderStroke(
                             width = 1.dp,
@@ -218,7 +216,7 @@ fun FloatingWindowGuideDialog(
                         Text(
                             text = stringResource(R.string.guide_tip),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             lineHeight = 16.sp
                         )
                     }
@@ -244,9 +242,9 @@ fun FloatingWindowGuideDialog(
                             enabled = canClick,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White,
+                                contentColor = MaterialTheme.colorScheme.onBackground,
                                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                disabledContentColor = Color.White.copy(alpha = 0.5f)
+                                disabledContentColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             ),
                             shape = RoundedCornerShape(14.dp)
                         ) {
@@ -265,14 +263,14 @@ fun FloatingWindowGuideDialog(
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.2f)),
+                                            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = "${countdown}s",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            color = MaterialTheme.colorScheme.onBackground
                                         )
                                     }
                                 }
@@ -289,7 +287,7 @@ fun FloatingWindowGuideDialog(
                         ) {
                             Text(
                                 text = stringResource(R.string.guide_later),
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 fontSize = 14.sp
                             )
                         }
@@ -334,7 +332,7 @@ private fun GuideStep(
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.85f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
             lineHeight = 18.sp
         )
     }

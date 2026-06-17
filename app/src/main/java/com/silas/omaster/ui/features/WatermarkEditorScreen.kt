@@ -271,7 +271,7 @@ fun WatermarkEditorScreen(
     var dateText by remember { mutableStateOf("2026-06-09") }
 
     // 智能颜色推荐
-    var recommendedColor by remember { mutableStateOf(Color.White) }
+    var recommendedColor by remember { mutableStateOf(MaterialTheme.colorScheme.onBackground) }
 
     // 图片选择器
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -339,7 +339,7 @@ fun WatermarkEditorScreen(
     // 样式参数
     var selectedPosition by remember { mutableStateOf(WatermarkPlacement.BOTTOM_LEFT) }
     var selectedFont by remember { mutableStateOf(FontOption.DEFAULT) }
-    var selectedColor by remember { mutableStateOf(Color.White) }
+    var selectedColor by remember { mutableStateOf(MaterialTheme.colorScheme.onBackground) }
     var textSize by remember { mutableFloatStateOf(14f) }
     var opacity by remember { mutableFloatStateOf(0.8f) }
     var rotation by remember { mutableFloatStateOf(0f) }
@@ -441,7 +441,7 @@ fun WatermarkEditorScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // TopAppBar
@@ -452,7 +452,7 @@ fun WatermarkEditorScreen(
                     Text(
                         "专业水印设计 · ${WATERMARK_TEMPLATES.size}+模板",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
             },
@@ -461,7 +461,7 @@ fun WatermarkEditorScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -472,7 +472,7 @@ fun WatermarkEditorScreen(
                 }) {
                     Icon(
                         Icons.Default.Layers, "图层",
-                        tint = if (showBeforeAfter) CyanAccent else Color.White.copy(alpha = 0.5f)
+                        tint = if (showBeforeAfter) CyanAccent else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
                 // 预览按钮
@@ -483,7 +483,7 @@ fun WatermarkEditorScreen(
                     Icon(
                         if (showBeforeAfter) Icons.Default.Compare else Icons.Default.Visibility,
                         "预览对比",
-                        tint = if (showBeforeAfter) CyanAccent else Color.White.copy(alpha = 0.5f)
+                        tint = if (showBeforeAfter) CyanAccent else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
                 // 导出按钮
@@ -495,8 +495,8 @@ fun WatermarkEditorScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -505,7 +505,7 @@ fun WatermarkEditorScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.55f)
-                .background(DarkGray)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
@@ -540,7 +540,7 @@ fun WatermarkEditorScreen(
                     Text(
                         text = "水印",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Switch(
@@ -550,7 +550,7 @@ fun WatermarkEditorScreen(
                             isWatermarkEnabled = it
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                             checkedTrackColor = CyanAccent
                         )
                     )
@@ -592,14 +592,14 @@ fun WatermarkEditorScreen(
                     Icon(
                         Icons.Default.Image,
                         null,
-                        tint = Color.White.copy(alpha = 0.5f),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "选择图片开始编辑",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
@@ -770,7 +770,7 @@ fun WatermarkEditorScreen(
                         textSize = 14f
                         opacity = 0.8f
                         rotation = 0f
-                        selectedColor = Color.White
+                        selectedColor = MaterialTheme.colorScheme.onBackground
                         letterSpacing = 0f
                         fontWeight = FontWeight.Normal
                         bgOpacity = 0f
@@ -859,13 +859,13 @@ private fun WatermarkCategoryTabs(
                     category.icon,
                     null,
                     modifier = Modifier.size(14.dp),
-                    tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
+                    tint = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Text(
                     text = category.displayName,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 )
             }
         }
@@ -885,15 +885,15 @@ private fun SearchBar(
             .fillMaxWidth()
             .height(40.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkGray)
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Icon(
             Icons.Default.Search,
             null,
-            tint = Color.White.copy(alpha = 0.4f),
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
@@ -901,7 +901,7 @@ private fun SearchBar(
             value = query,
             onValueChange = onQueryChange,
             textStyle = TextStyle(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = MaterialTheme.typography.bodyMedium.fontSize
             ),
             singleLine = true,
@@ -912,7 +912,7 @@ private fun SearchBar(
                 if (query.isEmpty()) {
                     Text(
                         "搜索水印模板...",
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -936,7 +936,7 @@ private fun WatermarkTemplateGrid(
             text = "水印模板 (${templates.size})",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -996,7 +996,7 @@ private fun WatermarkTemplateCard(
             Icon(
                 template.category.icon,
                 null,
-                tint = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.5f),
+                tint = if (isSelected) CyanAccent else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(18.dp)
@@ -1007,7 +1007,7 @@ private fun WatermarkTemplateCard(
             text = template.name,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.7f),
+            color = if (isSelected) CyanAccent else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             maxLines = 1
         )
     }
@@ -1033,7 +1033,7 @@ private fun WatermarkPositionGrid(
             text = "水印位置",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -1066,7 +1066,7 @@ private fun WatermarkPositionGrid(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(if (isSelected) Color.White else Color.Gray)
+                                        .background(if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Gray)
                                         .align(
                                             when (position) {
                                                 WatermarkPlacement.TOP_LEFT -> Alignment.TopStart
@@ -1106,7 +1106,7 @@ private fun CustomTextInput(
             text = label,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Box(
@@ -1114,8 +1114,8 @@ private fun CustomTextInput(
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(DarkGray)
-                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -1123,7 +1123,7 @@ private fun CustomTextInput(
                     value = value,
                     onValueChange = onValueChange,
                     textStyle = TextStyle(
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = MaterialTheme.typography.bodyMedium.fontSize
                     ),
                     singleLine = true,
@@ -1172,7 +1172,7 @@ private fun WatermarkElementsSection(
             text = "印记元素",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -1270,7 +1270,7 @@ private fun WatermarkElementRow(
         Text(
             text = name,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.width(50.dp)
         )
 
@@ -1280,7 +1280,7 @@ private fun WatermarkElementRow(
                     .weight(1f)
                     .height(32.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(DarkGray)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -1295,7 +1295,7 @@ private fun WatermarkElementRow(
                         value = text,
                         onValueChange = onTextChange,
                         textStyle = TextStyle(
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = MaterialTheme.typography.bodySmall.fontSize
                         ),
                         singleLine = true,
@@ -1307,7 +1307,7 @@ private fun WatermarkElementRow(
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -1316,7 +1316,7 @@ private fun WatermarkElementRow(
             checked = isEnabled,
             onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                 checkedTrackColor = CyanAccent
             )
         )
@@ -1343,7 +1343,7 @@ private fun WatermarkVignetteRow(
         Text(
             text = "暗角",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.width(50.dp)
         )
 
@@ -1366,7 +1366,7 @@ private fun WatermarkVignetteRow(
             checked = isEnabled,
             onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                 checkedTrackColor = CyanAccent
             )
         )
@@ -1404,8 +1404,8 @@ private fun WatermarkStyleSection(
 ) {
     // 8种预设颜色（与Web端同步）
     val colors = listOf(
-        Color.White to "白色",
-        Color.Black to "黑色",
+        MaterialTheme.colorScheme.onBackground to "白色",
+        MaterialTheme.colorScheme.scrim to "黑色",
         Color(0xFFFFD700) to "金色",
         Color(0xFFFF6B35) to "橙色",
         CyanAccent to "青色",
@@ -1419,7 +1419,7 @@ private fun WatermarkStyleSection(
             text = "样式",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -1427,7 +1427,7 @@ private fun WatermarkStyleSection(
         Text(
             text = "字体样式",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(4.dp))
         LazyRow(
@@ -1450,7 +1450,7 @@ private fun WatermarkStyleSection(
                     Text(
                         text = font.displayName,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isSelected) CyanAccent else Color.White,
+                        color = if (isSelected) CyanAccent else MaterialTheme.colorScheme.onBackground,
                         fontFamily = font.fontFamily
                     )
                 }
@@ -1463,7 +1463,7 @@ private fun WatermarkStyleSection(
         Text(
             text = "字体粗细",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
@@ -1488,7 +1488,7 @@ private fun WatermarkStyleSection(
                     Text(
                         text = name,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isSelected) CyanAccent else Color.White,
+                        color = if (isSelected) CyanAccent else MaterialTheme.colorScheme.onBackground,
                         fontWeight = weight
                     )
                 }
@@ -1501,7 +1501,7 @@ private fun WatermarkStyleSection(
         Text(
             text = "文字颜色",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
@@ -1623,14 +1623,14 @@ private fun WatermarkStyleSection(
                 Text(
                     text = "文字阴影",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Switch(
                     checked = shadowEnabled,
                     onCheckedChange = onShadowToggle,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                         checkedTrackColor = CyanAccent
                     )
                 )
@@ -1644,7 +1644,7 @@ private fun WatermarkStyleSection(
                     Text(
                         text = "模糊",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.width(40.dp)
                     )
                     Slider(
@@ -1687,7 +1687,7 @@ private fun StyleSlider(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.width(70.dp)
         )
         Slider(
@@ -1771,7 +1771,7 @@ private fun WatermarkPreviewCanvas(
             Text(
                 text = "双指拖拽调整位置和大小",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(8.dp)
@@ -1818,7 +1818,7 @@ private fun analyzeDominantColor(bitmap: Bitmap): Color {
     }
 
     val avgBrightness = totalBrightness / (20 * 20)
-    return if (avgBrightness > 128) Color.Black else Color.White
+    return if (avgBrightness > 128) NearBlack else OffWhite
 }
 
 private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bitmap {
@@ -1942,7 +1942,7 @@ data class WatermarkConfig(
     val locationText: String = "",
     val photographerText: String = "",
     val position: WatermarkPlacement = WatermarkPlacement.BOTTOM_LEFT,
-    val textColor: Color = Color.White,
+    val textColor: Color = OffWhite,
     val textSize: Float = 14f,
     val opacity: Float = 0.8f,
     val rotation: Float = 0f,
@@ -1982,7 +1982,7 @@ private fun DrawScope.drawWatermarkText(
     val textPaint = androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
         color = config.textColor.toArgb()
         textSize = config.textSize * scale
-        setShadowLayer(config.shadowBlur, 0f, 0f, Color.Black.toArgb())
+        setShadowLayer(config.shadowBlur, 0f, 0f, NearBlack.toArgb())
     }
 
     val paddingPx = config.padding.dp.toPx()

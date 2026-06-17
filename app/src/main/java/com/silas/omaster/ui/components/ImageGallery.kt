@@ -34,7 +34,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -42,7 +41,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.silas.omaster.ui.animation.AnimationSpecs
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.NearBlack
 import com.silas.omaster.util.ImageCacheManager
 import kotlinx.coroutines.delay
@@ -215,8 +213,8 @@ private fun GalleryNavigationButton(
             .padding(8.dp)
             .size(40.dp),
         colors = IconButtonDefaults.iconButtonColors(
-            containerColor = DarkGray.copy(alpha = 0.7f),
-            contentColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+            contentColor = MaterialTheme.colorScheme.onBackground
         )
     ) {
         Icon(
@@ -240,7 +238,7 @@ private fun GalleryIndicators(
         modifier = modifier
             .padding(bottom = 16.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(DarkGray.copy(alpha = 0.7f))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -251,7 +249,7 @@ private fun GalleryIndicators(
                         .size(if (isSelected) 8.dp else 6.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f)
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         )
                 )
             if (index < pageCount - 1) {

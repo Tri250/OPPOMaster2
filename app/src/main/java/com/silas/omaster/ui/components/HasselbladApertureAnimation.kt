@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -242,7 +241,7 @@ fun HasselbladApertureAnimation(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0A0A))
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -293,7 +292,7 @@ fun HasselbladApertureAnimation(
         // 当前状态文字
         Text(
             text = currentMessage,
-            color = Color.White.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             fontSize = 14.sp
         )
 
@@ -305,7 +304,7 @@ fun HasselbladApertureAnimation(
                 .fillMaxWidth(0.8f)
                 .height(8.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
         ) {
             Box(
                 modifier = Modifier
@@ -332,7 +331,7 @@ fun HasselbladApertureAnimation(
         ) {
             Text(
                 text = "分析进度",
-                color = Color.White.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 fontSize = 12.sp
             )
             Text(
@@ -360,7 +359,7 @@ fun HasselbladApertureAnimation(
         // 底部品牌标识
         Text(
             text = "HNCS · HASSELBLAD NATURAL COLOR SOLUTION",
-            color = Color.White.copy(alpha = 0.3f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
             fontSize = 10.sp,
             letterSpacing = 2.sp
         )
@@ -432,14 +431,14 @@ private fun ApertureBlades(
 private fun AnalysisStepItem(step: AnalysisStep) {
     val backgroundColor = when (step.status) {
         AnalysisStatus.COMPLETED -> HasselbladOrange.copy(alpha = 0.1f)
-        AnalysisStatus.PROCESSING -> Color.White.copy(alpha = 0.05f)
+        AnalysisStatus.PROCESSING -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
         AnalysisStatus.PENDING -> Color.Transparent
     }
 
     val textColor = when (step.status) {
         AnalysisStatus.COMPLETED -> HasselbladOrange
-        AnalysisStatus.PROCESSING -> Color.White.copy(alpha = 0.8f)
-        AnalysisStatus.PENDING -> Color.White.copy(alpha = 0.4f)
+        AnalysisStatus.PROCESSING -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+        AnalysisStatus.PENDING -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
     }
 
     Row(
@@ -478,7 +477,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                         .then(
                             Modifier.drawBehind {
                                 drawCircle(
-                                    color = Color.White.copy(alpha = 0.2f),
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                                     radius = size.minDimension / 2,
                                     style = Stroke(width = 1.dp.toPx())
                                 )

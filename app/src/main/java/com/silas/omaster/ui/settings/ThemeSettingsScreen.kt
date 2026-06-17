@@ -83,8 +83,8 @@ fun ThemeSettingsScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -167,7 +167,7 @@ fun ThemeSettingsScreen(
                                     else -> Icons.Default.Settings
                                 },
                                 null,
-                                tint = if (darkMode == mode) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                tint = if (darkMode == mode) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -178,7 +178,7 @@ fun ThemeSettingsScreen(
                                     else -> mode
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (darkMode == mode) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                color = if (darkMode == mode) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -230,7 +230,7 @@ fun ThemeSettingsScreen(
                             .background(color)
                             .border(
                                 2.dp,
-                                if (customColor == color) Color.White else Color.Transparent,
+                                if (customColor == color) MaterialTheme.colorScheme.onBackground else Color.Transparent,
                                 CircleShape
                             )
                             .clickable {

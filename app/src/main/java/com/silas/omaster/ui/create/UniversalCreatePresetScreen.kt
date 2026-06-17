@@ -116,7 +116,7 @@ fun UniversalCreatePresetScreen(
                                 .fillMaxWidth()
                                 .height(200.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.DarkGray)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable { imagePicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
@@ -152,11 +152,11 @@ fun UniversalCreatePresetScreen(
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = "添加",
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onBackground,
                                         modifier = Modifier.size(48.dp)
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(stringResource(R.string.upload_cover_hint), color = Color.White)
+                                    Text(stringResource(R.string.upload_cover_hint), color = MaterialTheme.colorScheme.onBackground)
                                 }
                             }
                         }

@@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,9 +48,7 @@ import coil.request.ImageRequest
 import com.silas.omaster.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,7 +66,7 @@ fun PresetStatsCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
     ) {
         Row(
             modifier = Modifier
@@ -106,13 +105,13 @@ private fun StatItem(
     ) {
         Text(
             text = value,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = label,
-            color = Color.White.copy(alpha = 0.4f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
             fontSize = 10.sp
         )
     }
@@ -137,7 +136,7 @@ fun ShootingTipsDetailCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(DarkGray)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -153,7 +152,7 @@ fun ShootingTipsDetailCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "拍摄建议",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -197,7 +196,7 @@ private fun TipRow(
             )
             Text(
                 text = content,
-                color = Color.White.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 fontSize = 12.sp
             )
         }
@@ -225,7 +224,7 @@ fun UserCommentsCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -239,7 +238,7 @@ fun UserCommentsCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "用户评价",
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -256,7 +255,7 @@ fun UserCommentsCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color.White.copy(alpha = 0.05f))
+                            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -290,14 +289,14 @@ private fun CommentItem(
             repeat(5) { index ->
                 Text(
                     text = "★",
-                    color = if (index < comment.rating) Color(0xFFFFC107) else Color.White.copy(alpha = 0.2f),
+                    color = if (index < comment.rating) Color(0xFFFFC107) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                     fontSize = 12.sp
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = comment.user,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -308,7 +307,7 @@ private fun CommentItem(
         // 评价内容
         Text(
             text = comment.content,
-            color = Color.White.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             fontSize = 12.sp
         )
     }
@@ -337,7 +336,7 @@ fun RelatedPresetsCard(
         // 标题（对齐用户规范）
         Text(
             text = "🎞️ 看了这个的人也看了",
-            color = Color.White.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
@@ -371,7 +370,7 @@ private fun RelatedPresetItem(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         onClick = onClick
     ) {
         Column(
@@ -382,7 +381,7 @@ private fun RelatedPresetItem(
             Card(
                 modifier = Modifier.size(96.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkGray)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (preset.coverPath.isNotBlank()) {
                     AsyncImage(
@@ -399,13 +398,13 @@ private fun RelatedPresetItem(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(DarkGray),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.Camera,
                             contentDescription = "图片",
-                            tint = Color.White.copy(alpha = 0.3f),
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -417,7 +416,7 @@ private fun RelatedPresetItem(
             // 名称
             Text(
                 text = preset.name,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 12.sp,
                 maxLines = 1
             )
@@ -426,7 +425,7 @@ private fun RelatedPresetItem(
             preset.author?.let {
                 Text(
                     text = it,
-                    color = Color.White.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     fontSize = 10.sp
                 )
             }
@@ -469,13 +468,13 @@ fun ApplyPresetButton(
         Icon(
             imageVector = if (applied) Icons.Default.CheckCircle else Icons.Default.AutoAwesome,
             contentDescription = "图标",
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = if (applied) "已应用哈苏配方" else "一键应用哈苏配方",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
@@ -491,9 +490,9 @@ fun FavoriteButton(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f)
-    val textColor = if (isFavorite) Color.Red else Color.White.copy(alpha = 0.8f)
-    val borderColor = if (isFavorite) Color.Red.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f)
+    val backgroundColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+    val textColor = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+    val borderColor = if (isFavorite) Color.Red.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
     
     Button(
         onClick = onToggle,

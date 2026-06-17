@@ -21,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,8 +31,6 @@ import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.PolicyItem
 import com.silas.omaster.ui.components.PolicySection
-import com.silas.omaster.ui.theme.DarkGray
-
 @Composable
 fun PrivacyPolicyScreen(
     onBack: () -> Unit
@@ -83,7 +80,7 @@ fun PrivacyPolicyScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = DarkGray
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Column(
@@ -116,7 +113,7 @@ fun PrivacyPolicyScreen(
                         Text(
                             text = stringResource(R.string.privacy_link_label),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                         Text(
                             text = "https://www.umeng.com/page/policy",
@@ -151,9 +148,9 @@ fun PrivacyPolicyScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = stringResource(R.string.last_updated, "2026-02-09"),
+                text = stringResource(R.string.last_updated, "2026-06-17"),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )

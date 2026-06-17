@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
@@ -81,7 +80,7 @@ fun PresetCard(
             .hapticClickable { onClick() }
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.05f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(16.dp)
             )
             .semantics {
@@ -89,7 +88,7 @@ fun PresetCard(
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -116,8 +115,8 @@ fun PresetCard(
                         brush = Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.2f),
-                                Color.Black.copy(alpha = 0.8f)
+                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.2f),
+                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.8f)
                             )
                         )
                     )
@@ -144,13 +143,13 @@ fun PresetCard(
                         Text(
                             text = "👑",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = stringResource(R.string.badge_hncs),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -175,13 +174,13 @@ fun PresetCard(
                         Text(
                             text = "✨",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = stringResource(R.string.badge_new),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -203,7 +202,7 @@ fun PresetCard(
                                 color = if (preset.isFavorite)
                                     Color.Red.copy(alpha = 0.2f)
                                 else
-                                    Color.Black.copy(alpha = 0.4f),
+                                    MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
                                 shape = RoundedCornerShape(16.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -217,7 +216,7 @@ fun PresetCard(
                                 stringResource(R.string.preset_favorited)
                             else
                                 stringResource(R.string.preset_favorite),
-                            tint = if (preset.isFavorite) Color.Red else Color.White.copy(alpha = 0.7f),
+                            tint = if (preset.isFavorite) Color.Red else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -237,7 +236,7 @@ fun PresetCard(
                         modifier = Modifier
                             .size(32.dp)
                             .background(
-                                color = Color.Black.copy(alpha = 0.4f),
+                                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
                                 shape = RoundedCornerShape(16.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -263,7 +262,7 @@ fun PresetCard(
                     text = PresetI18n.getLocalizedPresetName(preset.name),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -272,7 +271,7 @@ fun PresetCard(
                     Text(
                         text = preset.author,
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -288,7 +287,7 @@ fun PresetCard(
                             Text(
                                 text = "⭐ ${String.format("%.1f", rating)}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             )
                         }
                         // 下载量（仅在有数据时展示）
@@ -301,7 +300,7 @@ fun PresetCard(
                             Text(
                                 text = "📥 $downloadsText",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             )
                         }
                         // 品牌
@@ -309,7 +308,7 @@ fun PresetCard(
                             Text(
                                 text = brand,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.4f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                                 modifier = Modifier.padding(start = 4.dp)
                             )
                         }
@@ -330,12 +329,12 @@ fun PresetCardPlaceholder(
             .height(250.dp)
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.05f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(16.dp)
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = DarkGray
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Box(
@@ -345,7 +344,7 @@ fun PresetCardPlaceholder(
             Text(
                 text = stringResource(R.string.empty_no_data),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
     }

@@ -230,7 +230,7 @@ fun HomeScreen(
                     onNavigateToCreate()
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White,
+                contentColor = MaterialTheme.colorScheme.onBackground,
                 shape = RoundedCornerShape(20.dp),
                 elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(
                     defaultElevation = 8.dp,
@@ -333,13 +333,13 @@ private fun HeaderSection(
                     Text(
                         text = "👑",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
                         text = stringResource(R.string.hasselblad_master),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -619,7 +619,7 @@ private fun BrandFilterButton(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
     }
 }

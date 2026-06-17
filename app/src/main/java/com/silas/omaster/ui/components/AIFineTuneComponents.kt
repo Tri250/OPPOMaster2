@@ -203,8 +203,8 @@ fun AIFineTuneDialog(
             }
         },
         containerColor = Color(0xFF1A1A1A),
-        titleContentColor = Color.White,
-        textContentColor = Color.White
+        titleContentColor = MaterialTheme.colorScheme.onBackground,
+        textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
 
@@ -230,7 +230,7 @@ private fun LoadingSection(progress: Float, text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.8f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
         )
         Spacer(modifier = Modifier.height(8.dp))
         LinearProgressIndicator(
@@ -276,7 +276,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
                 text = "来自: ${suggestion.basePresetName}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = "${suggestion.suggestions.size} 项参数建议",
@@ -317,7 +317,7 @@ private fun ParamComparisonTable(
             text = "建议参数",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.8f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
         )
 
         suggestions.forEach { param ->
@@ -348,7 +348,7 @@ private fun ParamComparisonRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .border(2.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+            .border(2.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
             .background(if (isSelected) HasselbladOrange.copy(alpha = 0.1f) else Color.Transparent)
             .clickable { onToggle() }
             .padding(12.dp),
@@ -367,7 +367,7 @@ private fun ParamComparisonRow(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "图标",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -379,7 +379,7 @@ private fun ParamComparisonRow(
         Text(
             text = param.displayName,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f)
         )
 

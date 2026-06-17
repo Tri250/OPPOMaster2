@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
@@ -107,8 +106,8 @@ fun PresetSourceManagerScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
         
@@ -319,7 +318,7 @@ private fun PresetSourceCard(
                         checked = source.enabled,
                         onCheckedChange = onToggle,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                             checkedTrackColor = SuccessGreen,
                             uncheckedThumbColor = Color.Gray,
                             uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)

@@ -127,8 +127,8 @@ fun LUTShareScreen(
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -179,7 +179,7 @@ fun LUTShareScreen(
                         text = "${category.icon} ${category.label}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (category.key == selectedCategory) FontWeight.Bold else FontWeight.Normal,
-                        color = if (category.key == selectedCategory) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        color = if (category.key == selectedCategory) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -603,7 +603,7 @@ private fun LUTGridCard(
                         .padding(6.dp)
                         .align(Alignment.TopEnd)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f))
                         .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
                     Text(
