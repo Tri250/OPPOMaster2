@@ -1063,7 +1063,12 @@ data class PresetItem(
     val updatedAt: Long = 0,
     val isNew: Boolean = false,
     val isPinned: Boolean = false,
-    val mode: String? = null  // 模式：auto或pro（对齐Web端）
+    val mode: String? = null,  // 模式：auto或pro（对齐Web端）
+    val author: String = "@OPPO影像",  // 作者
+    val sections: List<com.silas.omaster.model.PresetSection>? = null,  // 动态参数分组（保留原始展示数据）
+    val filter: String? = null,  // 滤镜
+    val softLight: String? = null,  // 柔光
+    val vignette: String? = null  // 暗角
 ) {
     fun toExportModel() = ExportPresetModel(
         name = name,
@@ -1081,23 +1086,26 @@ data class PresetItem(
         return MasterPreset(
             id = id,
             name = name,
-            // 无自定义封面时使用内置占位图（assets/images/placeholder.webp）
-            // 若占位图不存在，UI 层应兜底显示纯色/图标，不可因此崩溃
             coverPath = coverPath ?: "images/placeholder.webp",
-            galleryImages = galleryImages,  // 对齐Web端
+            galleryImages = galleryImages,
+            author = author,
             brand = brand,
             tags = tags,
             description = if (description.isNotEmpty()) {
                 com.silas.omaster.model.PresetDescription("Shooting Tips", description)
             } else null,
+            sections = sections,  // 保留原始动态参数分组
             isNew = isNew,
             isHncs = isHncs,
             downloads = downloadCount,
             rating = rating,
-            ratingCount = ratingCount,  // 对齐Web端
-            comments = comments,  // 对齐Web端
+            ratingCount = ratingCount,
+            comments = comments,
             createdAt = createdAt,
-            mode = mode,  // 对齐Web端
+            mode = mode,
+            filter = filter,
+            softLight = softLight,
+            vignette = vignette,
             saturation = params["saturation"],
             tone = params["contrast"],
             warmCool = params["warmth"],
@@ -1176,19 +1184,25 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         ?: shootingTips
         ?: ""
     val paramsMap = mutableMapOf<String, Int>()
+
+    // 优先从数值字段提取参数
     saturation?.let { paramsMap["saturation"] = it }
-    tone?.let { paramsMap["contrast"] = it } // tone 在本应用中等同于 contrast
+    tone?.let { paramsMap["contrast"] = it }
     warmCool?.let { paramsMap["warmth"] = it }
     sharpness?.let { paramsMap["sharpness"] = it }
-    // 以下字段云端模型暂不直接提供，使用默认值 0（即"无调整"）
-    // clarity（清晰度）范围 [0, 100]，0 表示不增强，与 RenderParameters.DEFAULT 一致
-    paramsMap.putIfAbsent("clarity", 0)
-    // brightness（亮度）范围 [-100, 100]，0 表示不调整，与 RenderParameters.DEFAULT 一致
-    paramsMap.putIfAbsent("brightness", 0)
-    // 额外保存原值字段（保证导入导出无损）
     cyanMagenta?.let { paramsMap["cyan_magenta"] = it }
     colorTemperature?.let { paramsMap["color_temperature"] = it }
     colorHue?.let { paramsMap["color_hue"] = it }
+
+    // 当数值字段为空时，从 sections.items 的 value 字符串中解析参数
+    // JSON格式如: {"label": "@string/param_saturation", "value": "+19"}
+    if (paramsMap.isEmpty() || !paramsMap.containsKey("saturation")) {
+        parseParamsFromSections(sections, paramsMap)
+    }
+
+    // 默认值
+    paramsMap.putIfAbsent("clarity", 0)
+    paramsMap.putIfAbsent("brightness", 0)
 
     return PresetItem(
         id = id ?: "preset_${abs(name.hashCode())}_${System.nanoTime()}",
@@ -1197,22 +1211,89 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         scene = resolvedScene,
         params = paramsMap,
         coverPath = coverPath,
-        galleryImages = galleryImages,  // 对齐Web端
+        galleryImages = galleryImages,
         description = resolvedDescription,
         isSystem = true,
         isHncs = isHncs,
         rating = rating ?: 0f,
-        ratingCount = ratingCount,  // 对齐Web端
+        ratingCount = ratingCount,
         downloadCount = downloads ?: 0,
         favoriteCount = 0,
-        comments = comments,  // 对齐Web端
+        comments = comments,
         tags = tags ?: emptyList(),
         createdAt = if (createdAt > 0) createdAt else System.currentTimeMillis(),
         updatedAt = System.currentTimeMillis(),
         isNew = isNew,
         isPinned = false,
-        mode = mode  // 对齐Web端
+        mode = mode,
+        author = this@author ?: "@OPPO影像",
+        sections = sections,  // 保留原始动态参数分组
+        filter = filter,
+        softLight = softLight,
+        vignette = vignette
     )
+}
+
+/**
+ * 从 sections.items 的 value 字符串中解析数值参数
+ * JSON格式如: {"label": "@string/param_saturation", "value": "+19"}
+ * label 中的 @string/ 前缀会被去除，匹配参数名
+ */
+private fun parseParamsFromSections(
+    sections: List<com.silas.omaster.model.PresetSection>?,
+    paramsMap: MutableMap<String, Int>
+) {
+    if (sections.isNullOrEmpty()) return
+
+    // label后缀到参数键名的映射
+    val labelToKey = mapOf(
+        "param_saturation" to "saturation",
+        "param_tone_curve" to "contrast",
+        "param_warm_cool" to "warmth",
+        "param_cyan_magenta" to "cyan_magenta",
+        "param_sharpness" to "sharpness",
+        "param_color_temp" to "color_temperature",
+        "param_tone" to "color_hue",
+        "param_filter" to "filter",
+        "param_soft_light" to "soft_light",
+        "param_vignette" to "vignette"
+    )
+
+    for (section in sections) {
+        for (item in section.items) {
+            // 提取label中的参数标识: "@string/param_saturation" -> "param_saturation"
+            val labelKey = item.label
+                .removePrefix("@string/")
+                .trim()
+
+            val paramKey = labelToKey[labelKey] ?: continue
+
+            // 跳过已存在的参数（数值字段优先）
+            if (paramsMap.containsKey(paramKey)) continue
+
+            // 解析value中的数值: "+19" -> 19, "-5" -> -5, "15" -> 15
+            val numericValue = parseNumericValue(item.value)
+            if (numericValue != null) {
+                paramsMap[paramKey] = numericValue
+            }
+        }
+    }
+}
+
+/**
+ * 从字符串中解析数值
+ * 支持: "+19" -> 19, "-5" -> -5, "15" -> 15, "0" -> 0
+ * 不支持: "复古 100%", "无", "开", "关" 等非纯数值字符串
+ */
+private fun parseNumericValue(value: String): Int? {
+    val trimmed = value.trim()
+    // 匹配可选正负号后跟数字的模式
+    val match = Regex("^([+-]?)(\\d+)$").find(trimmed)
+    return match?.let {
+        val sign = if (it.groupValues[1] == "-") -1 else 1
+        val num = it.groupValues[2].toIntOrNull() ?: return null
+        sign * num
+    }
 }
 
 /**
