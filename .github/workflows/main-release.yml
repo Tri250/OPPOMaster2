@@ -72,6 +72,17 @@ jobs:
           mv settings.ci.gradle.kts settings.gradle.kts
           echo "✅ CI settings 配置已切换"
 
+      # 生成 debug 签名用于 CI 构建
+      - name: Generate Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            echo "✅ Debug keystore 已生成"
+          else
+            echo "✅ Debug keystore 已存在"
+          fi
+
       # 清除可能损坏的 Gradle 缓存，确保重新下载 AGP
       - name: Clean Gradle Cache
         run: |
