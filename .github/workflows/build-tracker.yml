@@ -1,0 +1,272 @@
+name: Build Tracker & Monitor
+
+# 构建跟踪与闭环监控
+# 功能：
+# 1. 跟踪所有构建状态
+# 2. 生成构建报告
+# 3. 构建失败通知
+# 4. 构建产物归档
+
+on:
+  workflow_run:
+    workflows: ["Main Release", "CI Build & Test", "Build Beta & Release"]
+    types:
+      - completed
+
+jobs:
+  track-build:
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download workflow run information
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = context.payload.workflow_run.id;
+            const run = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            
+            // 获取构建信息
+            const buildInfo = {
+              workflow: run.data.name,
+              runId: runId,
+              runNumber: run.data.run_number,
+              status: run.data.conclusion,
+              branch: run.data.head_branch,
+              commit: run.data.head_sha.substring(0, 7),
+              commitMessage: run.data.head_commit?.message || 'N/A',
+              author: run.data.head_commit?.author?.name || 'N/A',
+              startedAt: run.data.run_started_at,
+              completedAt: run.data.updated_at,
+              url: run.data.html_url,
+              triggeringActor: run.data.triggering_actor?.login || 'N/A'
+            };
+            
+            // 计算构建时长
+            const start = new Date(buildInfo.startedAt);
+            const end = new Date(buildInfo.completedAt);
+            buildInfo.duration = Math.round((end - start) / 1000);
+            
+            // 获取 artifacts
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            
+            buildInfo.artifacts = artifacts.data.artifacts.map(a => ({
+              name: a.name,
+              size: a.size_in_bytes,
+              url: a.url
+            }));
+            
+            // 保存构建信息
+            const fs = require('fs');
+            fs.writeFileSync('build-info.json', JSON.stringify(buildInfo, null, 2));
+            
+            // 输出摘要
+            console.log('=== 构建跟踪报告 ===');
+            console.log(`工作流: ${buildInfo.workflow}`);
+            console.log(`状态: ${buildInfo.status}`);
+            console.log(`分支: ${buildInfo.branch}`);
+            console.log(`提交: ${buildInfo.commit}`);
+            console.log(`作者: ${buildInfo.author}`);
+            console.log(`时长: ${buildInfo.duration}秒`);
+            console.log(`产物数: ${buildInfo.artifacts.length}`);
+            
+            // 设置输出供后续步骤使用
+            core.setOutput('status', buildInfo.status);
+            core.setOutput('workflow', buildInfo.workflow);
+
+      - name: Generate Build Report
+        run: |
+          cat > build-report.md << 'EOF'
+          # 构建跟踪报告
+
+          **生成时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## 构建信息
+
+          EOF
+          
+          # 解析 JSON 并生成报告
+          cat build-info.json | jq -r '
+          "- **工作流**: \(.workflow)"
+          "- **运行编号**: #\(.runNumber)"
+          "- **状态**: \(.status)"
+          "- **分支**: \(.branch)"
+          "- **提交**: \(.commit)"
+          "- **提交信息**: \(.commitMessage)"
+          "- **作者**: \(.author)"
+          "- **触发者**: \(.triggeringActor)"
+          "- **构建时长**: \(.duration)秒"
+          "- **构建链接**: [查看详情](\(.url))"
+          ""
+          "## 构建产物"
+          ""
+          '| cat >> build-report.md
+          
+          # 添加产物列表
+          cat build-info.json | jq -r '.artifacts[] | "- \(.name) (\(.size) bytes)"' >> build-report.md
+          
+          cat build-report.md
+
+      - name: Upload Build Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-report-${{ github.event.workflow_run.run_number }}
+          path: build-report.md
+          retention-days: 90
+
+      - name: Update Build Status Badge
+        if: github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'master'
+        run: |
+          STATUS=$(cat build-info.json | jq -r '.status')
+          WORKFLOW=$(cat build-info.json | jq -r '.workflow')
+          
+          # 创建状态文件
+          echo "{\"status\": \"$STATUS\", \"workflow\": \"$WORKFLOW\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > build-status.json
+          
+          # 提交到 gh-pages 分支（如果存在）
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 尝试更新状态
+          git add build-status.json || true
+          git commit -m "ci: 更新构建状态 [$STATUS]" || echo "无变化需要提交"
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: track-build
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Failure Report
+        run: |
+          cat > failure-report.md << EOF
+          # ❌ 构建失败报告
+
+          **工作流**: ${{ github.event.workflow_run.name }}
+          **运行编号**: #${{ github.event.workflow_run.run_number }}
+          **分支**: ${{ github.event.workflow_run.head_branch }}
+          **提交**: ${{ github.event.workflow_run.head_sha }}
+          **作者**: ${{ github.event.workflow_run.head_commit.author.name }}
+          **时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## 失败详情
+
+          - [查看完整日志](${{ github.event.workflow_run.html_url }})
+
+          ## 需要采取的行动
+
+          1. 点击上方链接查看详细错误日志
+          2. 修复代码问题
+          3. 重新推送触发构建
+
+          ---
+          *此报告由 Build Tracker 自动生成*
+          EOF
+
+          cat failure-report.md
+
+      - name: Create Issue on Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `❌ 构建失败: ${{ github.event.workflow_run.name }} #${{ github.event.workflow_run.run_number }}`;
+            const body = `## 构建失败详情
+
+            - **工作流**: ${{ github.event.workflow_run.name }}
+            - **运行编号**: #${{ github.event.workflow_run.run_number }}
+            - **分支**: ${{ github.event.workflow_run.head_branch }}
+            - **提交**: ${{ github.event.workflow_run.head_sha }}
+            - **作者**: ${{ github.event.workflow_run.head_commit.author.name }}
+            - **时间**: ${new Date().toISOString()}
+
+            ## 查看日志
+
+            [点击查看详细日志](${{ github.event.workflow_run.html_url }})
+
+            ## 失败原因分析
+
+            请检查上述链接中的构建日志，常见失败原因：
+            1. 编译错误
+            2. 测试失败
+            3. 依赖下载超时
+            4. 签名配置问题
+
+            ---
+            *此 Issue 由 Build Tracker 自动创建*`;
+
+            // 检查是否已存在相同的 open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'build-failure'
+            });
+
+            const existingIssue = issues.data.find(i => i.title === title);
+            
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['build-failure', 'automated']
+              });
+              console.log('✅ 已创建构建失败 Issue');
+            } else {
+              console.log('ℹ️ 已存在相同的 open issue，跳过创建');
+            }
+
+  archive-artifacts:
+    runs-on: ubuntu-latest
+    needs: track-build
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download All Artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = ${{ github.event.workflow_run.id }};
+            
+            // 获取所有 artifacts
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            
+            console.log(`找到 ${artifacts.data.artifacts.length} 个构建产物`);
+            
+            // 保存产物清单
+            const fs = require('fs');
+            fs.writeFileSync('artifacts-manifest.json', JSON.stringify({
+              runId: runId,
+              runNumber: ${{ github.event.workflow_run.run_number }},
+              workflow: '${{ github.event.workflow_run.name }}',
+              artifacts: artifacts.data.artifacts.map(a => ({
+                id: a.id,
+                name: a.name,
+                size: a.size_in_bytes,
+                created_at: a.created_at,
+                expired: a.expired
+              }))
+            }, null, 2));
+
+      - name: Upload Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-manifest-${{ github.event.workflow_run.run_number }}
+          path: artifacts-manifest.json
+          retention-days: 90
