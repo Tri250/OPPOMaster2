@@ -402,9 +402,9 @@ class MasterInsightEngine private constructor(context: Context) {
             else -> "南半球"
         }
         return if (hemisphere.isNotEmpty()) {
-            "拍摄于$hemisphere$season时节，"
+            "拍摄于$hemisphere$season，"
         } else {
-            "拍摄于$season时节，"
+            "拍摄于$season，"
         }
     }
 

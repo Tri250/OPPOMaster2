@@ -62,7 +62,7 @@ class OMasterApplication : Application() {
 
         @Volatile
         private var instance: OMasterApplication? = null
-        private lateinit var prefs: SharedPreferences
+        private var prefs: SharedPreferences? = null
 
         /**
          * 由 InitializationProvider 在早期阶段调用，初始化 SharedPreferences
@@ -137,7 +137,7 @@ class OMasterApplication : Application() {
             instance = this
             // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
             if (!::prefs.isInitialized) {
-                prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             }
         }
         StartupLogger.logStep("基础变量初始化", SystemClock.elapsedRealtime() - step1Start)

@@ -1,3 +1,9 @@
+import com.silas.omaster.ui.theme.saturation
+import com.silas.omaster.ui.theme.contrast
+import com.silas.omaster.ui.theme.warmth
+import com.silas.omaster.ui.theme.sharpness
+import com.silas.omaster.ui.theme.clarity
+import com.silas.omaster.ui.theme.brightness
 package com.silas.omaster
 
 import androidx.compose.animation.AnimatedContentTransitionScope
