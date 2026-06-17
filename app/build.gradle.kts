@@ -125,11 +125,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v1.3.1 (最新稳定版，见 CHANGELOG.md)
+        // 当前版本: v1.60 (最新稳定版，见 CHANGELOG.md)
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 1.3.1 → 1*10000 + 3*100 + 1 = 10301
-        versionCode = 10301
-        versionName = "1.3.1"
+        // 1.60.0 → 1*10000 + 60*100 + 0 = 16000
+        versionCode = 16000
+        versionName = "1.60"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

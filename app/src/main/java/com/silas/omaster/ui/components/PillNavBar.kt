@@ -76,15 +76,16 @@ fun PillNavBar(
         NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
     )
 
-    // 使用动画控制底部导航栏显示/隐藏，不直接return避免导航消失
+    // 使用动画控制底部导航栏显示/隐藏，固定在底部
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it })
+        exit = slideOutVertically(targetOffsetY = { it }),
+        modifier = modifier
     ) {
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp),
         contentAlignment = Alignment.Center

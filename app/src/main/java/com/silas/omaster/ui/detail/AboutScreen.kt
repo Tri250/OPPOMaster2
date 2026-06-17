@@ -83,7 +83,7 @@ import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.ui.settings.ThemeSelectionDialog
 import com.silas.omaster.ui.settings.DarkModeDialog
 import com.silas.omaster.ui.settings.UpdateChannelDialog
-import com.silas.omaster.util.UpdateChecker
+// import com.silas.omaster.util.UpdateChecker  // 版本更新功能已暂停
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -148,22 +148,24 @@ fun AboutScreen(
         }
     }
 
-    var isChecking by remember { mutableStateOf(false) }
-    var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
-    var checkError by remember { mutableStateOf<String?>(null) }
-    var lastCheckTime by remember { mutableStateOf<Long?>(null) }
+    // 版本更新功能已暂停
+    // var isChecking by remember { mutableStateOf(false) }
+    // var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+    // var checkError by remember { mutableStateOf<String?>(null) }
+    // var lastCheckTime by remember { mutableStateOf<Long?>(null) }
 
     // 下载进度相关状态
-    var downloadId by remember { mutableStateOf<Long>(-1L) }
-    var downloadProgress by remember { mutableIntStateOf(0) }
-    var isDownloading by remember { mutableStateOf(false) }
+    // var downloadId by remember { mutableStateOf<Long>(-1L) }
+    // var downloadProgress by remember { mutableIntStateOf(0) }
+    // var isDownloading by remember { mutableStateOf(false) }
 
-    val checkFailedText = stringResource(R.string.version_check_failed)
+    // val checkFailedText = stringResource(R.string.version_check_failed)
 
-    // 版本更新检查 - 仅在用户手动触发时检查
-    var showUpdateDialog by remember { mutableStateOf(false) }
+    // 版本更新检查 - 功能已暂停
+    // var showUpdateDialog by remember { mutableStateOf(false) }
 
-    // 监听下载进度
+    // 监听下载进度 - 功能已暂停
+    /*
     LaunchedEffect(isDownloading, downloadId) {
         if (isDownloading && downloadId != -1L) {
             val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -186,6 +188,7 @@ fun AboutScreen(
             }
         }
     }
+    */
 
     // Dialogs
     if (showThemeDialog) {

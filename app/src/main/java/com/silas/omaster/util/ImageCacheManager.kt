@@ -309,6 +309,8 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
             return when {
                 url.startsWith("/") -> File(url).toUri().toString()
                 url.startsWith("presets/") -> File(context.filesDir, url).toUri().toString()
+                url.startsWith("file://") -> url  // 已经是file协议，直接返回
+                url.startsWith("images/") -> "file:///android_asset/$url"
                 else -> "file:///android_asset/$url"
             }
         }
