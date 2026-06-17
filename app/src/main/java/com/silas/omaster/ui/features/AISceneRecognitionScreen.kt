@@ -324,7 +324,8 @@ fun AISceneRecognitionScreen(
                     onCameraFacingChange = { cameraFacing = it },
                     onTakePhoto = onTakePhoto,
                     onSelectImage = onSelectImage,
-                    onBack = onBack
+                    onBack = onBack,
+                    onFlowStateChange = { flowState = it }
                 )
             }
             
@@ -428,9 +429,12 @@ private fun CameraEntryScreen(
     onTakePhoto: () -> Unit,
     onSelectImage: () -> Unit,
     onBack: () -> Unit,
+    onFlowStateChange: (RecognitionFlowState) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -449,7 +453,7 @@ private fun CameraEntryScreen(
                     scope.launch {
                         val savedPath = saveBitmapToCache(context, bitmap)
                         if (savedPath != null) {
-                            flowState = RecognitionFlowState.ANALYZING
+                            onFlowStateChange(RecognitionFlowState.ANALYZING)
                             // 触发分析
                         }
                     }
@@ -1844,6 +1848,7 @@ private fun getRelatedSceneIds(category: SceneCategory): List<String> {
         SceneCategory.STILL_LIFE -> listOf("still-natural", "still-minimal", "still-artistic")
         SceneCategory.MACRO -> listOf("macro-nature", "macro-detail", "macro-texture")
         SceneCategory.EVENT -> listOf("event-indoor", "event-outdoor", "event-candid")
+        else -> listOf()
     }
 }
 

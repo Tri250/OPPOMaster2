@@ -2,11 +2,9 @@ package com.silas.omaster.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.silas.omaster.R
 
 /**
  * OMaster Typography 字体系统
@@ -18,12 +16,8 @@ import com.silas.omaster.R
  * - 字体文件放置路径：app/src/main/res/font/
  * - 推荐字体：NotoSans-Regular.ttf, NotoSans-Bold.ttf 等
  */
-val OMasterFontFamily = FontFamily(
-    Font(R.font.noto_sans_regular, FontWeight.Normal),
-    Font(R.font.noto_sans_bold, FontWeight.Bold),
-    Font(R.font.noto_sans_medium, FontWeight.Medium),
-    Font(R.font.noto_sans_semibold, FontWeight.SemiBold),
-)
+// 字体资源尚未添加，使用系统默认字体
+val OMasterFontFamily = FontFamily.Default
 
 /**
  * 安全获取字体族：如果自定义字体文件不存在，回退至系统默认字体

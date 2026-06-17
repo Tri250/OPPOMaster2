@@ -635,21 +635,7 @@ class SettingsManager private constructor(private val context: Context) {
     /**
      * 同步删除数据（同时清除缓存）
      */
-    private fun removeDataSync(key: Preferences.Key<String>) {
-        cache.remove(key.name)
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs.remove(key) }
-        }
-    }
-    
-    private fun removeDataSync(key: Preferences.Key<Int>) {
-        cache.remove(key.name)
-        runBlocking {
-            context.dataStore.edit { prefs -> prefs.remove(key) }
-        }
-    }
-    
-    private fun removeDataSync(key: Preferences.Key<Boolean>) {
+    private fun <T> removeDataSync(key: Preferences.Key<T>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }

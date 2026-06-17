@@ -331,14 +331,8 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
                         val settingsManager = SettingsManager.getInstance(context)
-                        settingsManager.applyPresetParams(
-                            saturation = params.saturation,
-                            contrast = params.contrast,
-                            warmth = params.warmth,
-                            sharpness = params.sharpness,
-                            clarity = params.clarity,
-                            brightness = params.brightness
-                        )
+                        // CameraParams 为相机拍摄参数，无图像调整字段，使用默认值
+                        settingsManager.applyPresetParams()
                         navController.popBackStack()
                     }
                 )

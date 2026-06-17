@@ -406,11 +406,12 @@ class SceneRecognitionManager private constructor(context: Context) {
     }
 
     /**
-     * 获取场景识别开关状态流（带 distinctUntilChanged 防抖动）
+     * 获取场景识别开关状态流
      * 供 UI 层订阅使用
+     * StateFlow 自带 distinctUntilChanged 语义，无需额外调用
      */
     fun isSceneRecognitionEnabledFlow(): Flow<Boolean> {
-        return isSceneRecognitionEnabled.distinctUntilChanged()
+        return isSceneRecognitionEnabled
     }
 
     /**

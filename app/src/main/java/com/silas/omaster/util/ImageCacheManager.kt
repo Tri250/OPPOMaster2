@@ -66,9 +66,9 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
         }
     }
 
-    private const val CACHE_DIR = "presets/images"
-    private const val TIMEOUT_MS = 30000L
-    private const val MAX_RETRIES = 3
+    private val CACHE_DIR = "presets/images"
+    private val TIMEOUT_MS = 30000L
+    private val MAX_RETRIES = 3
 
     // ==================== LRU 内存缓存 ====================
 
@@ -93,7 +93,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
     private fun resizeMemoryCache(sizeKB: Int) {
         synchronized(memoryCache) {
-            val newCache = LruCache<String, Bitmap>(sizeKB) {
+            val newCache = object : LruCache<String, Bitmap>(sizeKB) {
                 override fun sizeOf(key: String, bitmap: Bitmap): Int {
                     return bitmap.byteCount / 1024
                 }
@@ -111,7 +111,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
     // ==================== 磁盘缓存大小限制 ====================
 
     /** 默认最大磁盘缓存大小：50MB */
-    private const val DEFAULT_MAX_DISK_CACHE_BYTES = 50L * 1024 * 1024
+    private val DEFAULT_MAX_DISK_CACHE_BYTES = 50L * 1024 * 1024
 
     /** 可配置的最大磁盘缓存大小（字节） */
     @Volatile

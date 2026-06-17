@@ -1,27 +1,37 @@
+// 优化网络配置 - 使用可访问的镜像源
+// 腾讯云镜像可访问 Google 仓库内容，Maven Central 可访问普通 Java 依赖
+
 pluginManagement {
     repositories {
-        // ===== 本地 Maven 仓库（沙箱离线构建模式）=====
-        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+        // 腾讯云镜像 - 可访问 Google 仓库内容（AGP、AndroidX 等）
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+        }
 
-        // 优先使用可访问的仓库
+        // Maven Central - 普通 Java 依赖
         mavenCentral()
+
+        // Gradle Plugin Portal - Gradle 插件
         gradlePluginPortal()
-        // 最后尝试 Google（网络可能不通）
-        google()
+
+        // JitPack - 第三方库
+        maven { url = uri("https://www.jitpack.io") }
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // ===== 本地 Maven 仓库（沙箱离线构建模式）=====
-        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+        // 腾讯云镜像 - 可访问 Google 仓库内容（AGP、AndroidX 等）
+        maven {
+            url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+        }
 
-        // 优先使用可访问的仓库
+        // Maven Central - 普通 Java 依赖
         mavenCentral()
-        // 最后尝试 Google（网络可能不通）
-        google()
-        maven { url = uri("https://jitpack.io") }
+
+        // JitPack - 第三方库
+        maven { url = uri("https://www.jitpack.io") }
     }
 }
 

@@ -120,7 +120,7 @@ fun SceneRecognitionResultScreen(
                         sliderPosition = sliderPosition,
                         onSliderChange = { position ->
                             sliderPosition = position
-                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     )
                 } else {
@@ -149,7 +149,7 @@ fun SceneRecognitionResultScreen(
                     selectedId = selectedFilmId,
                     onSelect = { id ->
                         selectedFilmId = id
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 )
             }
@@ -190,7 +190,7 @@ fun SceneRecognitionResultScreen(
                 onApply = {
                     selectedFilmId = showFilmDetail?.id
                     showFilmDetail = null
-                    haptic.perform(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
             )
         }
@@ -884,6 +884,7 @@ private fun getCategoryTip(category: SceneCategory): String {
         SceneCategory.STILL_LIFE -> "注重光影细节和构图"
         SceneCategory.MACRO -> "精确聚焦和景深控制"
         SceneCategory.EVENT -> "捕捉瞬间和氛围表达"
+        else -> ""
     }
 }
 
@@ -906,7 +907,7 @@ private fun ActionButtonsRow(
         // 分享
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onShare()
             },
             modifier = Modifier.weight(1f),
@@ -921,7 +922,7 @@ private fun ActionButtonsRow(
         // 保存
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onSave()
             },
             modifier = Modifier.weight(1f),
@@ -936,7 +937,7 @@ private fun ActionButtonsRow(
         // 导出
         OutlinedButton(
             onClick = {
-                haptic.perform(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onExport()
             },
             modifier = Modifier.weight(1f),
@@ -954,7 +955,7 @@ private fun ActionButtonsRow(
     // 一键优化按钮
     Button(
         onClick = {
-            haptic.perform(HapticFeedbackType.LongPress)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onOptimize()
         },
         modifier = Modifier.fillMaxWidth(),

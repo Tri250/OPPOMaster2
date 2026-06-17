@@ -1337,25 +1337,21 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
         if (war > 0) {
             // 暖色调：增加红色，减少蓝色
             val warmFactor = war * 0.3f
-            set(
-                floatArrayOf(
-                    1f + warmFactor, 0f, 0f, 0f, 0f,
-                    0f, 1f, 0f, 0f, 0f,
-                    0f, 0f, 1f - warmFactor, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-            )
+            floatArrayOf(
+                1f + warmFactor, 0f, 0f, 0f, 0f,
+                0f, 1f, 0f, 0f, 0f,
+                0f, 0f, 1f - warmFactor, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ).copyInto(values)
         } else if (war < 0) {
             // 冷色调：减少红色，增加蓝色
             val coolFactor = -war * 0.3f
-            set(
-                floatArrayOf(
-                    1f - coolFactor, 0f, 0f, 0f, 0f,
-                    0f, 1f, 0f, 0f, 0f,
-                    0f, 0f, 1f + coolFactor, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-            )
+            floatArrayOf(
+                1f - coolFactor, 0f, 0f, 0f, 0f,
+                0f, 1f, 0f, 0f, 0f,
+                0f, 0f, 1f + coolFactor, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ).copyInto(values)
         }
     }
 

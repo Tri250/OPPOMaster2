@@ -516,9 +516,8 @@ fun WatermarkEditorScreen(
                 // 预览Canvas（支持手势操作）
                 WatermarkPreviewCanvas(
                     bitmap = when {
-                        showBeforeAfter && originalBitmap != null -> originalBitmap
-                        previewBitmap != null -> previewBitmap
-                        else -> return@WatermarkPreviewCanvas
+                        showBeforeAfter && originalBitmap != null -> originalBitmap!!
+                        else -> previewBitmap!!
                     },
                     watermarkConfig = watermarkConfig.copy(
                         enabled = isWatermarkEnabled,

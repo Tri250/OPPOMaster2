@@ -552,7 +552,7 @@ class GPURenderManager private constructor(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "GPU render failed", e)
                 // 尝试CPU降级
-                renderWithCPU(request)
+                runBlocking { renderWithCPU(request) }
             }
         }
     }
@@ -969,7 +969,7 @@ class CPURenderer {
             
             // 应用曝光
             if (params.exposure != 0f) {
-                val exposureFactor = kotlin.math.pow(2.0, (params.exposure / 50f).toDouble()).toFloat()
+                val exposureFactor = Math.pow(2.0, (params.exposure / 50f).toDouble()).toFloat()
                 r = (r * exposureFactor).toInt().coerceIn(0, 255)
                 g = (g * exposureFactor).toInt().coerceIn(0, 255)
                 b = (b * exposureFactor).toInt().coerceIn(0, 255)

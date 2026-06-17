@@ -275,7 +275,7 @@ fun DetailScreen(
                         
                         Text(
                             text = "@${it.author}",
-                            color = colorScheme.onBackground.copy(alpha = 0.5f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             fontSize = 14.sp
                         )
                         
@@ -448,7 +448,7 @@ private fun DynamicParameters(
             Text(
                 text = "暂无调色参数",
                 style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.onBackground.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
         return

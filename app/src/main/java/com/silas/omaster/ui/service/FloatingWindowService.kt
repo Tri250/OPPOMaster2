@@ -33,6 +33,7 @@ import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
+import androidx.compose.ui.graphics.toArgb
 
 /**
  * 悬浮窗服务 - 高级美观版
@@ -55,7 +56,7 @@ class FloatingWindowService : Service() {
     // 配色方案 - 从 SettingsManager 动态读取主题色
     private fun getPrimaryColor(context: Context): Int {
         val theme = SettingsManager.getInstance(context).currentTheme
-        return theme.primaryColor.toInt()
+        return theme.primaryColor.toArgb()
     }
 
     private fun getPrimaryDarkColor(context: Context): Int {
@@ -778,7 +779,7 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = icon
                 textSize = 12f
-                setTextColor(primaryColor)
+                setTextColor(getPrimaryColor(context))
             })
 
             addView(createSpacing(dpToPx(4)))
