@@ -56,6 +56,10 @@ class ImageShaderRenderer(private val context: Context) {
     // 图像尺寸
     private var imageWidth: Int = 0
     private var imageHeight: Int = 0
+
+    // 输出纹理尺寸（用于检测尺寸变化后重建 FBO）
+    private var outputWidth: Int = 0
+    private var outputHeight: Int = 0
     
     // 初始化状态
     private var isInitialized: Boolean = false
@@ -283,6 +287,9 @@ class ImageShaderRenderer(private val context: Context) {
         )
         
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+
+        outputWidth = width
+        outputHeight = height
         
         return outputTextureId
     }
@@ -335,8 +342,16 @@ class ImageShaderRenderer(private val context: Context) {
         val startTime = System.currentTimeMillis()
 
         try {
-            // 性能优化：复用输出纹理和FBO，仅在尺寸变化时重建
-            if (outputTextureId == 0) {
+            // 性能优化：复用输出纹理和FBO，仅在尺寸变化或尚未创建时重建
+            if (outputTextureId == 0 || outputWidth != imageWidth || outputHeight != imageHeight) {
+                if (outputTextureId != 0) {
+                    GLES30.glDeleteTextures(1, intArrayOf(outputTextureId), 0)
+                    outputTextureId = 0
+                }
+                if (framebufferId != 0) {
+                    GLES30.glDeleteFramebuffers(1, intArrayOf(framebufferId), 0)
+                    framebufferId = 0
+                }
                 createOutputTexture(imageWidth, imageHeight)
             }
             if (framebufferId == 0) {
@@ -444,7 +459,7 @@ class ImageShaderRenderer(private val context: Context) {
             val buffer = ByteBuffer.allocateDirect(imageWidth * imageHeight * 4)
                 .order(ByteOrder.nativeOrder())
             
-            // 读取像素数据
+            // 读取像素数据（GL_RGBA 顺序：R G B A）
             GLES30.glReadPixels(
                 0, 0,
                 imageWidth, imageHeight,
@@ -452,9 +467,23 @@ class ImageShaderRenderer(private val context: Context) {
                 GLES30.GL_UNSIGNED_BYTE,
                 buffer
             )
-            
-            // 将数据复制到Bitmap
+
+            // Android Bitmap ARGB_8888 以小端 int 存储，内存字节序为 B G R A；
+            // OpenGL GL_RGBA 读回的是 R G B A，因此需要交换 R 与 B 通道。
             buffer.rewind()
+            val pixelBytes = ByteArray(imageWidth * imageHeight * 4)
+            buffer.get(pixelBytes)
+            for (i in pixelBytes.indices step 4) {
+                val r = pixelBytes[i]
+                val b = pixelBytes[i + 2]
+                pixelBytes[i] = b
+                pixelBytes[i + 2] = r
+            }
+            buffer.rewind()
+            buffer.put(pixelBytes)
+            buffer.rewind()
+
+            // 将数据复制到Bitmap
             bitmap.copyPixelsFromBuffer(buffer)
             
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
@@ -501,7 +530,9 @@ class ImageShaderRenderer(private val context: Context) {
             Log.e(TAG, "Bitmap已被回收，无法更新纹理")
             return
         }
-        if (inputTextureId == 0) {
+
+        // 尺寸变化或尚未创建时重新创建输入纹理（texSubImage2D 不能改变尺寸）
+        if (inputTextureId == 0 || bitmap.width != imageWidth || bitmap.height != imageHeight) {
             createInputTexture(bitmap)
             return
         }
@@ -515,12 +546,6 @@ class ImageShaderRenderer(private val context: Context) {
             Log.e(TAG, "更新纹理失败", e)
         }
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
-
-        imageWidth = bitmap.width
-        imageHeight = bitmap.height
-
-        // 性能优化：尺寸变化时需要重新创建输出纹理和FBO
-        // 由于FBO绑定的纹理是固定尺寸的
     }
     
     /**

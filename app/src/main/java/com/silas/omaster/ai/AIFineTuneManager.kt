@@ -160,6 +160,16 @@ class AIFineTuneManager private constructor(context: Context) {
         _permissionGranted.value = granted
     }
 
+    /**
+     * 检查云端AI是否可用（网络正常、质量达标、云同步开启、API密钥有效）
+     */
+    fun isCloudAIAvailable(): Boolean {
+        return isNetworkAvailable()
+                && isNetworkQualityGood()
+                && settingsManager.isCloudSyncEnabled
+                && getApiKey() != null
+    }
+
     // ==================== 真实AI推理接口 ====================
 
     /**
@@ -193,7 +203,7 @@ class AIFineTuneManager private constructor(context: Context) {
             // 超时控制：3秒
             withTimeout(3000L) {
                 // 端云协同策略
-                if (isNetworkAvailable() && settingsManager.isCloudSyncEnabled && _permissionGranted.value) {
+                if (isCloudAIAvailable() && _permissionGranted.value) {
                     // 尝试云端增强推理
                     try {
                         val cloudResult = generateCloudSuggestion(bitmap, currentParams)
@@ -207,6 +217,8 @@ class AIFineTuneManager private constructor(context: Context) {
                     } catch (e: Exception) {
                         Log.w(TAG, "云端AI推理失败，降级到本地推理: ${e.message}")
                     }
+                } else {
+                    Log.d(TAG, "云端AI不可用，直接使用本地推理")
                 }
 
                 // 本地TFLite推理（真实AI分析）
@@ -233,7 +245,10 @@ class AIFineTuneManager private constructor(context: Context) {
 
     /**
      * FT-001: 一键AI微调（基于预设ID的推理）
-     * 
+     *
+     * 基于预设ID的推理始终使用本地规则引擎（无图像输入，无法调用云端视觉API）。
+     * 因此统一标记为离线模式，并向 UI 反馈真实的端云状态。
+     *
      * @param presetId 预设ID
      * @return AI建议结果
      */
@@ -246,37 +261,37 @@ class AIFineTuneManager private constructor(context: Context) {
             val startTime = System.currentTimeMillis()
             val timeout = 3000L
 
-            // 检查网络（如果需要云端AI）
-            if (!isNetworkAvailable() && settingsManager.isCloudSyncEnabled) {
-                // 网络不可用，使用本地算法
-                val localResult = generateLocalSuggestion(presetId)
-                val elapsed = System.currentTimeMillis() - startTime
-                if (elapsed < 500) delay(500 - elapsed) // 最小处理时间
-
-                _isProcessing.value = false
-                return@withContext AISuggestionResult.Success(localResult, isOfflineMode = true)
+            // 基于预设ID的推理无图像输入，无法使用云端视觉API，统一走本地规则引擎
+            val isCloudAvailable = isCloudAIAvailable()
+            if (isCloudAvailable) {
+                Log.d(TAG, "云端AI可用，但预设ID推理无图像输入，仍使用本地规则引擎")
+            } else {
+                Log.d(TAG, "云端AI不可用，使用本地规则引擎: presetId=$presetId")
             }
 
-            // 尝试调用AI服务（带超时）
-            try {
+            val localResult = try {
                 withTimeout(timeout) {
-                    // 使用真实本地推理
-                    val result = generateLocalSuggestion(presetId)
-                    appliedSuggestions.add(result)
-
-                    _isProcessing.value = false
-                    AISuggestionResult.Success(result, isOfflineMode = false)
+                    generateLocalSuggestion(presetId)
                 }
             } catch (e: TimeoutCancellationException) {
-                // 超时，使用本地降级
-                val localResult = generateLocalSuggestion(presetId)
-                _isProcessing.value = false
-                _errorState.value = ErrorState.Timeout("处理超时，已使用本地优化")
-                AISuggestionResult.Success(localResult, isOfflineMode = true)
+                Log.w(TAG, "预设ID推理超时，使用规则引擎降级")
+                generateFallbackSuggestion(_currentAdjustments.value.toMap())
             }
+
+            appliedSuggestions.add(localResult)
+            _suggestedParams.value = localResult
+
+            // 最小处理时间，避免UI闪烁
+            val elapsed = System.currentTimeMillis() - startTime
+            if (elapsed < 500) delay(500 - elapsed)
+
+            _isProcessing.value = false
+            // 无图像输入的预设推理本质上是本地离线推理
+            AISuggestionResult.Success(localResult, isOfflineMode = true)
         } catch (e: Exception) {
             _isProcessing.value = false
             _errorState.value = ErrorState.Unknown(e.message ?: "未知错误")
+            Log.e(TAG, "预设ID推理异常: ${e.message}", e)
             AISuggestionResult.Error(ErrorState.Unknown(e.message ?: "未知错误"))
         }
     }
@@ -568,14 +583,21 @@ class AIFineTuneManager private constructor(context: Context) {
     ): AISuggestion? = withContext(Dispatchers.Default) {
         try {
             Log.d(TAG, "开始云端AI推理")
-            
-            // Step 1: 检查网络连接质量
+
+            // Step 1: 检查API密钥有效性（拒绝 demo_key / 空密钥）
+            val apiKey = getApiKey()
+            if (apiKey == null) {
+                Log.w(TAG, "未配置有效云端API密钥，跳过云端推理")
+                return@withContext null
+            }
+
+            // Step 2: 检查网络连接质量
             if (!isNetworkAvailable() || !isNetworkQualityGood()) {
                 Log.w(TAG, "网络不可用或质量不佳，跳过云端推理")
                 return@withContext null
             }
             
-            // Step 2: 压缩图像并转换为Base64
+            // Step 3: 压缩图像并转换为Base64
             val compressedBitmap = compressBitmapForUpload(bitmap)
             val imageBase64 = bitmapToBase64(compressedBitmap)
             
@@ -584,13 +606,13 @@ class AIFineTuneManager private constructor(context: Context) {
                 return@withContext null
             }
             
-            // Step 3: 构建请求参数
+            // Step 4: 构建请求参数
             val requestParams = buildCloudRequestParams(imageBase64, currentParams)
             
-            // Step 4: 发送HTTP请求（带超时控制）
-            val responseJson = sendCloudRequestWithTimeout(requestParams, CLOUD_API_TIMEOUT_MS)
+            // Step 5: 发送HTTP请求（带超时控制）
+            val responseJson = sendCloudRequestWithTimeout(requestParams, CLOUD_API_TIMEOUT_MS, apiKey)
             
-            // Step 5: 解析响应并转换为AI建议
+            // Step 6: 解析响应并转换为AI建议
             if (responseJson != null) {
                 val suggestion = parseCloudResponse(responseJson)
                 Log.d(TAG, "云端AI推理成功: 场景=${suggestion?.basePresetName}, 置信度=${suggestion?.confidence}")
@@ -711,7 +733,8 @@ class AIFineTuneManager private constructor(context: Context) {
      */
     private suspend fun sendCloudRequestWithTimeout(
         params: Map<String, Any>,
-        timeoutMs: Long
+        timeoutMs: Long,
+        apiKey: String
     ): String? = withContext(Dispatchers.IO) {
         try {
             withTimeout(timeoutMs) {
@@ -734,7 +757,7 @@ class AIFineTuneManager private constructor(context: Context) {
                     .url(CLOUD_API_ENDPOINT)
                     .post(requestBody)
                     .addHeader("Content-Type", "application/json")
-                    .addHeader("X-Api-Key", getApiKey())
+                    .addHeader("X-Api-Key", apiKey)
                     .addHeader("X-Device-Id", getDeviceId())
                     .build()
                 
@@ -858,10 +881,18 @@ class AIFineTuneManager private constructor(context: Context) {
 
     /**
      * 获取API密钥
+     * 返回 null 表示未配置有效密钥（含 demo_key / 空值 / 长度过短 / 格式错误）
+     *
+     * 使用 SettingsManager 统一的验证逻辑，避免两边规则不一致导致
+     * 占位符/demo密钥被误用。
      */
-    private fun getApiKey(): String {
-        // 从安全存储或配置中获取API密钥
-        return settingsManager.cloudApiKey ?: "demo_key"
+    private fun getApiKey(): String? {
+        val key = settingsManager.cloudApiKey
+        return if (settingsManager.validateApiKeyFormat(key)) {
+            key
+        } else {
+            null
+        }
     }
 
     /**
@@ -1367,7 +1398,22 @@ data class AdjustmentParams(
     val detail: Int = 0,
     val vignette: Int = 0,
     val selectedStyleId: String? = null
-)
+) {
+    fun toMap(): Map<String, Int> = mapOf(
+        "saturation" to saturation,
+        "contrast" to contrast,
+        "brightness" to brightness,
+        "warmth" to warmth,
+        "sharpness" to sharpness,
+        "clarity" to clarity,
+        "highlights" to highlights,
+        "shadows" to shadows,
+        "noiseReduction" to noiseReduction,
+        "skinSmooth" to skinSmooth,
+        "detail" to detail,
+        "vignette" to vignette
+    )
+}
 
 /**
  * 调整类型

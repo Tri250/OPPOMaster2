@@ -1,5 +1,15 @@
 package com.silas.omaster.ui.settings
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,9 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.util.perform
@@ -23,48 +36,118 @@ import com.silas.omaster.util.perform
 /**
  * 通知设置页面
  */
+private const val CHANNEL_GENERAL = "omaster_general"
+private const val CHANNEL_RECOMMENDATION = "omaster_recommendation"
+private const val CHANNEL_SYNC = "omaster_sync"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSettingsScreen(
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val notificationManager = remember {
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
+    val notificationManagerCompat = remember { NotificationManagerCompat.from(context) }
 
-    val notificationSettings = remember {
-        mutableStateListOf(
-            NotificationItem("功能更新通知", "接收新功能和更新提醒", true),
-            NotificationItem("预设推荐", "接收个性化预设推荐", true),
-            NotificationItem("云同步提醒", "同步状态变更通知", true),
-            NotificationItem("系统公告", "重要系统公告通知", false),
-            NotificationItem("每日提示", "摄影技巧每日提示", false),
-        )
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Android 13+ 通知权限
+    val notificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.POST_NOTIFICATIONS
+    } else null
+
+    fun hasNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && notificationPermission != null) {
+            ContextCompat.checkSelfPermission(context, notificationPermission) == PackageManager.PERMISSION_GRANTED
+        } else true
     }
 
-    Column(
+    fun openNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        }
+        context.startActivity(intent)
+    }
+
+    fun isChannelEnabled(channelId: String): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.getNotificationChannel(channelId)?.importance != NotificationManager.IMPORTANCE_NONE
+        } else true
+    }
+
+    fun createOrUpdateChannel(channelId: String, name: String, enabled: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val importance = if (enabled) NotificationManager.IMPORTANCE_DEFAULT else NotificationManager.IMPORTANCE_NONE
+            val channel = NotificationChannel(channelId, name, importance).apply {
+                description = name
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    var masterEnabled by remember { mutableStateOf(notificationManagerCompat.areNotificationsEnabled()) }
+
+    var generalEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_GENERAL)) }
+    var recommendationEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_RECOMMENDATION)) }
+    var syncEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_SYNC)) }
+    var systemAnnounceEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_GENERAL)) }
+    var dailyTipEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_RECOMMENDATION)) }
+
+    // 首次进入：若未授权，请求权限
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && notificationPermission != null) {
+            if (!hasNotificationPermission()) {
+                // 不在 compose 内部直接请求，权限请求由用户点击总开关触发
+            }
+        }
+        // 确保各渠道已创建（默认开启）
+        createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", generalEnabled)
+        createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", recommendationEnabled)
+        createOrUpdateChannel(CHANNEL_SYNC, "云同步提醒", syncEnabled)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        masterEnabled = granted
+        if (!granted) {
+            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            })
+        }
+    }
+
+    Scaffold(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
-        // 标题栏
-        TopAppBar(
-            title = { Text("通知设置", fontWeight = FontWeight.Bold) },
-            navigationIcon = {
-                IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onBack()
-                }) {
-                    Icon(Icons.Default.ArrowBack, "返回")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+            .windowInsetsPadding(WindowInsets.statusBars),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("通知设置", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        onBack()
+                    }) {
+                        Icon(Icons.Default.ArrowBack, "返回")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = PureBlack,
+                    titleContentColor = Color.White
+                )
             )
-        )
-
+        }
+    ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -105,8 +188,24 @@ fun NotificationSettingsScreen(
                             }
                         }
                         Switch(
-                            checked = true,
-                            onCheckedChange = {},
+                            checked = masterEnabled,
+                            onCheckedChange = { enabled ->
+                                haptic.perform(HapticFeedbackType.LongPress)
+                                if (enabled) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && notificationPermission != null) {
+                                        if (hasNotificationPermission()) {
+                                            masterEnabled = true
+                                        } else {
+                                            permissionLauncher.launch(notificationPermission)
+                                        }
+                                    } else {
+                                        masterEnabled = true
+                                    }
+                                } else {
+                                    openNotificationSettings()
+                                    masterEnabled = false
+                                }
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = HasselbladOrange,
@@ -128,20 +227,97 @@ fun NotificationSettingsScreen(
                 )
             }
 
-            items(notificationSettings.size) { index ->
-                val item = notificationSettings[index]
+            item {
+                val enabled = generalEnabled
                 NotificationSettingCard(
-                    title = item.title,
-                    description = item.description,
-                    isEnabled = item.enabled,
-                    onToggle = { enabled ->
+                    title = "功能更新通知",
+                    description = "接收新功能和更新提醒",
+                    isEnabled = enabled,
+                    onToggle = { newValue ->
                         haptic.perform(HapticFeedbackType.LongPress)
-                        notificationSettings[index] = item.copy(enabled = enabled)
+                        if (!masterEnabled) {
+                            openNotificationSettings()
+                        } else {
+                            generalEnabled = newValue
+                            systemAnnounceEnabled = newValue
+                            createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", newValue)
+                        }
                     }
                 )
             }
 
-            // 免打扰设置
+            item {
+                NotificationSettingCard(
+                    title = "预设推荐",
+                    description = "接收个性化预设推荐",
+                    isEnabled = recommendationEnabled,
+                    onToggle = { newValue ->
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        if (!masterEnabled) {
+                            openNotificationSettings()
+                        } else {
+                            recommendationEnabled = newValue
+                            dailyTipEnabled = newValue
+                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", newValue)
+                        }
+                    }
+                )
+            }
+
+            item {
+                NotificationSettingCard(
+                    title = "云同步提醒",
+                    description = "同步状态变更通知",
+                    isEnabled = syncEnabled,
+                    onToggle = { newValue ->
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        if (!masterEnabled) {
+                            openNotificationSettings()
+                        } else {
+                            syncEnabled = newValue
+                            createOrUpdateChannel(CHANNEL_SYNC, "云同步提醒", newValue)
+                        }
+                    }
+                )
+            }
+
+            item {
+                NotificationSettingCard(
+                    title = "系统公告",
+                    description = "重要系统公告通知",
+                    isEnabled = systemAnnounceEnabled,
+                    onToggle = { newValue ->
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        if (!masterEnabled) {
+                            openNotificationSettings()
+                        } else {
+                            systemAnnounceEnabled = newValue
+                            generalEnabled = newValue
+                            createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", newValue)
+                        }
+                    }
+                )
+            }
+
+            item {
+                NotificationSettingCard(
+                    title = "每日提示",
+                    description = "摄影技巧每日提示",
+                    isEnabled = dailyTipEnabled,
+                    onToggle = { newValue ->
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        if (!masterEnabled) {
+                            openNotificationSettings()
+                        } else {
+                            dailyTipEnabled = newValue
+                            recommendationEnabled = newValue
+                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", newValue)
+                        }
+                    }
+                )
+            }
+
+            // 免打扰设置（UI 状态保留，实际调度需接入系统 DND 权限，暂不自动写入）
             item {
                 Text(
                     text = "免打扰设置",
@@ -152,6 +328,7 @@ fun NotificationSettingsScreen(
             }
 
             item {
+                var dndEnabled by remember { mutableStateOf(false) }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -178,8 +355,8 @@ fun NotificationSettingsScreen(
                                 )
                             }
                             Switch(
-                                checked = false,
-                                onCheckedChange = {},
+                                checked = dndEnabled,
+                                onCheckedChange = { dndEnabled = it },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = Color(0xFF9C27B0),
@@ -218,12 +395,6 @@ fun NotificationSettingsScreen(
         }
     }
 }
-
-data class NotificationItem(
-    val title: String,
-    val description: String,
-    val enabled: Boolean
-)
 
 @Composable
 private fun NotificationSettingCard(

@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -270,7 +271,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "来自: ${suggestion.basePresetName}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -282,6 +283,22 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
+        }
+        if (suggestion.isOfflineMode) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CloudOff,
+                    contentDescription = null,
+                    tint = com.silas.omaster.ui.theme.WarningYellow,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "离线",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = com.silas.omaster.ui.theme.WarningYellow
+                )
+            }
         }
     }
 }

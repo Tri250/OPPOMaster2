@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestion
+import com.silas.omaster.ai.AISuggestionResult
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,6 +80,10 @@ class AIFineTuneViewModel(
     // 成功提示
     private val _showSuccess = MutableStateFlow(false)
     val showSuccess: StateFlow<Boolean> = _showSuccess.asStateFlow()
+
+    // 离线模式结果
+    private val _isOfflineResult = MutableStateFlow(false)
+    val isOfflineResult: StateFlow<Boolean> = _isOfflineResult.asStateFlow()
 
     // 推理阶段
     private val _inferenceStage = MutableStateFlow(InferenceStage.IDLE)
@@ -274,42 +279,62 @@ class AIFineTuneViewModel(
 
     /**
      * 执行AI推理
+     *
+     * 端云协同：优先尝试云端增强推理，无网络/密钥/权限时自动降级到本地推理，
+     * 并通过 _isOfflineResult 向 UI 反馈真实推理来源。
      */
     fun performAIInference(bitmap: Bitmap?) {
         if (bitmap == null) return
-        
+
         inferenceJob?.cancel()
         inferenceJob = viewModelScope.launch {
             _inferenceStage.value = InferenceStage.ANALYZING
             _inferenceProgress.value = 0f
             _inferenceMessage.value = "正在分析图像..."
-            
+            _isOfflineResult.value = false
+            _showSuccess.value = false
+
             try {
-                // 模拟推理进度
                 _inferenceProgress.value = 0.2f
                 _inferenceStage.value = InferenceStage.DETECTING_SUBJECT
                 _inferenceMessage.value = "检测主体..."
-                
+
                 _inferenceProgress.value = 0.4f
                 _inferenceStage.value = InferenceStage.ANALYZING_LIGHT
                 _inferenceMessage.value = "分析光线..."
-                
+
                 _inferenceProgress.value = 0.6f
                 _inferenceStage.value = InferenceStage.COMPUTING_PARAMS
                 _inferenceMessage.value = "计算参数..."
-                
-                // 实际AI推理
-                aiManager.analyzeImage(bitmap)
-                
-                _inferenceProgress.value = 0.8f
-                _inferenceStage.value = InferenceStage.APPLYING_AI
-                _inferenceMessage.value = "应用AI建议..."
-                
-                _inferenceProgress.value = 1f
-                _inferenceStage.value = InferenceStage.COMPLETED
-                _inferenceMessage.value = "完成"
-                _showSuccess.value = true
-                
+
+                // 实际AI推理：端云协同，自动降级
+                val currentParamMap = _currentParams.value.toMap().mapValues { it.value.toInt() }
+                when (val result = aiManager.generateAISuggestion(bitmap, currentParamMap)) {
+                    is AISuggestionResult.Success -> {
+                        _isOfflineResult.value = result.isOfflineMode
+
+                        _inferenceProgress.value = 0.8f
+                        _inferenceStage.value = InferenceStage.APPLYING_AI
+                        _inferenceMessage.value = if (result.isOfflineMode) "应用本地AI建议..." else "应用云端AI建议..."
+
+                        // 将AI建议合并到当前参数（跳过锁定的参数）
+                        result.suggestion.suggestions.forEach { suggestion ->
+                            if (!_lockedParams.value.contains(suggestion.field)) {
+                                updateParam(suggestion.field, suggestion.suggestedValue.toFloat())
+                            }
+                        }
+
+                        _inferenceProgress.value = 1f
+                        _inferenceStage.value = InferenceStage.COMPLETED
+                        _inferenceMessage.value = "完成"
+                        _showSuccess.value = true
+                    }
+                    is AISuggestionResult.Error -> {
+                        _inferenceStage.value = InferenceStage.ERROR
+                        _inferenceMessage.value = "推理失败: ${result.error.message}"
+                        _errorState.value = result.error.message
+                    }
+                }
             } catch (e: Exception) {
                 _inferenceStage.value = InferenceStage.ERROR
                 _inferenceMessage.value = "推理失败: ${e.message}"
@@ -326,6 +351,7 @@ class AIFineTuneViewModel(
         _inferenceProgress.value = 0f
         _inferenceMessage.value = ""
         _showSuccess.value = false
+        _isOfflineResult.value = false
         _errorState.value = null
     }
 

@@ -493,11 +493,9 @@ class SettingsManager private constructor(private val context: Context) {
      * @return Boolean 密钥是否有效
      */
     fun validateApiKey(): Boolean {
-        val apiKey = cloudApiKey ?: return false
-        // 基本验证：密钥非空且长度合理
-        return apiKey.isNotBlank() && apiKey.length >= 16
+        return validateApiKeyFormat(cloudApiKey)
     }
-    
+
     /**
      * 验证 API 密钥格式
      * @param key 要验证的密钥
@@ -506,7 +504,12 @@ class SettingsManager private constructor(private val context: Context) {
     fun validateApiKeyFormat(key: String?): Boolean {
         if (key.isNullOrBlank()) return false
         // 基本格式验证：长度至少16字符，只包含字母、数字、连字符和下划线
-        return key.length >= 16 && key.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+        if (key.length < 16 || !key.all { it.isLetterOrDigit() || it == '-' || it == '_' }) {
+            return false
+        }
+        // 拒绝占位符/demo密钥，避免误用默认密钥发起无效请求
+        val lowerKey = key.lowercase()
+        return lowerKey !in setOf("demo_key", "your_api_key_here", "your_api_key", "api_key", "test_key")
     }
     
     /**

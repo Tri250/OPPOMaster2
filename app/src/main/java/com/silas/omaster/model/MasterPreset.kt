@@ -260,14 +260,14 @@ data class MasterPreset(
         brand = parcel.readString(),
         version = parcel.readValue(Int::class.java.classLoader) as? Int,
         build = parcel.readInt(),
-        params = null, // Map需要特殊处理
-        colorGradingParams = null,
         createdAt = parcel.readLong(),
         downloads = parcel.readValue(Int::class.java.classLoader) as? Int,
         rating = parcel.readValue(Float::class.java.classLoader) as? Float,
         ratingCount = parcel.readValue(Int::class.java.classLoader) as? Int,
         comments = parcel.createTypedArrayList(PresetComment.CREATOR),
-        isHncs = parcel.readByte() != 0.toByte()
+        isHncs = parcel.readByte() != 0.toByte(),
+        params = parcel.readStringMap(),
+        colorGradingParams = parcel.readStringMap()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -310,6 +310,8 @@ data class MasterPreset(
         parcel.writeValue(ratingCount)
         parcel.writeTypedList(comments)
         parcel.writeByte(if (isHncs) 1 else 0)
+        parcel.writeStringMap(params)
+        parcel.writeStringMap(colorGradingParams)
     }
 
     fun getDisplaySections(context: Context): List<PresetSection> {
@@ -462,6 +464,34 @@ data class MasterPreset(
                 listOf(coverPath) + gallery
             }
         }
+}
+
+/**
+ * Parcel 扩展：读写 Map<String, String>
+ * 用于 MasterPreset.params / colorGradingParams 的跨组件传递
+ */
+private fun Parcel.writeStringMap(map: Map<String, String>?) {
+    if (map == null) {
+        writeInt(-1)
+        return
+    }
+    writeInt(map.size)
+    for ((key, value) in map) {
+        writeString(key)
+        writeString(value)
+    }
+}
+
+private fun Parcel.readStringMap(): Map<String, String>? {
+    val size = readInt()
+    if (size < 0) return null
+    val map = mutableMapOf<String, String>()
+    repeat(size) {
+        val key = readString() ?: return@repeat
+        val value = readString() ?: return@repeat
+        map[key] = value
+    }
+    return map
 }
 
 /**

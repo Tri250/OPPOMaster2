@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.features
 
+import android.Manifest
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -15,6 +16,9 @@ import android.util.Size
 import android.view.Surface
 import android.view.TextureView
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -677,6 +681,23 @@ private fun Camera2Preview(
     var captureSession by remember { mutableStateOf<CameraCaptureSession?>(null) }
     var imageReader by remember { mutableStateOf<android.media.ImageReader?>(null) }
 
+    // 请求相机权限
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(context, "需要相机权限才能拍照识别场景", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     // 响应外部拍摄触发
     LaunchedEffect(captureTrigger.value) {
         if (captureTrigger.value) {
@@ -691,7 +712,7 @@ private fun Camera2Preview(
 
         if (cameraId != null) {
             try {
-                if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA)
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                     == android.content.pm.PackageManager.PERMISSION_GRANTED
                 ) {
                     // 创建ImageReader用于拍照

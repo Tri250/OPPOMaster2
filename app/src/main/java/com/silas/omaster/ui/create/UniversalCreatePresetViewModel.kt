@@ -175,14 +175,16 @@ class UniversalCreatePresetViewModel(
                     mapOf(
                         "name" to state.name,
                         "coverPath" to coverPath,
-                        "params" to sectionsToParams(state.sections)
+                        "params" to sectionsToParams(state.sections),
+                        "sections" to state.sections
                     )
                 )
             } else {
                 repository.createCustomPreset(
                     name = state.name,
                     params = sectionsToParams(state.sections),
-                    coverPath = coverPath
+                    coverPath = coverPath,
+                    sections = state.sections
                 )
             }
             true
@@ -205,6 +207,10 @@ class UniversalCreatePresetViewModel(
                     "色温" -> "color_temperature"
                     "色调" -> "color_hue"
                     "曝光补偿" -> "exposure_compensation"
+                    "ISO", "iso" -> "iso"
+                    "快门" -> "shutter_speed"
+                    "光圈" -> "aperture"
+                    "白平衡" -> "white_balance"
                     else -> item.label
                 }
                 item.value.toIntOrNull()?.let { params[key] = it }
