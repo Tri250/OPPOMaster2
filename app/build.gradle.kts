@@ -4,8 +4,37 @@ import java.util.Properties
 // ===== AppKey 运行时混淆密钥 =====
 // 构建时使用此密钥对 AppKey 做 XOR+Base64 混淆，运行时在 OMasterApplication 中解混淆
 // 防止 APK 反编译后直接提取明文 AppKey
-// 注意：此为中间安全方案，生产环境建议将 AppKey 迁移至后端代理或 NDK 层
-const val OBFUSCATION_KEY = "Oma5terK3y2024!X"
+// 
+// 安全说明：
+// - 密钥从环境变量或 local.properties 读取，不在代码中硬编码
+// - 如未配置，使用动态生成的随机密钥（每次构建不同）
+// - 生产环境建议将 AppKey 迁移至后端代理或 NDK 层
+//
+// 配置方式（local.properties）：
+// OBFUSCATION_KEY=YourRandomKeyHere16!
+
+/**
+ * 获取混淆密钥
+ * 优先级：1. 环境变量 2. local.properties 3. 动态生成（随机）
+ */
+fun getObfuscationKey(localProps: Properties): String {
+    // 1. 从环境变量读取（CI/CD 环境）
+    System.getenv("OBFUSCATION_KEY")?.let {
+        if (it.length >= 16) return it
+    }
+    
+    // 2. 从 local.properties 读取
+    localProps.getProperty("OBFUSCATION_KEY")?.let {
+        if (it.length >= 16) return it
+    }
+    
+    // 3. 动态生成随机密钥（每次构建不同，增加逆向难度）
+    // 注意：这会使得同一 AppKey 在不同构建中混淆结果不同，但运行时能正确解混淆
+    val random = java.security.SecureRandom()
+    val bytes = ByteArray(16)
+    random.nextBytes(bytes)
+    return Base64.getEncoder().encodeToString(bytes).take(16)
+}
 
 /**
  * XOR + Base64 混淆：将明文与固定密钥逐字节 XOR 后 Base64 编码
@@ -109,8 +138,10 @@ android {
         // ===== 安全配置注入到 BuildConfig =====
         // 友盟统计 AppKey：构建时混淆后注入，运行时在 OMasterApplication 中解混淆
         // 防止 APK 反编译后直接提取明文 AppKey
-        buildConfigField("String", "UMENG_APPKEY", "\"${obfuscateXor(umengAppKey, OBFUSCATION_KEY)}\"")
+        val obfuscationKey = getObfuscationKey(localProperties)
+        buildConfigField("String", "UMENG_APPKEY", "\"${obfuscateXor(umengAppKey, obfuscationKey)}\"")
         buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
+        buildConfigField("String", "OBFUSCATION_KEY", "\"$obfuscationKey\"")
     }
 
     // 签名配置

@@ -55,8 +55,10 @@ class OMasterApplication : Application() {
         private const val PREFS_NAME = "omaster_prefs"
         private const val KEY_USER_AGREED = "user_agreed_to_policy"
 
-        // 与 build.gradle.kts 中的 OBFUSCATION_KEY 保持一致
-        private const val OBFUSCATION_KEY = "Oma5terK3y2024!X"
+        // 从 BuildConfig 读取混淆密钥（构建时动态生成或从环境变量读取）
+        // 避免硬编码密钥在代码中，增加逆向难度
+        private val OBFUSCATION_KEY: String
+            get() = BuildConfig.OBFUSCATION_KEY
 
         @Volatile
         private var instance: OMasterApplication? = null

@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.core.content.FileProvider
+import com.silas.omaster.BuildConfig
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.Dispatchers
@@ -340,8 +341,11 @@ object UpdateChecker {
                 Log.i(TAG, "APK 签名验证通过")
             } else {
                 Log.e(TAG, "APK 签名验证失败：签名不匹配")
-                Log.e(TAG, "当前应用签名: $currentSignature")
-                Log.e(TAG, "APK 文件签名: $apkSignature")
+                // 安全日志：不输出具体签名值，防止信息泄露
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "当前应用签名: $currentSignature")
+                    Log.d(TAG, "APK 文件签名: $apkSignature")
+                }
             }
             isValid
         } catch (e: Exception) {

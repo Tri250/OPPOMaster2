@@ -226,6 +226,16 @@
 }
 
 # ========================================
+# Release 构建日志移除
+# ========================================
+# 移除调试日志，减少 APK 体积并防止信息泄露
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
+
+# ========================================
 # 精确 dontwarn（替代 -dontwarn **.**）
 # ========================================
 -dontwarn java.lang.invoke.**
