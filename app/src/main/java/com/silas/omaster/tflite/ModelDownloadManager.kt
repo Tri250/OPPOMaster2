@@ -31,8 +31,12 @@ class ModelDownloadManager(private val context: Context) {
         // ===== 模型文件配置 =====
         // ⚠️ 生产环境安全要求：
         // 所有 checksum 必须提供真实的 SHA256 校验值，格式为 "sha256:<hex>"
-        // 正式发布前，请使用以下命令生成校验值：
+        // 模型就绪后，请使用以下命令生成校验值：
         //   sha256sum scene_classifier.tflite quality_analyzer.tflite param_predictor.tflite
+        //
+        // v1.3.1 正式版说明：
+        // AI 场景识别、智能优化、哈苏色彩科学等实验性功能默认关闭，不会触发模型下载。
+        // 待后续版本上传模型文件并填写 checksum 后，方可在功能开关中重新启用。
         //
         // 运行时校验策略：
         // - checksum 为空且 BuildConfig.DEBUG=true：仅警告，允许通过（开发阶段）
@@ -44,21 +48,21 @@ class ModelDownloadManager(private val context: Context) {
                 displayName = "场景分类模型",
                 description = "36类场景智能识别",
                 expectedSize = 700 * 1024,  // 700KB
-                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值
+                checksum = ""  // v1.3.1: 模型未就绪，留空；Release 构建禁止下载
             ),
             ModelFile(
                 name = "quality_analyzer.tflite",
                 displayName = "质量分析模型",
                 description = "图像质量智能评估",
                 expectedSize = 500 * 1024,  // 500KB
-                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值
+                checksum = ""  // v1.3.1: 模型未就绪，留空；Release 构建禁止下载
             ),
             ModelFile(
                 name = "param_predictor.tflite",
                 displayName = "参数预测模型",
                 description = "哈苏调校参数推荐",
                 expectedSize = 200 * 1024,  // 200KB
-                checksum = ""  // TODO: 生产发布前必须填入真实 SHA256 校验值
+                checksum = ""  // v1.3.1: 模型未就绪，留空；Release 构建禁止下载
             )
         )
         
