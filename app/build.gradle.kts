@@ -1,3 +1,4 @@
+import java.security.SecureRandom
 import java.util.Base64
 import java.util.Properties
 
@@ -30,7 +31,7 @@ fun getObfuscationKey(localProps: Properties): String {
     
     // 3. 动态生成随机密钥（每次构建不同，增加逆向难度）
     // 注意：这会使得同一 AppKey 在不同构建中混淆结果不同，但运行时能正确解混淆
-    val random = java.security.SecureRandom()
+    val random = SecureRandom()
     val bytes = ByteArray(16)
     random.nextBytes(bytes)
     return Base64.getEncoder().encodeToString(bytes).take(16)
