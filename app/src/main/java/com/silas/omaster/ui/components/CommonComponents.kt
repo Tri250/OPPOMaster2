@@ -278,7 +278,7 @@ fun PresetImage(
 
     // 如果是网络图片且未缓存，后台下载
     LaunchedEffect(preset.coverPath) {
-        if (preset.coverPath.startsWith("http") &&
+        if (preset.coverPath.isNotBlank() && preset.coverPath.startsWith("http") &&
             !ImageCacheManager.getInstance(context).isImageCached(context, preset.coverPath)) {
 
             downloadState = DownloadState.Downloading
@@ -306,21 +306,34 @@ fun PresetImage(
     }
 
     Box(modifier = modifier) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(imageUri)
-                .crossfade(AnimationSpecs.FastTween.durationMillis)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .build(),
-            contentDescription = preset.name,
-            contentScale = contentScale,
-            modifier = Modifier.fillMaxSize()
-        )
+        if (imageUri.isBlank()) {
+            // 路径为空时显示占位图
+            ImagePlaceholder()
+        } else {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUri)
+                    .crossfade(AnimationSpecs.FastTween.durationMillis)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .build(),
+                contentDescription = preset.name,
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize(),
+                onError = {
+                    android.util.Log.w("PresetImage", "图片加载失败: $imageUri, error: ${it.result.throwable?.message}")
+                }
+            )
+        }
 
         // 显示加载状态
         if (showDownloadIndicator && downloadState is DownloadState.Downloading) {
             LoadingIndicator()
+        }
+
+        // 加载失败时显示占位图
+        if (downloadState is DownloadState.Error && imageUri.startsWith("http")) {
+            ImagePlaceholder()
         }
     }
 }
@@ -340,6 +353,28 @@ fun LoadingIndicator(
             modifier = Modifier.size(32.dp),
             color = MaterialTheme.colorScheme.primary,
             strokeWidth = 3.dp
+        )
+    }
+}
+
+/**
+ * 图片占位图组件 - 当图片路径为空或加载失败时显示
+ */
+@Composable
+fun ImagePlaceholder(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(DarkGray),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Image,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(32.dp)
         )
     }
 }

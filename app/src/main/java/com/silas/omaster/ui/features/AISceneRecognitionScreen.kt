@@ -324,7 +324,17 @@ fun AISceneRecognitionScreen(
                     onCameraFacingChange = { cameraFacing = it },
                     onTakePhoto = onTakePhoto,
                     onSelectImage = onSelectImage,
-                    onBack = onBack
+                    onBack = onBack,
+                    onCapture = { bitmap ->
+                        // 保存拍照的图片并进入分析流程
+                        scope.launch {
+                            val savedPath = saveBitmapToCache(context, bitmap)
+                            if (savedPath != null) {
+                                flowState = RecognitionFlowState.ANALYZING
+                                // 触发分析
+                            }
+                        }
+                    }
                 )
             }
             
@@ -428,6 +438,7 @@ private fun CameraEntryScreen(
     onTakePhoto: () -> Unit,
     onSelectImage: () -> Unit,
     onBack: () -> Unit,
+    onCapture: (Bitmap) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -444,16 +455,7 @@ private fun CameraEntryScreen(
             // Camera2 实时预览
             Camera2Preview(
                 cameraFacing = cameraFacing,
-                onCapture = { bitmap ->
-                    // 保存拍照的图片并进入分析流程
-                    scope.launch {
-                        val savedPath = saveBitmapToCache(context, bitmap)
-                        if (savedPath != null) {
-                            flowState = RecognitionFlowState.ANALYZING
-                            // 触发分析
-                        }
-                    }
-                },
+                onCapture = onCapture,
                 modifier = Modifier.fillMaxSize()
             )
 

@@ -149,6 +149,7 @@ fun AIFineTuneScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedBitmap by remember { mutableStateOf<Bitmap?>(bitmap) }
 
+    // 相册选择启动器
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -156,6 +157,23 @@ fun AIFineTuneScreen(
             selectedImageUri = it
             try {
                 val inputStream = context.contentResolver.openInputStream(it)
+                selectedBitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+            } catch (e: Exception) {
+                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // 相机拍照启动器
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success && cameraImageUri != null) {
+            selectedImageUri = cameraImageUri
+            try {
+                val inputStream = context.contentResolver.openInputStream(cameraImageUri!!)
                 selectedBitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
             } catch (e: Exception) {
@@ -240,18 +258,18 @@ fun AIFineTuneScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(PureBlack)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("AI 微调", fontWeight = FontWeight.Bold) },
+            title = { Text("AI 微调", fontWeight = FontWeight.Bold, color = Color.White) },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                 }
             },
             actions = {
@@ -259,7 +277,7 @@ fun AIFineTuneScreen(
                     Icon(
                         if (showCompare) Icons.Default.Compare else Icons.Default.CompareArrows,
                         "对比",
-                        tint = if (showCompare) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        tint = if (showCompare) HasselbladOrange else Color.White.copy(alpha = 0.6f)
                     )
                 }
                 IconButton(onClick = {
@@ -281,7 +299,7 @@ fun AIFineTuneScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Box(
                 modifier = Modifier
@@ -306,7 +324,7 @@ fun AIFineTuneScreen(
                         onClick = {
                             scope.launch {
                                 try {
-                                    val saved = saveImageToGallery(context, selectedBitmap)
+                                    val saved = saveImageToGallery(context, selectedBitmap, renderParams)
                                     if (saved) {
                                         Toast.makeText(context, "图片已导出到相册", Toast.LENGTH_SHORT).show()
                                     } else {
@@ -322,7 +340,7 @@ fun AIFineTuneScreen(
                             .padding(8.dp)
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f))
+                            .background(PureBlack.copy(alpha = 0.7f))
                     ) {
                         Icon(
                             Icons.Default.SaveAlt,
@@ -339,39 +357,82 @@ fun AIFineTuneScreen(
                             .padding(8.dp)
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f))
+                            .background(PureBlack.copy(alpha = 0.7f))
                     ) {
                         Icon(
                             Icons.Default.SwapHoriz,
                             "更换",
-                            tint = MaterialTheme.colorScheme.onBackground,
+                            tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                 } else {
-                    // 上传图片区域
+                    // 上传图片区域（支持相册选择和相机拍照）
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clickable { imagePickerLauncher.launch("image/*") }
                     ) {
-                        Spacer(modifier = Modifier.width(0.dp).height(0.dp)) // workaround
+                        Spacer(modifier = Modifier.height(24.dp))
                         Icon(
                             Icons.Default.AddPhotoAlternate,
                             null,
-                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                            tint = Color.White.copy(alpha = 0.4f),
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "点击上传图片",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                            "选择图片开始微调",
+                            color = Color.White.copy(alpha = 0.5f),
                             fontSize = 14.sp
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        // 相册选择和相机拍照按钮
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // 相册选择按钮
+                            Card(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { imagePickerLauncher.launch("image/*") },
+                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.PhotoLibrary, null, tint = HasselbladOrange, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("相册选择", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                                }
+                            }
+                            // 相机拍照按钮
+                            Card(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        // 创建临时Uri用于保存拍照图片
+                                        val photoUri = createTempImageUri(context)
+                                        cameraImageUri = photoUri
+                                        cameraLauncher.launch(photoUri)
+                                    },
+                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, null, tint = HasselbladOrange, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("相机拍照", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "支持 JPG/PNG/WebP 格式",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                            color = Color.White.copy(alpha = 0.3f),
                             fontSize = 12.sp
                         )
                     }
@@ -389,7 +450,7 @@ fun AIFineTuneScreen(
             )
             Text(
                 text = inferenceMessage,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                color = Color.White.copy(alpha = 0.6f),
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
@@ -413,7 +474,7 @@ fun AIFineTuneScreen(
                 ) {
                     Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("优化完成", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+                    Text("优化完成", color = Color.White, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -492,7 +553,7 @@ fun AIFineTuneScreen(
 
                     // 基础参数调整
                     item {
-                        Text("参数调整", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                        Text("参数调整", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
 
                     item {
@@ -513,7 +574,7 @@ fun AIFineTuneScreen(
                 "color" -> {
                     // 色彩风格
                     item {
-                        Text("色彩风格", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                        Text("色彩风格", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
 
                     items(colorStyles.chunked(2)) { stylePair ->
@@ -540,7 +601,7 @@ fun AIFineTuneScreen(
                 "smart" -> {
                     // 智能优化
                     item {
-                        Text("智能优化", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                        Text("智能优化", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
 
                     items(smartOptimizations.chunked(2)) { optPair ->
@@ -570,7 +631,7 @@ fun AIFineTuneScreen(
                 "hsl" -> {
                     // HSL调整
                     item {
-                        Text("HSL 调色", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                        Text("HSL 调色", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
 
                     item {
@@ -597,7 +658,7 @@ fun AIFineTuneScreen(
                 "curve" -> {
                     // 曲线调整
                     item {
-                        Text("曲线调整", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                        Text("曲线调整", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
 
                     item {
@@ -619,7 +680,7 @@ fun AIFineTuneScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
+                .background(PureBlack.copy(alpha = 0.95f))
                 .padding(vertical = 12.dp, horizontal = 16.dp)
         ) {
             Row(
@@ -635,9 +696,9 @@ fun AIFineTuneScreen(
                     selectedOptimizations.clear()
                     hslValues = defaultHslValuesList()
                 }) {
-                    Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                    Icon(Icons.Default.Refresh, null, tint = Color.White.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("重置", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                    Text("重置", color = Color.White.copy(alpha = 0.6f))
                 }
 
                 // 应用
@@ -649,9 +710,9 @@ fun AIFineTuneScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
                     shape = RoundedCornerShape(24.dp)
                 ) {
-                    Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.Default.Check, null, tint = Color.White)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("应用参数", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+                    Text("应用参数", color = Color.White, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -673,12 +734,12 @@ private fun TabChip(
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) HasselbladOrange else DarkGray
         )
     ) {
         Text(
             text = label,
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -729,11 +790,11 @@ private fun QuickPresetsSection(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("正在分析...", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+                    Text("正在分析...", color = Color.White, fontWeight = FontWeight.Medium)
                 } else {
                     Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("一键 AI 微调", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
+                    Text("一键 AI 微调", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -749,12 +810,12 @@ private fun QuickPresetsSection(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(enabled = !isProcessing) { onPresetApply(preset.second) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                    colors = CardDefaults.cardColors(containerColor = DarkGray),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
                 ) {
                     Text(
                         text = preset.first,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        color = Color.White.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -813,12 +874,12 @@ private fun ParamSliderCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "基础参数",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    color = Color.White.copy(alpha = 0.5f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -836,12 +897,12 @@ private fun ParamSliderCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "专业参数",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    color = Color.White.copy(alpha = 0.5f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -859,12 +920,12 @@ private fun ParamSliderCard(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(containerColor = DarkGray)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "效果参数",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    color = Color.White.copy(alpha = 0.5f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -898,7 +959,7 @@ private fun ParamSliderRow(
     ) {
         Text(
             text = name,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = Color.White.copy(alpha = 0.7f),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.width(70.dp)
@@ -954,9 +1015,9 @@ private fun ColorStyleCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) style.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) style.color.copy(alpha = 0.2f) else DarkGray
         ),
-        border = BorderStroke(1.dp, if (isSelected) style.color else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, if (isSelected) style.color else Color.White.copy(alpha = 0.1f))
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -966,13 +1027,13 @@ private fun ColorStyleCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = style.name,
-                color = if (isSelected) style.color else MaterialTheme.colorScheme.onBackground,
+                color = if (isSelected) style.color else Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
                 text = style.description,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                color = Color.White.copy(alpha = 0.5f),
                 fontSize = 10.sp
             )
         }
@@ -994,9 +1055,9 @@ private fun SmartOptimizationCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) optimization.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) optimization.color.copy(alpha = 0.2f) else DarkGray
         ),
-        border = BorderStroke(1.dp, if (isSelected) optimization.color else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, if (isSelected) optimization.color else Color.White.copy(alpha = 0.1f))
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -1008,7 +1069,7 @@ private fun SmartOptimizationCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = optimization.name,
-                        color = if (isSelected) optimization.color else MaterialTheme.colorScheme.onBackground,
+                        color = if (isSelected) optimization.color else Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -1020,7 +1081,7 @@ private fun SmartOptimizationCard(
                 }
                 Text(
                     text = optimization.description,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    color = Color.White.copy(alpha = 0.5f),
                     fontSize = 10.sp
                 )
             }
@@ -1043,7 +1104,7 @@ private fun HSLSelectorCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 颜色选择
@@ -1066,7 +1127,7 @@ private fun HSLSelectorCard(
                         contentAlignment = Alignment.Center
                     ) {
                         if (selectedId == hsl.id) {
-                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -1074,13 +1135,13 @@ private fun HSLSelectorCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(selectedHsl.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+            Text(selectedHsl.name, color = Color.White, fontWeight = FontWeight.Medium)
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // 色相
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("色相", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
+                Text("色相", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
                 Slider(
                     value = selectedHsl.hue.toFloat(),
                     onValueChange = { onValueChange(selectedId, "hue", it.toInt()) },
@@ -1093,7 +1154,7 @@ private fun HSLSelectorCard(
 
             // 饱和度
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("饱和度", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
+                Text("饱和度", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
                 Slider(
                     value = selectedHsl.saturation.toFloat(),
                     onValueChange = { onValueChange(selectedId, "saturation", it.toInt()) },
@@ -1106,7 +1167,7 @@ private fun HSLSelectorCard(
 
             // 明度
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("明度", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
+                Text("明度", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
                 Slider(
                     value = selectedHsl.luminance.toFloat(),
                     onValueChange = { onValueChange(selectedId, "luminance", it.toInt()) },
@@ -1156,7 +1217,7 @@ private fun CurveAdjustCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = DarkGray)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 通道选择
@@ -1170,12 +1231,12 @@ private fun CurveAdjustCard(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { onChannelChange(ch) },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (channel == ch) channelColors[index].copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = if (channel == ch) channelColors[index].copy(alpha = 0.2f) else DarkGray
                         )
                     ) {
                         Text(
                             text = if (ch == "rgb") "RGB" else ch.uppercase(),
-                            color = if (channel == ch) channelColors[index] else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            color = if (channel == ch) channelColors[index] else Color.White.copy(alpha = 0.6f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -1192,13 +1253,13 @@ private fun CurveAdjustCard(
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(PureBlack),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ShowChart, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
-                    Text("曲线调整", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 12.sp)
-                    Text("拖动曲线点进行精确调整", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 10.sp)
+                    Icon(Icons.Default.ShowChart, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
+                    Text("曲线调整", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                    Text("拖动曲线点进行精确调整", color = Color.White.copy(alpha = 0.3f), fontSize = 10.sp)
                 }
             }
 
@@ -1207,7 +1268,7 @@ private fun CurveAdjustCard(
             // 曲线预设选择（与Web端对齐）
             Text(
                 text = "曲线预设",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                color = Color.White.copy(alpha = 0.5f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -1224,9 +1285,9 @@ private fun CurveAdjustCard(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { selectedPreset = preset.id },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (selectedPreset == preset.id) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = if (selectedPreset == preset.id) HasselbladOrange.copy(alpha = 0.2f) else DarkGray
                         ),
-                        border = BorderStroke(1.dp, if (selectedPreset == preset.id) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                        border = BorderStroke(1.dp, if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.1f))
                     ) {
                         Column(
                             modifier = Modifier.padding(8.dp),
@@ -1235,13 +1296,13 @@ private fun CurveAdjustCard(
                             Icon(
                                 Icons.Default.TrendingUp,
                                 null,
-                                tint = if (selectedPreset == preset.id) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                                tint = if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = preset.name,
-                                color = if (selectedPreset == preset.id) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                color = if (selectedPreset == preset.id) HasselbladOrange else Color.White.copy(alpha = 0.7f),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -1370,12 +1431,19 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
 }
 
 /**
- * 保存图片到系统相册
+ * 保存图片到系统相册（应用滤镜效果后保存）
  */
-private suspend fun saveImageToGallery(context: android.content.Context, bitmap: Bitmap?): Boolean {
+private suspend fun saveImageToGallery(
+    context: android.content.Context,
+    bitmap: Bitmap?,
+    renderParams: RenderParameters = RenderParameters()
+): Boolean {
     if (bitmap == null) return false
     return withContext(Dispatchers.IO) {
         try {
+            // 应用ColorMatrix滤镜效果到bitmap
+            val filteredBitmap = applyColorMatrixToBitmap(bitmap, renderParams)
+
             val filename = "omaster_ai_${System.currentTimeMillis()}.jpg"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val contentValues = ContentValues().apply {
@@ -1389,7 +1457,7 @@ private suspend fun saveImageToGallery(context: android.content.Context, bitmap:
                 )
                 uri?.let {
                     context.contentResolver.openOutputStream(it)?.use { out ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                        filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
                     }
                     true
                 } ?: false
@@ -1399,7 +1467,7 @@ private suspend fun saveImageToGallery(context: android.content.Context, bitmap:
                 val file = java.io.File(dir, "OMaster/$filename")
                 file.parentFile?.mkdirs()
                 file.outputStream().use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
                 }
                 // 通知相册扫描
                 val values = ContentValues().apply {
@@ -1414,4 +1482,38 @@ private suspend fun saveImageToGallery(context: android.content.Context, bitmap:
             false
         }
     }
+}
+
+/**
+ * 将ColorMatrix滤镜效果应用到Bitmap上
+ */
+private fun applyColorMatrixToBitmap(source: Bitmap, renderParams: RenderParameters): Bitmap {
+    val colorMatrix = renderParams.toColorMatrix()
+    val result = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(result)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+    // 将Compose ColorMatrix转换为Android ColorMatrix
+    val values = FloatArray(20)
+    colorMatrix.values.forEachIndexed { index, value -> values[index] = value }
+    val androidColorMatrix = android.graphics.ColorMatrix(values)
+    paint.colorFilter = android.graphics.ColorMatrixColorFilter(androidColorMatrix)
+
+    canvas.drawBitmap(source, 0f, 0f, paint)
+    return result
+}
+
+/**
+ * 创建临时图片Uri用于相机拍照保存
+ */
+private fun createTempImageUri(context: android.content.Context): Uri {
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "omaster_camera_${System.currentTimeMillis()}.jpg")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+        put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster")
+    }
+    return context.contentResolver.insert(
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        contentValues
+    ) ?: Uri.EMPTY
 }

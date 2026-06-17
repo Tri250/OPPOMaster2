@@ -304,22 +304,42 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
      * @return 本地路径（如果存在），否则返回原始URL
      */
     fun getImageLoadPath(context: Context, url: String): String {
+        // 空路径直接返回空字符串
+        if (url.isBlank()) {
+            Log.w(TAG, "getImageLoadPath: 图片路径为空")
+            return ""
+        }
+
         // 非网络图片直接返回
         if (!url.startsWith("http")) {
-            return when {
+            val result = when {
                 url.startsWith("/") -> File(url).toUri().toString()
                 url.startsWith("presets/") -> File(context.filesDir, url).toUri().toString()
                 url.startsWith("file://") -> url  // 已经是file协议，直接返回
                 url.startsWith("images/") -> "file:///android_asset/$url"
-                else -> "file:///android_asset/$url"
+                url.startsWith("assets/") -> "file:///android_asset/$url"
+                url.contains("/") -> {
+                    // 包含路径分隔符但无已知前缀，尝试作为 assets 路径
+                    Log.d(TAG, "getImageLoadPath: 未知路径格式，尝试作为assets路径: $url")
+                    "file:///android_asset/$url"
+                }
+                else -> {
+                    // 无路径分隔符，可能是 assets 根目录下的文件
+                    Log.d(TAG, "getImageLoadPath: 简单文件名，尝试作为assets路径: $url")
+                    "file:///android_asset/$url"
+                }
             }
+            Log.d(TAG, "getImageLoadPath: 本地路径 '$url' -> '$result'")
+            return result
         }
 
         // 检查本地缓存
         val localFile = getLocalImagePath(context, url)
         return if (localFile.exists()) {
+            Log.d(TAG, "getImageLoadPath: 使用缓存 '$url' -> '${localFile.toUri()}'")
             localFile.toUri().toString()
         } else {
+            Log.d(TAG, "getImageLoadPath: 使用网络URL: $url")
             url
         }
     }

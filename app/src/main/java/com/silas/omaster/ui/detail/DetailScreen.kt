@@ -120,12 +120,10 @@ fun DetailScreen(
     // 悬浮窗控制器（全局单例，已在 MainActivity 中注册）
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
 
-    val colorScheme = MaterialTheme.colorScheme
-
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colorScheme.background)
+            .background(PureBlack)
     ) {
         OMasterTopAppBar(
             title = preset?.let { PresetI18n.getLocalizedPresetName(it.name) } ?: stringResource(R.string.detail_title),
@@ -155,7 +153,7 @@ fun DetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
                         contentDescription = stringResource(R.string.floating_window),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = HasselbladOrange
                     )
                 }
 
@@ -172,7 +170,7 @@ fun DetailScreen(
                         Icon(
                         imageVector = Icons.Filled.Edit,
                         contentDescription = stringResource(R.string.edit),
-                        tint = colorScheme.onBackground
+                        tint = Color.White
                     )
                     }
                 }
@@ -188,7 +186,7 @@ fun DetailScreen(
                         else
                             Icons.Outlined.FavoriteBorder,
                         contentDescription = if (isFavorite) stringResource(R.string.preset_favorited) else stringResource(R.string.preset_favorite),
-                        tint = if (isFavorite) colorScheme.primary else colorScheme.onBackground
+                        tint = if (isFavorite) HasselbladOrange else Color.White
                     )
                 }
             },
@@ -206,7 +204,7 @@ fun DetailScreen(
                     Text(
                         text = stringResource(R.string.detail_load_failed),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = colorScheme.onBackground.copy(alpha = 0.6f)
+                        color = Color.White.copy(alpha = 0.6f)
                     )
                 }
             } else {
@@ -256,7 +254,7 @@ fun DetailScreen(
                         ) {
                             Text(
                             text = PresetI18n.getLocalizedPresetName(it.name),
-                            color = colorScheme.onBackground,
+                            color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -275,7 +273,7 @@ fun DetailScreen(
                         
                         Text(
                             text = "@${it.author}",
-                            color = colorScheme.onBackground.copy(alpha = 0.5f),
+                            color = Color.White.copy(alpha = 0.5f),
                             fontSize = 14.sp
                         )
                         
@@ -288,11 +286,11 @@ fun DetailScreen(
                             it.tags?.forEach { tag ->
                                 Text(
                                     text = "#$tag",
-                                    color = colorScheme.onBackground.copy(alpha = 0.6f),
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 10.sp,
                                     modifier = Modifier
                                         .background(
-                                            color = colorScheme.onBackground.copy(alpha = 0.05f),
+                                            color = Color.White.copy(alpha = 0.05f),
                                             shape = RoundedCornerShape(4.dp)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -448,7 +446,7 @@ private fun DynamicParameters(
             Text(
                 text = "暂无调色参数",
                 style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.onBackground.copy(alpha = 0.5f)
+                color = Color.White.copy(alpha = 0.5f)
             )
         }
         return

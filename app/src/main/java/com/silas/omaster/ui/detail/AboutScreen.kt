@@ -1,7 +1,5 @@
 package com.silas.omaster.ui.detail
 
-import android.app.DownloadManager
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,23 +24,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,7 +47,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +61,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,11 +73,7 @@ import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.ui.settings.ThemeSelectionDialog
 import com.silas.omaster.ui.settings.DarkModeDialog
 import com.silas.omaster.ui.settings.UpdateChannelDialog
-// import com.silas.omaster.util.UpdateChecker  // 版本更新功能已暂停
 import com.silas.omaster.util.VersionInfo
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.isActive
 import com.silas.omaster.util.perform
 
 @Composable
@@ -105,7 +91,6 @@ fun AboutScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
     val currentTheme by settingsManager.themeFlow.collectAsState()
@@ -147,48 +132,6 @@ fun AboutScreen(
             hasHapticAtBottom = false
         }
     }
-
-    // 版本更新功能已暂停
-    // var isChecking by remember { mutableStateOf(false) }
-    // var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
-    // var checkError by remember { mutableStateOf<String?>(null) }
-    // var lastCheckTime by remember { mutableStateOf<Long?>(null) }
-
-    // 下载进度相关状态
-    // var downloadId by remember { mutableStateOf<Long>(-1L) }
-    // var downloadProgress by remember { mutableIntStateOf(0) }
-    // var isDownloading by remember { mutableStateOf(false) }
-
-    // val checkFailedText = stringResource(R.string.version_check_failed)
-
-    // 版本更新检查 - 功能已暂停
-    // var showUpdateDialog by remember { mutableStateOf(false) }
-
-    // 监听下载进度 - 功能已暂停
-    /*
-    LaunchedEffect(isDownloading, downloadId) {
-        if (isDownloading && downloadId != -1L) {
-            val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager
-            while (isActive && isDownloading) {
-                val query = DownloadManager.Query().setFilterById(downloadId)
-                val cursor = downloadManager.query(query)
-                if (cursor.moveToFirst()) {
-                    val bytesDownloaded = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val bytesTotal = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    if (bytesTotal > 0) {
-                        downloadProgress = (bytesDownloaded * 100 / bytesTotal)
-                    }
-                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
-                        isDownloading = false
-                    }
-                }
-                cursor.close()
-                delay(500)
-            }
-        }
-    }
-    */
 
     // Dialogs
     if (showThemeDialog) {

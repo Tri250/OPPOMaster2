@@ -311,14 +311,14 @@ fun MainApp(navController: NavHostController) {
                 SmartOptimizeScreen(
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
-                        // 应用优化参数到设置
+                        // 应用智能优化参数到设置
                         val settingsManager = SettingsManager.getInstance(context)
                         settingsManager.applyPresetParams(
                             saturation = params.colorCorrectionStrength.toInt(),
-                            contrast = params.sharpenStrength.toInt(),
+                            contrast = params.hdrStrength.toInt(),
                             warmth = 0,
                             sharpness = params.sharpenStrength.toInt(),
-                            clarity = params.hdrStrength.toInt(),
+                            clarity = params.noiseReductionStrength.toInt(),
                             brightness = params.exposureAdjustment.toInt()
                         )
                         navController.popBackStack()
@@ -331,13 +331,13 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
                         val settingsManager = SettingsManager.getInstance(context)
-                        settingsManager.applyPresetParams(
-                            saturation = params.saturation,
-                            contrast = params.contrast,
-                            warmth = params.warmth,
-                            sharpness = params.sharpness,
-                            clarity = params.clarity,
-                            brightness = params.brightness
+                        settingsManager.applyCameraParams(
+                            iso = params.iso,
+                            shutterSpeed = params.shutterSpeed,
+                            aperture = params.aperture,
+                            whiteBalance = params.whiteBalance,
+                            focalLength = params.focalLength,
+                            exposureCompensation = params.exposureCompensation
                         )
                         navController.popBackStack()
                     }
