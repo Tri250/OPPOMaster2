@@ -267,7 +267,7 @@ fun AISceneRecognitionScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     if (flowState == RecognitionFlowState.RESULT) {
                         flowState = RecognitionFlowState.CAMERA
                         analysisResult = null
@@ -352,7 +352,7 @@ fun AISceneRecognitionScreen(
                         onShowParamsChange = { showParams = it },
                         isOptimized = isOptimized,
                         onOptimize = {
-                            haptic.perform(HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isOptimized = true
                             showParams = true
                             scope.launch {
@@ -371,7 +371,7 @@ fun AISceneRecognitionScreen(
                         isSaving = isSaving,
                         saveSuccess = saveSuccess,
                         onSaveRecipe = {
-                            haptic.perform(HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isSaving = true
                             scope.launch {
                                 // 保存配方到本地
@@ -468,7 +468,7 @@ private fun CameraEntryScreen(
                 // 闪光灯控制
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onFlashModeChange(
                             when (flashMode) {
                                 FlashMode.OFF -> FlashMode.ON
@@ -498,7 +498,7 @@ private fun CameraEntryScreen(
                 // 摄像头切换
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onCameraFacingChange(
                             if (cameraFacing == CameraFacing.BACK) CameraFacing.FRONT else CameraFacing.BACK
                         )
@@ -607,7 +607,7 @@ private fun CameraEntryScreen(
                     modifier = Modifier
                         .size(80.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onTakePhoto()
                         },
                     contentAlignment = Alignment.Center
@@ -634,7 +634,7 @@ private fun CameraEntryScreen(
                 // 选择图片按钮
                 IconButton(
                     onClick = {
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSelectImage()
                     },
                     modifier = Modifier
@@ -1459,7 +1459,7 @@ private fun RecognitionHistoryStrip(
                     modifier = Modifier
                         .size(64.dp)
                         .clickable {
-                            haptic.perform(HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onSelect(scene)
                         },
                     shape = RoundedCornerShape(12.dp),
@@ -1508,7 +1508,7 @@ private fun BottomActionBar(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
-                    haptic.perform(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onRetake()
                 }
             ) {
@@ -1540,7 +1540,7 @@ private fun BottomActionBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
                     if (!isSaving && !saveSuccess) {
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSaveRecipe()
                     }
                 }

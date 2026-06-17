@@ -112,7 +112,7 @@ fun LUTShareScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
@@ -170,7 +170,7 @@ fun LUTShareScreen(
                             else MaterialTheme.colorScheme.surfaceVariant
                         )
                         .clickable {
-                            haptic.perform(HapticFeedbackType.LongPress)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             selectedCategory = category.key
                         }
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -289,7 +289,7 @@ fun LUTShareScreen(
                             onLike = { likedIds.toggle(lut.id) },
                             onClick = { selectedLUT = lut },
                             onDownload = {
-                                haptic.perform(HapticFeedbackType.LongPress)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 downloadingId = lut.id
                                 scope.launch(Dispatchers.IO) {
                                     try {
@@ -361,7 +361,7 @@ fun LUTShareScreen(
             isDownloading = downloadingId == lut.id,
             onLike = { likedIds.toggle(lut.id) },
             onDownload = {
-                haptic.perform(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 downloadingId = lut.id
                 scope.launch(Dispatchers.IO) {
                     try {
@@ -440,7 +440,7 @@ private fun LUTPosterCard(
         modifier = Modifier
             .width(140.dp)
             .clickable {
-                haptic.perform(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             },
         shape = RoundedCornerShape(12.dp),
@@ -533,7 +533,7 @@ private fun LUTGridCard(
     val haptic = LocalHapticFeedback.current
     Card(
         modifier = modifier.clickable {
-            haptic.perform(HapticFeedbackType.LongPress)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
         shape = RoundedCornerShape(12.dp),

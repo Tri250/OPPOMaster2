@@ -305,7 +305,7 @@ fun CoreFeaturesScreen(
                     feature = feature,
                     isEnabled = isEnabled,
                     onToggle = { enabled ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when (feature.id) {
                             "ai-scene" -> {
                                 aiSceneEnabled = enabled
@@ -389,7 +389,7 @@ fun CoreFeaturesScreen(
                     feature = feature,
                     isEnabled = isEnabled,
                     onToggle = { enabled ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when (feature.id) {
                             "hasselblad" -> {
                                 hasselbladEnabled = enabled
