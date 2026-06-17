@@ -339,8 +339,8 @@
 
     <!-- Feature Intro -->
     <string name="feature_title">Features</string>
-    <string name="feature_desc_1">OMaster is a color grading parameter management tool designed for OPPO/OnePlus/Realme mobile photography enthusiasts.</string>
-    <string name="feature_desc_2">You can view, favorite, and reproduce Master Mode photography color grading parameters, including exposure, contrast, saturation, color temperature, and more.</string>
+    <string name="feature_desc_1">OMaster is a color grading parameter management tool for photography enthusiasts and professionals.</string>
+    <string name="feature_desc_2">You can view, favorite, and reproduce master color grading parameters for Hasselblad, Leica, Fujifilm, and more, including exposure, contrast, saturation, color temperature, and more.</string>
 
     <!-- Credits -->
     <string name="credits_title">Credits</string>
@@ -355,9 +355,9 @@
     <!-- Privacy Policy Page -->
     <string name="privacy_title">User Agreement &amp; Privacy Policy</string>
     <string name="welcome_title">Welcome to OMaster</string>
-    <string name="welcome_desc">OMaster is a color grading parameter management tool designed for OPPO/OnePlus/Realme mobile photography enthusiasts. Here, you can view, favorite, and reproduce Master Mode photography color grading parameters.</string>
+    <string name="welcome_desc">OMaster is a color grading parameter management tool for photography enthusiasts and professionals. Here, you can view, favorite, and reproduce master color grading parameters for Hasselblad, Leica, Fujifilm, and more.</string>
     <string name="features_title">Features</string>
-    <string name="features_list">• View Master Mode color grading parameters\n• Support multiple preset styles\n• Pure local operation, data stored locally\n• No internet required</string>
+    <string name="features_list">• View master color grading parameters for Hasselblad, Leica, Fujifilm, and more\n• Support multiple preset styles\n• Local preset management\n• No internet required</string>
     <string name="data_collection_title">Data Collection</string>
     <string name="data_collection_desc">To provide better service, we use Umeng Analytics SDK to collect app usage data.</string>
     <string name="sdk_info_title">Umeng SDK Info</string>
@@ -393,13 +393,13 @@
 
     <!-- Welcome Dialog -->
     <string name="welcome_dialog_title">Welcome to OMaster</string>
-    <string name="welcome_version">Master Mode Color Grading Library v1.0</string>
+    <string name="welcome_version">OMaster v1.3.1</string>
     <string name="feature_1_title">Pro Parameters</string>
-    <string name="feature_1_desc">View professional photography color grading parameters for Master Mode</string>
+    <string name="feature_1_desc">View master color grading parameters for Hasselblad, Leica, Fujifilm and more</string>
     <string name="feature_2_title">Multiple Styles</string>
     <string name="feature_2_desc">Support multiple preset styles to meet different shooting needs</string>
-    <string name="feature_3_title">Local Storage</string>
-    <string name="feature_3_desc">Pure local operation, data stored locally</string>
+    <string name="feature_3_title">Offline Available</string>
+    <string name="feature_3_desc">Local preset management, no internet required</string>
     <string name="agree_prefix">I have read and agree to</string>
     <string name="umeng_notice">• We use Umeng SDK for analytics\n• Collect device info to optimize app experience</string>
     <string name="privacy_hint">Tap User Agreement &amp; Privacy Policy to view details</string>

@@ -367,8 +367,8 @@
 
     <!-- 功能介绍 -->
     <string name="feature_title">功能介绍</string>
-    <string name="feature_desc_1">OMaster 是一款专为OPPO/一加/Realme手机摄影爱好者设计的调色参数管理工具。</string>
-    <string name="feature_desc_2">您可以在这里查看、收藏和复现大师模式的摄影调色参数，包括曝光、对比度、饱和度、色温等专业参数。</string>
+    <string name="feature_desc_1">OMaster 是一款面向摄影爱好者与专业人士的调色参数管理工具。</string>
+    <string name="feature_desc_2">您可以在这里查看、收藏和复现哈苏、徕卡、富士等品牌的大师调色参数，包括曝光、对比度、饱和度、色温等专业参数。</string>
 
     <!-- 制作信息 -->
     <string name="credits_title">制作信息</string>
@@ -383,9 +383,9 @@
     <!-- 隐私政策页 -->
     <string name="privacy_title">用户协议和隐私政策</string>
     <string name="welcome_title">欢迎使用 OMaster</string>
-    <string name="welcome_desc">OMaster 是一款专为 OPPO/一加/Realme 手机摄影爱好者设计的调色参数管理工具。在这里，您可以查看、收藏和复现大师模式的摄影调色参数。</string>
+    <string name="welcome_desc">OMaster 是一款面向摄影爱好者与专业人士的调色参数管理工具。在这里，您可以查看、收藏和复现哈苏、徕卡、富士等品牌的大师调色参数。</string>
     <string name="features_title">功能介绍</string>
-    <string name="features_list">• 查看大师模式调色参数\n• 支持多种预设风格\n• 无需联网即可使用</string>
+    <string name="features_list">• 查看哈苏、徕卡、富士等品牌大师调色参数\n• 支持多种预设风格\n• 本地预设管理，无需联网即可使用</string>
     <string name="data_collection_title">数据收集说明</string>
     <string name="data_collection_desc">为了提供更好的服务，我们使用了友盟统计分析 SDK 来收集应用使用数据。</string>
     <string name="sdk_info_title">友盟 SDK 信息</string>
