@@ -1,5 +1,6 @@
-// 正式版构建配置 - 镜像修复
-// 本地开发和 CI 构建使用相同的仓库配置
+// CI 构建专用配置 - 使用标准 Maven 仓库
+// GitHub Actions 使用此配置进行正式版构建
+// 避免使用本地 Maven 仓库，防止 AGP 版本冲突
 
 pluginManagement {
     repositories {
