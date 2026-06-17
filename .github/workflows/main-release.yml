@@ -65,6 +65,43 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # CI 环境：跳过本地 Maven 仓库，使用标准仓库
+      - name: Configure CI Repository Settings
+        run: |
+          # 备份原始文件
+          cp settings.gradle.kts settings.gradle.kts.backup
+          
+          # 创建 CI 专用配置（移除本地仓库）
+          cat > settings.gradle.kts << 'EOF'
+      pluginManagement {
+          repositories {
+              maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+              maven { url = uri("https://maven.aliyun.com/repository/public") }
+              maven { url = uri("https://maven.aliyun.com/repository/google") }
+              maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+              gradlePluginPortal()
+              google()
+              mavenCentral()
+          }
+      }
+      
+      dependencyResolutionManagement {
+          repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+          repositories {
+              maven { url = uri("https://maven.aliyun.com/repository/google") }
+              maven { url = uri("https://maven.aliyun.com/repository/public") }
+              maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+              google()
+              mavenCentral()
+              maven { url = uri("https://jitpack.io") }
+          }
+      }
+      
+      rootProject.name = "OMaster"
+      include(":app")
+      EOF
+          echo "✅ CI 仓库配置已更新"
+
       # 同步版本号到 Git Tag
       - name: Sync Version with Git Tag
         id: version
