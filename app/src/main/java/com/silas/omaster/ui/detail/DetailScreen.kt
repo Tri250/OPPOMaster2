@@ -21,6 +21,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetSection
@@ -85,7 +87,10 @@ fun DetailScreen(
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     val haptic = LocalHapticFeedback.current
-    
+
+    // 支持在详情页内切换关联推荐预设
+    var currentPresetId by remember { mutableStateOf(presetId) }
+
     // 使用 presetId 作为 key，确保每个预设有独立的 ViewModel
     val viewModel: DetailViewModel = viewModel(
         key = presetId,
@@ -93,10 +98,10 @@ fun DetailScreen(
     )
 
     // 加载预设数据
-    LaunchedEffect(presetId) {
-        viewModel.loadPreset(presetId)
+    LaunchedEffect(currentPresetId) {
+        viewModel.loadPreset(currentPresetId)
     }
-    
+
     // 当 refreshTrigger 变化时重新加载数据（用于编辑后刷新）
     // 使用 snapshotFlow 确保持续监听，即使页面不可见时也能捕获变化
     var lastRefreshTrigger by remember { mutableIntStateOf(refreshTrigger) }
@@ -105,7 +110,7 @@ fun DetailScreen(
             .collect { newValue ->
                 if (newValue != lastRefreshTrigger && newValue > 0) {
                     lastRefreshTrigger = newValue
-                    viewModel.loadPreset(presetId)
+                    viewModel.loadPreset(currentPresetId)
                 }
             }
     }
@@ -341,7 +346,11 @@ fun DetailScreen(
                                 presets = relatedPresets.map { rp ->
                                     RelatedPreset(rp.id ?: "", rp.name, rp.coverPath)
                                 },
-                                onSelect = { id -> },
+                                onSelect = { id ->
+                                    if (id.isNotBlank()) {
+                                        currentPresetId = id
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(16.dp))
@@ -376,6 +385,7 @@ fun DetailScreen(
                             ApplyPresetButton(
                                 onApply = {
                                     preset?.let { p ->
+                                        applyPresetParameters(context, p)
                                         handleFloatingWindowClick(context, p)
                                     }
                                 },
@@ -427,6 +437,54 @@ private fun handleFloatingWindowClick(
         }
     } else {
         FloatingWindowController.getInstance(context).showFloatingWindow(preset)
+    }
+}
+
+/**
+ * 将预设参数写入 SettingsManager，实现“一键应用”真正生效。
+ * 写入后可通过 SettingsManager.getAppliedPresetParams() / getAppliedCameraParams() 读取。
+ */
+private fun applyPresetParameters(context: android.content.Context, preset: MasterPreset) {
+    val settings = SettingsManager.getInstance(context)
+
+    // 1. 写入调色参数（颜色 grading）
+    settings.applyPresetParams(
+        saturation = preset.saturation ?: 0,
+        contrast = preset.tone ?: 0,
+        warmth = preset.warmCool ?: 0,
+        sharpness = preset.sharpness ?: 0,
+        clarity = 0,
+        brightness = 0
+    )
+
+    // 2. 写入 Pro 拍摄参数（尽可能从字符串字段解析）
+    val iso = preset.iso?.filter { it.isDigit() }?.toIntOrNull() ?: 100
+    val shutterSpeed = parseShutterSpeed(preset.shutterSpeed)
+    val whiteBalance = preset.colorTemperature ?: 5500
+    val exposureCompensation = preset.exposureCompensation
+        ?.replace(Regex("[^0-9.+-]"), "")
+        ?.toFloatOrNull() ?: 0f
+
+    settings.applyCameraParams(
+        iso = iso,
+        shutterSpeed = shutterSpeed,
+        whiteBalance = whiteBalance,
+        exposureCompensation = exposureCompensation
+    )
+
+    Toast.makeText(context, "已应用预设参数：${preset.name}", Toast.LENGTH_SHORT).show()
+}
+
+/**
+ * 解析快门速度字符串（如 "1/500s" -> 500.0f，"1/60s" -> 60.0f）
+ */
+private fun parseShutterSpeed(shutter: String?): Float {
+    if (shutter.isNullOrBlank()) return 125f
+    val cleaned = shutter.replace(Regex("[^0-9/]"), "")
+    return if (cleaned.contains("/")) {
+        cleaned.substringAfter("/").toFloatOrNull() ?: 125f
+    } else {
+        cleaned.toFloatOrNull() ?: 125f
     }
 }
 

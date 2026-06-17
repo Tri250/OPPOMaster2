@@ -201,7 +201,8 @@ class PresetRepository private constructor(context: Context) {
         name: String,
         params: Map<String, Int>,
         coverPath: String? = null,
-        description: String = ""
+        description: String = "",
+        sections: List<com.silas.omaster.model.PresetSection>? = null
     ): Result<PresetItem> = withContext(Dispatchers.IO) {
         // 验证名称
         if (name.length !in 1..20) {
@@ -234,7 +235,8 @@ class PresetRepository private constructor(context: Context) {
             updatedAt = System.currentTimeMillis(),
             isNew = false,
             isPinned = false,
-            mode = null
+            mode = null,
+            sections = sections
         )
 
         val current = _presets.value.toMutableList()
@@ -274,6 +276,7 @@ class PresetRepository private constructor(context: Context) {
             coverPath = updates["coverPath"] as? String ?: preset.coverPath,
             description = updates["description"] as? String ?: preset.description,
             tags = updates["tags"] as? List<String> ?: preset.tags,
+            sections = updates["sections"] as? List<com.silas.omaster.model.PresetSection> ?: preset.sections,
             updatedAt = System.currentTimeMillis()
         )
 
@@ -874,7 +877,7 @@ class PresetRepository private constructor(context: Context) {
         }
 
         // 验证域名格式（防止 IP 地址绕过）
-        if (host.matches(Regex("^\\d+\\.\\d+\\.\\d+\\.\\d+\\$"))) {
+        if (host.matches(Regex("^\\d+\\.\\d+\\.\\d+\\.\\d+$"))) {
             return "禁止直接使用 IP 地址"
         }
 
@@ -1112,7 +1115,11 @@ data class PresetItem(
             sharpness = params["sharpness"],
             cyanMagenta = params["cyan_magenta"],
             colorTemperature = params["color_temperature"],
-            colorHue = params["color_hue"]
+            colorHue = params["color_hue"],
+            exposureCompensation = params["exposure_compensation"]?.toString(),
+            iso = params["iso"]?.toString(),
+            shutterSpeed = params["shutter_speed"]?.toString(),
+            whiteBalance = params["white_balance"]?.toString()
         )
     }
 }
@@ -1226,7 +1233,7 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         isNew = isNew,
         isPinned = false,
         mode = mode,
-        author = this@author ?: "@OPPO影像",
+        author = this.author ?: "@OPPO影像",
         sections = sections,  // 保留原始动态参数分组
         filter = filter,
         softLight = softLight,

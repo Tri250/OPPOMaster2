@@ -199,6 +199,15 @@ fun AIFineTuneScreen(
     var inferenceStage by remember { mutableStateOf(InferenceStage.IDLE) }
     var inferenceProgress by remember { mutableStateOf(0f) }
     var inferenceMessage by remember { mutableStateOf("") }
+    var isOfflineResult by remember { mutableStateOf(false) }
+
+    // 成功提示自动隐藏
+    LaunchedEffect(showSuccess) {
+        if (showSuccess) {
+            kotlinx.coroutines.delay(2500)
+            showSuccess = false
+        }
+    }
 
     // HSL和曲线
     var hslValues: List<HSLValue> by remember { mutableStateOf(defaultHslValuesList()) }
@@ -456,7 +465,7 @@ fun AIFineTuneScreen(
             )
         }
 
-        // 成功提示
+        // 成功提示（含离线模式标识）
         AnimatedVisibility(
             visible = showSuccess,
             enter = fadeIn() + slideInVertically(),
@@ -466,15 +475,34 @@ fun AIFineTuneScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.2f))
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isOfflineResult) WarningYellow.copy(alpha = 0.2f) else SuccessGreen.copy(alpha = 0.2f)
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen)
+                    Icon(
+                        if (isOfflineResult) Icons.Default.CloudOff else Icons.Default.CheckCircle,
+                        null,
+                        tint = if (isOfflineResult) WarningYellow else SuccessGreen
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("优化完成", color = Color.White, fontWeight = FontWeight.Medium)
+                    Column {
+                        Text(
+                            if (isOfflineResult) "离线模式完成" else "优化完成",
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                        if (isOfflineResult) {
+                            Text(
+                                "当前无有效云端密钥/网络，已使用本地AI推理",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -512,8 +540,13 @@ fun AIFineTuneScreen(
                                     inferenceProgress = 0.1f
 
                                     try {
-                                        val result = if (bitmap != null) {
-                                            aiManager.generateAISuggestion(bitmap, renderParams.toMap().mapValues { it.value.toInt() })
+                                        // 优先使用用户从相册/相机选择的图片，否则使用传入的初始 bitmap
+                                        val activeBitmap = selectedBitmap ?: bitmap
+                                        val result = if (activeBitmap != null) {
+                                            aiManager.generateAISuggestion(
+                                                activeBitmap,
+                                                renderParams.toMap().mapValues { it.value.toInt() }
+                                            )
                                         } else {
                                             aiManager.generateAISuggestion("auto")
                                         }
@@ -525,22 +558,28 @@ fun AIFineTuneScreen(
                                             inferenceProgress = 1f
                                             inferenceMessage = "优化完成"
                                             inferenceStage = InferenceStage.COMPLETED
+                                            isOfflineResult = result.isOfflineMode
                                             showSuccess = true
+
+                                            // 离线模式提示
+                                            if (result.isOfflineMode) {
+                                                Toast.makeText(context, "当前处于离线模式，已使用本地AI推理", Toast.LENGTH_SHORT).show()
+                                            }
 
                                             // 更新渲染参数
                                             result.suggestion.suggestions.forEach { s ->
                                                 renderParams = updateRenderParam(renderParams, s.field, s.suggestedValue.toFloat())
                                             }
-
-                                            showSuccess = false
-                                        } else {
+                                        } else if (result is AISuggestionResult.Error) {
                                             inferenceStage = InferenceStage.ERROR
-                                            inferenceMessage = "优化失败"
+                                            inferenceMessage = result.error.message
+                                            Toast.makeText(context, "优化失败: ${result.error.message}", Toast.LENGTH_SHORT).show()
                                         }
                                     } catch (e: Exception) {
                                         android.util.Log.e("AIFineTune", "AI auto-tune failed", e)
                                         inferenceStage = InferenceStage.ERROR
-                                        inferenceMessage = "优化失败"
+                                        inferenceMessage = "优化失败: ${e.message}"
+                                        Toast.makeText(context, "优化失败: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },

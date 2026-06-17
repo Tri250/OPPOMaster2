@@ -324,7 +324,21 @@ class GPURenderManager private constructor(private val context: Context) {
             // 创建渲染线程
             renderThread = HandlerThread("GPURenderThread")
             renderThread?.start()
-            renderHandler = Handler(renderThread?.looper ?: Looper.getMainLooper())
+
+            // 等待渲染线程的 Looper 准备完成，避免回退到主线程
+            var looperRetry = 0
+            while (renderThread?.looper == null && looperRetry < 100) {
+                delay(10)
+                looperRetry++
+            }
+            val looper = renderThread?.looper
+            if (looper == null) {
+                Log.e(TAG, "Failed to prepare render thread looper")
+                _isInitialized.value = false
+                _isGpuAvailable.value = false
+                return@withContext false
+            }
+            renderHandler = Handler(looper)
             
             // 在渲染线程初始化EGL
             val initResult = initEGLOnRenderThread()
@@ -495,7 +509,7 @@ class GPURenderManager private constructor(private val context: Context) {
      * 处理渲染请求
      */
     private suspend fun processRenderRequest(request: RenderRequest) {
-        _renderQueueSize.value = _renderQueueSize.value.coerceAtLeast(1) - 1
+        _renderQueueSize.value = (_renderQueueSize.value - 1).coerceAtLeast(0)
         
         val result = if (_isGpuAvailable.value) {
             // GPU渲染
@@ -537,10 +551,15 @@ class GPURenderManager private constructor(private val context: Context) {
 
                 when (renderResult) {
                     is RenderResult.Success -> {
-                        // 读取输出
+                        // 读取输出位图并封装进结果
                         val outputBitmap = imageRenderer?.readOutputToBitmap()
                         if (outputBitmap != null) {
-                            RenderResult.Success(renderResult.outputTextureId, processingTime, effectiveQuality)
+                            RenderResult.Success(
+                                outputTextureId = renderResult.outputTextureId,
+                                processingTimeMs = processingTime,
+                                quality = effectiveQuality,
+                                outputBitmap = outputBitmap
+                            )
                         } else {
                             RenderResult.Error("Failed to read output bitmap")
                         }
@@ -576,7 +595,11 @@ class GPURenderManager private constructor(private val context: Context) {
             FrameTimingMetrics.recordFrame(processingTime)
             
             return if (outputBitmap != null) {
-                RenderResult.FallbackToCPU("GPU unavailable or failed", processingTime)
+                RenderResult.FallbackToCPU(
+                    reason = "GPU unavailable or failed",
+                    processingTimeMs = processingTime,
+                    outputBitmap = outputBitmap
+                )
             } else {
                 RenderResult.Error("CPU render failed")
             }
@@ -648,8 +671,8 @@ class GPURenderManager private constructor(private val context: Context) {
         val result = renderSync(inputBitmap, params, RenderQuality.PREVIEW)
         
         return when (result) {
-            is RenderResult.Success -> imageRenderer?.readOutputToBitmap()
-            is RenderResult.FallbackToCPU -> cpuFallbackRenderer?.render(inputBitmap, params)
+            is RenderResult.Success -> result.outputBitmap
+            is RenderResult.FallbackToCPU -> result.outputBitmap
             else -> null
         }
     }

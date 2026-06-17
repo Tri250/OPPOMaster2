@@ -88,7 +88,8 @@ fun CloudSyncScreen(
     var selectedProviderType by remember { mutableStateOf<CloudProviderType?>(null) }
 
     // 从 CloudSyncManager 获取真实的云服务提供商列表
-    val presetProviders = remember(syncManager) {
+    // 依赖 cloudPresets State，确保同步完成后 UI 重新计算连接状态
+    val presetProviders = remember(cloudPresets) {
         val urls = syncManager.getCloudPresetUrls()
         val brandColors = mapOf(
             "oppo" to 0xFF1E90FF,
@@ -157,17 +158,40 @@ fun CloudSyncScreen(
                             fontWeight = FontWeight.Bold,
                             color = HasselbladOrange
                         )
+                        val (statusText, statusColor) = when (syncState) {
+                            is SyncState.Syncing -> "正在同步中..." to HasselbladOrange
+                            is SyncState.Success -> "同步成功" to SuccessGreen
+                            is SyncState.Error -> {
+                                val msg = (syncState as SyncState.Error).message
+                                if (msg.contains("网络", ignoreCase = true) || msg.contains("Network", ignoreCase = true) || msg.contains("Connect", ignoreCase = true)) {
+                                    "同步失败：网络不可用" to Color(0xFFFFA726)
+                                } else {
+                                    "同步失败" to Color(0xFFE57373)
+                                }
+                            }
+                            else -> if (lastSyncTimestamp > 0) "自动同步已开启" to MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                   else "尚未同步" to MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        }
+
                         Text(
-                            text = when (syncState) {
-                                is SyncState.Syncing -> "正在同步中..."
-                                is SyncState.Success -> "同步成功"
-                                is SyncState.Error -> "同步失败"
-                                else -> if (lastSyncTimestamp > 0) "自动同步已开启" else "尚未同步"
-                            },
+                            text = statusText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            color = statusColor,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+
+                        // 错误/离线详情
+                        if (syncState is SyncState.Error) {
+                            val errorMessage = (syncState as SyncState.Error).message
+                            if (errorMessage.isNotBlank()) {
+                                Text(
+                                    text = errorMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                        }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), modifier = Modifier.size(14.dp))
                             Text(

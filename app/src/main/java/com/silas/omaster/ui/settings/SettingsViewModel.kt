@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.silas.omaster.cloud.CloudSyncManager
+import com.silas.omaster.cloud.SyncResult
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
@@ -136,20 +138,31 @@ class SettingsViewModel(
 
     /**
      * 执行云同步
+     * 先通过 CloudSyncManager 从 CDN 拉取各品牌预设，再刷新本地 PresetRepository。
      */
     fun performCloudSync(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             _isSyncing.value = true
             try {
-                // 模拟同步操作
-                withContext(Dispatchers.IO) {
-                    // 实际同步逻辑
-                    presetRepository.reloadDefaultPresets()
+                val cloudSyncManager = CloudSyncManager.getInstance(application)
+                val result = withContext(Dispatchers.IO) {
+                    cloudSyncManager.sync()
                 }
-                val now = System.currentTimeMillis()
-                settingsManager.lastSyncTime = now
-                _lastSyncTime.value = now
-                onComplete(true)
+                if (result is SyncResult.Success) {
+                    // 同步成功后刷新本地预设列表与缓存
+                    withContext(Dispatchers.IO) {
+                        presetRepository.reloadDefaultPresets()
+                    }
+                    _lastSyncTime.value = settingsManager.lastSyncTime
+                    onComplete(true)
+                } else if (result is SyncResult.Disabled) {
+                    _errorMessage.value = "云同步未开启"
+                    onComplete(false)
+                } else {
+                    val errorResult = result as? SyncResult.Error
+                    _errorMessage.value = "同步失败: ${errorResult?.message ?: "未知错误"}"
+                    onComplete(false)
+                }
             } catch (e: Exception) {
                 _errorMessage.value = "同步失败: ${e.message}"
                 onComplete(false)

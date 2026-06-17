@@ -1,5 +1,6 @@
 package com.silas.omaster.renderer
 
+import android.graphics.Bitmap
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
@@ -287,7 +288,8 @@ sealed class RenderResult {
     data class Success(
         val outputTextureId: Int,
         val processingTimeMs: Long,
-        val quality: RenderQuality
+        val quality: RenderQuality,
+        val outputBitmap: Bitmap? = null
     ) : RenderResult()
     
     data class Error(
@@ -297,6 +299,7 @@ sealed class RenderResult {
     
     data class FallbackToCPU(
         val reason: String,
-        val processingTimeMs: Long
+        val processingTimeMs: Long,
+        val outputBitmap: Bitmap? = null
     ) : RenderResult()
 }
