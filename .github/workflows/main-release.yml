@@ -72,6 +72,14 @@ jobs:
           mv settings.ci.gradle.kts settings.gradle.kts
           echo "✅ CI settings 配置已切换"
 
+      # 清除可能损坏的 Gradle 缓存，确保重新下载 AGP
+      - name: Clean Gradle Cache
+        run: |
+          rm -rf ~/.gradle/caches/build-cache-1
+          rm -rf ~/.gradle/caches/transforms-3
+          rm -rf ~/.gradle/caches/modules-2/files-2.1/com.android.tools.build
+          echo "✅ Gradle 缓存已清理"
+
       # 同步版本号到 Git Tag
       - name: Sync Version with Git Tag
         id: version
