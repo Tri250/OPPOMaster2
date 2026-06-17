@@ -31,11 +31,19 @@ def download_file(url: str, dest: Path) -> bool:
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
         result = subprocess.run(
-            ["curl", "-L", "--max-time", "60", "-s", "-o", str(dest), url],
+            ["curl", "-f", "-L", "--max-time", "60", "-s", "-o", str(dest), url],
             capture_output=True,
             text=True,
         )
-        return result.returncode == 0 and dest.exists() and dest.stat().st_size > 100
+        if result.returncode != 0 or not dest.exists() or dest.stat().st_size < 100:
+            return False
+        # Validate POM files are valid XML
+        if dest.suffix == ".pom":
+            with dest.open("rb") as f:
+                header = f.read(100)
+                if b"<?xml" not in header and b"<project" not in header:
+                    return False
+        return True
     except Exception:
         return False
 
