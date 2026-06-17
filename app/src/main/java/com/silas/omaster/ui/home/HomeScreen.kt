@@ -720,7 +720,7 @@ private fun PresetGrid(
             ) {
                 itemsIndexed(
                     items = presets,
-                    key = { index, preset -> preset.id?.let { "${it}_$index" } ?: "preset_$index" }
+                    key = { index, preset -> preset.id ?: "${preset.name}_$index" }
                 ) { index, preset ->
                     val imageHeight = remember(index) {
                         when (index % 3) {

@@ -150,6 +150,7 @@
     <string name="preset_favorited">Favorited</string>
     <string name="preset_delete">Delete</string>
     <string name="preset_new">NEW</string>
+    <string name="preset_card_description">Preset %1$s by %2$s</string>
 
     <!-- Detail Page -->
     <string name="detail_title">Preset Details</string>

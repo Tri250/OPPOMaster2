@@ -1,6 +1,8 @@
 package com.silas.omaster.ui.features
 
+import android.Manifest
 import android.content.ContentValues
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -34,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.silas.omaster.ai.*
@@ -180,6 +184,19 @@ fun AIFineTuneScreen(
                 Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    // 存储权限请求启动器（Android 9 及以下导出图片需要）
+    var pendingExportAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pendingExportAction?.invoke()
+        } else {
+            Toast.makeText(context, "需要存储权限才能导出图片到相册", Toast.LENGTH_SHORT).show()
+        }
+        pendingExportAction = null
     }
 
     // 状态
@@ -331,17 +348,32 @@ fun AIFineTuneScreen(
                     // 导出按钮
                     IconButton(
                         onClick = {
-                            scope.launch {
-                                try {
-                                    val saved = saveImageToGallery(context, selectedBitmap, renderParams)
-                                    if (saved) {
-                                        Toast.makeText(context, "图片已导出到相册", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "导出失败", Toast.LENGTH_SHORT).show()
+                            val doExport = {
+                                scope.launch {
+                                    try {
+                                        val saved = saveImageToGallery(context, selectedBitmap, renderParams)
+                                        if (saved) {
+                                            Toast.makeText(context, "图片已导出到相册", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "导出失败", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
+                            }
+
+                            // Android 9 及以下需要 WRITE_EXTERNAL_STORAGE 权限
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                pendingExportAction = doExport
+                                storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            } else {
+                                doExport()
                             }
                         },
                         modifier = Modifier
@@ -421,10 +453,14 @@ fun AIFineTuneScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable {
-                                        // 创建临时Uri用于保存拍照图片
+                                        // 创建应用私有缓存目录临时文件，并通过 FileProvider 共享给相机
                                         val photoUri = createTempImageUri(context)
-                                        cameraImageUri = photoUri
-                                        cameraLauncher.launch(photoUri)
+                                        if (photoUri != Uri.EMPTY) {
+                                            cameraImageUri = photoUri
+                                            cameraLauncher.launch(photoUri)
+                                        } else {
+                                            Toast.makeText(context, "无法创建相机临时文件", Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
                             ) {
@@ -1544,15 +1580,25 @@ private fun applyColorMatrixToBitmap(source: Bitmap, renderParams: RenderParamet
 
 /**
  * 创建临时图片Uri用于相机拍照保存
+ * 使用应用私有缓存目录 + FileProvider，避免 MediaStore 提前创建文件导致的权限和兼容问题
  */
 private fun createTempImageUri(context: android.content.Context): Uri {
-    val contentValues = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "omaster_camera_${System.currentTimeMillis()}.jpg")
-        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-        put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster")
+    return try {
+        val cameraDir = java.io.File(context.cacheDir, "camera").apply {
+            if (!exists()) mkdirs()
+        }
+        val tempFile = java.io.File.createTempFile(
+            "omaster_camera_${System.currentTimeMillis()}",
+            ".jpg",
+            cameraDir
+        )
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            tempFile
+        )
+    } catch (e: Exception) {
+        android.util.Log.e("AIFineTune", "创建相机临时文件失败", e)
+        Uri.EMPTY
     }
-    return context.contentResolver.insert(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        contentValues
-    ) ?: Uri.EMPTY
 }

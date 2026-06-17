@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.CachePolicy
@@ -73,33 +73,34 @@ fun ImageGallery(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { images.size })
 
-    // 用户是否手动干预过
+    // 用户是否手动干预过（点击按钮或滑动页面后暂停自动播放）
     var isUserInteracted by remember { mutableStateOf(false) }
-    // 自动播放协程Job，用于取消
-    var autoPlayJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    // 启动自动播放
-    LaunchedEffect(isUserInteracted) {
-        if (!isUserInteracted && images.size > 1) {
-            autoPlayJob?.cancel()
-            autoPlayJob = launch {
-                while (true) {
-                    delay(autoPlayInterval)
-                    if (!isUserInteracted) {
-                        val nextPage = (pagerState.currentPage + 1) % images.size
-                        pagerState.animateScrollToPage(
-                            page = nextPage,
-                            animationSpec = tween(
-                                durationMillis = AnimationSpecs.PageTransitionMillis.toInt(),
-                                easing = AnimationSpecs.NormalTween.easing
-                            )
-                        )
-                    }
-                }
+    // 监听用户手势滑动：只要处于滚动状态即视为手动干预
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.isScrollInProgress }
+            .collect { scrolling ->
+                if (scrolling) isUserInteracted = true
             }
-        } else {
-            autoPlayJob?.cancel()
-            autoPlayJob = null
+    }
+
+    // 自动播放协程：避免使用 mutableState 保存 Job 导致频繁重组，
+    // 在独立 LaunchedEffect 中管理生命周期，用户干预或页面数为 1 时自动停止
+    LaunchedEffect(pagerState, images.size, isUserInteracted) {
+        if (isUserInteracted || images.size <= 1) return@LaunchedEffect
+
+        while (true) {
+            delay(autoPlayInterval)
+            if (!pagerState.isScrollInProgress && !isUserInteracted) {
+                val nextPage = (pagerState.currentPage + 1) % images.size
+                pagerState.animateScrollToPage(
+                    page = nextPage,
+                    animationSpec = tween(
+                        durationMillis = AnimationSpecs.PageTransitionMillis.toInt(),
+                        easing = AnimationSpecs.NormalTween.easing
+                    )
+                )
+            }
         }
     }
 

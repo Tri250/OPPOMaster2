@@ -1,10 +1,7 @@
 package com.silas.omaster.ui.components
 
-import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -19,10 +16,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -51,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.silas.omaster.ui.animation.adaptiveSpringSpec
 import com.silas.omaster.util.perform
 
 private val NavBarBackground = Color(0xFF1A1A1A)
@@ -170,7 +167,7 @@ fun PillNavBar(
                 )
             }
 
-            // 导航项
+            // 导航项 - 使用 weight 均分宽度，避免小屏设备固定宽度溢出
             Row(
                 modifier = Modifier
                     .then(navBarModifier)
@@ -185,7 +182,8 @@ fun PillNavBar(
                     NavItemButton(
                         item = item,
                         selected = selected,
-                        onClick = { onNavigate(item.route) }
+                        onClick = { onNavigate(item.route) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -200,7 +198,8 @@ fun PillNavBar(
 private fun NavItemButton(
     item: NavItem,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -208,10 +207,7 @@ private fun NavItemButton(
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = adaptiveSpringSpec(),
         label = "scale"
     )
 
@@ -227,45 +223,58 @@ private fun NavItemButton(
 
     val iconScale by animateFloatAsState(
         targetValue = if (selected) 1.1f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = adaptiveSpringSpec(),
         label = "iconScale"
     )
 
+    val indicatorAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "indicatorAlpha"
+    )
+
     Column(
-        modifier = Modifier
-            .width(80.dp)
-            .height(48.dp)
+        modifier = modifier
+            .heightIn(min = 48.dp)
             .scale(scale)
             .clip(RoundedCornerShape(24.dp))
             .background(backgroundColor)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                onClickLabel = item.title,
                 onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     onClick()
                 }
-            ),
+            )
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = item.icon,
-            contentDescription = item.title,
+            contentDescription = null,
             modifier = Modifier
                 .size(if (selected) 22.dp else 20.dp)
                 .scale(iconScale),
             tint = contentColor
         )
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = item.title,
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
             fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal
+        )
+        // 选中指示器 - 提供更强的选中状态视觉反馈
+        Box(
+            modifier = Modifier
+                .padding(top = 2.dp)
+                .size(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary)
+                .graphicsLayer { alpha = indicatorAlpha }
         )
     }
 }

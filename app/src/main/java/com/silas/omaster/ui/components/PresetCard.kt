@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,12 @@ fun PresetCard(
     modifier: Modifier = Modifier,
     imageHeight: Int = 200
 ) {
+    val cardContentDescription = stringResource(
+        R.string.preset_card_description,
+        PresetI18n.getLocalizedPresetName(preset.name),
+        preset.author
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -75,7 +83,10 @@ fun PresetCard(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(16.dp)
-            ),
+            )
+            .semantics {
+                contentDescription = cardContentDescription
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = DarkGray
@@ -176,24 +187,24 @@ fun PresetCard(
                 }
             }
 
-            // 收藏按钮（对齐Web端：右上角）
+            // 收藏按钮（对齐Web端：右上角，触摸区域扩大到 48dp）
             if (showFavoriteButton) {
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
+                        .padding(4.dp)
+                        .size(48.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(32.dp)
                             .background(
                                 color = if (preset.isFavorite)
                                     Color.Red.copy(alpha = 0.2f)
                                 else
                                     Color.Black.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(16.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -207,27 +218,27 @@ fun PresetCard(
                             else
                                 stringResource(R.string.preset_favorite),
                             tint = if (preset.isFavorite) Color.Red else Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
 
-            // 删除按钮（对齐Web端：左上角，仅自定义预设且启用时显示）
+            // 删除按钮（对齐Web端：左上角，仅自定义预设且启用时显示，触摸区域扩大到 48dp）
             if (showDeleteButton && preset.isCustom) {
                 IconButton(
                     onClick = onDeleteClick,
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .size(32.dp)
+                        .padding(4.dp)
+                        .size(48.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(32.dp)
                             .background(
                                 color = Color.Black.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(16.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -235,7 +246,7 @@ fun PresetCard(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = stringResource(R.string.preset_delete),
                             tint = Color.Red,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }

@@ -4,4 +4,9 @@
     <external-files-path
         name="downloads"
         path="Download/" />
+
+    <!-- 应用私有缓存目录 - 用于相机拍照临时文件共享 -->
+    <cache-path
+        name="camera_cache"
+        path="camera/" />
 </paths>

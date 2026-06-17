@@ -150,6 +150,7 @@
     <string name="preset_favorited">已收藏</string>
     <string name="preset_delete">删除</string>
     <string name="preset_new">NEW</string>
+    <string name="preset_card_description">预设 %1$s，作者 %2$s</string>
 
     <!-- 详情页 -->
     <string name="detail_title">预设详情</string>
