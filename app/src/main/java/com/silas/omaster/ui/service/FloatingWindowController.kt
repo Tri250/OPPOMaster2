@@ -114,9 +114,43 @@ class FloatingWindowController private constructor(private val context: Context)
 
     /**
      * 设置预设列表（用于悬浮窗切换）
+     * 当列表变更时，同步更新 currentIndex 和 _currentPreset
      */
     fun setPresetList(presets: List<MasterPreset>) {
+        val oldPreset = _currentPreset.value
         presetList = presets
+
+        if (presets.isEmpty()) {
+            // 列表为空时重置状态
+            currentIndex = 0
+            _currentPreset.value = null
+            return
+        }
+
+        // 尝试在新列表中保持当前预设的选中状态
+        if (oldPreset != null) {
+            var newIndex = presets.indexOfFirst { it.id == oldPreset.id }
+            // 如果找不到 ID，尝试根据名称查找（兜底方案）
+            if (newIndex == -1) {
+                newIndex = presets.indexOfFirst { it.name == oldPreset.name }
+            }
+            if (newIndex != -1) {
+                // 当前预设仍在列表中，保持选中
+                currentIndex = newIndex
+                _currentPreset.value = presets[newIndex]
+            } else {
+                // 当前预设不在新列表中，默认选中第一个并更新 StateFlow
+                currentIndex = 0
+                _currentPreset.value = presets[0]
+            }
+        } else if (currentIndex in presets.indices) {
+            // 之前没有选中预设，但索引有效，更新 StateFlow
+            _currentPreset.value = presets[currentIndex]
+        } else {
+            // 索引无效，重置为第一个
+            currentIndex = 0
+            _currentPreset.value = presets[0]
+        }
     }
 
     /**

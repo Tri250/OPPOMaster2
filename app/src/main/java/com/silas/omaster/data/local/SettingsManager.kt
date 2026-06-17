@@ -403,6 +403,52 @@ class SettingsManager private constructor(private val context: Context) {
         setDataSync(KEY_HAS_APPLIED_PRESET, false)
     }
 
+    // 应用相机参数（参数精细调节功能）
+    fun applyCameraParams(
+        iso: Int = 100,
+        shutterSpeed: Float = 125f,
+        aperture: Float = 2.8f,
+        whiteBalance: Int = 5500,
+        focalLength: Int = 23,
+        exposureCompensation: Float = 0f
+    ) {
+        setDataSync(KEY_APPLIED_ISO, iso)
+        setDataSync(KEY_APPLIED_SHUTTER_SPEED, shutterSpeed)
+        setDataSync(KEY_APPLIED_APERTURE, aperture)
+        setDataSync(KEY_APPLIED_WHITE_BALANCE, whiteBalance)
+        setDataSync(KEY_APPLIED_FOCAL_LENGTH, focalLength)
+        setDataSync(KEY_APPLIED_EXPOSURE_COMPENSATION, exposureCompensation)
+        setDataSync(KEY_HAS_APPLIED_CAMERA_PARAMS, true)
+    }
+
+    // 获取已应用的相机参数
+    fun getAppliedCameraParams(): Map<String, Any> {
+        return mapOf(
+            "iso" to getDataSync(KEY_APPLIED_ISO, 100),
+            "shutterSpeed" to getDataSync(KEY_APPLIED_SHUTTER_SPEED, 125f),
+            "aperture" to getDataSync(KEY_APPLIED_APERTURE, 2.8f),
+            "whiteBalance" to getDataSync(KEY_APPLIED_WHITE_BALANCE, 5500),
+            "focalLength" to getDataSync(KEY_APPLIED_FOCAL_LENGTH, 23),
+            "exposureCompensation" to getDataSync(KEY_APPLIED_EXPOSURE_COMPENSATION, 0f)
+        )
+    }
+
+    // 是否已应用相机参数
+    fun hasAppliedCameraParams(): Boolean {
+        return getDataSync(KEY_HAS_APPLIED_CAMERA_PARAMS, false)
+    }
+
+    // 清除已应用的相机参数
+    fun clearAppliedCameraParams() {
+        removeDataSync(KEY_APPLIED_ISO)
+        removeDataSync(KEY_APPLIED_SHUTTER_SPEED)
+        removeDataSync(KEY_APPLIED_APERTURE)
+        removeDataSync(KEY_APPLIED_WHITE_BALANCE)
+        removeDataSync(KEY_APPLIED_FOCAL_LENGTH)
+        removeDataSync(KEY_APPLIED_EXPOSURE_COMPENSATION)
+        setDataSync(KEY_HAS_APPLIED_CAMERA_PARAMS, false)
+    }
+
     // 迁移对话框处理状态
     fun getMigrationHandled(): Boolean {
         return getDataSync(KEY_MIGRATION_HANDLED, false)
@@ -579,6 +625,20 @@ class SettingsManager private constructor(private val context: Context) {
         cache[key.name] = value
         return value
     }
+
+    private fun getDataSync(key: Preferences.Key<Float>, defaultValue: Float): Float {
+        @Suppress("UNCHECKED_CAST")
+        cache[key.name]?.let { return it as Float }
+        val value = try {
+            runBlocking {
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+            }
+        } catch (e: Exception) {
+            defaultValue
+        }
+        cache[key.name] = value
+        return value
+    }
     
     private fun getDataSetSync(key: Preferences.Key<Set<String>>, defaultValue: Set<String>): Set<String> {
         @Suppress("UNCHECKED_CAST")
@@ -624,6 +684,13 @@ class SettingsManager private constructor(private val context: Context) {
             context.dataStore.edit { prefs -> prefs[key] = value }
         }
     }
+
+    private fun setDataSync(key: Preferences.Key<Float>, value: Float) {
+        cache[key.name] = value
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
     
     private fun setDataSetSync(key: Preferences.Key<Set<String>>, value: Set<String>) {
         cache[key.name] = value
@@ -650,6 +717,13 @@ class SettingsManager private constructor(private val context: Context) {
     }
     
     private fun removeDataSync(key: Preferences.Key<Boolean>) {
+        cache.remove(key.name)
+        runBlocking {
+            context.dataStore.edit { prefs -> prefs.remove(key) }
+        }
+    }
+
+    private fun removeDataSync(key: Preferences.Key<Float>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
@@ -785,6 +859,16 @@ class SettingsManager private constructor(private val context: Context) {
         private val KEY_APPLIED_CLARITY = intPreferencesKey("applied_clarity")
         private val KEY_APPLIED_BRIGHTNESS = intPreferencesKey("applied_brightness")
         private val KEY_HAS_APPLIED_PRESET = booleanPreferencesKey("has_applied_preset")
+
+        // 应用相机参数 Key
+        private val KEY_APPLIED_ISO = intPreferencesKey("applied_iso")
+        private val KEY_APPLIED_SHUTTER_SPEED = floatPreferencesKey("applied_shutter_speed")
+        private val KEY_APPLIED_APERTURE = floatPreferencesKey("applied_aperture")
+        private val KEY_APPLIED_WHITE_BALANCE = intPreferencesKey("applied_white_balance")
+        private val KEY_APPLIED_FOCAL_LENGTH = intPreferencesKey("applied_focal_length")
+        private val KEY_APPLIED_EXPOSURE_COMPENSATION = floatPreferencesKey("applied_exposure_compensation")
+        private val KEY_HAS_APPLIED_CAMERA_PARAMS = booleanPreferencesKey("has_applied_camera_params")
+
         private val KEY_MIGRATION_HANDLED = booleanPreferencesKey("migration_handled")
 
         @Volatile

@@ -76,19 +76,22 @@ fun PillNavBar(
         NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
     )
 
-    // 使用动画控制底部导航栏显示/隐藏，不直接return避免导航消失
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it })
-    ) {
-
+    // 使用动画控制底部导航栏显示/隐藏，固定在底部
+    // 将 modifier（包含 align）应用在外层 Box 上，确保定位不受动画影响
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        contentAlignment = Alignment.Center
     ) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
         // 使用 fillMaxWidth(0.9f) 替代固定 maxWidth，适配不同屏幕
         val navBarModifier = Modifier.fillMaxWidth(0.92f)
         // 外层阴影效果
@@ -187,6 +190,7 @@ fun PillNavBar(
                 }
             }
         }
+    }
     }
     }
 }

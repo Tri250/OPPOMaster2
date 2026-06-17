@@ -2,6 +2,10 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +27,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -69,8 +74,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -116,8 +119,28 @@ fun SmartOptimizeScreen(
     // AI 推理引擎实例
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
-    // 预览图片状态
-    var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    // 图片选择器
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            try {
+                context.contentResolver.openInputStream(it)?.use { stream ->
+                    originalBitmap = BitmapFactory.decodeStream(stream)
+                    optimizedBitmap = null
+                    previewMode = "before"
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // 原图与优化后图片状态
+    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var optimizedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     // 优化参数状态
     var hdrEnabled by remember { mutableStateOf(false) }
@@ -150,7 +173,7 @@ fun SmartOptimizeScreen(
     LaunchedEffect(Unit) {
         try {
             context.assets.open("images/placeholder.webp").use { stream ->
-                previewBitmap = BitmapFactory.decodeStream(stream)
+                originalBitmap = BitmapFactory.decodeStream(stream)
             }
         } catch (e: IOException) {
             // 资源不存在时保持空，将显示占位提示
@@ -177,7 +200,7 @@ fun SmartOptimizeScreen(
     )
 
     // 顺序执行优化流程（对齐Web端handleOptimize + processStep）
-    // 使用 AI 推理引擎执行真实优化处理
+    // 使用 AI 推理引擎执行真实优化处理，并将结果回显到预览
     fun runOptimizeWorkflow() {
         if (selectedOptimizeIds.isEmpty()) return
         scope.launch {
@@ -187,23 +210,29 @@ fun SmartOptimizeScreen(
             optimizationStep = 0
             optimizationProgress = 0f
 
+            val source = originalBitmap
+            if (source == null) {
+                isOptimizing = false
+                return@launch
+            }
+
             try {
+                var workingBitmap = source
                 for ((index, id) in selectedOptimizeIds.withIndex()) {
                     optimizationStep = index + 1
                     optimizationCurrentName = optimizeIdToName[id] ?: id
                     optimizationProgress = (index.toFloat()) / selectedOptimizeIds.size
 
                     // 调用 AI 推理引擎执行真实优化处理
-                    val bitmap = previewBitmap
-                    if (bitmap != null) {
-                        withContext(Dispatchers.Default) {
-                            inferenceEngine.applyOptimization(bitmap, id)
-                        }
+                    workingBitmap = withContext(Dispatchers.Default) {
+                        inferenceEngine.applyOptimization(workingBitmap, id)
                     }
 
                     optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
                     optimizedOptions.add(id)
                 }
+                optimizedBitmap = workingBitmap
+                previewMode = "after"
             } catch (e: Exception) {
                 android.util.Log.e("SmartOptimize", "Optimization failed", e)
                 return@launch
@@ -328,26 +357,14 @@ fun SmartOptimizeScreen(
                 .height(200.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            previewBitmap?.let { bitmap ->
-                // 显示预览图片（带优化后效果模拟滤镜）
+            val displayBitmap = if (previewMode == "after") optimizedBitmap ?: originalBitmap else originalBitmap
+            displayBitmap?.let { bitmap ->
+                // 显示原图或真实处理后的图片
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = if (previewMode == "after") "优化后预览" else "原图预览",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    colorFilter = if (previewMode == "after") {
-                        // 模拟优化后效果：轻微提亮+暖色调
-                        ColorFilter.colorMatrix(
-                            ColorMatrix(
-                                floatArrayOf(
-                                    1.05f, 0f, 0f, 0f, 10f,
-                                    0f, 1.02f, 0f, 0f, 6f,
-                                    0f, 0f, 0.98f, 0f, -2f,
-                                    0f, 0f, 0f, 1f, 0f
-                                )
-                            )
-                        )
-                    } else null
+                    contentScale = ContentScale.Crop
                 )
 
                 // 顶部状态徽标
@@ -363,9 +380,26 @@ fun SmartOptimizeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (previewMode == "after") "优化后" else "原图",
-                        color = if (previewMode == "after") HasselbladOrange else MaterialTheme.colorScheme.onBackground,
+                        text = if (previewMode == "after" && optimizedBitmap != null) "优化后" else "原图",
+                        color = if (previewMode == "after" && optimizedBitmap != null) HasselbladOrange else MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                // 选择图片按钮
+                IconButton(
+                    onClick = { imagePickerLauncher.launch("image/*") },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(36.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddPhotoAlternate,
+                        contentDescription = "选择图片",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             } ?: run {
@@ -382,7 +416,7 @@ fun SmartOptimizeScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (previewMode == "after") "优化后预览" else "原图预览",
+                        text = "选择图片开始优化",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
@@ -564,6 +598,8 @@ fun SmartOptimizeScreen(
                     colorCorrectionEnabled = true
                     colorCorrectionStrength = 20f
                     optimizedOptions.clear()
+                    optimizedBitmap = null
+                    previewMode = "before"
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
