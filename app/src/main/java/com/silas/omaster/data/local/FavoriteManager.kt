@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import timber.log.Timber
 
 /**
  * 【核心数据管理类 - 软件更新时数据保留的关键】
@@ -44,7 +45,7 @@ class FavoriteManager(context: Context) {
         // 【数据加载】必须使用 HashSet 创建副本
         // 因为 getStringSet 返回的是原始引用，可能被系统修改
         val initialFavorites = HashSet(prefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet())
-        android.util.Log.d("FavoriteManager", "Init loaded ${initialFavorites.size} favorites: $initialFavorites")
+        Timber.d("Init loaded ${initialFavorites.size} favorites: $initialFavorites")
         _favoritesFlow = MutableStateFlow(initialFavorites)
         favoritesFlow = _favoritesFlow.asStateFlow()
     }
@@ -79,7 +80,7 @@ class FavoriteManager(context: Context) {
             favorites.add(presetId)
             true
         }
-        android.util.Log.d("FavoriteManager", "Toggle $presetId -> $isNowFavorite, saving ${favorites.size} favorites")
+        Timber.d("Toggle $presetId -> $isNowFavorite, saving ${favorites.size} favorites")
         saveFavorites(favorites)
         return isNowFavorite
     }
@@ -132,15 +133,15 @@ class FavoriteManager(context: Context) {
     private fun saveFavorites(favorites: Set<String>) {
         // 创建新的 HashSet 保存，避免引用问题
         val newSet = HashSet(favorites)
-        android.util.Log.d("FavoriteManager", "Saving to SharedPreferences: $newSet")
+        Timber.d("Saving to SharedPreferences: $newSet")
         // 使用 commit() 同步保存，确保数据立即写入（不是 apply() 的异步）
         val success = prefs.edit().putStringSet(KEY_FAVORITES, newSet).commit()
-        android.util.Log.d("FavoriteManager", "Commit result: $success")
+        Timber.d("Commit result: $success")
         _favoritesFlow.value = newSet
         
         // 验证保存结果
         val saved = prefs.getStringSet(KEY_FAVORITES, emptySet())
-        android.util.Log.d("FavoriteManager", "Verified saved to SharedPreferences: $saved")
+        Timber.d("Verified saved to SharedPreferences: $saved")
     }
 
     companion object {

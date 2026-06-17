@@ -7,6 +7,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import timber.log.Timber
 
 /**
  * 配方历史管理器
@@ -116,7 +117,7 @@ class RecipeHistoryManager private constructor(context: Context) {
                 val type = object : TypeToken<List<RecipeRecord>>() {}.type
                 gson.fromJson<List<RecipeRecord>>(json, type) ?: emptyList()
             } catch (e: Exception) {
-                android.util.Log.e("RecipeHistoryManager", "加载配方数据失败", e)
+                Timber.e(e, "加载配方数据失败")
                 emptyList()
             }
         } else {

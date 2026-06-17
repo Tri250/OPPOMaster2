@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import java.util.UUID
+import timber.log.Timber
 
 /**
  * 【核心数据管理类 - 软件更新时数据保留的关键】
@@ -113,7 +114,7 @@ class CustomPresetManager(context: Context) {
             val coverFile = File(context.filesDir, coverPath)
             if (coverFile.exists()) {
                 val deleted = coverFile.delete()
-                android.util.Log.d("CustomPresetManager", "Deleted cover image: $coverPath, success: $deleted")
+                Timber.d("Deleted cover image: $coverPath, success: $deleted")
             }
         }
         
@@ -122,7 +123,7 @@ class CustomPresetManager(context: Context) {
             val galleryFile = File(context.filesDir, galleryPath)
             if (galleryFile.exists()) {
                 val deleted = galleryFile.delete()
-                android.util.Log.d("CustomPresetManager", "Deleted gallery image: $galleryPath, success: $deleted")
+                Timber.d("Deleted gallery image: $galleryPath, success: $deleted")
             }
         }
     }
@@ -157,7 +158,7 @@ class CustomPresetManager(context: Context) {
             } catch (e: Exception) {
                 // 【错误处理】如果 JSON 损坏，记录错误并返回空列表
                 // 这会导致用户数据丢失，但 App 不会崩溃
-                android.util.Log.e("CustomPresetManager", "加载自定义预设失败", e)
+                Timber.e(e, "加载自定义预设失败")
                 emptyList()
             }
         } else {

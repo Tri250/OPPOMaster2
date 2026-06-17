@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import timber.log.Timber
 
 /**
  * 详情页 ViewModel
@@ -55,7 +56,7 @@ class DetailViewModel(
         loadJob?.cancel()
         currentPresetId = presetId
 
-        android.util.Log.d("DetailViewModel", "Loading preset with id: $presetId")
+        Timber.d("Loading preset with id: $presetId")
 
         loadJob = viewModelScope.launch {
             _isLoading.value = true
@@ -63,12 +64,12 @@ class DetailViewModel(
                 val presetData = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
                 // 检查是否仍然是当前要加载的预设（可能被取消了）
                 if (presetId == currentPresetId) {
-                    android.util.Log.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
+                    Timber.d("Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
                     _preset.value = presetData
                     _isFavorite.value = presetData?.isFavorite ?: false
                 }
             } catch (e: Exception) {
-                android.util.Log.e("DetailViewModel", "Error loading preset: $presetId", e)
+                Timber.e(e, "Error loading preset: $presetId")
                 if (presetId == currentPresetId) {
                     _preset.value = null
                     _isFavorite.value = false
@@ -94,7 +95,7 @@ class DetailViewModel(
                 // 更新预设数据
                 _preset.value = _preset.value?.copy(isFavorite = isNowFavorite)
             } catch (e: Exception) {
-                android.util.Log.e("DetailViewModel", "Error toggling favorite: $id", e)
+                Timber.e(e, "Error toggling favorite: $id")
             }
         }
     }

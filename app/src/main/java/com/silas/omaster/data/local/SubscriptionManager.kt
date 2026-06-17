@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import java.io.File
+import timber.log.Timber
 
 class SubscriptionManager private constructor(context: Context) {
     private val appContext = context.applicationContext
@@ -42,10 +43,10 @@ class SubscriptionManager private constructor(context: Context) {
                 _subscriptionsFlow.value = migratedSubscriptions
                 if (updated) {
                     saveSubscriptions()
-                    android.util.Log.d("SubscriptionManager", "Migrated official subscription to new URL")
+                    Timber.d("Migrated official subscription to new URL")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SubscriptionManager", "Failed to decode subscriptions", e)
+                Timber.e(e, "Failed to decode subscriptions")
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
@@ -71,7 +72,7 @@ class SubscriptionManager private constructor(context: Context) {
                 null
             }
         } catch (e: Exception) {
-            android.util.Log.w("SubscriptionManager", "读取加密订阅失败", e)
+            Timber.w(e, "读取加密订阅失败")
             null
         }
     }
@@ -92,7 +93,7 @@ class SubscriptionManager private constructor(context: Context) {
                 return
             }
         } catch (e: Exception) {
-            android.util.Log.w("SubscriptionManager", "加密存储失败，使用明文", e)
+            Timber.w(e, "加密存储失败，使用明文")
         }
         
         // 回退明文存储
@@ -102,12 +103,12 @@ class SubscriptionManager private constructor(context: Context) {
     fun addSubscription(url: String, name: String = "", author: String = "", build: Int = 1) {
         // 防御性:验证URL非空
         if (url.isBlank()) {
-            android.util.Log.w("SubscriptionManager", "URL为空,拒绝添加订阅")
+            Timber.w("URL为空,拒绝添加订阅")
             return
         }
         // HTTPS 安全校验
         if (!url.lowercase().startsWith("https://")) {
-            android.util.Log.w("SubscriptionManager", "非HTTPS URL,拒绝添加: $url")
+            Timber.w("非HTTPS URL,拒绝添加: $url")
             return
         }
         if (_subscriptionsFlow.value.any { it.url == url }) return

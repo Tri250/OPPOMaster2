@@ -456,7 +456,7 @@ fun DescriptionCard(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Lightbulb,
-                    contentDescription = null,
+                    contentDescription = "提示",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )

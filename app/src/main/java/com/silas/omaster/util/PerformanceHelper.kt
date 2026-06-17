@@ -136,12 +136,10 @@ object PerformanceHelper {
         
         // 创建缩放后的Bitmap
         val scaledBitmap = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
-        
-        // 回收原始Bitmap（如果不是同一个对象）
-        if (scaledBitmap != bitmap) {
-            bitmap.recycle()
-        }
-        
+
+        // createScaledBitmap 始终返回新对象，直接回收原始 Bitmap
+        bitmap.recycle()
+
         return scaledBitmap
     }
 

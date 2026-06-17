@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ui.theme.HasselbladColors
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -88,6 +89,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import timber.log.Timber
 
 /**
  * 智能优化页面
@@ -205,7 +207,7 @@ fun SmartOptimizeScreen(
                     optimizedOptions.add(id)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SmartOptimize", "Optimization failed", e)
+                Timber.e(e, "Optimization failed")
                 return@launch
             } finally {
                 isOptimizing = false
@@ -266,7 +268,7 @@ fun SmartOptimizeScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = HasselbladColors.TextPrimary
             )
         )
 
@@ -356,7 +358,7 @@ fun SmartOptimizeScreen(
                         .align(Alignment.TopStart)
                         .padding(8.dp)
                         .background(
-                            Color.Black.copy(alpha = 0.5f),
+                            HasselbladColors.BackgroundSemiTransparent,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -657,10 +659,10 @@ private fun CompositeOptimizeCard(
                         if (it) onEnable() else onDisable()
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = HasselbladColors.TextPrimary,
                         checkedTrackColor = SuccessGreen
                     )
-                )
+                }
             }
             if (enabled && selectedCount > 0) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -769,10 +771,10 @@ private fun OptimizeOptionCard(
                         onToggle(it)
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = HasselbladColors.TextPrimary,
                         checkedTrackColor = color
                     )
-                )
+                }
             }
 
             // 强度滑块（仅启用时显示）

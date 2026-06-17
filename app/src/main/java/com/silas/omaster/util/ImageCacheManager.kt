@@ -205,9 +205,22 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
             val cacheDir = File(context.filesDir, CACHE_DIR)
             if (!cacheDir.exists()) return
             val files = cacheDir.listFiles() ?: return
-            // 按最后修改时间排序，删除最旧的文件
-            files.sortedBy { it.lastModified() }.forEach { it.delete() }
-            Log.d(TAG, "已清理磁盘缓存: ${files.size} 个文件")
+            var totalSize = 0L
+            for (f in files) totalSize += f.length()
+            if (totalSize <= maxDiskCacheBytes) return
+            // 按最后修改时间排序，只删除超出限制的最旧文件
+            val sorted = files.sortedBy { it.lastModified() }
+            var currentSize = totalSize
+            var deletedCount = 0
+            for (file in sorted) {
+                if (currentSize <= maxDiskCacheBytes) break
+                val len = file.length()
+                if (file.delete()) {
+                    currentSize -= len
+                    deletedCount++
+                }
+            }
+            Log.d(TAG, "磁盘缓存LRU清理: $deletedCount 个文件, 释放 ${(totalSize - currentSize) / 1024}KB")
         } catch (e: Exception) {
             Log.w(TAG, "清理磁盘缓存失败", e)
         }

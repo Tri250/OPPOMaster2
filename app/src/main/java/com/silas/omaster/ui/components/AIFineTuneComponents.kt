@@ -265,7 +265,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
     ) {
         Icon(
             imageVector = Icons.Default.Check,
-            contentDescription = null,
+            contentDescription = "确认",
             tint = HasselbladOrange,
             modifier = Modifier.size(20.dp)
         )
@@ -349,7 +349,7 @@ private fun ParamComparisonRow(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = null,
+                    contentDescription = "已选中",
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
@@ -376,7 +376,7 @@ private fun ParamComparisonRow(
                 )
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = null,
+                    contentDescription = "确认",
                     tint = HasselbladOrange,
                     modifier = Modifier
                         .padding(horizontal = 4.dp)

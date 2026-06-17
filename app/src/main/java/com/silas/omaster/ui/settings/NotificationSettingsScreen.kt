@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -59,7 +58,7 @@ fun NotificationSettingsScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = MaterialTheme.colorScheme.onSurface
             )
         )
 
@@ -108,10 +107,10 @@ fun NotificationSettingsScreen(
                             checked = true,
                             onCheckedChange = {},
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                                 checkedTrackColor = HasselbladOrange,
-                                uncheckedThumbColor = Color.Gray,
-                                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
                         )
                     }
@@ -155,7 +154,7 @@ fun NotificationSettingsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -167,7 +166,7 @@ fun NotificationSettingsScreen(
                                 Icon(
                                     Icons.Default.DoNotDisturb,
                                     null,
-                                    tint = Color(0xFF9C27B0),
+                                    tint = MaterialTheme.colorScheme.tertiary,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -181,10 +180,10 @@ fun NotificationSettingsScreen(
                                 checked = false,
                                 onCheckedChange = {},
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = Color(0xFF9C27B0),
-                                    uncheckedThumbColor = Color.Gray,
-                                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.tertiary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                                 )
                             )
                         }
@@ -235,7 +234,7 @@ private fun NotificationSettingCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
@@ -263,10 +262,10 @@ private fun NotificationSettingCard(
                 checked = isEnabled,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                     checkedTrackColor = HasselbladOrange,
-                    uncheckedThumbColor = Color.Gray,
-                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 )
             )
         }

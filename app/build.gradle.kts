@@ -377,6 +377,9 @@ dependencies {
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // Timber 日志库
+    implementation(libs.timber)
+
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

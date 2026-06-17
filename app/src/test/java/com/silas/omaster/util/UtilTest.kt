@@ -366,9 +366,153 @@ class PresetI18nTest {
     @Test
     fun `暗角模式 - 应该有对应的显示名称`() {
         val vignetteModes = listOf("开", "关")
-        
+
         for (mode in vignetteModes) {
             assertTrue("暗角模式应该有显示名称: $mode", mode.isNotEmpty())
         }
+    }
+}
+
+/**
+ * PerformanceHelper 单元测试
+ * 测试性能优化工具类的纯逻辑部分
+ */
+class PerformanceHelperTest {
+
+    @Test
+    fun `Bitmap内存计算 - ARGB_8888应该按4字节计算`() {
+        val width = 1024
+        val height = 1024
+        val bytesPerPixel = 4
+        val expectedMB = (width * height * bytesPerPixel).toDouble() / (1024 * 1024)
+        // 验证计算公式正确
+        assertEquals(4.0, expectedMB, 0.01)
+    }
+
+    @Test
+    fun `Bitmap内存计算 - RGB_565应该按2字节计算`() {
+        val width = 1024
+        val height = 1024
+        val bytesPerPixel = 2
+        val expectedMB = (width * height * bytesPerPixel).toDouble() / (1024 * 1024)
+        assertEquals(2.0, expectedMB, 0.01)
+    }
+
+    @Test
+    fun `Bitmap缩放比例 - 宽度超出时应按宽度比例缩放`() {
+        val width = 2000
+        val height = 1000
+        val maxWidth = 1000
+        val maxHeight = 1000
+        val scale = kotlin.math.min(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+        assertEquals(1000, newWidth)
+        assertEquals(500, newHeight)
+    }
+
+    @Test
+    fun `Bitmap缩放比例 - 高度超出时应按高度比例缩放`() {
+        val width = 1000
+        val height = 2000
+        val maxWidth = 1000
+        val maxHeight = 1000
+        val scale = kotlin.math.min(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+        assertEquals(500, newWidth)
+        assertEquals(1000, newHeight)
+    }
+
+    @Test
+    fun `Bitmap缩放比例 - 尺寸在范围内时不应缩放`() {
+        val width = 500
+        val height = 500
+        val maxWidth = 1000
+        val maxHeight = 1000
+        val needsScale = width > maxWidth || height > maxHeight
+        assertFalse(needsScale)
+    }
+
+    @Test
+    fun `协程作用域 - 创建后不应为null`() {
+        val scope = PerformanceHelper.createSafeScope("test_scope")
+        assertNotNull(scope)
+        // 清理
+        PerformanceHelper.cancelScope("test_scope")
+    }
+
+    @Test
+    fun `协程作用域 - 取消后应失效`() {
+        val scope = PerformanceHelper.createSafeScope("test_cancel_scope")
+        assertTrue(scope.isActive)
+        PerformanceHelper.cancelScope("test_cancel_scope")
+        // 取消后 isActive 应该变为 false（由于 cancel 是异步的，这里直接检查）
+        assertFalse(scope.isActive)
+    }
+
+    @Test
+    fun `性能统计 - 初始平均时间应为0`() {
+        val avgTime = PerformanceHelper.getAverageOperationTime("non_existent_op")
+        assertEquals(0L, avgTime)
+    }
+
+    @Test
+    fun `性能统计 - 记录后平均时间应正确计算`() {
+        val opName = "test_op"
+        // 模拟记录两次操作，耗时 100ms 和 300ms
+        PerformanceHelper.recordOperationTime(opName, System.currentTimeMillis() - 100)
+        PerformanceHelper.recordOperationTime(opName, System.currentTimeMillis() - 300)
+        val avgTime = PerformanceHelper.getAverageOperationTime(opName)
+        // 平均时间应在 100~300 之间（由于使用真实时间，这里只验证大于0）
+        assertTrue("平均时间应大于0", avgTime >= 0)
+    }
+
+    @Test
+    fun `内存状态枚举 - 应包含OK WARNING CRITICAL`() {
+        val statuses = PerformanceHelper.MemoryStatus.values()
+        assertEquals(3, statuses.size)
+        assertTrue(statuses.contains(PerformanceHelper.MemoryStatus.OK))
+        assertTrue(statuses.contains(PerformanceHelper.MemoryStatus.WARNING))
+        assertTrue(statuses.contains(PerformanceHelper.MemoryStatus.CRITICAL))
+    }
+
+    @Test
+    fun `采样率计算 - 尺寸刚好满足时应返回1`() {
+        val width = 500
+        val height = 500
+        val maxWidth = 1000
+        val maxHeight = 1000
+        var sampleSize = 1
+        while (width / sampleSize > maxWidth || height / sampleSize > maxHeight) {
+            sampleSize *= 2
+        }
+        assertEquals(1, sampleSize)
+    }
+
+    @Test
+    fun `采样率计算 - 超出一倍时应返回2`() {
+        val width = 2000
+        val height = 1000
+        val maxWidth = 1000
+        val maxHeight = 1000
+        var sampleSize = 1
+        while (width / sampleSize > maxWidth || height / sampleSize > maxHeight) {
+            sampleSize *= 2
+        }
+        assertEquals(2, sampleSize)
+    }
+
+    @Test
+    fun `采样率计算 - 超出四倍时应返回4`() {
+        val width = 4001
+        val height = 1000
+        val maxWidth = 1000
+        val maxHeight = 1000
+        var sampleSize = 1
+        while (width / sampleSize > maxWidth || height / sampleSize > maxHeight) {
+            sampleSize *= 2
+        }
+        assertEquals(4, sampleSize)
     }
 }

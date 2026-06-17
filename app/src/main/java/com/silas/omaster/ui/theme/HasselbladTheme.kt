@@ -101,6 +101,29 @@ object HasselbladColors {
 
     /** 分割线（白色） */
     val DividerWhite = Color(0x4DFFFFFF) // alpha=0.3
+
+    // ========== 曲线通道语义颜色 ==========
+
+    /** 曲线 - 红色通道 */
+    val CurveRed = Color.Red
+
+    /** 曲线 - 绿色通道 */
+    val CurveGreen = Color.Green
+
+    /** 曲线 - 蓝色通道 */
+    val CurveBlue = Color.Blue
+
+    /** 曲线 - 白色/RGB通道 */
+    val CurveWhite = Color.White
+
+    /** 曲线 - 黄色 */
+    val CurveYellow = Color.Yellow
+
+    /** 曲线 - 青色 */
+    val CurveCyan = Color.Cyan
+
+    /** 曲线 - 洋红 */
+    val CurveMagenta = Color.Magenta
 }
 
 /**

@@ -6,6 +6,7 @@ import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 /**
  * Layer 4: 大师洞察 (Master Insight)
@@ -88,7 +89,7 @@ class MasterInsightEngine private constructor(context: Context) {
         // 防御性：BitmapFactory.decodeFile 可能返回 null（文件不存在、权限不足、OOM）
         val bitmap = android.graphics.BitmapFactory.decodeFile(imagePath)
         if (bitmap == null) {
-            android.util.Log.w("MasterInsightEngine", "无法解码图像: $imagePath")
+            Timber.w("无法解码图像: $imagePath")
             return@withContext MasterWorkflowResult(
                 sceneProfile = createEmptyProfile(),
                 filmMatch = createEmptyFilmMatch(),

@@ -446,7 +446,7 @@ private fun SectionHeader(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = title,
                 tint = HasselbladOrange,
                 modifier = Modifier.size(20.dp)
             )
@@ -553,7 +553,7 @@ private fun FeatureCard(
                     ) {
                         Icon(
                             imageVector = feature.icon,
-                            contentDescription = null,
+                            contentDescription = feature.title,
                             tint = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
                             modifier = Modifier.size(28.dp)
                         )
@@ -586,7 +586,7 @@ private fun FeatureCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = null,
+                                contentDescription = "已选中",
                                 tint = Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.size(18.dp)
                             )

@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -104,7 +103,7 @@ fun SubscriptionScreen(
             Box(modifier = Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
                 if (subscriptions.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = stringResource(R.string.sub_empty), color = Color.Gray)
+                        Text(text = stringResource(R.string.sub_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     LazyColumn(
@@ -140,7 +139,7 @@ fun SubscriptionScreen(
         FloatingActionButton(
             onClick = { showAddDialog = true },
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -280,21 +279,21 @@ fun SubscriptionItem(
                         text = if (sub.name.isNotEmpty()) sub.name else stringResource(R.string.sub_no_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (sub.isEnabled) Color.White else Color.Gray,
+                        color = if (sub.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "作者: ${sub.author} | Build: ${sub.build}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = sub.url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -320,7 +319,7 @@ fun SubscriptionItem(
                 Text(
                     text = stringResource(R.string.sub_preset_count, sub.presetCount),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
                 
                 if (sub.lastUpdateTime > 0) {
@@ -328,7 +327,7 @@ fun SubscriptionItem(
                     Text(
                         text = stringResource(R.string.sub_last_update, sdf.format(Date(sub.lastUpdateTime))),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.4f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -351,9 +350,9 @@ fun SubscriptionDetailBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = DarkGray,
-        contentColor = Color.White,
-        scrimColor = Color.Black.copy(alpha = 0.5f),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        scrimColor = MaterialTheme.colorScheme.scrim,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
     ) {
         Column(
             modifier = Modifier
@@ -402,7 +401,7 @@ fun SubscriptionDetailBottomSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Edit, contentDescription = "编辑", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.edit))
                 }
@@ -413,7 +412,7 @@ fun SubscriptionDetailBottomSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
@@ -446,11 +445,11 @@ fun SubscriptionDetailBottomSheet(
 @Composable
 fun DetailRow(label: String, value: String, isLink: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isLink) MaterialTheme.colorScheme.primary else Color.White,
+            color = if (isLink) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             maxLines = if (isLink) 2 else 1,
             overflow = TextOverflow.Ellipsis
         )

@@ -42,6 +42,7 @@ import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 /**
  * AI微调功能页面 - 与Web端AIFineTunePage.tsx完全对齐
@@ -271,7 +272,7 @@ fun AIFineTuneScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = HasselbladColors.TextPrimary
             )
         )
 
@@ -477,7 +478,7 @@ fun AIFineTuneScreen(
                                             inferenceMessage = "优化失败"
                                         }
                                     } catch (e: Exception) {
-                                        android.util.Log.e("AIFineTune", "AI auto-tune failed", e)
+                                        Timber.e(e, "AI auto-tune failed")
                                         inferenceStage = InferenceStage.ERROR
                                         inferenceMessage = "优化失败"
                                     }
@@ -678,7 +679,7 @@ private fun TabChip(
     ) {
         Text(
             text = label,
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            color = if (isSelected) HasselbladColors.TextPrimary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -910,15 +911,15 @@ private fun ParamSliderRow(
             valueRange = if (isEffectParam) 0f..100f else -100f..100f,
             modifier = Modifier.weight(1f),
             colors = SliderDefaults.colors(
-                activeTrackColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange,
-                thumbColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange
+                activeTrackColor = if (lockedParams.contains(key)) HasselbladColors.TextTertiary else HasselbladOrange,
+                thumbColor = if (lockedParams.contains(key)) HasselbladColors.TextTertiary else HasselbladOrange
             ),
             enabled = !lockedParams.contains(key)
         )
 
         Text(
             text = if (value > 0 && !isEffectParam) "+${value.toInt()}" else value.toInt().toString(),
-            color = if (value != 0f) HasselbladOrange else Color.Gray,
+            color = if (value != 0f) HasselbladOrange else HasselbladColors.TextTertiary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.width(40.dp)
@@ -932,7 +933,7 @@ private fun ParamSliderRow(
             Icon(
                 if (lockedParams.contains(key)) Icons.Default.Lock else Icons.Default.LockOpen,
                 if (lockedParams.contains(key)) "解锁参数" else "锁定参数",
-                tint = if (lockedParams.contains(key)) HasselbladOrange else Color.Gray,
+                tint = if (lockedParams.contains(key)) HasselbladOrange else HasselbladColors.TextTertiary,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -1060,7 +1061,7 @@ private fun HSLSelectorCard(
                             .clickable { onSelect(hsl.id) }
                             .then(
                                 if (selectedId == hsl.id) {
-                                    Modifier.border(2.dp, Color.White, RoundedCornerShape(8.dp))
+                                    Modifier.border(2.dp, HasselbladColors.TextPrimary, RoundedCornerShape(8.dp))
                                 } else Modifier
                             ),
                         contentAlignment = Alignment.Center
@@ -1138,7 +1139,7 @@ private fun CurveAdjustCard(
     onChannelChange: (String) -> Unit
 ) {
     val channels = listOf("rgb", "red", "green", "blue")
-    val channelColors = listOf(Color.White, Color.Red, Color.Green, Color.Blue)
+    val channelColors = listOf(HasselbladColors.CurveWhite, HasselbladColors.CurveRed, HasselbladColors.CurveGreen, HasselbladColors.CurveBlue)
     
     // 曲线预设（与Web端CURVE_PRESETS对齐）
     val curvePresets = remember {
@@ -1410,7 +1411,7 @@ private suspend fun saveImageToGallery(context: android.content.Context, bitmap:
                 true
             }
         } catch (e: Exception) {
-            android.util.Log.e("AIFineTune", "Save image failed", e)
+            Timber.e(e, "Save image failed")
             false
         }
     }

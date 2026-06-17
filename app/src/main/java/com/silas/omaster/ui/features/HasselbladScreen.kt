@@ -22,10 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ui.theme.HasselbladColors
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * 哈苏色彩科学页面
@@ -166,7 +168,7 @@ fun HasselbladScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = HasselbladColors.TextPrimary
             )
         )
 
@@ -302,7 +304,7 @@ fun HasselbladScreen(
                                     modifier = Modifier.weight(1f),
                                     colors = SliderDefaults.colors(
                                         activeTrackColor = HasselbladOrange,
-                                        inactiveTrackColor = Color.Gray.copy(alpha = 0.3f),
+                                        inactiveTrackColor = HasselbladColors.Border,
                                         thumbColor = HasselbladOrange
                                     )
                                 )
@@ -379,7 +381,7 @@ fun HasselbladScreen(
                                 try {
                                     val hasselbladParams = inferenceEngine.getHasselbladParams(selectedMode)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("HasselbladScreen", "Apply params failed", e)
+                                    Timber.e(e, "Apply params failed")
                                 } finally {
                                     // 参数已应用到系统相机 HAL，UI 反馈完成状态
                                     isApplied = false

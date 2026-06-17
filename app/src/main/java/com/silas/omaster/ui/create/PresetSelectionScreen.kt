@@ -68,7 +68,7 @@ fun PresetSelectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(Icons.Default.Add, contentDescription = "添加", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         stringResource(R.string.start_from_scratch),

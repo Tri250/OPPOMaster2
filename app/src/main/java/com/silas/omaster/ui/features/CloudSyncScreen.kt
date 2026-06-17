@@ -22,8 +22,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.cloud.SyncState
+import com.silas.omaster.ui.theme.HasselbladColors
 import com.silas.omaster.ui.theme.HasselbladOrange
-
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import timber.log.Timber
 
 /**
  * 云同步功能页面
@@ -131,7 +132,7 @@ fun CloudSyncScreen(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = PureBlack,
-                titleContentColor = Color.White
+                titleContentColor = HasselbladColors.TextPrimary
             )
         )
 
@@ -185,7 +186,7 @@ fun CloudSyncScreen(
                                     try {
                                         syncManager.sync()
                                     } catch (e: Exception) {
-                                        android.util.Log.e("CloudSyncScreen", "Sync failed", e)
+                                        Timber.e(e, "Sync failed")
                                     }
                                 }
                             },

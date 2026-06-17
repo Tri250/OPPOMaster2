@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import android.util.Base64
-import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.repository.PresetRepository
@@ -13,6 +12,7 @@ import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
+import timber.log.Timber
 
 /**
  * 启动初始化日志记录器
@@ -94,7 +94,7 @@ class OMasterApplication : Application() {
                 }
                 String(result, Charsets.UTF_8)
             } catch (e: Exception) {
-                Log.e("OMasterApplication", "AppKey 解混淆失败", e)
+                Timber.e(e, "AppKey 解混淆失败")
                 ""
             }
         }
@@ -130,7 +130,7 @@ class OMasterApplication : Application() {
         synchronized(Companion::class.java) {
             if (instance != null) {
                 // 多进程场景：每个进程有自己的 Application 实例，这是正常的
-                Log.w("OMasterApplication", "Application 实例在多进程中重新创建: ${android.os.Process.myPid()}")
+                Timber.w("Application 实例在多进程中重新创建: ${android.os.Process.myPid()}")
             }
             instance = this
             // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
@@ -148,7 +148,7 @@ class OMasterApplication : Application() {
                 CrashHandler.getInstance().install(applicationContext)
             }
         } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "CrashHandler安装失败", e)
+            Timber.e(e, "CrashHandler安装失败")
         }
         StartupLogger.logStep("CrashHandler安装", SystemClock.elapsedRealtime() - step2Start)
 
@@ -157,7 +157,7 @@ class OMasterApplication : Application() {
         try {
             HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled
         } catch (e: Throwable) {
-            android.util.Log.w("OMasterApplication", "HapticSettings初始化失败,使用默认值", e)
+            Timber.w(e, "HapticSettings初始化失败,使用默认值")
         }
         StartupLogger.logStep("HapticSettings初始化", SystemClock.elapsedRealtime() - step3Start)
 
@@ -170,7 +170,12 @@ class OMasterApplication : Application() {
         triggerLazyInitialization()
         StartupLogger.logStep("触发懒加载调度", SystemClock.elapsedRealtime() - step5Start)
 
-        Log.i("OMasterApplication", StartupLogger.getReport())
+        // 初始化 Timber（Debug 种植 DebugTree，Release 由 CrashHandler 接管）
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+
+        Timber.i(StartupLogger.getReport())
     }
 
     /**
@@ -188,7 +193,7 @@ class OMasterApplication : Application() {
                     SettingsManager.getInstance(this).preloadCache()
                     StartupLogger.logStep("SettingsManager预加载", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
-                    Log.w("OMasterApplication", "SettingsManager预加载失败", e)
+                    Timber.w(e, "SettingsManager预加载失败")
                 }
 
                 // 预初始化 FaceDetectorSingleton（非关键，首次使用时才真正加载模型）
@@ -197,11 +202,11 @@ class OMasterApplication : Application() {
                     FaceDetectorSingleton.getInstance()
                     StartupLogger.logStep("FaceDetector预初始化", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
-                    Log.w("OMasterApplication", "FaceDetector预初始化失败", e)
+                    Timber.w(e, "FaceDetector预初始化失败")
                 }
 
             } catch (e: Throwable) {
-                Log.e("OMasterApplication", "懒加载初始化失败", e)
+                Timber.e(e, "懒加载初始化失败")
             }
         }.apply {
             name = "LazyInitThread"
@@ -218,7 +223,7 @@ class OMasterApplication : Application() {
     fun initUMeng() {
         // 安全检查：用户必须已同意隐私政策
         if (!hasUserAgreed()) {
-            android.util.Log.w("OMasterApplication", "用户未同意隐私政策，跳过友盟初始化")
+            Timber.w("用户未同意隐私政策，跳过友盟初始化")
             return
         }
 
@@ -227,9 +232,9 @@ class OMasterApplication : Application() {
             // 使用解混淆后的 AppKey（BuildConfig 中存储的是 XOR+Base64 混淆值）
             val appKey = deobfuscateKey(BuildConfig.UMENG_APPKEY, OBFUSCATION_KEY)
             UMConfigure.init(this, appKey, "default", UMConfigure.DEVICE_TYPE_PHONE, null)
-            android.util.Log.i("OMasterApplication", "友盟统计初始化成功")
+            Timber.i("友盟统计初始化成功")
         } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "友盟初始化失败", e)
+            Timber.e(e, "友盟初始化失败")
         }
     }
 
@@ -284,25 +289,25 @@ class OMasterApplication : Application() {
     fun releaseResources() {
         try {
             FaceDetectorSingleton.release()
-            android.util.Log.i("OMasterApplication", "FaceDetectorSingleton 已释放")
+            Timber.i("FaceDetectorSingleton 已释放")
         } catch (e: Exception) {
-            android.util.Log.e("OMasterApplication", "释放 FaceDetectorSingleton 失败", e)
+            Timber.e(e, "释放 FaceDetectorSingleton 失败")
         }
 
         // 关闭 Ktor HttpClient，释放连接池和线程资源
         try {
             PresetRepository.getInstance(this).close()
-            android.util.Log.i("OMasterApplication", "PresetRepository HttpClient 已关闭")
+            Timber.i("PresetRepository HttpClient 已关闭")
         } catch (e: Exception) {
-            android.util.Log.e("OMasterApplication", "关闭 PresetRepository HttpClient 失败", e)
+            Timber.e(e, "关闭 PresetRepository HttpClient 失败")
         }
 
         // 释放 GPU 渲染管理器
         try {
             com.silas.omaster.renderer.GPURenderManager.getInstance(this).release()
-            android.util.Log.i("OMasterApplication", "GPURenderManager 已释放")
+            Timber.i("GPURenderManager 已释放")
         } catch (e: Exception) {
-            android.util.Log.e("OMasterApplication", "释放 GPURenderManager 失败", e)
+            Timber.e(e, "释放 GPURenderManager 失败")
         }
     }
 }

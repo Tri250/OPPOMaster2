@@ -224,7 +224,7 @@ private fun WatermarkTemplateItem(
                         com.silas.omaster.watermark.WatermarkType.STYLE -> Icons.Default.ColorLens
                         com.silas.omaster.watermark.WatermarkType.CUSTOM -> Icons.Default.Add
                     },
-                    contentDescription = null,
+                    contentDescription = template.name,
                     tint = if (isSelected) HasselbladOrange else Color.White,
                     modifier = Modifier.size(24.dp)
                 )
@@ -402,7 +402,7 @@ fun WatermarkElementConfigPanel(
                 containerColor = HasselbladOrange
             )
         ) {
-            Icon(Icons.Default.Save, contentDescription = null)
+            Icon(Icons.Default.Save, contentDescription = "保存")
             Spacer(modifier = Modifier.width(8.dp))
             Text("另存为模板")
         }

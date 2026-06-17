@@ -24,6 +24,7 @@ import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import timber.log.Timber
 
 /**
  * 云同步管理器
@@ -73,7 +74,7 @@ class CloudSyncManager private constructor(context: Context) {
             val type = object : TypeToken<List<MasterPreset>>() {}.type
             gson.fromJson<List<MasterPreset>>(json, type) ?: emptyList()
         } catch (e: Exception) {
-            android.util.Log.e("CloudSyncManager", "加载云端预设失败", e)
+            Timber.e(e, "加载云端预设失败")
             emptyList()
         }
     }
@@ -125,7 +126,7 @@ class CloudSyncManager private constructor(context: Context) {
                     allPresets.addAll(result.presets)
                 } catch (e: Exception) {
                     // 单个品牌同步失败不影响其他品牌
-                    android.util.Log.e("CloudSyncManager", "同步品牌 $brand 失败", e)
+                    Timber.e(e, "同步品牌 $brand 失败")
                 }
             }
 
@@ -139,11 +140,11 @@ class CloudSyncManager private constructor(context: Context) {
             settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.SYNCED
             _syncState.value = SyncState.Success(totalNewPresets, totalUpdatedPresets)
 
-            android.util.Log.d("CloudSyncManager", "同步完成: 新增$totalNewPresets, 更新$totalUpdatedPresets")
+            Timber.d("同步完成: 新增$totalNewPresets, 更新$totalUpdatedPresets")
 
             SyncResult.Success(totalNewPresets, totalUpdatedPresets)
         } catch (e: Exception) {
-            android.util.Log.e("CloudSyncManager", "同步失败", e)
+            Timber.e(e, "同步失败")
             settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.ERROR
             _syncState.value = SyncState.Error(e.message ?: "Unknown error")
             SyncResult.Error(e.message ?: "Unknown error")
@@ -198,7 +199,7 @@ class CloudSyncManager private constructor(context: Context) {
                     }
                 } catch (e: Exception) {
                     // 单个预设解析失败不影响其他预设
-                    android.util.Log.w("CloudSyncManager", "解析品牌 $brand 第 ${i + 1} 条预设失败", e)
+                    Timber.w(e, "解析品牌 $brand 第 ${i + 1} 条预设失败")
                 }
             }
 

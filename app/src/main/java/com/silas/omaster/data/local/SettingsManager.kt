@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 // DataStore 扩展属性
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
@@ -668,7 +669,7 @@ class SettingsManager private constructor(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.w("SettingsManager", "预加载缓存失败，将在首次访问时逐项加载", e)
+            Timber.w(e, "预加载缓存失败，将在首次访问时逐项加载")
         }
     }
 
@@ -729,9 +730,9 @@ class SettingsManager private constructor(private val context: Context) {
             // legacyPrefs.edit().clear().apply()
             
             migrationCompleted = true
-            android.util.Log.i("SettingsManager", "SharedPreferences → DataStore 迁移完成")
+            Timber.i("SharedPreferences → DataStore 迁移完成")
         } catch (e: Exception) {
-            android.util.Log.e("SettingsManager", "迁移失败，继续使用默认值", e)
+            Timber.e(e, "迁移失败，继续使用默认值")
         }
     }
 

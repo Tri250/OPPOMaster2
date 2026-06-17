@@ -151,7 +151,7 @@ fun UniversalCreatePresetScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Add,
-                                        contentDescription = null,
+                                        contentDescription = "添加",
                                         tint = Color.White,
                                         modifier = Modifier.size(48.dp)
                                     )
@@ -344,7 +344,7 @@ fun SectionCard(
                 onClick = onAddItem,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = "添加")
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(stringResource(R.string.add_item))
             }

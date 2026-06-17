@@ -44,8 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.HasselbladColors
 import com.silas.omaster.ui.theme.NearBlack
 import kotlinx.coroutines.delay
+import timber.log.Timber
 
 /**
  * 悬浮窗使用引导对话框
@@ -72,7 +74,7 @@ fun FloatingWindowGuideDialog(
 
     // 调试日志
     LaunchedEffect(Unit) {
-        android.util.Log.d("FloatingWindowGuideDialog", "对话框显示")
+        Timber.d("对话框显示")
     }
 
     AnimatedVisibility(
@@ -83,7 +85,7 @@ fun FloatingWindowGuideDialog(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.8f)),
+                .background(HasselbladColors.Background),
             contentAlignment = Alignment.Center
         ) {
             Card(
@@ -131,7 +133,7 @@ fun FloatingWindowGuideDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
-                            contentDescription = null,
+                            contentDescription = "提示",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(36.dp)
                         )
@@ -144,7 +146,7 @@ fun FloatingWindowGuideDialog(
                         text = stringResource(R.string.guide_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = HasselbladColors.TextPrimary,
                         textAlign = TextAlign.Center
                     )
 
@@ -154,7 +156,7 @@ fun FloatingWindowGuideDialog(
                     Text(
                         text = stringResource(R.string.guide_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = HasselbladColors.TextSecondary,
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
                     )
@@ -218,7 +220,7 @@ fun FloatingWindowGuideDialog(
                         Text(
                             text = stringResource(R.string.guide_tip),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = HasselbladColors.TextTertiary,
                             lineHeight = 16.sp
                         )
                     }
@@ -244,9 +246,9 @@ fun FloatingWindowGuideDialog(
                             enabled = canClick,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White,
+                                contentColor = HasselbladColors.TextPrimary,
                                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                disabledContentColor = Color.White.copy(alpha = 0.5f)
+                                disabledContentColor = HasselbladColors.TextTertiary
                             ),
                             shape = RoundedCornerShape(14.dp)
                         ) {
@@ -265,14 +267,14 @@ fun FloatingWindowGuideDialog(
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.2f)),
+                                            .background(HasselbladColors.BorderLight),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = "${countdown}s",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            color = HasselbladColors.TextPrimary
                                         )
                                     }
                                 }
@@ -289,7 +291,7 @@ fun FloatingWindowGuideDialog(
                         ) {
                             Text(
                                 text = stringResource(R.string.guide_later),
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = HasselbladColors.TextTertiary,
                                 fontSize = 14.sp
                             )
                         }
@@ -334,7 +336,7 @@ private fun GuideStep(
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.85f),
+            color = HasselbladColors.TextPrimary,
             lineHeight = 18.sp
         )
     }

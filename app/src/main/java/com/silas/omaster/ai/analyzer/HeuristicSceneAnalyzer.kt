@@ -9,6 +9,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.sqrt
+import timber.log.Timber
 
 /**
  * Layer 2: 大师推理层 - 核心启发式分析器
@@ -344,7 +345,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             faces.size
         } catch (e: Exception) {
             // 检测失败时回退到肤色推断
-            android.util.Log.w("HeuristicSceneAnalyzer", "ML Kit人脸检测失败，回退到肤色推断: ${e.message}")
+            Timber.w(e, "ML Kit人脸检测失败，回退到肤色推断")
             inferFaceCountBySkinTone(bitmap)
         }
     }
