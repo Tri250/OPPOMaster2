@@ -172,38 +172,40 @@ class CloudSyncManager private constructor(context: Context) {
         val version = jsonObject.optInt("version", 1)
         val build = jsonObject.optInt("build", 1)
         // 防御性：getJSONArray 可能在缺失时抛 JSONException
-        val presetsArray = jsonObject.optJSONArray("presets") ?: return@withContext BrandSyncResult(0, 0, emptyList())
-
-            var newCount = 0
-            var updatedCount = 0
-            val brandPresets = mutableListOf<MasterPreset>()
-
-            // 获取现有预设用于比较
-            val existingPresets = _cloudPresets.value.filter { it.brand == brand }
-            val existingMap = existingPresets.associateBy { it.name }
-
-            for (i in 0 until presetsArray.length()) {
-                try {
-                    val presetJson = presetsArray.getJSONObject(i)
-                    val preset = parsePresetJson(presetJson, brand, version, build)
-
-                    brandPresets.add(preset)
-
-                    // 检查是否已存在
-                    val existing = existingMap[preset.name]
-                    if (existing == null) {
-                        newCount++
-                    } else if (existing.build < preset.build) {
-                        updatedCount++
-                    }
-                } catch (e: Exception) {
-                    // 单个预设解析失败不影响其他预设
-                    android.util.Log.w("CloudSyncManager", "解析品牌 $brand 第 ${i + 1} 条预设失败", e)
-                }
-            }
-
-            BrandSyncResult(newCount, updatedCount, brandPresets)
+        val presetsArray = jsonObject.optJSONArray("presets")
+        if (presetsArray == null || presetsArray.length() == 0) {
+            return@withContext BrandSyncResult(0, 0, emptyList())
         }
+
+        var newCount = 0
+        var updatedCount = 0
+        val brandPresets = mutableListOf<MasterPreset>()
+
+        // 获取现有预设用于比较
+        val existingPresets = _cloudPresets.value.filter { it.brand == brand }
+        val existingMap = existingPresets.associateBy { it.name }
+
+        for (i in 0 until presetsArray.length()) {
+            try {
+                val presetJson = presetsArray.getJSONObject(i)
+                val preset = parsePresetJson(presetJson, brand, version, build)
+
+                brandPresets.add(preset)
+
+                // 检查是否已存在
+                val existing = existingMap[preset.name]
+                if (existing == null) {
+                    newCount++
+                } else if (existing.build < preset.build) {
+                    updatedCount++
+                }
+            } catch (e: Exception) {
+                // 单个预设解析失败不影响其他预设
+                android.util.Log.w("CloudSyncManager", "解析品牌 $brand 第 ${i + 1} 条预设失败", e)
+            }
+        }
+
+        BrandSyncResult(newCount, updatedCount, brandPresets)
     }
 
     /**
