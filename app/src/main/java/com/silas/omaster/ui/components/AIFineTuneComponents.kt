@@ -266,7 +266,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
     ) {
         Icon(
             imageVector = Icons.Default.Check,
-            contentDescription = null,
+            contentDescription = "图标",
             tint = HasselbladOrange,
             modifier = Modifier.size(20.dp)
         )
@@ -288,7 +288,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.CloudOff,
-                    contentDescription = null,
+                    contentDescription = "图标",
                     tint = com.silas.omaster.ui.theme.WarningYellow,
                     modifier = Modifier.size(14.dp)
                 )
@@ -366,7 +366,7 @@ private fun ParamComparisonRow(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = null,
+                    contentDescription = "图标",
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
@@ -393,7 +393,7 @@ private fun ParamComparisonRow(
                 )
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = null,
+                    contentDescription = "图标",
                     tint = HasselbladOrange,
                     modifier = Modifier
                         .padding(horizontal = 4.dp)

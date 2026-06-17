@@ -280,7 +280,7 @@ private fun AppInfoCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
+                        contentDescription = "应用图标",
                         tint = Color.White,
                         modifier = Modifier.size(36.dp)
                     )
@@ -482,7 +482,7 @@ private fun SettingsListItem(
             ) {
                 Icon(
                     imageVector = item.icon,
-                    contentDescription = null,
+                    contentDescription = "设置图标",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -508,7 +508,7 @@ private fun SettingsListItem(
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
+                contentDescription = "箭头",
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                 modifier = Modifier.size(16.dp)
             )

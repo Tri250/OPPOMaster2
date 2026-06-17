@@ -68,9 +68,13 @@ jobs:
       # CI 环境：使用专用 settings 文件，避免本地仓库导致的 AGP 版本冲突
       - name: Use CI Settings
         run: |
-          mv settings.gradle.kts settings.gradle.kts.local
-          mv settings.ci.gradle.kts settings.gradle.kts
-          echo "✅ CI settings 配置已切换"
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
 
       # 生成 debug 签名用于 CI 构建
       - name: Generate Debug Keystore
@@ -82,14 +86,6 @@ jobs:
           else
             echo "✅ Debug keystore 已存在"
           fi
-
-      # 清除可能损坏的 Gradle 缓存，确保重新下载 AGP
-      - name: Clean Gradle Cache
-        run: |
-          rm -rf ~/.gradle/caches/build-cache-1
-          rm -rf ~/.gradle/caches/transforms-3
-          rm -rf ~/.gradle/caches/modules-2/files-2.1/com.android.tools.build
-          echo "✅ Gradle 缓存已清理"
 
       # 同步版本号到 Git Tag
       - name: Sync Version with Git Tag

@@ -263,7 +263,7 @@ fun MasterWorkflow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
-                contentDescription = null,
+                contentDescription = "图标",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(20.dp)
             )
@@ -320,7 +320,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
+                                contentDescription = "图标",
                                 tint = HasselbladOrange,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -339,7 +339,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Camera,
-                                contentDescription = null,
+                                contentDescription = "图标",
                                 tint = Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -366,7 +366,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Movie,
-                                contentDescription = null,
+                                contentDescription = "图标",
                                 tint = Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -388,7 +388,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Tune,
-                                contentDescription = null,
+                                contentDescription = "图标",
                                 tint = Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -497,7 +497,7 @@ private fun WorkflowStepItem(
                     when (step.status) {
                         WorkflowStatus.COMPLETED -> Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = null,
+                            contentDescription = "图标",
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
@@ -524,7 +524,7 @@ private fun WorkflowStepItem(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = step.icon,
-                            contentDescription = null,
+                            contentDescription = "图标",
                             tint = iconColor,
                             modifier = Modifier.size(16.dp)
                         )

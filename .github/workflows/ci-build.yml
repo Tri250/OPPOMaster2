@@ -32,6 +32,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # CI 环境：使用专用 settings 文件
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
+
       # 配置友盟 AppKey（从 GitHub Secrets 注入）
       - name: Configure UMENG AppKey
         run: |
@@ -81,6 +92,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # CI 环境：使用专用 settings 文件
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
+
       # 运行单元测试
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --no-daemon
@@ -121,6 +143,17 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      # CI 环境：使用专用 settings 文件
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
 
       # 运行测试覆盖率
       - name: Run Test Coverage
@@ -171,6 +204,17 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      # CI 环境：使用专用 settings 文件
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
 
       # 构建 Debug APK
       - name: Build Debug APK
@@ -226,6 +270,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # CI 环境：使用专用 settings 文件
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
+
       # 构建 Release APK (使用 debug 签名)
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
@@ -270,6 +325,17 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      # CI 环境：使用专用 settings 文件
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
 
       # 依赖版本检查
       - name: Check Dependency Updates

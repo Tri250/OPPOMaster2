@@ -284,18 +284,18 @@ fun AIFineTuneScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("AI 微调", fontWeight = FontWeight.Bold, color = Color.White) },
+            title = { Text("AI 微调", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground) },
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -303,7 +303,7 @@ fun AIFineTuneScreen(
                     Icon(
                         if (showCompare) Icons.Default.Compare else Icons.Default.CompareArrows,
                         "对比",
-                        tint = if (showCompare) HasselbladOrange else Color.White.copy(alpha = 0.6f)
+                        tint = if (showCompare) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
                 IconButton(onClick = {
@@ -314,8 +314,8 @@ fun AIFineTuneScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = PureBlack,
-                titleContentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
 
@@ -325,7 +325,7 @@ fun AIFineTuneScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkGray)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Box(
                 modifier = Modifier
@@ -755,7 +755,7 @@ fun AIFineTuneScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(PureBlack.copy(alpha = 0.95f))
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
                 .padding(vertical = 12.dp, horizontal = 16.dp)
         ) {
             Row(

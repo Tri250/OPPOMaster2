@@ -609,7 +609,7 @@ private fun SettingsSwitchItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = "图标",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -661,7 +661,7 @@ private fun SettingsClickableItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = "图标",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -669,7 +669,7 @@ private fun SettingsClickableItem(
         trailingContent = trailingContent ?: {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
+                contentDescription = "图标",
                 tint = Color.Gray
             )
         },

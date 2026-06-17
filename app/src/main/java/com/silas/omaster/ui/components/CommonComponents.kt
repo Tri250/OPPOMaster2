@@ -372,7 +372,7 @@ fun ImagePlaceholder(
     ) {
         Icon(
             imageVector = Icons.Filled.Image,
-            contentDescription = null,
+            contentDescription = "图标",
             tint = Color.White.copy(alpha = 0.3f),
             modifier = Modifier.size(32.dp)
         )
@@ -491,7 +491,7 @@ fun DescriptionCard(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Lightbulb,
-                    contentDescription = null,
+                contentDescription = "图标",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )

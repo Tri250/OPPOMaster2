@@ -218,7 +218,7 @@ private fun NavItemButton(
 
     val contentColor = when {
         selected -> MaterialTheme.colorScheme.primary
-        else -> Color.White.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
     }
 
     val iconScale by animateFloatAsState(
@@ -254,7 +254,7 @@ private fun NavItemButton(
     ) {
         Icon(
             imageVector = item.icon,
-            contentDescription = null,
+            contentDescription = item.title,
             modifier = Modifier
                 .size(if (selected) 22.dp else 20.dp)
                 .scale(iconScale),

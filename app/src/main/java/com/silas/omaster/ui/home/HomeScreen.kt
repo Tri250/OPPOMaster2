@@ -84,9 +84,7 @@ import com.silas.omaster.ui.animation.ListItemPlacementSpec
 import com.silas.omaster.ui.animation.calculateStaggerDelay
 import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.service.FloatingWindowController
-import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -165,7 +163,7 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header（对齐Web端）
@@ -315,7 +313,7 @@ private fun HeaderSection(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             // 哈苏大师标签（对齐Web端）
             Box(
@@ -355,7 +353,7 @@ private fun HeaderSection(
             Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = stringResource(R.string.refresh),
-                tint = Color.White.copy(alpha = 0.7f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -375,12 +373,12 @@ private fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color.White.copy(alpha = 0.05f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(24.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.1f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(24.dp)
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -392,7 +390,7 @@ private fun SearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = stringResource(R.string.search_hint),
-                tint = Color.White.copy(alpha = 0.4f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.size(16.dp)
             )
             
@@ -403,7 +401,7 @@ private fun SearchBar(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { }),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 ),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth(),
@@ -412,7 +410,7 @@ private fun SearchBar(
                         Text(
                             text = stringResource(R.string.search_placeholder),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                     }
                     innerTextField()
@@ -441,7 +439,7 @@ private fun TabBar(
 
     ScrollableTabRow(
         selectedTabIndex = selectedTab,
-        containerColor = PureBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.primary,
         edgePadding = 0.dp,
         modifier = modifier,
@@ -471,7 +469,7 @@ private fun TabBar(
                         Text(
                             text = title,
                             style = MaterialTheme.typography.labelLarge,
-                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
+                            color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                         // 计数徽章（对齐Web端）
@@ -482,7 +480,7 @@ private fun TabBar(
                                         color = if (isSelected)
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                                         else
-                                            Color.White.copy(alpha = 0.05f),
+                                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .padding(horizontal = 6.dp, vertical = 1.dp)
@@ -493,7 +491,7 @@ private fun TabBar(
                                     color = if (isSelected)
                                         MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                                     else
-                                        Color.White.copy(alpha = 0.4f)
+                                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                                 )
                             }
                         }
@@ -563,12 +561,12 @@ private fun BrandAndSortFilter(
                 Text(
                     text = sortOptions.find { it.first == sortType }?.second ?: stringResource(R.string.sort_newest),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = "排序",
-                    tint = Color.White.copy(alpha = 0.4f),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -576,7 +574,7 @@ private fun BrandAndSortFilter(
             DropdownMenu(
                 expanded = showSortMenu,
                 onDismissRequest = { showSortMenu = false },
-                modifier = Modifier.background(DarkGray)
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 sortOptions.forEach { (type, label) ->
                     DropdownMenuItem(
@@ -584,7 +582,7 @@ private fun BrandAndSortFilter(
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (sortType == type) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.8f)
+                                color = if (sortType == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                             )
                         },
                         onClick = {
@@ -612,7 +610,7 @@ private fun BrandFilterButton(
         modifier = modifier
             .hapticClickable { onClick() }
             .background(
-                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.05f),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -621,7 +619,7 @@ private fun BrandFilterButton(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
-            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
     }
 }
@@ -846,7 +844,7 @@ private fun EmptyState(tabIndex: Int) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
             if (subMessage.isNotEmpty()) {
