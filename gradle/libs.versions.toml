@@ -1,6 +1,7 @@
 [versions]
 # ===== Android Gradle Plugin =====
-agp = "8.9.1"
+# 沙箱环境降级到本地缓存的 8.7.3 版本（原 8.9.1 需网络下载）
+agp = "8.7.3"
 
 # ===== Kotlin =====
 kotlin = "2.1.20"
