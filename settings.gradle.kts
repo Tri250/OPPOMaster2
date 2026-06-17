@@ -1,19 +1,26 @@
-// settings.ci.gradle.kts - CI 专用配置
-// 使用标准仓库，避免本地仓库导致的 AGP 版本冲突
-
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        google()
+        // ===== 本地 Maven 仓库（沙箱离线构建模式）=====
+        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+
+        // 优先使用可访问的仓库
         mavenCentral()
+        gradlePluginPortal()
+        // 最后尝试 Google（网络可能不通）
+        google()
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        google()
+        // ===== 本地 Maven 仓库（沙箱离线构建模式）=====
+        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+
+        // 优先使用可访问的仓库
         mavenCentral()
+        // 最后尝试 Google（网络可能不通）
+        google()
         maven { url = uri("https://jitpack.io") }
     }
 }
