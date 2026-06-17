@@ -74,8 +74,10 @@ app/build/outputs/apk/release/
 
 ### 版本信息
 
-- **versionCode**: 10
+- **versionCode**: 10301
 - **versionName**: 1.3.1
+
+> 注意：版本号应与 CHANGELOG.md 和 Git Tag 保持同步
 
 ### 构建特性
 

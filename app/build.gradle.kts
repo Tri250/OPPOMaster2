@@ -94,8 +94,12 @@ android {
         // 版本号与 Git Tag 同步规则：
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
-        versionCode = 100
-        versionName = "1.0.0"
+        //
+        // 当前版本: v1.3.1 (最新稳定版，见 CHANGELOG.md)
+        // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
+        // 1.3.1 → 1*10000 + 3*100 + 1 = 10301
+        versionCode = 10301
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
