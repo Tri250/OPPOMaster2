@@ -3,7 +3,8 @@ import { useAppStore } from '../../store/appStore';
 import { 
   ArrowLeft, RefreshCw, Check, Wand2, Sparkles, Sun, Moon, Palette, 
   Camera, Aperture, Zap, Eye, Contrast, Droplets, Layers, Sliders,
-  Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search
+  Target, TrendingUp, Circle, Brush, RotateCcw, Heart, Crown, Search,
+  Upload, Download
 } from 'lucide-react';
 
 // 导入状态管理和 AI 推理服务
@@ -81,16 +82,27 @@ const DEFAULT_IMAGE_SOURCE = 'https://images.unsplash.com/photo-1494790108377-be
 // ============================================
 
 const AIFineTunePage: React.FC = () => {
-  const { goBack } = useAppStore();
+  const { goBack, tuneImageSource, setTuneImageSource } = useAppStore();
   
   // 使用 useReducer 管理所有状态
   const [state, dispatch] = useReducer(
     fineTuneReducer,
-    createInitialState(DEFAULT_IMAGE_SOURCE)
+    createInitialState(tuneImageSource || DEFAULT_IMAGE_SOURCE)
   );
   
   // 成功提示自动隐藏定时器
   const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 文件输入引用（用于图片上传）
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 导出 Canvas 引用
+  const exportCanvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // 同步全局 imageSource 到本地 state
+  useEffect(() => {
+    if (tuneImageSource && tuneImageSource !== state.imageSource) {
+      dispatch({ type: FineTuneActionType.SET_IMAGE_SOURCE, source: tuneImageSource });
+    }
+  }, [tuneImageSource]);
   
   // 成功提示自动隐藏
   useEffect(() => {
@@ -207,6 +219,97 @@ const AIFineTunePage: React.FC = () => {
   const handleReset = useCallback(() => {
     dispatch({ type: FineTuneActionType.RESET_PARAMS });
   }, []);
+  
+  // ========== 上传/导出 ==========
+  
+  // 触发文件选择
+  const triggerUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+  
+  // 处理图片上传
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // 仅接受图片
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        // 同时更新本地 state 和全局 store
+        dispatch({ type: FineTuneActionType.SET_IMAGE_SOURCE, source: dataUrl });
+        setTuneImageSource(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+    // 重置 input 以便重复选择同一文件
+    e.target.value = '';
+  }, [setTuneImageSource]);
+  
+  // 导出图片（合成当前参数效果到 Canvas 并下载）
+  const handleExportImage = useCallback(async () => {
+    const src = state.imageSource || tuneImageSource || DEFAULT_IMAGE_SOURCE;
+    
+    try {
+      // 加载图片
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('图片加载失败'));
+        img.src = src;
+      });
+      
+      // 使用离屏 Canvas 合成
+      const canvas = exportCanvasRef.current ?? document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        alert('浏览器不支持 Canvas');
+        return;
+      }
+      
+      // 将 CSS filter 字符串同步应用到 ctx.filter
+      const filterStr = [
+        `saturate(${100 + state.params.saturation}%)`,
+        `contrast(${100 + state.params.contrast}%)`,
+        `brightness(${100 + state.params.brightness + state.params.exposure}%)`,
+        state.params.warmth > 0 ? `sepia(${state.params.warmth * 0.5}%)` : '',
+        state.params.warmth < 0 ? `hue-rotate(${state.params.warmth * 0.5}deg)` : '',
+      ].filter(Boolean).join(' ');
+      
+      ctx.filter = filterStr || 'none';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.filter = 'none';
+      
+      // 导出为 JPG
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('图片导出失败');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const timestamp = Date.now();
+        link.href = url;
+        link.download = `OMaster_AITune_${timestamp}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/jpeg', 0.92);
+    } catch (err) {
+      console.error('导出失败:', err);
+      alert(`导出失败：${err instanceof Error ? err.message : '未知错误'}`);
+    }
+  }, [state.imageSource, state.params, tuneImageSource]);
   
   // 撤销操作
   const handleUndo = useCallback(() => {
@@ -331,6 +434,22 @@ const AIFineTunePage: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* 上传图片按钮 */}
+            <button 
+              onClick={triggerUpload}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="上传图片"
+            >
+              <Upload size={18} className="text-white/50" />
+            </button>
+            {/* 导出图片按钮 */}
+            <button 
+              onClick={handleExportImage}
+              className="p-2 rounded-full hover:bg-white/10"
+              title="导出图片"
+            >
+              <Download size={18} className="text-white/50" />
+            </button>
             {/* 撤销按钮 */}
             {canUndo(state) && (
               <button onClick={handleUndo} className="p-2 rounded-full hover:bg-white/10" title="撤销">
@@ -353,6 +472,17 @@ const AIFineTunePage: React.FC = () => {
         </div>
       </div>
 
+      {/* 隐藏的文件输入（用于图片上传） */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      {/* 离屏 Canvas（用于导出合成） */}
+      <canvas ref={exportCanvasRef} className="hidden" />
+
       {/* Preview Area */}
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
@@ -373,6 +503,17 @@ const AIFineTunePage: React.FC = () => {
           />
           {/* 渐变遮罩 */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+          {/* 上传图片提示（无自定义图片时显示） */}
+          {!state.imageSource && (
+            <button
+              onClick={triggerUpload}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center gap-2 hover:bg-black/80 transition-colors"
+            >
+              <Upload size={16} className="text-white" />
+              <span className="text-white text-sm font-medium">点击上传图片</span>
+            </button>
+          )}
 
           {/* Compare Mode */}
           {state.showCompare && (
