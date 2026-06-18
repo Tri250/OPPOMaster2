@@ -402,9 +402,9 @@ class MasterInsightEngine private constructor(context: Context) {
             else -> "南半球"
         }
         return if (hemisphere.isNotEmpty()) {
-            "拍摄于$hemisphere$season时节，"
+            "拍摄于${hemisphere}${season}时节，"
         } else {
-            "拍摄于$season时节，"
+            "拍摄于${season}时节，"
         }
     }
 
@@ -496,6 +496,7 @@ class MasterInsightEngine private constructor(context: Context) {
         SceneCategory.NIGHT -> listOf("城市灯光", "星空", "夜景人像")
         SceneCategory.MACRO -> listOf("昆虫", "花卉细节", "纹理")
         SceneCategory.EVENT -> listOf("婚礼", "派对", "演唱会")
+        SceneCategory.UNKNOWN -> listOf("主体", "细节", "氛围")
     }
 
     private fun getBestTimeOfDay(sceneId: String): String = when {

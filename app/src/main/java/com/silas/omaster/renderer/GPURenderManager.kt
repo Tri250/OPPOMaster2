@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.pow
 
 /**
  * Bitmap 对象池，减少 GC 压力
@@ -527,7 +528,7 @@ class GPURenderManager private constructor(private val context: Context) {
      * GPU渲染
      */
     private suspend fun renderWithGPU(request: RenderRequest): RenderResult {
-        return runOnRenderThreadBlocking {
+        val gpuResult = runOnRenderThreadBlocking {
             try {
                 val startTime = SystemClock.elapsedRealtime()
 
@@ -570,9 +571,15 @@ class GPURenderManager private constructor(private val context: Context) {
 
             } catch (e: Exception) {
                 Log.e(TAG, "GPU render failed", e)
-                // 尝试CPU降级
-                renderWithCPU(request)
+                RenderResult.Error("GPU render failed: ${e.message}")
             }
+        }
+
+        // GPU 失败时降级到 CPU 渲染
+        return if (gpuResult is RenderResult.Error) {
+            renderWithCPU(request)
+        } else {
+            gpuResult
         }
     }
     
@@ -992,7 +999,7 @@ class CPURenderer {
             
             // 应用曝光
             if (params.exposure != 0f) {
-                val exposureFactor = kotlin.math.pow(2.0, (params.exposure / 50f).toDouble()).toFloat()
+                val exposureFactor = 2.0.pow((params.exposure / 50f).toDouble()).toFloat()
                 r = (r * exposureFactor).toInt().coerceIn(0, 255)
                 g = (g * exposureFactor).toInt().coerceIn(0, 255)
                 b = (b * exposureFactor).toInt().coerceIn(0, 255)

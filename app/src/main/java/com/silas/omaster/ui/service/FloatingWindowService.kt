@@ -26,6 +26,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.ui.graphics.toArgb
 import com.silas.omaster.MainActivity
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager

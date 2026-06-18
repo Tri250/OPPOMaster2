@@ -440,6 +440,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
         AnalysisStatus.PROCESSING -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
         AnalysisStatus.PENDING -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
     }
+    val pendingRingColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
 
     Row(
         modifier = Modifier
@@ -477,7 +478,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                         .then(
                             Modifier.drawBehind {
                                 drawCircle(
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                                    color = pendingRingColor,
                                     radius = size.minDimension / 2,
                                     style = Stroke(width = 1.dp.toPx())
                                 )

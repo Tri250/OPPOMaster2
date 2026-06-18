@@ -30,22 +30,6 @@ object PresetRemoteManager {
                 json(Json { ignoreUnknownKeys = true })
             }
 
-            // ==================== 连接池配置 ====================
-            engine {
-                // 连接超时
-                requestTimeout = 30_000
-                // 连接池配置
-                endpoint {
-                    maxConnectionsPerRoute = 8          // 每个路由最大连接数
-                    maxConnectionsCount = 32             // 全局最大连接数
-                    pipelineMaxSize = 4                  // 流水线最大请求数
-                    keepAliveTime = 30_000               // 保持连接存活时间 (30s)
-                    connectTimeout = 10_000              // 连接建立超时 (10s)
-                    connectRetryAttempts = 2             // 连接重试次数
-                    socketTimeout = 15_000               // Socket 超时
-                }
-            }
-
             // ==================== 超时配置 ====================
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000

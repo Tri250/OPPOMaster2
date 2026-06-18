@@ -351,7 +351,7 @@ fun AIFineTuneScreen(
                     // 导出按钮
                     IconButton(
                         onClick = {
-                            val doExport = {
+                            val doExport: () -> Unit = {
                                 scope.launch {
                                     try {
                                         val saved = saveImageToGallery(context, selectedBitmap, renderParams)
@@ -1472,11 +1472,11 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
     )
 
     // 色温矩阵（暖色/冷色调整）
-    val warmthMatrix = ColorMatrix().apply {
-        if (war > 0) {
+    val warmthMatrix = when {
+        war > 0 -> {
             // 暖色调：增加红色，减少蓝色
             val warmFactor = war * 0.3f
-            set(
+            ColorMatrix(
                 floatArrayOf(
                     1f + warmFactor, 0f, 0f, 0f, 0f,
                     0f, 1f, 0f, 0f, 0f,
@@ -1484,10 +1484,11 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
                     0f, 0f, 0f, 1f, 0f
                 )
             )
-        } else if (war < 0) {
+        }
+        war < 0 -> {
             // 冷色调：减少红色，增加蓝色
             val coolFactor = -war * 0.3f
-            set(
+            ColorMatrix(
                 floatArrayOf(
                     1f - coolFactor, 0f, 0f, 0f, 0f,
                     0f, 1f, 0f, 0f, 0f,
@@ -1496,6 +1497,7 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
                 )
             )
         }
+        else -> ColorMatrix()
     }
 
     // 合并所有矩阵（按顺序应用）

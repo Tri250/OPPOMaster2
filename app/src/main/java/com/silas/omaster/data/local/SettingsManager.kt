@@ -25,6 +25,9 @@ import kotlinx.serialization.json.Json
 // DataStore 扩展属性
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
+// DataStore Preferences 没有内置 floatPreferencesKey，使用 Preferences.Key 自行创建
+private fun floatPreferencesKey(name: String): Preferences.Key<Float> = Preferences.Key(name)
+
 /**
  * 工具函数：安全的枚举反序列化（性能优化：基于 enumConstants 缓存）
  * @param name 枚举名称
