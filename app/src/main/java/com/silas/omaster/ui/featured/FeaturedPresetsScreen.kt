@@ -68,6 +68,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +81,7 @@ import com.silas.omaster.ui.components.PresetImage
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.LightGray
 import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.R
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform

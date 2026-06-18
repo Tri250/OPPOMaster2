@@ -2,38 +2,18 @@ package com.silas.omaster.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.silas.omaster.R
 
 /**
  * OMaster Typography 字体系统
  * 基于 Material3 设计规范，统一管理应用内所有字体样式
  *
  * 品牌字体配置：
- * - 使用 Noto Sans 作为品牌字体族（将通过 res/font 目录加载）
- * - 如未添加字体文件，将自动回退至系统默认字体
- * - 字体文件放置路径：app/src/main/res/font/
- * - 推荐字体：NotoSans-Regular.ttf, NotoSans-Bold.ttf 等
+ * - 使用系统默认字体族（res/font 自定义字体未提供时回退）
  */
-val OMasterFontFamily = FontFamily(
-    Font(R.font.noto_sans_regular, FontWeight.Normal),
-    Font(R.font.noto_sans_bold, FontWeight.Bold),
-    Font(R.font.noto_sans_medium, FontWeight.Medium),
-    Font(R.font.noto_sans_semibold, FontWeight.SemiBold),
-)
-
-/**
- * 安全获取字体族：如果自定义字体文件不存在，回退至系统默认字体
- */
-private val safeFontFamily: FontFamily
-    get() = try {
-        OMasterFontFamily
-    } catch (e: Exception) {
-        FontFamily.Default
-    }
+private val safeFontFamily: FontFamily = FontFamily.Default
 
 val Typography = Typography(
     // 大标题 - 用于页面主标题

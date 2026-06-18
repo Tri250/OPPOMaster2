@@ -8,6 +8,7 @@ import android.util.Base64
 import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
+import kotlinx.coroutines.runBlocking
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
@@ -136,9 +137,7 @@ class OMasterApplication : Application() {
             }
             instance = this
             // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
-            if (!::prefs.isInitialized) {
-                prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            }
+            initializePrefs(this@OMasterApplication)
         }
         StartupLogger.logStep("基础变量初始化", SystemClock.elapsedRealtime() - step1Start)
 
@@ -187,7 +186,7 @@ class OMasterApplication : Application() {
 
                 // 预初始化 SettingsManager 缓存（减少首次访问时的阻塞）
                 try {
-                    SettingsManager.getInstance(this).preloadCache()
+                    runBlocking { SettingsManager.getInstance(this@OMasterApplication).preloadCache() }
                     StartupLogger.logStep("SettingsManager预加载", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "SettingsManager预加载失败", e)
@@ -196,7 +195,7 @@ class OMasterApplication : Application() {
                 // 预初始化 FaceDetectorSingleton（非关键，首次使用时才真正加载模型）
                 try {
                     // 仅触发初始化，实际模型加载延迟到首次使用时
-                    FaceDetectorSingleton.getInstance()
+                    FaceDetectorSingleton.run { }
                     StartupLogger.logStep("FaceDetector预初始化", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "FaceDetector预初始化失败", e)

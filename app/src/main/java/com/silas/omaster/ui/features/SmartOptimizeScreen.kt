@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
@@ -120,6 +121,14 @@ fun SmartOptimizeScreen(
 
     // 图片选择器
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // 原图与优化后图片状态
+    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var optimizedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    // 预览模式
+    var previewMode by remember { mutableStateOf("before") }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -137,10 +146,6 @@ fun SmartOptimizeScreen(
         }
     }
 
-    // 原图与优化后图片状态
-    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var optimizedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
     // 优化参数状态
     var hdrEnabled by remember { mutableStateOf(false) }
     var hdrStrength by remember { mutableFloatStateOf(50f) }
@@ -156,9 +161,6 @@ fun SmartOptimizeScreen(
 
     var colorCorrectionEnabled by remember { mutableStateOf(true) }
     var colorCorrectionStrength by remember { mutableFloatStateOf(20f) }
-
-    // 预览模式
-    var previewMode by remember { mutableStateOf("before") }
 
     // 优化进度
     var isOptimizing by remember { mutableStateOf(false) }
@@ -224,8 +226,8 @@ fun SmartOptimizeScreen(
 
                     // 调用 AI 推理引擎执行真实优化处理
                     workingBitmap = withContext(Dispatchers.Default) {
-                        inferenceEngine.applyOptimization(workingBitmap, id)
-                    }
+                        inferenceEngine.applyOptimization(workingBitmap!!, id)
+                    } ?: source
 
                     optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
                     optimizedOptions.add(id)

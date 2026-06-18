@@ -410,7 +410,7 @@ class SceneRecognitionManager private constructor(context: Context) {
      * 供 UI 层订阅使用
      */
     fun isSceneRecognitionEnabledFlow(): Flow<Boolean> {
-        return isSceneRecognitionEnabled.distinctUntilChanged()
+        return isSceneRecognitionEnabled
     }
 
     /**

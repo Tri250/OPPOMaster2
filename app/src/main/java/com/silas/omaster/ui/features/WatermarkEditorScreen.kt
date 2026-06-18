@@ -255,6 +255,7 @@ fun WatermarkEditorScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val defaultOnBackgroundColor = MaterialTheme.colorScheme.onBackground
     val scope = rememberCoroutineScope()
 
     // ========== 状态管理 ==========
@@ -271,7 +272,7 @@ fun WatermarkEditorScreen(
     var dateText by remember { mutableStateOf("2026-06-09") }
 
     // 智能颜色推荐
-    var recommendedColor by remember { mutableStateOf(MaterialTheme.colorScheme.onBackground) }
+    var recommendedColor by remember { mutableStateOf(defaultOnBackgroundColor) }
 
     // 图片选择器
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -339,7 +340,7 @@ fun WatermarkEditorScreen(
     // 样式参数
     var selectedPosition by remember { mutableStateOf(WatermarkPlacement.BOTTOM_LEFT) }
     var selectedFont by remember { mutableStateOf(FontOption.DEFAULT) }
-    var selectedColor by remember { mutableStateOf(MaterialTheme.colorScheme.onBackground) }
+    var selectedColor by remember { mutableStateOf(defaultOnBackgroundColor) }
     var textSize by remember { mutableFloatStateOf(14f) }
     var opacity by remember { mutableFloatStateOf(0.8f) }
     var rotation by remember { mutableFloatStateOf(0f) }
@@ -514,12 +515,12 @@ fun WatermarkEditorScreen(
                 )
             } else if (previewBitmap != null) {
                 // 预览Canvas（支持手势操作）
+                val displayBitmap = when {
+                    showBeforeAfter && originalBitmap != null -> originalBitmap
+                    else -> previewBitmap
+                } ?: return@Box
                 WatermarkPreviewCanvas(
-                    bitmap = when {
-                        showBeforeAfter && originalBitmap != null -> originalBitmap
-                        previewBitmap != null -> previewBitmap
-                        else -> return@WatermarkPreviewCanvas
-                    },
+                    bitmap = displayBitmap,
                     watermarkConfig = watermarkConfig.copy(
                         enabled = isWatermarkEnabled,
                         offset = watermarkOffset,
@@ -770,7 +771,7 @@ fun WatermarkEditorScreen(
                         textSize = 14f
                         opacity = 0.8f
                         rotation = 0f
-                        selectedColor = MaterialTheme.colorScheme.onBackground
+                        selectedColor = defaultOnBackgroundColor
                         letterSpacing = 0f
                         fontWeight = FontWeight.Normal
                         bgOpacity = 0f

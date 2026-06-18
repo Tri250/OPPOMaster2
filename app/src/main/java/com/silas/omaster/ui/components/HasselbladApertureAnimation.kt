@@ -469,6 +469,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                 )
             }
             AnalysisStatus.PENDING -> {
+                val pendingStrokeColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
                 Box(
                     modifier = Modifier
                         .size(16.dp)
@@ -477,7 +478,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                         .then(
                             Modifier.drawBehind {
                                 drawCircle(
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                                    color = pendingStrokeColor,
                                     radius = size.minDimension / 2,
                                     style = Stroke(width = 1.dp.toPx())
                                 )
