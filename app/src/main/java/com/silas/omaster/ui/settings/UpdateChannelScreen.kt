@@ -21,6 +21,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.ui.theme.ChannelBeta
+import com.silas.omaster.ui.theme.ChannelDev
+import com.silas.omaster.ui.theme.ChannelStable
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.perform
@@ -46,9 +49,9 @@ fun UpdateChannelScreen(
     var autoInstallEnabled by remember { mutableStateOf(false) }
 
     val channels = listOf(
-        UpdateChannelInfo("stable", "稳定版", "最稳定的版本，推荐日常使用", Icons.Default.Shield, Color(0xFF10B981)),
-        UpdateChannelInfo("beta", "测试版", "提前体验新功能，可能存在小问题", Icons.Default.Bolt, Color(0xFFF59E0B)),
-        UpdateChannelInfo("dev", "开发版", "最新功能，适合尝鲜用户", Icons.Default.Autorenew, Color(0xFF3B82F6))
+        UpdateChannelInfo("stable", "稳定版", "最稳定的版本，推荐日常使用", Icons.Default.Shield, ChannelStable),
+        UpdateChannelInfo("beta", "测试版", "提前体验新功能，可能存在小问题", Icons.Default.Bolt, ChannelBeta),
+        UpdateChannelInfo("dev", "开发版", "最新功能，适合尝鲜用户", Icons.Default.Autorenew, ChannelDev)
     )
 
     Column(

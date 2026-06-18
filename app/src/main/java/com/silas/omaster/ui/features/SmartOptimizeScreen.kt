@@ -83,6 +83,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ui.theme.AccentAmber
+import com.silas.omaster.ui.theme.AccentBlue
+import com.silas.omaster.ui.theme.AccentPurple
+import com.silas.omaster.ui.theme.AccentYellow
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
@@ -503,7 +507,7 @@ fun SmartOptimizeScreen(
                     onToggle = { hdrEnabled = it },
                     strength = hdrStrength,
                     onStrengthChange = { hdrStrength = it },
-                    color = Color(0xFFFF9800),
+                    color = AccentAmber,
                     isOptimized = optimizedOptions.contains("hdr"),
                     isProcessing = isOptimizing && optimizationCurrentName == "HDR增强"
                 )
@@ -519,7 +523,7 @@ fun SmartOptimizeScreen(
                     onToggle = { noiseReductionEnabled = it },
                     strength = noiseReductionStrength,
                     onStrengthChange = { noiseReductionStrength = it },
-                    color = Color(0xFF2196F3),
+                    color = AccentBlue,
                     isOptimized = optimizedOptions.contains("denoise"),
                     isProcessing = isOptimizing && optimizationCurrentName == "智能降噪"
                 )
@@ -535,7 +539,7 @@ fun SmartOptimizeScreen(
                     onToggle = { sharpenEnabled = it },
                     strength = sharpenStrength,
                     onStrengthChange = { sharpenStrength = it },
-                    color = Color(0xFF9C27B0),
+                    color = AccentPurple,
                     isOptimized = optimizedOptions.contains("sharpen"),
                     isProcessing = isOptimizing && optimizationCurrentName == "锐化增强"
                 )
@@ -552,7 +556,7 @@ fun SmartOptimizeScreen(
                     strength = exposureAdjustment,
                     strengthRange = -50f..50f,
                     onStrengthChange = { exposureAdjustment = it },
-                    color = Color(0xFFFFEB3B),
+                    color = AccentYellow,
                     isOptimized = optimizedOptions.contains("exposure"),
                     isProcessing = isOptimizing && optimizationCurrentName == "自动曝光"
                 )

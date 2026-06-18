@@ -70,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.HasselbladOrangeLight
 import com.silas.omaster.util.perform
 
 /**
@@ -131,7 +132,7 @@ fun CoreFeaturesScreen(
                 title = "哈苏之眼",
                 subtitle = "智能识别50+拍摄场景，自动推荐最佳参数",
                 icon = Icons.Default.CameraAlt,
-                gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 description = FeatureDescription(
                     desc = "支持36+拍摄场景智能识别",
                     tips = listOf("人像", "风景", "夜景", "美食", "建筑", "自然")
@@ -188,7 +189,7 @@ fun CoreFeaturesScreen(
                 title = "预设管理",
                 subtitle = "云端预设库，收藏、创建、分享",
                 icon = Icons.Default.PhotoFilter,
-                gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 description = FeatureDescription(
                     desc = "云端预设库，收藏、创建、分享",
                     tips = listOf("云端同步", "本地管理", "批量操作")

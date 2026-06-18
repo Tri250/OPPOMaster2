@@ -207,7 +207,7 @@ fun ParamAdjustScreen(
                     options = isoOptions.map { it.toString() to it },
                     onValueChange = { iso = it as Int },
                     unit = "",
-                    color = Color(0xFF9C27B0)
+                    color = AccentPurple
                 )
             }
 
@@ -222,7 +222,7 @@ fun ParamAdjustScreen(
                     options = shutterOptions,
                     onValueChange = { shutterSpeed = it as Float },
                     unit = "",
-                    color = Color(0xFF2196F3)
+                    color = AccentBlue
                 )
             }
 
@@ -250,7 +250,7 @@ fun ParamAdjustScreen(
                     options = wbOptions.map { "${it}K" to it },
                     onValueChange = { whiteBalance = it as Int },
                     unit = "K",
-                    color = Color(0xFFFFEB3B)
+                    color = AccentYellow
                 )
             }
 
@@ -263,7 +263,7 @@ fun ParamAdjustScreen(
                     valueRange = 8..400,
                     onValueChange = { focalLength = it as Int },
                     unit = "mm",
-                    color = Color(0xFFE91E63)
+                    color = AccentPink
                 )
             }
 
@@ -276,7 +276,7 @@ fun ParamAdjustScreen(
                     valueRange = -3f..3f,
                     onValueChange = { exposureCompensation = it as Float },
                     unit = "EV",
-                    color = Color(0xFF4CAF50)
+                    color = SuccessGreen
                 )
             }
         }
@@ -287,7 +287,7 @@ fun ParamAdjustScreen(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+            colors = CardDefaults.cardColors(containerColor = SurfaceLight)
         ) {
             Row(
                 modifier = Modifier
@@ -313,7 +313,7 @@ private fun ParamPresetChip(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) HasselbladOrange else Color(0xFF2A2A2A))
+            .background(if (selected) HasselbladOrange else SurfaceLight)
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
@@ -343,7 +343,7 @@ private fun ParamSliderCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+        colors = CardDefaults.cardColors(containerColor = SurfaceLight)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // 标题

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.silas.omaster.ui.theme.AccentPurple
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.perform
 
@@ -331,7 +332,7 @@ fun NotificationSettingsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -343,7 +344,7 @@ fun NotificationSettingsScreen(
                                 Icon(
                                     Icons.Default.DoNotDisturb,
                                     null,
-                                    tint = Color(0xFF9C27B0),
+                                    tint = AccentPurple,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -358,7 +359,7 @@ fun NotificationSettingsScreen(
                                 onCheckedChange = { dndEnabled = it },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = MaterialTheme.colorScheme.onBackground,
-                                    checkedTrackColor = Color(0xFF9C27B0),
+                                    checkedTrackColor = AccentPurple,
                                     uncheckedThumbColor = Color.Gray,
                                     uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
                                 )
@@ -405,7 +406,7 @@ private fun NotificationSettingCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier

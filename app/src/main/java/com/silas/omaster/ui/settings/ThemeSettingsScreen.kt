@@ -38,11 +38,11 @@ fun ThemeSettingsScreen(
     var selectedTheme by remember { mutableStateOf("hasselblad") }
     val themes = listOf(
         ThemeOption("hasselblad", "哈苏", HasselbladOrange, "专业哈苏品牌风格"),
-        ThemeOption("oppo", "OPPO", Color(0xFF1BA784), "OPPO 品牌绿色"),
-        ThemeOption("vivo", "vivo", Color(0xFF415FFF), "vivo 品牌蓝色"),
-        ThemeOption("realme", "realme", Color(0xFFFFC30D), "realme 品牌金色"),
-        ThemeOption("honor", "荣耀", Color(0xFF0091FF), "荣耀品牌蓝色"),
-        ThemeOption("xiaomi", "小米", Color(0xFFFF6900), "小米品牌橙色")
+        ThemeOption("oppo", "OPPO", BrandOppoGreen, "OPPO 品牌绿色"),
+        ThemeOption("vivo", "vivo", BrandVivoBlue, "vivo 品牌蓝色"),
+        ThemeOption("realme", "realme", BrandRealmeGold, "realme 品牌金色"),
+        ThemeOption("honor", "荣耀", BrandHonorBlue, "荣耀品牌蓝色"),
+        ThemeOption("xiaomi", "小米", BrandXiaomiOrange, "小米品牌橙色")
     )
     
     // 自定义颜色
@@ -213,13 +213,13 @@ fun ThemeSettingsScreen(
             ) {
                 val colorPresets = listOf(
                     HasselbladOrange,
-                    Color(0xFF1BA784),
-                    Color(0xFF415FFF),
-                    Color(0xFFFFC30D),
-                    Color(0xFF0091FF),
-                    Color(0xFFFF6900),
-                    Color(0xFFE91E63),
-                    Color(0xFF9C27B0)
+                    BrandOppoGreen,
+                    BrandVivoBlue,
+                    BrandRealmeGold,
+                    BrandHonorBlue,
+                    BrandXiaomiOrange,
+                    AccentPink,
+                    AccentPurple
                 )
                 
                 colorPresets.forEach { color ->

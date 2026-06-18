@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
+import com.silas.omaster.ui.theme.AccentPurple
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.UrlConstants
@@ -116,7 +117,7 @@ fun TermsScreen(
                         Icon(
                             Icons.Default.CheckCircle,
                             null,
-                            tint = Color(0xFF9C27B0),
+                            tint = AccentPurple,
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -244,7 +245,7 @@ private fun KeyTermItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

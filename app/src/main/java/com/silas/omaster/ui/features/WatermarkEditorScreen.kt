@@ -567,7 +567,7 @@ fun WatermarkEditorScreen(
                             .align(Alignment.BottomCenter)
                             .padding(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (showBeforeAfter) CyanAccent else Color(0xFF2A2A2A)
+                            containerColor = if (showBeforeAfter) CyanAccent else SurfaceLight
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -842,7 +842,7 @@ private fun WatermarkCategoryTabs(
         items(WatermarkCategory.entries) { category ->
             val isSelected = category == selectedCategory
             val bgColor by animateColorAsState(
-                targetValue = if (isSelected) CyanAccent else Color(0xFF2A2A2A),
+                targetValue = if (isSelected) CyanAccent else SurfaceLight,
                 label = "bg"
             )
 
@@ -980,7 +980,7 @@ private fun WatermarkTemplateCard(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) CyanAccent.copy(alpha = 0.15f) else Color(0xFF2A2A2A))
+            .background(if (isSelected) CyanAccent.copy(alpha = 0.15f) else SurfaceLight)
             .border(1.dp, borderColor, RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(8.dp),
@@ -991,7 +991,7 @@ private fun WatermarkTemplateCard(
             modifier = Modifier
                 .size(32.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (isSelected) CyanAccent.copy(alpha = 0.3f) else Color(0xFF3A3A3A))
+                .background(if (isSelected) CyanAccent.copy(alpha = 0.3f) else SurfaceLighter)
         ) {
             Icon(
                 template.category.icon,
@@ -1053,7 +1053,7 @@ private fun WatermarkPositionGrid(
                                     .weight(1f)
                                     .height(36.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(if (isSelected) CyanAccent else Color(0xFF2A2A2A))
+                                    .background(if (isSelected) CyanAccent else SurfaceLight)
                                     .border(
                                         1.dp,
                                         if (isSelected) CyanAccent else Color.Gray.copy(alpha = 0.3f),
@@ -1262,7 +1262,7 @@ private fun WatermarkElementRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2A2A2A))
+            .background(SurfaceLight)
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1335,7 +1335,7 @@ private fun WatermarkVignetteRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2A2A2A))
+            .background(SurfaceLight)
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1406,12 +1406,12 @@ private fun WatermarkStyleSection(
     val colors = listOf(
         MaterialTheme.colorScheme.onBackground to "白色",
         MaterialTheme.colorScheme.scrim to "黑色",
-        Color(0xFFFFD700) to "金色",
-        Color(0xFFFF6B35) to "橙色",
+        AccentGold to "金色",
+        HasselbladOrange to "橙色",
         CyanAccent to "青色",
-        Color(0xFFFF6B9D) to "粉色",
+        AccentPinkLight to "粉色",
         SuccessGreen to "绿色",
-        Color(0xFF9C27B0) to "紫色"
+        AccentPurple to "紫色"
     )
 
     Column {
@@ -1438,7 +1438,7 @@ private fun WatermarkStyleSection(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
+                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else SurfaceLight)
                         .border(
                             1.dp,
                             if (isSelected) CyanAccent else Color.Transparent,
@@ -1475,7 +1475,7 @@ private fun WatermarkStyleSection(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
+                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else SurfaceLight)
                         .border(
                             1.dp,
                             if (isSelected) CyanAccent else Color.Transparent,

@@ -42,10 +42,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.silas.omaster.ai.*
 import com.silas.omaster.renderer.RenderParameters
-import com.silas.omaster.ui.theme.CyanAccent
-import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.SuccessGreen
-import com.silas.omaster.ui.theme.WarningYellow
+import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -243,27 +240,27 @@ fun AIFineTuneScreen(
         listOf(
             ColorStylePreset("natural", "自然", Icons.Default.WbSunny, SuccessGreen,
                 RenderParameters(saturation = 5f, contrast = 5f, vibrance = 5f), "自然真实色彩"),
-            ColorStylePreset("vivid", "鲜艳", Icons.Default.Palette, Color(0xFFFF5722),
+            ColorStylePreset("vivid", "鲜艳", Icons.Default.Palette, AccentDeepOrange,
                 RenderParameters(saturation = 25f, contrast = 15f, warmth = 5f, vibrance = 20f), "浓郁鲜艳色彩"),
-            ColorStylePreset("warm", "暖调", Icons.Default.WbSunny, Color(0xFFFF9800),
+            ColorStylePreset("warm", "暖调", Icons.Default.WbSunny, AccentAmber,
                 RenderParameters(saturation = 10f, contrast = 8f, warmth = 20f, vibrance = 10f), "温暖阳光感"),
-            ColorStylePreset("cool", "冷调", Icons.Default.AcUnit, Color(0xFF2196F3),
+            ColorStylePreset("cool", "冷调", Icons.Default.AcUnit, AccentBlue,
                 RenderParameters(saturation = 8f, contrast = 10f, warmth = -20f, vibrance = 8f), "清冷高级感"),
-            ColorStylePreset("film", "胶片", Icons.Default.CameraAlt, Color(0xFF795548),
+            ColorStylePreset("film", "胶片", Icons.Default.CameraAlt, AccentBrown,
                 RenderParameters(saturation = -10f, contrast = 15f, warmth = 5f, grain = 15f, fade = 10f), "经典胶片质感"),
-            ColorStylePreset("bw", "黑白", Icons.Default.Contrast, Color(0xFF9E9E9E),
+            ColorStylePreset("bw", "黑白", Icons.Default.Contrast, AccentGrey,
                 RenderParameters(saturation = -100f, contrast = 20f, clarity = 15f), "经典黑白摄影"),
-            ColorStylePreset("vintage", "复古", Icons.Default.History, Color(0xFF8D6E63),
+            ColorStylePreset("vintage", "复古", Icons.Default.History, AccentVintageBrown,
                 RenderParameters(saturation = -15f, contrast = 5f, warmth = 15f, fade = 20f, grain = 10f), "怀旧复古风格"),
-            ColorStylePreset("cinematic", "电影", Icons.Default.Movie, Color(0xFF607D8B),
+            ColorStylePreset("cinematic", "电影", Icons.Default.Movie, AccentBlueGrey,
                 RenderParameters(saturation = 5f, contrast = 25f, warmth = 10f), "电影大片感"),
-            ColorStylePreset("moody", "情绪", Icons.Default.DarkMode, Color(0xFF3F51B5),
+            ColorStylePreset("moody", "情绪", Icons.Default.DarkMode, AccentIndigo,
                 RenderParameters(saturation = -5f, contrast = 30f, warmth = -10f, shadows = 20f, highlights = -15f), "情绪氛围感"),
-            ColorStylePreset("pastel", "柔和", Icons.Default.Brush, Color(0xFFE1BEE7),
+            ColorStylePreset("pastel", "柔和", Icons.Default.Brush, AccentLightPurple,
                 RenderParameters(saturation = -10f, contrast = -10f, warmth = 5f, brightness = 10f, fade = 15f), "柔和粉彩风"),
-            ColorStylePreset("dramatic", "戏剧", Icons.Default.Bolt, Color(0xFFFF5722),
+            ColorStylePreset("dramatic", "戏剧", Icons.Default.Bolt, AccentDeepOrange,
                 RenderParameters(saturation = 15f, contrast = 35f, warmth = 5f, clarity = 20f, highlights = -20f), "戏剧性光影"),
-            ColorStylePreset("hdr", "HDR", Icons.Default.TrendingUp, Color(0xFF00BCD4),
+            ColorStylePreset("hdr", "HDR", Icons.Default.TrendingUp, CyanAccent,
                 RenderParameters(saturation = 10f, contrast = 20f, highlights = -30f, shadows = 30f, clarity = 25f), "高动态范围")
         )
     }
@@ -271,16 +268,16 @@ fun AIFineTuneScreen(
     // 智能优化选项（与Web端SMART_OPTIMIZATIONS完全对齐 - 10项）
     val smartOptimizations = remember {
         listOf(
-            SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", Color(0xFFFF6B35)),
+            SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", HasselbladOrange),
             SmartOptimization("denoise", "智能降噪", Icons.Default.WaterDrop, "减少噪点，保持细节", SuccessGreen),
-            SmartOptimization("sharpen", "智能锐化", Icons.Default.Visibility, "增强边缘清晰度", Color(0xFF2196F3)),
-            SmartOptimization("dehaze", "去雾", Icons.Default.WbSunny, "去除雾气，提升通透感", Color(0xFF9C27B0)),
-            SmartOptimization("skin", "肤色优化", Icons.Default.Face, "智能美化肤色", Color(0xFFE91E63)),
-            SmartOptimization("sky", "天空增强", Icons.Default.Cloud, "增强天空色彩和细节", Color(0xFF00BCD4), true),
-            SmartOptimization("ai-composition", "AI构图", Icons.Default.Crop, "智能裁剪优化构图", Color(0xFFFF9800), true),
-            SmartOptimization("portrait-bokeh", "人像虚化", Icons.Default.Circle, "模拟大光圈虚化效果", Color(0xFF795548), true),
-            SmartOptimization("color-match", "色彩匹配", Icons.Default.Palette, "匹配参考图色彩风格", Color(0xFF607D8B), true),
-            SmartOptimization("smart-light", "智能补光", Icons.Default.Lightbulb, "AI分析并补光阴影区域", Color(0xFFFFEB3B), true)
+            SmartOptimization("sharpen", "智能锐化", Icons.Default.Visibility, "增强边缘清晰度", AccentBlue),
+            SmartOptimization("dehaze", "去雾", Icons.Default.WbSunny, "去除雾气，提升通透感", AccentPurple),
+            SmartOptimization("skin", "肤色优化", Icons.Default.Face, "智能美化肤色", AccentPink),
+            SmartOptimization("sky", "天空增强", Icons.Default.Cloud, "增强天空色彩和细节", CyanAccent, true),
+            SmartOptimization("ai-composition", "AI构图", Icons.Default.Crop, "智能裁剪优化构图", AccentAmber, true),
+            SmartOptimization("portrait-bokeh", "人像虚化", Icons.Default.Circle, "模拟大光圈虚化效果", AccentBrown, true),
+            SmartOptimization("color-match", "色彩匹配", Icons.Default.Palette, "匹配参考图色彩风格", AccentBlueGrey, true),
+            SmartOptimization("smart-light", "智能补光", Icons.Default.Lightbulb, "AI分析并补光阴影区域", AccentYellow, true)
         )
     }
 
@@ -1398,12 +1395,12 @@ private fun CurveAdjustCard(
 private fun defaultHslValuesList(): List<HSLValue> {
     return listOf(
         HSLValue("red", "红色", Color.Red),
-        HSLValue("orange", "橙色", Color(0xFFFF8000)),
+        HSLValue("orange", "橙色", AccentWarmOrange),
         HSLValue("yellow", "黄色", Color.Yellow),
         HSLValue("green", "绿色", Color.Green),
         HSLValue("cyan", "青色", Color.Cyan),
         HSLValue("blue", "蓝色", Color.Blue),
-        HSLValue("purple", "紫色", Color(0xFF8000FF)),
+        HSLValue("purple", "紫色", AccentViolet),
         HSLValue("magenta", "洋红", Color.Magenta)
     )
 }

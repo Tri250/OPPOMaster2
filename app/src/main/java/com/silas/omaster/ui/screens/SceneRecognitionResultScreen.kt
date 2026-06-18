@@ -748,7 +748,7 @@ private fun ParamRow(
                 fontWeight = FontWeight.Bold,
                 color = when {
                     value > 15 -> HasselbladOrange
-                    value < -15 -> Color(0xFF2196F3)
+                    value < -15 -> AccentBlue
                     value != 0 -> MaterialTheme.colorScheme.onBackground
                     else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 }

@@ -2,43 +2,24 @@ package com.silas.omaster.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.silas.omaster.R
 
 /**
  * OMaster Typography 字体系统
  * 基于 Material3 设计规范，统一管理应用内所有字体样式
  *
- * 品牌字体配置：
- * - 使用 Noto Sans 作为品牌字体族（将通过 res/font 目录加载）
- * - 如未添加字体文件，将自动回退至系统默认字体
- * - 字体文件放置路径：app/src/main/res/font/
- * - 推荐字体：NotoSans-Regular.ttf, NotoSans-Bold.ttf 等
+ * 当前使用系统默认字体族，确保在没有自定义字体资源时也能正常编译和运行。
+ * 如需接入品牌字体，请将字体文件放入 app/src/main/res/font/ 后，
+ * 在此处改为 FontFamily(Font(R.font.xxx, FontWeight.Normal), ...)。
  */
-val OMasterFontFamily = FontFamily(
-    Font(R.font.noto_sans_regular, FontWeight.Normal),
-    Font(R.font.noto_sans_bold, FontWeight.Bold),
-    Font(R.font.noto_sans_medium, FontWeight.Medium),
-    Font(R.font.noto_sans_semibold, FontWeight.SemiBold),
-)
-
-/**
- * 安全获取字体族：如果自定义字体文件不存在，回退至系统默认字体
- */
-private val safeFontFamily: FontFamily
-    get() = try {
-        OMasterFontFamily
-    } catch (e: Exception) {
-        FontFamily.Default
-    }
+val OMasterFontFamily: FontFamily = FontFamily.Default
 
 val Typography = Typography(
     // 大标题 - 用于页面主标题
     titleLarge = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
@@ -47,7 +28,7 @@ val Typography = Typography(
     
     // 中标题 - 用于卡片标题、章节标题
     titleMedium = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -56,7 +37,7 @@ val Typography = Typography(
     
     // 小标题 - 用于列表项标题
     titleSmall = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -65,7 +46,7 @@ val Typography = Typography(
     
     // 正文大 - 用于主要内容文本
     bodyLarge = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -74,7 +55,7 @@ val Typography = Typography(
     
     // 正文中 - 用于描述文本、辅助信息
     bodyMedium = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -83,7 +64,7 @@ val Typography = Typography(
     
     // 正文小 - 用于次要信息、提示文本
     bodySmall = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -92,7 +73,7 @@ val Typography = Typography(
     
     // 标签大 - 用于按钮文字、重要标签
     labelLarge = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -101,7 +82,7 @@ val Typography = Typography(
     
     // 标签中 - 用于普通标签、徽章
     labelMedium = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -110,7 +91,7 @@ val Typography = Typography(
     
     // 标签小 - 用于小标签、角标文字
     labelSmall = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
@@ -119,7 +100,7 @@ val Typography = Typography(
     
     // 标题显示 - 用于特殊大标题（如Logo）
     displayLarge = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 26.sp,
         lineHeight = 32.sp,
@@ -128,7 +109,7 @@ val Typography = Typography(
     
     // 标题显示中 - 用于欢迎页标题
     displayMedium = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 30.sp,
@@ -137,7 +118,7 @@ val Typography = Typography(
     
     // 标题显示小 - 用于副标题
     displaySmall = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         lineHeight = 26.sp,
@@ -146,7 +127,7 @@ val Typography = Typography(
     
     // 标题头 - 用于顶部导航栏标题
     headlineLarge = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
         lineHeight = 24.sp,
@@ -155,7 +136,7 @@ val Typography = Typography(
     
     // 标题头中 - 用于列表头部
     headlineMedium = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -164,7 +145,7 @@ val Typography = Typography(
     
     // 标题头小 - 用于小节头部
     headlineSmall = TextStyle(
-        fontFamily = safeFontFamily,
+        fontFamily = OMasterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
