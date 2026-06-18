@@ -56,7 +56,7 @@ class FloatingWindowService : Service() {
     // 配色方案 - 从 SettingsManager 动态读取主题色
     private fun getPrimaryColor(context: Context): Int {
         val theme = SettingsManager.getInstance(context).currentTheme
-        return theme.primaryColor.toInt()
+        return theme.primaryColor.toArgb()
     }
 
     private fun getPrimaryDarkColor(context: Context): Int {
@@ -764,6 +764,7 @@ class FloatingWindowService : Service() {
      * 创建小型参数项（用于网格）
      */
     private fun createSmallParamItem(icon: String, label: String, value: String, valueTag: String? = null): LinearLayout {
+        val primaryColor = getPrimaryColor(this)
         return LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL

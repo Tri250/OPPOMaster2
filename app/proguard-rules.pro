@@ -160,7 +160,7 @@
 -dontnote kotlinx.serialization.AnnotationsKt
 
 # kotlinx.serialization 核心 JSON 序列化器
--keepclassmembers class kotlinx.serialization.json.** { ***; }
+-keepclassmembers class kotlinx.serialization.json.** { *; }
 
 # @Serializable 类的 $$serializer（编译器插件生成，反序列化入口）
 -keep class com.silas.omaster.model.**$$serializer { *; }

@@ -136,10 +136,8 @@ class OMasterApplication : Application() {
                 Log.w("OMasterApplication", "Application 实例在多进程中重新创建: ${android.os.Process.myPid()}")
             }
             instance = this
-            // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
-            if (!this::prefs.isInitialized) {
-                prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            }
+            // 补初始化 SharedPreferences（重复获取同一文件无副作用）
+            Companion.prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
         StartupLogger.logStep("基础变量初始化", SystemClock.elapsedRealtime() - step1Start)
 

@@ -210,8 +210,7 @@ fun SmartOptimizeScreen(
             optimizationStep = 0
             optimizationProgress = 0f
 
-            val source = originalBitmap
-            if (source == null) {
+            val source = originalBitmap ?: run {
                 isOptimizing = false
                 return@launch
             }

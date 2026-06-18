@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -24,9 +25,6 @@ import kotlinx.serialization.json.Json
 
 // DataStore 扩展属性
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
-
-// DataStore Preferences 没有内置 floatPreferencesKey，使用 Preferences.Key 自行创建
-private fun floatPreferencesKey(name: String): Preferences.Key<Float> = Preferences.Key(name)
 
 /**
  * 工具函数：安全的枚举反序列化（性能优化：基于 enumConstants 缓存）
@@ -636,18 +634,18 @@ class SettingsManager private constructor(private val context: Context) {
         return value
     }
 
-    private fun getDataSync(key: Preferences.Key<Float>, defaultValue: Float): Float {
+    private fun getDataSync(key: Preferences.Key<Double>, defaultValue: Float): Float {
         @Suppress("UNCHECKED_CAST")
-        cache[key.name]?.let { return it as Float }
+        cache[key.name]?.let { return (it as Double).toFloat() }
         val value = try {
             runBlocking {
-                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
+                context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue.toDouble() }.first()
             }
         } catch (e: Exception) {
-            defaultValue
+            defaultValue.toDouble()
         }
         cache[key.name] = value
-        return value
+        return value.toFloat()
     }
     
     private fun getDataSetSync(key: Preferences.Key<Set<String>>, defaultValue: Set<String>): Set<String> {
@@ -695,10 +693,11 @@ class SettingsManager private constructor(private val context: Context) {
         }
     }
 
-    private fun setDataSync(key: Preferences.Key<Float>, value: Float) {
-        cache[key.name] = value
+    private fun setDataSync(key: Preferences.Key<Double>, value: Float) {
+        val stored = value.toDouble()
+        cache[key.name] = stored
         runBlocking {
-            context.dataStore.edit { prefs -> prefs[key] = value }
+            context.dataStore.edit { prefs -> prefs[key] = stored }
         }
     }
     
@@ -712,20 +711,23 @@ class SettingsManager private constructor(private val context: Context) {
     /**
      * 同步删除数据（同时清除缓存）
      */
+    @JvmName("removeDataSyncString")
     private fun removeDataSync(key: Preferences.Key<String>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
         }
     }
-    
+
+    @JvmName("removeDataSyncInt")
     private fun removeDataSync(key: Preferences.Key<Int>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
         }
     }
-    
+
+    @JvmName("removeDataSyncBoolean")
     private fun removeDataSync(key: Preferences.Key<Boolean>) {
         cache.remove(key.name)
         runBlocking {
@@ -733,7 +735,8 @@ class SettingsManager private constructor(private val context: Context) {
         }
     }
 
-    private fun removeDataSync(key: Preferences.Key<Float>) {
+    @JvmName("removeDataSyncDouble")
+    private fun removeDataSync(key: Preferences.Key<Double>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
@@ -872,11 +875,11 @@ class SettingsManager private constructor(private val context: Context) {
 
         // 应用相机参数 Key
         private val KEY_APPLIED_ISO = intPreferencesKey("applied_iso")
-        private val KEY_APPLIED_SHUTTER_SPEED = floatPreferencesKey("applied_shutter_speed")
-        private val KEY_APPLIED_APERTURE = floatPreferencesKey("applied_aperture")
+        private val KEY_APPLIED_SHUTTER_SPEED = doublePreferencesKey("applied_shutter_speed")
+        private val KEY_APPLIED_APERTURE = doublePreferencesKey("applied_aperture")
         private val KEY_APPLIED_WHITE_BALANCE = intPreferencesKey("applied_white_balance")
         private val KEY_APPLIED_FOCAL_LENGTH = intPreferencesKey("applied_focal_length")
-        private val KEY_APPLIED_EXPOSURE_COMPENSATION = floatPreferencesKey("applied_exposure_compensation")
+        private val KEY_APPLIED_EXPOSURE_COMPENSATION = doublePreferencesKey("applied_exposure_compensation")
         private val KEY_HAS_APPLIED_CAMERA_PARAMS = booleanPreferencesKey("has_applied_camera_params")
 
         private val KEY_MIGRATION_HANDLED = booleanPreferencesKey("migration_handled")
