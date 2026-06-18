@@ -367,6 +367,9 @@ interface AppState {
   // 从源获取的预设
   fetchedPresets: Preset[];
   setFetchedPresets: (presets: Preset[]) => void;
+  // AI 微调图像源（跨页面共享）
+  tuneImageSource: string | null;
+  setTuneImageSource: (source: string | null) => void;
   // 批量转换 Android 预设
   convertAndSetPresets: (androidPresets: AndroidPresetJson[]) => void;
 }
@@ -580,6 +583,9 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   fetchedPresets: [],
   setFetchedPresets: (presets) => set({ fetchedPresets: presets }),
+  // AI 微调图像源（跨页面共享）
+  tuneImageSource: null,
+  setTuneImageSource: (source) => set({ tuneImageSource: source }),
   // 批量转换 Android 预设
   convertAndSetPresets: (androidPresets) => {
     const converted = androidPresets.map((p, i) => convertAndroidPresetToReact(p, i));
