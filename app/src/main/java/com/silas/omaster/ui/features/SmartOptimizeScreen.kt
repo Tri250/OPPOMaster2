@@ -222,9 +222,19 @@ fun SmartOptimizeScreen(
                     optimizationCurrentName = optimizeIdToName[id] ?: id
                     optimizationProgress = (index.toFloat()) / selectedOptimizeIds.size
 
+                    // 获取对应优化项的强度参数
+                    val strength = when (id) {
+                        "hdr" -> hdrStrength / 100f
+                        "denoise" -> noiseReductionStrength / 100f
+                        "sharpen" -> sharpenStrength / 100f
+                        "exposure" -> exposureAdjustment / 100f + 0.5f
+                        "color" -> colorCorrectionStrength / 100f
+                        else -> 0.5f
+                    }
+
                     // 调用 AI 推理引擎执行真实优化处理
                     workingBitmap = withContext(Dispatchers.Default) {
-                        inferenceEngine.applyOptimization(workingBitmap, id)
+                        inferenceEngine.applyOptimization(workingBitmap, id, strength)
                     }
 
                     optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size

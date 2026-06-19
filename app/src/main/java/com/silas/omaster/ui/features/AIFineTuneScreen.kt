@@ -336,11 +336,11 @@ fun AIFineTuneScreen(
                     .height(200.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedImageUri != null) {
-                    // 显示已选图片作为实时预览（应用ColorMatrix滤镜）
+                if (selectedBitmap != null) {
+                    // 使用 Bitmap + Image 直接渲染，确保 ColorMatrix 滤镜实时生效
                     val colorMatrix = remember(renderParams) { renderParams.toColorMatrix() }
-                    AsyncImage(
-                        model = selectedImageUri,
+                    Image(
+                        bitmap = selectedBitmap!!.asImageBitmap(),
                         contentDescription = "预览图片",
                         modifier = Modifier
                             .fillMaxSize()

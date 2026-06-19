@@ -201,14 +201,14 @@ class MasterInferenceEngine private constructor(context: Context) {
      * @param optimizationId 优化项ID（hdr/denoise/sharpen/exposure/color）
      * @return 处理后的图片（失败时返回原图）
      */
-    fun applyOptimization(bitmap: Bitmap, optimizationId: String): Bitmap {
+    fun applyOptimization(bitmap: Bitmap, optimizationId: String, strength: Float = 0.5f): Bitmap {
         return try {
             when (optimizationId) {
-                "hdr" -> applyHdr(bitmap)
-                "denoise" -> applyDenoise(bitmap)
-                "sharpen" -> applySharpen(bitmap)
-                "exposure" -> applyExposure(bitmap)
-                "color" -> applyColorCorrection(bitmap)
+                "hdr" -> applyHdr(bitmap, strength)
+                "denoise" -> applyDenoise(bitmap, strength)
+                "sharpen" -> applySharpen(bitmap, strength)
+                "exposure" -> applyExposure(bitmap, strength)
+                "color" -> applyColorCorrection(bitmap, strength)
                 else -> bitmap
             }
         } catch (e: Exception) {
@@ -218,13 +218,14 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * HDR 增强：提升动态范围，轻微提升亮部与暗部
+     * HDR 增强：提升动态范围，增强亮部细节与暗部层次
+     * strength 范围 0.0~1.0，控制效果强度
      */
-    private fun applyHdr(bitmap: Bitmap): Bitmap {
+    private fun applyHdr(bitmap: Bitmap, strength: Float): Bitmap {
+        val s = strength.coerceIn(0f, 1f)
+        val contrast = 1f + 0.25f * s
+        val brightness = 25f * s
         val matrix = ColorMatrix().apply {
-            // 提升对比度与亮度，模拟 HDR 压缩
-            val contrast = 1.08f
-            val brightness = 12f
             set(
                 floatArrayOf(
                     contrast, 0f, 0f, 0f, brightness,
@@ -238,41 +239,49 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 智能降噪：使用轻量高斯模糊平滑高频噪点
+     * 智能降噪：使用高斯模糊平滑高频噪点，保留边缘
+     * strength 越大，降噪半径越大
      */
-    private fun applyDenoise(bitmap: Bitmap): Bitmap {
-        return applyFastBlur(bitmap, radius = 2)
+    private fun applyDenoise(bitmap: Bitmap, strength: Float): Bitmap {
+        val radius = (1 + 5 * strength.coerceIn(0f, 1f)).toInt()
+        return applyFastBlur(bitmap, radius)
     }
 
     /**
      * 锐化增强：使用 Unsharp Mask 提升边缘清晰度
+     * strength 越大，锐化效果越强
      */
-    private fun applySharpen(bitmap: Bitmap): Bitmap {
-        val blurred = applyFastBlur(bitmap, radius = 3)
+    private fun applySharpen(bitmap: Bitmap, strength: Float): Bitmap {
+        val s = strength.coerceIn(0f, 1f)
+        val blurRadius = (2 + 3 * s).toInt()
+        val blurred = applyFastBlur(bitmap, blurRadius)
         val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
-        val paint = Paint().apply {
-            // 原图
-            canvas.drawBitmap(bitmap, 0f, 0f, this)
-            // 叠加（原图 - 模糊）* 锐化强度
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.LIGHTEN)
-            alpha = 100
-        }
+        val paint = Paint()
+        // 先画原图
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+        // 叠加（原图 - 模糊）* 锐化强度，使边缘更明显
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+        // 使用 SOURCE 混合模式：new = src + dst * alpha
+        paint.alpha = (50 + 100 * s).toInt()
         canvas.drawBitmap(blurred, 0f, 0f, paint)
         return output
     }
 
     /**
-     * 自动曝光调整：根据直方图进行亮度补偿
+     * 自动曝光调整：根据强度进行亮度补偿
+     * strength 越大，亮度提升越明显
      */
-    private fun applyExposure(bitmap: Bitmap): Bitmap {
+    private fun applyExposure(bitmap: Bitmap, strength: Float): Bitmap {
+        val s = strength.coerceIn(0f, 1f)
+        val multiplier = 1f + 0.15f * s
+        val offset = 30f * s
         val matrix = ColorMatrix().apply {
-            // 轻微提亮，模拟自动曝光补偿
             set(
                 floatArrayOf(
-                    1.05f, 0f, 0f, 0f, 15f,
-                    0f, 1.05f, 0f, 0f, 15f,
-                    0f, 0f, 1.05f, 0f, 15f,
+                    multiplier, 0f, 0f, 0f, offset,
+                    0f, multiplier, 0f, 0f, offset,
+                    0f, 0f, multiplier, 0f, offset,
                     0f, 0f, 0f, 1f, 0f
                 )
             )
@@ -281,16 +290,21 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 智能色彩校正：轻微增强暖调与自然饱和度
+     * 智能色彩校正：增强暖调与自然饱和度
+     * strength 越大，色彩增强越明显
      */
-    private fun applyColorCorrection(bitmap: Bitmap): Bitmap {
+    private fun applyColorCorrection(bitmap: Bitmap, strength: Float): Bitmap {
+        val s = strength.coerceIn(0f, 1f)
         val matrix = ColorMatrix().apply {
-            // 轻微暖调 + 饱和度提升
+            // 暖调 + 饱和度增强
+            val warmRed = 0.08f * s
+            val warmGreen = 0.04f * s
+            val satBoost = 0.12f * s
             set(
                 floatArrayOf(
-                    1.05f, 0.05f, 0f, 0f, 8f,
-                    0f, 1.02f, 0f, 0f, 4f,
-                    0f, 0f, 0.98f, 0f, -2f,
+                    1f + satBoost + warmRed, 0.05f * s, 0f, 0f, 12f * s,
+                    0f, 1f + satBoost + warmGreen, 0f, 0f, 6f * s,
+                    0f, 0f, 1f + satBoost - 0.03f * s, 0f, -3f * s,
                     0f, 0f, 0f, 1f, 0f
                 )
             )
