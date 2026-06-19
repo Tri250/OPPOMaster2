@@ -6,10 +6,12 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -138,7 +140,31 @@ fun MainApp(navController: NavHostController) {
         mainRouteList.indexOfFirst { route?.contains(it) == true }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val swipeEnabled = showBottomNav
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(swipeEnabled, currentRoute) {
+                if (!swipeEnabled) return@pointerInput
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    val currentIndex = getNavIndex(currentRoute)
+                    if (currentIndex == -1) return@detectHorizontalDragGestures
+                    // 向左滑（dragAmount < 0）-> 下一页；向右滑 -> 上一页
+                    val threshold = 80f
+                    if (kotlin.math.abs(dragAmount) < threshold) return@detectHorizontalDragGestures
+                    val targetIndex = if (dragAmount < 0) {
+                        (currentIndex + 1).coerceAtMost(mainRouteList.size - 1)
+                    } else {
+                        (currentIndex - 1).coerceAtLeast(0)
+                    }
+                    if (targetIndex != currentIndex) {
+                        val targetRoute = mainRouteList[targetIndex]
+                        handleBottomNav(navController, targetRoute.lowercase(), currentRoute)
+                    }
+                }
+            }
+    ) {
         NavHost(
             navController = navController,
             startDestination = Screen.Home,
@@ -252,8 +278,6 @@ fun MainApp(navController: NavHostController) {
                 AboutScreen(
                     onBack = { navController.popBackStack() },
                     onNavigateToSettings = { navController.navigate(Screen.Settings) },
-                    onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
-                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
                     onNavigateToPrivacy = { navController.navigate(Screen.PrivacyPolicy) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp },

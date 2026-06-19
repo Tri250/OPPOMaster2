@@ -212,6 +212,20 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "FaceDetector预初始化失败", e)
                 }
 
+                // 云同步：开关默认开启，首次启动在后台自动拉取 CDN 预设
+                try {
+                    val settingsManager = SettingsManager.getInstance(this@OMasterApplication)
+                    if (settingsManager.isCloudSyncEnabled) {
+                        val repository = PresetRepository.getInstance(this@OMasterApplication)
+                        kotlinx.coroutines.runBlocking {
+                            repository.syncFromCloud()
+                        }
+                        StartupLogger.logStep("云端预设同步", SystemClock.elapsedRealtime() - lazyStart)
+                    }
+                } catch (e: Throwable) {
+                    Log.w("OMasterApplication", "云端预设同步失败", e)
+                }
+
             } catch (e: Throwable) {
                 Log.e("OMasterApplication", "懒加载初始化失败", e)
             }

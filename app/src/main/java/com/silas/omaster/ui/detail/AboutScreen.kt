@@ -67,12 +67,7 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.data.local.SettingsManager
-import com.silas.omaster.data.local.DarkMode
-import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.ui.theme.BrandTheme
-import com.silas.omaster.ui.settings.ThemeSelectionDialog
-import com.silas.omaster.ui.settings.DarkModeDialog
-import com.silas.omaster.ui.settings.UpdateChannelDialog
 import com.silas.omaster.util.VersionInfo
 import com.silas.omaster.util.perform
 
@@ -80,8 +75,6 @@ import com.silas.omaster.util.perform
 fun AboutScreen(
     onBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToNotificationSettings: () -> Unit,
-    onNavigateToPresetSourceManager: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToTerms: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit,
@@ -94,13 +87,6 @@ fun AboutScreen(
     val haptic = LocalHapticFeedback.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
     val currentTheme by settingsManager.themeFlow.collectAsState()
-    var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
-    var updateChannel by remember { mutableStateOf(settingsManager.updateChannel) }
-
-    // Dialog states
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showDarkModeDialog by remember { mutableStateOf(false) }
-    var showChannelDialog by remember { mutableStateOf(false) }
 
     // 滚动方向检测（不在 derivedStateOf 内变更状态，避免触发无限重组）
     var isScrollingUp by remember { mutableStateOf(false) }
@@ -131,45 +117,6 @@ fun AboutScreen(
             hasHapticAtTop = false
             hasHapticAtBottom = false
         }
-    }
-
-    // Dialogs
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentTheme = currentTheme,
-            onThemeSelected = { theme ->
-                haptic.perform(HapticFeedbackType.LongPress)
-                settingsManager.currentTheme = theme
-                showThemeDialog = false
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-
-    if (showDarkModeDialog) {
-        DarkModeDialog(
-            currentMode = darkMode,
-            onModeSelected = { mode ->
-                haptic.perform(HapticFeedbackType.LongPress)
-                settingsManager.darkMode = mode
-                darkMode = mode
-                showDarkModeDialog = false
-            },
-            onDismiss = { showDarkModeDialog = false }
-        )
-    }
-
-    if (showChannelDialog) {
-        UpdateChannelDialog(
-            currentChannel = updateChannel,
-            onChannelSelected = { channel ->
-                haptic.perform(HapticFeedbackType.LongPress)
-                settingsManager.updateChannel = channel
-                updateChannel = channel
-                showChannelDialog = false
-            },
-            onDismiss = { showChannelDialog = false }
-        )
     }
 
     Column(
@@ -206,16 +153,8 @@ fun AboutScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Settings List Card
-            SettingsListCard(
-                currentTheme = currentTheme,
-                darkMode = darkMode,
-                updateChannel = updateChannel,
-                onThemeClick = { showThemeDialog = true },
-                onDarkModeClick = { showDarkModeDialog = true },
-                onUpdateChannelClick = { showChannelDialog = true },
-                onNotificationClick = onNavigateToNotificationSettings,
-                onPresetSourceClick = onNavigateToPresetSourceManager,
+            // 法律信息（关于页面仅保留应用信息与法律条款，避免与“设置”重复）
+            LegalListCard(
                 onPrivacyClick = onNavigateToPrivacy,
                 onTermsClick = onNavigateToTerms
             )
@@ -354,70 +293,19 @@ private fun AppInfoCard(
 }
 
 @Composable
-private fun SettingsListCard(
-    currentTheme: BrandTheme,
-    darkMode: DarkMode,
-    updateChannel: UpdateChannel,
-    onThemeClick: () -> Unit,
-    onDarkModeClick: () -> Unit,
-    onUpdateChannelClick: () -> Unit,
-    onNotificationClick: () -> Unit,
-    onPresetSourceClick: () -> Unit,
+private fun LegalListCard(
     onPrivacyClick: () -> Unit,
     onTermsClick: () -> Unit
 ) {
-    val settingsItems = listOf(
-        SettingsItem(
-            icon = Icons.Default.Palette,
-            label = stringResource(R.string.settings_theme_title),
-            value = stringResource(currentTheme.brandNameResId),
-            onClick = onThemeClick
-        ),
-        SettingsItem(
-            icon = when (darkMode) {
-                DarkMode.LIGHT -> Icons.Default.WbSunny
-                DarkMode.DARK -> Icons.Default.DarkMode
-                else -> Icons.Default.Brush
-            },
-            label = stringResource(R.string.dark_mode_title),
-            value = when (darkMode) {
-                DarkMode.SYSTEM -> stringResource(R.string.dark_mode_system)
-                DarkMode.LIGHT -> stringResource(R.string.dark_mode_light)
-                DarkMode.DARK -> stringResource(R.string.dark_mode_dark)
-            },
-            onClick = onDarkModeClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Language,
-            label = stringResource(R.string.update_channel_title),
-            value = when (updateChannel) {
-                UpdateChannel.GITEE -> stringResource(R.string.update_channel_gitee)
-                UpdateChannel.GITHUB -> stringResource(R.string.update_channel_github)
-            },
-            onClick = onUpdateChannelClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Notifications,
-            label = stringResource(R.string.notification_settings_title),
-            value = "",
-            onClick = onNotificationClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Storage,
-            label = stringResource(R.string.preset_source_title),
-            value = "",
-            onClick = onPresetSourceClick
-        ),
-        SettingsItem(
+    val legalItems = listOf(
+        LegalItem(
             icon = Icons.Default.Security,
             label = stringResource(R.string.privacy_policy_title),
-            value = "",
             onClick = onPrivacyClick
         ),
-        SettingsItem(
+        LegalItem(
             icon = Icons.Default.Description,
             label = stringResource(R.string.user_agreement_title),
-            value = "",
             onClick = onTermsClick
         )
     )
@@ -434,30 +322,29 @@ private fun SettingsListCard(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            settingsItems.forEachIndexed { index, item ->
-                SettingsListItem(
+            legalItems.forEachIndexed { index, item ->
+                LegalListItem(
                     item = item,
-                    showDivider = index < settingsItems.size - 1
+                    showDivider = index < legalItems.size - 1
                 )
             }
         }
     }
 }
 
-private data class SettingsItem(
+private data class LegalItem(
     val icon: ImageVector,
     val label: String,
-    val value: String,
     val onClick: () -> Unit
 )
 
 @Composable
-private fun SettingsListItem(
-    item: SettingsItem,
+private fun LegalListItem(
+    item: LegalItem,
     showDivider: Boolean
 ) {
     val haptic = LocalHapticFeedback.current
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -482,7 +369,7 @@ private fun SettingsListItem(
             ) {
                 Icon(
                     imageVector = item.icon,
-                    contentDescription = "设置图标",
+                    contentDescription = "法律图标",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -494,27 +381,15 @@ private fun SettingsListItem(
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
-        
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (item.value.isNotEmpty()) {
-                Text(
-                    text = item.value,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "箭头",
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                modifier = Modifier.size(16.dp)
-            )
-        }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "箭头",
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+            modifier = Modifier.size(16.dp)
+        )
     }
-    
+
     if (showDivider) {
         HorizontalDivider(
             modifier = Modifier.padding(start = 68.dp),
