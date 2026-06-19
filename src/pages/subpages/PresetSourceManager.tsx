@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, Preset, PresetSource } from '../../store/appStore';
 import { LOCAL_FALLBACK_PRESETS } from '../../data/localPresets';
+import { fetchWithTimeout, safeParseJson, TIMEOUT_CONFIG } from '../../services/networkUtils';
 import {
   ArrowLeft,
   Plus,
@@ -46,12 +47,18 @@ const PresetSourceManager: React.FC = () => {
         enabledCount++;
 
         try {
-          const response = await fetch(source.url);
+          const response = await fetchWithTimeout(source.url, { method: 'GET' }, TIMEOUT_CONFIG.standard);
           if (response.ok) {
-            const data = await response.json();
-            const presets = (data.presets || data || []) as Preset[];
+            const data = await safeParseJson<Record<string, unknown> | unknown[]>(response, source.url);
+            const presets = Array.isArray(data)
+              ? (data as Preset[])
+              : Array.isArray((data as Record<string, unknown>).presets)
+                ? ((data as Record<string, unknown>).presets as Preset[])
+                : [];
             allPresets.push(...presets);
             successCount++;
+          } else {
+            console.warn(`预设源返回非成功状态: ${source.name} (${response.status})`);
           }
         } catch (err) {
           console.error(`Failed to fetch from ${source.name}:`, err);

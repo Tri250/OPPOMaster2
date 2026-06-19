@@ -1,14 +1,12 @@
 import React from 'react';
 import { useAppStore } from '../store/appStore';
 import {
-  Palette,
-  Globe,
-  Bell,
-  Shield,
-  FileText,
+  Settings,
+  Cloud,
+  Database,
+  Scale,
   ChevronRight,
   Camera,
-  Database,
 } from 'lucide-react';
 
 const AboutScreen: React.FC = () => {
@@ -31,22 +29,16 @@ const AboutScreen: React.FC = () => {
 
   const settingsItems = [
     { 
-      icon: Palette, 
-      label: '外观设置', 
+      icon: Settings, 
+      label: '通用设置', 
       value: `${themeNames[theme] || '哈苏橙'} · ${darkModeNames[darkMode] || '跟随系统'}`,
-      route: 'appearance' as const
+      route: 'general-settings' as const
     },
     { 
-      icon: Globe, 
-      label: '更新渠道', 
-      value: '稳定版',
-      route: 'update-channel' as const
-    },
-    { 
-      icon: Bell, 
-      label: '通知设置', 
-      value: '',
-      route: 'notification' as const
+      icon: Cloud, 
+      label: '云同步', 
+      value: '自动同步已开启',
+      route: 'cloud-sync' as const
     },
     { 
       icon: Database, 
@@ -55,16 +47,10 @@ const AboutScreen: React.FC = () => {
       route: 'preset-sources' as const
     },
     { 
-      icon: Shield, 
-      label: '隐私政策', 
-      value: '',
-      route: 'privacy' as const
-    },
-    { 
-      icon: FileText, 
-      label: '用户协议', 
-      value: '',
-      route: 'terms' as const
+      icon: Scale, 
+      label: '法律信息', 
+      value: '隐私政策 / 用户协议',
+      route: 'legal-info' as const
     },
   ];
 

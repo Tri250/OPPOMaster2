@@ -91,7 +91,7 @@ const AIFineTunePage: React.FC = () => {
   );
   
   // 成功提示自动隐藏定时器
-  const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 文件输入引用（用于图片上传）
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 导出 Canvas 引用
@@ -102,7 +102,7 @@ const AIFineTunePage: React.FC = () => {
     if (tuneImageSource && tuneImageSource !== state.imageSource) {
       dispatch({ type: FineTuneActionType.SET_IMAGE_SOURCE, source: tuneImageSource });
     }
-  }, [tuneImageSource]);
+  }, [tuneImageSource, state.imageSource]);
   
   // 成功提示自动隐藏
   useEffect(() => {

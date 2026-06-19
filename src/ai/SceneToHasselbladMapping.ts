@@ -16,7 +16,8 @@ import {
  */
 export const SCENE_TO_HASSELBLAD_PARAMS: Record<string, HasselbladParams> = {
   // ─── 人像系列 ───
-  'portrait-standard': { tone: -3, saturation: 10, contrast: -15, colorTemp: -5, sharpness: -15, vignette: 20, cyanMagenta: -5, softLight: SoftLightMode.SOFT },
+  'portrait-standard': { tone: -3, saturation: 10, contrast: -15, colorTemp: -5, sharpness: -15, clarity: 5, vignette: 20, cyanMagenta: -5, softLight: SoftLightMode.SOFT },
+  'portrait-indoor': { tone: -2, saturation: 5, contrast: -10, colorTemp: 0, sharpness: -5, clarity: 8, vignette: 15, cyanMagenta: -3, softLight: SoftLightMode.SOFT },
   'portrait-backlit': { tone: -5, saturation: 12, contrast: -10, colorTemp: -10, sharpness: -10, vignette: 25, cyanMagenta: -8, softLight: SoftLightMode.DREAMY },
   'portrait-studio': { tone: 0, saturation: 0, contrast: 15, colorTemp: 0, sharpness: 0, vignette: 0, cyanMagenta: 0, softLight: SoftLightMode.NONE },
   'portrait-bw': { tone: -10, saturation: -30, contrast: 25, colorTemp: 0, sharpness: 20, vignette: 15, cyanMagenta: 0, softLight: SoftLightMode.NONE },
@@ -27,7 +28,7 @@ export const SCENE_TO_HASSELBLAD_PARAMS: Record<string, HasselbladParams> = {
 
   // ─── 风景系列 ───
   'landscape-standard': { tone: 5, saturation: 15, contrast: 12, colorTemp: 0, sharpness: 18, vignette: -5, cyanMagenta: -3, softLight: SoftLightMode.NONE },
-  'landscape-sunset': { tone: -5, saturation: 25, contrast: 10, colorTemp: 20, sharpness: 12, vignette: 0, cyanMagenta: 5, softLight: SoftLightMode.NONE },
+  'landscape-sunset': { tone: -5, saturation: 25, contrast: 10, colorTemp: 20, sharpness: 12, clarity: 15, vignette: 0, cyanMagenta: 5, softLight: SoftLightMode.NONE },
   'landscape-sky': { tone: 10, saturation: 10, contrast: 5, colorTemp: -15, sharpness: 15, vignette: -10, cyanMagenta: -10, softLight: SoftLightMode.NONE },
   'landscape-forest': { tone: 3, saturation: 20, contrast: 10, colorTemp: 5, sharpness: 15, vignette: -8, cyanMagenta: -5, softLight: SoftLightMode.NONE },
   'landscape-autumn': { tone: 0, saturation: 25, contrast: 10, colorTemp: 15, sharpness: 12, vignette: 0, cyanMagenta: 8, softLight: SoftLightMode.NONE },

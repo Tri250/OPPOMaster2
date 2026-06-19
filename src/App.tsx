@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useAppStore } from './store/appStore';
 import PhoneMockup from './components/PhoneMockup';
 import HomeScreen from './pages/HomeScreen';
@@ -6,22 +6,26 @@ import FeaturedScreen from './pages/FeaturedScreen';
 import FeaturesScreen from './pages/FeaturesScreen';
 import AboutScreen from './pages/AboutScreen';
 
-// Sub pages
-import AISceneRecognitionPage from './pages/subpages/AISceneRecognitionPage';
-import AIFineTunePage from './pages/subpages/AIFineTunePage';
-import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
-import WatermarkPage from './pages/subpages/WatermarkPage';
-import PresetManagerPage from './pages/subpages/PresetManagerPage';
-import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
-import LUTSharePage from './pages/subpages/LUTSharePage';
-import HasselbladPage from './pages/subpages/HasselbladPage';
-import CloudSyncPage from './pages/subpages/CloudSyncPage';
-import UpdateChannelPage from './pages/subpages/UpdateChannelPage';
-import TermsPage from './pages/subpages/TermsPage';
-import AppearanceSettingsPage from './pages/subpages/AppearanceSettingsPage';
-import NotificationPage from './pages/subpages/NotificationPage';
-import PrivacyPage from './pages/subpages/PrivacyPage';
-import PresetSourceManager from './pages/subpages/PresetSourceManager';
+// Sub pages - 动态加载，减少首屏 bundle
+const AISceneRecognitionPage = React.lazy(() => import('./pages/subpages/AISceneRecognitionPage'));
+const AIFineTunePage = React.lazy(() => import('./pages/subpages/AIFineTunePage'));
+const SmartOptimizePage = React.lazy(() => import('./pages/subpages/SmartOptimizePage'));
+const WatermarkPage = React.lazy(() => import('./pages/subpages/WatermarkPage'));
+const PresetManagerPage = React.lazy(() => import('./pages/subpages/PresetManagerPage'));
+const ParamAdjustPage = React.lazy(() => import('./pages/subpages/ParamAdjustPage'));
+const LUTSharePage = React.lazy(() => import('./pages/subpages/LUTSharePage'));
+const HasselbladPage = React.lazy(() => import('./pages/subpages/HasselbladPage'));
+const CloudSyncPage = React.lazy(() => import('./pages/subpages/CloudSyncPage'));
+const GeneralSettingsPage = React.lazy(() => import('./pages/subpages/GeneralSettingsPage'));
+const LegalInfoPage = React.lazy(() => import('./pages/subpages/LegalInfoPage'));
+const PresetSourceManager = React.lazy(() => import('./pages/subpages/PresetSourceManager'));
+
+const SubPageFallback: React.FC = () => (
+  <div className="h-full w-full bg-[#0a0a0a] flex flex-col items-center justify-center">
+    <div className="w-10 h-10 rounded-full border-4 border-white/20 border-t-[#FF6B35] animate-spin" />
+    <span className="mt-4 text-white/60 text-sm">加载中...</span>
+  </div>
+);
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -46,16 +50,10 @@ const App: React.FC = () => {
         return <HasselbladPage />;
       case 'cloud-sync':
         return <CloudSyncPage />;
-      case 'appearance':
-        return <AppearanceSettingsPage />;
-      case 'update-channel':
-        return <UpdateChannelPage />;
-      case 'notification':
-        return <NotificationPage />;
-      case 'privacy':
-        return <PrivacyPage />;
-      case 'terms':
-        return <TermsPage />;
+      case 'general-settings':
+        return <GeneralSettingsPage />;
+      case 'legal-info':
+        return <LegalInfoPage />;
       case 'preset-sources':
         return <PresetSourceManager />;
       default:
@@ -81,7 +79,9 @@ const App: React.FC = () => {
   return (
     <PhoneMockup>
       <div className="h-full w-full relative">
-        {currentSubPage ? renderSubPage() : renderMainPage()}
+        <Suspense fallback={<SubPageFallback />}>
+          {currentSubPage ? renderSubPage() : renderMainPage()}
+        </Suspense>
       </div>
     </PhoneMockup>
   );

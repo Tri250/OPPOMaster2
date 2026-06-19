@@ -75,6 +75,22 @@ export async function fetchWithTimeout(
 }
 
 /**
+ * 安全解析 JSON 响应
+ */
+export async function safeParseJson<T>(response: Response, url: string): Promise<T> {
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    throw new NetworkError(url, response.status, 'Empty response body');
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch (parseError) {
+    const message = parseError instanceof Error ? parseError.message : 'JSON parse failed';
+    throw new NetworkError(url, response.status, `Invalid JSON: ${message}`);
+  }
+}
+
+/**
  * 带超时的GET请求
  */
 export async function fetchGet<T>(
@@ -82,12 +98,12 @@ export async function fetchGet<T>(
   timeoutMs: number = TIMEOUT_CONFIG.standard
 ): Promise<T> {
   const response = await fetchWithTimeout(url, { method: 'GET' }, timeoutMs);
-  
+
   if (!response.ok) {
     throw new NetworkError(url, response.status, response.statusText);
   }
-  
-  return response.json();
+
+  return safeParseJson<T>(response, url);
 }
 
 /**
@@ -103,12 +119,12 @@ export async function fetchPost<T>(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }, timeoutMs);
-  
+
   if (!response.ok) {
     throw new NetworkError(url, response.status, response.statusText);
   }
-  
-  return response.json();
+
+  return safeParseJson<T>(response, url);
 }
 
 /**

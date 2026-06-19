@@ -65,7 +65,7 @@ describe('SceneToHasselbladMapping', () => {
     });
 
     it('应该为夜景场景推荐合适的胶片', () => {
-      const films = getRecommendedFilms('night-cityscape');
+      const films = getRecommendedFilms('night-city');
       expect(films.length).toBeGreaterThan(0);
       
       // 夜景场景应该推荐800T胶片
@@ -106,7 +106,7 @@ describe('SceneToHasselbladMapping', () => {
     });
 
     it('夜景场景应该有较高的对比度', () => {
-      const params = getHasselbladParams('night-cityscape');
+      const params = getHasselbladParams('night-city');
       expect(params.contrast).toBeGreaterThanOrEqual(10);
     });
   });

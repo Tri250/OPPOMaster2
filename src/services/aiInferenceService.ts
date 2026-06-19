@@ -5,7 +5,7 @@
 
 import { HeuristicSceneAnalyzer, AnalysisResult } from '../ai/HeuristicSceneAnalyzer';
 import { getHasselbladParams, getRecommendedFilms } from '../ai/SceneToHasselbladMapping';
-import { fetchWithTimeout, TimeoutError, TIMEOUT_CONFIG } from './networkUtils';
+import { fetchWithTimeout, safeParseJson, NetworkError, TimeoutError, TIMEOUT_CONFIG } from './networkUtils';
 
 // ============================================
 // 类型定义
@@ -248,14 +248,24 @@ export class AIInferenceService {
   }
   
   /**
-   * 从 URL 加载图片
+   * 从 URL 加载图片（带超时）
    */
-  private async loadImageFromUrl(url: string): Promise<HTMLImageElement> {
+  private async loadImageFromUrl(url: string, timeoutMs = 20000): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error(`图片加载失败: ${url}`));
+      const timer = setTimeout(() => {
+        reject(new Error(`图片加载超时: ${url}`));
+      }, timeoutMs);
+
+      img.onload = () => {
+        clearTimeout(timer);
+        resolve(img);
+      };
+      img.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error(`图片加载失败: ${url}`));
+      };
       img.src = url;
     });
   }
@@ -622,15 +632,19 @@ export class AIInferenceService {
       }, TIMEOUT_CONFIG.long);
       
       if (!response.ok) {
-        throw new Error(`API 调用失败: ${response.status}`);
+        throw new NetworkError(this.apiEndpoint, response.status, response.statusText);
       }
-      
-      const data = await response.json();
+
+      const data = await safeParseJson<Record<string, unknown>>(response, this.apiEndpoint);
+      if (!data || typeof data !== 'object' || !('params' in data)) {
+        throw new Error('后端 API 返回数据格式不正确');
+      }
+
       return {
         success: true,
-        params: data.params,
-        confidence: data.confidence || 0.9,
-        processingTime: data.processingTime || 0,
+        params: data.params as AIFineTuneParams,
+        confidence: typeof data.confidence === 'number' ? data.confidence : 0.9,
+        processingTime: typeof data.processingTime === 'number' ? data.processingTime : 0,
       };
       
     } catch (error) {

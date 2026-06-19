@@ -11,11 +11,8 @@ export type SubPageType =
   | 'lut-share'
   | 'hasselblad'
   | 'cloud-sync'
-  | 'appearance'
-  | 'update-channel'
-  | 'notification'
-  | 'privacy'
-  | 'terms'
+  | 'general-settings'
+  | 'legal-info'
   | 'preset-sources'
   | null;
 

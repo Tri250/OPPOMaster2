@@ -3,6 +3,7 @@ import { useAppStore, homePresets, Preset, PresetSection } from '../store/appSto
 import { Heart, Search, RefreshCw, Sparkles, Crown, Download, Star, Filter, X, Zap, Grid as GridIcon, Edit2 } from 'lucide-react';
 import PresetImageGallery from '../components/PresetImageGallery';
 import PresetParameters, { PresetStats, ShootingTipsCard, UserComments, ApplyPresetButton, FavoriteButton, SimpleRelatedPresets } from '../components/PresetParameters';
+import { fetchWithTimeout, safeParseJson, TIMEOUT_CONFIG } from '../services/networkUtils';
 
 const tabs = [
   { key: 'all', label: '发现' },
@@ -41,25 +42,35 @@ const HomeScreen: React.FC = () => {
         if (!source.enabled) continue;
         
         try {
-          const response = await fetch(source.url);
+          const response = await fetchWithTimeout(source.url, { method: 'GET' }, TIMEOUT_CONFIG.standard);
           if (response.ok) {
-            const data = await response.json();
-            const presets = (data.presets || data || []).map((p: Record<string, unknown>): Preset => ({
-              id: `${source.id}-${String(p.id || Date.now() + Math.random())}`,
-              name: String(p.name || '未命名预设'),
-              coverPath: String(p.coverPath || p.cover || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop'),
-              author: String(p.author || source.name),
-              brand: String(p.brand || source.name),
-              tags: Array.isArray(p.tags) ? p.tags as string[] : ['预设'],
-              isNew: true,
-              isHncs: Boolean(p.isHncs || false),
-              sections: Array.isArray(p.sections) ? p.sections as PresetSection[] : [],
-              saturation: Number(p.saturation || 10),
-              contrast: Number(p.contrast || 5),
-              warmth: Number(p.warmth || 0),
-              sharpness: Number(p.sharpness || 15),
-            }));
+            const data = await safeParseJson<Record<string, unknown> | unknown[]>(response, source.url);
+            const rawPresets = Array.isArray(data)
+              ? data
+              : Array.isArray(data.presets)
+                ? data.presets
+                : [];
+            const presets = rawPresets.map((p: unknown): Preset => {
+              const preset = p as Record<string, unknown>;
+              return {
+                id: `${source.id}-${String(preset.id || Date.now() + Math.random())}`,
+                name: String(preset.name || '未命名预设'),
+                coverPath: String(preset.coverPath || preset.cover || 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop'),
+                author: String(preset.author || source.name),
+                brand: String(preset.brand || source.name),
+                tags: Array.isArray(preset.tags) ? (preset.tags as string[]) : ['预设'],
+                isNew: true,
+                isHncs: Boolean(preset.isHncs || false),
+                sections: Array.isArray(preset.sections) ? (preset.sections as PresetSection[]) : [],
+                saturation: Number(preset.saturation || 10),
+                contrast: Number(preset.contrast || 5),
+                warmth: Number(preset.warmth || 0),
+                sharpness: Number(preset.sharpness || 15),
+              };
+            });
             allPresets.push(...presets);
+          } else {
+            console.warn(`首页预设源返回非成功状态: ${source.name} (${response.status})`);
           }
         } catch (err) {
           console.error(`Failed to fetch from ${source.name}:`, err);
