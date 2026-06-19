@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAppStore, PageType } from '../store/appStore';
 import { Home, Star, Grid3X3, Info } from 'lucide-react';
 
@@ -15,9 +15,10 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const touchStartTime = useRef<number>(0);
 
-  // 更新滑动指示器位置
-  useEffect(() => {
+  // 更新滑动指示器位置 - 使用 ResizeObserver 确保位置准确
+  const updateIndicator = useCallback(() => {
     if (!navRef.current) return;
     const buttons = navRef.current.querySelectorAll('button');
     const activeIndex = navItems.findIndex(item => item.id === currentPage);
@@ -32,20 +33,64 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   }, [currentPage]);
 
+  useEffect(() => {
+    updateIndicator();
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [updateIndicator]);
+
+  // 触摸开始
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
   };
 
+  // 触摸结束 - 降低阈值，提高灵敏度
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current == null || touchStartY.current == null) return;
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
     const diffX = touchStartX.current - endX;
     const diffY = touchStartY.current - endY;
+    const duration = Date.now() - touchStartTime.current;
 
-    //  predominantly horizontal swipe
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+    // 水平滑动判定：水平位移 > 垂直位移，且水平位移 > 30px 或速度较快
+    const isHorizontal = Math.abs(diffX) > Math.abs(diffY);
+    const isFastSwipe = Math.abs(diffX) / duration > 0.5; // 速度判定
+    const isLongSwipe = Math.abs(diffX) > 30;
+
+    if (isHorizontal && (isLongSwipe || isFastSwipe)) {
+      const currentIndex = navItems.findIndex(item => item.id === currentPage);
+      if (diffX > 0 && currentIndex < navItems.length - 1) {
+        setCurrentPage(navItems[currentIndex + 1].id);
+      } else if (diffX < 0 && currentIndex > 0) {
+        setCurrentPage(navItems[currentIndex - 1].id);
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  // 同时支持鼠标拖拽滑动（桌面端测试用）
+  const handleMouseDown = (e: React.MouseEvent) => {
+    touchStartX.current = e.clientX;
+    touchStartY.current = e.clientY;
+    touchStartTime.current = Date.now();
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (touchStartX.current == null || touchStartY.current == null) return;
+    const diffX = touchStartX.current - e.clientX;
+    const diffY = touchStartY.current - e.clientY;
+    const duration = Date.now() - touchStartTime.current;
+
+    const isHorizontal = Math.abs(diffX) > Math.abs(diffY);
+    const isFastSwipe = Math.abs(diffX) / duration > 0.3;
+    const isLongSwipe = Math.abs(diffX) > 40;
+
+    if (isHorizontal && (isLongSwipe || isFastSwipe)) {
       const currentIndex = navItems.findIndex(item => item.id === currentPage);
       if (diffX > 0 && currentIndex < navItems.length - 1) {
         setCurrentPage(navItems[currentIndex + 1].id);
@@ -66,9 +111,11 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="relative w-[375px] h-[812px] bg-[#1a1a1a] rounded-[50px] shadow-2xl border-4 border-[#2a2a2a] overflow-hidden">
           {/* Screen Content - 全屏显示，无状态栏 */}
           <div
-            className="absolute top-0 left-0 right-0 bottom-20 bg-[#0a0a0a] overflow-hidden"
+            className="absolute top-0 left-0 right-0 bottom-20 bg-[#0a0a0a] overflow-hidden select-none"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
           >
             {children}
           </div>
@@ -92,7 +139,7 @@ const PhoneMockup: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <button
                 key={item.id}
                 onClick={() => setCurrentPage(item.id)}
-                className={`flex flex-col items-center gap-1 transition-all duration-300 ${
+                className={`flex flex-col items-center gap-1 transition-all duration-300 active:scale-95 ${
                   currentPage === item.id
                     ? 'text-[#FF6B35] scale-110'
                     : 'text-white/50 hover:text-white/70'

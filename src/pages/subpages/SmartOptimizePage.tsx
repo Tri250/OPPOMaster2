@@ -11,7 +11,7 @@ const optimizeOptions = [
 
 const DEFAULT_IMAGE_SOURCE = 'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop';
 
-// 将 aiParams 转换为可见的 CSS filter
+// 将 aiParams 转换为可见的 CSS filter - 增强效果可见性
 const buildOptimizeFilter = (params: Record<string, number>): string => {
   const parts: string[] = [];
   const saturation = params.saturation ?? 0;
@@ -20,15 +20,18 @@ const buildOptimizeFilter = (params: Record<string, number>): string => {
   const warmth = params.warmth ?? 0;
   const sharpness = params.sharpness ?? 0;
 
-  parts.push(`saturate(${100 + saturation}%)`);
-  parts.push(`contrast(${100 + contrast}%)`);
+  // 饱和度
+  if (saturation !== 0) parts.push(`saturate(${100 + saturation}%)`);
+  // 对比度（叠加锐度影响）
+  const totalContrast = contrast + (sharpness > 0 ? sharpness * 0.3 : 0);
+  if (totalContrast !== 0) parts.push(`contrast(${100 + totalContrast}%)`);
+  // 亮度
   if (brightness !== 0) parts.push(`brightness(${100 + brightness}%)`);
-  if (warmth > 0) parts.push(`sepia(${warmth * 0.4}%)`);
-  if (warmth < 0) parts.push(`hue-rotate(${warmth * 0.4}deg)`);
-  // 锐度通过轻微对比度增强模拟
-  if (sharpness > 0) parts.push(`contrast(${100 + sharpness * 0.3}%)`);
+  // 暖色/冷色
+  if (warmth > 0) parts.push(`sepia(${warmth * 0.6}%)`);
+  if (warmth < 0) parts.push(`hue-rotate(${warmth * 0.6}deg)`);
 
-  return parts.join(' ');
+  return parts.join(' ') || 'none';
 };
 
 const SmartOptimizePage: React.FC = () => {
@@ -98,23 +101,23 @@ const SmartOptimizePage: React.FC = () => {
 
           // 应用优化参数（数值更明显，便于用户感知）
           if (selectedOptions.includes('enhance')) {
-            setAiParam('contrast', 18);
-            setAiParam('saturation', 12);
-            setAiParam('sharpness', 28);
-            setAiParam('brightness', 8);
+            setAiParam('contrast', 22);
+            setAiParam('saturation', 18);
+            setAiParam('sharpness', 30);
+            setAiParam('brightness', 10);
           }
           if (selectedOptions.includes('hdr')) {
-            setAiParam('contrast', 12);
-            setAiParam('brightness', 15);
-            setAiParam('saturation', 8);
+            setAiParam('contrast', 18);
+            setAiParam('brightness', 18);
+            setAiParam('saturation', 12);
           }
           if (selectedOptions.includes('sharpen')) {
-            setAiParam('sharpness', 40);
-            setAiParam('contrast', 8);
+            setAiParam('sharpness', 45);
+            setAiParam('contrast', 12);
           }
           if (selectedOptions.includes('denoise')) {
-            setAiParam('warmth', 5);
-            setAiParam('sharpness', 0);
+            setAiParam('warmth', 8);
+            setAiParam('sharpness', 5);
           }
         }, 500);
       }
@@ -123,6 +126,9 @@ const SmartOptimizePage: React.FC = () => {
     setOptimizedOptions([]);
     processStep(0);
   };
+
+  const currentImage = tuneImageSource || DEFAULT_IMAGE_SOURCE;
+  const hasOptimized = optimizedOptions.length > 0 && !isOptimizing;
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a]">
@@ -136,7 +142,7 @@ const SmartOptimizePage: React.FC = () => {
       />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 shrink-0">
         <button
           onClick={goBack}
           className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
@@ -147,7 +153,7 @@ const SmartOptimizePage: React.FC = () => {
         <div className="flex-1" />
         <button
           onClick={triggerUpload}
-          className="p-2 rounded-full hover:bg-white/10"
+          className="p-2 rounded-full hover:bg-white/10 active:scale-95 transition-transform"
           title="上传图片"
         >
           <Upload size={18} className="text-white/50" />
@@ -155,20 +161,39 @@ const SmartOptimizePage: React.FC = () => {
       </div>
 
       {/* Preview */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 shrink-0">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
+          {/* 底层：优化后的图片（始终渲染，对比时显示右侧） */}
           <img
-            src={tuneImageSource || DEFAULT_IMAGE_SOURCE}
-            alt="Preview"
-            className="w-full h-full object-cover transition-all duration-500"
+            src={currentImage}
+            alt="Optimized"
+            className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
             style={{ filter: buildOptimizeFilter(aiParams) }}
           />
+
+          {/* 对比模式：左侧覆盖原图 */}
+          {showCompare && (
+            <div className="absolute inset-0 flex">
+              <div className="w-1/2 h-full relative overflow-hidden border-r-2 border-white">
+                <img
+                  src={currentImage}
+                  alt="Original"
+                  className="w-full h-full object-cover"
+                  style={{ filter: 'none' }}
+                />
+                <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60 text-xs text-white font-medium">原图</div>
+              </div>
+              <div className="w-1/2 h-full relative">
+                <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-xs text-white font-medium">优化后</div>
+              </div>
+            </div>
+          )}
 
           {/* 上传提示 */}
           {!tuneImageSource && (
             <button
               onClick={triggerUpload}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center gap-2 hover:bg-black/80 transition-colors"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center gap-2 hover:bg-black/80 transition-colors z-10"
             >
               <Upload size={16} className="text-white" />
               <span className="text-white text-sm font-medium">点击上传图片</span>
@@ -176,46 +201,28 @@ const SmartOptimizePage: React.FC = () => {
           )}
 
           {/* 对比按钮 */}
-          {optimizedOptions.length > 0 && !isOptimizing && (
+          {hasOptimized && (
             <button
               onClick={() => setShowCompare(v => !v)}
-              className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-1.5"
+              className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-1.5 z-10 active:scale-95 transition-transform"
             >
               <Eye size={12} className={showCompare ? 'text-[#2196F3]' : 'text-white/60'} />
               {showCompare ? '退出对比' : '对比原图'}
             </button>
           )}
 
-          {/* 对比遮罩 */}
-          {showCompare && (
-            <div className="absolute inset-0 flex">
-              <div className="w-1/2 h-full border-r-2 border-white overflow-hidden">
-                <img
-                  src={tuneImageSource || DEFAULT_IMAGE_SOURCE}
-                  alt="Original"
-                  className="w-full h-full object-cover"
-                  style={{ filter: 'none' }}
-                />
-                <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/50 text-xs text-white">原图</div>
-              </div>
-              <div className="w-1/2 h-full overflow-hidden">
-                <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/50 text-xs text-white">优化后</div>
-              </div>
-            </div>
-          )}
-          
           {/* Processing Overlay */}
           {isOptimizing && (
-            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-20">
               <div className="w-16 h-16 rounded-full border-4 border-[#2196F3] border-t-transparent animate-spin mb-4" />
-              <span className="text-white text-sm">智能优化中...</span>
+              <span className="text-white text-sm font-medium">智能优化中...</span>
               <div className="flex gap-2 mt-3">
                 {selectedOptions.map((opt) => (
-                  <div 
+                  <div
                     key={opt}
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      optimizedOptions.includes(opt) 
-                        ? 'bg-[#4CAF50] text-white' 
+                    className={`px-2 py-1 rounded-full text-xs transition-all ${
+                      optimizedOptions.includes(opt)
+                        ? 'bg-[#4CAF50] text-white'
                         : 'bg-white/20 text-white/70'
                     }`}
                   >
@@ -226,38 +233,55 @@ const SmartOptimizePage: React.FC = () => {
             </div>
           )}
 
-          {/* Optimized Overlay */}
-          {!isOptimizing && optimizedOptions.length > 0 && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-full bg-[#4CAF50] flex items-center justify-center">
-                  <Check size={24} className="text-white" />
-                </div>
-                <span className="text-white text-sm">优化完成</span>
-              </div>
+          {/* Optimized Success Overlay - 短暂显示后消失 */}
+          {hasOptimized && !showCompare && (
+            <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-[#4CAF50]/80 backdrop-blur-sm flex items-center gap-1.5 z-10">
+              <Check size={12} className="text-white" />
+              <span className="text-white text-xs font-medium">优化完成</span>
             </div>
           )}
 
-          {/* Current Params */}
-          <div className="absolute bottom-3 left-3 right-3">
-            <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                对比度: +{aiParams.contrast}
-              </span>
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
-                锐度: +{aiParams.sharpness}
-              </span>
+          {/* Current Params Badge */}
+          {hasOptimized && (
+            <div className="absolute bottom-3 left-3 right-3 z-10">
+              <div className="flex flex-wrap gap-1.5">
+                {aiParams.contrast !== 0 && (
+                  <span className="px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px]">
+                    对比度 {aiParams.contrast > 0 ? '+' : ''}{aiParams.contrast}
+                  </span>
+                )}
+                {aiParams.saturation !== 0 && (
+                  <span className="px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px]">
+                    饱和度 {aiParams.saturation > 0 ? '+' : ''}{aiParams.saturation}
+                  </span>
+                )}
+                {aiParams.sharpness !== 0 && (
+                  <span className="px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px]">
+                    锐度 {aiParams.sharpness > 0 ? '+' : ''}{aiParams.sharpness}
+                  </span>
+                )}
+                {aiParams.brightness !== 0 && (
+                  <span className="px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px]">
+                    亮度 {aiParams.brightness > 0 ? '+' : ''}{aiParams.brightness}
+                  </span>
+                )}
+                {aiParams.warmth !== 0 && (
+                  <span className="px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[10px]">
+                    色温 {aiParams.warmth > 0 ? '+' : ''}{aiParams.warmth}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Optimize Button */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 shrink-0">
         <button
           onClick={handleOptimize}
           disabled={isOptimizing || selectedOptions.length === 0}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 active:scale-98 disabled:opacity-50"
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] flex items-center justify-center gap-2 text-white font-medium transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
         >
           {isOptimizing ? (
             <>
@@ -276,19 +300,19 @@ const SmartOptimizePage: React.FC = () => {
       {/* Options */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <p className="text-white/50 text-xs mb-3">选择优化项目</p>
-        
+
         <div className="space-y-3">
           {optimizeOptions.map((option) => {
             const Icon = option.icon;
             const isSelected = selectedOptions.includes(option.id);
             const isOptimized = optimizedOptions.includes(option.id);
-            
+
             return (
               <button
                 key={option.id}
                 onClick={() => toggleOption(option.id)}
                 disabled={isOptimizing}
-                className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
+                className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] ${
                   isOptimized
                     ? 'bg-[#4CAF50]/20 border border-[#4CAF50]/50'
                     : isSelected
@@ -296,8 +320,8 @@ const SmartOptimizePage: React.FC = () => {
                       : 'bg-white/5 hover:bg-white/10'
                 }`}
               >
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${option.color}20` }}
                 >
                   <Icon size={24} style={{ color: option.color }} />
@@ -307,12 +331,12 @@ const SmartOptimizePage: React.FC = () => {
                   <p className="text-white/50 text-xs">{option.desc}</p>
                 </div>
                 {isOptimized && (
-                  <div className="w-6 h-6 rounded-full bg-[#4CAF50] flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full bg-[#4CAF50] flex items-center justify-center flex-shrink-0">
                     <Check size={14} className="text-white" />
                   </div>
                 )}
                 {!isOptimized && (
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
                     isSelected ? 'border-[#2196F3] bg-[#2196F3]' : 'border-white/30'
                   }`}>
                     {isSelected && <Check size={12} className="text-white" />}
@@ -326,7 +350,7 @@ const SmartOptimizePage: React.FC = () => {
         {/* Info */}
         <div className="mt-6 p-4 rounded-2xl bg-white/5">
           <div className="flex items-start gap-3">
-            <Cpu size={20} className="text-[#2196F3] mt-0.5" />
+            <Cpu size={20} className="text-[#2196F3] mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-white text-sm font-medium">AI 智能引擎</p>
               <p className="text-white/50 text-xs mt-1">

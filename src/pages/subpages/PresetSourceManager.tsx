@@ -78,9 +78,11 @@ const PresetSourceManager: React.FC = () => {
     }
   }, [presetSources, setFetchedPresets]);
 
+  // 组件挂载时自动加载预设（包括兜底）
   useEffect(() => {
     fetchPresetsFromSources();
-  }, [fetchPresetsFromSources]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddSource = () => {
     if (!newSourceName.trim() || !newSourceUrl.trim()) return;

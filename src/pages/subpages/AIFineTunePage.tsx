@@ -279,10 +279,10 @@ const AIFineTunePage: React.FC = () => {
       // 将 CSS filter 字符串同步应用到 ctx.filter
       const filterStr = [
         `saturate(${100 + state.params.saturation + state.params.vibrance * 0.5}%)`,
-        `contrast(${100 + state.params.contrast + state.params.clarity * 0.2 + state.params.texture * 0.1}%)`,
-        `brightness(${100 + state.params.brightness + state.params.exposure * 0.5}%)`,
-        state.params.warmth > 0 ? `sepia(${state.params.warmth * 0.5}%)` : '',
-        state.params.warmth < 0 ? `hue-rotate(${state.params.warmth * 0.5}deg)` : '',
+        `contrast(${100 + state.params.contrast + state.params.clarity * 0.3 + state.params.texture * 0.2}%)`,
+        `brightness(${100 + state.params.brightness + state.params.exposure * 0.6}%)`,
+        state.params.warmth > 0 ? `sepia(${state.params.warmth * 0.6}%)` : '',
+        state.params.warmth < 0 ? `hue-rotate(${state.params.warmth * 0.6}deg)` : '',
       ].filter(Boolean).join(' ');
       
       ctx.filter = filterStr || 'none';
@@ -494,10 +494,11 @@ const AIFineTunePage: React.FC = () => {
             style={{
               filter: `
                 saturate(${100 + state.params.saturation + state.params.vibrance * 0.5}%)
-                contrast(${100 + state.params.contrast + state.params.clarity * 0.2 + state.params.texture * 0.1}%)
-                brightness(${100 + state.params.brightness + state.params.exposure * 0.5}%)
-                sepia(${state.params.warmth > 0 ? state.params.warmth * 0.5 : 0}%)
-                hue-rotate(${state.params.warmth < 0 ? state.params.warmth * 0.5 : 0}deg)
+                contrast(${100 + state.params.contrast + state.params.clarity * 0.3 + state.params.texture * 0.2}%)
+                brightness(${100 + state.params.brightness + state.params.exposure * 0.6}%)
+                sepia(${state.params.warmth > 0 ? state.params.warmth * 0.6 : 0}%)
+                hue-rotate(${state.params.warmth < 0 ? state.params.warmth * 0.6 : 0}deg)
+                drop-shadow(0 0 ${state.params.sharpness * 0.05}px rgba(0,0,0,${state.params.sharpness * 0.002}))
               `,
             }}
           />
