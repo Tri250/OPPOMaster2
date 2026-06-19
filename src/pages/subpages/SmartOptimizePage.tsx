@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus } from 'lucide-react';
+import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus, Upload, Eye } from 'lucide-react';
 
 const optimizeOptions = [
   { id: 'hdr', name: 'HDR增强', icon: Sun, color: '#FF9800', desc: '提升动态范围，保留更多细节' },
@@ -9,25 +9,81 @@ const optimizeOptions = [
   { id: 'enhance', name: '综合优化', icon: Zap, color: '#4CAF50', desc: '一键优化全部参数' },
 ];
 
+const DEFAULT_IMAGE_SOURCE = 'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop';
+
+// 将 aiParams 转换为可见的 CSS filter
+const buildOptimizeFilter = (params: Record<string, number>): string => {
+  const parts: string[] = [];
+  const saturation = params.saturation ?? 0;
+  const contrast = params.contrast ?? 0;
+  const brightness = params.brightness ?? 0;
+  const warmth = params.warmth ?? 0;
+  const sharpness = params.sharpness ?? 0;
+
+  parts.push(`saturate(${100 + saturation}%)`);
+  parts.push(`contrast(${100 + contrast}%)`);
+  if (brightness !== 0) parts.push(`brightness(${100 + brightness}%)`);
+  if (warmth > 0) parts.push(`sepia(${warmth * 0.4}%)`);
+  if (warmth < 0) parts.push(`hue-rotate(${warmth * 0.4}deg)`);
+  // 锐度通过轻微对比度增强模拟
+  if (sharpness > 0) parts.push(`contrast(${100 + sharpness * 0.3}%)`);
+
+  return parts.join(' ');
+};
+
 const SmartOptimizePage: React.FC = () => {
-  const { aiParams, setAiParam, goBack } = useAppStore();
+  const { aiParams, setAiParam, goBack, tuneImageSource, setTuneImageSource } = useAppStore();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizedOptions, setOptimizedOptions] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>(['enhance']);
+  const [showCompare, setShowCompare] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleOption = (id: string) => {
-    setSelectedOptions(prev => 
-      prev.includes(id) 
+    setSelectedOptions(prev =>
+      prev.includes(id)
         ? prev.filter(o => o !== id)
         : [...prev, id]
     );
   };
 
+  const triggerUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) setTuneImageSource(dataUrl);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, [setTuneImageSource]);
+
+  const resetParams = useCallback(() => {
+    setAiParam('contrast', 0);
+    setAiParam('saturation', 0);
+    setAiParam('brightness', 0);
+    setAiParam('warmth', 0);
+    setAiParam('sharpness', 0);
+  }, [setAiParam]);
+
   const handleOptimize = () => {
     if (selectedOptions.length === 0) return;
-    
+
     setIsOptimizing(true);
-    
+    setShowCompare(false);
+
+    // 重置后应用，确保效果可见
+    resetParams();
+
     // 模拟优化过程
     const processStep = (index: number) => {
       if (index < selectedOptions.length) {
@@ -39,47 +95,114 @@ const SmartOptimizePage: React.FC = () => {
         // 完成优化
         setTimeout(() => {
           setIsOptimizing(false);
-          
-          // 应用优化参数
+
+          // 应用优化参数（数值更明显，便于用户感知）
           if (selectedOptions.includes('enhance')) {
-            setAiParam('contrast', 15);
-            setAiParam('sharpness', 25);
+            setAiParam('contrast', 18);
+            setAiParam('saturation', 12);
+            setAiParam('sharpness', 28);
+            setAiParam('brightness', 8);
           }
           if (selectedOptions.includes('hdr')) {
-            setAiParam('brightness', 10);
+            setAiParam('contrast', 12);
+            setAiParam('brightness', 15);
+            setAiParam('saturation', 8);
           }
           if (selectedOptions.includes('sharpen')) {
-            setAiParam('sharpness', 30);
+            setAiParam('sharpness', 40);
+            setAiParam('contrast', 8);
+          }
+          if (selectedOptions.includes('denoise')) {
+            setAiParam('warmth', 5);
+            setAiParam('sharpness', 0);
           }
         }, 500);
       }
     };
-    
+
     setOptimizedOptions([]);
     processStep(0);
   };
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a]">
+      {/* 隐藏的文件输入 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-        <button 
+        <button
           onClick={goBack}
           className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">智能优化</h1>
+        <div className="flex-1" />
+        <button
+          onClick={triggerUpload}
+          className="p-2 rounded-full hover:bg-white/10"
+          title="上传图片"
+        >
+          <Upload size={18} className="text-white/50" />
+        </button>
       </div>
 
       {/* Preview */}
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
-          <img 
-            src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop"
+          <img
+            src={tuneImageSource || DEFAULT_IMAGE_SOURCE}
             alt="Preview"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-all duration-500"
+            style={{ filter: buildOptimizeFilter(aiParams) }}
           />
+
+          {/* 上传提示 */}
+          {!tuneImageSource && (
+            <button
+              onClick={triggerUpload}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center gap-2 hover:bg-black/80 transition-colors"
+            >
+              <Upload size={16} className="text-white" />
+              <span className="text-white text-sm font-medium">点击上传图片</span>
+            </button>
+          )}
+
+          {/* 对比按钮 */}
+          {optimizedOptions.length > 0 && !isOptimizing && (
+            <button
+              onClick={() => setShowCompare(v => !v)}
+              className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-1.5"
+            >
+              <Eye size={12} className={showCompare ? 'text-[#2196F3]' : 'text-white/60'} />
+              {showCompare ? '退出对比' : '对比原图'}
+            </button>
+          )}
+
+          {/* 对比遮罩 */}
+          {showCompare && (
+            <div className="absolute inset-0 flex">
+              <div className="w-1/2 h-full border-r-2 border-white overflow-hidden">
+                <img
+                  src={tuneImageSource || DEFAULT_IMAGE_SOURCE}
+                  alt="Original"
+                  className="w-full h-full object-cover"
+                  style={{ filter: 'none' }}
+                />
+                <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/50 text-xs text-white">原图</div>
+              </div>
+              <div className="w-1/2 h-full overflow-hidden">
+                <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/50 text-xs text-white">优化后</div>
+              </div>
+            </div>
+          )}
           
           {/* Processing Overlay */}
           {isOptimizing && (

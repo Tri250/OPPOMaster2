@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore, Preset, PresetSource } from '../../store/appStore';
+import { LOCAL_FALLBACK_PRESETS } from '../../data/localPresets';
 import {
   ArrowLeft,
   Plus,
@@ -9,6 +10,8 @@ import {
   RefreshCw,
   Cloud,
   Database,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 const PresetSourceManager: React.FC = () => {
@@ -28,29 +31,48 @@ const PresetSourceManager: React.FC = () => {
   const [newSourceName, setNewSourceName] = useState('');
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadStatus, setLoadStatus] = useState<'idle' | 'partial' | 'all-failed' | 'success'>('idle');
 
   const fetchPresetsFromSources = useCallback(async () => {
     setIsLoading(true);
+    setLoadStatus('idle');
     try {
       const allPresets: Preset[] = [];
-      
+      let successCount = 0;
+      let enabledCount = 0;
+
       for (const source of presetSources) {
         if (!source.enabled) continue;
-        
+        enabledCount++;
+
         try {
           const response = await fetch(source.url);
           if (response.ok) {
             const data = await response.json();
-            allPresets.push(...(data.presets || data || []));
+            const presets = (data.presets || data || []) as Preset[];
+            allPresets.push(...presets);
+            successCount++;
           }
         } catch (err) {
           console.error(`Failed to fetch from ${source.name}:`, err);
         }
       }
-      
+
+      // 如果所有启用源都失败或没有可用源，使用本地兜底预设
+      if (enabledCount === 0 || (enabledCount > 0 && successCount === 0)) {
+        allPresets.push(...LOCAL_FALLBACK_PRESETS);
+        setLoadStatus(enabledCount === 0 ? 'idle' : 'all-failed');
+      } else if (successCount < enabledCount) {
+        setLoadStatus('partial');
+      } else {
+        setLoadStatus('success');
+      }
+
       setFetchedPresets(allPresets);
     } catch (err) {
       console.error('Failed to fetch presets:', err);
+      setFetchedPresets([...LOCAL_FALLBACK_PRESETS]);
+      setLoadStatus('all-failed');
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +133,7 @@ const PresetSourceManager: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="p-4 bg-white/5 border-b border-white/5">
+      <div className="p-4 bg-white/5 border-b border-white/5 space-y-3">
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <Database size={16} className="text-[#4CAF50]" />
@@ -126,6 +148,25 @@ const PresetSourceManager: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {loadStatus === 'all-failed' && (
+          <div className="flex items-start gap-2 text-xs text-yellow-400/90 bg-yellow-400/10 rounded-lg px-3 py-2">
+            <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+            <span>外部预设源加载失败，已自动切换至本地兜底预设。</span>
+          </div>
+        )}
+        {loadStatus === 'partial' && (
+          <div className="flex items-start gap-2 text-xs text-orange-400/90 bg-orange-400/10 rounded-lg px-3 py-2">
+            <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+            <span>部分外部源加载失败，已补充本地兜底预设。</span>
+          </div>
+        )}
+        {loadStatus === 'success' && (
+          <div className="flex items-start gap-2 text-xs text-green-400/90 bg-green-400/10 rounded-lg px-3 py-2">
+            <CheckCircle2 size={14} className="mt-0.5 flex-shrink-0" />
+            <span>预设源加载成功。</span>
+          </div>
+        )}
       </div>
 
       {/* Sources List */}

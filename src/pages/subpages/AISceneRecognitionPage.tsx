@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { getRecommendedFilms, getMasterTips } from '../../ai/SceneToHasselbladMapping';
+import { FilmPreset } from '../../store/sceneProfile';
 import { 
   ArrowLeft, Camera, Zap, Sun, Moon, Mountain, Users, Utensils, Building,
   Flower, Sparkles, Leaf, Coffee, Eye,
@@ -7,7 +9,10 @@ import {
   Download, RefreshCw,
   Sliders, CheckCircle,
   Wand2,
-  Circle
+  Circle,
+  Film,
+  Lightbulb,
+  ThumbsUp
 } from 'lucide-react';
 
 // 精细场景类型定义 - 带完整参数
@@ -44,6 +49,23 @@ const SCENE_TYPES = [
   { id: 'action', name: '动作', icon: Zap, color: '#FFD700', params: { exposure: 0.4, contrast: 22, highlights: -8, shadows: 12, saturation: 5, vibrance: 8, warmth: 0, sharpness: 40, motionBlur: -30 } },
 ];
 
+// 将场景参数转换为 CSS filter，让预览可见
+const buildSceneFilter = (params: Record<string, number>): string => {
+  const parts: string[] = [];
+  const saturation = params.saturation ?? 0;
+  const contrast = params.contrast ?? 0;
+  const brightness = (params.exposure ?? 0) * 0.5 + (params.brightness ?? 0) * 0.3;
+  const warmth = params.warmth ?? 0;
+
+  parts.push(`saturate(${100 + saturation}%)`);
+  parts.push(`contrast(${100 + contrast}%)`);
+  if (brightness !== 0) parts.push(`brightness(${100 + brightness}%)`);
+  if (warmth > 0) parts.push(`sepia(${warmth * 0.3}%)`);
+  if (warmth < 0) parts.push(`hue-rotate(${warmth * 0.3}deg)`);
+
+  return parts.join(' ');
+};
+
 const AISceneRecognitionPage: React.FC = () => {
   const { setCurrentSubPage } = useAppStore();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -58,6 +80,9 @@ const AISceneRecognitionPage: React.FC = () => {
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [recognitionHistory, setRecognitionHistory] = useState<typeof SCENE_TYPES[0][]>([]);
+  const [filmRecommendations, setFilmRecommendations] = useState<FilmPreset[]>([]);
+  const [masterTips, setMasterTips] = useState<string[]>([]);
+  const [filterEffectEnabled, setFilterEffectEnabled] = useState(false);
 
   // 启动相机
   const startCamera = useCallback(async () => {
@@ -115,16 +140,26 @@ const AISceneRecognitionPage: React.FC = () => {
     
     // 模拟哈苏之眼识别
     setIsAnalyzing(true);
-    
+    setFilmRecommendations([]);
+    setMasterTips([]);
+    setFilterEffectEnabled(false);
+
     setTimeout(() => {
       // 随机选择一个场景进行模拟
       const randomScene = SCENE_TYPES[Math.floor(Math.random() * SCENE_TYPES.length)];
       setRecognizedScene(randomScene);
       setAppliedParams(randomScene.params);
-      
+      setFilterEffectEnabled(true);
+
+      // 生成胶片推荐和大师建议
+      const films = getRecommendedFilms(randomScene.id);
+      const tips = getMasterTips(randomScene.id);
+      setFilmRecommendations(films);
+      setMasterTips(tips);
+
       // 添加到历史记录
       setRecognitionHistory(prev => [randomScene, ...prev.slice(0, 4)]);
-      
+
       setIsAnalyzing(false);
       stopCamera();
     }, 2000);
@@ -136,6 +171,9 @@ const AISceneRecognitionPage: React.FC = () => {
     setRecognizedScene(null);
     setAppliedParams({});
     setShowParams(false);
+    setFilmRecommendations([]);
+    setMasterTips([]);
+    setFilterEffectEnabled(false);
     startCamera();
   }, [startCamera]);
 
@@ -168,6 +206,16 @@ const AISceneRecognitionPage: React.FC = () => {
       return 'off';
     });
   }, []);
+
+  // 组件挂载时启动相机
+  useEffect(() => {
+    startCamera();
+  }, [startCamera]);
+
+  // 前后置切换后自动重启相机
+  useEffect(() => {
+    startCamera();
+  }, [cameraFacing, startCamera]);
 
   // 清理
   useEffect(() => {
@@ -331,6 +379,9 @@ const AISceneRecognitionPage: React.FC = () => {
             setCapturedImage(null);
             setRecognizedScene(null);
             setAppliedParams({});
+            setFilmRecommendations([]);
+            setMasterTips([]);
+            setFilterEffectEnabled(false);
           }}
           className="text-white/70 hover:text-white"
         >
@@ -341,12 +392,20 @@ const AISceneRecognitionPage: React.FC = () => {
           <Download size={20} />
         </button>
       </div>
-      
-      {/* 图片预览 */}
-      <div className="flex-1 p-4">
+
+      {/* 可滚动内容区 */}
+      <div className="flex-1 overflow-y-auto p-4 pb-24">
+        {/* 图片预览 */}
         <div className="relative rounded-2xl overflow-hidden mb-4">
-          <img src={capturedImage!} alt="Result" className="w-full aspect-[4/3] object-cover" />
-          
+          <img
+            src={capturedImage!}
+            alt="Result"
+            className="w-full aspect-[4/3] object-cover transition-all duration-500"
+            style={{
+              filter: filterEffectEnabled ? buildSceneFilter(appliedParams) : 'none',
+            }}
+          />
+
           {/* 场景标签 */}
           {recognizedScene && (
             <div className="absolute top-3 left-3">
@@ -356,7 +415,16 @@ const AISceneRecognitionPage: React.FC = () => {
               </div>
             </div>
           )}
-          
+
+          {/* 效果开关 */}
+          <button
+            onClick={() => setFilterEffectEnabled(v => !v)}
+            className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-medium flex items-center gap-1.5"
+          >
+            <Sparkles size={12} className={filterEffectEnabled ? 'text-orange-400' : 'text-white/60'} />
+            {filterEffectEnabled ? '效果已开启' : '效果已关闭'}
+          </button>
+
           {/* 参数显示 */}
           {showParams && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-12">
@@ -371,7 +439,7 @@ const AISceneRecognitionPage: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {/* 场景信息 */}
         {recognizedScene && (
           <div className="bg-white/5 rounded-2xl p-4 mb-4">
@@ -404,7 +472,56 @@ const AISceneRecognitionPage: React.FC = () => {
             </div>
           </div>
         )}
-        
+
+        {/* 胶片推荐 */}
+        {filmRecommendations.length > 0 && (
+          <div className="bg-white/5 rounded-2xl p-4 mb-4">
+            <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
+              <Film size={16} className="text-orange-400" />
+              哈苏胶片推荐
+            </h3>
+            <div className="space-y-2">
+              {filmRecommendations.slice(0, 3).map((film) => (
+                <div
+                  key={film.id}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
+                    <ThumbsUp size={18} className="text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">{film.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
+                        {Math.round(film.matchScore * 100)}% 匹配
+                      </span>
+                    </div>
+                    <p className="text-white/50 text-xs">{film.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 大师拍摄建议 */}
+        {masterTips.length > 0 && (
+          <div className="bg-white/5 rounded-2xl p-4 mb-4">
+            <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
+              <Lightbulb size={16} className="text-yellow-400" />
+              大师拍摄建议
+            </h3>
+            <ul className="space-y-2">
+              {masterTips.slice(0, 4).map((tip, index) => (
+                <li key={index} className="flex items-start gap-2 text-xs text-white/70">
+                  <span className="text-orange-400 mt-0.5">•</span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* 历史记录 */}
         {recognitionHistory.length > 1 && (
           <div>
@@ -416,6 +533,9 @@ const AISceneRecognitionPage: React.FC = () => {
                   onClick={() => {
                     setRecognizedScene(scene);
                     setAppliedParams(scene.params);
+                    setFilterEffectEnabled(true);
+                    setFilmRecommendations(getRecommendedFilms(scene.id));
+                    setMasterTips(getMasterTips(scene.id));
                   }}
                   className="flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center"
                   style={{ backgroundColor: `${scene.color}20` }}
@@ -427,7 +547,7 @@ const AISceneRecognitionPage: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       {/* 底部操作 */}
       <div className="p-4 bg-black/80 backdrop-blur-lg border-t border-white/10">
         <div className="flex gap-3">

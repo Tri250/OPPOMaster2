@@ -278,9 +278,9 @@ const AIFineTunePage: React.FC = () => {
       
       // 将 CSS filter 字符串同步应用到 ctx.filter
       const filterStr = [
-        `saturate(${100 + state.params.saturation}%)`,
-        `contrast(${100 + state.params.contrast}%)`,
-        `brightness(${100 + state.params.brightness + state.params.exposure}%)`,
+        `saturate(${100 + state.params.saturation + state.params.vibrance * 0.5}%)`,
+        `contrast(${100 + state.params.contrast + state.params.clarity * 0.2 + state.params.texture * 0.1}%)`,
+        `brightness(${100 + state.params.brightness + state.params.exposure * 0.5}%)`,
         state.params.warmth > 0 ? `sepia(${state.params.warmth * 0.5}%)` : '',
         state.params.warmth < 0 ? `hue-rotate(${state.params.warmth * 0.5}deg)` : '',
       ].filter(Boolean).join(' ');
@@ -487,15 +487,15 @@ const AIFineTunePage: React.FC = () => {
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
           {/* 预览图像 */}
-          <img 
+          <img
             src={state.imageSource || DEFAULT_IMAGE_SOURCE}
             alt="Preview"
             className="w-full h-full object-cover"
             style={{
               filter: `
-                saturate(${100 + state.params.saturation}%) 
-                contrast(${100 + state.params.contrast}%) 
-                brightness(${100 + state.params.brightness}%)
+                saturate(${100 + state.params.saturation + state.params.vibrance * 0.5}%)
+                contrast(${100 + state.params.contrast + state.params.clarity * 0.2 + state.params.texture * 0.1}%)
+                brightness(${100 + state.params.brightness + state.params.exposure * 0.5}%)
                 sepia(${state.params.warmth > 0 ? state.params.warmth * 0.5 : 0}%)
                 hue-rotate(${state.params.warmth < 0 ? state.params.warmth * 0.5 : 0}deg)
               `,
