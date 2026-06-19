@@ -6,6 +6,7 @@ import com.silas.omaster.model.PresetList
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.cio.endpoint
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -34,16 +35,15 @@ object PresetRemoteManager {
             engine {
                 // 连接超时
                 requestTimeout = 30_000
+                // 全局最大连接数
+                maxConnectionsCount = 32
                 // 连接池配置
-                endpoint {
-                    maxConnectionsPerRoute = 8          // 每个路由最大连接数
-                    maxConnectionsCount = 32             // 全局最大连接数
-                    pipelineMaxSize = 4                  // 流水线最大请求数
-                    keepAliveTime = 30_000               // 保持连接存活时间 (30s)
-                    connectTimeout = 10_000              // 连接建立超时 (10s)
-                    connectRetryAttempts = 2             // 连接重试次数
-                    socketTimeout = 15_000               // Socket 超时
-                }
+                endpoint.maxConnectionsPerRoute = 8          // 每个路由最大连接数
+                endpoint.pipelineMaxSize = 4                  // 流水线最大请求数
+                endpoint.keepAliveTime = 30_000               // 保持连接存活时间 (30s)
+                endpoint.connectTimeout = 10_000              // 连接建立超时 (10s)
+                endpoint.connectAttempts = 2                  // 连接重试次数
+                endpoint.socketTimeout = 15_000               // Socket 超时
             }
 
             // ==================== 超时配置 ====================

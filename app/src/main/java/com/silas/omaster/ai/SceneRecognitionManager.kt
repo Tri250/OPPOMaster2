@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -406,11 +405,11 @@ class SceneRecognitionManager private constructor(context: Context) {
     }
 
     /**
-     * 获取场景识别开关状态流（带 distinctUntilChanged 防抖动）
-     * 供 UI 层订阅使用
+     * 获取场景识别开关状态流
+     * StateFlow 本身已去重，直接返回即可
      */
     fun isSceneRecognitionEnabledFlow(): Flow<Boolean> {
-        return isSceneRecognitionEnabled.distinctUntilChanged()
+        return isSceneRecognitionEnabled
     }
 
     /**

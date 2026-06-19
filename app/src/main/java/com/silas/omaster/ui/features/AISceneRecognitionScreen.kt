@@ -1861,6 +1861,7 @@ private fun getRelatedSceneIds(category: SceneCategory): List<String> {
         SceneCategory.STILL_LIFE -> listOf("still-natural", "still-minimal", "still-artistic")
         SceneCategory.MACRO -> listOf("macro-nature", "macro-detail", "macro-texture")
         SceneCategory.EVENT -> listOf("event-indoor", "event-outdoor", "event-candid")
+        SceneCategory.UNKNOWN -> listOf()
     }
 }
 

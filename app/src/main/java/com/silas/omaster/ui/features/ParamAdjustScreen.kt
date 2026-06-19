@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import kotlin.math.roundToInt
 
 /**
  * 参数精细调节页面

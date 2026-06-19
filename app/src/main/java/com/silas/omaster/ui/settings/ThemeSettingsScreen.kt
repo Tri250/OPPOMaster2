@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 
 /**
  * 主题设置页面

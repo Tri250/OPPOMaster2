@@ -19,7 +19,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.cloud.SyncState
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -699,7 +701,7 @@ private fun CloudProviderConnectDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    visualTransformation = if (isWebDAV) null else PasswordVisualTransformation(),
+                    visualTransformation = if (isWebDAV) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = if (isWebDAV) KeyboardType.Uri else KeyboardType.Password
                     ),

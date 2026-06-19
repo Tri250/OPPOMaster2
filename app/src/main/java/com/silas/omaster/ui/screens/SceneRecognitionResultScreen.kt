@@ -32,6 +32,7 @@ import com.silas.omaster.model.*
 import kotlin.math.roundToInt
 import com.silas.omaster.ui.components.FilmRecommendationStrip
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.util.perform
 import java.io.File
 
 /**
@@ -884,6 +885,7 @@ private fun getCategoryTip(category: SceneCategory): String {
         SceneCategory.STILL_LIFE -> "注重光影细节和构图"
         SceneCategory.MACRO -> "精确聚焦和景深控制"
         SceneCategory.EVENT -> "捕捉瞬间和氛围表达"
+        SceneCategory.UNKNOWN -> ""
     }
 }
 

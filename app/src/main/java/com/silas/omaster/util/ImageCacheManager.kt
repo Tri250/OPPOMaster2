@@ -55,6 +55,10 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
     companion object {
         private const val TAG = "ImageCacheManager"
+        private const val CACHE_DIR = "presets/images"
+        private const val TIMEOUT_MS = 30000L
+        private const val MAX_RETRIES = 3
+        private const val DEFAULT_MAX_DISK_CACHE_BYTES = 50L * 1024 * 1024
 
         @Volatile
         private var instance: ImageCacheManager? = null
@@ -65,10 +69,6 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
             }
         }
     }
-
-    private const val CACHE_DIR = "presets/images"
-    private const val TIMEOUT_MS = 30000L
-    private const val MAX_RETRIES = 3
 
     // ==================== LRU 内存缓存 ====================
 
@@ -88,16 +88,21 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
             }
         }
 
+    /** 创建按 Bitmap 大小（KB）计量的 LruCache */
+    private fun createMemoryCache(sizeKB: Int): LruCache<String, Bitmap> {
+        return object : LruCache<String, Bitmap>(sizeKB) {
+            override fun sizeOf(key: String, bitmap: Bitmap): Int {
+                return bitmap.byteCount / 1024
+            }
+        }
+    }
+
     /** LRU 内存缓存 */
-    private var memoryCache: LruCache<String, Bitmap> = LruCache(defaultMemoryCacheSize)
+    private var memoryCache: LruCache<String, Bitmap> = createMemoryCache(defaultMemoryCacheSize)
 
     private fun resizeMemoryCache(sizeKB: Int) {
         synchronized(memoryCache) {
-            val newCache = LruCache<String, Bitmap>(sizeKB) {
-                override fun sizeOf(key: String, bitmap: Bitmap): Int {
-                    return bitmap.byteCount / 1024
-                }
-            }
+            val newCache = createMemoryCache(sizeKB)
             memoryCache = newCache
         }
     }
@@ -109,9 +114,6 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
     }
 
     // ==================== 磁盘缓存大小限制 ====================
-
-    /** 默认最大磁盘缓存大小：50MB */
-    private const val DEFAULT_MAX_DISK_CACHE_BYTES = 50L * 1024 * 1024
 
     /** 可配置的最大磁盘缓存大小（字节） */
     @Volatile

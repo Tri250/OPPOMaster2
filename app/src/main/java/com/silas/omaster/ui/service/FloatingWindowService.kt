@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.LinearGradient
+import androidx.compose.ui.graphics.toArgb
 import android.graphics.PixelFormat
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
@@ -55,7 +56,7 @@ class FloatingWindowService : Service() {
     // 配色方案 - 从 SettingsManager 动态读取主题色
     private fun getPrimaryColor(context: Context): Int {
         val theme = SettingsManager.getInstance(context).currentTheme
-        return theme.primaryColor.toInt()
+        return theme.primaryColor.toArgb()
     }
 
     private fun getPrimaryDarkColor(context: Context): Int {
@@ -778,7 +779,7 @@ class FloatingWindowService : Service() {
             addView(TextView(context).apply {
                 text = icon
                 textSize = 12f
-                setTextColor(primaryColor)
+                setTextColor(getPrimaryColor(context))
             })
 
             addView(createSpacing(dpToPx(4)))

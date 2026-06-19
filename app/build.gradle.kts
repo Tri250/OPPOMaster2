@@ -110,6 +110,7 @@ val finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseK
 android {
     namespace = "com.silas.omaster"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.silas.omaster"
@@ -390,6 +391,8 @@ dependencies {
     // Room 数据库已移除，使用 DataStore 替代 SharedPreferences
     // DataStore - 异步配置存储，避免 SP 主线程 ANR
     implementation(libs.androidx.datastore.preferences)
+    implementation("androidx.datastore:datastore-preferences-android:1.1.1")
+    implementation("androidx.datastore:datastore-core-android:1.1.1")
 
     // ⚠️ 替换友盟硬编码依赖
 // 友盟

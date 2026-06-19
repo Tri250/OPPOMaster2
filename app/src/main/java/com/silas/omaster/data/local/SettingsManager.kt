@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.jvm.JvmName
 
 // DataStore 扩展属性
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
@@ -709,20 +711,23 @@ class SettingsManager private constructor(private val context: Context) {
     /**
      * 同步删除数据（同时清除缓存）
      */
+    @JvmName("removeDataSyncString")
     private fun removeDataSync(key: Preferences.Key<String>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
         }
     }
-    
+
+    @JvmName("removeDataSyncInt")
     private fun removeDataSync(key: Preferences.Key<Int>) {
         cache.remove(key.name)
         runBlocking {
             context.dataStore.edit { prefs -> prefs.remove(key) }
         }
     }
-    
+
+    @JvmName("removeDataSyncBoolean")
     private fun removeDataSync(key: Preferences.Key<Boolean>) {
         cache.remove(key.name)
         runBlocking {
@@ -730,6 +735,7 @@ class SettingsManager private constructor(private val context: Context) {
         }
     }
 
+    @JvmName("removeDataSyncFloat")
     private fun removeDataSync(key: Preferences.Key<Float>) {
         cache.remove(key.name)
         runBlocking {
