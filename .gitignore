@@ -123,3 +123,9 @@ app/src/main/assets/models/*.h5
 
 # 开发过程记录（不应提交到版本控制）
 WORKTREE_RECORD.md
+
+# 临时构建初始化脚本
+init-build.gradle.kts
+
+# R8 混淆 mapping 文件（体积过大，按需归档）
+app/mapping/
