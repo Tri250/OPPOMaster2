@@ -2,7 +2,6 @@ import React from 'react';
 import { useAppStore } from '../store/appStore';
 import {
   Palette,
-  Moon,
   Globe,
   Bell,
   Shield,
@@ -33,15 +32,9 @@ const AboutScreen: React.FC = () => {
   const settingsItems = [
     { 
       icon: Palette, 
-      label: '主题设置', 
-      value: themeNames[theme] || '哈苏橙',
-      route: 'theme-settings' as const
-    },
-    { 
-      icon: Moon, 
-      label: '深色模式', 
-      value: darkModeNames[darkMode] || '跟随系统',
-      route: 'dark-mode' as const
+      label: '外观设置', 
+      value: `${themeNames[theme] || '哈苏橙'} · ${darkModeNames[darkMode] || '跟随系统'}`,
+      route: 'appearance' as const
     },
     { 
       icon: Globe, 
