@@ -270,8 +270,8 @@ class SettingsManager private constructor(private val context: Context) {
         }
 
     // 哈苏之眼开关（带 StateFlow 支持）
-    // v1.3.1 正式版默认关闭：需上传模型文件并提供 SHA256 校验值后方可开启
-    private val _isAISceneRecognitionEnabledFlow = MutableStateFlow(getDataSync(KEY_AI_SCENE_ENABLED, false))
+    // v1.6.0 默认开启：所有核心功能默认启用
+    private val _isAISceneRecognitionEnabledFlow = MutableStateFlow(getDataSync(KEY_AI_SCENE_ENABLED, true))
     val isAISceneRecognitionEnabledFlow: StateFlow<Boolean> = _isAISceneRecognitionEnabledFlow.asStateFlow()
 
     var isAISceneRecognitionEnabled: Boolean
@@ -282,17 +282,17 @@ class SettingsManager private constructor(private val context: Context) {
         }
 
     // AI 微调开关
-    // v1.3.1 正式版默认关闭：实验性功能，待模型就绪后开启
+    // v1.6.0 默认开启：所有核心功能默认启用
     var isAIFineTuneEnabled: Boolean
-        get() = getDataSync(KEY_AI_FINE_TUNE_ENABLED, false)
+        get() = getDataSync(KEY_AI_FINE_TUNE_ENABLED, true)
         set(value) {
             setDataSync(KEY_AI_FINE_TUNE_ENABLED, value)
         }
 
     // 智能优化开关
-    // v1.3.1 正式版默认关闭：依赖 TFLite 模型，当前使用启发式降级策略
+    // v1.6.0 默认开启：所有核心功能默认启用
     var isSmartOptimizeEnabled: Boolean
-        get() = getDataSync(KEY_SMART_OPTIMIZE_ENABLED, false)
+        get() = getDataSync(KEY_SMART_OPTIMIZE_ENABLED, true)
         set(value) {
             setDataSync(KEY_SMART_OPTIMIZE_ENABLED, value)
         }
@@ -305,9 +305,9 @@ class SettingsManager private constructor(private val context: Context) {
         }
 
     // 哈苏色彩科学开关
-    // v1.3.1 正式版默认关闭：实验性 AI 色彩功能
+    // v1.6.0 默认开启：所有核心功能默认启用
     var isHasselbladColorEnabled: Boolean
-        get() = getDataSync(KEY_HASSELBLAD_COLOR_ENABLED, false)
+        get() = getDataSync(KEY_HASSELBLAD_COLOR_ENABLED, true)
         set(value) {
             setDataSync(KEY_HASSELBLAD_COLOR_ENABLED, value)
         }

@@ -142,7 +142,9 @@ fun MainApp(navController: NavHostController) {
         NavHost(
             navController = navController,
             startDestination = Screen.Home,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = if (showBottomNav) 80.dp else 0.dp),
             enterTransition = { navEnterTransition(getNavIndex, forward = true) },
             exitTransition = { navExitTransition(getNavIndex, forward = true) },
             popEnterTransition = { navEnterTransition(getNavIndex, forward = false) },

@@ -680,33 +680,41 @@ private fun Camera2Preview(
     var cameraDevice by remember { mutableStateOf<CameraDevice?>(null) }
     var captureSession by remember { mutableStateOf<CameraCaptureSession?>(null) }
     var imageReader by remember { mutableStateOf<android.media.ImageReader?>(null) }
+    var hasCameraPermission by remember { mutableStateOf(false) }
 
     // 请求相机权限
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
+        hasCameraPermission = granted
         if (!granted) {
             Toast.makeText(context, "需要相机权限才能拍照识别场景", Toast.LENGTH_LONG).show()
         }
     }
 
     LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
+        val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+        if (permission == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            hasCameraPermission = true
+        } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
     // 响应外部拍摄触发
     LaunchedEffect(captureTrigger.value) {
-        if (captureTrigger.value) {
+        if (captureTrigger.value && hasCameraPermission) {
             captureImage(cameraDevice, captureSession, imageReader, cameraHandler, onCapture)
             captureTrigger.value = false
         }
     }
 
-    DisposableEffect(cameraFacing) {
+    DisposableEffect(cameraFacing, hasCameraPermission) {
+        if (!hasCameraPermission) {
+            onDispose { /* 权限未授予，无需清理 */ }
+            return@DisposableEffect
+        }
+        
         val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
         val cameraId = getCameraId(cameraManager, cameraFacing)
 
@@ -797,7 +805,7 @@ private fun captureImage(
             buffer.get(bytes)
             image.close()
 
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             if (bitmap != null) {
                 onCapture(bitmap)
             }
@@ -809,7 +817,15 @@ private fun captureImage(
                 request: CaptureRequest,
                 result: TotalCaptureResult
             ) {
-                Log.d("Camera2Preview", "Photo captured")
+                Log.d("Camera2Preview", "Photo captured successfully")
+            }
+            
+            override fun onCaptureFailed(
+                session: CameraCaptureSession,
+                request: CaptureRequest,
+                failure: CaptureFailure
+            ) {
+                Log.e("Camera2Preview", "Photo capture failed: ${failure.reason}")
             }
         }, handler)
     } catch (e: Exception) {

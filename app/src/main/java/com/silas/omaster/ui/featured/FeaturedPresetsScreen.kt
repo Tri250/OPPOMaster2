@@ -83,7 +83,6 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.LightGray
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.util.ImageCacheManager
-import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -568,12 +567,12 @@ private fun EmptyState(
  * 加载精选预设数据
  */
 private fun loadFeaturedPresets(): List<MasterPreset> {
-    // 示例精选预设数据
+    // 示例精选预设数据 - 使用空封面路径，由 PresetImage 组件显示占位图
     return listOf(
         MasterPreset(
             id = "featured_1",
             name = "清新人像",
-            coverPath = UrlConstants.getSampleImageUrl("portrait_fresh.jpg"),
+            coverPath = "",
             author = "@OPPO影像",
             brand = "OPPO",
             tags = listOf("人像", "清新"),
@@ -587,7 +586,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_2",
             name = "夜景霓虹",
-            coverPath = UrlConstants.getSampleImageUrl("night_neon.jpg"),
+            coverPath = "",
             author = "@Find摄影",
             brand = "OPPO",
             tags = listOf("夜景", "霓虹"),
@@ -601,7 +600,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_3",
             name = "美食暖调",
-            coverPath = UrlConstants.getSampleImageUrl("food_warm.jpg"),
+            coverPath = "",
             author = "@美食摄影师",
             brand = "realme",
             tags = listOf("美食", "暖调"),
@@ -614,7 +613,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_4",
             name = "街拍黑白",
-            coverPath = UrlConstants.getSampleImageUrl("street_bw.jpg"),
+            coverPath = "",
             author = "@街拍大师",
             brand = "vivo",
             tags = listOf("街拍", "黑白"),
@@ -626,7 +625,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_5",
             name = "风景通透",
-            coverPath = UrlConstants.getSampleImageUrl("landscape_clear.jpg"),
+            coverPath = "",
             author = "@风光摄影",
             brand = "荣耀",
             tags = listOf("风景", "通透"),
@@ -640,7 +639,7 @@ private fun loadFeaturedPresets(): List<MasterPreset> {
         MasterPreset(
             id = "featured_6",
             name = "建筑几何",
-            coverPath = UrlConstants.getSampleImageUrl("architecture.jpg"),
+            coverPath = "",
             author = "@建筑摄影",
             brand = "小米",
             tags = listOf("建筑", "几何"),
