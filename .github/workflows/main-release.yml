@@ -117,6 +117,21 @@ jobs:
             echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           fi
 
+      # 解码 Release Keystore（从 GitHub Secrets 注入）
+      - name: Decode Release Keystore
+        run: |
+          if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+            mkdir -p app/keystore
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > app/keystore/release.keystore
+            echo "RELEASE_STORE_FILE=${GITHUB_WORKSPACE}/app/keystore/release.keystore" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}" >> $GITHUB_ENV
+            echo "✅ Release keystore 已解码并配置"
+          else
+            echo "⚠️ RELEASE_KEYSTORE_BASE64 未配置，Release 构建将使用 debug 签名回退"
+          fi
+
       # 构建 Release APK
       - name: Build Release APK
         id: build
@@ -124,6 +139,13 @@ jobs:
           echo "status=building" >> $GITHUB_OUTPUT
           ./gradlew assembleRelease --no-daemon --stacktrace
           echo "status=success" >> $GITHUB_OUTPUT
+        env:
+          CI: true
+
+      # 构建 Release AAB
+      - name: Build Release AAB
+        run: |
+          ./gradlew bundleRelease --no-daemon --stacktrace
         env:
           CI: true
 
@@ -180,6 +202,14 @@ jobs:
         with:
           name: release-apk-x86_64
           path: app/build/outputs/apk/release/*-x86_64-*.apk
+          retention-days: 30
+
+      # 上传 Release AAB
+      - name: Upload Release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: app/build/outputs/bundle/release/*.aab
           retention-days: 30
 
       # 上传构建报告

@@ -170,16 +170,16 @@
 
 # @Serializable 类的 Companion 对象（提供 serializer() 函数入口）
 -keepclassmembers class com.silas.omaster.model.** {
-    *** Companion;
+    public static ** Companion;
 }
 -keepclassmembers class com.silas.omaster.data.model.** {
-    *** Companion;
+    public static ** Companion;
 }
 -keepclassmembers class com.silas.omaster.renderer.** {
-    *** Companion;
+    public static ** Companion;
 }
 -keepclassmembers class com.silas.omaster.watermark.** {
-    *** Companion;
+    public static ** Companion;
 }
 
 # 保留包含 serializer() 方法的类及其成员（确保序列化字段名不被混淆）

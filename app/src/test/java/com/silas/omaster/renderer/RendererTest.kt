@@ -25,9 +25,8 @@ class RenderParametersTest {
         assertEquals(0f, params.clarity)
         assertEquals(0f, params.vibrance)
         assertEquals(0f, params.grain)
-        assertEquals(0f, params.vignette)
         assertEquals(0f, params.dehaze)
-        assertEquals(0f, params.noiseReduction)
+        assertEquals(0f, params.denoise)
     }
 
     @Test
@@ -116,10 +115,10 @@ class RenderParametersTest {
     }
 
     @Test
-    fun testVignetteRange() {
-        // 测试暗角范围 -100 到 100
-        val params = RenderParameters(vignette = -30f)
-        assertEquals(-30f, params.vignette)
+    fun testFadeRange() {
+        // 测试褪色范围 0 到 100
+        val params = RenderParameters(fade = 30f)
+        assertEquals(30f, params.fade)
     }
 
     @Test
@@ -132,8 +131,8 @@ class RenderParametersTest {
     @Test
     fun testNoiseReductionRange() {
         // 测试降噪范围 0 到 100
-        val params = RenderParameters(noiseReduction = 50f)
-        assertEquals(50f, params.noiseReduction)
+        val params = RenderParameters(denoise = 50f)
+        assertEquals(50f, params.denoise)
     }
 
     @Test
@@ -151,9 +150,8 @@ class RenderParametersTest {
             clarity = 15f,
             vibrance = 10f,
             grain = 5f,
-            vignette = -15f,
             dehaze = 10f,
-            noiseReduction = 20f
+            denoise = 20f
         )
         
         assertEquals(10f, params.brightness)
@@ -167,9 +165,8 @@ class RenderParametersTest {
         assertEquals(15f, params.clarity)
         assertEquals(10f, params.vibrance)
         assertEquals(5f, params.grain)
-        assertEquals(-15f, params.vignette)
         assertEquals(10f, params.dehaze)
-        assertEquals(20f, params.noiseReduction)
+        assertEquals(20f, params.denoise)
     }
 
     @Test

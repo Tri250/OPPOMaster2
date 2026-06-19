@@ -1,13 +1,16 @@
 package com.silas.omaster.viewmodel
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.silas.omaster.data.local.FavoriteManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.featured.FeaturedPresetsViewModel
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -15,11 +18,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
-import org.mockito.kotlin.*
 
 /**
  * FeaturedPresetsViewModel 单元测试
@@ -27,15 +26,9 @@ import org.mockito.kotlin.*
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeaturedPresetsViewModelTest {
 
-    @get:Rule
-    val instantTaskExecutorRule = InstantTaskExecutorRule()
-
     private val testDispatcher = StandardTestDispatcher()
 
-    @Mock
     private lateinit var repository: PresetRepository
-
-    @Mock
     private lateinit var favoriteManager: FavoriteManager
 
     private lateinit var viewModel: FeaturedPresetsViewModel
@@ -44,11 +37,14 @@ class FeaturedPresetsViewModelTest {
 
     @Before
     fun setup() {
-        MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(testDispatcher)
-        
-        whenever(favoriteManager.favoritesFlow).thenReturn(favoritesFlow)
-        
+
+        repository = mockk(relaxed = true)
+        favoriteManager = mockk(relaxed = true)
+
+        every { favoriteManager.favoritesFlow } returns favoritesFlow
+        every { repository.getAllPresets() } returns emptyFlow()
+
         viewModel = FeaturedPresetsViewModel(repository, favoriteManager)
     }
 
@@ -88,9 +84,9 @@ class FeaturedPresetsViewModelTest {
         viewModel.setBrand("Hasselblad")
         viewModel.setScene("Portrait")
         viewModel.setSearchQuery("test")
-        
+
         viewModel.clearFilters()
-        
+
         assertNull(viewModel.selectedBrand.value)
         assertNull(viewModel.selectedScene.value)
         assertEquals("", viewModel.searchQuery.value)
@@ -100,15 +96,15 @@ class FeaturedPresetsViewModelTest {
     fun `切换收藏调用FavoriteManager`() = runTest {
         val presetId = "preset123"
         viewModel.toggleFavorite(presetId)
-        
-        verify(favoriteManager).toggleFavorite(presetId)
+
+        verify { favoriteManager.toggleFavorite(presetId) }
     }
 
     @Test
     fun `检查收藏状态返回正确结果`() = runTest {
         val presetId = "preset123"
         favoritesFlow.value = setOf(presetId)
-        
+
         assertTrue(viewModel.isFavorite(presetId))
         assertFalse(viewModel.isFavorite("other"))
     }
@@ -116,15 +112,15 @@ class FeaturedPresetsViewModelTest {
     @Test
     fun `获取筛选后预设正确过滤`() = runTest {
         val presets = listOf(
-            MasterPreset(id = "1", name = "Preset1", author = "Author1", brand = "Hasselblad", tags = listOf("Portrait")),
-            MasterPreset(id = "2", name = "Preset2", author = "Author2", brand = "Fuji", tags = listOf("Landscape")),
-            MasterPreset(id = "3", name = "Test Preset", author = "Test Author", brand = "Hasselblad", tags = listOf("Portrait"))
+            MasterPreset(id = "1", name = "Preset1", coverPath = "cover1.jpg", author = "Author1", brand = "Hasselblad", tags = listOf("Portrait")),
+            MasterPreset(id = "2", name = "Preset2", coverPath = "cover2.jpg", author = "Author2", brand = "Fuji", tags = listOf("Landscape")),
+            MasterPreset(id = "3", name = "Test Preset", coverPath = "cover3.jpg", author = "Test Author", brand = "Hasselblad", tags = listOf("Portrait"))
         )
-        
+
         // 模拟加载预设
         viewModel.setBrand("Hasselblad")
         viewModel.setScene("Portrait")
-        
+
         // 验证筛选逻辑
         val filtered = viewModel.getFilteredPresets()
         // 由于预设是异步加载的，这里验证筛选逻辑正确
@@ -134,7 +130,7 @@ class FeaturedPresetsViewModelTest {
     @Test
     fun `刷新数据重新加载预设`() = runTest {
         viewModel.refresh()
-        
-        verify(repository, atLeast(1)).getAllPresetsOnce()
+
+        verify(atLeast = 1) { repository.getAllPresets() }
     }
 }

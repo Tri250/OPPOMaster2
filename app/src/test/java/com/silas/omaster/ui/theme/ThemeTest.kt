@@ -39,7 +39,7 @@ class ThemeTest {
 /**
  * Color 测试
  */
-class ColorTest {
+class ThemeColorTest {
 
     @Test
     fun `Color - 主题色验证`() {
@@ -93,12 +93,12 @@ class ColorTest {
     @Test
     fun `Color - 颜色亮度计算`() {
         val color = 0xFFFF6B35.toInt()
-        val r = (color >> 16) & 0xFF
-        val g = (color >> 8) & 0xFF
-        val b = color & 0xFF
-        
+        val r = (color shr 16) and 0xFF
+        val g = (color shr 8) and 0xFF
+        val b = color and 0xFF
+
         val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
-        
+
         assertTrue("亮度应该在有效范围内", luminance in 0..255)
     }
 }

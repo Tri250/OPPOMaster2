@@ -1,5 +1,6 @@
 package com.silas.omaster.tflite
 
+import com.silas.omaster.tflite.models.QualityMetrics
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -17,12 +18,13 @@ class TFLiteEngineTest {
     @Test
     fun `QualityMetrics 范围验证`() {
         val metrics = QualityMetrics()
-        // 亮度范围 0-100
-        assertTrue(metrics.brightness in 0f..100f)
-        // 对比度范围 0-100
-        assertTrue(metrics.contrast in 0f..100f)
-        // 饱和度范围 0-100
-        assertTrue(metrics.saturation in 0f..100f)
+        val diagnostic = metrics.getDiagnosticInfo()
+        // 亮度评分范围 0-100
+        assertTrue(diagnostic.brightnessScore in 0f..100f)
+        // 对比度评分范围 0-100
+        assertTrue(diagnostic.contrastScore in 0f..100f)
+        // 清晰度评分范围 0-100
+        assertTrue(diagnostic.sharpnessScore in 0f..100f)
     }
 
     @Test

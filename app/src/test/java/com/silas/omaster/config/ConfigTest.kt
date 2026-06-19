@@ -84,8 +84,8 @@ class ConfigTest {
             "strategy" to "LRU"
         )
         
-        assertTrue("缓存大小应该有效", cacheConfig["maxSize"]!! > 0)
-        assertTrue("TTL应该有效", cacheConfig["ttl"]!! > 0)
+        assertTrue("缓存大小应该有效", (cacheConfig["maxSize"] as Long) > 0)
+        assertTrue("TTL应该有效", (cacheConfig["ttl"] as Long) > 0)
     }
 
     @Test
@@ -198,7 +198,7 @@ class ConfigTest {
             "initialDelay" to 1000L
         )
         
-        assertTrue("最大重试次数应该有效", retryConfig["maxRetries"]!! > 0)
+        assertTrue("最大重试次数应该有效", (retryConfig["maxRetries"] as Int) > 0)
     }
 
     @Test

@@ -81,18 +81,25 @@ if (umengAppKey.isEmpty()) {
 }
 
 // 读取签名配置
-// 优先级：1. gradle.properties 中的 RELEASE_* 配置
+// 优先级：1. 环境变量 RELEASE_*（CI/CD 注入，最高优先级）
 //        2. keystore-release.properties 文件（不应提交到版本控制）
-//        3. keystore.properties 模板文件
+//        3. gradle.properties 中的 RELEASE_* 配置
+//        4. keystore.properties 模板文件
 val keystoreProperties = Properties()
 
-// 方式1：从 gradle.properties 读取
+// 方式1：从环境变量读取（CI/CD 常见做法）
+val envStoreFileBase64 = System.getenv("RELEASE_STORE_FILE_BASE64")
+val envStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
+val envKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
+val envKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+
+// 方式2：从 gradle.properties 读取
 val releaseStoreFile = project.findProperty("RELEASE_STORE_FILE") as String?
 val releaseStorePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
 val releaseKeyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
 val releaseKeyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
 
-// 方式2：从 keystore-release.properties 文件读取（优先级更高）
+// 方式3：从 keystore-release.properties 文件读取（优先级高于 gradle.properties）
 val keystorePropertiesFile = file("keystore-release.properties")
     .takeIf { it.exists() }
     ?: file("keystore.properties")
@@ -102,10 +109,24 @@ if (keystorePropertiesFile.exists()) {
 }
 
 // 合并配置：文件配置优先于 gradle.properties
-val finalStoreFile = keystoreProperties.getProperty("storeFile") ?: releaseStoreFile
-val finalStorePassword = keystoreProperties.getProperty("storePassword") ?: releaseStorePassword
-val finalKeyAlias = keystoreProperties.getProperty("keyAlias") ?: releaseKeyAlias
-val finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseKeyPassword
+var finalStoreFile = keystoreProperties.getProperty("storeFile") ?: releaseStoreFile
+var finalStorePassword = keystoreProperties.getProperty("storePassword") ?: releaseStorePassword
+var finalKeyAlias = keystoreProperties.getProperty("keyAlias") ?: releaseKeyAlias
+var finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseKeyPassword
+
+// 环境变量覆盖：支持 Base64 编码的 keystore 内容直接注入
+val envKeystoreFile = if (!envStoreFileBase64.isNullOrBlank()) {
+    val decoded = Base64.getDecoder().decode(envStoreFileBase64)
+    val target = layout.buildDirectory.file("omaster-release.keystore").get().asFile
+    target.parentFile?.mkdirs()
+    target.writeBytes(decoded)
+    target.absolutePath
+} else null
+
+if (envKeystoreFile != null) finalStoreFile = envKeystoreFile
+if (!envStorePassword.isNullOrBlank()) finalStorePassword = envStorePassword
+if (!envKeyAlias.isNullOrBlank()) finalKeyAlias = envKeyAlias
+if (!envKeyPassword.isNullOrBlank()) finalKeyPassword = envKeyPassword
 
 android {
     namespace = "com.silas.omaster"
@@ -253,7 +274,6 @@ android {
             isJniDebuggable = false
             isPseudoLocalesEnabled = false
             // 启用资源去重与混淆
-            resValue("string", "build_type", "release")
         }
     }
 
