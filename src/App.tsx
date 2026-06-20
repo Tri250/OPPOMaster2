@@ -1,27 +1,43 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useAppStore } from './store/appStore';
 import PhoneMockup from './components/PhoneMockup';
 import HomeScreen from './pages/HomeScreen';
 import FeaturedScreen from './pages/FeaturedScreen';
 import FeaturesScreen from './pages/FeaturesScreen';
 import AboutScreen from './pages/AboutScreen';
+import { tokens } from './styles/designTokens';
 
-// Sub pages
-import AISceneRecognitionPage from './pages/subpages/AISceneRecognitionPage';
-import AIFineTunePage from './pages/subpages/AIFineTunePage';
-import SmartOptimizePage from './pages/subpages/SmartOptimizePage';
-import WatermarkPage from './pages/subpages/WatermarkPage';
-import PresetManagerPage from './pages/subpages/PresetManagerPage';
-import ParamAdjustPage from './pages/subpages/ParamAdjustPage';
-import LUTSharePage from './pages/subpages/LUTSharePage';
-import HasselbladPage from './pages/subpages/HasselbladPage';
-import CloudSyncPage from './pages/subpages/CloudSyncPage';
-import UpdateChannelPage from './pages/subpages/UpdateChannelPage';
-import TermsPage from './pages/subpages/TermsPage';
-import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
-import NotificationPage from './pages/subpages/NotificationPage';
-import PrivacyPage from './pages/subpages/PrivacyPage';
-import PresetSourceManager from './pages/subpages/PresetSourceManager';
+// 主屏保持即时加载；子页面按路由懒加载，降低首屏包体积
+const AISceneRecognitionPage = lazy(() => import('./pages/subpages/AISceneRecognitionPage'));
+const AIFineTunePage = lazy(() => import('./pages/subpages/AIFineTunePage'));
+const SmartOptimizePage = lazy(() => import('./pages/subpages/SmartOptimizePage'));
+const WatermarkPage = lazy(() => import('./pages/subpages/WatermarkPage'));
+const PresetManagerPage = lazy(() => import('./pages/subpages/PresetManagerPage'));
+const ParamAdjustPage = lazy(() => import('./pages/subpages/ParamAdjustPage'));
+const LUTSharePage = lazy(() => import('./pages/subpages/LUTSharePage'));
+const HasselbladPage = lazy(() => import('./pages/subpages/HasselbladPage'));
+const CloudSyncPage = lazy(() => import('./pages/subpages/CloudSyncPage'));
+const UpdateChannelPage = lazy(() => import('./pages/subpages/UpdateChannelPage'));
+const TermsPage = lazy(() => import('./pages/subpages/TermsPage'));
+const ThemeSettingsPage = lazy(() => import('./pages/subpages/ThemeSettingsPage'));
+const NotificationPage = lazy(() => import('./pages/subpages/NotificationPage'));
+const PrivacyPage = lazy(() => import('./pages/subpages/PrivacyPage'));
+const PresetSourceManager = lazy(() => import('./pages/subpages/PresetSourceManager'));
+
+/**
+ * 子页面懒加载占位
+ */
+const PageSkeleton: React.FC = () => (
+  <div
+    className="h-full w-full flex items-center justify-center"
+    style={{ background: tokens.colors.background }}
+  >
+    <div
+      className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+      style={{ borderColor: tokens.colors.accent, borderTopColor: 'transparent' }}
+    />
+  </div>
+);
 
 const App: React.FC = () => {
   const { currentPage, currentSubPage } = useAppStore();
@@ -81,7 +97,11 @@ const App: React.FC = () => {
   return (
     <PhoneMockup>
       <div className="h-full w-full relative">
-        {currentSubPage ? renderSubPage() : renderMainPage()}
+        {currentSubPage ? (
+          <Suspense fallback={<PageSkeleton />}>{renderSubPage()}</Suspense>
+        ) : (
+          renderMainPage()
+        )}
       </div>
     </PhoneMockup>
   );

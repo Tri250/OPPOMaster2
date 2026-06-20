@@ -1,5 +1,6 @@
 import React, { useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { 
   ArrowLeft, RefreshCw, Check, Wand2, Sparkles, Sun, Moon, Palette, 
   Camera, Aperture, Zap, Eye, Contrast, Droplets, Layers, Sliders,
@@ -82,7 +83,7 @@ const DEFAULT_IMAGE_SOURCE = 'https://images.unsplash.com/photo-1494790108377-be
 // ============================================
 
 const AIFineTunePage: React.FC = () => {
-  const { goBack, tuneImageSource, setTuneImageSource } = useAppStore();
+  const { reduceMotion, goBack, tuneImageSource, setTuneImageSource } = useAppStore();
   
   // 使用 useReducer 管理所有状态
   const [state, dispatch] = useReducer(
@@ -455,49 +456,49 @@ const AIFineTunePage: React.FC = () => {
   // ========== 渲染 ==========
   
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-master-bg text-white" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-50 bg-master-bg/95 backdrop-blur-glass border-b border-master-glass-border">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <button onClick={goBack} className="p-2 -ml-2 rounded-full hover:bg-white/10">
+            <button onClick={goBack} className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong active:scale-95">
               <ArrowLeft size={20} className="text-white" />
             </button>
             <div>
               <h1 className="text-lg font-bold">AI 微调</h1>
-              <p className="text-xs text-white/50">专业色彩优化引擎 v4.0</p>
+              <p className="text-xs text-master-text-tertiary">专业色彩优化引擎 v4.0</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {/* 上传图片按钮 */}
             <button 
               onClick={triggerUpload}
-              className="p-2 rounded-full hover:bg-white/10"
+              className="p-2 rounded-full hover:bg-master-glass-strong active:scale-95"
               title="上传图片"
             >
-              <Upload size={18} className="text-white/50" />
+              <Upload size={18} className="text-master-text-tertiary" />
             </button>
             {/* 导出图片按钮 */}
             <button 
               onClick={handleExportImage}
-              className="p-2 rounded-full hover:bg-white/10"
+              className="p-2 rounded-full hover:bg-master-glass-strong active:scale-95"
               title="导出图片"
             >
-              <Download size={18} className="text-white/50" />
+              <Download size={18} className="text-master-text-tertiary" />
             </button>
             {/* 撤销按钮 */}
             {canUndo(state) && (
-              <button onClick={handleUndo} className="p-2 rounded-full hover:bg-white/10" title="撤销">
-                <RefreshCw size={18} className="text-white/50" />
+              <button onClick={handleUndo} className="p-2 rounded-full hover:bg-master-glass-strong active:scale-95" title="撤销">
+                <RefreshCw size={18} className="text-master-text-tertiary" />
               </button>
             )}
             {/* 对比按钮 */}
             <button 
               onClick={toggleCompare}
-              className={`p-2 rounded-full ${state.showCompare ? 'bg-[#9C27B0]/20' : 'hover:bg-white/10'}`}
+              className={`p-2 rounded-full ${state.showCompare ? 'bg-[#9C27B0]/20' : 'hover:bg-master-glass-strong'}`}
               title="对比"
             >
-              <Eye size={18} className={state.showCompare ? 'text-[#9C27B0]' : 'text-white/50'} />
+              <Eye size={18} className={state.showCompare ? 'text-[#9C27B0]' : 'text-master-text-tertiary'} />
             </button>
             {/* 版本徽章 */}
             <div className="px-2 py-1 rounded-full bg-gradient-to-r from-[#9C27B0] to-[#673AB7] text-white text-xs font-bold">
@@ -520,12 +521,12 @@ const AIFineTunePage: React.FC = () => {
 
       {/* Preview Area */}
       <div className="px-4 py-4">
-        <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
+        <div className="relative aspect-video rounded-2xl overflow-hidden bg-master-surface">
           {/* 预览图像 */}
           <img
             src={state.imageSource || DEFAULT_IMAGE_SOURCE}
             alt="Preview"
-            className="w-full h-full object-cover transition-all duration-300"
+            className="w-full h-full object-cover transition-all duration-normal"
             style={{ filter: previewFilter }}
           />
           {/* 渐变遮罩 */}
@@ -535,7 +536,7 @@ const AIFineTunePage: React.FC = () => {
           {!state.imageSource && (
             <button
               onClick={triggerUpload}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 flex items-center gap-2 hover:bg-black/80 transition-colors"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full bg-black/60 backdrop-blur-glass border border-master-glass-border flex items-center gap-2 hover:bg-black/80 transition-all duration-normal active:scale-95"
             >
               <Upload size={16} className="text-white" />
               <span className="text-white text-sm font-medium">点击上传图片</span>
@@ -565,7 +566,7 @@ const AIFineTunePage: React.FC = () => {
               <div className="flex flex-col items-center gap-4">
                 {/* 动画圆环 */}
                 <div className="relative w-20 h-20">
-                  <div className="absolute inset-0 rounded-full border-4 border-white/20" />
+                  <div className="absolute inset-0 rounded-full border-4 border-master-glass-border" />
                   <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#9C27B0] animate-spin" />
                   <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-[#673AB7] animate-spin" style={{ animationDirection: 'reverse' }} />
                   <Wand2 size={28} className="absolute inset-0 m-auto text-[#9C27B0]" />
@@ -584,9 +585,9 @@ const AIFineTunePage: React.FC = () => {
                     ))}
                   </div>
                   {/* 进度条 */}
-                  <div className="mt-3 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="mt-3 w-48 h-1 bg-master-glass-strong rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-[#9C27B0] to-[#673AB7] transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-[#9C27B0] to-[#673AB7] transition-all duration-normal"
                       style={{ width: `${state.processProgress * 100}%` }}
                     />
                   </div>
@@ -605,7 +606,7 @@ const AIFineTunePage: React.FC = () => {
                 <span className="text-white text-sm font-medium">优化完成</span>
                 {/* 显示置信度 */}
                 {state.confidence > 0 && (
-                  <span className="text-white/50 text-xs">
+                  <span className="text-master-text-tertiary text-xs">
                     置信度: {Math.round(state.confidence * 100)}%
                   </span>
                 )}
@@ -620,7 +621,7 @@ const AIFineTunePage: React.FC = () => {
                 state.params[param.key as keyof AIFineTuneParams] !== 0 && (
                   <span 
                     key={param.key}
-                    className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-[10px]"
+                    className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-glass text-white text-[10px]"
                   >
                     {param.label}: {state.params[param.key as keyof AIFineTuneParams] > 0 ? '+' : ''}
                     {state.params[param.key as keyof AIFineTuneParams]}
@@ -633,7 +634,7 @@ const AIFineTunePage: React.FC = () => {
           {/* Style Badge */}
           {state.selectedStyle && (
             <div className="absolute top-3 left-3">
-              <div className="px-3 py-1.5 rounded-full bg-[#9C27B0]/80 backdrop-blur-sm flex items-center gap-2">
+              <div className="px-3 py-1.5 rounded-full bg-[#9C27B0]/80 backdrop-blur-glass flex items-center gap-2">
                 <Palette size={14} className="text-white" />
                 <span className="text-white text-xs font-medium">
                   {COLOR_STYLES.find(s => s.id === state.selectedStyle)?.name}
@@ -645,7 +646,7 @@ const AIFineTunePage: React.FC = () => {
           {/* AI 分析结果徽章 */}
           {state.sceneAnalysis && (
             <div className="absolute top-3 right-3">
-              <div className="px-3 py-1.5 rounded-full bg-green-500/80 backdrop-blur-sm flex items-center gap-2">
+              <div className="px-3 py-1.5 rounded-full bg-green-500/80 backdrop-blur-glass flex items-center gap-2">
                 <Sparkles size={14} className="text-white" />
                 <span className="text-white text-xs font-medium">
                   {state.sceneAnalysis.primaryScene.name}
@@ -663,7 +664,7 @@ const AIFineTunePage: React.FC = () => {
           <button
             onClick={handleAutoTune}
             disabled={state.isProcessing}
-            className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 flex items-center gap-2 text-white font-medium shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 flex items-center gap-2 text-white font-medium shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
           >
             <Wand2 size={16} />
             <span>一键 AI 微调</span>
@@ -676,7 +677,7 @@ const AIFineTunePage: React.FC = () => {
                 key={preset.id}
                 onClick={() => applyPreset(preset)}
                 disabled={state.isProcessing}
-                className="flex-shrink-0 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 flex items-center gap-1.5 disabled:opacity-50"
+                className="flex-shrink-0 px-3 py-2.5 rounded-xl bg-master-glass border border-master-glass-border text-master-text-secondary text-sm hover:bg-master-glass-strong flex items-center gap-1.5 disabled:opacity-50"
               >
                 <Icon size={14} />
                 {preset.name}
@@ -687,7 +688,7 @@ const AIFineTunePage: React.FC = () => {
       </div>
 
       {/* Tab Bar */}
-      <div className="px-4 pb-3 border-b border-white/5">
+      <div className="px-4 pb-3 border-b border-master-glass-border">
         <div className="flex gap-1 overflow-x-auto scrollbar-hide">
           {[
             { key: 'basic', label: '基础', icon: Sliders },
@@ -699,10 +700,10 @@ const AIFineTunePage: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as FineTuneState['activeTab'])}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+              className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all duration-normal ${
                 state.activeTab === tab.key
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/50 hover:bg-white/5'
+                  ? 'bg-master-glass-strong text-white'
+                  : 'text-master-text-tertiary hover:bg-master-glass'
               }`}
             >
               <tab.icon size={16} />
@@ -713,19 +714,19 @@ const AIFineTunePage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className={`flex-1 overflow-y-auto pb-6 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         {/* Basic Tab */}
         {state.activeTab === 'basic' && (
           <div className="px-4 py-4 space-y-6">
             {/* Basic Params */}
             <div>
-              <h3 className="text-white/50 text-xs mb-3 flex items-center gap-2">
+              <h3 className="text-master-text-tertiary text-xs mb-3 flex items-center gap-2">
                 <Sliders size={12} />
                 基础参数
               </h3>
               <div className="space-y-3">
                 {basicParams.map((param) => (
-                  <div key={param.key} className="bg-white/5 rounded-xl p-4">
+                  <div key={param.key} className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white text-sm font-medium">{param.label}</span>
                       <div className="flex items-center gap-2">
@@ -736,7 +737,7 @@ const AIFineTunePage: React.FC = () => {
                         {/* 锁定按钮 */}
                         <button
                           onClick={() => toggleLock(param.key)}
-                          className={`p-1 rounded text-xs ${state.lockedParams.includes(param.key) ? 'text-yellow-500' : 'text-white/30'}`}
+                          className={`p-1 rounded text-xs ${state.lockedParams.includes(param.key) ? 'text-yellow-500' : 'text-master-text-muted'}`}
                           title={state.lockedParams.includes(param.key) ? '已锁定' : '锁定参数'}
                         >
                           <RefreshCw size={12} />
@@ -750,7 +751,7 @@ const AIFineTunePage: React.FC = () => {
                       max={param.max}
                       value={state.params[param.key as keyof AIFineTuneParams]}
                       onChange={(e) => updateParam(param.key as keyof AIFineTuneParams, parseInt(e.target.value))}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
+                      className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
                     />
                   </div>
                 ))}
@@ -759,13 +760,13 @@ const AIFineTunePage: React.FC = () => {
 
             {/* Pro Params */}
             <div>
-              <h3 className="text-white/50 text-xs mb-3 flex items-center gap-2">
+              <h3 className="text-master-text-tertiary text-xs mb-3 flex items-center gap-2">
                 <Target size={12} />
                 专业参数
               </h3>
               <div className="space-y-3">
                 {proParams.map((param) => (
-                  <div key={param.key} className="bg-white/5 rounded-xl p-4">
+                  <div key={param.key} className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white text-sm font-medium">{param.label}</span>
                       <span className="text-[#9C27B0] text-sm font-bold">
@@ -779,7 +780,7 @@ const AIFineTunePage: React.FC = () => {
                       max={param.max}
                       value={state.params[param.key as keyof AIFineTuneParams]}
                       onChange={(e) => updateParam(param.key as keyof AIFineTuneParams, parseInt(e.target.value))}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
+                      className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
                     />
                   </div>
                 ))}
@@ -788,13 +789,13 @@ const AIFineTunePage: React.FC = () => {
 
             {/* Effect Params */}
             <div>
-              <h3 className="text-white/50 text-xs mb-3 flex items-center gap-2">
+              <h3 className="text-master-text-tertiary text-xs mb-3 flex items-center gap-2">
                 <Sparkles size={12} />
                 效果参数
               </h3>
               <div className="space-y-3">
                 {effectParams.map((param) => (
-                  <div key={param.key} className="bg-white/5 rounded-xl p-4">
+                  <div key={param.key} className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white text-sm font-medium">{param.label}</span>
                       <span className="text-[#9C27B0] text-sm font-bold">
@@ -807,7 +808,7 @@ const AIFineTunePage: React.FC = () => {
                       max={param.max}
                       value={state.params[param.key as keyof AIFineTuneParams]}
                       onChange={(e) => updateParam(param.key as keyof AIFineTuneParams, parseInt(e.target.value))}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
+                      className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#9C27B0]"
                     />
                   </div>
                 ))}
@@ -817,7 +818,7 @@ const AIFineTunePage: React.FC = () => {
             {/* Reset Button */}
             <button
               onClick={handleReset}
-              className="w-full py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl border border-master-glass-border text-master-text-secondary text-sm font-medium hover:bg-master-glass flex items-center justify-center gap-2 active:scale-95"
             >
               <RotateCcw size={16} />
               重置所有参数
@@ -830,17 +831,17 @@ const AIFineTunePage: React.FC = () => {
           <div className="px-4 py-4">
             {/* Search */}
             <div className="relative mb-4">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-master-text-muted" />
               <input
                 type="text"
                 value={state.searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索色彩风格..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#9C27B0] outline-none"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-master-glass text-white text-sm border border-master-glass-border focus:border-[#9C27B0] outline-none"
               />
             </div>
             
-            <h3 className="text-white/50 text-xs mb-3">色彩风格预设 ({filteredStyles.length})</h3>
+            <h3 className="text-master-text-tertiary text-xs mb-3">色彩风格预设 ({filteredStyles.length})</h3>
             <div className="grid grid-cols-2 gap-3">
               {filteredStyles.map((style) => {
                 const isFavorite = state.favorites.includes(style.id);
@@ -851,8 +852,8 @@ const AIFineTunePage: React.FC = () => {
                     disabled={state.isProcessing}
                     className={`relative p-4 rounded-xl text-left transition-all ${
                       state.selectedStyle === style.id
-                        ? 'bg-white/10 border border-white/20'
-                        : 'bg-white/5 hover:bg-white/10'
+                        ? 'bg-master-glass-strong border border-master-glass-border'
+                        : 'bg-master-glass hover:bg-master-glass-strong'
                     } disabled:opacity-50`}
                   >
                     {/* Favorite Button */}
@@ -860,7 +861,7 @@ const AIFineTunePage: React.FC = () => {
                       onClick={(e) => { e.stopPropagation(); toggleFavorite(style.id); }}
                       className="absolute top-2 right-2"
                     >
-                      <Heart size={14} className={isFavorite ? 'text-red-500 fill-red-500' : 'text-white/30'} />
+                      <Heart size={14} className={isFavorite ? 'text-red-500 fill-red-500' : 'text-master-text-muted'} />
                     </button>
                     
                     <div className="flex items-center gap-3 mb-2">
@@ -872,10 +873,10 @@ const AIFineTunePage: React.FC = () => {
                       </div>
                       <span className="text-white font-medium">{style.name}</span>
                     </div>
-                    <p className="text-white/40 text-xs mb-2">{style.desc}</p>
+                    <p className="text-master-text-muted text-xs mb-2">{style.desc}</p>
                     <div className="flex flex-wrap gap-1">
                       {Object.entries(style.params).slice(0, 3).map(([key, value]) => (
-                        <span key={key} className="text-[10px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded">
+                        <span key={key} className="text-[10px] text-master-text-muted bg-master-glass px-1.5 py-0.5 rounded">
                           {key}: {value > 0 ? '+' : ''}{value}
                         </span>
                       ))}
@@ -890,7 +891,7 @@ const AIFineTunePage: React.FC = () => {
         {/* Smart Tab */}
         {state.activeTab === 'smart' && (
           <div className="px-4 py-4">
-            <h3 className="text-white/50 text-xs mb-3">智能优化选项</h3>
+            <h3 className="text-master-text-tertiary text-xs mb-3">智能优化选项</h3>
             <div className="space-y-3">
               {SMART_OPTIMIZATIONS.map((opt) => (
                 <button
@@ -899,8 +900,8 @@ const AIFineTunePage: React.FC = () => {
                   disabled={state.isProcessing}
                   className={`w-full p-4 rounded-xl text-left transition-all flex items-center gap-4 ${
                     state.selectedOptimizations.includes(opt.id)
-                      ? 'bg-white/10 border border-white/20'
-                      : 'bg-white/5 hover:bg-white/10'
+                      ? 'bg-master-glass-strong border border-master-glass-border'
+                      : 'bg-master-glass hover:bg-master-glass-strong'
                   } disabled:opacity-50`}
                 >
                   <div 
@@ -919,9 +920,9 @@ const AIFineTunePage: React.FC = () => {
                         <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-[10px]">PRO</span>
                       )}
                     </div>
-                    <p className="text-white/50 text-xs">{opt.desc}</p>
+                    <p className="text-master-text-tertiary text-xs">{opt.desc}</p>
                   </div>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-normal ${
                     state.selectedOptimizations.includes(opt.id)
                       ? 'bg-[#9C27B0] border-[#9C27B0]'
                       : 'border-white/30'
@@ -937,7 +938,7 @@ const AIFineTunePage: React.FC = () => {
               <button
                 onClick={applySmartOptimizations}
                 disabled={state.isProcessing}
-                className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-[#9C27B0] to-[#673AB7] text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-[#9C27B0] to-[#673AB7] text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
               >
                 <Sparkles size={18} />
                 应用 {state.selectedOptimizations.length} 项优化
@@ -949,7 +950,7 @@ const AIFineTunePage: React.FC = () => {
         {/* HSL Tab */}
         {state.activeTab === 'hsl' && (
           <div className="px-4 py-4">
-            <h3 className="text-white/50 text-xs mb-3">HSL 色彩调节</h3>
+            <h3 className="text-master-text-tertiary text-xs mb-3">HSL 色彩调节</h3>
             
             {/* Color Selector */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4">
@@ -977,7 +978,7 @@ const AIFineTunePage: React.FC = () => {
                 const value = currentHsl ? currentHsl[type] : 0;
                 
                 return (
-                  <div key={type} className="bg-white/5 rounded-xl p-4">
+                  <div key={type} className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white text-sm font-medium">
                         {type === 'hue' ? '色相' : type === 'saturation' ? '饱和度' : '明度'}
@@ -993,7 +994,7 @@ const AIFineTunePage: React.FC = () => {
                       value={value}
                       onChange={(e) => updateHslValue(state.selectedHsl, type, parseInt(e.target.value))}
                       disabled={state.isProcessing}
-                      className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9C27B0] disabled:opacity-50"
+                      className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#9C27B0] disabled:opacity-50"
                     />
                   </div>
                 );
@@ -1004,7 +1005,7 @@ const AIFineTunePage: React.FC = () => {
             <button
               onClick={resetHsl}
               disabled={state.isProcessing}
-              className="w-full mt-4 py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
+              className="w-full mt-4 py-3 rounded-xl border border-master-glass-border text-master-text-secondary text-sm font-medium hover:bg-master-glass disabled:opacity-50 active:scale-95"
             >
               重置 HSL
             </button>
@@ -1014,15 +1015,15 @@ const AIFineTunePage: React.FC = () => {
         {/* Curve Tab */}
         {state.activeTab === 'curve' && (
           <div className="px-4 py-4">
-            <h3 className="text-white/50 text-xs mb-3">曲线调节</h3>
+            <h3 className="text-master-text-tertiary text-xs mb-3">曲线调节</h3>
             
             {/* Curve Preview */}
-            <div className="bg-white/5 rounded-xl p-4 mb-4">
-              <div className="aspect-square relative bg-[#1a1a1a] rounded-lg border border-white/10">
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass mb-4">
+              <div className="aspect-square relative bg-master-surface rounded-lg border border-master-glass-border">
                 {/* Grid */}
                 <div className="absolute inset-0 grid grid-cols-4 grid-rows-4">
                   {[...Array(16)].map((_, i) => (
-                    <div key={i} className="border border-white/5" />
+                    <div key={i} className="border border-master-glass-border" />
                   ))}
                 </div>
                 {/* Diagonal */}
@@ -1044,10 +1045,10 @@ const AIFineTunePage: React.FC = () => {
                 <button
                   key={preset.id}
                   disabled={state.isProcessing}
-                  className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-center disabled:opacity-50"
+                  className="p-3 rounded-xl bg-master-glass hover:bg-master-glass-strong text-center disabled:opacity-50 active:scale-95"
                 >
-                  <TrendingUp size={20} className="mx-auto mb-1 text-white/50" />
-                  <span className="text-xs text-white/70">{preset.name}</span>
+                  <TrendingUp size={20} className="mx-auto mb-1 text-master-text-tertiary" />
+                  <span className="text-xs text-master-text-secondary">{preset.name}</span>
                 </button>
               ))}
             </div>
@@ -1060,8 +1061,8 @@ const AIFineTunePage: React.FC = () => {
                   disabled={state.isProcessing}
                   className={`flex-1 py-2 rounded-lg text-xs font-medium ${
                     state.selectedCurveChannel === channel.toLowerCase() 
-                      ? 'bg-white/10 text-white' 
-                      : 'bg-white/5 text-white/50'
+                      ? 'bg-master-glass-strong text-white' 
+                      : 'bg-master-glass text-master-text-tertiary'
                   } disabled:opacity-50`}
                 >
                   {channel}
@@ -1074,7 +1075,7 @@ const AIFineTunePage: React.FC = () => {
         {/* AI 推荐区域 */}
         {state.recommendations.length > 0 && (
           <div className="px-4 py-4 mt-4">
-            <h3 className="text-white/50 text-xs mb-3 flex items-center gap-2">
+            <h3 className="text-master-text-tertiary text-xs mb-3 flex items-center gap-2">
               <Sparkles size={12} />
               AI 推荐风格
             </h3>
@@ -1089,12 +1090,12 @@ const AIFineTunePage: React.FC = () => {
                     }
                   }}
                   disabled={state.isProcessing}
-                  className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm flex items-center gap-2 disabled:opacity-50"
+                  className="px-3 py-2 rounded-xl bg-master-glass hover:bg-master-glass-strong text-master-text-secondary text-sm flex items-center gap-2 disabled:opacity-50"
                 >
                   {rec.type === 'film' && <Camera size={14} />}
                   {rec.type === 'style' && <Palette size={14} />}
                   {rec.name}
-                  <span className="text-white/30 text-xs">{Math.round(rec.matchScore * 100)}%</span>
+                  <span className="text-master-text-muted text-xs">{Math.round(rec.matchScore * 100)}%</span>
                 </button>
               ))}
             </div>

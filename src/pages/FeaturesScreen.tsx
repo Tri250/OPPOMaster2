@@ -14,6 +14,7 @@ import {
   Brush,
   ChevronRight,
 } from 'lucide-react';
+import { tokens } from '../styles/designTokens';
 
 const iconMap: Record<string, React.ElementType> = {
   Camera,
@@ -90,46 +91,53 @@ const FeaturesScreen: React.FC = () => {
     }
   };
 
-  const FeatureCard: React.FC<{ 
-    feature: (typeof features)[0]; 
-  }> = ({ feature }) => {
+  const FeatureCard: React.FC<{
+    feature: (typeof features)[0];
+    index: number;
+  }> = ({ feature, index }) => {
     const Icon = iconMap[feature.icon] || Sparkles;
     const info = featureDescriptions[feature.id];
 
     return (
       <button
         onClick={() => handleFeatureClick(feature.id)}
-        className="w-full text-left rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group"
+        className="w-full text-left rounded-2xl overflow-hidden transition-all duration-slow active:scale-[0.98] group hover:shadow-medium"
         style={{
           background: `linear-gradient(135deg, ${feature.gradientColors[0]}, ${feature.gradientColors[1]})`,
+          transitionTimingFunction: tokens.animation.easing.spring,
+          animation: `fade-in-up 0.4s ${tokens.animation.easing.smooth} ${index * 0.06}s both`,
         }}
       >
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-sm"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10"
+              style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
             >
               <Icon size={28} className="text-white" />
             </div>
-            <div className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <ChevronRight size={18} className="text-white/70" />
+            <div
+              className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center transition-all duration-normal group-hover:bg-white/20 group-hover:scale-110"
+              style={{ transitionTimingFunction: tokens.animation.easing.spring }}
+            >
+              <ChevronRight size={18} className="text-white/80" />
             </div>
           </div>
 
           <div className="mb-2">
-            <h3 className="text-white font-bold text-lg">{feature.title}</h3>
-            <p className="text-white/70 text-xs mt-1">{feature.subtitle}</p>
+            <h3 className="text-white font-bold text-h3">{feature.title}</h3>
+            <p className="text-white/75 text-xs mt-1">{feature.subtitle}</p>
           </div>
 
           {info && (
             <div className="mt-3 pt-3 border-t border-white/10">
-              <p className="text-white/50 text-[10px] mb-2">{info.desc}</p>
+              <p className="text-white/60 text-micro mb-2">{info.desc}</p>
               <div className="flex flex-wrap gap-1">
                 {info.tips?.slice(0, 4).map((tip, i) => (
                   <span
                     key={i}
-                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-[10px]"
+                    className="px-2 py-0.5 rounded-full text-micro text-white/80"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
                   >
                     {tip}
                   </span>
@@ -148,18 +156,24 @@ const FeaturesScreen: React.FC = () => {
     icon: React.ElementType;
     count?: number;
   }> = ({ title, description, icon: Icon, count }) => (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-2 animate-fade-in-up">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#FF6B35]/20 flex items-center justify-center backdrop-blur-sm">
-          <Icon size={20} className="text-[#FF6B35]" />
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-sm"
+          style={{ backgroundColor: `${tokens.colors.accent}20` }}
+        >
+          <Icon size={20} style={{ color: tokens.colors.accent }} />
         </div>
         <div>
-          <h2 className="text-white font-semibold">{title}</h2>
-          <p className="text-white/50 text-xs">{description}</p>
+          <h2 className="text-master-text-primary font-semibold text-h3">{title}</h2>
+          <p className="text-master-text-tertiary text-xs">{description}</p>
         </div>
       </div>
       {count && (
-        <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
+        <span
+          className="px-2 py-1 rounded-full text-xs"
+          style={{ background: tokens.colors.glass, color: tokens.colors.textTertiary }}
+        >
           {count}
         </span>
       )}
@@ -167,15 +181,15 @@ const FeaturesScreen: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
+    <div className="h-full flex flex-col bg-master-bg overflow-hidden">
       {/* Header */}
-      <div className="px-4 pt-2 pb-3">
-        <h1 className="text-xl font-bold text-white">核心功能</h1>
-        <p className="text-white/50 text-xs">点击进入功能操作界面</p>
+      <div className="px-lg pt-sm pb-md">
+        <h1 className="text-h1 font-bold text-master-text-primary">核心功能</h1>
+        <p className="text-master-text-tertiary text-xs mt-0.5">点击进入功能操作界面</p>
       </div>
 
       {/* Features List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-lg pb-lg space-y-6 scrollbar-hide">
         {/* AI Features */}
         <div>
           <SectionHeader
@@ -185,8 +199,8 @@ const FeaturesScreen: React.FC = () => {
             count={aiFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {aiFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+            {aiFeatures.map((feature, index) => (
+              <FeatureCard key={feature.id} feature={feature} index={index} />
             ))}
           </div>
         </div>
@@ -200,8 +214,8 @@ const FeaturesScreen: React.FC = () => {
             count={toolFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {toolFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+            {toolFeatures.map((feature, index) => (
+              <FeatureCard key={feature.id} feature={feature} index={index + 4} />
             ))}
           </div>
         </div>
@@ -215,8 +229,8 @@ const FeaturesScreen: React.FC = () => {
             count={brandFeatures.length}
           />
           <div className="space-y-3 mt-2">
-            {brandFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+            {brandFeatures.map((feature, index) => (
+              <FeatureCard key={feature.id} feature={feature} index={index + 6} />
             ))}
           </div>
         </div>
@@ -224,6 +238,12 @@ const FeaturesScreen: React.FC = () => {
         {/* Bottom Spacing */}
         <div className="h-8" />
       </div>
+
+      {/* Styles */}
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };

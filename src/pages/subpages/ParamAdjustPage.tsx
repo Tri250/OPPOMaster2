@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { ArrowLeft, Aperture, Timer, Thermometer } from 'lucide-react';
 
 const ParamAdjustPage: React.FC = () => {
-  const { cameraParams, setCameraParam, goBack } = useAppStore();
+  const { reduceMotion, cameraParams, setCameraParam, goBack } = useAppStore();
 
   const params = [
     { 
@@ -59,12 +60,12 @@ const ParamAdjustPage: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-master-bg" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-master-glass-border">
         <button 
           onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal active:scale-95"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
@@ -73,13 +74,13 @@ const ParamAdjustPage: React.FC = () => {
 
       {/* Quick Presets */}
       <div className="px-4 py-4">
-        <p className="text-white/50 text-xs mb-3">快捷档位</p>
+        <p className="text-master-text-tertiary text-xs mb-3">快捷档位</p>
         <div className="flex gap-2">
           {quickPresets.map((preset) => (
             <button
               key={preset.name}
               onClick={() => applyPreset(preset)}
-              className="flex-1 py-2 rounded-xl bg-white/5 text-white text-sm font-medium transition-all hover:bg-white/10 active:scale-95"
+              className="flex-1 py-2 rounded-xl bg-master-glass text-white text-sm font-medium transition-all hover:bg-master-glass-strong active:scale-95"
             >
               {preset.name}
             </button>
@@ -88,13 +89,13 @@ const ParamAdjustPage: React.FC = () => {
       </div>
 
       {/* Param Controls */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className={`flex-1 overflow-y-auto px-4 pb-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         <div className="space-y-6">
           {params.map((param) => {
             const Icon = param.icon;
             const value = cameraParams[param.key as keyof typeof cameraParams];
             return (
-              <div key={param.key} className="bg-white/5 rounded-2xl p-4">
+              <div key={param.key} className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-[#E91E63]/20 flex items-center justify-center">
                     <Icon size={20} className="text-[#E91E63]" />
@@ -115,7 +116,7 @@ const ParamAdjustPage: React.FC = () => {
                   step={param.step}
                   value={value}
                   onChange={(e) => setCameraParam(param.key, parseFloat(e.target.value))}
-                  className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#E91E63]"
+                  className="w-full h-3 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#E91E63]"
                 />
 
                 {/* Marks */}
@@ -125,7 +126,7 @@ const ParamAdjustPage: React.FC = () => {
                       <button
                         key={mark}
                         onClick={() => setCameraParam(param.key, mark)}
-                        className="text-white/30 text-[10px] hover:text-white/60 transition-colors"
+                        className="text-master-text-muted text-[10px] hover:text-master-text-secondary transition-all duration-normal"
                       >
                         {mark}
                       </button>
@@ -138,23 +139,23 @@ const ParamAdjustPage: React.FC = () => {
         </div>
 
         {/* Exposure Meter */}
-        <div className="mt-6 p-4 bg-white/5 rounded-2xl">
-          <p className="text-white/50 text-xs mb-3">曝光指示器</p>
+        <div className="mt-6 p-4 bg-master-glass rounded-2xl">
+          <p className="text-master-text-tertiary text-xs mb-3">曝光指示器</p>
           <div className="relative h-8 bg-gradient-to-r from-blue-900 via-green-900 to-red-900 rounded-full overflow-hidden">
             <div 
-              className="absolute top-0 bottom-0 w-1 bg-white shadow-lg transition-all duration-300"
+              className="absolute top-0 bottom-0 w-1 bg-white shadow-lg transition-all duration-normal"
               style={{ 
                 left: `${Math.min(100, Math.max(0, 50 + (cameraParams.iso - 100) / 100))}%`,
                 transform: 'translateX(-50%)'
               }}
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white/50 text-xs font-mono">0</span>
+              <span className="text-master-text-tertiary text-xs font-mono">0</span>
             </div>
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-white/30 text-xs">-3</span>
-            <span className="text-white/30 text-xs">+3</span>
+            <span className="text-master-text-muted text-xs">-3</span>
+            <span className="text-master-text-muted text-xs">+3</span>
           </div>
         </div>
       </div>

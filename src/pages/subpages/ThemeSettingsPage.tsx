@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { ArrowLeft, Palette, Check, Sun, Moon, Monitor } from 'lucide-react';
 
 const ThemeSettingsPage: React.FC = () => {
-  const { theme, setTheme, darkMode, setDarkMode, goBack } = useAppStore();
+  const { reduceMotion, theme, setTheme, darkMode, setDarkMode, goBack } = useAppStore();
 
   const themes = [
     { id: 'hasselblad', name: '哈苏橙', color: '#FF6B35', desc: '经典哈苏影像风格' },
@@ -21,21 +22,21 @@ const ThemeSettingsPage: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-master-bg" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-master-glass-border">
         <button
           onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal active:scale-95"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
         <h1 className="text-lg font-bold text-white">外观设置</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 space-y-6 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         {/* Current Theme */}
-        <div className="p-4 rounded-2xl bg-white/5">
+        <div className="p-4 rounded-2xl bg-master-glass">
           <div className="flex items-center gap-3">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -45,14 +46,14 @@ const ThemeSettingsPage: React.FC = () => {
             </div>
             <div>
               <p className="text-white font-medium">{themes.find(t => t.id === theme)?.name}</p>
-              <p className="text-white/50 text-xs">{themes.find(t => t.id === theme)?.desc}</p>
+              <p className="text-master-text-tertiary text-xs">{themes.find(t => t.id === theme)?.desc}</p>
             </div>
           </div>
         </div>
 
         {/* Theme List */}
         <div>
-          <p className="text-white/50 text-xs mb-3">选择主题</p>
+          <p className="text-master-text-tertiary text-xs mb-3">选择主题</p>
           <div className="space-y-2">
             {themes.map((t) => (
               <button
@@ -60,8 +61,8 @@ const ThemeSettingsPage: React.FC = () => {
                 onClick={() => setTheme(t.id as typeof theme)}
                 className={`w-full p-4 rounded-xl flex items-center gap-3 transition-all ${
                   theme === t.id
-                    ? 'bg-white/10 border border-white/20'
-                    : 'bg-white/5 hover:bg-white/10'
+                    ? 'bg-master-glass-strong border border-master-glass-border'
+                    : 'bg-master-glass hover:bg-master-glass-strong'
                 }`}
               >
                 <div
@@ -75,7 +76,7 @@ const ThemeSettingsPage: React.FC = () => {
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-white font-medium">{t.name}</p>
-                  <p className="text-white/50 text-xs">{t.desc}</p>
+                  <p className="text-master-text-tertiary text-xs">{t.desc}</p>
                 </div>
                 {theme === t.id && (
                   <div
@@ -92,7 +93,7 @@ const ThemeSettingsPage: React.FC = () => {
 
         {/* Dark Mode */}
         <div>
-          <p className="text-white/50 text-xs mb-3">深色模式</p>
+          <p className="text-master-text-tertiary text-xs mb-3">深色模式</p>
           <div className="space-y-2">
             {darkModes.map((mode) => {
               const Icon = mode.icon;
@@ -103,17 +104,17 @@ const ThemeSettingsPage: React.FC = () => {
                   className={`w-full p-4 rounded-xl flex items-center gap-3 transition-all ${
                     darkMode === mode.id
                       ? 'bg-[#FF6B35]/10 border border-[#FF6B35]/30'
-                      : 'bg-white/5 hover:bg-white/10'
+                      : 'bg-master-glass hover:bg-master-glass-strong'
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    darkMode === mode.id ? 'bg-[#FF6B35]/20' : 'bg-white/10'
+                    darkMode === mode.id ? 'bg-[#FF6B35]/20' : 'bg-master-glass-strong'
                   }`}>
-                    <Icon size={20} className={darkMode === mode.id ? 'text-[#FF6B35]' : 'text-white/60'} />
+                    <Icon size={20} className={darkMode === mode.id ? 'text-[#FF6B35]' : 'text-master-text-secondary'} />
                   </div>
                   <div className="flex-1 text-left">
                     <p className="text-white font-medium">{mode.name}</p>
-                    <p className="text-white/50 text-xs">{mode.desc}</p>
+                    <p className="text-master-text-tertiary text-xs">{mode.desc}</p>
                   </div>
                   {darkMode === mode.id && (
                     <div className="w-6 h-6 rounded-full bg-[#FF6B35] flex items-center justify-center">

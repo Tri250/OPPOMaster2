@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { 
   ArrowLeft, Type, AlignLeft, AlignCenter, AlignRight, Check, 
   Camera, Aperture, MapPin, Calendar, User, AtSign,
@@ -214,7 +215,7 @@ interface WatermarkLayer {
 }
 
 const WatermarkPage: React.FC = () => {
-  const { goBack } = useAppStore();
+  const { reduceMotion, goBack } = useAppStore();
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [enabled, setEnabled] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -379,35 +380,35 @@ const WatermarkPage: React.FC = () => {
   }, [position, padding, fontFamily, fontSize, fontWeight, opacity, textColor, rotation, shadowEnabled, shadowBlur, letterSpacing, bgOpacity]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-master-bg text-white" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-50 bg-master-bg/95 backdrop-blur-glass border-b border-master-glass-border">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <button onClick={goBack} className="p-2 -ml-2 rounded-full hover:bg-white/10">
+            <button onClick={goBack} className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong active:scale-95">
               <ArrowLeft size={20} className="text-white" />
             </button>
             <div>
               <h1 className="text-lg font-bold">水印编辑器</h1>
-              <p className="text-xs text-white/50">专业水印设计 · {WATERMARK_TEMPLATES.length}+模板</p>
+              <p className="text-xs text-master-text-tertiary">专业水印设计 · {WATERMARK_TEMPLATES.length}+模板</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowLayers(!showLayers)}
-              className={`p-2 rounded-full ${showLayers ? 'bg-[#00BCD4]/20' : 'hover:bg-white/10'}`}
+              className={`p-2 rounded-full ${showLayers ? 'bg-[#00BCD4]/20' : 'hover:bg-master-glass-strong'}`}
             >
-              <Layers size={18} className={showLayers ? 'text-[#00BCD4]' : 'text-white/50'} />
+              <Layers size={18} className={showLayers ? 'text-[#00BCD4]' : 'text-master-text-tertiary'} />
             </button>
             <button
               onClick={() => setShowPreview(!showPreview)}
-              className={`p-2 rounded-full ${showPreview ? 'bg-[#00BCD4]/20' : 'hover:bg-white/10'}`}
+              className={`p-2 rounded-full ${showPreview ? 'bg-[#00BCD4]/20' : 'hover:bg-master-glass-strong'}`}
             >
-              <Eye size={18} className={showPreview ? 'text-[#00BCD4]' : 'text-white/50'} />
+              <Eye size={18} className={showPreview ? 'text-[#00BCD4]' : 'text-master-text-tertiary'} />
             </button>
             <button
               onClick={handleExport}
-              className="px-3 py-1.5 rounded-lg bg-[#00BCD4] text-white text-sm font-medium flex items-center gap-1"
+              className="px-3 py-1.5 rounded-lg bg-[#00BCD4] text-white text-sm font-medium flex items-center gap-1 active:scale-95"
             >
               <Download size={14} />
               导出
@@ -418,18 +419,18 @@ const WatermarkPage: React.FC = () => {
 
       {/* Layers Panel */}
       {showLayers && (
-        <div className="px-4 py-4 border-b border-white/5 bg-[#0a0a0a]">
+        <div className="px-4 py-4 border-b border-master-glass-border bg-master-bg">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white/70 text-sm font-medium">图层管理</h3>
+            <h3 className="text-master-text-secondary text-sm font-medium">图层管理</h3>
             <div className="flex gap-1">
-              <button onClick={() => addLayer('text')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10">
-                <Type size={14} className="text-white/50" />
+              <button onClick={() => addLayer('text')} className="p-1.5 rounded-lg bg-master-glass hover:bg-master-glass-strong">
+                <Type size={14} className="text-master-text-tertiary" />
               </button>
-              <button onClick={() => addLayer('logo')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10">
-                <Image size={14} className="text-white/50" />
+              <button onClick={() => addLayer('logo')} className="p-1.5 rounded-lg bg-master-glass hover:bg-master-glass-strong">
+                <Image size={14} className="text-master-text-tertiary" />
               </button>
-              <button onClick={() => addLayer('shape')} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10">
-                <Square size={14} className="text-white/50" />
+              <button onClick={() => addLayer('shape')} className="p-1.5 rounded-lg bg-master-glass hover:bg-master-glass-strong">
+                <Square size={14} className="text-master-text-tertiary" />
               </button>
             </div>
           </div>
@@ -440,13 +441,13 @@ const WatermarkPage: React.FC = () => {
                   key={layer.id}
                   onClick={() => setSelectedLayer(layer.id)}
                   className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer ${
-                    selectedLayer === layer.id ? 'bg-[#00BCD4]/20 border border-[#00BCD4]/50' : 'bg-white/5'
+                    selectedLayer === layer.id ? 'bg-[#00BCD4]/20 border border-[#00BCD4]/50' : 'bg-master-glass'
                   }`}
                 >
-                  {layer.type === 'text' && <Type size={16} className="text-white/50" />}
-                  {layer.type === 'logo' && <Image size={16} className="text-white/50" />}
-                  {layer.type === 'shape' && <Square size={16} className="text-white/50" />}
-                  <span className="text-white/70 text-sm flex-1 truncate">{layer.content || '图层'}</span>
+                  {layer.type === 'text' && <Type size={16} className="text-master-text-tertiary" />}
+                  {layer.type === 'logo' && <Image size={16} className="text-master-text-tertiary" />}
+                  {layer.type === 'shape' && <Square size={16} className="text-master-text-tertiary" />}
+                  <span className="text-master-text-secondary text-sm flex-1 truncate">{layer.content || '图层'}</span>
                   <button onClick={(e) => { e.stopPropagation(); deleteLayer(layer.id); }} className="p-1">
                     <Trash2 size={14} className="text-red-400" />
                   </button>
@@ -454,14 +455,14 @@ const WatermarkPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-white/30 text-xs text-center py-4">点击上方按钮添加图层</p>
+            <p className="text-master-text-muted text-xs text-center py-4">点击上方按钮添加图层</p>
           )}
         </div>
       )}
 
       {/* Preview Area */}
       <div className="px-4 py-4">
-        <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
+        <div className="relative aspect-video rounded-2xl overflow-hidden bg-master-surface">
           <img 
             src={selectedImage}
             alt="Preview"
@@ -497,7 +498,7 @@ const WatermarkPage: React.FC = () => {
             <div className="absolute inset-0 pointer-events-none">
               <div className="w-full h-full grid grid-cols-3 grid-rows-3">
                 {[...Array(9)].map((_, i) => (
-                  <div key={i} className="border border-white/10" />
+                  <div key={i} className="border border-master-glass-border" />
                 ))}
               </div>
             </div>
@@ -522,7 +523,7 @@ const WatermarkPage: React.FC = () => {
           className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-all ${
             enabled 
               ? 'bg-[#00BCD4] text-white' 
-              : 'bg-white/10 text-white/70'
+              : 'bg-master-glass-strong text-master-text-secondary'
           }`}
         >
           {enabled ? <Check size={18} /> : <Type size={18} />}
@@ -542,7 +543,7 @@ const WatermarkPage: React.FC = () => {
                 className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all ${
                   selectedCategory === cat.id
                     ? 'bg-[#00BCD4] text-white'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    : 'bg-master-glass text-master-text-secondary hover:bg-master-glass-strong'
                 }`}
               >
                 <Icon size={14} />
@@ -556,21 +557,21 @@ const WatermarkPage: React.FC = () => {
       {/* Search */}
       <div className="px-4 pb-3">
         <div className="relative">
-          <Type size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+          <Type size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-master-text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索水印模板..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#00BCD4] outline-none"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-master-glass text-white text-sm border border-master-glass-border focus:border-[#00BCD4] outline-none"
           />
         </div>
       </div>
 
       {/* Template Selection */}
       <div className="px-4 pb-4">
-        <h3 className="text-white/50 text-xs mb-3">水印模板 ({filteredTemplates.length})</h3>
-        <div className="grid grid-cols-4 gap-2">
+        <h3 className="text-master-text-tertiary text-xs mb-3">水印模板 ({filteredTemplates.length})</h3>
+        <div className={`grid grid-cols-4 gap-2 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
           {filteredTemplates.map((template) => {
             const Icon = template.icon;
             return (
@@ -580,11 +581,11 @@ const WatermarkPage: React.FC = () => {
                 className={`p-3 rounded-xl flex flex-col items-center gap-1.5 transition-all ${
                   selectedTemplate === template.id
                     ? 'bg-[#00BCD4]/20 border border-[#00BCD4]/50'
-                    : 'bg-white/5 hover:bg-white/10'
+                    : 'bg-master-glass hover:bg-master-glass-strong'
                 }`}
               >
-                <Icon size={20} className={selectedTemplate === template.id ? 'text-[#00BCD4]' : 'text-white/50'} />
-                <span className="text-[10px] text-white/70">{template.name}</span>
+                <Icon size={20} className={selectedTemplate === template.id ? 'text-[#00BCD4]' : 'text-master-text-tertiary'} />
+                <span className="text-[10px] text-master-text-secondary">{template.name}</span>
               </button>
             );
           })}
@@ -593,7 +594,7 @@ const WatermarkPage: React.FC = () => {
 
       {/* Position Selection */}
       <div className="px-4 pb-4">
-        <h3 className="text-white/50 text-xs mb-3">水印位置</h3>
+        <h3 className="text-master-text-tertiary text-xs mb-3">水印位置</h3>
         <div className="grid grid-cols-7 gap-2">
           {positions.map((pos) => {
             const Icon = pos.icon;
@@ -604,11 +605,11 @@ const WatermarkPage: React.FC = () => {
                 className={`p-2.5 rounded-xl flex flex-col items-center gap-1 transition-all ${
                   position === pos.id
                     ? 'bg-[#00BCD4]/20 border border-[#00BCD4]/50'
-                    : 'bg-white/5 hover:bg-white/10'
+                    : 'bg-master-glass hover:bg-master-glass-strong'
                 }`}
               >
-                <Icon size={16} className={position === pos.id ? 'text-[#00BCD4]' : 'text-white/50'} />
-                <span className="text-[9px] text-white/60">{pos.name}</span>
+                <Icon size={16} className={position === pos.id ? 'text-[#00BCD4]' : 'text-master-text-tertiary'} />
+                <span className="text-[9px] text-master-text-secondary">{pos.name}</span>
               </button>
             );
           })}
@@ -617,20 +618,20 @@ const WatermarkPage: React.FC = () => {
 
       {/* Custom Text */}
       <div className="px-4 pb-4">
-        <h3 className="text-white/50 text-xs mb-3">自定义文字</h3>
+        <h3 className="text-master-text-tertiary text-xs mb-3">自定义文字</h3>
         <input
           type="text"
           value={customText}
           onChange={(e) => setCustomText(e.target.value)}
           placeholder="输入水印文字"
-          className="w-full px-4 py-3 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#00BCD4] outline-none transition-colors"
+          className="w-full px-4 py-3 rounded-xl bg-master-glass text-white text-sm border border-master-glass-border focus:border-[#00BCD4] outline-none transition-all duration-normal"
         />
       </div>
 
       {/* Style Controls */}
       <div className="px-4 pb-4 space-y-4">
         {/* Font Size */}
-        <div className="bg-white/5 rounded-xl p-4">
+        <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white text-sm font-medium">字体大小</span>
             <span className="text-[#00BCD4] text-sm font-bold">{fontSize}px</span>
@@ -641,12 +642,12 @@ const WatermarkPage: React.FC = () => {
             max="48"
             value={fontSize}
             onChange={(e) => setFontSize(parseInt(e.target.value))}
-            className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+            className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
           />
         </div>
 
         {/* Opacity */}
-        <div className="bg-white/5 rounded-xl p-4">
+        <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white text-sm font-medium">透明度</span>
             <span className="text-[#00BCD4] text-sm font-bold">{Math.round(opacity * 100)}%</span>
@@ -657,12 +658,12 @@ const WatermarkPage: React.FC = () => {
             max="100"
             value={opacity * 100}
             onChange={(e) => setOpacity(parseInt(e.target.value) / 100)}
-            className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+            className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
           />
         </div>
 
         {/* Rotation */}
-        <div className="bg-white/5 rounded-xl p-4">
+        <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white text-sm font-medium">旋转角度</span>
             <span className="text-[#00BCD4] text-sm font-bold">{rotation}°</span>
@@ -673,12 +674,12 @@ const WatermarkPage: React.FC = () => {
             max="45"
             value={rotation}
             onChange={(e) => setRotation(parseInt(e.target.value))}
-            className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+            className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
           />
         </div>
 
         {/* Padding */}
-        <div className="bg-white/5 rounded-xl p-4">
+        <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white text-sm font-medium">边距</span>
             <span className="text-[#00BCD4] text-sm font-bold">{padding}px</span>
@@ -689,7 +690,7 @@ const WatermarkPage: React.FC = () => {
             max="60"
             value={padding}
             onChange={(e) => setPadding(parseInt(e.target.value))}
-            className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+            className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
           />
         </div>
       </div>
@@ -698,7 +699,7 @@ const WatermarkPage: React.FC = () => {
       <div className="px-4 pb-4">
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full py-3 rounded-xl bg-white/5 flex items-center justify-between px-4 text-white/70"
+          className="w-full py-3 rounded-xl bg-master-glass flex items-center justify-between px-4 text-master-text-secondary"
         >
           <span className="text-sm">高级设置</span>
           <ChevronRight size={16} className={`transition-transform ${showAdvanced ? 'rotate-90' : ''}`} />
@@ -707,8 +708,8 @@ const WatermarkPage: React.FC = () => {
         {showAdvanced && (
           <div className="mt-3 space-y-3">
             {/* Font Family */}
-            <div className="bg-white/5 rounded-xl p-4">
-              <span className="text-white/50 text-xs mb-2 block">字体样式</span>
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
+              <span className="text-master-text-tertiary text-xs mb-2 block">字体样式</span>
               <div className="grid grid-cols-3 gap-2">
                 {FONT_OPTIONS.map((font) => (
                   <button
@@ -717,7 +718,7 @@ const WatermarkPage: React.FC = () => {
                     className={`py-2 rounded-lg text-sm transition-all ${
                       fontFamily === font.id
                         ? 'bg-[#00BCD4]/20 text-[#00BCD4]'
-                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                        : 'bg-master-glass text-master-text-secondary hover:bg-master-glass-strong'
                     }`}
                     style={{ fontFamily: font.family }}
                   >
@@ -728,13 +729,13 @@ const WatermarkPage: React.FC = () => {
             </div>
 
             {/* Font Weight */}
-            <div className="bg-white/5 rounded-xl p-4">
-              <span className="text-white/50 text-xs mb-2 block">字体粗细</span>
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
+              <span className="text-master-text-tertiary text-xs mb-2 block">字体粗细</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setFontWeight('normal')}
                   className={`flex-1 py-2 rounded-lg text-sm transition-all ${
-                    fontWeight === 'normal' ? 'bg-[#00BCD4]/20 text-[#00BCD4]' : 'bg-white/5 text-white/60'
+                    fontWeight === 'normal' ? 'bg-[#00BCD4]/20 text-[#00BCD4]' : 'bg-master-glass text-master-text-secondary'
                   }`}
                 >
                   常规
@@ -742,7 +743,7 @@ const WatermarkPage: React.FC = () => {
                 <button
                   onClick={() => setFontWeight('bold')}
                   className={`flex-1 py-2 rounded-lg text-sm transition-all ${
-                    fontWeight === 'bold' ? 'bg-[#00BCD4]/20 text-[#00BCD4]' : 'bg-white/5 text-white/60'
+                    fontWeight === 'bold' ? 'bg-[#00BCD4]/20 text-[#00BCD4]' : 'bg-master-glass text-master-text-secondary'
                   }`}
                 >
                   粗体
@@ -751,7 +752,7 @@ const WatermarkPage: React.FC = () => {
             </div>
 
             {/* Letter Spacing */}
-            <div className="bg-white/5 rounded-xl p-4">
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white text-sm">字间距</span>
                 <span className="text-[#00BCD4] text-sm">{letterSpacing}px</span>
@@ -762,13 +763,13 @@ const WatermarkPage: React.FC = () => {
                 max="10"
                 value={letterSpacing}
                 onChange={(e) => setLetterSpacing(parseInt(e.target.value))}
-                className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+                className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
               />
             </div>
 
             {/* Text Color */}
-            <div className="bg-white/5 rounded-xl p-4">
-              <span className="text-white/50 text-xs mb-2 block">文字颜色</span>
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
+              <span className="text-master-text-tertiary text-xs mb-2 block">文字颜色</span>
               <div className="flex gap-2">
                 {['#ffffff', '#000000', '#FFD700', '#FF6B35', '#00BCD4', '#FF6B9D', '#4CAF50', '#9C27B0'].map((color) => (
                   <button
@@ -784,13 +785,13 @@ const WatermarkPage: React.FC = () => {
             </div>
 
             {/* Shadow */}
-            <div className="bg-white/5 rounded-xl p-4">
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
               <div className="flex items-center justify-between">
                 <span className="text-white text-sm">文字阴影</span>
                 <button
                   onClick={() => setShadowEnabled(!shadowEnabled)}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    shadowEnabled ? 'bg-[#00BCD4]' : 'bg-white/20'
+                  className={`w-12 h-6 rounded-full transition-all duration-normal ${
+                    shadowEnabled ? 'bg-[#00BCD4]' : 'bg-master-glass-strong'
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
@@ -801,7 +802,7 @@ const WatermarkPage: React.FC = () => {
               {shadowEnabled && (
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/50 text-xs">模糊程度</span>
+                    <span className="text-master-text-tertiary text-xs">模糊程度</span>
                     <span className="text-[#00BCD4] text-xs">{shadowBlur}px</span>
                   </div>
                   <input
@@ -810,14 +811,14 @@ const WatermarkPage: React.FC = () => {
                     max="15"
                     value={shadowBlur}
                     onChange={(e) => setShadowBlur(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+                    className="w-full h-1.5 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
                   />
                 </div>
               )}
             </div>
 
             {/* Background */}
-            <div className="bg-white/5 rounded-xl p-4">
+            <div className="bg-master-glass backdrop-blur-glass rounded-lg p-4 border border-master-glass-border shadow-glass">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white text-sm">背景透明度</span>
                 <span className="text-[#00BCD4] text-sm">{Math.round(bgOpacity * 100)}%</span>
@@ -828,7 +829,7 @@ const WatermarkPage: React.FC = () => {
                 max="80"
                 value={bgOpacity * 100}
                 onChange={(e) => setBgOpacity(parseInt(e.target.value) / 100)}
-                className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
+                className="w-full h-2 bg-master-glass-strong rounded-full appearance-none cursor-pointer accent-[#00BCD4]"
               />
             </div>
           </div>
@@ -850,21 +851,21 @@ const WatermarkPage: React.FC = () => {
               setFontWeight('normal');
               setBgOpacity(0);
             }}
-            className="flex-1 py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5 flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-xl border border-master-glass-border text-master-text-secondary text-sm font-medium hover:bg-master-glass flex items-center justify-center gap-2"
           >
             <RotateCcw size={16} />
             重置默认
           </button>
           <button
             onClick={handleBatchExport}
-            className="flex-1 py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5 flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-xl border border-master-glass-border text-master-text-secondary text-sm font-medium hover:bg-master-glass flex items-center justify-center gap-2 active:scale-95"
           >
             <Copy size={16} />
             批量应用
           </button>
           <button
             onClick={handleExport}
-            className="flex-1 py-3 rounded-xl bg-[#00BCD4] text-white text-sm font-medium flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-xl bg-[#00BCD4] text-white text-sm font-medium flex items-center justify-center gap-2 active:scale-95"
           >
             <Download size={16} />
             保存图片
