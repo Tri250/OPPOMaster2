@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
-import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
 import com.silas.omaster.util.UrlConstants
@@ -34,22 +33,11 @@ import java.io.File
 import kotlin.math.abs
 
 /**
- * 云同步状态（从 CloudSyncManager 迁移）
- */
-sealed class CloudSyncState {
-    object Idle : CloudSyncState()
-    object Syncing : CloudSyncState()
-    data class Success(val newCount: Int, val updatedCount: Int) : CloudSyncState()
-    data class Error(val message: String) : CloudSyncState()
-}
-
-/**
  * 预设管理器 - 完整版
  * 实现所有PM系列功能用例
  */
 class PresetRepository private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
-    private val subscriptionManager = SubscriptionManager.getInstance(context)
     private val appContext = context.applicationContext
 
     // 预设列表
@@ -67,16 +55,6 @@ class PresetRepository private constructor(context: Context) {
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
 
-    // 云同步状态（从 CloudSyncManager 迁移）
-    private val _syncState = MutableStateFlow<CloudSyncState>(CloudSyncState.Idle)
-    val syncState: StateFlow<CloudSyncState> = _syncState.asStateFlow()
-
-    private val _lastSyncTime = MutableStateFlow(settingsManager.lastSyncTime)
-    val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
-
-    private val _cloudPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
-    val cloudPresets: StateFlow<List<MasterPreset>> = _cloudPresets.asStateFlow()
-
     // 设备型号（WM-003）
     private var deviceModel: String = Build.MODEL
 
@@ -93,7 +71,6 @@ class PresetRepository private constructor(context: Context) {
         encodeDefaults = true
         prettyPrint = false
         coerceInputValues = true
-        isLenient = true
     }
 
     /**
@@ -477,7 +454,6 @@ class PresetRepository private constructor(context: Context) {
      * - 内部带有重试与指数退避
      */
     suspend fun syncFromCloud(): Result<SyncResult> = withContext(Dispatchers.IO) {
-        _syncState.value = CloudSyncState.Syncing
         var lastError: Throwable? = null
         val maxRetries = 3
 
@@ -486,17 +462,9 @@ class PresetRepository private constructor(context: Context) {
                 Log.d(TAG, "云同步第 ${attempt}/${maxRetries} 次尝试")
                 val result = fetchFromCDN()
                 if (result.isSuccess) {
-                    val syncResult = result.getOrNull()!!
-                    val currentTime = System.currentTimeMillis()
-                    settingsManager.lastSyncTime = currentTime
-                    _lastSyncTime.value = currentTime
+                    settingsManager.lastSyncTime = System.currentTimeMillis()
                     settingsManager.cloudSyncStatus =
                         com.silas.omaster.data.local.CloudSyncStatus.SYNCED
-                    _syncState.value = CloudSyncState.Success(syncResult.imported, syncResult.conflicts.size)
-
-                    // 更新云端预设缓存
-                    _cloudPresets.value = _presets.value.map { it.toMasterPreset() }
-
                     return@withContext result
                 }
                 lastError = result.exceptionOrNull()
@@ -513,7 +481,6 @@ class PresetRepository private constructor(context: Context) {
 
         settingsManager.cloudSyncStatus =
             com.silas.omaster.data.local.CloudSyncStatus.ERROR
-        _syncState.value = CloudSyncState.Error(lastError?.message ?: "同步失败：达到最大重试次数")
         Result.failure(lastError ?: Exception("同步失败：达到最大重试次数"))
     }
 
@@ -521,20 +488,8 @@ class PresetRepository private constructor(context: Context) {
      * 从 jsDelivr CDN 拉取所有启用品牌的预设数据
      */
     private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
-        val cloudUrlPairs = mutableListOf<Pair<String, String>>()
-        cloudUrlPairs.addAll(settingsManager.cloudPresetUrls.toList())
-
-        // 合并订阅管理中启用的预设源 URL
-        val enabledSubUrls = subscriptionManager.subscriptionsFlow.value
-            .filter { it.isEnabled }
-            .map { it.url }
-            .filter { url -> cloudUrlPairs.none { it.second == url } }
-        for (url in enabledSubUrls) {
-            val brand = this@PresetRepository.extractBrandFromUrl(url) ?: "custom_${cloudUrlPairs.size}"
-            cloudUrlPairs.add(brand to url)
-        }
-
-        if (cloudUrlPairs.isEmpty()) {
+        val cloudUrls = settingsManager.cloudPresetUrls
+        if (cloudUrls.isEmpty()) {
             Log.w(TAG, "未配置云端数据源 URL，跳过同步")
             return@withContext Result.failure(IllegalStateException("未配置云端数据源 URL"))
         }
@@ -546,7 +501,7 @@ class PresetRepository private constructor(context: Context) {
         // 已存在的预设索引（按 brand+name 查重）
         val existingIndex = _presets.value.associateBy { "${it.brand}::${it.name}" }.toMutableMap()
 
-        for ((brand, url) in cloudUrlPairs) {
+        for ((brand, url) in cloudUrls) {
             try {
                 Log.d(TAG, "拉取品牌 [$brand] 的云端预设: $url")
                 val brandPresets = fetchBrandFromCDN(brand, url)
@@ -941,15 +896,6 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * 从预设源 URL 中提取品牌标识，用于云端同步分类
-     * 例如: https://.../presets/v2/oppo.json -> "oppo"
-     */
-    private fun extractBrandFromUrl(url: String): String? {
-        val fileName = url.substringAfterLast('/', "")
-        return fileName.substringBeforeLast('.', "").takeIf { it.isNotBlank() }
-    }
-
-    /**
      * SSRF 防护：验证云端 URL 安全性
      * @param url 待验证的 URL
      * @return 错误信息，如果验证通过返回 null
@@ -1129,34 +1075,6 @@ class PresetRepository private constructor(context: Context) {
         runCatching { httpClient.close() }
             .onFailure { Log.w(TAG, "关闭 HttpClient 时发生异常", it) }
     }
-
-    // ==================== 云同步便捷方法（从 CloudSyncManager 迁移） ====================
-
-    /**
-     * 检查是否需要同步
-     * 每24小时自动同步一次
-     */
-    fun shouldSync(): Boolean {
-        if (!settingsManager.isCloudSyncEnabled) return false
-        val lastSync = settingsManager.lastSyncTime
-        val currentTime = System.currentTimeMillis()
-        return currentTime - lastSync > 24 * 60 * 60 * 1000
-    }
-
-    /**
-     * 切换云同步开关
-     */
-    fun toggleCloudSync(enabled: Boolean) {
-        settingsManager.isCloudSyncEnabled = enabled
-        if (!enabled) {
-            settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.DISABLED
-        }
-    }
-
-    /**
-     * 获取云端预设URL列表
-     */
-    fun getCloudPresetUrls(): Map<String, String> = settingsManager.cloudPresetUrls
 
     companion object {
         private const val TAG = "PresetRepository"
@@ -1350,7 +1268,7 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
     paramsMap.putIfAbsent("brightness", 0)
 
     return PresetItem(
-        id = id ?: "${resolvedBrand}_${name.hashCode().toUInt()}",
+        id = id ?: "preset_${abs(name.hashCode())}_${System.nanoTime()}",
         name = name,
         brand = resolvedBrand,
         scene = resolvedScene,

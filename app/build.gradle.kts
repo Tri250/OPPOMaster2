@@ -126,11 +126,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v1.8.4
+        // 当前版本: v1.8.5
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 1.8.4 → 1*10000 + 8*100 + 4 = 10804
-        versionCode = 10804
-        versionName = "1.8.4"
+        // 1.8.5 → 1*10000 + 8*100 + 5 = 10805
+        versionCode = 10805
+        versionName = "1.8.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -199,17 +199,6 @@ android {
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             // 生成一个包含所有 ABI 的通用 APK（用于不支持拆分的场景）
             isUniversalApk = true
-        }
-    }
-
-    // ===== NDK 配置：16KB Page Size 兼容 =====
-    // Android 15+ (API 35) 强制要求所有 native 库按 16KB 页对齐
-    // AGP 8.5.1+ 默认会链接 -Wl,-z,max-page-size=16384，无需额外配置
-    // 16KB 兼容通过 splits.abi + packagingOptions.jniLibs.useLegacyPackaging 协同保证
-    packaging {
-        jniLibs {
-            // 启用新的 NDK 打包模式，确保 16KB 对齐
-            useLegacyPackaging = false
         }
     }
 
@@ -317,8 +306,8 @@ android {
         // release 构建时检查
         checkReleaseBuilds = true
         // 忽略警告（谨慎使用）
-        disable.add("IconLauncherShape")
-        disable.add("IconMissingDensityFolder")
+        ignore.add("IconLauncherShape")
+        ignore.add("IconMissingDensityFolder")
         // 错误严重级别配置
         error.add("HardcodedText")
         error.add("MissingTranslation")
@@ -368,6 +357,7 @@ dependencies {
     // 核心依赖（已使用 catalog，保持不变）
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
     // Compose BOM 平台依赖（已使用 catalog）

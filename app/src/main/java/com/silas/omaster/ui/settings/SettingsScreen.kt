@@ -92,7 +92,7 @@ import android.widget.Toast
 fun SettingsScreen(
     onNavigateToNotificationSettings: (() -> Unit)? = null,
     onNavigateToTerms: (() -> Unit)? = null,
-    onNavigateToSubscription: (() -> Unit)? = null,
+    onNavigateToPresetSourceManager: (() -> Unit)? = null,
     onNavigateToUpdateChannel: (() -> Unit)? = null,
     onNavigateToApiConfig: (() -> Unit)? = null
 ) {
@@ -465,9 +465,9 @@ fun SettingsScreen(
 
             SettingsClickableItem(
                 icon = Icons.Default.Storage,
-                title = "订阅管理",
-                subtitle = "管理订阅源",
-                onClick = { onNavigateToSubscription?.invoke() }
+                title = "预设源管理",
+                subtitle = "管理云端预设源",
+                onClick = { onNavigateToPresetSourceManager?.invoke() }
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))

@@ -106,6 +106,7 @@ fun CoreFeaturesScreen(
     onNavigateToPresetManager: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToLUTShare: () -> Unit,
+    onNavigateToHasselbladColor: () -> Unit,
     onNavigateToCloudSync: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
@@ -118,21 +119,33 @@ fun CoreFeaturesScreen(
     var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
     var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
+    var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
     var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
 
     // 定义所有功能数据 - 同步Web端features数组
     val allFeatures = remember {
         listOf(
-            // 核心影像 (前3个)
+            // AI智能功能 (前4个)
             FeatureData(
                 id = "ai-scene",
                 title = "哈苏之眼",
-                subtitle = "AI场景识别 + 哈苏色彩科学，一键拍出大师级作品",
+                subtitle = "智能识别50+拍摄场景，自动推荐最佳参数",
                 icon = Icons.Default.CameraAlt,
                 gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
                 description = FeatureDescription(
-                    desc = "AI场景识别 + 哈苏色彩科学，一键拍出大师级作品",
+                    desc = "支持36+拍摄场景智能识别",
                     tips = listOf("人像", "风景", "夜景", "美食", "建筑", "自然")
+                )
+            ),
+            FeatureData(
+                id = "ai-fine-tune",
+                title = "AI 微调",
+                subtitle = "一键智能微调，色彩风格精准控制",
+                icon = Icons.Default.ColorLens,
+                gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
+                description = FeatureDescription(
+                    desc = "一键智能微调，精准控制色彩风格",
+                    tips = listOf("饱和度", "对比度", "亮度", "色温", "锐度")
                 )
             ),
             FeatureData(
@@ -182,7 +195,7 @@ fun CoreFeaturesScreen(
                 ),
                 showToggle = false
             ),
-            // 品牌特色 (2个)
+            // 品牌特色 (3个)
             FeatureData(
                 id = "lut-share",
                 title = "LUT 资源分享",
@@ -194,6 +207,17 @@ fun CoreFeaturesScreen(
                     tips = listOf("电影色调", "胶片风格", "日系清新", "欧美复古")
                 ),
                 showToggle = false
+            ),
+            FeatureData(
+                id = "hasselblad",
+                title = "哈苏色彩科学",
+                subtitle = "HNCS 3.0 自然色彩解决方案",
+                icon = Icons.Default.Image,
+                gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
+                description = FeatureDescription(
+                    desc = "HNCS 3.0 自然色彩解决方案",
+                    tips = listOf("自然色彩", "肤色优化", "风景增强", "黑白胶片")
+                )
             ),
             FeatureData(
                 id = "cloud-sync",
@@ -210,9 +234,9 @@ fun CoreFeaturesScreen(
     }
 
     // 功能分类 - 同步Web端
-    val coreFeatures = allFeatures.slice(0..2)
-    val toolFeatures = allFeatures.slice(3..4)
-    val brandFeatures = allFeatures.slice(5..6)
+    val aiFeatures = allFeatures.slice(0..3)
+    val toolFeatures = allFeatures.slice(4..5)
+    val brandFeatures = allFeatures.slice(6..8)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -256,25 +280,26 @@ fun CoreFeaturesScreen(
             }
         }
 
-        // 核心影像功能区域
+        // AI智能功能区域
         item {
             SectionHeader(
-                title = "核心影像",
-                description = "哈苏影像系统核心功能",
-                icon = Icons.Default.CameraAlt,
-                count = coreFeatures.size
+                title = "AI 智能功能",
+                description = "智能识别与自动优化",
+                icon = Icons.Default.AutoAwesome,
+                count = aiFeatures.size
             )
         }
 
-        coreFeatures.forEach { feature ->
+        aiFeatures.forEach { feature ->
             item {
                 val isEnabled = when (feature.id) {
                     "ai-scene" -> aiSceneEnabled
+                    "ai-fine-tune" -> aiFineTuneEnabled
                     "smart-optimize" -> smartOptimizeEnabled
                     "watermark" -> watermarkEnabled
                     else -> true
                 }
-
+                
                 FeatureCard(
                     feature = feature,
                     isEnabled = isEnabled,
@@ -284,6 +309,10 @@ fun CoreFeaturesScreen(
                             "ai-scene" -> {
                                 aiSceneEnabled = enabled
                                 settingsManager.isAISceneRecognitionEnabled = enabled
+                            }
+                            "ai-fine-tune" -> {
+                                aiFineTuneEnabled = enabled
+                                settingsManager.isAIFineTuneEnabled = enabled
                             }
                             "smart-optimize" -> {
                                 smartOptimizeEnabled = enabled
@@ -298,6 +327,7 @@ fun CoreFeaturesScreen(
                     onClick = {
                         when (feature.id) {
                             "ai-scene" -> onNavigateToSceneRecognition()
+                            "ai-fine-tune" -> onNavigateToAIFineTune()
                             "smart-optimize" -> onNavigateToSmartOptimize()
                             "watermark" -> onNavigateToWatermarkEditor()
                         }
@@ -349,16 +379,21 @@ fun CoreFeaturesScreen(
         brandFeatures.forEach { feature ->
             item {
                 val isEnabled = when (feature.id) {
+                    "hasselblad" -> hasselbladEnabled
                     "cloud-sync" -> cloudSyncEnabled
                     else -> true
                 }
-
+                
                 FeatureCard(
                     feature = feature,
                     isEnabled = isEnabled,
                     onToggle = { enabled ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when (feature.id) {
+                            "hasselblad" -> {
+                                hasselbladEnabled = enabled
+                                settingsManager.isHasselbladColorEnabled = enabled
+                            }
                             "cloud-sync" -> {
                                 cloudSyncEnabled = enabled
                                 settingsManager.isCloudSyncEnabled = enabled
@@ -368,6 +403,7 @@ fun CoreFeaturesScreen(
                     onClick = {
                         when (feature.id) {
                             "lut-share" -> onNavigateToLUTShare()
+                            "hasselblad" -> onNavigateToHasselbladColor()
                             "cloud-sync" -> onNavigateToCloudSync()
                         }
                     }

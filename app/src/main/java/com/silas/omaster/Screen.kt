@@ -53,6 +53,9 @@ sealed class Screen {
     data object LUTShare : Screen()
 
     @Serializable
+    data object HasselbladColor : Screen()
+
+    @Serializable
     data object CloudSync : Screen()
 
     @Serializable
@@ -65,7 +68,7 @@ sealed class Screen {
     data object PrivacyPolicy : Screen()
 
     @Serializable
-    data object SubscriptionManagement : Screen()
+    data object PresetSourceManager : Screen()
 
     @Serializable
     data object UpdateChannel : Screen()

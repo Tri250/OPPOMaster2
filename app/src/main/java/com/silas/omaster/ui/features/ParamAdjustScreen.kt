@@ -28,22 +28,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.silas.omaster.ui.theme.*
-import android.content.Context
-import android.net.Uri
-import android.widget.Toast
-import android.util.Log
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.JsonObject
-import org.json.JSONObject
-import kotlin.math.abs
 import kotlin.math.log2
-import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -68,7 +53,6 @@ fun ParamAdjustScreen(
     onApply: (CameraParams) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
 
     // ========== 相机参数状态 ==========
     var iso by remember { mutableIntStateOf(100) }
@@ -173,38 +157,40 @@ fun ParamAdjustScreen(
     // ========== 参数联动逻辑 ==========
     fun applyLinkage(changedParam: String) {
         if (!linkageEnabled) return
-        val ev = calculateEV()
-        // Target EV range: 10-12 (well-exposed)
-        val targetEV = 11f
-        val evDelta = ev - targetEV
-
         when (changedParam) {
             "iso" -> {
-                // ISO changed: compensate with shutter speed
-                if (abs(evDelta) > 0.5f) {
-                    // Adjust shutter to compensate: +1 EV = half shutter time
-                    val compensation = 2.0.pow((-evDelta / 2.0).toDouble()).toFloat() // partial compensation
-                    val targetShutter = shutterSpeed * compensation
+                // ISO 变化时，如果过曝则加快快门，欠曝则减慢快门
+                val ev = calculateEV()
+                if (ev > 12f) {
+                    // 过曝，加快快门
+                    val targetShutter = shutterSpeed / 2f
                     val snapped = snapToNearestShutter(targetShutter, shutterSteps)
-                    if (snapped != shutterSpeed && snapped > 0f) shutterSpeed = snapped
+                    if (snapped != shutterSpeed) shutterSpeed = snapped
+                } else if (ev < 8f) {
+                    // 欠曝，减慢快门
+                    val targetShutter = shutterSpeed * 2f
+                    val snapped = snapToNearestShutter(targetShutter, shutterSteps)
+                    if (snapped != shutterSpeed) shutterSpeed = snapped
                 }
             }
             "aperture" -> {
-                // Aperture changed: compensate with shutter speed
-                if (abs(evDelta) > 0.5f) {
-                    val compensation = 2.0.pow((-evDelta / 2.0).toDouble()).toFloat()
-                    val targetShutter = shutterSpeed * compensation
-                    val snapped = snapToNearestShutter(targetShutter, shutterSteps)
-                    if (snapped != shutterSpeed && snapped > 0f) shutterSpeed = snapped
+                // 光圈变化时，调整快门补偿
+                val ev = calculateEV()
+                if (ev > 12f) {
+                    val targetShutter = shutterSpeed / 2f
+                    shutterSpeed = snapToNearestShutter(targetShutter, shutterSteps)
+                } else if (ev < 8f) {
+                    val targetShutter = shutterSpeed * 2f
+                    shutterSpeed = snapToNearestShutter(targetShutter, shutterSteps)
                 }
             }
             "shutter" -> {
-                // Shutter changed: compensate with ISO
-                if (abs(evDelta) > 0.5f) {
-                    val compensation = 2.0.pow((evDelta / 2.0).toDouble()).toFloat()
-                    val targetIso = (iso * compensation).toInt().coerceIn(isoSteps.first(), isoSteps.last())
-                    val snapped = snapToNearestISO(targetIso, isoSteps)
-                    if (snapped != iso) iso = snapped
+                // 快门变化时，调整ISO补偿
+                val ev = calculateEV()
+                if (ev > 12f && iso > 100) {
+                    iso = snapToNearestISO(iso / 2, isoSteps)
+                } else if (ev < 8f && iso < 12800) {
+                    iso = snapToNearestISO(iso * 2, isoSteps)
                 }
             }
         }
@@ -253,25 +239,6 @@ fun ParamAdjustScreen(
                     selectedPreset = null
                 }) {
                     Icon(Icons.Default.Refresh, "重置", tint = MaterialTheme.colorScheme.onBackground)
-                }
-                // 导出按钮
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    exportMasterModeParams(
-                        context = context,
-                        params = CameraParams(
-                            iso = iso,
-                            shutterSpeed = shutterSpeed,
-                            aperture = aperture,
-                            whiteBalance = whiteBalance,
-                            focalLength = focalLength,
-                            exposureCompensation = exposureCompensation
-                        ),
-                        focusMode = focusMode,
-                        meteringMode = meteringMode
-                    )
-                }) {
-                    Icon(Icons.Default.FileDownload, "导出", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 // 应用按钮
                 IconButton(onClick = {
@@ -469,121 +436,6 @@ fun ParamAdjustScreen(
             currentEV = currentEV,
             linkageEnabled = linkageEnabled
         )
-    }
-}
-
-/**
- * 导出大师模式参数文件
- * 生成 OPPO/OnePlus 大师模式可导入的 JSON 格式
- */
-private fun exportMasterModeParams(
-    context: Context,
-    params: CameraParams,
-    focusMode: FocusMode,
-    meteringMode: MeteringMode
-) {
-    val scope = CoroutineScope(Dispatchers.IO)
-    scope.launch {
-        try {
-            val exportData = buildJsonObject {
-                put("version", 2)
-                put("app", "OMaster")
-                put("timestamp", System.currentTimeMillis())
-                put("params", buildJsonObject {
-                    put("iso", params.iso)
-                    put("shutter_speed", params.shutterSpeed)
-                    put("aperture", params.aperture)
-                    put("white_balance", params.whiteBalance)
-                    put("focal_length", params.focalLength)
-                    put("exposure_compensation", params.exposureCompensation)
-                    put("focus_mode", focusMode.name)
-                    put("metering_mode", meteringMode.name)
-                    // OPPO 大师模式参数映射
-                    put("saturation", 0)
-                    put("contrast", 0)
-                    put("warmth", 0)
-                    put("sharpness", 0)
-                })
-            }
-
-            val jsonStr = kotlinx.serialization.json.Json { prettyPrint = true }
-                .encodeToString(JsonObject.serializer(), exportData)
-
-            // Save to Downloads directory
-            val fileName = "omaster_params_${System.currentTimeMillis()}.json"
-            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
-                android.os.Environment.DIRECTORY_DOWNLOADS
-            )
-            val file = java.io.File(downloadsDir, fileName)
-            file.writeText(jsonStr)
-
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    "参数已导出到 Downloads/$fileName",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        } catch (e: Exception) {
-            Log.e("ParamAdjustScreen", "Export failed", e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    "导出失败: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
-}
-
-/**
- * 从 JSON 文件导入大师模式参数
- */
-private fun importMasterModeParams(
-    context: Context,
-    uri: Uri,
-    onImport: (CameraParams, FocusMode, MeteringMode) -> Unit
-) {
-    val scope = CoroutineScope(Dispatchers.IO)
-    scope.launch {
-        try {
-            val jsonStr = context.contentResolver.openInputStream(uri)?.use {
-                it.bufferedReader().readText()
-            } ?: throw Exception("无法读取文件")
-
-            val jsonObj = JSONObject(jsonStr)
-            val paramsObj = jsonObj.optJSONObject("params") ?: throw Exception("无效的参数格式")
-
-            val cameraParams = CameraParams(
-                iso = paramsObj.optInt("iso", 100),
-                shutterSpeed = paramsObj.optDouble("shutter_speed", 1.0 / 125.0).toFloat(),
-                aperture = paramsObj.optDouble("aperture", 2.8).toFloat(),
-                whiteBalance = paramsObj.optInt("white_balance", 5500),
-                focalLength = paramsObj.optInt("focal_length", 23),
-                exposureCompensation = paramsObj.optDouble("exposure_compensation", 0.0).toFloat()
-            )
-
-            val focusMode = try {
-                FocusMode.valueOf(paramsObj.optString("focus_mode", "AUTO"))
-            } catch (_: Exception) { FocusMode.AUTO }
-
-            val meteringMode = try {
-                MeteringMode.valueOf(paramsObj.optString("metering_mode", "MATRIX"))
-            } catch (_: Exception) { MeteringMode.MATRIX }
-
-            withContext(Dispatchers.Main) {
-                onImport(cameraParams, focusMode, meteringMode)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    "导入失败: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
     }
 }
 

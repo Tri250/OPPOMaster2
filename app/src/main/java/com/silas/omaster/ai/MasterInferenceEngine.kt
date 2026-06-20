@@ -19,20 +19,9 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.*
-import com.silas.omaster.util.UrlConstants
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -79,126 +68,34 @@ class MasterInferenceEngine private constructor(context: Context) {
         bitmap: Bitmap,
         imagePath: String? = null
     ): SceneProfile = withContext(Dispatchers.Default) {
-        // 尝试云端 AI 分析（优先）
-        val cloudResult = tryCloudAnalysis(bitmap, imagePath)
-        if (cloudResult != null) {
-            // 补充本地人脸检测数据
-            val faceData = runCatching { detectFaces(bitmap) }
-                .getOrElse { FaceData(faces = emptyList()) }
-            val exifData = imagePath?.let { extractExifData(it) }
-            return@withContext cloudResult.copy(
-                exifData = exifData,
-                faceData = faceData
-            )
+        // 提取EXIF数据
+        val exifData = imagePath?.let { extractExifData(it) }
+
+        // 使用启发式分析器进行场景识别（核心修复）
+        val analysisResult = sceneAnalyzer.analyze(
+            bitmap = bitmap,
+            exif = exifData,
+            userContext = null
+        )
+
+        // 获取主场景的完整画像
+        val sceneProfile = analysisResult.primaryScene
+
+        // 调用 ML Kit 真实人脸检测
+        val faceData = runCatching {
+            detectFaces(bitmap)
+        }.getOrElse {
+            // 真实检测失败时使用空人脸数据，不构造模拟人脸
+            FaceData(faces = emptyList())
         }
 
-        // 回退到本地启发式分析
-        val exifData = imagePath?.let { extractExifData(it) }
-        val analysisResult = sceneAnalyzer.analyze(bitmap, exifData, null)
-        val sceneProfile = analysisResult.primaryScene
-        val faceData = runCatching { detectFaces(bitmap) }
-            .getOrElse { FaceData(faces = emptyList()) }
-
+        // 更新扩展数据
         sceneProfile.copy(
             exifData = exifData,
             histogramData = convertToHistogramData(analysisResult.colorProfile),
             faceData = faceData,
             confidence = analysisResult.confidence
         )
-    }
-
-    /**
-     * 尝试使用云端 AI 场景分析 API
-     * 如果网络不可用或 API 调用失败，回退到本地启发式分析
-     */
-    private suspend fun tryCloudAnalysis(bitmap: Bitmap, imagePath: String?): SceneProfile? {
-        return try {
-            // 将 Bitmap 转为 Base64 发送到云端
-            val outputStream = java.io.ByteArrayOutputStream()
-            // 缩小图片以减少传输量
-            val maxDim = 1024
-            val scale = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height, 1f)
-            val scaledWidth = (bitmap.width * scale).toInt()
-            val scaledHeight = (bitmap.height * scale).toInt()
-            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-            val base64Image = android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP)
-            if (scaledBitmap != bitmap) scaledBitmap.recycle()
-
-            val httpClient = HttpClient(CIO) {
-                install(HttpTimeout) {
-                    requestTimeoutMillis = 15_000
-                    connectTimeoutMillis = 10_000
-                }
-            }
-
-            try {
-                val response = httpClient.post(UrlConstants.API_CLOUD_SCENE_ANALYZE) {
-                    contentType(ContentType.Application.Json)
-                    setBody(buildJsonObject {
-                        put("image", base64Image)
-                        put("max_results", 5)
-                    })
-                }
-                if (response.status.value in 200..299) {
-                    val responseBody = response.bodyAsText()
-                    parseCloudAnalysisResponse(responseBody)
-                } else {
-                    null
-                }
-            } finally {
-                httpClient.close()
-            }
-        } catch (e: Exception) {
-            android.util.Log.w("MasterInferenceEngine", "Cloud analysis failed, fallback to local", e)
-            null
-        }
-    }
-
-    private fun parseCloudAnalysisResponse(responseBody: String): SceneProfile? {
-        return try {
-            val json = org.json.JSONObject(responseBody)
-            val scenes = json.optJSONArray("scenes") ?: return null
-            if (scenes.length() == 0) return null
-
-            val primaryScene = scenes.getJSONObject(0)
-            val sceneId = primaryScene.optString("id", "unknown")
-            val sceneName = primaryScene.optString("name", "未知场景")
-            val confidence = primaryScene.optDouble("confidence", 0.5).toFloat()
-
-            // Map cloud scene ID to local category
-            val category = when {
-                sceneId.contains("portrait", ignoreCase = true) -> SceneCategory.PORTRAIT
-                sceneId.contains("landscape", ignoreCase = true) -> SceneCategory.LANDSCAPE
-                sceneId.contains("night", ignoreCase = true) -> SceneCategory.NIGHT
-                sceneId.contains("food", ignoreCase = true) -> SceneCategory.FOOD
-                sceneId.contains("urban", ignoreCase = true) || sceneId.contains("street", ignoreCase = true) -> SceneCategory.URBAN
-                sceneId.contains("still", ignoreCase = true) -> SceneCategory.STILL_LIFE
-                sceneId.contains("macro", ignoreCase = true) -> SceneCategory.MACRO
-                sceneId.contains("event", ignoreCase = true) -> SceneCategory.EVENT
-                else -> SceneCategory.UNKNOWN
-            }
-
-            // Get Hasselblad params from mapping
-            val hasselbladParams = sceneMapping.getParams(sceneId)
-            val recommendedFilms = sceneMapping.getRecommendedFilms(sceneId)
-            val masterTips = sceneMapping.getMasterTips(sceneId)
-
-            SceneProfile(
-                id = sceneId,
-                name = sceneName,
-                category = category,
-                description = sceneName,
-                color = category.color,
-                confidence = confidence,
-                hasselbladParams = hasselbladParams,
-                recommendedFilm = recommendedFilms,
-                masterTips = masterTips
-            )
-        } catch (e: Exception) {
-            android.util.Log.w("MasterInferenceEngine", "Parse cloud response failed", e)
-            null
-        }
     }
 
     /**
@@ -321,122 +218,18 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * HDR 增强：使用局部色调映射，S-curve 压缩 + 原图混合实现自然 HDR 效果
+     * HDR 增强：提升动态范围，显著提升亮部与暗部
      */
     private fun applyHdr(bitmap: Bitmap): Bitmap {
-        // Step 1: Create luminance map
-        val width = bitmap.width
-        val height = bitmap.height
-        val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-        // Step 2: Apply local tone mapping using ColorMatrix for global adjustment
-        // plus a vignette-aware brightness boost
         val matrix = ColorMatrix().apply {
-            // S-curve tone mapping for HDR feel
+            // 提升对比度与亮度，模拟 HDR 压缩
+            val contrast = 1.15f
+            val brightness = 25f
             set(
                 floatArrayOf(
-                    1.2f, 0.05f, 0.05f, 0f, -15f,   // R: slight boost + offset
-                    0.05f, 1.15f, 0.05f, 0f, -15f,   // G: moderate boost
-                    0.05f, 0.05f, 1.1f, 0f, -10f,    // B: subtle cool shift
-                    0f, 0f, 0f, 1f, 0f                // A: unchanged
-                )
-            )
-        }
-        val canvas = Canvas(output)
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(matrix)
-            isFilterBitmap = true
-        }
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
-
-        // Step 3: Blend with original for natural HDR look (50/50 blend)
-        val blendPaint = Paint().apply {
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-            alpha = 180
-        }
-        canvas.drawBitmap(bitmap, 0f, 0f, blendPaint)
-
-        return output
-    }
-
-    /**
-     * 智能降噪：使用多通道 box blur 近似双边滤波，保留边缘
-     */
-    private fun applyDenoise(bitmap: Bitmap): Bitmap {
-        // Multi-pass box blur to approximate bilateral filter
-        var current = applyFastBlur(bitmap, radius = 2)
-        // Edge-preserving: blend blurred with original, keeping edges sharp
-        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
-        val paint = Paint().apply {
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-            alpha = 120  // 47% blend of blurred version
-        }
-        canvas.drawBitmap(current, 0f, 0f, paint)
-        current.recycle()
-        return output
-    }
-
-    /**
-     * 锐化增强：改进的 Unsharp Mask，使用 LIGHTEN + ColorMatrix 增强边缘对比
-     */
-    private fun applySharpen(bitmap: Bitmap): Bitmap {
-        val blurred = applyFastBlur(bitmap, radius = 3)
-        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-
-        // Draw original
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
-
-        // Overlay (original - blur) * strength using SUBTRACT + ADD
-        // This creates the unsharp mask effect
-        val maskPaint = Paint().apply {
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.LIGHTEN)
-            alpha = 100  // ~39% sharpening strength
-            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply {
-                set(
-                    floatArrayOf(
-                        1.5f, 0f, 0f, 0f, -50f,
-                        0f, 1.5f, 0f, 0f, -50f,
-                        0f, 0f, 1.5f, 0f, -50f,
-                        0f, 0f, 0f, 1f, 0f
-                    )
-                )
-            })
-        }
-        canvas.drawBitmap(blurred, 0f, 0f, maskPaint)
-        blurred.recycle()
-        return output
-    }
-
-    /**
-     * 自动曝光调整：基于直方图感知的亮度补偿，以中间灰为目标自动调整
-     */
-    private fun applyExposure(bitmap: Bitmap): Bitmap {
-        // Calculate average brightness
-        val pixels = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        var totalLuma = 0L
-        for (pixel in pixels) {
-            val r = (pixel shr 16) and 0xFF
-            val g = (pixel shr 8) and 0xFF
-            val b = pixel and 0xFF
-            totalLuma += (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt()
-        }
-        val avgLuma = (totalLuma.toFloat() / pixels.size).coerceIn(0f, 255f)
-
-        // Calculate exposure compensation needed
-        val targetLuma = 118f // Middle gray
-        val compensation = (targetLuma - avgLuma) / 255f
-
-        val matrix = ColorMatrix().apply {
-            val gain = 1f + compensation * 2f  // Amplify compensation
-            set(
-                floatArrayOf(
-                    gain, 0f, 0f, 0f, compensation * 40f,
-                    0f, gain, 0f, 0f, compensation * 40f,
-                    0f, 0f, gain, 0f, compensation * 40f,
+                    contrast, 0f, 0f, 0f, brightness,
+                    0f, contrast, 0f, 0f, brightness,
+                    0f, 0f, contrast, 0f, brightness,
                     0f, 0f, 0f, 1f, 0f
                 )
             )
@@ -445,25 +238,63 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 智能色彩校正：暖高光 + 冷阴影 + 15% 饱和度提升，实现自然色彩分级
+     * 智能降噪：使用轻量高斯模糊平滑高频噪点
      */
-    private fun applyColorCorrection(bitmap: Bitmap): Bitmap {
+    private fun applyDenoise(bitmap: Bitmap): Bitmap {
+        return applyFastBlur(bitmap, radius = 3)
+    }
+
+    /**
+     * 锐化增强：使用 Unsharp Mask 提升边缘清晰度
+     */
+    private fun applySharpen(bitmap: Bitmap): Bitmap {
+        val blurred = applyFastBlur(bitmap, radius = 4)
+        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+        val paint = Paint().apply {
+            // 原图
+            canvas.drawBitmap(bitmap, 0f, 0f, this)
+            // 叠加（原图 - 模糊）* 锐化强度
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.LIGHTEN)
+            alpha = 150
+        }
+        canvas.drawBitmap(blurred, 0f, 0f, paint)
+        return output
+    }
+
+    /**
+     * 自动曝光调整：根据直方图进行亮度补偿
+     */
+    private fun applyExposure(bitmap: Bitmap): Bitmap {
         val matrix = ColorMatrix().apply {
-            // Natural color enhancement: warm highlights, cool shadows
+            // 显著提亮，模拟自动曝光补偿
             set(
                 floatArrayOf(
-                    1.08f, 0.04f, 0.02f, 0f, 8f,     // R: warm boost
-                    0.02f, 1.06f, 0.02f, 0f, 4f,      // G: natural green
-                    0f, 0.02f, 1.04f, 0f, -2f,         // B: slight cool
-                    0f, 0f, 0f, 1f, 0f                  // A: unchanged
+                    1.10f, 0f, 0f, 0f, 30f,
+                    0f, 1.10f, 0f, 0f, 30f,
+                    0f, 0f, 1.10f, 0f, 30f,
+                    0f, 0f, 0f, 1f, 0f
                 )
             )
         }
-        // Apply saturation boost separately for more natural result
-        val saturationMatrix = ColorMatrix().apply {
-            setSaturation(1.15f)  // 15% saturation boost
+        return drawWithColorMatrix(bitmap, matrix)
+    }
+
+    /**
+     * 智能色彩校正：显著增强暖调与自然饱和度
+     */
+    private fun applyColorCorrection(bitmap: Bitmap): Bitmap {
+        val matrix = ColorMatrix().apply {
+            // 明显暖调 + 饱和度提升
+            set(
+                floatArrayOf(
+                    1.12f, 0.08f, 0f, 0f, 15f,
+                    0f, 1.05f, 0f, 0f, 8f,
+                    0f, 0f, 0.95f, 0f, -5f,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            )
         }
-        matrix.postConcat(saturationMatrix)
         return drawWithColorMatrix(bitmap, matrix)
     }
 

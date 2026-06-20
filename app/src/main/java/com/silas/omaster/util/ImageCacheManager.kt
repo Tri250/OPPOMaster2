@@ -121,7 +121,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
     // ==================== HTTP 客户端 ====================
 
-    private val client = lazy {
+    private val client: HttpClient by lazy {
         HttpClient(CIO) {
             install(HttpTimeout) {
                 requestTimeoutMillis = TIMEOUT_MS
@@ -390,7 +390,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
                     localFile.parentFile?.mkdirs()
 
                     // 下载图片
-                    val bytes = client.value.get(url).body<ByteArray>()
+                    val bytes = client.get(url).body<ByteArray>()
 
                     // 使用临时文件写入，成功后重命名（原子操作）
                     val tempFile = File(localFile.absolutePath + ".tmp")
@@ -604,9 +604,6 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
             memoryCache.evictAll()
         }
         unregisterMemoryCallbacks()
-        if (client.isInitialized()) {
-            client.value.close()
-        }
     }
 
     /**
