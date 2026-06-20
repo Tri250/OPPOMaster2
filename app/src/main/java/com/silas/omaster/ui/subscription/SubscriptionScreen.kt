@@ -33,7 +33,9 @@ import com.silas.omaster.model.Subscription
 import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.CardBorderLight
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -47,43 +49,61 @@ fun SubscriptionScreen(
     val subManager = remember { SubscriptionManager.getInstance(context) }
     val subscriptions by subManager.subscriptionsFlow.collectAsState()
     val scope = rememberCoroutineScope()
-    
+
     var refreshing by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<Subscription?>(null) }
     var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
-    
+
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
-    
+
+    // 修复：使用 M2 pullRefresh，确保 onRefresh 在协程中正确执行
     val pullRefreshState = rememberPullRefreshState(
         refreshing = refreshing,
         onRefresh = {
             scope.launch {
                 refreshing = true
-                var successCount = 0
-                var upToDateCount = 0
-                val enabledSubs = subscriptions.filter { it.isEnabled }
-                for (sub in enabledSubs) {
-                    val result = PresetRemoteManager.fetchAndSave(context, sub.url)
-                    if (result.isSuccess) {
-                        successCount++
-                    } else if (result.exceptionOrNull()?.message == "无需更新") {
-                        upToDateCount++
+                try {
+                    var successCount = 0
+                    var upToDateCount = 0
+                    var failCount = 0
+                    val enabledSubs = subscriptions.filter { it.isEnabled }
+                    for (sub in enabledSubs) {
+                        val result = PresetRemoteManager.fetchAndSave(context, sub.url)
+                        if (result.isSuccess) {
+                            successCount++
+                        } else if (result.exceptionOrNull()?.message == "无需更新") {
+                            upToDateCount++
+                        } else {
+                            failCount++
+                        }
                     }
-                }
-                if (enabledSubs.isNotEmpty()) {
-                    PresetRepository.getInstance(context).reloadDefaultPresets()
-                    val message = when {
-                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                        upToDateCount > 0 -> "所有订阅均已是最新"
-                        else -> "更新失败，请检查网络"
+                    if (enabledSubs.isNotEmpty()) {
+                        PresetRepository.getInstance(context).reloadDefaultPresets()
+                        val message = when {
+                            successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
+                            successCount > 0 -> "成功更新 ${successCount} 个订阅"
+                            upToDateCount > 0 -> "所有订阅均已是最新"
+                            failCount > 0 -> "更新失败，请检查网络"
+                            else -> "没有启用的订阅"
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "没有启用的订阅源", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "刷新失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    refreshing = false
                 }
-                refreshing = false
             }
         }
     )
@@ -99,17 +119,42 @@ fun SubscriptionScreen(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
             )
 
-            Box(modifier = Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
-                if (subscriptions.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = stringResource(R.string.sub_empty), color = Color.Gray)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+            // 修复：pullRefresh 必须包裹可滚动内容
+            // 始终使用 LazyColumn 以确保下拉手势可被检测
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pullRefresh(pullRefreshState)
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (subscriptions.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillParentMaxHeight(0.7f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = stringResource(R.string.sub_empty),
+                                        color = Color.Gray,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "下拉刷新或点击 + 添加订阅",
+                                        color = Color.Gray.copy(alpha = 0.6f),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    } else {
                         items(subscriptions, key = { it.url }) { sub ->
                             SubscriptionItem(
                                 sub = sub,
@@ -120,9 +165,9 @@ fun SubscriptionScreen(
                                 }
                             )
                         }
-                        item {
-                            Spacer(modifier = Modifier.height(100.dp))
-                        }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
 
@@ -173,7 +218,6 @@ fun SubscriptionScreen(
                 onConfirm = { url ->
                     showAddDialog = false
                     scope.launch {
-                        // 添加新订阅时强制更新 (forceUpdate = true)，以确保能正确导入并验证
                         val result = PresetRemoteManager.fetchAndSave(context, url, forceUpdate = true)
                         result.onSuccess { presetList ->
                             subManager.addSubscription(
@@ -182,7 +226,6 @@ fun SubscriptionScreen(
                                 author = presetList.author ?: "",
                                 build = presetList.build
                             )
-                            // 再次更新状态，确保 presetCount 等信息正确（因为 fetchAndSave 时可能还没 add）
                             subManager.updateSubscriptionStatus(
                                 url = url,
                                 presetCount = presetList.presets.size,
@@ -211,7 +254,6 @@ fun SubscriptionScreen(
                         showEditDialog = null
                         scope.launch {
                             subManager.updateSubscriptionUrl(oldUrl, newUrl)
-                            // 更新 URL 后需要重新拉取
                             val result = PresetRemoteManager.fetchAndSave(context, newUrl, forceUpdate = true)
                             result.onSuccess { presetList ->
                                 subManager.updateSubscriptionStatus(

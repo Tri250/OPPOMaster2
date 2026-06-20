@@ -295,7 +295,7 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.SceneRecognition> {
-                AISceneRecognitionScreen(onBack = { navController.popBackStack() })
+                HasselbladScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.WatermarkEditor> { backStackEntry ->
