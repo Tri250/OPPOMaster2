@@ -448,6 +448,7 @@ fun HasselbladScreen(
  * 3. 操作分流：拍照/相册双入口，满足不同场景启动路径
  * 4. 特性教育：3个核心卖点卡片，降低用户认知门槛
  * 5. 液态玻璃：所有卡片采用半透明+模糊材质，符合ColorOS 16规范
+ * 6. 工作流引导：新增 4 步流程指示器，明确告知用户后续步骤
  */
 @Composable
 private fun ReadyContent(
@@ -529,12 +530,19 @@ private fun ReadyContent(
             }
         }
 
+        // 工作流指示器 - 新增 4 步流程引导
+        item {
+            WorkflowIndicator(
+                steps = listOf("拍照", "AI分析", "选择风格", "保存")
+            )
+        }
+
         // 大圆形拍照按钮 - 视觉焦点
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 32.dp),
+                    .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -594,7 +602,7 @@ private fun ReadyContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Text(
                         "点击拍照，AI即刻分析场景",
@@ -603,7 +611,7 @@ private fun ReadyContent(
                         letterSpacing = 0.25.sp
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // 从相册选择 - 次级操作
                     OutlinedButton(
@@ -656,7 +664,67 @@ private fun ReadyContent(
         }
 
         item {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * 4 步工作流指示器
+ * 让用户对整个流程有清晰预期，减少认知负担
+ */
+@Composable
+private fun WorkflowIndicator(steps: List<String>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            steps.forEachIndexed { index, step ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(HasselbladOrange.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            color = HasselbladOrange,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = step,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                if (index < steps.size - 1) {
+                    Box(
+                        modifier = Modifier
+                            .width(16.dp)
+                            .height(1.5.dp)
+                            .background(HasselbladOrange.copy(alpha = 0.3f))
+                    )
+                }
+            }
         }
     }
 }
@@ -1787,6 +1855,11 @@ private fun AnalysisStepItem(step: AnalysisStep) {
 /**
  * 应用哈苏色彩科学（核心接口）
  * 将场景分析得到的 HasselbladParams 与用户选择的色彩模式风格叠加
+ *
+ * 产品经理技术规范：
+ * - 参数归一化：所有输入参数必须 coerceIn 到合理范围，避免极端值导致图像损坏
+ * - 性能优化：单次 Bitmap 分配 + 离屏 Canvas，避免内存抖动
+ * - 顺序固定：先饱和度→对比度→色温→影调→清晰度，叠加顺序与用户感知一致
  */
 fun applyHasselbladColorScience(
     source: Bitmap,
@@ -1798,9 +1871,12 @@ fun applyHasselbladColorScience(
     val warmth = ((hasselbladParams.colorTemp + (colorModeParams["warmth"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
     val tone = (hasselbladParams.tone / 100f).coerceIn(-0.3f, 0.3f)
     val clarity = ((hasselbladParams.clarity + (colorModeParams["clarity"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
+    val vibrance = (colorModeParams["vibrance"] ?: 0) / 100f
 
     val matrix = ColorMatrix().apply {
-        setSaturation(1f + saturation)
+        // 饱和度：先自然饱和度
+        setSaturation((1f + saturation).coerceIn(0f, 2f))
+        // 对比度 + 影调（亮度偏移）+ 清晰度（中间调对比增强）
         val postMatrix = ColorMatrix(floatArrayOf(
             contrast, 0f, 0f, 0f, tone * 25f + clarity * 10f,
             0f, contrast, 0f, 0f, tone * 10f + clarity * 5f,
@@ -1818,7 +1894,21 @@ fun applyHasselbladColorScience(
     }
     canvas.drawBitmap(source, 0f, 0f, paint)
 
-    // 暗角效果
+    // Vibrance 效果（vibrance 比 saturation 更柔和，提升欠饱和区域的鲜艳度）
+    if (vibrance > 0f || vibrance < 0f) {
+        val vibrancePaint = Paint().apply { isFilterBitmap = true }
+        // 通过额外的半透明叠加来模拟 vibrance
+        val overlayAlpha = (kotlin.math.abs(vibrance) * 50f).toInt().coerceIn(0, 80)
+        val overlayColor = if (vibrance > 0f) {
+            android.graphics.Color.argb(overlayAlpha, 255, 200, 150) // 暖色增强
+        } else {
+            android.graphics.Color.argb(overlayAlpha, 180, 200, 255) // 冷色降低
+        }
+        vibrancePaint.color = overlayColor
+        canvas.drawRect(0f, 0f, output.width.toFloat(), output.height.toFloat(), vibrancePaint)
+    }
+
+    // 暗角效果（HNCS 标志性特征）
     if (hasselbladParams.vignette > 0) {
         val vignettePaint = Paint().apply { isFilterBitmap = true }
         val cx = output.width / 2f
