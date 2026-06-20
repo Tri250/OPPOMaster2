@@ -98,11 +98,13 @@ fun CloudSyncScreen(
             "vivo" to 0xFF4169E1,
             "honor" to 0xFF32CD32
         )
-        urls.keys.mapIndexed { index, brand ->
+        urls.entries.mapIndexed { index, entry ->
+            val brand = entry.key
             ProviderInfo(
                 name = brand.replaceFirstChar { it.uppercase() },
                 color = brandColors[brand.lowercase()] ?: (0xFF1E90FF + index * 0x002020),
-                connected = cloudPresets.any { it.brand == brand }
+                connected = cloudPresets.any { it.brand == brand },
+                url = entry.value
             )
         }
     }
@@ -424,7 +426,8 @@ private data class CloudProviderConnection(
 data class ProviderInfo(
     val name: String,
     val color: Long,
-    val connected: Boolean
+    val connected: Boolean,
+    val url: String = ""
 )
 
 data class SyncItem(
@@ -458,7 +461,7 @@ private fun ProviderCard(provider: ProviderInfo, onConnect: () -> Unit = {}) {
                     Icon(Icons.Default.Smartphone, null, tint = Color(provider.color))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "${provider.name} Cloud",
                         style = MaterialTheme.typography.titleSmall,
@@ -470,6 +473,14 @@ private fun ProviderCard(provider: ProviderInfo, onConnect: () -> Unit = {}) {
                         style = MaterialTheme.typography.bodySmall,
                         color = if (provider.connected) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (provider.url.isNotEmpty()) {
+                        Text(
+                            text = provider.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                            maxLines = 1
+                        )
+                    }
                 }
             }
             if (provider.connected) {

@@ -158,8 +158,8 @@ class SettingsManager private constructor(private val context: Context) {
         _themeFlow = MutableStateFlow(BrandTheme.fromId(themeId))
         themeFlow = _themeFlow.asStateFlow()
 
-        val darkModeValue = getDataSync(KEY_DARK_MODE, DarkMode.SYSTEM.name)
-        _darkModeFlow = MutableStateFlow(safeValueOf(darkModeValue, DarkMode.SYSTEM))
+        val darkModeValue = getDataSync(KEY_DARK_MODE, DarkMode.DARK.name)
+        _darkModeFlow = MutableStateFlow(safeValueOf(darkModeValue, DarkMode.DARK))
         darkModeFlow = _darkModeFlow.asStateFlow()
         
         // 初始化震动设置
@@ -205,7 +205,7 @@ class SettingsManager private constructor(private val context: Context) {
 
     // 深色模式设置
     var darkMode: DarkMode
-        get() = safeValueOf(getDataSync(KEY_DARK_MODE, DarkMode.SYSTEM.name), DarkMode.SYSTEM)
+        get() = safeValueOf(getDataSync(KEY_DARK_MODE, DarkMode.DARK.name), DarkMode.DARK)
         set(value) {
             setDataSync(KEY_DARK_MODE, value.name)
             _darkModeFlow.value = value
@@ -233,9 +233,9 @@ class SettingsManager private constructor(private val context: Context) {
     val cloudPresetUrls: Map<String, String>
         get() = UrlConstants.PRESET_SOURCE_URLS
 
-    // 云同步状态
+    // 云同步状态（默认 SYNCED，与 isCloudSyncEnabled 默认 true 保持一致）
     var cloudSyncStatus: CloudSyncStatus
-        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.DISABLED.name), CloudSyncStatus.DISABLED)
+        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.SYNCED.name), CloudSyncStatus.SYNCED)
         set(value) {
             setDataSync(KEY_CLOUD_SYNC_STATUS, value.name)
         }

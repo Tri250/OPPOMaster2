@@ -1,14 +1,30 @@
 package com.silas.omaster.ui.animation
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import com.silas.omaster.ui.theme.ColorOS16Palette
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 
 /**
  * 全局动画配置
  * 统一管理应用内所有动画规格，确保一致性和性能
+ *
+ * ColorOS 16 动画规范：
+ * - 使用 Spring 物理动画替代固定时长 Tween
+ * - 弹性阻尼比 0.75（中等弹性，柔和自然）
+ * - 刚度系数 400（中等偏低，流畅不突兀）
+ * - 过渡动画时长 300-400ms
+ * - 微交互 150-200ms
  *
  * 注意：Spring 动画在低端设备上应使用较低的 stiffness 值以避免卡顿。
  * 使用 adaptiveSpringSpec() 可根据设备性能等级自动选择合适的动画参数。
@@ -115,6 +131,90 @@ object AnimationSpecs {
      * 页面切换动画时长
      */
     const val PageTransitionMillis = 250
+
+    // ==================== ColorOS 16 Spring 动画规格 ====================
+
+    /**
+     * ColorOS 16 标准弹性动画
+     * 阻尼比 0.75，刚度 400 - 柔和自然的弹性效果
+     * 适用于：页面切换、卡片展开、模态弹出
+     */
+    val ColorOS16StandardSpring = spring<Float>(
+        dampingRatio = 0.75f,
+        stiffness = 400f,
+        visibilityThreshold = 0.001f
+    )
+
+    /**
+     * ColorOS 16 柔和弹性动画
+     * 阻尼比 0.85，刚度 300 - 更柔和的过渡
+     * 适用于：底部抽屉、滑出面板
+     */
+    val ColorOS16GentleSpring = spring<Float>(
+        dampingRatio = 0.85f,
+        stiffness = 300f,
+        visibilityThreshold = 0.001f
+    )
+
+    /**
+     * ColorOS 16 活泼弹性动画
+     * 阻尼比 0.6，刚度 500 - 更有弹性的反馈
+     * 适用于：按钮按压、图标弹跳、开关切换
+     */
+    val ColorOS16BouncySpring = spring<Float>(
+        dampingRatio = 0.6f,
+        stiffness = 500f,
+        visibilityThreshold = 0.001f
+    )
+
+    /**
+     * ColorOS 16 微交互弹性动画
+     * 阻尼比 0.7，刚度 600 - 快速响应的微交互
+     * 适用于：涟漪效果、焦点变化、选中状态
+     */
+    val ColorOS16MicroSpring = spring<Float>(
+        dampingRatio = 0.7f,
+        stiffness = 600f,
+        visibilityThreshold = 0.01f
+    )
+
+    /**
+     * ColorOS 16 液态玻璃过渡动画
+     * 阻尼比 0.8，刚度 350 - 流体般的过渡效果
+     * 适用于：液态玻璃效果出现/消失、模糊度变化
+     */
+    val ColorOS16LiquidSpring = spring<Float>(
+        dampingRatio = 0.8f,
+        stiffness = 350f,
+        visibilityThreshold = 0.001f
+    )
+
+    /**
+     * ColorOS 16 页面切换动画
+     * 时长 350ms，使用 Emphasized 缓动
+     */
+    val ColorOS16PageTransition = tween<Float>(
+        durationMillis = 350,
+        easing = CubicBezierEasing(0.2f, 0f, 0f, 1f) // Emphasized easing
+    )
+
+    /**
+     * ColorOS 16 内容入场动画
+     * 时长 300ms，使用 EmphasizedAccelerate 缓动
+     */
+    val ColorOS16ContentEnter = tween<Float>(
+        durationMillis = 300,
+        easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f) // EmphasizedAccelerate
+    )
+
+    /**
+     * ColorOS 16 内容退场动画
+     * 时长 200ms，使用 EmphasizedDecelerate 缓动
+     */
+    val ColorOS16ContentExit = tween<Float>(
+        durationMillis = 200,
+        easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f) // EmphasizedDecelerate
+    )
 }
 
 /**
@@ -203,3 +303,29 @@ fun adaptiveSpringSpec(
         visibilityThreshold = visibilityThreshold
     )
 }
+
+// ==================== ColorOS 16 液态玻璃效果 Modifier ====================
+
+/**
+ * ColorOS 16 液态玻璃效果 Modifier
+ * 为 Composable 添加液态玻璃视觉效果（模糊 + 半透明 + 边框 + 高光）
+ *
+ * 注意：模糊效果需要 API 31+ (Android 12+)，低版本设备自动降级为半透明效果
+ *
+ * @param cornerRadius 圆角半径，默认 24.dp
+ * @param backgroundColor 背景色，默认使用深色玻璃色
+ * @param borderColor 边框色，默认使用玻璃边框色
+ */
+@Composable
+fun Modifier.liquidGlassEffect(
+    cornerRadius: Dp = Dp(LiquidGlassConfig.CornerRadius),
+    backgroundColor: Color = ColorOS16Palette.GlassDarkSurface,
+    borderColor: Color = ColorOS16Palette.GlassDarkBorder
+): Modifier = this
+    .clip(RoundedCornerShape(cornerRadius))
+    .background(backgroundColor)
+    .border(
+        width = Dp(LiquidGlassConfig.BorderWidth),
+        color = borderColor,
+        shape = RoundedCornerShape(cornerRadius)
+    )

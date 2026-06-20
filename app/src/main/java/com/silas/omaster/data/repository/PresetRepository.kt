@@ -6,6 +6,7 @@ import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
+import com.silas.omaster.util.UrlConstants
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpRequestRetry
@@ -110,7 +111,7 @@ class PresetRepository private constructor(context: Context) {
                 try {
                     loadLocalPresets()
                     Log.i(TAG, "本地预设初始化完成: ${_presets.value.size} 条")
-                    return@launch
+                    break
                 } catch (e: Exception) {
                     attempts++
                     Log.e(TAG, "本地预设初始化失败 (尝试 $attempts/$maxAttempts)", e)
@@ -121,6 +122,14 @@ class PresetRepository private constructor(context: Context) {
                         _presets.value = emptyList()
                     }
                 }
+            }
+
+            // 本地预设加载完成后，触发后台云同步以获取最新云端预设
+            try {
+                triggerBackgroundSync(brand = null)
+                Log.i(TAG, "初始云同步完成: ${_presets.value.size} 条预设")
+            } catch (e: Exception) {
+                Log.w(TAG, "初始云同步失败，使用本地缓存", e)
             }
         }
     }
@@ -560,7 +569,54 @@ class PresetRepository private constructor(context: Context) {
         }
         val presetList = json.decodeFromString(PresetList.serializer(), body)
         Log.d(TAG, "品牌 [$brand] 解析得到 ${presetList.presets.size} 条云端预设")
-        return presetList.presets.map { it.toRepositoryPreset(brand) }
+
+        // 从预设源 URL 推算 CDN 基础路径（去掉 /presets/v2/xxx.json 部分）
+        val cdnBasePath = resolveCdnBasePath(url)
+
+        return presetList.presets.map { preset ->
+            preset.toRepositoryPreset(brand).let { item ->
+                // 将相对路径的 coverPath 和 galleryImages 转换为完整 CDN URL
+                item.copy(
+                    coverPath = resolveToFullUrl(cdnBasePath, item.coverPath),
+                    galleryImages = item.galleryImages?.mapNotNull { resolveToFullUrl(cdnBasePath, it) }
+                )
+            }
+        }
+    }
+
+    /**
+     * 从预设源 URL 推算 CDN 基础路径
+     * 例如: https://cdn.jsdelivr.net/gh/repo@main/presets/v2/oppo.json
+     *   -> https://cdn.jsdelivr.net/gh/repo@main
+     */
+    private fun resolveCdnBasePath(presetUrl: String): String {
+        // CDN_JSDELIVR = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main"
+        val cdnBase = UrlConstants.CDN_JSDELIVR
+        return if (presetUrl.startsWith(cdnBase)) {
+            cdnBase
+        } else {
+            // 通用回退：去掉最后一段路径
+            val lastSlash = presetUrl.lastIndexOf('/')
+            if (lastSlash > 0) {
+                // 尝试去掉 /presets/v2/ 部分
+                val path = presetUrl.substring(0, lastSlash)
+                val secondLastSlash = path.lastIndexOf('/')
+                if (secondLastSlash > 0) path.substring(0, secondLastSlash + 1) else "$path/"
+            } else {
+                presetUrl
+            }
+        }
+    }
+
+    /**
+     * 将相对路径解析为完整 URL
+     * 如果已经是完整 URL（http/https），直接返回
+     * 如果是相对路径（如 images/xxx.webp），拼接 CDN 基础路径
+     */
+    private fun resolveToFullUrl(cdnBasePath: String, path: String?): String? {
+        if (path.isNullOrBlank()) return path
+        if (path.startsWith("http://") || path.startsWith("https://")) return path
+        return "${cdnBasePath.trimEnd('/')}/${path.trimStart('/')}"
     }
 
     /**
