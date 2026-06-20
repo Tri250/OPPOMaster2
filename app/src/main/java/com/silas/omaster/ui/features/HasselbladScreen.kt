@@ -336,16 +336,6 @@ fun HasselbladScreen(
         }
     }
 
-    // 重置参数
-    fun resetParams() {
-        val mode = colorModesMap[selectedMode]
-        if (mode != null) {
-            mode.params.forEach { (key, value) ->
-                params[key] = value
-            }
-        }
-    }
-
     // 启动相机
     fun launchCamera() {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -367,22 +357,31 @@ fun HasselbladScreen(
         }
     }
 
-    // 应用哈苏色彩参数到图片
-    fun applyHasselbladColorScience(source: Bitmap, hasselbladParams: HasselbladParams): Bitmap {
-        val saturation = (hasselbladParams.saturation / 100f).coerceIn(-1f, 1f)
-        val contrast = 1f + (hasselbladParams.contrast / 100f)
-        val warmth = hasselbladParams.colorTemp / 100f
-        val tone = hasselbladParams.tone / 100f
+    /**
+     * 应用哈苏色彩科学（核心接口）
+     * 将场景分析得到的 HasselbladParams 与用户选择的色彩模式风格叠加
+     */
+    fun applyHasselbladColorScience(
+        source: Bitmap,
+        hasselbladParams: HasselbladParams,
+        colorModeParams: Map<String, Int> = emptyMap()
+    ): Bitmap {
+        // 叠加场景参数和色彩模式参数
+        val saturation = ((hasselbladParams.saturation + (colorModeParams["saturation"] ?: 0)) / 100f).coerceIn(-1f, 1f)
+        val contrast = 1f + ((hasselbladParams.contrast + (colorModeParams["contrast"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
+        val warmth = ((hasselbladParams.colorTemp + (colorModeParams["warmth"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
+        val tone = (hasselbladParams.tone / 100f).coerceIn(-0.3f, 0.3f)
+        val clarity = ((hasselbladParams.clarity + (colorModeParams["clarity"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
 
         val matrix = ColorMatrix().apply {
-            // 饱和度调整
+            // 基础饱和度调整
             setSaturation(1f + saturation)
-            // 对比度和色温叠加
+            // 对比度、色温、色调叠加
             val postMatrix = ColorMatrix(floatArrayOf(
-                contrast, 0f, 0f, 0f, tone * 25f,           // R
-                0f, contrast, 0f, 0f, tone * 10f,            // G
-                0f, 0f, contrast, 0f, -warmth * 15f,         // B (暖调减蓝)
-                0f, 0f, 0f, 1f, 0f                            // A
+                contrast, 0f, 0f, 0f, tone * 25f + clarity * 10f,
+                0f, contrast, 0f, 0f, tone * 10f + clarity * 5f,
+                0f, 0f, contrast, 0f, -warmth * 15f - clarity * 5f,
+                0f, 0f, 0f, 1f, 0f
             ))
             setConcat(this, postMatrix)
         }
@@ -397,9 +396,7 @@ fun HasselbladScreen(
 
         // 暗角效果
         if (hasselbladParams.vignette > 0) {
-            val vignettePaint = Paint().apply {
-                isFilterBitmap = true
-            }
+            val vignettePaint = Paint().apply { isFilterBitmap = true }
             val cx = output.width / 2f
             val cy = output.height / 2f
             val radius = maxOf(cx, cy)
@@ -466,7 +463,7 @@ fun HasselbladScreen(
             title = {
                 Text(
                     when (stage) {
-                        HasselbladEyeStage.SETUP -> "哈苏色彩科学"
+                        HasselbladEyeStage.SETUP -> "哈苏大师"
                         HasselbladEyeStage.ANALYZING -> "哈苏之眼 · 分析中"
                         HasselbladEyeStage.RESULTS -> "哈苏之眼 · 分析结果"
                         HasselbladEyeStage.PREVIEW -> "哈苏之眼 · 预览"
@@ -519,9 +516,7 @@ fun HasselbladScreen(
                 HasselbladEyeStage.SETUP -> SetupContent(
                     colorModes = colorModes,
                     selectedMode = selectedMode,
-                    params = params,
                     onSelectMode = { selectMode(it) },
-                    onResetParams = { resetParams() },
                     onLaunchCamera = { launchCamera() },
                     onPickFromGallery = { galleryLauncher.launch("image/*") },
                     haptic = haptic
@@ -545,7 +540,8 @@ fun HasselbladScreen(
                         if (bmp != null && result != null) {
                             scope.launch {
                                 previewBitmap = withContext(Dispatchers.Default) {
-                                    applyHasselbladColorScience(bmp, result.sceneProfile.hasselbladParams)
+                                    val modeParams = colorModesMap[selectedMode]?.params ?: emptyMap()
+                                    applyHasselbladColorScience(bmp, result.sceneProfile.hasselbladParams, modeParams)
                                 }
                                 stage = HasselbladEyeStage.PREVIEW
                             }
@@ -595,9 +591,7 @@ fun HasselbladScreen(
 private fun SetupContent(
     colorModes: List<ColorMode>,
     selectedMode: String,
-    params: MutableMap<String, Int>,
     onSelectMode: (String) -> Unit,
-    onResetParams: () -> Unit,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
     haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -691,67 +685,6 @@ private fun SetupContent(
                             onSelectMode(mode.id)
                         }
                     )
-                }
-            }
-        }
-
-        // 精细调节
-        item {
-            Text(
-                text = "精细调节",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    listOf(
-                        "saturation" to "饱和度",
-                        "contrast" to "对比度",
-                        "warmth" to "色温",
-                        "vibrance" to "鲜艳度",
-                        "clarity" to "清晰度",
-                    ).forEach { (key, label) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.width(60.dp)
-                            )
-                            Slider(
-                                value = (params[key] ?: 0).toFloat(),
-                                onValueChange = { params[key] = it.toInt() },
-                                valueRange = -100f..100f,
-                                modifier = Modifier.weight(1f),
-                                colors = SliderDefaults.colors(
-                                    activeTrackColor = HasselbladOrange,
-                                    inactiveTrackColor = Color.Gray.copy(alpha = 0.3f),
-                                    thumbColor = HasselbladOrange
-                                )
-                            )
-                            Text(
-                                text = "${params[key] ?: 0}",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = HasselbladOrange,
-                                modifier = Modifier.width(40.dp),
-                                textAlign = TextAlign.Right
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -864,26 +797,6 @@ private fun SetupContent(
                             fontSize = 15.sp
                         )
                     }
-                }
-            }
-        }
-
-        // 重置按钮
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onResetParams()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.outline),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("重置参数", color = MaterialTheme.colorScheme.onBackground)
                 }
             }
         }

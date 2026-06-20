@@ -24,41 +24,73 @@ class SubscriptionManager private constructor(context: Context) {
     }
 
     private fun loadSubscriptions() {
-        // 优先尝试解密读取，加密存储后无法迁移则回退明文
-        val jsonStr = tryReadSecureSubscriptions() ?: prefs.getString(KEY_SUBSCRIPTIONS, null)
-        if (jsonStr != null) {
-            try {
-                val list = json.decodeFromString<SubscriptionList>(jsonStr)
-                var updated = false
-                val migratedSubscriptions = list.subscriptions.map { sub ->
-                    // 迁移逻辑：如果订阅名称是"官方内置预设"但 URL 不是最新的，则更新它
-                    if (sub.name == "官方内置预设" && sub.url != UpdateConfigManager.DEFAULT_PRESET_URL) {
-                        updated = true
-                        sub.copy(url = UpdateConfigManager.DEFAULT_PRESET_URL)
-                    } else {
-                        sub
-                    }
-                }
-                _subscriptionsFlow.value = migratedSubscriptions
-                if (updated) {
-                    saveSubscriptions()
-                    android.util.Log.d("SubscriptionManager", "Migrated official subscription to new URL")
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("SubscriptionManager", "Failed to decode subscriptions", e)
-                _subscriptionsFlow.value = emptyList()
-            }
-        } else {
-            // 首次使用，添加默认订阅
-            val defaultSub = Subscription(
-                url = UpdateConfigManager.DEFAULT_PRESET_URL,
-                name = "官方内置预设",
-                author = "@OMaster",
+        val defaultSubs = listOf(
+            Subscription(
+                url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json",
+                name = "OPPO 预设库",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            ),
+            Subscription(
+                url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json",
+                name = "realme 预设库",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            ),
+            Subscription(
+                url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json",
+                name = "vivo 预设库",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            ),
+            Subscription(
+                url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json",
+                name = "荣耀 预设库",
+                author = "@OMaster-Community",
                 build = 1,
                 isEnabled = true
             )
-            _subscriptionsFlow.value = listOf(defaultSub)
+        )
+
+        // 优先尝试解密读取，加密存储后无法迁移则回退明文
+        val jsonStr = tryReadSecureSubscriptions() ?: prefs.getString(KEY_SUBSCRIPTIONS, null)
+        val existingSubs = if (jsonStr != null) {
+            try {
+                json.decodeFromString<SubscriptionList>(jsonStr).subscriptions
+            } catch (e: Exception) {
+                android.util.Log.e("SubscriptionManager", "Failed to decode subscriptions", e)
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+
+        // 迁移逻辑：更新旧版"官方内置预设"URL
+        var updated = false
+        val migratedSubs = existingSubs.map { sub ->
+            if (sub.name == "官方内置预设" && sub.url != UpdateConfigManager.DEFAULT_PRESET_URL) {
+                updated = true
+                sub.copy(url = UpdateConfigManager.DEFAULT_PRESET_URL)
+            } else {
+                sub
+            }
+        }
+
+        // 合并默认订阅：保留已有订阅，补充缺失的默认订阅
+        val existingUrls = migratedSubs.map { it.url }.toSet()
+        val missingDefaults = defaultSubs.filter { it.url !in existingUrls }
+        val mergedSubs = migratedSubs + missingDefaults
+        if (missingDefaults.isNotEmpty()) {
+            updated = true
+        }
+
+        _subscriptionsFlow.value = mergedSubs
+        if (updated) {
             saveSubscriptions()
+            android.util.Log.d("SubscriptionManager", "Migrated/merged default subscriptions")
         }
     }
 

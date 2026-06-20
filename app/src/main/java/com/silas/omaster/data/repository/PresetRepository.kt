@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
 import com.silas.omaster.util.UrlConstants
@@ -48,6 +49,7 @@ sealed class CloudSyncState {
  */
 class PresetRepository private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
+    private val subscriptionManager = SubscriptionManager.getInstance(context)
     private val appContext = context.applicationContext
 
     // 预设列表
@@ -518,8 +520,20 @@ class PresetRepository private constructor(context: Context) {
      * 从 jsDelivr CDN 拉取所有启用品牌的预设数据
      */
     private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
-        val cloudUrls = settingsManager.cloudPresetUrls
-        if (cloudUrls.isEmpty()) {
+        val cloudUrlPairs = mutableListOf<Pair<String, String>>()
+        cloudUrlPairs.addAll(settingsManager.cloudPresetUrls.toList())
+
+        // 合并订阅管理中启用的预设源 URL
+        val enabledSubUrls = subscriptionManager.subscriptionsFlow.value
+            .filter { it.isEnabled }
+            .map { it.url }
+            .filter { url -> cloudUrlPairs.none { it.second == url } }
+        for (url in enabledSubUrls) {
+            val brand = this@PresetRepository.extractBrandFromUrl(url) ?: "custom_${cloudUrlPairs.size}"
+            cloudUrlPairs.add(brand to url)
+        }
+
+        if (cloudUrlPairs.isEmpty()) {
             Log.w(TAG, "未配置云端数据源 URL，跳过同步")
             return@withContext Result.failure(IllegalStateException("未配置云端数据源 URL"))
         }
@@ -531,7 +545,7 @@ class PresetRepository private constructor(context: Context) {
         // 已存在的预设索引（按 brand+name 查重）
         val existingIndex = _presets.value.associateBy { "${it.brand}::${it.name}" }.toMutableMap()
 
-        for ((brand, url) in cloudUrls) {
+        for ((brand, url) in cloudUrlPairs) {
             try {
                 Log.d(TAG, "拉取品牌 [$brand] 的云端预设: $url")
                 val brandPresets = fetchBrandFromCDN(brand, url)
@@ -923,6 +937,15 @@ class PresetRepository private constructor(context: Context) {
 
     private fun savePinned(pinned: Set<String>) {
         settingsManager.pinnedPresetIds = pinned.toList()
+    }
+
+    /**
+     * 从预设源 URL 中提取品牌标识，用于云端同步分类
+     * 例如: https://.../presets/v2/oppo.json -> "oppo"
+     */
+    private fun extractBrandFromUrl(url: String): String? {
+        val fileName = url.substringAfterLast('/', "")
+        return fileName.substringBeforeLast('.', "").takeIf { it.isNotBlank() }
     }
 
     /**
