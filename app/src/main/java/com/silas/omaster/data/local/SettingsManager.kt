@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import kotlin.jvm.JvmName
 
 // DataStore 扩展属性
@@ -357,13 +359,13 @@ class SettingsManager private constructor(private val context: Context) {
         get() {
             val jsonStr = getDataSyncOrNull(KEY_CUSTOM_QUICK_PRESETS) ?: return emptyMap()
             return try {
-                Json.decodeFromString(jsonStr)
+                apiJson.decodeFromString(jsonStr)
             } catch (e: Exception) {
                 emptyMap()
             }
         }
         set(value) {
-            val jsonStr = Json.encodeToString(value)
+            val jsonStr = apiJson.encodeToString(value)
             setDataAsync(KEY_CUSTOM_QUICK_PRESETS, jsonStr)
         }
 
@@ -474,18 +476,24 @@ class SettingsManager private constructor(private val context: Context) {
      * 从 assets 加载 API 配置
      * @return ApiConfig 配置对象
      */
+    private val apiJson = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+    }
+
     fun loadApiConfig(): ApiConfig {
         return try {
             val jsonStr = context.assets.open("api_config.json").bufferedReader().use { it.readText() }
-            val config = Json { ignoreUnknownKeys = true }.decodeFromString<ApiConfig>(jsonStr)
-            
+            val config = apiJson.decodeFromString<ApiConfig>(jsonStr)
+
             // 保存到 DataStore
             setDataSync(KEY_AI_API_ENDPOINT, config.aiApiEndpoint)
             setDataSync(KEY_PRESET_API_ENDPOINT, config.presetApiEndpoint)
             setDataSync(KEY_AUTH_API_ENDPOINT, config.authApiEndpoint)
             setDataSync(KEY_API_VERSION, config.apiVersion)
             setDataSync(KEY_API_CONFIG_LOADED, true)
-            
+
             config
         } catch (e: Exception) {
             // 返回默认配置

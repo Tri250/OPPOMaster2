@@ -93,6 +93,7 @@ class PresetRepository private constructor(context: Context) {
         encodeDefaults = true
         prettyPrint = false
         coerceInputValues = true
+        isLenient = true
     }
 
     /**
