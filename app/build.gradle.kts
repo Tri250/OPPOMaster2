@@ -81,25 +81,18 @@ if (umengAppKey.isEmpty()) {
 }
 
 // 读取签名配置
-// 优先级：1. 环境变量 RELEASE_*（CI/CD 注入，最高优先级）
+// 优先级：1. gradle.properties 中的 RELEASE_* 配置
 //        2. keystore-release.properties 文件（不应提交到版本控制）
-//        3. gradle.properties 中的 RELEASE_* 配置
-//        4. keystore.properties 模板文件
+//        3. keystore.properties 模板文件
 val keystoreProperties = Properties()
 
-// 方式1：从环境变量读取（CI/CD 常见做法）
-val envStoreFileBase64 = System.getenv("RELEASE_STORE_FILE_BASE64")
-val envStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
-val envKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
-val envKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
-
-// 方式2：从 gradle.properties 读取
+// 方式1：从 gradle.properties 读取
 val releaseStoreFile = project.findProperty("RELEASE_STORE_FILE") as String?
 val releaseStorePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
 val releaseKeyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
 val releaseKeyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
 
-// 方式3：从 keystore-release.properties 文件读取（优先级高于 gradle.properties）
+// 方式2：从 keystore-release.properties 文件读取（优先级更高）
 val keystorePropertiesFile = file("keystore-release.properties")
     .takeIf { it.exists() }
     ?: file("keystore.properties")
@@ -109,24 +102,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 // 合并配置：文件配置优先于 gradle.properties
-var finalStoreFile = keystoreProperties.getProperty("storeFile") ?: releaseStoreFile
-var finalStorePassword = keystoreProperties.getProperty("storePassword") ?: releaseStorePassword
-var finalKeyAlias = keystoreProperties.getProperty("keyAlias") ?: releaseKeyAlias
-var finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseKeyPassword
-
-// 环境变量覆盖：支持 Base64 编码的 keystore 内容直接注入
-val envKeystoreFile = if (!envStoreFileBase64.isNullOrBlank()) {
-    val decoded = Base64.getDecoder().decode(envStoreFileBase64)
-    val target = layout.buildDirectory.file("omaster-release.keystore").get().asFile
-    target.parentFile?.mkdirs()
-    target.writeBytes(decoded)
-    target.absolutePath
-} else null
-
-if (envKeystoreFile != null) finalStoreFile = envKeystoreFile
-if (!envStorePassword.isNullOrBlank()) finalStorePassword = envStorePassword
-if (!envKeyAlias.isNullOrBlank()) finalKeyAlias = envKeyAlias
-if (!envKeyPassword.isNullOrBlank()) finalKeyPassword = envKeyPassword
+val finalStoreFile = keystoreProperties.getProperty("storeFile") ?: releaseStoreFile
+val finalStorePassword = keystoreProperties.getProperty("storePassword") ?: releaseStorePassword
+val finalKeyAlias = keystoreProperties.getProperty("keyAlias") ?: releaseKeyAlias
+val finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseKeyPassword
 
 android {
     namespace = "com.silas.omaster"
@@ -147,11 +126,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v1.6.0 (见 CHANGELOG.md)
+        // 当前版本: v1.3.1 (最新稳定版，见 CHANGELOG.md)
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 1.6.0 → 1*10000 + 6*100 + 0 = 10600
-        versionCode = 10600
-        versionName = "1.6.0"
+        // 1.3.1 → 1*10000 + 3*100 + 1 = 10301
+        versionCode = 10301
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -274,6 +253,7 @@ android {
             isJniDebuggable = false
             isPseudoLocalesEnabled = false
             // 启用资源去重与混淆
+            resValue("string", "build_type", "release")
         }
     }
 

@@ -58,30 +58,6 @@
     <string name="cache_size_format">Cache size: %.2f MB</string>
     <string name="cache_cleared">Cache cleared</string>
 
-    <!-- Settings Items -->
-    <string name="dark_mode_title">Dark mode</string>
-    <string name="dark_mode_system">System default</string>
-    <string name="dark_mode_light">Light mode</string>
-    <string name="dark_mode_dark">Dark mode</string>
-    <string name="update_channel_title">Update channel</string>
-    <string name="update_channel_gitee">Stable</string>
-    <string name="update_channel_github">GitHub</string>
-    <string name="notification_settings_title">Notification settings</string>
-    <string name="preset_source_title">Preset source management</string>
-    <string name="privacy_policy_title">Privacy Policy</string>
-    <string name="user_agreement_title">User Agreement</string>
-
-    <!-- Advanced Settings -->
-    <string name="settings_section_advanced">Advanced</string>
-    <string name="api_config_title">API Configuration</string>
-    <string name="api_config_desc">Configure cloud API endpoint addresses</string>
-    <string name="api_endpoint_ai">AI inference endpoint</string>
-    <string name="api_endpoint_preset">Preset sync endpoint</string>
-    <string name="api_endpoint_auth">User authentication endpoint</string>
-    <string name="api_config_saved">API configuration saved</string>
-    <string name="api_config_reset">Reset to default</string>
-    <string name="api_config_reset_confirm">Reset all API endpoints to default values?</string>
-
     <!-- Brand Names -->
     <string name="brand_hasselblad">Hasselblad</string>
     <string name="brand_zeiss">ZEISS</string>
@@ -375,8 +351,6 @@
     <!-- Footer -->
     <string name="footer_local">Pure local operation, data stored locally</string>
     <string name="privacy_policy">User Agreement &amp; Privacy Policy</string>
-    <string name="developer_footer">Developed by Silas</string>
-    <string name="copyright_footer">© 2026 OMaster. All rights reserved.</string>
 
     <!-- Privacy Policy Page -->
     <string name="privacy_title">User Agreement &amp; Privacy Policy</string>
@@ -464,23 +438,5 @@
     <string name="floating_sharpness_label">Sharp</string>
     <string name="floating_vignette_icon">◍</string>
     <string name="floating_vignette_label">Vignette</string>
-
-    <!-- AI Scene Recognition -->
-    <string name="analysis_failed">Analysis failed, please try again</string>
-    <string name="ai_smart_shoot">AI Smart Shoot</string>
-    <string name="scene_recognition_50plus">50+ Fine Scene Recognition</string>
-    <string name="one_click_optimize">One-Tap Parameter Optimization</string>
-    <string name="ai_analyzing">AI scene analyzing...</string>
-    <string name="processed">Processed</string>
-    <string name="original">Original</string>
-    <string name="before">Before</string>
-    <string name="after">After</string>
-    <string name="hasselblad_master_recognition">Hasselblad Master Recognition</string>
-    <string name="auto_matched_params">Best parameters auto-matched</string>
-    <string name="hasselblad_master_params">Hasselblad Master Parameters</string>
-    <string name="master_tips_title">Master Tips</string>
-    <string name="recent_recognition">Recent Recognition</string>
-    <string name="retake">Retake</string>
-    <string name="apply_params">Apply Parameters</string>
 
 </resources>

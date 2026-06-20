@@ -6,23 +6,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- 敏感权限说明：READ_PHONE_STATE
-         用途：用于友盟统计分析获取设备标识，仅在 Android 9 及以下使用。
-         使用场景：应用启动统计与崩溃上报。
-         该权限已在运行时向用户申请。 -->
+    <!-- 设备信息权限（用于友盟统计，Android 10+ 需要运行时权限） -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE"
         android:maxSdkVersion="28" />
 
-    <!-- 敏感权限说明：SYSTEM_ALERT_WINDOW
-         用途：用于悬浮窗快捷工具功能，允许用户在其它应用上层显示参数调节悬浮窗。
-         使用场景：用户在拍摄或修图过程中快速调整 LUT/参数。
-         该权限需要用户在系统设置中手动授权。 -->
+    <!-- 悬浮窗权限（用于悬浮窗功能） -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- 敏感权限说明：REQUEST_INSTALL_PACKAGES
-         用途：用于应用内更新，下载新版本 APK 后请求安装。
-         使用场景：用户主动点击“检查更新”并确认下载后发起安装。
-         该权限仅在用户触发更新流程时使用。 -->
+    <!-- 应用安装权限（用于应用内更新） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- 通知权限（Android 13+ 必需） -->
@@ -33,25 +24,12 @@
         android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-
-    <!-- 敏感权限说明：READ_MEDIA_IMAGES
-         用途：用于读取相册图片以进行 LUT 预览、编辑与导出，替代 Android 13 之前的 READ_EXTERNAL_STORAGE。
-         使用场景：用户从相册选择图片进行编辑或导入 LUT 预览。
-         该权限在 Android 13+ 运行时向用户申请。 -->
+    <!-- Android 13+ 图片读取权限（替代 READ_EXTERNAL_STORAGE） -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <!-- 前台服务权限 -->
+    <!-- 前台服务权限 (Android 14+ 必需) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <!-- 敏感权限说明：FOREGROUND_SERVICE_SPECIAL_USE
-         用途：用于在后台保持特殊用途前台服务，支撑悬浮窗参数调节与图片处理任务的稳定性。
-         使用场景：用户开启悬浮窗或执行批量导出任务时保持服务运行。
-         该权限声明与对应前台服务类型 specialUse 一致。 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-
-    <!-- 相机硬件特性声明：应用使用相机但非必需，未安装相机的设备仍可安装 -->
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <!-- 相机权限（SceneRecognitionManager / SmartOptimize 使用） -->
     <uses-permission android:name="android.permission.CAMERA" />

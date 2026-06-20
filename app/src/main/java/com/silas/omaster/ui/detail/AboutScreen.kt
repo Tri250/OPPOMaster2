@@ -22,17 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -42,9 +35,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,12 +60,6 @@ import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.data.local.SettingsManager
-import com.silas.omaster.data.local.DarkMode
-import com.silas.omaster.data.local.UpdateChannel
-import com.silas.omaster.ui.theme.BrandTheme
-import com.silas.omaster.ui.settings.ThemeSelectionDialog
-import com.silas.omaster.ui.settings.DarkModeDialog
-import com.silas.omaster.ui.settings.UpdateChannelDialog
 import com.silas.omaster.util.VersionInfo
 import com.silas.omaster.util.perform
 
@@ -94,19 +81,10 @@ fun AboutScreen(
     val haptic = LocalHapticFeedback.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
     val currentTheme by settingsManager.themeFlow.collectAsState()
-    var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
-    var updateChannel by remember { mutableStateOf(settingsManager.updateChannel) }
 
-    // Dialog states
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showDarkModeDialog by remember { mutableStateOf(false) }
-    var showChannelDialog by remember { mutableStateOf(false) }
-
-    // 滚动方向检测（不在 derivedStateOf 内变更状态，避免触发无限重组）
+    // 滚动方向检测
     var isScrollingUp by remember { mutableStateOf(false) }
     var previousScrollValue by remember { mutableIntStateOf(0) }
-
-    // 滚动到顶/底部震感
     var hasHapticAtTop by remember { mutableStateOf(false) }
     var hasHapticAtBottom by remember { mutableStateOf(false) }
 
@@ -116,9 +94,7 @@ fun AboutScreen(
         previousScrollValue = currentValue
         onScrollStateChanged(isScrollingUp)
 
-        // 滚动到顶/底部震感
         val maxValue = scrollState.maxValue
-
         if (currentValue == 0 && !hasHapticAtTop) {
             haptic.perform(HapticFeedbackType.TextHandleMove)
             hasHapticAtTop = true
@@ -131,45 +107,6 @@ fun AboutScreen(
             hasHapticAtTop = false
             hasHapticAtBottom = false
         }
-    }
-
-    // Dialogs
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentTheme = currentTheme,
-            onThemeSelected = { theme ->
-                haptic.perform(HapticFeedbackType.LongPress)
-                settingsManager.currentTheme = theme
-                showThemeDialog = false
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-
-    if (showDarkModeDialog) {
-        DarkModeDialog(
-            currentMode = darkMode,
-            onModeSelected = { mode ->
-                haptic.perform(HapticFeedbackType.LongPress)
-                settingsManager.darkMode = mode
-                darkMode = mode
-                showDarkModeDialog = false
-            },
-            onDismiss = { showDarkModeDialog = false }
-        )
-    }
-
-    if (showChannelDialog) {
-        UpdateChannelDialog(
-            currentChannel = updateChannel,
-            onChannelSelected = { channel ->
-                haptic.perform(HapticFeedbackType.LongPress)
-                settingsManager.updateChannel = channel
-                updateChannel = channel
-                showChannelDialog = false
-            },
-            onDismiss = { showChannelDialog = false }
-        )
     }
 
     Column(
@@ -198,7 +135,7 @@ fun AboutScreen(
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // App Info Card - Logo + Version (版本更新功能已暂停)
+            // App Info Card - Logo + Version
             AppInfoCard(
                 currentVersionName = currentVersionName,
                 currentTheme = currentTheme
@@ -206,18 +143,20 @@ fun AboutScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Settings List Card
-            SettingsListCard(
-                currentTheme = currentTheme,
-                darkMode = darkMode,
-                updateChannel = updateChannel,
-                onThemeClick = { showThemeDialog = true },
-                onDarkModeClick = { showDarkModeDialog = true },
-                onUpdateChannelClick = { showChannelDialog = true },
-                onNotificationClick = onNavigateToNotificationSettings,
-                onPresetSourceClick = onNavigateToPresetSourceManager,
-                onPrivacyClick = onNavigateToPrivacy,
-                onTermsClick = onNavigateToTerms
+            // Quick Actions Card - 精简版，仅保留关键入口
+            QuickActionsCard(
+                onNavigateToSettings = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToSettings()
+                },
+                onNavigateToPrivacy = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToPrivacy()
+                },
+                onNavigateToTerms = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToTerms()
+                }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -354,73 +293,12 @@ private fun AppInfoCard(
 }
 
 @Composable
-private fun SettingsListCard(
-    currentTheme: BrandTheme,
-    darkMode: DarkMode,
-    updateChannel: UpdateChannel,
-    onThemeClick: () -> Unit,
-    onDarkModeClick: () -> Unit,
-    onUpdateChannelClick: () -> Unit,
-    onNotificationClick: () -> Unit,
-    onPresetSourceClick: () -> Unit,
-    onPrivacyClick: () -> Unit,
-    onTermsClick: () -> Unit
+private fun QuickActionsCard(
+    onNavigateToSettings: () -> Unit,
+    onNavigateToPrivacy: () -> Unit,
+    onNavigateToTerms: () -> Unit
 ) {
-    val settingsItems = listOf(
-        SettingsItem(
-            icon = Icons.Default.Palette,
-            label = stringResource(R.string.settings_theme_title),
-            value = stringResource(currentTheme.brandNameResId),
-            onClick = onThemeClick
-        ),
-        SettingsItem(
-            icon = when (darkMode) {
-                DarkMode.LIGHT -> Icons.Default.WbSunny
-                DarkMode.DARK -> Icons.Default.DarkMode
-                else -> Icons.Default.Brush
-            },
-            label = stringResource(R.string.dark_mode_title),
-            value = when (darkMode) {
-                DarkMode.SYSTEM -> stringResource(R.string.dark_mode_system)
-                DarkMode.LIGHT -> stringResource(R.string.dark_mode_light)
-                DarkMode.DARK -> stringResource(R.string.dark_mode_dark)
-            },
-            onClick = onDarkModeClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Language,
-            label = stringResource(R.string.update_channel_title),
-            value = when (updateChannel) {
-                UpdateChannel.GITEE -> stringResource(R.string.update_channel_gitee)
-                UpdateChannel.GITHUB -> stringResource(R.string.update_channel_github)
-            },
-            onClick = onUpdateChannelClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Notifications,
-            label = stringResource(R.string.notification_settings_title),
-            value = "",
-            onClick = onNotificationClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Storage,
-            label = stringResource(R.string.preset_source_title),
-            value = "",
-            onClick = onPresetSourceClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Security,
-            label = stringResource(R.string.privacy_policy_title),
-            value = "",
-            onClick = onPrivacyClick
-        ),
-        SettingsItem(
-            icon = Icons.Default.Description,
-            label = stringResource(R.string.user_agreement_title),
-            value = "",
-            onClick = onTermsClick
-        )
-    )
+    val haptic = LocalHapticFeedback.current
 
     Card(
         modifier = Modifier
@@ -431,39 +309,52 @@ private fun SettingsListCard(
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            settingsItems.forEachIndexed { index, item ->
-                SettingsListItem(
-                    item = item,
-                    showDivider = index < settingsItems.size - 1
-                )
-            }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            QuickActionItem(
+                icon = Icons.Default.Settings,
+                label = stringResource(R.string.settings_title),
+                description = "主题、深色模式、通知、预设源等",
+                onClick = onNavigateToSettings
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 68.dp),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+            )
+            QuickActionItem(
+                icon = Icons.Default.Security,
+                label = stringResource(R.string.privacy_policy_title),
+                description = "了解我们如何保护你的数据",
+                onClick = onNavigateToPrivacy
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 68.dp),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+            )
+            QuickActionItem(
+                icon = Icons.Default.Description,
+                label = stringResource(R.string.user_agreement_title),
+                description = "使用条款与用户协议",
+                onClick = onNavigateToTerms
+            )
         }
     }
 }
 
-private data class SettingsItem(
-    val icon: ImageVector,
-    val label: String,
-    val value: String,
-    val onClick: () -> Unit
-)
-
 @Composable
-private fun SettingsListItem(
-    item: SettingsItem,
-    showDivider: Boolean
+private fun QuickActionItem(
+    icon: ImageVector,
+    label: String,
+    description: String,
+    onClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
                 haptic.perform(HapticFeedbackType.TextHandleMove)
-                item.onClick()
+                onClick()
             }
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -471,7 +362,8 @@ private fun SettingsListItem(
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
         ) {
             Box(
                 modifier = Modifier
@@ -481,44 +373,31 @@ private fun SettingsListItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = item.icon,
-                    contentDescription = "设置图标",
+                    imageVector = icon,
+                    contentDescription = label,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
             }
-            Text(
-                text = item.label,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-        
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (item.value.isNotEmpty()) {
+            Column {
                 Text(
-                    text = item.value,
-                    fontSize = 12.sp,
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = description,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "箭头",
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                modifier = Modifier.size(16.dp)
-            )
         }
-    }
-    
-    if (showDivider) {
-        HorizontalDivider(
-            modifier = Modifier.padding(start = 68.dp),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+            modifier = Modifier.size(16.dp)
         )
     }
 }

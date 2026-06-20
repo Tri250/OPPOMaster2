@@ -4,31 +4,6 @@
 
 ---
 
-## v1.6.0 (2026-06-19)
-
-### ✨ 新增功能
-
-- **Android 端完整功能集成** - 完成 Android Release 构建流程，支持多架构 APK 输出
-- **AAB 构建支持** - CI 新增 `bundleRelease`，为 Google Play 上架做准备
-- **环境变量签名注入** - Release 构建支持通过 `RELEASE_KEYSTORE_BASE64` 等 Secrets 注入正式签名
-
-### 🎨 优化改进
-
-- 清理 `local-maven-repo` 无效/占位依赖，改为纯远程仓库解析
-- 补全 38 处英文翻译，修复 `lintRelease` MissingTranslation 错误
-- 修复单元测试编译错误，恢复 `testDebugUnitTest` 可运行
-- 移除 CI 中未配置的 `ktlintCheck` / `jacocoTestReport` 任务
-- 替换部分已弃用 Compose API，清理无用颜色资源
-- 更新 Gradle Wrapper 为官方 `services.gradle.org` 镜像
-
-### 🐛 问题修复
-
-- 修复 `settings.gradle.kts` 中 `local-maven-repo` 导致的构建失败
-- 修复 AndroidManifest 缺少 `uses-feature camera` 声明的问题
-- 修复 Release 构建在非 CI 环境缺少 debug keystore 的 fallback 提示
-
----
-
 ## v1.3.1 (2026-06-09)
 
 ### ✨ 新增功能

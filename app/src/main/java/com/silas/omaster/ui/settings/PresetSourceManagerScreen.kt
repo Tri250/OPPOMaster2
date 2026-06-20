@@ -14,11 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
+import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -33,36 +35,44 @@ import kotlinx.serialization.json.Json
 fun PresetSourceManagerScreen(
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+    val cloudSyncManager = remember { CloudSyncManager.getInstance(context) }
     
     var sources by remember { mutableStateOf(getDefaultSources()) }
     var isLoading by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<PresetSource?>(null) }
     var fetchedPresetCount by remember { mutableStateOf(0) }
+    var syncError by remember { mutableStateOf<String?>(null) }
     
-    // 加载预设数量
+    // 加载预设 - 使用 CloudSyncManager 统一同步
     LaunchedEffect(sources) {
         if (sources.any { it.enabled }) {
             isLoading = true
-            var count = 0
-            sources.filter { it.enabled }.forEach { source ->
-                try {
-                    val response = withContext(Dispatchers.IO) {
-                        java.net.URL(source.url).openStream().bufferedReader().readText()
-                    }
-                    val data = Json.decodeFromString<Map<String, Any>>(response)
-                    val presets = data["presets"]
-                    if (presets is List<*>) {
-                        count += presets.size
-                    }
-                } catch (e: Exception) {
-                    // ignore
+            syncError = null
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    cloudSyncManager.sync()
                 }
+                when (result) {
+                    is com.silas.omaster.cloud.SyncResult.Success -> {
+                        fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
+                    }
+                    is com.silas.omaster.cloud.SyncResult.Error -> {
+                        syncError = result.message
+                    }
+                    is com.silas.omaster.cloud.SyncResult.Disabled -> {
+                        // 云同步被禁用，尝试手动加载
+                        fetchedPresetCount = 0
+                    }
+                }
+            } catch (e: Exception) {
+                syncError = e.message ?: "同步失败"
+            } finally {
+                isLoading = false
             }
-            fetchedPresetCount = count
-            isLoading = false
         }
     }
     
@@ -86,11 +96,28 @@ fun PresetSourceManagerScreen(
             actions = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
-                    // 刷新
+                    // 刷新：重新触发同步
                     scope.launch {
                         isLoading = true
-                        delay(1000)
-                        isLoading = false
+                        syncError = null
+                        try {
+                            val result = withContext(Dispatchers.IO) {
+                                cloudSyncManager.sync()
+                            }
+                            when (result) {
+                                is com.silas.omaster.cloud.SyncResult.Success -> {
+                                    fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
+                                }
+                                is com.silas.omaster.cloud.SyncResult.Error -> {
+                                    syncError = result.message
+                                }
+                                else -> {}
+                            }
+                        } catch (e: Exception) {
+                            syncError = e.message ?: "刷新失败"
+                        } finally {
+                            isLoading = false
+                        }
                     }
                 }) {
                     Icon(
@@ -119,49 +146,58 @@ fun PresetSourceManagerScreen(
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${sources.count { it.enabled }}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = HasselbladOrange
-                    )
-                    Text(
-                        text = "已启用",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${sources.count { it.enabled }}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = HasselbladOrange
+                        )
+                        Text(
+                            text = "已启用",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${sources.size}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "预设源",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (isLoading) "..." else "$fetchedPresetCount",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (syncError != null) ErrorRed else SuccessGreen
+                        )
+                        Text(
+                            text = if (syncError != null) "同步失败" else "已加载预设",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (syncError != null) ErrorRed else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+                    }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (syncError != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "${sources.size}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "预设源",
+                        text = syncError ?: "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (isLoading) "..." else "$fetchedPresetCount",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = SuccessGreen
-                    )
-                    Text(
-                        text = "已加载预设",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        color = ErrorRed,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }

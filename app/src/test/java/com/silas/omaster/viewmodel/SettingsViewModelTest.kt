@@ -1,15 +1,13 @@
 package com.silas.omaster.viewmodel
 
 import android.app.Application
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.settings.SettingsViewModel
 import com.silas.omaster.ui.theme.BrandTheme
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +18,11 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.mockito.Mock
+import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.*
 
 /**
  * SettingsViewModel 单元测试
@@ -28,10 +30,18 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
+
     private val testDispatcher = StandardTestDispatcher()
 
+    @Mock
     private lateinit var settingsManager: SettingsManager
+
+    @Mock
     private lateinit var presetRepository: PresetRepository
+
+    @Mock
     private lateinit var application: Application
 
     private lateinit var viewModel: SettingsViewModel
@@ -40,23 +50,20 @@ class SettingsViewModelTest {
 
     @Before
     fun setup() {
+        MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(testDispatcher)
-
-        settingsManager = mockk(relaxed = true)
-        presetRepository = mockk(relaxed = true)
-        application = mockk(relaxed = true)
-
-        every { settingsManager.themeFlow } returns themeFlow
-        every { settingsManager.currentTheme } returns BrandTheme.Hasselblad
-        every { settingsManager.darkMode } returns DarkMode.SYSTEM
-        every { settingsManager.isVibrationEnabled } returns true
-        every { settingsManager.isAnalyticsEnabled } returns false
-        every { settingsManager.isCloudSyncEnabled } returns false
-        every { settingsManager.lastSyncTime } returns 0L
-        every { settingsManager.defaultStartTab } returns 0
-        every { settingsManager.updateChannel } returns UpdateChannel.GITEE
-        every { settingsManager.floatingWindowOpacity } returns 56
-
+        
+        whenever(settingsManager.themeFlow).thenReturn(themeFlow)
+        whenever(settingsManager.currentTheme).thenReturn(BrandTheme.Hasselblad)
+        whenever(settingsManager.darkMode).thenReturn(DarkMode.SYSTEM)
+        whenever(settingsManager.isVibrationEnabled).thenReturn(true)
+        whenever(settingsManager.isAnalyticsEnabled).thenReturn(false)
+        whenever(settingsManager.isCloudSyncEnabled).thenReturn(false)
+        whenever(settingsManager.lastSyncTime).thenReturn(0L)
+        whenever(settingsManager.defaultStartTab).thenReturn(0)
+        whenever(settingsManager.updateChannel).thenReturn(UpdateChannel.STABLE)
+        whenever(settingsManager.floatingWindowOpacity).thenReturn(0.9f)
+        
         viewModel = SettingsViewModel(application, settingsManager, presetRepository)
     }
 
@@ -72,10 +79,10 @@ class SettingsViewModelTest {
 
     @Test
     fun `设置主题更新状态`() = runTest {
-        val newTheme = BrandTheme.Fujifilm
+        val newTheme = BrandTheme.Fuji
         viewModel.setTheme(newTheme)
-
-        verify { settingsManager.currentTheme = newTheme }
+        
+        verify(settingsManager).currentTheme = newTheme
         assertEquals(newTheme, viewModel.currentTheme.value)
     }
 
@@ -83,32 +90,32 @@ class SettingsViewModelTest {
     fun `设置深色模式更新状态`() = runTest {
         val mode = DarkMode.DARK
         viewModel.setDarkMode(mode)
-
-        verify { settingsManager.darkMode = mode }
+        
+        verify(settingsManager).darkMode = mode
         assertEquals(mode, viewModel.darkMode.value)
     }
 
     @Test
     fun `设置振动开关更新状态`() = runTest {
         viewModel.setVibrationEnabled(false)
-
-        verify { settingsManager.isVibrationEnabled = false }
+        
+        verify(settingsManager).isVibrationEnabled = false
         assertFalse(viewModel.vibrationEnabled.value)
     }
 
     @Test
     fun `设置分析开关更新状态`() = runTest {
         viewModel.setAnalyticsEnabled(true)
-
-        verify { settingsManager.isAnalyticsEnabled = true }
+        
+        verify(settingsManager).isAnalyticsEnabled = true
         assertTrue(viewModel.analyticsEnabled.value)
     }
 
     @Test
     fun `设置云同步开关更新状态`() = runTest {
         viewModel.setCloudSyncEnabled(true)
-
-        verify { settingsManager.isCloudSyncEnabled = true }
+        
+        verify(settingsManager).isCloudSyncEnabled = true
         assertTrue(viewModel.cloudSyncEnabled.value)
     }
 
@@ -116,52 +123,52 @@ class SettingsViewModelTest {
     fun `设置默认启动Tab更新状态`() = runTest {
         val tab = 2
         viewModel.setDefaultStartTab(tab)
-
-        verify { settingsManager.defaultStartTab = tab }
+        
+        verify(settingsManager).defaultStartTab = tab
         assertEquals(tab, viewModel.defaultStartTab.value)
     }
 
     @Test
     fun `设置更新渠道更新状态`() = runTest {
-        val channel = UpdateChannel.GITHUB
+        val channel = UpdateChannel.BETA
         viewModel.setUpdateChannel(channel)
-
-        verify { settingsManager.updateChannel = channel }
+        
+        verify(settingsManager).updateChannel = channel
         assertEquals(channel, viewModel.updateChannel.value)
     }
 
     @Test
     fun `设置浮窗透明度更新状态`() = runTest {
-        val opacity = 50
+        val opacity = 0.5f
         viewModel.setFloatingWindowOpacity(opacity)
-
-        verify { settingsManager.floatingWindowOpacity = opacity }
+        
+        verify(settingsManager).floatingWindowOpacity = opacity
         assertEquals(opacity, viewModel.floatingWindowOpacity.value)
     }
 
     @Test
     fun `格式化最后同步时间返回正确格式`() = runTest {
-        every { settingsManager.lastSyncTime } returns System.currentTimeMillis()
-
+        whenever(settingsManager.lastSyncTime).thenReturn(System.currentTimeMillis())
+        
         val formatted = viewModel.formatLastSyncTime()
-
+        
         assertNotNull(formatted)
         assertNotEquals("从未同步", formatted)
     }
 
     @Test
     fun `从未同步时返回正确文本`() = runTest {
-        every { settingsManager.lastSyncTime } returns 0L
-
+        whenever(settingsManager.lastSyncTime).thenReturn(0L)
+        
         val formatted = viewModel.formatLastSyncTime()
-
+        
         assertEquals("从未同步", formatted)
     }
 
     @Test
     fun `清除错误信息`() = runTest {
         viewModel.clearError()
-
+        
         assertNull(viewModel.errorMessage.value)
     }
 }

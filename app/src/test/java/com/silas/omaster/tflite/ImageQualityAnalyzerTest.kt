@@ -257,9 +257,9 @@ class QualityMetricsTest {
 
     @Test
     fun `噪点指标 - 噪点类型判断`() {
-        val lowNoise = NoiseMetrics(8f, "low", 3f)
-        val midNoise = NoiseMetrics(15f, "mixed", 6f)
-        val highNoise = NoiseMetrics(25f, "gaussian", 10f)
+        val lowNoise = NoiseMetrics("low", 8f, 3f)
+        val midNoise = NoiseMetrics("mixed", 15f, 6f)
+        val highNoise = NoiseMetrics("gaussian", 25f, 10f)
         
         assertEquals("low", lowNoise.noiseType)
         assertEquals("mixed", midNoise.noiseType)

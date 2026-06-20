@@ -119,7 +119,7 @@ fun ThemeSettingsScreen(
             }
         }
 
-        HorizontalDivider(
+        Divider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
         )
@@ -187,7 +187,7 @@ fun ThemeSettingsScreen(
             }
         }
 
-        HorizontalDivider(
+        Divider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
         )

@@ -70,7 +70,7 @@ class MasterPresetTest {
             rating = 4.5f,
             ratingCount = 50,
             comments = listOf(
-                PresetComment("1", "User", content = "Great!", rating = 5f)
+                PresetComment("1", "User", "Great!", 5f)
             ),
             isHncs = true
         )
@@ -620,8 +620,8 @@ class MasterPresetTest {
 
     @Test
     fun `相同字段的PresetComment应该相等`() {
-        val comment1 = PresetComment("1", "User", content = "Nice", rating = 5f)
-        val comment2 = PresetComment("1", "User", content = "Nice", rating = 5f)
+        val comment1 = PresetComment("1", "User", "Nice", 5f)
+        val comment2 = PresetComment("1", "User", "Nice", 5f)
         assertEquals(comment1, comment2)
     }
 }

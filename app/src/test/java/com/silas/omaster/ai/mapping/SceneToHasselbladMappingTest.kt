@@ -3,8 +3,6 @@ package com.silas.omaster.ai.mapping
 import com.silas.omaster.model.FilmSeries
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneCategory
-import com.silas.omaster.model.ScenePresets
-import com.silas.omaster.model.SoftLightMode
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -20,8 +18,7 @@ import org.junit.Test
  */
 class SceneToHasselbladMappingTest {
 
-    private val mapping = SceneToHasselbladMapping
-    private val allSceneIds = ScenePresets.allScenes.map { it.id }
+    private val mapping = SceneToHasselbladMapping()
 
     @Test
     fun `getParams - 应该返回人像场景的参数`() {
@@ -194,23 +191,23 @@ class SceneToHasselbladMappingTest {
         val advice = mapping.getParamAdjustmentAdvice(currentParams, "portrait-indoor")
 
         // 对于人像场景，高对比度应该被建议调整
-        val hasContrastAdvice = advice.any { adjustment: SceneToHasselbladMapping.ParamAdjustment ->
-            adjustment.param.contains("contrast", ignoreCase = true) ||
-            adjustment.param.contains("对比度")
+        val hasContrastAdvice = advice.any {
+            it.param.contains("contrast", ignoreCase = true) ||
+            it.param.contains("对比度")
         }
         assertTrue("应该建议调整对比度", hasContrastAdvice)
     }
 
     @Test
     fun `getAllSceneIds - 应该返回所有场景ID`() {
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
 
         assertTrue("场景ID列表不应该为空", sceneIds.isNotEmpty())
     }
 
     @Test
     fun `getAllSceneIds - 应该包含主要场景类别`() {
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
 
         // 检查是否包含人像场景
         assertTrue("应该包含人像场景", sceneIds.any { it.contains("portrait") })
@@ -227,7 +224,7 @@ class SceneToHasselbladMappingTest {
 
     @Test
     fun `getAllSceneIds - 场景ID应该唯一`() {
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
         val uniqueIds = sceneIds.distinct()
 
         assertEquals("场景ID应该唯一", uniqueIds.size, sceneIds.size)
@@ -235,7 +232,7 @@ class SceneToHasselbladMappingTest {
 
     @Test
     fun `场景参数一致性 - 所有场景的参数应该在有效范围内`() {
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
 
         for (sceneId in sceneIds) {
             val params = mapping.getParams(sceneId)
@@ -249,7 +246,7 @@ class SceneToHasselbladMappingTest {
 
     @Test
     fun `场景参数一致性 - 所有场景都应该有胶片推荐`() {
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
 
         for (sceneId in sceneIds) {
             val films = mapping.getRecommendedFilms(sceneId)
@@ -259,7 +256,7 @@ class SceneToHasselbladMappingTest {
 
     @Test
     fun `场景参数一致性 - 所有场景都应该有大师建议`() {
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
 
         for (sceneId in sceneIds) {
             val tips = mapping.getMasterTips(sceneId)
@@ -272,7 +269,7 @@ class SceneToHasselbladMappingTest {
         val standardFilms = listOf("cc", "nc", "nh", "portra", "rdp3", "800t", "tx400")
 
         // 检查至少有一个场景推荐这些胶片
-        val sceneIds = allSceneIds
+        val sceneIds = mapping.getAllSceneIds()
         val allRecommendedFilms = sceneIds.flatMap { mapping.getRecommendedFilms(it) }.map { it.id }
 
         for (film in standardFilms) {

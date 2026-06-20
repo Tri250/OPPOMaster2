@@ -178,7 +178,7 @@ class SceneProfileTest {
             description = "室内环境人像拍摄",
             color = 0xFFFF6B35,
             confidence = 0.85f,
-            hasselbladParams = HasselbladParams(),
+            hasselbladParams = HasselbladParams.DEFAULT,
             recommendedFilm = emptyList(),
             masterTips = listOf("使用柔和光线")
         )
@@ -494,9 +494,7 @@ class ExifDataTest {
             fNumber = 3.2f,
             exposureTime = "1/125",
             iso = 400,
-            dateTime = "2024:01:15 14:30:00",
-            gpsLatitude = null,
-            gpsLongitude = null
+            dateTime = "2024:01:15 14:30:00"
         )
         
         assertEquals("Hasselblad X2D 100C", exif.cameraModel)
