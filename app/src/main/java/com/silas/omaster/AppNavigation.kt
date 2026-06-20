@@ -285,7 +285,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToPresetManager = { navController.navigate(Screen.Home) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
-                    onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
                     onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
@@ -351,10 +350,6 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() },
                     onDownload = { /* LUT download handled internally */ }
                 )
-            }
-
-            composable<Screen.HasselbladColor> {
-                HasselbladScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.CloudSync> {

@@ -53,9 +53,6 @@ sealed class Screen {
     data object LUTShare : Screen()
 
     @Serializable
-    data object HasselbladColor : Screen()
-
-    @Serializable
     data object CloudSync : Screen()
 
     @Serializable

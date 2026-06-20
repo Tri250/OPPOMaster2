@@ -106,7 +106,6 @@ fun CoreFeaturesScreen(
     onNavigateToPresetManager: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToLUTShare: () -> Unit,
-    onNavigateToHasselbladColor: () -> Unit,
     onNavigateToCloudSync: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
@@ -119,7 +118,6 @@ fun CoreFeaturesScreen(
     var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
     var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
-    var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
     var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
 
     // 定义所有功能数据 - 同步Web端features数组
@@ -128,12 +126,12 @@ fun CoreFeaturesScreen(
             // AI智能功能 (前4个)
             FeatureData(
                 id = "ai-scene",
-                title = "哈苏之眼",
-                subtitle = "智能识别50+拍摄场景，自动推荐最佳参数",
+                title = "哈苏大师",
+                subtitle = "AI场景识别 + 哈苏色彩科学，一键拍出大师级作品",
                 icon = Icons.Default.CameraAlt,
                 gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
                 description = FeatureDescription(
-                    desc = "支持36+拍摄场景智能识别",
+                    desc = "AI场景识别 + 哈苏色彩科学，一键拍出大师级作品",
                     tips = listOf("人像", "风景", "夜景", "美食", "建筑", "自然")
                 )
             ),
@@ -209,17 +207,6 @@ fun CoreFeaturesScreen(
                 showToggle = false
             ),
             FeatureData(
-                id = "hasselblad",
-                title = "哈苏色彩科学",
-                subtitle = "HNCS 3.0 自然色彩解决方案",
-                icon = Icons.Default.Image,
-                gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
-                description = FeatureDescription(
-                    desc = "HNCS 3.0 自然色彩解决方案",
-                    tips = listOf("自然色彩", "肤色优化", "风景增强", "黑白胶片")
-                )
-            ),
-            FeatureData(
                 id = "cloud-sync",
                 title = "云同步",
                 subtitle = "多平台云同步，数据永不丢失",
@@ -236,7 +223,7 @@ fun CoreFeaturesScreen(
     // 功能分类 - 同步Web端
     val aiFeatures = allFeatures.slice(0..3)
     val toolFeatures = allFeatures.slice(4..5)
-    val brandFeatures = allFeatures.slice(6..8)
+    val brandFeatures = allFeatures.slice(6..7)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -379,21 +366,16 @@ fun CoreFeaturesScreen(
         brandFeatures.forEach { feature ->
             item {
                 val isEnabled = when (feature.id) {
-                    "hasselblad" -> hasselbladEnabled
                     "cloud-sync" -> cloudSyncEnabled
                     else -> true
                 }
-                
+
                 FeatureCard(
                     feature = feature,
                     isEnabled = isEnabled,
                     onToggle = { enabled ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when (feature.id) {
-                            "hasselblad" -> {
-                                hasselbladEnabled = enabled
-                                settingsManager.isHasselbladColorEnabled = enabled
-                            }
                             "cloud-sync" -> {
                                 cloudSyncEnabled = enabled
                                 settingsManager.isCloudSyncEnabled = enabled
@@ -403,7 +385,6 @@ fun CoreFeaturesScreen(
                     onClick = {
                         when (feature.id) {
                             "lut-share" -> onNavigateToLUTShare()
-                            "hasselblad" -> onNavigateToHasselbladColor()
                             "cloud-sync" -> onNavigateToCloudSync()
                         }
                     }

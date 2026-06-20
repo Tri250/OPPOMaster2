@@ -11,9 +11,11 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.util.perform
 
@@ -50,8 +52,10 @@ fun ThemeSettingsScreen(
     var customColor by remember { mutableStateOf(HasselbladOrange) }
     var showCustomColorPicker by remember { mutableStateOf(false) }
     
-    // 深色模式
-    var darkMode by remember { mutableStateOf("system") }
+    // 深色模式 - 从 SettingsManager 读取，默认深色
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager.getInstance(context) }
+    var darkMode by remember { mutableStateOf(settingsManager.darkMode.name.lowercase()) }
     val darkModeOptions = listOf("system", "light", "dark")
     
     Column(

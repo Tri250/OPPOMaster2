@@ -14,11 +14,15 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.util.UrlConstants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -96,7 +100,10 @@ data class ApiConfig(
  * - 迁移完成后清除旧数据
  */
 class SettingsManager private constructor(private val context: Context) {
-    
+
+    // 协程作用域，用于异步写入 DataStore
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     // 内存缓存层：避免在主线程调用 runBlocking 读取 DataStore 时因磁盘 I/O 导致 ANR
     private val cache = java.util.concurrent.ConcurrentHashMap<String, Any>()
     
@@ -135,7 +142,7 @@ class SettingsManager private constructor(private val context: Context) {
     var isVibrationEnabled: Boolean
         get() = _isVibrationEnabledFlow.value
         set(value) {
-            setDataSync(KEY_VIBRATION_ENABLED, value)
+            setDataAsync(KEY_VIBRATION_ENABLED, value)
             _isVibrationEnabledFlow.value = value
         }
 
@@ -169,7 +176,7 @@ class SettingsManager private constructor(private val context: Context) {
     var currentTheme: BrandTheme
         get() = _themeFlow.value
         set(value) {
-            setDataSync(KEY_THEME_ID, value.id)
+            setDataAsync(KEY_THEME_ID, value.id)
             _themeFlow.value = value
         }
 
@@ -177,28 +184,28 @@ class SettingsManager private constructor(private val context: Context) {
     var floatingWindowOpacity: Int
         get() = getDataSync(KEY_FLOATING_WINDOW_OPACITY, 56)
         set(value) {
-            setDataSync(KEY_FLOATING_WINDOW_OPACITY, value.coerceIn(30, 70))
+            setDataAsync(KEY_FLOATING_WINDOW_OPACITY, value.coerceIn(30, 70))
         }
 
     // 默认启动 Tab (0=发现, 1=收藏, 2=哈苏, 3=上新，默认0)
     var defaultStartTab: Int
         get() = getDataSync(KEY_DEFAULT_START_TAB, 0)
         set(value) {
-            setDataSync(KEY_DEFAULT_START_TAB, value.coerceIn(0, 3))
+            setDataAsync(KEY_DEFAULT_START_TAB, value.coerceIn(0, 3))
         }
 
     // 更新渠道（默认 Gitee）
     var updateChannel: UpdateChannel
         get() = safeValueOf(getDataSync(KEY_UPDATE_CHANNEL, UpdateChannel.GITEE.name), UpdateChannel.GITEE)
         set(value) {
-            setDataSync(KEY_UPDATE_CHANNEL, value.name)
+            setDataAsync(KEY_UPDATE_CHANNEL, value.name)
         }
 
     // 友盟统计开关（默认开启，因为用户首次已同意隐私政策）
     var isAnalyticsEnabled: Boolean
         get() = getDataSync(KEY_ANALYTICS_ENABLED, true)
         set(value) {
-            setDataSync(KEY_ANALYTICS_ENABLED, value)
+            setDataAsync(KEY_ANALYTICS_ENABLED, value)
         }
 
     // ==================== 新增功能 ====================
@@ -207,7 +214,7 @@ class SettingsManager private constructor(private val context: Context) {
     var darkMode: DarkMode
         get() = safeValueOf(getDataSync(KEY_DARK_MODE, DarkMode.DARK.name), DarkMode.DARK)
         set(value) {
-            setDataSync(KEY_DARK_MODE, value.name)
+            setDataAsync(KEY_DARK_MODE, value.name)
             _darkModeFlow.value = value
         }
 
@@ -216,7 +223,7 @@ class SettingsManager private constructor(private val context: Context) {
         get() = getDataSyncOrNull(KEY_LAST_WATERMARK_TEMPLATE)
         set(value) {
             if (value != null) {
-                setDataSync(KEY_LAST_WATERMARK_TEMPLATE, value)
+                setDataAsync(KEY_LAST_WATERMARK_TEMPLATE, value)
             } else {
                 removeDataSync(KEY_LAST_WATERMARK_TEMPLATE)
             }
@@ -226,7 +233,7 @@ class SettingsManager private constructor(private val context: Context) {
     var isCloudSyncEnabled: Boolean
         get() = getDataSync(KEY_CLOUD_SYNC_ENABLED, true)
         set(value) {
-            setDataSync(KEY_CLOUD_SYNC_ENABLED, value)
+            setDataAsync(KEY_CLOUD_SYNC_ENABLED, value)
         }
 
     // 云端预设数据源 URL
@@ -237,14 +244,14 @@ class SettingsManager private constructor(private val context: Context) {
     var cloudSyncStatus: CloudSyncStatus
         get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.SYNCED.name), CloudSyncStatus.SYNCED)
         set(value) {
-            setDataSync(KEY_CLOUD_SYNC_STATUS, value.name)
+            setDataAsync(KEY_CLOUD_SYNC_STATUS, value.name)
         }
 
     // 最后同步时间
     var lastSyncTime: Long
         get() = getDataSync(KEY_LAST_SYNC_TIME, 0L)
         set(value) {
-            setDataSync(KEY_LAST_SYNC_TIME, value)
+            setDataAsync(KEY_LAST_SYNC_TIME, value)
         }
 
     // 用户ID（用于云同步）
@@ -252,7 +259,7 @@ class SettingsManager private constructor(private val context: Context) {
         get() = getDataSyncOrNull(KEY_USER_ID)
         set(value) {
             if (value != null) {
-                setDataSync(KEY_USER_ID, value)
+                setDataAsync(KEY_USER_ID, value)
             } else {
                 removeDataSync(KEY_USER_ID)
             }
@@ -263,7 +270,7 @@ class SettingsManager private constructor(private val context: Context) {
         get() = getDataSyncOrNull(KEY_CLOUD_API_KEY)
         set(value) {
             if (value != null) {
-                setDataSync(KEY_CLOUD_API_KEY, value)
+                setDataAsync(KEY_CLOUD_API_KEY, value)
             } else {
                 removeDataSync(KEY_CLOUD_API_KEY)
             }
@@ -277,7 +284,7 @@ class SettingsManager private constructor(private val context: Context) {
     var isAISceneRecognitionEnabled: Boolean
         get() = _isAISceneRecognitionEnabledFlow.value
         set(value) {
-            setDataSync(KEY_AI_SCENE_ENABLED, value)
+            setDataAsync(KEY_AI_SCENE_ENABLED, value)
             _isAISceneRecognitionEnabledFlow.value = value
         }
 
@@ -286,7 +293,7 @@ class SettingsManager private constructor(private val context: Context) {
     var isAIFineTuneEnabled: Boolean
         get() = getDataSync(KEY_AI_FINE_TUNE_ENABLED, true)
         set(value) {
-            setDataSync(KEY_AI_FINE_TUNE_ENABLED, value)
+            setDataAsync(KEY_AI_FINE_TUNE_ENABLED, value)
         }
 
     // 智能优化开关
@@ -294,57 +301,54 @@ class SettingsManager private constructor(private val context: Context) {
     var isSmartOptimizeEnabled: Boolean
         get() = getDataSync(KEY_SMART_OPTIMIZE_ENABLED, true)
         set(value) {
-            setDataSync(KEY_SMART_OPTIMIZE_ENABLED, value)
+            setDataAsync(KEY_SMART_OPTIMIZE_ENABLED, value)
         }
 
     // 水印编辑器开关
     var isWatermarkEditorEnabled: Boolean
         get() = getDataSync(KEY_WATERMARK_EDITOR_ENABLED, true)
         set(value) {
-            setDataSync(KEY_WATERMARK_EDITOR_ENABLED, value)
+            setDataAsync(KEY_WATERMARK_EDITOR_ENABLED, value)
         }
 
-    // 哈苏色彩科学开关
-    // v1.6.0 默认开启：所有核心功能默认启用
+    // 哈苏色彩科学开关（已合并到哈苏大师，委托给 AI 场景识别开关）
     var isHasselbladColorEnabled: Boolean
-        get() = getDataSync(KEY_HASSELBLAD_COLOR_ENABLED, true)
-        set(value) {
-            setDataSync(KEY_HASSELBLAD_COLOR_ENABLED, value)
-        }
+        get() = isAISceneRecognitionEnabled
+        set(value) { isAISceneRecognitionEnabled = value }
 
     // 自定义设备型号（WM-003）
     var customDeviceModel: String
         get() = getDataSync(KEY_CUSTOM_DEVICE_MODEL, "")
         set(value) {
-            setDataSync(KEY_CUSTOM_DEVICE_MODEL, value)
+            setDataAsync(KEY_CUSTOM_DEVICE_MODEL, value)
         }
 
     // 预设版本映射（JSON 字符串），用于云端增量更新对比
     var presetVersionMapJson: String
         get() = getDataSync(KEY_PRESET_VERSION_MAP, "")
         set(value) {
-            setDataSync(KEY_PRESET_VERSION_MAP, value)
+            setDataAsync(KEY_PRESET_VERSION_MAP, value)
         }
 
     // 收藏的预设ID列表（PM-003）
     var favoritePresetIds: List<String>
         get() = getDataSetSync(KEY_FAVORITE_PRESET_IDS, emptySet()).toList()
         set(value) {
-            setDataSetSync(KEY_FAVORITE_PRESET_IDS, value.toSet())
+            setDataSetAsync(KEY_FAVORITE_PRESET_IDS, value.toSet())
         }
 
     // 置顶的预设ID列表（PM-008）
     var pinnedPresetIds: List<String>
         get() = getDataSetSync(KEY_PINNED_PRESET_IDS, emptySet()).toList()
         set(value) {
-            setDataSetSync(KEY_PINNED_PRESET_IDS, value.toSet())
+            setDataSetAsync(KEY_PINNED_PRESET_IDS, value.toSet())
         }
 
     // 手动修改的参数（PP-005）
     var manuallyModifiedParams: List<String>
         get() = getDataSetSync(KEY_MANUALLY_MODIFIED_PARAMS, emptySet()).toList()
         set(value) {
-            setDataSetSync(KEY_MANUALLY_MODIFIED_PARAMS, value.toSet())
+            setDataSetAsync(KEY_MANUALLY_MODIFIED_PARAMS, value.toSet())
         }
 
     // 自定义快捷档位（PP-004）
@@ -360,7 +364,7 @@ class SettingsManager private constructor(private val context: Context) {
         }
         set(value) {
             val jsonStr = Json.encodeToString(value)
-            setDataSync(KEY_CUSTOM_QUICK_PRESETS, jsonStr)
+            setDataAsync(KEY_CUSTOM_QUICK_PRESETS, jsonStr)
         }
 
     // 应用预设参数（精选推荐功能）
@@ -709,6 +713,51 @@ class SettingsManager private constructor(private val context: Context) {
     }
     
     /**
+     * 异步设置数据（用于主线程调用，避免 ANR）
+     */
+    private fun setDataAsync(key: Preferences.Key<String>, value: String) {
+        cache[key.name] = value
+        scope.launch {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+
+    private fun setDataAsync(key: Preferences.Key<Boolean>, value: Boolean) {
+        cache[key.name] = value
+        scope.launch {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+
+    private fun setDataAsync(key: Preferences.Key<Int>, value: Int) {
+        cache[key.name] = value
+        scope.launch {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+
+    private fun setDataAsync(key: Preferences.Key<Long>, value: Long) {
+        cache[key.name] = value
+        scope.launch {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+
+    private fun setDataAsync(key: Preferences.Key<Float>, value: Float) {
+        cache[key.name] = value
+        scope.launch {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+
+    private fun setDataSetAsync(key: Preferences.Key<Set<String>>, value: Set<String>) {
+        cache[key.name] = value
+        scope.launch {
+            context.dataStore.edit { prefs -> prefs[key] = value }
+        }
+    }
+
+    /**
      * 同步删除数据（同时清除缓存）
      */
     @JvmName("removeDataSyncString")
@@ -784,7 +833,7 @@ class SettingsManager private constructor(private val context: Context) {
                 KEY_DARK_MODE, KEY_CLOUD_SYNC_ENABLED, KEY_CLOUD_SYNC_STATUS,
                 KEY_LAST_SYNC_TIME, KEY_USER_ID, KEY_CLOUD_API_KEY, KEY_AI_SCENE_ENABLED,
                 KEY_LAST_WATERMARK_TEMPLATE, KEY_AI_FINE_TUNE_ENABLED, KEY_SMART_OPTIMIZE_ENABLED,
-                KEY_WATERMARK_EDITOR_ENABLED, KEY_HASSELBLAD_COLOR_ENABLED, KEY_CUSTOM_DEVICE_MODEL,
+                KEY_WATERMARK_EDITOR_ENABLED, KEY_CUSTOM_DEVICE_MODEL,
                 KEY_PRESET_VERSION_MAP, KEY_FAVORITE_PRESET_IDS, KEY_PINNED_PRESET_IDS,
                 KEY_MANUALLY_MODIFIED_PARAMS, KEY_CUSTOM_QUICK_PRESETS, KEY_API_CONFIG_LOADED,
                 KEY_AI_API_ENDPOINT, KEY_PRESET_API_ENDPOINT, KEY_AUTH_API_ENDPOINT, KEY_API_VERSION,
@@ -849,7 +898,6 @@ class SettingsManager private constructor(private val context: Context) {
         private val KEY_AI_FINE_TUNE_ENABLED = booleanPreferencesKey("ai_fine_tune_enabled")
         private val KEY_SMART_OPTIMIZE_ENABLED = booleanPreferencesKey("smart_optimize_enabled")
         private val KEY_WATERMARK_EDITOR_ENABLED = booleanPreferencesKey("watermark_editor_enabled")
-        private val KEY_HASSELBLAD_COLOR_ENABLED = booleanPreferencesKey("hasselblad_color_enabled")
         private val KEY_CUSTOM_DEVICE_MODEL = stringPreferencesKey("custom_device_model")
         private val KEY_PRESET_VERSION_MAP = stringPreferencesKey("preset_version_map")
         private val KEY_FAVORITE_PRESET_IDS = stringSetPreferencesKey("favorite_preset_ids")
