@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import {
   ArrowLeft, Sun, Palette,
   Eye, Sparkles, Moon, Leaf,
@@ -37,7 +38,7 @@ const COLOR_PARAMS = [
 ];
 
 const HasselbladPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { reduceMotion, setCurrentSubPage } = useAppStore();
   const [selectedMode, setSelectedMode] = useState('natural');
   const [params, setParams] = useState<ColorParams>({
     saturation: 0,
@@ -89,12 +90,12 @@ const HasselbladPage: React.FC = () => {
   };
 
   return (
-    <div className="h-full w-full bg-[#0a0a0a] flex flex-col overflow-hidden">
+    <div className="h-full w-full bg-master-bg flex flex-col overflow-hidden" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="bg-[#0a0a0a] border-b border-white/5 px-4 py-3 flex items-center gap-3">
+      <div className="bg-master-bg border-b border-master-glass-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+          className="p-2 -ml-2 hover:bg-master-glass-strong rounded-full transition-all duration-normal"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
@@ -104,23 +105,23 @@ const HasselbladPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-[#FF6B35] to-[#FF8C42] rounded-2xl p-5 text-white">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
+            <div className="p-3 bg-master-glass-strong rounded-xl">
               <Camera size={32} className="text-white" />
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold mb-1">HNCS 3.0</h2>
-              <p className="text-white/80 text-sm">哈苏自然色彩解决方案</p>
-              <p className="text-white/60 text-xs mt-2">还原真实色彩，呈现自然之美</p>
+              <p className="text-master-text-secondary text-sm">哈苏自然色彩解决方案</p>
+              <p className="text-master-text-secondary text-xs mt-2">还原真实色彩，呈现自然之美</p>
             </div>
           </div>
         </div>
 
         {/* Color Modes */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 border border-white/5">
+        <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
           <h3 className="text-sm font-semibold text-white mb-3">色彩模式</h3>
           <div className="grid grid-cols-2 gap-2">
             {COLOR_MODES.map(mode => {
@@ -133,16 +134,16 @@ const HasselbladPage: React.FC = () => {
                   className={`p-3 rounded-xl border-2 transition-all text-left ${
                     isSelected
                       ? 'border-[#FF6B35] bg-[#FF6B35]/10'
-                      : 'border-white/5 hover:border-white/10 hover:bg-white/5'
+                      : 'border-master-glass-border hover:border-master-glass-border hover:bg-master-glass'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Icon size={18} style={{ color: mode.color }} />
-                    <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-white/70'}`}>
+                    <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-master-text-secondary'}`}>
                       {mode.name}
                     </span>
                   </div>
-                  <p className="text-xs text-white/50">{mode.desc}</p>
+                  <p className="text-xs text-master-text-tertiary">{mode.desc}</p>
                 </button>
               );
             })}
@@ -150,13 +151,13 @@ const HasselbladPage: React.FC = () => {
         </div>
 
         {/* Fine Tuning */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 border border-white/5">
+        <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
           <h3 className="text-sm font-semibold text-white mb-3">精细调节</h3>
           <div className="space-y-4">
             {COLOR_PARAMS.map(param => (
               <div key={param.id}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-white/60">{param.name}</span>
+                  <span className="text-sm text-master-text-secondary">{param.name}</span>
                   <span className="text-sm font-medium text-white">{params[param.id as keyof typeof params]}</span>
                 </div>
                 <input
@@ -165,7 +166,7 @@ const HasselbladPage: React.FC = () => {
                   max={param.max}
                   value={params[param.id as keyof typeof params]}
                   onChange={(e) => handleParamChange(param.id, parseInt(e.target.value))}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#FF6B35]"
+                  className="w-full h-2 bg-master-glass-strong rounded-lg appearance-none cursor-pointer accent-[#FF6B35]"
                 />
               </div>
             ))}
@@ -173,34 +174,34 @@ const HasselbladPage: React.FC = () => {
         </div>
 
         {/* Features */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 border border-white/5">
+        <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
           <h3 className="text-sm font-semibold text-white mb-3">核心特性</h3>
           <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#FF6B35]/20 rounded-lg">
                 <Zap size={18} className="text-[#FF6B35]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">自然肤色还原</h4>
-                <p className="text-xs text-white/50 mt-0.5">智能识别肤色区域，自然美化不偏色</p>
+                <p className="text-xs text-master-text-tertiary mt-0.5">智能识别肤色区域，自然美化不偏色</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#2196F3]/20 rounded-lg">
                 <Layers size={18} className="text-[#2196F3]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">色彩层次增强</h4>
-                <p className="text-xs text-white/50 mt-0.5">智能增强色彩过渡，层次更丰富</p>
+                <p className="text-xs text-master-text-tertiary mt-0.5">智能增强色彩过渡，层次更丰富</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#9C27B0]/20 rounded-lg">
                 <Sparkles size={18} className="text-[#9C27B0]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">16-bit 色彩深度</h4>
-                <p className="text-xs text-white/50 mt-0.5">超高色彩精度，细节分毫毕现</p>
+                <p className="text-xs text-master-text-tertiary mt-0.5">超高色彩精度，细节分毫毕现</p>
               </div>
             </div>
           </div>
@@ -208,16 +209,16 @@ const HasselbladPage: React.FC = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="bg-[#0a0a0a] border-t border-white/5 p-4 flex gap-3">
+      <div className="bg-master-bg border-t border-master-glass-border p-4 flex gap-3">
         <button
           onClick={handleReset}
-          className="flex-1 py-3 px-4 bg-white/10 text-white/70 rounded-xl font-medium hover:bg-white/15 transition-colors"
+          className="flex-1 py-3 px-4 bg-master-glass-strong text-master-text-secondary rounded-xl font-medium hover:bg-white/15 transition-all duration-normal active:scale-95"
         >
           重置
         </button>
         <button
           onClick={handleApply}
-          className="flex-1 py-3 px-4 bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] text-white rounded-xl font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-3 px-4 bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] text-white rounded-xl font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2 active:scale-95"
         >
           {isApplied ? <Check size={20} /> : <Aperture size={20} />}
           {isApplied ? '已应用' : '应用色彩'}

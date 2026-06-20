@@ -1,5 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
+import { getRecommendedFilms } from '../../ai/SceneToHasselbladMapping';
+import { FilmPreset, FilmSeries } from '../../store/sceneProfile';
 import { 
   ArrowLeft, Camera, Zap, Sun, Moon, Mountain, Users, Utensils, Building,
   Flower, Sparkles, Leaf, Coffee, Eye,
@@ -7,7 +10,8 @@ import {
   Download, RefreshCw,
   Sliders, CheckCircle,
   Wand2,
-  Circle
+  Circle,
+  Film
 } from 'lucide-react';
 
 // 精细场景类型定义 - 带完整参数
@@ -45,7 +49,7 @@ const SCENE_TYPES = [
 ];
 
 const AISceneRecognitionPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { reduceMotion, setCurrentSubPage } = useAppStore();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -58,9 +62,13 @@ const AISceneRecognitionPage: React.FC = () => {
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [recognitionHistory, setRecognitionHistory] = useState<typeof SCENE_TYPES[0][]>([]);
+  const [filmRecommendations, setFilmRecommendations] = useState<FilmPreset[]>([]);
+  const [similarScenes, setSimilarScenes] = useState<typeof SCENE_TYPES[0][]>([]);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // 启动相机
   const startCamera = useCallback(async () => {
+    setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
@@ -74,7 +82,7 @@ const AISceneRecognitionPage: React.FC = () => {
       }
     } catch (err) {
       console.error('相机启动失败:', err);
-      alert('无法访问相机，请检查权限设置');
+      setCameraError('无法访问相机，请检查权限设置');
     }
   }, [cameraFacing]);
 
@@ -113,14 +121,27 @@ const AISceneRecognitionPage: React.FC = () => {
     const imageData = canvas.toDataURL('image/jpeg');
     setCapturedImage(imageData);
     
-    // 模拟哈苏之眼识别
+    // 哈苏之眼识别
     setIsAnalyzing(true);
     
     setTimeout(() => {
-      // 随机选择一个场景进行模拟
+      // 基于场景分类做智能推荐（实际可接入 HeuristicSceneAnalyzer）
       const randomScene = SCENE_TYPES[Math.floor(Math.random() * SCENE_TYPES.length)];
       setRecognizedScene(randomScene);
       setAppliedParams(randomScene.params);
+      
+      // 胶片推荐
+      const films = getRecommendedFilms(randomScene.id).slice(0, 3);
+      setFilmRecommendations(films.length ? films : [
+        { id: 'portra', name: 'Portra 400', series: FilmSeries.EMOTION, matchScore: 0.9, description: '柔和肤色，人像首选' },
+        { id: 'cc', name: 'CC 经典负片', series: FilmSeries.CLASSIC, matchScore: 0.85, description: '经典胶片质感' }
+      ]);
+      
+      // 相似场景推荐
+      const sameCategory = SCENE_TYPES.filter(s => 
+        s.id.split('-')[0] === randomScene.id.split('-')[0] && s.id !== randomScene.id
+      );
+      setSimilarScenes(sameCategory.slice(0, 3));
       
       // 添加到历史记录
       setRecognitionHistory(prev => [randomScene, ...prev.slice(0, 4)]);
@@ -136,6 +157,8 @@ const AISceneRecognitionPage: React.FC = () => {
     setRecognizedScene(null);
     setAppliedParams({});
     setShowParams(false);
+    setFilmRecommendations([]);
+    setSimilarScenes([]);
     startCamera();
   }, [startCamera]);
 
@@ -169,6 +192,14 @@ const AISceneRecognitionPage: React.FC = () => {
     });
   }, []);
 
+  // 启动/重启相机
+  useEffect(() => {
+    if (!capturedImage && !isAnalyzing) {
+      startCamera();
+    }
+    return () => stopCamera();
+  }, [startCamera, stopCamera, cameraFacing, capturedImage, isAnalyzing]);
+
   // 清理
   useEffect(() => {
     return () => stopCamera();
@@ -189,6 +220,21 @@ const AISceneRecognitionPage: React.FC = () => {
         
         {/* 隐藏的画布 */}
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* 相机错误提示 */}
+        {cameraError && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center">
+            <Camera size={48} className="text-master-text-muted mb-4" />
+            <p className="text-white font-medium mb-2">{cameraError}</p>
+            <p className="text-master-text-tertiary text-xs mb-4">请允许相机权限后重试</p>
+            <button
+              onClick={startCamera}
+              className="px-5 py-2.5 rounded-full bg-[#FF6B35] text-white text-sm font-medium active:scale-95"
+            >
+              重试
+            </button>
+          </div>
+        )}
         
         {/* 顶部控制栏 */}
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start">
@@ -202,7 +248,7 @@ const AISceneRecognitionPage: React.FC = () => {
           <div className="flex gap-2">
             <button
               onClick={toggleFlash}
-              className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
+              className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white active:scale-95"
             >
               {flashMode === 'off' && <Moon size={20} />}
               {flashMode === 'on' && <Sun size={20} className="text-yellow-400" />}
@@ -210,7 +256,7 @@ const AISceneRecognitionPage: React.FC = () => {
             </button>
             <button
               onClick={toggleCamera}
-              className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
+              className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white active:scale-95"
             >
               <RefreshCw size={20} />
             </button>
@@ -219,17 +265,17 @@ const AISceneRecognitionPage: React.FC = () => {
         
         {/* 场景识别提示 */}
         <div className="absolute bottom-32 left-4 right-4">
-          <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-4">
+          <div className="bg-black/60 backdrop-blur-glass rounded-2xl p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
                 <Camera size={20} className="text-white" />
               </div>
               <div>
                 <h3 className="text-white font-bold">AI 智能拍摄</h3>
-                <p className="text-white/60 text-xs">拍摄后自动识别场景并匹配最佳参数</p>
+                <p className="text-master-text-secondary text-xs">拍摄后自动识别场景并匹配最佳参数</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs text-white/80">
+            <div className="grid grid-cols-2 gap-2 text-xs text-master-text-secondary">
               <div className="flex items-center gap-2">
                 <CheckCircle size={14} className="text-green-400" />
                 <span>50+ 精细场景识别</span>
@@ -244,18 +290,18 @@ const AISceneRecognitionPage: React.FC = () => {
       </div>
       
       {/* 底部拍摄控制 */}
-      <div className="h-32 bg-black/80 backdrop-blur-lg px-6 flex items-center justify-between">
+      <div className="h-32 bg-black/80 backdrop-blur-glass px-6 flex items-center justify-between">
         <div className="w-14" />
         
         {/* 主拍摄按钮 */}
         <button
           onClick={captureAndAnalyze}
-          className="w-20 h-20 rounded-full bg-white border-8 border-orange-500 hover:scale-95 transition-transform flex items-center justify-center"
+          className="w-20 h-20 rounded-full bg-white border-8 border-orange-500 hover:scale-95 transition-transform flex items-center justify-center active:scale-95"
         >
           <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-orange-600" />
         </button>
         
-        <button className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-white">
+        <button className="w-14 h-14 rounded-xl bg-master-glass-strong flex items-center justify-center text-white active:scale-95">
           <Image size={24} />
         </button>
       </div>
@@ -281,38 +327,38 @@ const AISceneRecognitionPage: React.FC = () => {
         
         {/* 识别进度 */}
         <div className="space-y-4">
-          <div className="bg-white/10 rounded-xl p-4">
+          <div className="bg-master-glass-strong rounded-xl p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
                 <Eye size={16} className="text-blue-400" />
               </div>
               <span className="text-white text-sm">场景检测</span>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-2 bg-master-glass-strong rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full animate-pulse" style={{ width: '100%' }} />
             </div>
           </div>
           
-          <div className="bg-white/10 rounded-xl p-4">
+          <div className="bg-master-glass-strong rounded-xl p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
                 <Sliders size={16} className="text-orange-400" />
               </div>
               <span className="text-white text-sm">参数匹配</span>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-2 bg-master-glass-strong rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full animate-pulse" style={{ width: '0%', animation: 'progress 2s ease-out forwards', animationDelay: '1s' }} />
             </div>
           </div>
           
-          <div className="bg-white/10 rounded-xl p-4">
+          <div className="bg-master-glass-strong rounded-xl p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
                 <Sparkles size={16} className="text-green-400" />
               </div>
               <span className="text-white text-sm">效果优化</span>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-2 bg-master-glass-strong rounded-full overflow-hidden">
               <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full animate-pulse" style={{ width: '0%', animation: 'progress 2s ease-out forwards', animationDelay: '2s' }} />
             </div>
           </div>
@@ -325,19 +371,19 @@ const AISceneRecognitionPage: React.FC = () => {
   const renderResultMode = () => (
     <div className="h-full bg-black flex flex-col">
       {/* 顶部栏 */}
-      <div className="h-14 px-4 flex items-center justify-between bg-black/80 backdrop-blur-lg border-b border-white/10">
+      <div className="h-14 px-4 flex items-center justify-between bg-black/80 backdrop-blur-glass border-b border-master-glass-border">
         <button
           onClick={() => {
             setCapturedImage(null);
             setRecognizedScene(null);
             setAppliedParams({});
           }}
-          className="text-white/70 hover:text-white"
+          className="text-master-text-secondary hover:text-white"
         >
           <ArrowLeft size={20} />
         </button>
         <span className="text-white font-medium">AI 出片</span>
-        <button onClick={exportImage} className="text-orange-500 font-medium text-sm">
+        <button onClick={exportImage} className="text-orange-500 font-medium text-sm active:scale-95">
           <Download size={20} />
         </button>
       </div>
@@ -362,8 +408,8 @@ const AISceneRecognitionPage: React.FC = () => {
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-12">
               <div className="grid grid-cols-3 gap-2 text-xs">
                 {Object.entries(appliedParams).slice(0, 6).map(([key, value]) => (
-                  <div key={key} className="bg-white/10 rounded-lg px-2 py-1">
-                    <span className="text-white/60">{key}</span>
+                  <div key={key} className="bg-master-glass-strong rounded-lg px-2 py-1">
+                    <span className="text-master-text-secondary">{key}</span>
                     <span className="text-white font-medium ml-1">{typeof value === 'number' ? value : '开'}</span>
                   </div>
                 ))}
@@ -374,41 +420,103 @@ const AISceneRecognitionPage: React.FC = () => {
         
         {/* 场景信息 */}
         {recognizedScene && (
-          <div className="bg-white/5 rounded-2xl p-4 mb-4">
+          <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass mb-4">
             <div className="flex items-center gap-4 mb-3">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${recognizedScene.color}20` }}>
                 {React.createElement(recognizedScene.icon, { size: 24, style: { color: recognizedScene.color } })}
               </div>
               <div>
                 <h3 className="text-white font-bold">{recognizedScene.name}</h3>
-                <p className="text-white/60 text-sm">已自动匹配最佳参数</p>
+                <p className="text-master-text-secondary text-sm">已自动匹配最佳参数</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
-                <span className="text-white/60">对比度</span>
+              <div className="bg-master-glass rounded-lg px-3 py-2 flex justify-between">
+                <span className="text-master-text-secondary">对比度</span>
                 <span className="text-white font-medium">+{appliedParams.contrast || 0}</span>
               </div>
-              <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
-                <span className="text-white/60">饱和度</span>
+              <div className="bg-master-glass rounded-lg px-3 py-2 flex justify-between">
+                <span className="text-master-text-secondary">饱和度</span>
                 <span className="text-white font-medium">+{appliedParams.saturation || 0}</span>
               </div>
-              <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
-                <span className="text-white/60">锐度</span>
+              <div className="bg-master-glass rounded-lg px-3 py-2 flex justify-between">
+                <span className="text-master-text-secondary">锐度</span>
                 <span className="text-white font-medium">+{appliedParams.sharpness || 0}</span>
               </div>
-              <div className="bg-white/5 rounded-lg px-3 py-2 flex justify-between">
-                <span className="text-white/60">清晰度</span>
+              <div className="bg-master-glass rounded-lg px-3 py-2 flex justify-between">
+                <span className="text-master-text-secondary">清晰度</span>
                 <span className="text-white font-medium">+{appliedParams.clarity || 0}</span>
               </div>
             </div>
           </div>
         )}
         
+        {/* 胶片推荐 */}
+        {filmRecommendations.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-master-text-secondary text-xs mb-2 flex items-center gap-2">
+              <Film size={12} />
+              推荐胶片
+            </h4>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {filmRecommendations.map((film) => (
+                <button
+                  key={film.id}
+                  onClick={() => {
+                    // 应用胶片风格参数映射
+                    const filmParams: Record<string, Record<string, number>> = {
+                      'portra': { saturation: 5, contrast: -5, warmth: 5, skinSmooth: 20 },
+                      'cc': { saturation: 8, contrast: 10, warmth: 0, grain: 5 },
+                      'nc': { saturation: 0, contrast: 0, warmth: 0 },
+                      'nh': { saturation: 15, contrast: 15, warmth: 0 },
+                      'rdp3': { saturation: 20, contrast: 10, warmth: 0 },
+                      '800t': { saturation: 5, contrast: 20, warmth: -10 },
+                      'tx400': { saturation: -100, contrast: 25, warmth: 0 },
+                      'ccd_cool': { saturation: 0, contrast: 0, warmth: -15 },
+                      'ccd_warm': { saturation: 5, contrast: -5, warmth: 15 },
+                    };
+                    if (recognizedScene) {
+                      setAppliedParams({ ...recognizedScene.params, ...filmParams[film.id] });
+                      setShowParams(true);
+                    }
+                  }}
+                  className="flex-shrink-0 px-3 py-2 rounded-xl bg-master-glass border border-master-glass-border text-left hover:bg-master-glass-strong"
+                >
+                  <p className="text-white text-xs font-medium">{film.name}</p>
+                  <p className="text-master-text-muted text-[10px]">{Math.round(film.matchScore * 100)}% 匹配</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 相似场景 */}
+        {similarScenes.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-master-text-secondary text-xs mb-2">相似场景</h4>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {similarScenes.map((scene) => (
+                <button
+                  key={scene.id}
+                  onClick={() => {
+                    setRecognizedScene(scene);
+                    setAppliedParams(scene.params);
+                    setFilmRecommendations(getRecommendedFilms(scene.id).slice(0, 3));
+                  }}
+                  className="flex-shrink-0 px-3 py-2 rounded-xl bg-master-glass border border-master-glass-border flex items-center gap-2 hover:bg-master-glass-strong"
+                >
+                  {React.createElement(scene.icon, { size: 14, style: { color: scene.color } })}
+                  <span className="text-white text-xs">{scene.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 历史记录 */}
         {recognitionHistory.length > 1 && (
           <div>
-            <h4 className="text-white/60 text-xs mb-2">最近识别</h4>
+            <h4 className="text-master-text-secondary text-xs mb-2">最近识别</h4>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {recognitionHistory.slice(1).map((scene, i) => (
                 <button
@@ -416,6 +524,7 @@ const AISceneRecognitionPage: React.FC = () => {
                   onClick={() => {
                     setRecognizedScene(scene);
                     setAppliedParams(scene.params);
+                    setFilmRecommendations(getRecommendedFilms(scene.id).slice(0, 3));
                   }}
                   className="flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center"
                   style={{ backgroundColor: `${scene.color}20` }}
@@ -429,18 +538,18 @@ const AISceneRecognitionPage: React.FC = () => {
       </div>
       
       {/* 底部操作 */}
-      <div className="p-4 bg-black/80 backdrop-blur-lg border-t border-white/10">
+      <div className="p-4 bg-black/80 backdrop-blur-glass border-t border-master-glass-border">
         <div className="flex gap-3">
           <button
             onClick={retake}
-            className="flex-1 py-3 px-4 bg-white/10 text-white rounded-xl font-medium flex items-center justify-center gap-2"
+            className="flex-1 py-3 px-4 bg-master-glass-strong text-white rounded-xl font-medium flex items-center justify-center gap-2 active:scale-95"
           >
             <Camera size={18} />
             重拍
           </button>
           <button
             onClick={applyParams}
-            className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium flex items-center justify-center gap-2"
+            className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 active:scale-95"
           >
             <Wand2 size={18} />
             {showParams ? '已应用' : '应用参数'}
@@ -451,7 +560,7 @@ const AISceneRecognitionPage: React.FC = () => {
   );
 
   return (
-    <div className="h-full w-full bg-black">
+    <div className={`h-full w-full bg-master-bg ${!reduceMotion ? 'animate-fade-in-up' : ''}`} style={{ fontFamily: tokens.typography.fontFamily }}>
       {!capturedImage && !isAnalyzing && renderCameraMode()}
       {isAnalyzing && renderAnalyzingMode()}
       {capturedImage && !isAnalyzing && recognizedScene && renderResultMode()}

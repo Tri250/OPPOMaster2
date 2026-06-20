@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { ArrowLeft, Shield, Lock, Eye, FileText, ExternalLink } from 'lucide-react';
 
 const PrivacyPage: React.FC = () => {
-  const { goBack } = useAppStore();
+  const { reduceMotion, goBack } = useAppStore();
 
   const sections = [
     {
@@ -24,12 +25,12 @@ const PrivacyPage: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-master-bg" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-master-glass-border">
         <button 
           onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal active:scale-95"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
@@ -37,13 +38,13 @@ const PrivacyPage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         <div className="p-4 rounded-2xl bg-gradient-to-br from-[#FF6B35]/10 to-transparent border border-[#FF6B35]/20 mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Shield size={24} className="text-[#FF6B35]" />
             <span className="text-white font-medium">您的隐私对我们很重要</span>
           </div>
-          <p className="text-white/60 text-sm">
+          <p className="text-master-text-secondary text-sm">
             我们致力于保护您的隐私和数据安全。请阅读以下内容了解我们如何处理您的信息。
           </p>
         </div>
@@ -52,14 +53,14 @@ const PrivacyPage: React.FC = () => {
           {sections.map((section, index) => {
             const Icon = section.icon;
             return (
-              <div key={index} className="p-4 rounded-2xl bg-white/5">
+              <div key={index} className="p-4 rounded-2xl bg-master-glass">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                    <Icon size={20} className="text-white/70" />
+                  <div className="w-10 h-10 rounded-xl bg-master-glass-strong flex items-center justify-center">
+                    <Icon size={20} className="text-master-text-secondary" />
                   </div>
                   <h3 className="text-white font-medium">{section.title}</h3>
                 </div>
-                <p className="text-white/50 text-sm leading-relaxed">
+                <p className="text-master-text-tertiary text-sm leading-relaxed">
                   {section.content}
                 </p>
               </div>
@@ -69,25 +70,25 @@ const PrivacyPage: React.FC = () => {
 
         {/* Links */}
         <div className="mt-6 space-y-2">
-          <button className="w-full p-4 rounded-2xl bg-white/5 flex items-center justify-between">
+          <button className="w-full p-4 rounded-2xl bg-master-glass flex items-center justify-between active:scale-95">
             <div className="flex items-center gap-3">
-              <FileText size={20} className="text-white/60" />
+              <FileText size={20} className="text-master-text-secondary" />
               <span className="text-white text-sm">完整隐私政策</span>
             </div>
-            <ExternalLink size={16} className="text-white/40" />
+            <ExternalLink size={16} className="text-master-text-muted" />
           </button>
-          <button className="w-full p-4 rounded-2xl bg-white/5 flex items-center justify-between">
+          <button className="w-full p-4 rounded-2xl bg-master-glass flex items-center justify-between active:scale-95">
             <div className="flex items-center gap-3">
-              <FileText size={20} className="text-white/60" />
+              <FileText size={20} className="text-master-text-secondary" />
               <span className="text-white text-sm">用户协议</span>
             </div>
-            <ExternalLink size={16} className="text-white/40" />
+            <ExternalLink size={16} className="text-master-text-muted" />
           </button>
         </div>
 
         {/* Version */}
         <div className="mt-8 text-center">
-          <p className="text-white/30 text-xs">最后更新：2026年6月</p>
+          <p className="text-master-text-muted text-xs">最后更新：2026年6月</p>
           <p className="text-white/20 text-xs mt-1">版本 1.3.1</p>
         </div>
       </div>

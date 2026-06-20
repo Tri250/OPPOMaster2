@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { ArrowLeft, Cpu, Wand2, Check, RefreshCw, Zap, Sun, Droplets, Focus } from 'lucide-react';
 
 const optimizeOptions = [
@@ -10,10 +11,20 @@ const optimizeOptions = [
 ];
 
 const SmartOptimizePage: React.FC = () => {
-  const { aiParams, setAiParam, goBack } = useAppStore();
+  const { reduceMotion, aiParams, setAiParam, goBack } = useAppStore();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizedOptions, setOptimizedOptions] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>(['enhance']);
+
+  // 根据 AI 参数构建实时滤镜
+  const previewFilter = `
+    saturate(${100 + aiParams.saturation}%)
+    contrast(${100 + aiParams.contrast}%)
+    brightness(${100 + aiParams.brightness}%)
+    sepia(${aiParams.warmth > 0 ? aiParams.warmth * 0.5 : 0}%)
+    hue-rotate(${aiParams.warmth < 0 ? aiParams.warmth * 0.5 : 0}deg)
+    ${aiParams.sharpness > 0 ? `drop-shadow(0 0 ${aiParams.sharpness / 20}px rgba(255,255,255,0.3))` : ''}
+  `;
 
   const toggleOption = (id: string) => {
     setSelectedOptions(prev => 
@@ -60,12 +71,12 @@ const SmartOptimizePage: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-master-bg" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-master-glass-border">
         <button 
           onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal active:scale-95"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
@@ -75,10 +86,11 @@ const SmartOptimizePage: React.FC = () => {
       {/* Preview */}
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
-          <img 
+          <img
             src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop"
             alt="Preview"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-all duration-slow"
+            style={{ filter: previewFilter }}
           />
           
           {/* Processing Overlay */}
@@ -93,7 +105,7 @@ const SmartOptimizePage: React.FC = () => {
                     className={`px-2 py-1 rounded-full text-xs ${
                       optimizedOptions.includes(opt) 
                         ? 'bg-[#4CAF50] text-white' 
-                        : 'bg-white/20 text-white/70'
+                        : 'bg-master-glass-strong text-master-text-secondary'
                     }`}
                   >
                     {optimizeOptions.find(o => o.id === opt)?.name}
@@ -118,10 +130,10 @@ const SmartOptimizePage: React.FC = () => {
           {/* Current Params */}
           <div className="absolute bottom-3 left-3 right-3">
             <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
+              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-glass text-white text-xs">
                 对比度: +{aiParams.contrast}
               </span>
-              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs">
+              <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-glass text-white text-xs">
                 锐度: +{aiParams.sharpness}
               </span>
             </div>
@@ -151,8 +163,8 @@ const SmartOptimizePage: React.FC = () => {
       </div>
 
       {/* Options */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <p className="text-white/50 text-xs mb-3">选择优化项目</p>
+      <div className={`flex-1 overflow-y-auto px-4 pb-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
+        <p className="text-master-text-tertiary text-xs mb-3">选择优化项目</p>
         
         <div className="space-y-3">
           {optimizeOptions.map((option) => {
@@ -169,8 +181,8 @@ const SmartOptimizePage: React.FC = () => {
                   isOptimized
                     ? 'bg-[#4CAF50]/20 border border-[#4CAF50]/50'
                     : isSelected
-                      ? 'bg-white/10 border border-white/20'
-                      : 'bg-white/5 hover:bg-white/10'
+                      ? 'bg-master-glass-strong border border-master-glass-border'
+                      : 'bg-master-glass hover:bg-master-glass-strong'
                 }`}
               >
                 <div 
@@ -181,7 +193,7 @@ const SmartOptimizePage: React.FC = () => {
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-white font-medium">{option.name}</p>
-                  <p className="text-white/50 text-xs">{option.desc}</p>
+                  <p className="text-master-text-tertiary text-xs">{option.desc}</p>
                 </div>
                 {isOptimized && (
                   <div className="w-6 h-6 rounded-full bg-[#4CAF50] flex items-center justify-center">
@@ -189,7 +201,7 @@ const SmartOptimizePage: React.FC = () => {
                   </div>
                 )}
                 {!isOptimized && (
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-normal ${
                     isSelected ? 'border-[#2196F3] bg-[#2196F3]' : 'border-white/30'
                   }`}>
                     {isSelected && <Check size={12} className="text-white" />}
@@ -201,12 +213,12 @@ const SmartOptimizePage: React.FC = () => {
         </div>
 
         {/* Info */}
-        <div className="mt-6 p-4 rounded-2xl bg-white/5">
+        <div className="mt-6 p-4 rounded-2xl bg-master-glass">
           <div className="flex items-start gap-3">
             <Cpu size={20} className="text-[#2196F3] mt-0.5" />
             <div>
               <p className="text-white text-sm font-medium">AI 智能引擎</p>
-              <p className="text-white/50 text-xs mt-1">
+              <p className="text-master-text-tertiary text-xs mt-1">
                 基于深度学习的图像优化算法，自动识别场景并调整最佳参数
               </p>
             </div>

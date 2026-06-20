@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Download, Star, Heart, Search, Filter, Check, ExternalLink, FileText, Sparkles, Crown } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { 
   LUT_RESOURCES, 
   LUT_CATEGORIES, 
@@ -12,7 +13,7 @@ import {
 } from '../../services/lutResourceService';
 
 const LUTSharePage: React.FC = () => {
-  const { navigateToSubPage } = useAppStore();
+  const { reduceMotion, navigateToSubPage } = useAppStore();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'downloads' | 'rating' | 'newest'>('downloads');
@@ -83,37 +84,37 @@ const LUTSharePage: React.FC = () => {
   const filteredLUTs = getFilteredLUTs();
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-master-bg text-white" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-50 bg-master-bg/95 backdrop-blur-glass border-b border-master-glass-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigateToSubPage(null)}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal"
             >
-              <ArrowLeft size={20} className="text-white/70" />
+              <ArrowLeft size={20} className="text-master-text-secondary" />
             </button>
             <div>
               <h1 className="text-lg font-bold">LUT资源库</h1>
-              <p className="text-xs text-white/50">视频调色LUT下载</p>
+              <p className="text-xs text-master-text-tertiary">视频调色LUT下载</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/40">{LUT_RESOURCES.length} 个LUT</span>
+            <span className="text-xs text-master-text-muted">{LUT_RESOURCES.length} 个LUT</span>
           </div>
         </div>
 
         {/* Search */}
         <div className="px-4 pb-3">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-master-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索LUT名称、风格..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#FF6B35] outline-none transition-colors"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-master-glass text-white text-sm border border-master-glass-border focus:border-[#FF6B35] outline-none transition-all duration-normal"
             />
           </div>
         </div>
@@ -127,7 +128,7 @@ const LUTSharePage: React.FC = () => {
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 selectedCategory === cat.key
                   ? 'bg-[#FF6B35] text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
+                  : 'bg-master-glass text-master-text-secondary hover:bg-master-glass-strong'
               }`}
             >
               <span className="mr-1">{cat.icon}</span>
@@ -138,21 +139,21 @@ const LUTSharePage: React.FC = () => {
 
         {/* Sort */}
         <div className="px-4 pb-3 flex items-center gap-2">
-          <Filter size={14} className="text-white/40" />
+          <Filter size={14} className="text-master-text-muted" />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'downloads' | 'rating' | 'newest')}
-            className="bg-transparent text-white/60 text-xs outline-none cursor-pointer"
+            className="bg-transparent text-master-text-secondary text-xs outline-none cursor-pointer"
           >
-            <option value="downloads" className="bg-[#1a1a1a]">最多下载</option>
-            <option value="rating" className="bg-[#1a1a1a]">最高评分</option>
-            <option value="newest" className="bg-[#1a1a1a]">最新发布</option>
+            <option value="downloads" className="bg-master-surface">最多下载</option>
+            <option value="rating" className="bg-master-surface">最高评分</option>
+            <option value="newest" className="bg-master-surface">最新发布</option>
           </select>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className={`p-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         {/* Hot & New Section */}
         {selectedCategory === 'all' && !searchQuery && (
           <div className="mb-6">
@@ -167,7 +168,7 @@ const LUTSharePage: React.FC = () => {
                   <div
                     key={lut.id}
                     onClick={() => setSelectedLUT(lut)}
-                    className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-[#1a1a1a] cursor-pointer hover:scale-[1.02] transition-transform"
+                    className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-master-surface cursor-pointer hover:scale-[1.02] transition-transform"
                   >
                     <div className="aspect-square relative">
                       <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
@@ -178,7 +179,7 @@ const LUTSharePage: React.FC = () => {
                     </div>
                     <div className="p-2">
                       <h3 className="text-xs font-medium truncate">{lut.name}</h3>
-                      <p className="text-[10px] text-white/50">{formatDownloads(lut.downloads)}下载</p>
+                      <p className="text-[10px] text-master-text-tertiary">{formatDownloads(lut.downloads)}下载</p>
                     </div>
                   </div>
                 ))}
@@ -196,7 +197,7 @@ const LUTSharePage: React.FC = () => {
                   <div
                     key={lut.id}
                     onClick={() => setSelectedLUT(lut)}
-                    className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-[#1a1a1a] cursor-pointer hover:scale-[1.02] transition-transform"
+                    className="flex-shrink-0 w-40 rounded-xl overflow-hidden bg-master-surface cursor-pointer hover:scale-[1.02] transition-transform"
                   >
                     <div className="aspect-square relative">
                       <img src={lut.previewImage} alt={lut.name} className="w-full h-full object-cover" />
@@ -207,7 +208,7 @@ const LUTSharePage: React.FC = () => {
                     </div>
                     <div className="p-2">
                       <h3 className="text-xs font-medium truncate">{lut.name}</h3>
-                      <p className="text-[10px] text-white/50">{formatDownloads(lut.downloads)}下载</p>
+                      <p className="text-[10px] text-master-text-tertiary">{formatDownloads(lut.downloads)}下载</p>
                     </div>
                   </div>
                 ))}
@@ -221,7 +222,7 @@ const LUTSharePage: React.FC = () => {
           {filteredLUTs.map((lut) => (
             <div
               key={lut.id}
-              className="rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/5"
+              className="rounded-xl overflow-hidden bg-master-surface border border-master-glass-border"
             >
               {/* Preview */}
               <div 
@@ -242,7 +243,7 @@ const LUTSharePage: React.FC = () => {
                 </div>
 
                 {/* Format Badge */}
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-black/50 backdrop-blur-sm rounded text-[9px]">
+                <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-black/50 backdrop-blur-glass rounded text-[9px]">
                   .{lut.format}
                 </div>
 
@@ -252,11 +253,11 @@ const LUTSharePage: React.FC = () => {
                     e.stopPropagation();
                     toggleLike(lut.id);
                   }}
-                  className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-sm"
+                  className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-glass"
                 >
                   <Heart
                     size={14}
-                    className={likedIds.has(lut.id) ? 'text-red-500 fill-red-500' : 'text-white/70'}
+                    className={likedIds.has(lut.id) ? 'text-red-500 fill-red-500' : 'text-master-text-secondary'}
                   />
                 </button>
               </div>
@@ -269,12 +270,12 @@ const LUTSharePage: React.FC = () => {
                 >
                   {lut.name}
                 </h3>
-                <p className="text-xs text-white/50 truncate mt-0.5">{lut.description}</p>
+                <p className="text-xs text-master-text-tertiary truncate mt-0.5">{lut.description}</p>
 
                 {/* Tags */}
                 <div className="flex gap-1 mt-2 overflow-hidden">
                   {lut.tags.slice(0, 2).map((tag, idx) => (
-                    <span key={idx} className="text-[10px] text-white/40">#{tag}</span>
+                    <span key={idx} className="text-[10px] text-master-text-muted">#{tag}</span>
                   ))}
                 </div>
 
@@ -282,13 +283,13 @@ const LUTSharePage: React.FC = () => {
                 <div className="flex items-center gap-3 mt-2">
                   <div className="flex items-center gap-1">
                     <Star size={10} className="text-yellow-400 fill-yellow-400" />
-                    <span className="text-[10px] text-white/50">{lut.rating.toFixed(1)}</span>
+                    <span className="text-[10px] text-master-text-tertiary">{lut.rating.toFixed(1)}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Download size={10} className="text-white/40" />
-                    <span className="text-[10px] text-white/50">{formatDownloads(lut.downloads)}</span>
+                    <Download size={10} className="text-master-text-muted" />
+                    <span className="text-[10px] text-master-text-tertiary">{formatDownloads(lut.downloads)}</span>
                   </div>
-                  <div className="text-[10px] text-white/40 ml-auto">
+                  <div className="text-[10px] text-master-text-muted ml-auto">
                     {lut.size}x{lut.size}
                   </div>
                 </div>
@@ -297,7 +298,7 @@ const LUTSharePage: React.FC = () => {
                 <button
                   onClick={() => handleDownload(lut)}
                   disabled={downloadingId === lut.id}
-                  className={`w-full mt-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                  className={`w-full mt-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-normal ${
                     downloadedIds.has(lut.id)
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-[#FF6B35]/20 text-[#FF6B35] hover:bg-[#FF6B35]/30'
@@ -329,23 +330,23 @@ const LUTSharePage: React.FC = () => {
         {filteredLUTs.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">
             <FileText size={48} className="text-white/20 mb-4" />
-            <p className="text-white/50 text-sm">未找到匹配的LUT</p>
-            <p className="text-white/30 text-xs mt-1">请调整搜索条件</p>
+            <p className="text-master-text-tertiary text-sm">未找到匹配的LUT</p>
+            <p className="text-master-text-muted text-xs mt-1">请调整搜索条件</p>
           </div>
         )}
       </div>
 
       {/* LUT Detail Modal */}
       {selectedLUT && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-glass">
+          <div className="w-full max-w-md bg-master-surface rounded-2xl overflow-hidden">
             {/* Preview */}
             <div className="aspect-video relative">
               <img src={selectedLUT.previewImage} alt={selectedLUT.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
               <button
                 onClick={() => setSelectedLUT(null)}
-                className="absolute top-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-sm"
+                className="absolute top-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-glass"
               >
                 <ArrowLeft size={18} className="text-white" />
               </button>
@@ -356,48 +357,48 @@ const LUTSharePage: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-lg font-bold">{selectedLUT.name}</h2>
-                  <p className="text-xs text-white/50">{selectedLUT.nameEn}</p>
+                  <p className="text-xs text-master-text-tertiary">{selectedLUT.nameEn}</p>
                 </div>
                 <div className="flex items-center gap-1 px-2 py-1 bg-[#FF6B35]/20 rounded-lg">
                   <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                  <span className="text-xs text-white/70">{selectedLUT.rating.toFixed(1)}</span>
+                  <span className="text-xs text-master-text-secondary">{selectedLUT.rating.toFixed(1)}</span>
                 </div>
               </div>
 
-              <p className="text-sm text-white/70 mt-3">{selectedLUT.description}</p>
+              <p className="text-sm text-master-text-secondary mt-3">{selectedLUT.description}</p>
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mt-3">
                 {selectedLUT.tags.map((tag, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-white/5 rounded-full text-xs text-white/60">
+                  <span key={idx} className="px-2 py-1 bg-master-glass rounded-full text-xs text-master-text-secondary">
                     #{tag}
                   </span>
                 ))}
               </div>
 
               {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-3 mt-4 p-3 bg-white/5 rounded-xl">
+              <div className="grid grid-cols-2 gap-3 mt-4 p-3 bg-master-glass rounded-xl">
                 <div>
-                  <p className="text-[10px] text-white/40">格式</p>
+                  <p className="text-[10px] text-master-text-muted">格式</p>
                   <p className="text-sm font-medium">.{selectedLUT.format.toUpperCase()}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-white/40">尺寸</p>
+                  <p className="text-[10px] text-master-text-muted">尺寸</p>
                   <p className="text-sm font-medium">{selectedLUT.size}x{selectedLUT.size}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-white/40">文件大小</p>
+                  <p className="text-[10px] text-master-text-muted">文件大小</p>
                   <p className="text-sm font-medium">{formatFileSize(selectedLUT.fileSize)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-white/40">下载次数</p>
+                  <p className="text-[10px] text-master-text-muted">下载次数</p>
                   <p className="text-sm font-medium">{formatDownloads(selectedLUT.downloads)}</p>
                 </div>
               </div>
 
               {/* Suitable For */}
               <div className="mt-4">
-                <p className="text-xs text-white/40 mb-2">适用场景</p>
+                <p className="text-xs text-master-text-muted mb-2">适用场景</p>
                 <div className="flex flex-wrap gap-2">
                   {selectedLUT.suitableFor.map((scene, idx) => (
                     <span key={idx} className="px-2 py-1 bg-[#FF6B35]/10 rounded-lg text-xs text-[#FF6B35]">
@@ -413,10 +414,10 @@ const LUTSharePage: React.FC = () => {
                   onClick={() => {
                     toggleLike(selectedLUT.id);
                   }}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all duration-normal ${
                     likedIds.has(selectedLUT.id)
                       ? 'bg-red-500/20 text-red-400'
-                      : 'bg-white/5 text-white/70 hover:bg-white/10'
+                      : 'bg-master-glass text-master-text-secondary hover:bg-master-glass-strong'
                   }`}
                 >
                   <Heart size={16} className={likedIds.has(selectedLUT.id) ? 'fill-current' : ''} />
@@ -425,7 +426,7 @@ const LUTSharePage: React.FC = () => {
                 <button
                   onClick={() => handleDownload(selectedLUT)}
                   disabled={downloadingId === selectedLUT.id}
-                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all duration-normal ${
                     downloadedIds.has(selectedLUT.id)
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-[#FF6B35] text-white hover:bg-[#FF6B35]/90'
@@ -451,14 +452,14 @@ const LUTSharePage: React.FC = () => {
               </div>
 
               {/* Author */}
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+              <div className="mt-4 pt-4 border-t border-master-glass-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9800] flex items-center justify-center text-xs font-bold">
                     O
                   </div>
                   <div>
                     <p className="text-xs font-medium">{selectedLUT.author}</p>
-                    <p className="text-[10px] text-white/40">{selectedLUT.createdAt}</p>
+                    <p className="text-[10px] text-master-text-muted">{selectedLUT.createdAt}</p>
                   </div>
                 </div>
                 {selectedLUT.authorUrl && (
@@ -466,9 +467,9 @@ const LUTSharePage: React.FC = () => {
                     href={selectedLUT.authorUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors"
+                    className="p-2 rounded-full hover:bg-master-glass transition-all duration-normal"
                   >
-                    <ExternalLink size={14} className="text-white/40" />
+                    <ExternalLink size={14} className="text-master-text-muted" />
                   </a>
                 )}
               </div>

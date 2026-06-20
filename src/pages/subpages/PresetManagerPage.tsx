@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useAppStore, homePresets } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { 
   ArrowLeft, Plus, Search, Grid, List, Heart, Share2, Trash2, Check, 
   Download, Filter, SortAsc, Folder, Clock, Star, 
@@ -74,7 +75,7 @@ interface PresetDetail {
 }
 
 const PresetManagerPage: React.FC = () => {
-  const { goBack } = useAppStore();
+  const { reduceMotion, goBack } = useAppStore();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
@@ -266,14 +267,14 @@ const PresetManagerPage: React.FC = () => {
   }, [filteredPresets, groupBy, presetDetails]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-master-bg text-white" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-50 bg-master-bg/95 backdrop-blur-glass border-b border-master-glass-border">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => actionMode ? (setActionMode(false), setSelectedPresets([])) : goBack()}
-              className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal"
             >
               <ArrowLeft size={20} className="text-white" />
             </button>
@@ -281,7 +282,7 @@ const PresetManagerPage: React.FC = () => {
               <h1 className="text-lg font-bold">
                 {actionMode ? `已选 ${selectedPresets.length} 项` : '预设管理'}
               </h1>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-master-text-tertiary">
                 {actionMode ? '选择要操作的预设' : `${filteredPresets.length} 个预设 · 企业级`}
               </p>
             </div>
@@ -291,34 +292,34 @@ const PresetManagerPage: React.FC = () => {
               <>
                 <button
                   onClick={() => setShowTagPanel(!showTagPanel)}
-                  className={`p-2 rounded-full ${showTagPanel ? 'bg-[#FF6B35]/20' : 'hover:bg-white/10'}`}
+                  className={`p-2 rounded-full ${showTagPanel ? 'bg-[#FF6B35]/20' : 'hover:bg-master-glass-strong'}`}
                 >
-                  <Tag size={18} className={showTagPanel ? 'text-[#FF6B35]' : 'text-white/50'} />
+                  <Tag size={18} className={showTagPanel ? 'text-[#FF6B35]' : 'text-master-text-tertiary'} />
                 </button>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`p-2 rounded-full ${showFilters ? 'bg-[#FF6B35]/20' : 'hover:bg-white/10'}`}
+                  className={`p-2 rounded-full ${showFilters ? 'bg-[#FF6B35]/20' : 'hover:bg-master-glass-strong'}`}
                 >
-                  <Filter size={18} className={showFilters ? 'text-[#FF6B35]' : 'text-white/50'} />
+                  <Filter size={18} className={showFilters ? 'text-[#FF6B35]' : 'text-master-text-tertiary'} />
                 </button>
                 <button
                   onClick={() => setShowImportExport(true)}
-                  className="p-2 rounded-full hover:bg-white/10"
+                  className="p-2 rounded-full hover:bg-master-glass-strong"
                 >
-                  <Archive size={18} className="text-white/50" />
+                  <Archive size={18} className="text-master-text-tertiary" />
                 </button>
                 <button
                   onClick={() => setActionMode(true)}
-                  className="p-2 rounded-full hover:bg-white/10"
+                  className="p-2 rounded-full hover:bg-master-glass-strong"
                 >
-                  <Check size={18} className="text-white/50" />
+                  <Check size={18} className="text-master-text-tertiary" />
                 </button>
               </>
             )}
             {actionMode && (
               <button
                 onClick={toggleSelectAll}
-                className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs font-medium"
+                className="px-3 py-1.5 rounded-lg bg-master-glass-strong text-white text-xs font-medium active:scale-95"
               >
                 {selectedPresets.length === homePresets.length ? '取消全选' : '全选'}
               </button>
@@ -329,20 +330,20 @@ const PresetManagerPage: React.FC = () => {
         {/* Search Bar */}
         <div className="px-4 pb-3">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-master-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索预设名称、作者、标签..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 text-white text-sm border border-white/10 focus:border-[#FF6B35] outline-none transition-colors"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-master-glass text-white text-sm border border-master-glass-border focus:border-[#FF6B35] outline-none transition-all duration-normal"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2"
               >
-                <X size={14} className="text-white/40" />
+                <X size={14} className="text-master-text-muted" />
               </button>
             )}
           </div>
@@ -350,8 +351,8 @@ const PresetManagerPage: React.FC = () => {
 
         {/* Tag Panel */}
         {showTagPanel && (
-          <div className="px-4 pb-3 border-t border-white/5 pt-3">
-            <h3 className="text-white/50 text-xs mb-2">标签筛选</h3>
+          <div className="px-4 pb-3 border-t border-master-glass-border pt-3">
+            <h3 className="text-master-text-tertiary text-xs mb-2">标签筛选</h3>
             <div className="flex flex-wrap gap-2">
               {PRESET_TAGS.map((tag) => (
                 <button
@@ -360,7 +361,7 @@ const PresetManagerPage: React.FC = () => {
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     selectedTags.includes(tag)
                       ? 'bg-[#FF6B35] text-white'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      : 'bg-master-glass text-master-text-secondary hover:bg-master-glass-strong'
                   }`}
                 >
                   {tag}
@@ -372,7 +373,7 @@ const PresetManagerPage: React.FC = () => {
 
         {/* Filter Bar */}
         {showFilters && (
-          <div className="px-4 pb-3 space-y-3 border-t border-white/5 pt-3">
+          <div className="px-4 pb-3 space-y-3 border-t border-master-glass-border pt-3">
             {/* Filter Options */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
               {FILTER_OPTIONS.map((filter) => {
@@ -384,7 +385,7 @@ const PresetManagerPage: React.FC = () => {
                     className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all ${
                       filterBy === filter.id
                         ? 'bg-[#FF6B35] text-white'
-                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                        : 'bg-master-glass text-master-text-secondary hover:bg-master-glass-strong'
                     }`}
                   >
                     <Icon size={14} />
@@ -397,26 +398,26 @@ const PresetManagerPage: React.FC = () => {
             {/* Sort & Group */}
             <div className="flex gap-2">
               <div className="flex-1">
-                <span className="text-white/40 text-[10px] mb-1 block">排序</span>
+                <span className="text-master-text-muted text-[10px] mb-1 block">排序</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 text-white text-xs outline-none"
+                  className="w-full px-3 py-2 rounded-lg bg-master-glass text-white text-xs outline-none"
                 >
                   {SORT_OPTIONS.map(opt => (
-                    <option key={opt.id} value={opt.id} className="bg-[#1a1a1a]">{opt.name}</option>
+                    <option key={opt.id} value={opt.id} className="bg-master-surface">{opt.name}</option>
                   ))}
                 </select>
               </div>
               <div className="flex-1">
-                <span className="text-white/40 text-[10px] mb-1 block">分组</span>
+                <span className="text-master-text-muted text-[10px] mb-1 block">分组</span>
                 <select
                   value={groupBy}
                   onChange={(e) => setGroupBy(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 text-white text-xs outline-none"
+                  className="w-full px-3 py-2 rounded-lg bg-master-glass text-white text-xs outline-none"
                 >
                   {GROUP_OPTIONS.map(opt => (
-                    <option key={opt.id} value={opt.id} className="bg-[#1a1a1a]">{opt.name}</option>
+                    <option key={opt.id} value={opt.id} className="bg-master-surface">{opt.name}</option>
                   ))}
                 </select>
               </div>
@@ -435,7 +436,7 @@ const PresetManagerPage: React.FC = () => {
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     filterBy === filter.id
                       ? 'bg-[#FF6B35] text-white'
-                      : 'bg-white/5 text-white/60'
+                      : 'bg-master-glass text-master-text-secondary'
                   }`}
                 >
                   {filter.name}
@@ -445,13 +446,13 @@ const PresetManagerPage: React.FC = () => {
             <div className="flex gap-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/40'}`}
+                className={`p-2 rounded-lg transition-all duration-normal ${viewMode === 'grid' ? 'bg-master-glass-strong text-white' : 'text-master-text-muted'}`}
               >
                 <Grid size={16} />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-white/40'}`}
+                className={`p-2 rounded-lg transition-all duration-normal ${viewMode === 'list' ? 'bg-master-glass-strong text-white' : 'text-master-text-muted'}`}
               >
                 <List size={16} />
               </button>
@@ -461,11 +462,11 @@ const PresetManagerPage: React.FC = () => {
       </div>
 
       {/* Preset List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-24">
+      <div className={`flex-1 overflow-y-auto px-4 pb-24 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         {Object.entries(groupedPresets).map(([groupName, presets]) => (
           <div key={groupName}>
             {groupBy !== 'none' && (
-              <h3 className="text-white/50 text-xs font-medium py-3 sticky top-0 bg-[#0a0a0a]">
+              <h3 className="text-master-text-tertiary text-xs font-medium py-3 sticky top-0 bg-master-bg">
                 {groupName} ({presets.length})
               </h3>
             )}
@@ -481,14 +482,14 @@ const PresetManagerPage: React.FC = () => {
                     <div
                       key={preset.id}
                       onClick={() => actionMode ? toggleSelect(preset.id) : setShowPresetDetail(preset.id)}
-                      className={`relative rounded-2xl overflow-hidden bg-[#1a1a1a] cursor-pointer transition-all duration-300 ${
+                      className={`relative rounded-2xl overflow-hidden bg-master-surface cursor-pointer transition-all duration-normal ${
                         isSelected ? 'ring-2 ring-[#FF6B35]' : ''
                       }`}
                     >
                       {/* Selection Overlay */}
                       {actionMode && (
-                        <div className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          isSelected ? 'bg-[#FF6B35] border-[#FF6B35]' : 'border-white/50 bg-black/30'
+                        <div className={`absolute top-2 left-2 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-normal ${
+                          isSelected ? 'bg-[#FF6B35] border-[#FF6B35]' : 'border-master-glass-border0 bg-black/30'
                         }`}>
                           {isSelected && <Check size={14} className="text-white" />}
                         </div>
@@ -520,23 +521,23 @@ const PresetManagerPage: React.FC = () => {
                         
                         {/* Rating */}
                         {detail && (
-                          <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm">
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-glass">
                             <Star size={10} className="text-yellow-400 fill-yellow-400" />
                             <span className="text-white text-[10px] font-medium">{detail.rating.toFixed(1)}</span>
-                            <span className="text-white/40 text-[10px]">({detail.ratingCount})</span>
+                            <span className="text-master-text-muted text-[10px]">({detail.ratingCount})</span>
                           </div>
                         )}
                       </div>
                       
                       <div className="p-3">
                         <h3 className="text-white text-sm font-medium truncate">{preset.name}</h3>
-                        <p className="text-white/50 text-xs truncate">{preset.author}</p>
+                        <p className="text-master-text-tertiary text-xs truncate">{preset.author}</p>
                         
                         {/* Stats */}
                         <div className="flex items-center gap-3 mt-2">
                           <div className="flex items-center gap-1">
-                            <Download size={10} className="text-white/30" />
-                            <span className="text-white/40 text-[10px]">
+                            <Download size={10} className="text-master-text-muted" />
+                            <span className="text-master-text-muted text-[10px]">
                               {detail ? `${(detail.downloads / 1000).toFixed(1)}k` : '0'}
                             </span>
                           </div>
@@ -548,10 +549,10 @@ const PresetManagerPage: React.FC = () => {
                       
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(preset.id); }}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-sm z-20"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-glass z-20"
                         style={{ right: actionMode ? '40px' : '8px' }}
                       >
-                        <Heart size={14} className={isFavorite ? 'text-red-500 fill-red-500' : 'text-white/70'} />
+                        <Heart size={14} className={isFavorite ? 'text-red-500 fill-red-500' : 'text-master-text-secondary'} />
                       </button>
                     </div>
                   );
@@ -568,13 +569,13 @@ const PresetManagerPage: React.FC = () => {
                     <div
                       key={preset.id}
                       onClick={() => actionMode ? toggleSelect(preset.id) : setShowPresetDetail(preset.id)}
-                      className={`flex items-center gap-3 p-3 rounded-2xl bg-white/5 transition-all ${
+                      className={`flex items-center gap-3 p-3 rounded-2xl bg-master-glass transition-all ${
                         isSelected ? 'ring-2 ring-[#FF6B35]' : ''
                       }`}
                     >
                       {/* Selection */}
                       {actionMode && (
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-normal ${
                           isSelected ? 'bg-[#FF6B35] border-[#FF6B35]' : 'border-white/30'
                         }`}>
                           {isSelected && <Check size={14} className="text-white" />}
@@ -593,21 +594,21 @@ const PresetManagerPage: React.FC = () => {
                           {preset.isNew && <Sparkles size={12} className="text-[#4CAF50]" />}
                           {detail?.isPro && <Award size={12} className="text-yellow-400" />}
                         </div>
-                        <p className="text-white/50 text-xs">{preset.author}</p>
+                        <p className="text-master-text-tertiary text-xs">{preset.author}</p>
                         <div className="flex items-center gap-3 mt-1">
                           {detail && (
                             <>
                               <div className="flex items-center gap-1">
                                 <Star size={10} className="text-yellow-400 fill-yellow-400" />
-                                <span className="text-white/40 text-[10px]">{detail.rating.toFixed(1)}</span>
+                                <span className="text-master-text-muted text-[10px]">{detail.rating.toFixed(1)}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Download size={10} className="text-white/30" />
-                                <span className="text-white/40 text-[10px]">{(detail.downloads / 1000).toFixed(1)}k</span>
+                                <Download size={10} className="text-master-text-muted" />
+                                <span className="text-master-text-muted text-[10px]">{(detail.downloads / 1000).toFixed(1)}k</span>
                               </div>
                             </>
                           )}
-                          <span className="text-white/30 text-[10px]">{preset.brand}</span>
+                          <span className="text-master-text-muted text-[10px]">{preset.brand}</span>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -615,13 +616,13 @@ const PresetManagerPage: React.FC = () => {
                           onClick={(e) => { e.stopPropagation(); toggleFavorite(preset.id); }}
                           className="p-2"
                         >
-                          <Heart size={18} className={isFavorite ? 'text-red-500 fill-red-500' : 'text-white/40'} />
+                          <Heart size={18} className={isFavorite ? 'text-red-500 fill-red-500' : 'text-master-text-muted'} />
                         </button>
-                        <button className="p-2">
-                          <Share2 size={18} className="text-white/40" />
+                        <button className="p-2 active:scale-95">
+                          <Share2 size={18} className="text-master-text-muted" />
                         </button>
-                        <button className="p-2">
-                          <MoreVertical size={18} className="text-white/40" />
+                        <button className="p-2 active:scale-95">
+                          <MoreVertical size={18} className="text-master-text-muted" />
                         </button>
                       </div>
                     </div>
@@ -636,42 +637,42 @@ const PresetManagerPage: React.FC = () => {
         {filteredPresets.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">
             <Folder size={48} className="text-white/20 mb-4" />
-            <p className="text-white/50 text-sm">未找到匹配的预设</p>
-            <p className="text-white/30 text-xs mt-1">请调整筛选条件</p>
+            <p className="text-master-text-tertiary text-sm">未找到匹配的预设</p>
+            <p className="text-master-text-muted text-xs mt-1">请调整筛选条件</p>
           </div>
         )}
       </div>
 
       {/* Batch Actions */}
       {actionMode && selectedPresets.length > 0 && (
-        <div className="fixed bottom-20 left-4 right-4 p-4 rounded-2xl bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10">
+        <div className="fixed bottom-20 left-4 right-4 p-4 rounded-2xl bg-master-surface/95 backdrop-blur-xl border border-master-glass-border">
           <div className="flex items-center justify-between">
             <span className="text-white text-sm">{selectedPresets.length} 项已选中</span>
             <div className="flex gap-2">
               <button 
                 onClick={handleBatchFavorite}
-                className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30"
+                className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 active:scale-95"
               >
                 <Heart size={18} className="text-red-500" />
               </button>
               <button 
                 onClick={handleBatchDownload}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20"
+                className="p-2.5 rounded-xl bg-master-glass-strong hover:bg-master-glass-strong active:scale-95"
               >
                 <Download size={18} className="text-white" />
               </button>
-              <button className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20">
+              <button className="p-2.5 rounded-xl bg-master-glass-strong hover:bg-master-glass-strong active:scale-95">
                 <Share2 size={18} className="text-white" />
               </button>
-              <button className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20">
+              <button className="p-2.5 rounded-xl bg-master-glass-strong hover:bg-master-glass-strong active:scale-95">
                 <Move size={18} className="text-white" />
               </button>
-              <button className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20">
+              <button className="p-2.5 rounded-xl bg-master-glass-strong hover:bg-master-glass-strong active:scale-95">
                 <Cloud size={18} className="text-white" />
               </button>
               <button 
                 onClick={handleBatchDelete}
-                className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30"
+                className="p-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 active:scale-95"
               >
                 <Trash2 size={18} className="text-red-500" />
               </button>
@@ -682,7 +683,7 @@ const PresetManagerPage: React.FC = () => {
 
       {/* FAB */}
       {!actionMode && (
-        <button className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center shadow-lg shadow-[#FF6B35]/30 z-50">
+        <button className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] flex items-center justify-center shadow-lg shadow-[#FF6B35]/30 z-50 active:scale-95">
           <Plus size={24} className="text-white" />
         </button>
       )}
@@ -690,11 +691,11 @@ const PresetManagerPage: React.FC = () => {
       {/* Preset Detail Modal - 哈苏大师配方卡 */}
       {showPresetDetail && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-glass"
           onClick={() => setShowPresetDetail(null)}
         >
           <div 
-            className="w-full max-w-md bg-[#0a0a0a] rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide"
+            className="w-full max-w-md bg-master-bg rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto scrollbar-hide"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -704,30 +705,30 @@ const PresetManagerPage: React.FC = () => {
               return (
                 <>
                   {/* 顶栏 */}
-                  <div className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-b border-white/5">
-                    <span className="text-white/50 text-sm">← 预设详情</span>
+                  <div className="sticky top-0 z-10 bg-master-bg/95 backdrop-blur-glass px-4 py-3 flex items-center justify-between border-b border-master-glass-border">
+                    <span className="text-master-text-tertiary text-sm">← 预设详情</span>
                     <div className="flex items-center gap-2">
-                      <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                        <Grid size={16} className="text-white/50" />
+                      <button className="p-1.5 rounded-lg bg-master-glass hover:bg-master-glass-strong transition-all duration-normal active:scale-95">
+                        <Grid size={16} className="text-master-text-tertiary" />
                       </button>
-                      <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                        <Edit size={16} className="text-white/50" />
+                      <button className="p-1.5 rounded-lg bg-master-glass hover:bg-master-glass-strong transition-all duration-normal active:scale-95">
+                        <Edit size={16} className="text-master-text-tertiary" />
                       </button>
                       <button
                         onClick={() => toggleFavorite(preset.id)}
-                        className={`p-1.5 rounded-lg transition-colors ${
+                        className={`p-1.5 rounded-lg transition-all duration-normal ${
                           favorites.includes(preset.id)
                             ? 'bg-red-500/20'
-                            : 'bg-white/5 hover:bg-white/10'
+                            : 'bg-master-glass hover:bg-master-glass-strong'
                         }`}
                       >
-                        <Heart size={16} className={favorites.includes(preset.id) ? 'text-red-400 fill-red-400' : 'text-white/50'} />
+                        <Heart size={16} className={favorites.includes(preset.id) ? 'text-red-400 fill-red-400' : 'text-master-text-tertiary'} />
                       </button>
                       <button
                         onClick={() => setShowPresetDetail(null)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                        className="p-1.5 rounded-lg bg-master-glass hover:bg-master-glass-strong transition-all duration-normal"
                       >
-                        <X size={16} className="text-white/50" />
+                        <X size={16} className="text-master-text-tertiary" />
                       </button>
                     </div>
                   </div>
@@ -761,12 +762,12 @@ const PresetManagerPage: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-white/50 text-sm mb-2">@{preset.author}</p>
+                    <p className="text-master-text-tertiary text-sm mb-2">@{preset.author}</p>
                     
                     {/* 标签 */}
                     <div className="flex flex-wrap gap-1.5 mb-4">
                       {preset.tags.map((tag, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-white/5 rounded-full text-[10px] text-white/60">
+                        <span key={idx} className="px-2 py-0.5 bg-master-glass rounded-full text-[10px] text-master-text-secondary">
                           #{tag}
                         </span>
                       ))}
@@ -839,7 +840,7 @@ const PresetManagerPage: React.FC = () => {
                   )}
 
                   {/* 底部操作栏 */}
-                  <div className="sticky bottom-0 bg-[#0a0a0a]/95 backdrop-blur-sm px-4 py-3 border-t border-white/5 flex gap-3">
+                  <div className="sticky bottom-0 bg-master-bg/95 backdrop-blur-glass px-4 py-3 border-t border-master-glass-border flex gap-3">
                     <FavoriteButton
                       isFavorite={favorites.includes(preset.id)}
                       onToggle={() => toggleFavorite(preset.id)}
@@ -858,52 +859,52 @@ const PresetManagerPage: React.FC = () => {
       {/* Import/Export Modal */}
       {showImportExport && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-glass"
           onClick={() => setShowImportExport(false)}
         >
           <div 
-            className="w-full max-w-sm bg-[#1a1a1a] rounded-2xl p-6"
+            className="w-full max-w-sm bg-master-surface rounded-2xl p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold mb-4">导入/导出预设</h2>
             
             <div className="space-y-3">
-              <button className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 flex items-center gap-3">
+              <button className="w-full p-4 rounded-xl bg-master-glass hover:bg-master-glass-strong flex items-center gap-3 active:scale-95">
                 <Upload size={20} className="text-[#FF6B35]" />
                 <div className="text-left">
                   <p className="text-white text-sm font-medium">导入预设</p>
-                  <p className="text-white/40 text-xs">从文件导入预设</p>
+                  <p className="text-master-text-muted text-xs">从文件导入预设</p>
                 </div>
               </button>
               
-              <button className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 flex items-center gap-3">
+              <button className="w-full p-4 rounded-xl bg-master-glass hover:bg-master-glass-strong flex items-center gap-3 active:scale-95">
                 <Download size={20} className="text-[#00BCD4]" />
                 <div className="text-left">
                   <p className="text-white text-sm font-medium">导出预设</p>
-                  <p className="text-white/40 text-xs">导出所有预设</p>
+                  <p className="text-master-text-muted text-xs">导出所有预设</p>
                 </div>
               </button>
               
-              <button className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 flex items-center gap-3">
+              <button className="w-full p-4 rounded-xl bg-master-glass hover:bg-master-glass-strong flex items-center gap-3 active:scale-95">
                 <Cloud size={20} className="text-[#4CAF50]" />
                 <div className="text-left">
                   <p className="text-white text-sm font-medium">云同步</p>
-                  <p className="text-white/40 text-xs">同步到云端</p>
+                  <p className="text-master-text-muted text-xs">同步到云端</p>
                 </div>
               </button>
               
-              <button className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 flex items-center gap-3">
+              <button className="w-full p-4 rounded-xl bg-master-glass hover:bg-master-glass-strong flex items-center gap-3 active:scale-95">
                 <RefreshCw size={20} className="text-yellow-400" />
                 <div className="text-left">
                   <p className="text-white text-sm font-medium">恢复默认</p>
-                  <p className="text-white/40 text-xs">重置所有预设</p>
+                  <p className="text-master-text-muted text-xs">重置所有预设</p>
                 </div>
               </button>
             </div>
             
             <button
               onClick={() => setShowImportExport(false)}
-              className="w-full mt-4 py-3 rounded-xl border border-white/20 text-white/70 text-sm font-medium"
+              className="w-full mt-4 py-3 rounded-xl border border-master-glass-border text-master-text-secondary text-sm font-medium"
             >
               关闭
             </button>

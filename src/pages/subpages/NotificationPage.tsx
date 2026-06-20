@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import { ArrowLeft, Bell, BellRing, Gift } from 'lucide-react';
 
 const NotificationPage: React.FC = () => {
-  const { notifications, setNotification, goBack } = useAppStore();
+  const { reduceMotion, notifications, setNotification, goBack } = useAppStore();
 
   const items = [
     { key: 'enabled', label: '接收通知', icon: Bell, desc: '开启或关闭所有通知' },
@@ -12,12 +13,12 @@ const NotificationPage: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-master-bg" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-master-glass-border">
         <button 
           onClick={goBack}
-          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-master-glass-strong transition-all duration-normal active:scale-95"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
@@ -25,7 +26,7 @@ const NotificationPage: React.FC = () => {
       </div>
 
       {/* Notification List */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         <div className="space-y-3">
           {items.map((item) => {
             const Icon = item.icon;
@@ -33,19 +34,19 @@ const NotificationPage: React.FC = () => {
             return (
               <div
                 key={item.key}
-                className="p-4 rounded-2xl bg-white/5 flex items-center gap-4"
+                className="p-4 rounded-2xl bg-master-glass flex items-center gap-4"
               >
-                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Icon size={24} className="text-white/60" />
+                <div className="w-12 h-12 rounded-xl bg-master-glass-strong flex items-center justify-center">
+                  <Icon size={24} className="text-master-text-secondary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-white font-medium">{item.label}</p>
-                  <p className="text-white/50 text-xs">{item.desc}</p>
+                  <p className="text-master-text-tertiary text-xs">{item.desc}</p>
                 </div>
                 <button
                   onClick={() => setNotification(item.key, !isEnabled)}
-                  className={`w-14 h-7 rounded-full relative transition-colors ${
-                    isEnabled ? 'bg-[#FF6B35]' : 'bg-white/20'
+                  className={`w-14 h-7 rounded-full relative transition-all duration-normal ${
+                    isEnabled ? 'bg-[#FF6B35]' : 'bg-master-glass-strong'
                   }`}
                 >
                   <div

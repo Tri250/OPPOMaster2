@@ -1,20 +1,21 @@
 import React from 'react';
 import { useAppStore } from '../../store/appStore';
+import { tokens } from '../../styles/designTokens';
 import {
   ArrowLeft, FileText, Shield, Users, Globe,
   Clock, Lock, CheckCircle
 } from 'lucide-react';
 
 const TermsPage: React.FC = () => {
-  const { setCurrentSubPage } = useAppStore();
+  const { reduceMotion, setCurrentSubPage } = useAppStore();
 
   return (
-    <div className="h-full w-full bg-[#0a0a0a] flex flex-col overflow-hidden">
+    <div className="h-full w-full bg-master-bg flex flex-col overflow-hidden" style={{ fontFamily: tokens.typography.fontFamily }}>
       {/* Header */}
-      <div className="bg-[#0a0a0a] border-b border-white/5 px-4 py-3 flex items-center gap-3">
+      <div className="bg-master-bg border-b border-master-glass-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => setCurrentSubPage(null)}
-          className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+          className="p-2 -ml-2 hover:bg-master-glass-strong rounded-full transition-all duration-normal"
         >
           <ArrowLeft size={20} className="text-white" />
         </button>
@@ -24,11 +25,11 @@ const TermsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${!reduceMotion ? 'animate-fade-in-up' : ''}`}>
         {/* Last Updated */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 border border-white/5">
-          <div className="flex items-center gap-2 text-sm text-white/60">
-            <Clock size={16} className="text-white/40" />
+        <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
+          <div className="flex items-center gap-2 text-sm text-master-text-secondary">
+            <Clock size={16} className="text-master-text-muted" />
             <span>最后更新：2026年6月1日</span>
           </div>
         </div>
@@ -36,12 +37,12 @@ const TermsPage: React.FC = () => {
         {/* Agreement Summary */}
         <div className="bg-gradient-to-br from-[#FF6B35] to-[#FF8C42] rounded-2xl p-5 text-white">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-white/20 rounded-xl">
+            <div className="p-3 bg-master-glass-strong rounded-xl">
               <CheckCircle size={32} className="text-white" />
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold mb-2">欢迎使用我们的服务</h2>
-              <p className="text-white/80 text-sm">
+              <p className="text-master-text-secondary text-sm">
                 使用我们的应用即表示您同意本用户协议和隐私政策。请仔细阅读以下内容。
               </p>
             </div>
@@ -49,52 +50,52 @@ const TermsPage: React.FC = () => {
         </div>
 
         {/* Key Terms */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 border border-white/5">
+        <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
           <h3 className="text-sm font-semibold text-white mb-3">重要条款</h3>
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#FF6B35]/20 rounded-lg">
                 <Users size={18} className="text-[#FF6B35]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">用户责任</h4>
-                <p className="text-xs text-white/50 mt-1">您需要对自己的账户安全和使用行为负责</p>
+                <p className="text-xs text-master-text-tertiary mt-1">您需要对自己的账户安全和使用行为负责</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#4CAF50]/20 rounded-lg">
                 <Shield size={18} className="text-[#4CAF50]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">知识产权</h4>
-                <p className="text-xs text-white/50 mt-1">应用内所有内容均受知识产权法保护</p>
+                <p className="text-xs text-master-text-tertiary mt-1">应用内所有内容均受知识产权法保护</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#2196F3]/20 rounded-lg">
                 <Globe size={18} className="text-[#2196F3]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">服务范围</h4>
-                <p className="text-xs text-white/50 mt-1">我们致力于提供稳定、高质量的摄影工具服务</p>
+                <p className="text-xs text-master-text-tertiary mt-1">我们致力于提供稳定、高质量的摄影工具服务</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-start gap-3 p-3 bg-master-glass rounded-xl">
               <div className="p-2 bg-[#9C27B0]/20 rounded-lg">
                 <Lock size={18} className="text-[#9C27B0]" />
               </div>
               <div>
                 <h4 className="text-sm font-medium text-white">隐私保护</h4>
-                <p className="text-xs text-white/50 mt-1">我们严格保护您的个人信息和隐私安全</p>
+                <p className="text-xs text-master-text-tertiary mt-1">我们严格保护您的个人信息和隐私安全</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Full Terms */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-4 border border-white/5">
+        <div className="bg-master-glass backdrop-blur-glass rounded-xl p-4 border border-master-glass-border shadow-glass">
           <h3 className="text-sm font-semibold text-white mb-3">完整协议</h3>
-          <div className="space-y-4 text-sm text-white/60">
+          <div className="space-y-4 text-sm text-master-text-secondary">
             <div>
               <h4 className="font-medium text-white mb-2">1. 服务条款</h4>
               <p className="text-xs leading-relaxed">

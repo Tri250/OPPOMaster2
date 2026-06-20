@@ -1,18 +1,17 @@
 import { create } from 'zustand';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
-export type SubPageType = 
-  | 'ai-scene' 
-  | 'ai-fine-tune' 
-  | 'smart-optimize' 
-  | 'watermark' 
-  | 'param-adjust' 
+export type SubPageType =
+  | 'ai-scene'
+  | 'ai-fine-tune'
+  | 'smart-optimize'
+  | 'watermark'
+  | 'param-adjust'
   | 'preset-manager'
   | 'lut-share'
   | 'hasselblad'
   | 'cloud-sync'
   | 'theme-settings'
-  | 'dark-mode'
   | 'update-channel'
   | 'notification'
   | 'privacy'
@@ -351,6 +350,9 @@ interface AppState {
   setTheme: (theme: AppState['theme']) => void;
   darkMode: 'system' | 'light' | 'dark';
   setDarkMode: (mode: AppState['darkMode']) => void;
+  // 全局 UI/UX 动效开关
+  reduceMotion: boolean;
+  setReduceMotion: (reduce: boolean) => void;
   // 通知设置
   notifications: {
     enabled: boolean;
@@ -522,8 +524,11 @@ export const useAppStore = create<AppState>((set) => ({
   // 主题设置
   theme: 'hasselblad',
   setTheme: (theme) => set({ theme }),
-  darkMode: 'system',
+  darkMode: 'dark',
   setDarkMode: (mode) => set({ darkMode: mode }),
+  // 全局 UI/UX 动效开关（默认开启，Android 端可依据系统设置关闭）
+  reduceMotion: false,
+  setReduceMotion: (reduce) => set({ reduceMotion: reduce }),
   // 通知设置
   notifications: {
     enabled: true,
