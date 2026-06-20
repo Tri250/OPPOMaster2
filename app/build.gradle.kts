@@ -202,6 +202,17 @@ android {
         }
     }
 
+    // ===== NDK 配置：16KB Page Size 兼容 =====
+    // Android 15+ (API 35) 强制要求所有 native 库按 16KB 页对齐
+    // AGP 8.5.1+ 默认会链接 -Wl,-z,max-page-size=16384，无需额外配置
+    // 16KB 兼容通过 splits.abi + packagingOptions.jniLibs.useLegacyPackaging 协同保证
+    packaging {
+        jniLibs {
+            // 启用新的 NDK 打包模式，确保 16KB 对齐
+            useLegacyPackaging = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

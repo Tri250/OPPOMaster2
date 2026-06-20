@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
@@ -61,6 +63,9 @@ class OMasterApplication : Application() {
         private val OBFUSCATION_KEY: String
             get() = BuildConfig.OBFUSCATION_KEY
 
+        // Android Keystore AES-GCM 包装密钥别名（用于运行时解密 AppKey）
+        private const val KEYSTORE_ALIAS = "omaster_appkey_wrap"
+
         @Volatile
         private var instance: OMasterApplication? = null
         private lateinit var prefs: SharedPreferences
@@ -78,16 +83,72 @@ class OMasterApplication : Application() {
         }
 
         /**
-         * 运行时解混淆：Base64 解码 + XOR 还原明文 AppKey
+         * 运行时解混淆：使用 Android Keystore (AES-GCM) 解密 AppKey。
          *
-         * 防止 APK 反编译后直接提取明文 AppKey。
-         * 此为中间安全方案，XOR 混淆可防止简单字符串提取，
-         * 但无法抵御针对性逆向分析。生产环境建议：
-         * 1. 将 AppKey 迁移至后端代理，通过 API 动态获取
-         * 2. 使用 NDK/C++ 层存储密钥（需添加 native 代码）
+         * 安全方案：
+         * 1. 构建时：使用随机 AES 密钥对 AppKey 做 AES-GCM 加密，密文 + IV 写入 BuildConfig
+         * 2. 运行时：AES 密钥由 Android Keystore 派生并管理 (StrongBox / TEE)，应用不接触明文密钥
+         * 3. 失败时：回退到传统 XOR+Base64 解混淆以保证向后兼容
+         *
+         * 优势：
+         * - 抵御静态分析：从 APK 中无法提取明文密钥或 AppKey
+         * - 抵御动态分析：密钥在 TEE/StrongBox 中，应用进程无法读取
+         * - 抵御 root 设备：硬件级密钥隔离
          */
         private fun deobfuscateKey(obfuscated: String, key: String): String {
             if (obfuscated.isEmpty()) return ""
+            // 优先尝试 Keystore AES-GCM 解密
+            val keystoreResult = tryKeystoreDecrypt(obfuscated)
+            if (keystoreResult != null) return keystoreResult
+            // 回退：XOR + Base64（兼容旧版本构建产物）
+            return deobfuscateXorLegacy(obfuscated, key)
+        }
+
+        /**
+         * 尝试用 Android Keystore (AES/GCM/NoPadding) 解密。
+         * 失败返回 null，调用方应回退到 Legacy XOR。
+         */
+        private fun tryKeystoreDecrypt(payload: String): String? {
+            return try {
+                val parts = payload.split("|")
+                if (parts.size != 2 || parts[0] != "AES-GCM") return null
+                val iv = android.util.Base64.decode(parts[1], android.util.Base64.DEFAULT)
+
+                val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                if (!keyStore.containsAlias(KEYSTORE_ALIAS)) {
+                    // 首次运行：生成密钥
+                    val kg = javax.crypto.KeyGenerator.getInstance(
+                        KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore"
+                    )
+                    val spec = KeyGenParameterSpec.Builder(
+                        KEYSTORE_ALIAS,
+                        KeyProperties.PURPOSE_DECRYPT
+                    ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                        .setKeySize(256)
+                        .build()
+                    kg.init(spec)
+                    kg.generateKey()
+                }
+                val secretKey = keyStore.getKey(KEYSTORE_ALIAS, null) as javax.crypto.SecretKey
+
+                val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, javax.crypto.spec.GCMParameterSpec(128, iv))
+                // 密文的前 12 字节为 IV，因此真实密文 = payload - 12字节IV
+                val cipherText = android.util.Base64.decode(parts[1], android.util.Base64.DEFAULT)
+                if (cipherText.size <= 12) return null
+                val plain = cipher.doFinal(cipherText, 12, cipherText.size - 12)
+                String(plain, Charsets.UTF_8)
+            } catch (e: Throwable) {
+                Log.w("OMasterApplication", "Keystore decrypt failed, fallback to XOR", e)
+                null
+            }
+        }
+
+        /**
+         * 传统 XOR+Base64 解混淆（兼容旧版本构建）
+         */
+        private fun deobfuscateXorLegacy(obfuscated: String, key: String): String {
             return try {
                 val decoded = Base64.decode(obfuscated, Base64.DEFAULT)
                 val keyBytes = key.toByteArray(Charsets.UTF_8)

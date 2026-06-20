@@ -72,7 +72,9 @@ import java.io.File
 
 /**
  * 色彩模式定义
+ * 使用 @Immutable 让 Compose 跳过 equals 比较，避免重组
  */
+@androidx.compose.runtime.Immutable
 data class ColorMode(
     val id: String,
     val name: String,
@@ -120,39 +122,42 @@ fun HasselbladScreen(
     val context = LocalContext.current
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
-    // 色彩模式列表（与Web端完全对齐）
-    val colorModes = listOf(
-        ColorMode(
-            "natural", "哈苏自然色彩", "HNCS 3.0 自然色彩解决方案",
-            HasselbladOrange, Icons.Default.Visibility,
-            mapOf("saturation" to 0, "contrast" to 5, "warmth" to 0, "vibrance" to 5, "clarity" to 0)
-        ),
-        ColorMode(
-            "portrait", "人像肤色优化", "自然美化肤色，保留细节",
-            Color(0xFFFF6B9D), Icons.Default.Face,
-            mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "vibrance" to 0, "skinTone" to 10, "clarity" to 0)
-        ),
-        ColorMode(
-            "landscape", "风景色彩增强", "增强风景色彩层次",
-            Color(0xFF4ECDC4), Icons.Default.Landscape,
-            mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "vibrance" to 0, "clarity" to 10)
-        ),
-        ColorMode(
-            "classic", "哈苏经典胶片", "复古胶片色彩质感",
-            Color(0xFF9C27B0), Icons.Default.AutoAwesome,
-            mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "vibrance" to 0, "grain" to 5, "clarity" to 0)
-        ),
-        ColorMode(
-            "bw", "哈苏黑白", "经典黑白摄影风格",
-            Color(0xFF808080), Icons.Default.DarkMode,
-            mapOf("saturation" to -100, "contrast" to 20, "warmth" to 0, "vibrance" to 0, "clarity" to 15)
-        ),
-        ColorMode(
-            "vivid", "鲜艳色彩", "鲜艳饱满的色彩表现",
-            Color(0xFFFF9800), Icons.Default.Palette,
-            mapOf("saturation" to 20, "contrast" to 10, "warmth" to 0, "vibrance" to 15, "clarity" to 0)
+    // 色彩模式列表（与Web端完全对齐，remember 避免每次重组重建）
+    val colorModes = remember {
+        listOf(
+            ColorMode(
+                "natural", "哈苏自然色彩", "HNCS 3.0 自然色彩解决方案",
+                HasselbladOrange, Icons.Default.Visibility,
+                mapOf("saturation" to 0, "contrast" to 5, "warmth" to 0, "vibrance" to 5, "clarity" to 0)
+            ),
+            ColorMode(
+                "portrait", "人像肤色优化", "自然美化肤色，保留细节",
+                Color(0xFFFF6B9D), Icons.Default.Face,
+                mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "vibrance" to 0, "skinTone" to 10, "clarity" to 0)
+            ),
+            ColorMode(
+                "landscape", "风景色彩增强", "增强风景色彩层次",
+                Color(0xFF4ECDC4), Icons.Default.Landscape,
+                mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "vibrance" to 0, "clarity" to 10)
+            ),
+            ColorMode(
+                "classic", "哈苏经典胶片", "复古胶片色彩质感",
+                Color(0xFF9C27B0), Icons.Default.AutoAwesome,
+                mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "vibrance" to 0, "grain" to 5, "clarity" to 0)
+            ),
+            ColorMode(
+                "bw", "哈苏黑白", "经典黑白摄影风格",
+                Color(0xFF808080), Icons.Default.DarkMode,
+                mapOf("saturation" to -100, "contrast" to 20, "warmth" to 0, "vibrance" to 0, "clarity" to 15)
+            ),
+            ColorMode(
+                "vivid", "鲜艳色彩", "鲜艳饱满的色彩表现",
+                Color(0xFFFF9800), Icons.Default.Palette,
+                mapOf("saturation" to 20, "contrast" to 10, "warmth" to 0, "vibrance" to 15, "clarity" to 0)
+            )
         )
-    )
+    }
+    val colorModesMap = remember(colorModes) { colorModes.associateBy { it.id } }
 
     // 核心状态
     var selectedMode by remember { mutableStateOf("natural") }
@@ -197,34 +202,56 @@ fun HasselbladScreen(
         }
     }
 
+    // 计算 BitmapFactory 采样率：保持最长边不超过 maxSize
+    fun calculateInSampleSize(width: Int, height: Int, maxSize: Int): Int {
+        var sample = 1
+        var w = width
+        var h = height
+        while (w / 2 >= maxSize || h / 2 >= maxSize) {
+            w /= 2
+            h /= 2
+            sample *= 2
+        }
+        return sample
+    }
+
+    // 协程内异步解码并按需缩放，避免主线程 IO / 阻塞
+    suspend fun loadBitmapFromUriAsync(uri: Uri, maxSize: Int = 2048): Bitmap? =
+        withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    // 第一次只读取尺寸
+                    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeStream(input, null, opts)
+                    val sample = calculateInSampleSize(opts.outWidth, opts.outHeight, maxSize)
+                    // 第二次按采样率实际解码
+                    val realOpts = BitmapFactory.Options().apply {
+                        inSampleSize = sample
+                        inPreferredConfig = Bitmap.Config.ARGB_8888
+                    }
+                    context.contentResolver.openInputStream(uri)?.use { input2 ->
+                        BitmapFactory.decodeStream(input2, null, realOpts)
+                    }
+                }
+            } catch (e: Throwable) {
+                android.util.Log.e("HasselbladScreen", "decodeStream failed: ${e.message}", e)
+                null
+            }
+        }
+
     // 相机拍照启动器
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success: Boolean ->
         if (success && cameraImageUri != null) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(cameraImageUri!!)
-                capturedBitmap = BitmapFactory.decodeStream(inputStream)?.also {
-                    // 缩小图片以加速分析
-                    if (it.width > 2048 || it.height > 2048) {
-                        val scale = 2048f / maxOf(it.width, it.height)
-                        capturedBitmap = Bitmap.createScaledBitmap(
-                            it,
-                            (it.width * scale).toInt(),
-                            (it.height * scale).toInt(),
-                            true
-                        )
-                        it.recycle()
-                    }
-                }
-                inputStream?.close()
-                capturedUri = cameraImageUri
-
-                if (capturedBitmap != null) {
-                    // 进入分析阶段
+            scope.launch {
+                val bitmap = loadBitmapFromUriAsync(cameraImageUri!!)
+                if (bitmap != null) {
+                    capturedBitmap = bitmap
+                    capturedUri = cameraImageUri
                     stage = HasselbladEyeStage.ANALYZING
                     startAnalysis(
-                        bitmap = capturedBitmap!!,
+                        bitmap = bitmap,
                         inferenceEngine = inferenceEngine,
                         selectedMode = selectedMode,
                         colorModes = colorModes,
@@ -248,9 +275,9 @@ fun HasselbladScreen(
                         },
                         scope = scope
                     )
+                } else {
+                    Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -260,27 +287,14 @@ fun HasselbladScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                capturedBitmap = BitmapFactory.decodeStream(inputStream)?.also { bmp ->
-                    if (bmp.width > 2048 || bmp.height > 2048) {
-                        val scale = 2048f / maxOf(bmp.width, bmp.height)
-                        capturedBitmap = Bitmap.createScaledBitmap(
-                            bmp,
-                            (bmp.width * scale).toInt(),
-                            (bmp.height * scale).toInt(),
-                            true
-                        )
-                        bmp.recycle()
-                    }
-                }
-                inputStream?.close()
-                capturedUri = it
-
-                if (capturedBitmap != null) {
+            scope.launch {
+                val bitmap = loadBitmapFromUriAsync(it)
+                if (bitmap != null) {
+                    capturedBitmap = bitmap
+                    capturedUri = it
                     stage = HasselbladEyeStage.ANALYZING
                     startAnalysis(
-                        bitmap = capturedBitmap!!,
+                        bitmap = bitmap,
                         inferenceEngine = inferenceEngine,
                         selectedMode = selectedMode,
                         colorModes = colorModes,
@@ -304,16 +318,16 @@ fun HasselbladScreen(
                         },
                         scope = scope
                     )
+                } else {
+                    Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    // 选择模式时更新参数
+    // 选择模式时更新参数（使用 O(1) Map 索引，避免 list.find）
     fun selectMode(modeId: String) {
-        val mode = colorModes.find { it.id == modeId }
+        val mode = colorModesMap[modeId]
         if (mode != null) {
             selectedMode = modeId
             mode.params.forEach { (key, value) ->
@@ -324,7 +338,7 @@ fun HasselbladScreen(
 
     // 重置参数
     fun resetParams() {
-        val mode = colorModes.find { it.id == selectedMode }
+        val mode = colorModesMap[selectedMode]
         if (mode != null) {
             mode.params.forEach { (key, value) ->
                 params[key] = value
