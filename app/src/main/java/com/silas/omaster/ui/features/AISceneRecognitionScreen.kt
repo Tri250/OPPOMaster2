@@ -712,54 +712,53 @@ private fun Camera2Preview(
     DisposableEffect(cameraFacing, hasCameraPermission) {
         if (!hasCameraPermission) {
             onDispose { /* 权限未授予，无需清理 */ }
-            return@DisposableEffect
-        }
-        
-        val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
-        val cameraId = getCameraId(cameraManager, cameraFacing)
+        } else {
+            val cameraManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = getCameraId(cameraManager, cameraFacing)
 
-        if (cameraId != null) {
-            try {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                    == android.content.pm.PackageManager.PERMISSION_GRANTED
-                ) {
-                    // 创建ImageReader用于拍照
-                    val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-                    val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-                    val largest = map?.getOutputSizes(android.graphics.ImageFormat.JPEG)?.maxByOrNull { it.width * it.height }
-                        ?: Size(1920, 1080)
-                    imageReader = android.media.ImageReader.newInstance(
-                        largest.width, largest.height,
-                        android.graphics.ImageFormat.JPEG, 2
-                    )
+            if (cameraId != null) {
+                try {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                        == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ) {
+                        // 创建ImageReader用于拍照
+                        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                        val largest = map?.getOutputSizes(android.graphics.ImageFormat.JPEG)?.maxByOrNull { it.width * it.height }
+                            ?: Size(1920, 1080)
+                        imageReader = android.media.ImageReader.newInstance(
+                            largest.width, largest.height,
+                            android.graphics.ImageFormat.JPEG, 2
+                        )
 
-                    cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
-                        override fun onOpened(camera: CameraDevice) {
-                            cameraDevice = camera
-                            startPreview(camera, textureView, imageReader?.surface, cameraManager, cameraId, cameraHandler)
-                        }
-                        override fun onDisconnected(camera: CameraDevice) {
-                            camera.close()
-                            cameraDevice = null
-                        }
-                        override fun onError(camera: CameraDevice, error: Int) {
-                            camera.close()
-                            cameraDevice = null
-                        }
-                    }, cameraHandler)
+                        cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+                            override fun onOpened(camera: CameraDevice) {
+                                cameraDevice = camera
+                                startPreview(camera, textureView, imageReader?.surface, cameraManager, cameraId, cameraHandler)
+                            }
+                            override fun onDisconnected(camera: CameraDevice) {
+                                camera.close()
+                                cameraDevice = null
+                            }
+                            override fun onError(camera: CameraDevice, error: Int) {
+                                camera.close()
+                                cameraDevice = null
+                            }
+                        }, cameraHandler)
+                    }
+                } catch (e: SecurityException) {
+                    Log.e("Camera2Preview", "Camera permission denied", e)
+                } catch (e: Exception) {
+                    Log.e("Camera2Preview", "Camera open failed", e)
                 }
-            } catch (e: SecurityException) {
-                Log.e("Camera2Preview", "Camera permission denied", e)
-            } catch (e: Exception) {
-                Log.e("Camera2Preview", "Camera open failed", e)
             }
-        }
 
-        onDispose {
-            captureSession?.close()
-            cameraDevice?.close()
-            imageReader?.close()
-            cameraThread.quitSafely()
+            onDispose {
+                captureSession?.close()
+                cameraDevice?.close()
+                imageReader?.close()
+                cameraThread.quitSafely()
+            }
         }
     }
 

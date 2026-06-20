@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
+import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.util.VersionInfo
 import com.silas.omaster.util.perform
