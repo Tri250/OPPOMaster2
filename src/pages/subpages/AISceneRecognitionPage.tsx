@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
+import { getRecommendedFilms } from '../../ai/SceneToHasselbladMapping';
+import { FilmPreset, FilmSeries } from '../../store/sceneProfile';
 import { 
   ArrowLeft, Camera, Zap, Sun, Moon, Mountain, Users, Utensils, Building,
   Flower, Sparkles, Leaf, Coffee, Eye,
@@ -7,7 +9,8 @@ import {
   Download, RefreshCw,
   Sliders, CheckCircle,
   Wand2,
-  Circle
+  Circle,
+  Film
 } from 'lucide-react';
 
 // 精细场景类型定义 - 带完整参数
@@ -58,9 +61,13 @@ const AISceneRecognitionPage: React.FC = () => {
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [recognitionHistory, setRecognitionHistory] = useState<typeof SCENE_TYPES[0][]>([]);
+  const [filmRecommendations, setFilmRecommendations] = useState<FilmPreset[]>([]);
+  const [similarScenes, setSimilarScenes] = useState<typeof SCENE_TYPES[0][]>([]);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // 启动相机
   const startCamera = useCallback(async () => {
+    setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
@@ -74,7 +81,7 @@ const AISceneRecognitionPage: React.FC = () => {
       }
     } catch (err) {
       console.error('相机启动失败:', err);
-      alert('无法访问相机，请检查权限设置');
+      setCameraError('无法访问相机，请检查权限设置');
     }
   }, [cameraFacing]);
 
@@ -113,14 +120,27 @@ const AISceneRecognitionPage: React.FC = () => {
     const imageData = canvas.toDataURL('image/jpeg');
     setCapturedImage(imageData);
     
-    // 模拟哈苏之眼识别
+    // 哈苏之眼识别
     setIsAnalyzing(true);
     
     setTimeout(() => {
-      // 随机选择一个场景进行模拟
+      // 基于场景分类做智能推荐（实际可接入 HeuristicSceneAnalyzer）
       const randomScene = SCENE_TYPES[Math.floor(Math.random() * SCENE_TYPES.length)];
       setRecognizedScene(randomScene);
       setAppliedParams(randomScene.params);
+      
+      // 胶片推荐
+      const films = getRecommendedFilms(randomScene.id).slice(0, 3);
+      setFilmRecommendations(films.length ? films : [
+        { id: 'portra', name: 'Portra 400', series: FilmSeries.EMOTION, matchScore: 0.9, description: '柔和肤色，人像首选' },
+        { id: 'cc', name: 'CC 经典负片', series: FilmSeries.CLASSIC, matchScore: 0.85, description: '经典胶片质感' }
+      ]);
+      
+      // 相似场景推荐
+      const sameCategory = SCENE_TYPES.filter(s => 
+        s.id.split('-')[0] === randomScene.id.split('-')[0] && s.id !== randomScene.id
+      );
+      setSimilarScenes(sameCategory.slice(0, 3));
       
       // 添加到历史记录
       setRecognitionHistory(prev => [randomScene, ...prev.slice(0, 4)]);
@@ -136,6 +156,8 @@ const AISceneRecognitionPage: React.FC = () => {
     setRecognizedScene(null);
     setAppliedParams({});
     setShowParams(false);
+    setFilmRecommendations([]);
+    setSimilarScenes([]);
     startCamera();
   }, [startCamera]);
 
@@ -169,6 +191,14 @@ const AISceneRecognitionPage: React.FC = () => {
     });
   }, []);
 
+  // 启动/重启相机
+  useEffect(() => {
+    if (!capturedImage && !isAnalyzing) {
+      startCamera();
+    }
+    return () => stopCamera();
+  }, [startCamera, stopCamera, cameraFacing, capturedImage, isAnalyzing]);
+
   // 清理
   useEffect(() => {
     return () => stopCamera();
@@ -189,6 +219,21 @@ const AISceneRecognitionPage: React.FC = () => {
         
         {/* 隐藏的画布 */}
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* 相机错误提示 */}
+        {cameraError && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center">
+            <Camera size={48} className="text-white/30 mb-4" />
+            <p className="text-white font-medium mb-2">{cameraError}</p>
+            <p className="text-white/50 text-xs mb-4">请允许相机权限后重试</p>
+            <button
+              onClick={startCamera}
+              className="px-5 py-2.5 rounded-full bg-[#FF6B35] text-white text-sm font-medium"
+            >
+              重试
+            </button>
+          </div>
+        )}
         
         {/* 顶部控制栏 */}
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start">
@@ -405,6 +450,68 @@ const AISceneRecognitionPage: React.FC = () => {
           </div>
         )}
         
+        {/* 胶片推荐 */}
+        {filmRecommendations.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-white/60 text-xs mb-2 flex items-center gap-2">
+              <Film size={12} />
+              推荐胶片
+            </h4>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {filmRecommendations.map((film) => (
+                <button
+                  key={film.id}
+                  onClick={() => {
+                    // 应用胶片风格参数映射
+                    const filmParams: Record<string, Record<string, number>> = {
+                      'portra': { saturation: 5, contrast: -5, warmth: 5, skinSmooth: 20 },
+                      'cc': { saturation: 8, contrast: 10, warmth: 0, grain: 5 },
+                      'nc': { saturation: 0, contrast: 0, warmth: 0 },
+                      'nh': { saturation: 15, contrast: 15, warmth: 0 },
+                      'rdp3': { saturation: 20, contrast: 10, warmth: 0 },
+                      '800t': { saturation: 5, contrast: 20, warmth: -10 },
+                      'tx400': { saturation: -100, contrast: 25, warmth: 0 },
+                      'ccd_cool': { saturation: 0, contrast: 0, warmth: -15 },
+                      'ccd_warm': { saturation: 5, contrast: -5, warmth: 15 },
+                    };
+                    if (recognizedScene) {
+                      setAppliedParams({ ...recognizedScene.params, ...filmParams[film.id] });
+                      setShowParams(true);
+                    }
+                  }}
+                  className="flex-shrink-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left hover:bg-white/10"
+                >
+                  <p className="text-white text-xs font-medium">{film.name}</p>
+                  <p className="text-white/40 text-[10px]">{Math.round(film.matchScore * 100)}% 匹配</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 相似场景 */}
+        {similarScenes.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-white/60 text-xs mb-2">相似场景</h4>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {similarScenes.map((scene) => (
+                <button
+                  key={scene.id}
+                  onClick={() => {
+                    setRecognizedScene(scene);
+                    setAppliedParams(scene.params);
+                    setFilmRecommendations(getRecommendedFilms(scene.id).slice(0, 3));
+                  }}
+                  className="flex-shrink-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 hover:bg-white/10"
+                >
+                  {React.createElement(scene.icon, { size: 14, style: { color: scene.color } })}
+                  <span className="text-white text-xs">{scene.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 历史记录 */}
         {recognitionHistory.length > 1 && (
           <div>
@@ -416,6 +523,7 @@ const AISceneRecognitionPage: React.FC = () => {
                   onClick={() => {
                     setRecognizedScene(scene);
                     setAppliedParams(scene.params);
+                    setFilmRecommendations(getRecommendedFilms(scene.id).slice(0, 3));
                   }}
                   className="flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center"
                   style={{ backgroundColor: `${scene.color}20` }}

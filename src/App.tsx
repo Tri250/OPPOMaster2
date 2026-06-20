@@ -19,7 +19,6 @@ import CloudSyncPage from './pages/subpages/CloudSyncPage';
 import UpdateChannelPage from './pages/subpages/UpdateChannelPage';
 import TermsPage from './pages/subpages/TermsPage';
 import ThemeSettingsPage from './pages/subpages/ThemeSettingsPage';
-import DarkModePage from './pages/subpages/DarkModePage';
 import NotificationPage from './pages/subpages/NotificationPage';
 import PrivacyPage from './pages/subpages/PrivacyPage';
 import PresetSourceManager from './pages/subpages/PresetSourceManager';
@@ -49,8 +48,6 @@ const App: React.FC = () => {
         return <CloudSyncPage />;
       case 'theme-settings':
         return <ThemeSettingsPage />;
-      case 'dark-mode':
-        return <DarkModePage />;
       case 'update-channel':
         return <UpdateChannelPage />;
       case 'notification':

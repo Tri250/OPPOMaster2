@@ -1,18 +1,17 @@
 import { create } from 'zustand';
 
 export type PageType = 'home' | 'featured' | 'features' | 'about';
-export type SubPageType = 
-  | 'ai-scene' 
-  | 'ai-fine-tune' 
-  | 'smart-optimize' 
-  | 'watermark' 
-  | 'param-adjust' 
+export type SubPageType =
+  | 'ai-scene'
+  | 'ai-fine-tune'
+  | 'smart-optimize'
+  | 'watermark'
+  | 'param-adjust'
   | 'preset-manager'
   | 'lut-share'
   | 'hasselblad'
   | 'cloud-sync'
   | 'theme-settings'
-  | 'dark-mode'
   | 'update-channel'
   | 'notification'
   | 'privacy'

@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAppStore, Preset, PresetSource } from '../../store/appStore';
+import { useAppStore, PresetSource } from '../../store/appStore';
+import {
+  fetchPresetsFromSources as loadPresetsFromService,
+  getLoadMessage,
+} from '../../services/presetService';
 import {
   ArrowLeft,
   Plus,
@@ -9,10 +13,12 @@ import {
   RefreshCw,
   Cloud,
   Database,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 const PresetSourceManager: React.FC = () => {
-  const { 
+  const {
     setCurrentSubPage,
     presetSources,
     addPresetSource,
@@ -28,33 +34,35 @@ const PresetSourceManager: React.FC = () => {
   const [newSourceName, setNewSourceName] = useState('');
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [lastLoadTime, setLastLoadTime] = useState<Date | null>(null);
 
   const fetchPresetsFromSources = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
-      const allPresets: Preset[] = [];
-      
-      for (const source of presetSources) {
-        if (!source.enabled) continue;
-        
-        try {
-          const response = await fetch(source.url);
-          if (response.ok) {
-            const data = await response.json();
-            allPresets.push(...(data.presets || data || []));
+      const result = await loadPresetsFromService(presetSources);
+
+      // 更新成功加载源的时间戳
+      if (result.successCount > 0) {
+        presetSources.forEach((source) => {
+          if (source.enabled) {
+            updatePresetSource(source.id, { lastUpdated: new Date() });
           }
-        } catch (err) {
-          console.error(`Failed to fetch from ${source.name}:`, err);
-        }
+        });
       }
-      
-      setFetchedPresets(allPresets);
+
+      setFetchedPresets(result.presets);
+      setLastLoadTime(new Date());
+      setLoadError(getLoadMessage(result));
     } catch (err) {
       console.error('Failed to fetch presets:', err);
+      setLoadError('预设加载异常，请检查网络或预设源配置');
+      setLastLoadTime(new Date());
     } finally {
       setIsLoading(false);
     }
-  }, [presetSources, setFetchedPresets]);
+  }, [presetSources, setFetchedPresets, updatePresetSource]);
 
   useEffect(() => {
     fetchPresetsFromSources();
@@ -111,7 +119,7 @@ const PresetSourceManager: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="p-4 bg-white/5 border-b border-white/5">
+      <div className="p-4 bg-white/5 border-b border-white/5 space-y-3">
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <Database size={16} className="text-[#4CAF50]" />
@@ -125,7 +133,22 @@ const PresetSourceManager: React.FC = () => {
               已加载预设: <span className="text-white font-medium">{fetchedPresets.length}</span>
             </span>
           </div>
+          {lastLoadTime && (
+            <div className="flex items-center gap-2 ml-auto">
+              <CheckCircle2 size={14} className="text-white/30" />
+              <span className="text-white/40 text-xs">
+                {lastLoadTime.toLocaleTimeString()}
+              </span>
+            </div>
+          )}
         </div>
+
+        {loadError && (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+            <AlertCircle size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+            <p className="text-yellow-500/90 text-xs leading-relaxed">{loadError}</p>
+          </div>
+        )}
       </div>
 
       {/* Sources List */}

@@ -15,6 +15,16 @@ const SmartOptimizePage: React.FC = () => {
   const [optimizedOptions, setOptimizedOptions] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>(['enhance']);
 
+  // 根据 AI 参数构建实时滤镜
+  const previewFilter = `
+    saturate(${100 + aiParams.saturation}%)
+    contrast(${100 + aiParams.contrast}%)
+    brightness(${100 + aiParams.brightness}%)
+    sepia(${aiParams.warmth > 0 ? aiParams.warmth * 0.5 : 0}%)
+    hue-rotate(${aiParams.warmth < 0 ? aiParams.warmth * 0.5 : 0}deg)
+    ${aiParams.sharpness > 0 ? `drop-shadow(0 0 ${aiParams.sharpness / 20}px rgba(255,255,255,0.3))` : ''}
+  `;
+
   const toggleOption = (id: string) => {
     setSelectedOptions(prev => 
       prev.includes(id) 
@@ -75,10 +85,11 @@ const SmartOptimizePage: React.FC = () => {
       {/* Preview */}
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
-          <img 
+          <img
             src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=400&fit=crop"
             alt="Preview"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-all duration-500"
+            style={{ filter: previewFilter }}
           />
           
           {/* Processing Overlay */}

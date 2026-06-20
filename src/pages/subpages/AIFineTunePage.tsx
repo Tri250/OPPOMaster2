@@ -102,7 +102,7 @@ const AIFineTunePage: React.FC = () => {
     if (tuneImageSource && tuneImageSource !== state.imageSource) {
       dispatch({ type: FineTuneActionType.SET_IMAGE_SOURCE, source: tuneImageSource });
     }
-  }, [tuneImageSource]);
+  }, [tuneImageSource, state.imageSource]);
   
   // 成功提示自动隐藏
   useEffect(() => {
@@ -335,7 +335,42 @@ const AIFineTunePage: React.FC = () => {
   const setSearchQuery = useCallback((query: string) => {
     dispatch({ type: FineTuneActionType.SET_SEARCH_QUERY, query });
   }, []);
-  
+
+  // 构建实时预览滤镜（覆盖基础、专业、效果参数）
+  const previewFilter = useMemo(() => {
+    const p = state.params;
+    const warmthSepia = p.warmth > 0 ? p.warmth * 0.5 : 0;
+    const warmthHue = p.warmth < 0 ? p.warmth * 0.5 : 0;
+    // vibrance 近似为饱和度+亮度微调
+    const vibranceSaturate = p.vibrance * 0.8;
+    // clarity 近似为对比度+饱和度
+    const clarityContrast = p.clarity * 0.4;
+    const claritySaturate = p.clarity * 0.2;
+    // sharpness 使用 drop-shadow 制造边缘锐化感
+    const sharpnessShadow = p.sharpness > 0 ? `drop-shadow(0 0 ${p.sharpness / 15}px rgba(255,255,255,${Math.min(p.sharpness / 200, 0.4)}))` : '';
+    // dehaze 增加对比和去饱和
+    const dehazeContrast = p.dehaze * 0.3;
+    const dehazeSaturate = -p.dehaze * 0.1;
+    // denoise / skinSmooth 使用轻微高斯模糊
+    const smoothBlur = Math.max(p.denoise, p.skinSmooth) > 0 ? `blur(${Math.max(p.denoise, p.skinSmooth) / 80}px)` : '';
+    // grain 用对比度+亮度抖动近似
+    const grainContrast = p.grain * 0.15;
+    // fade 用不透明度+亮度近似
+    const fadeOpacity = p.fade > 0 ? 1 - p.fade / 300 : 1;
+    const fadeBrightness = p.fade > 0 ? -p.fade / 4 : 0;
+
+    return [
+      `saturate(${100 + p.saturation + vibranceSaturate + dehazeSaturate + claritySaturate}%)`,
+      `contrast(${100 + p.contrast + clarityContrast + dehazeContrast + grainContrast}%)`,
+      `brightness(${100 + p.exposure + p.brightness + fadeBrightness}%)`,
+      `sepia(${warmthSepia}%)`,
+      `hue-rotate(${warmthHue}deg)`,
+      smoothBlur,
+      sharpnessShadow,
+      fadeOpacity < 1 ? `opacity(${fadeOpacity})` : '',
+    ].filter(Boolean).join(' ');
+  }, [state.params]);
+
   // 更新 HSL 值
   const updateHslValue = useCallback((hslId: string, field: 'hue' | 'saturation' | 'luminance', value: number) => {
     dispatch({ type: FineTuneActionType.SET_HSL_VALUE, hslId, field, value });
@@ -487,19 +522,11 @@ const AIFineTunePage: React.FC = () => {
       <div className="px-4 py-4">
         <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#1a1a1a]">
           {/* 预览图像 */}
-          <img 
+          <img
             src={state.imageSource || DEFAULT_IMAGE_SOURCE}
             alt="Preview"
-            className="w-full h-full object-cover"
-            style={{
-              filter: `
-                saturate(${100 + state.params.saturation}%) 
-                contrast(${100 + state.params.contrast}%) 
-                brightness(${100 + state.params.brightness}%)
-                sepia(${state.params.warmth > 0 ? state.params.warmth * 0.5 : 0}%)
-                hue-rotate(${state.params.warmth < 0 ? state.params.warmth * 0.5 : 0}deg)
-              `,
-            }}
+            className="w-full h-full object-cover transition-all duration-300"
+            style={{ filter: previewFilter }}
           />
           {/* 渐变遮罩 */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
