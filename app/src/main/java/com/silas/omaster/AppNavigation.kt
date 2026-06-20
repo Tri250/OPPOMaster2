@@ -58,7 +58,7 @@ import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
-import com.silas.omaster.ui.settings.PresetSourceManagerScreen
+import com.silas.omaster.ui.subscription.SubscriptionScreen
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.UpdateChannelScreen
@@ -244,7 +244,7 @@ fun MainApp(navController: NavHostController) {
                 SettingsScreen(
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
-                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToSubscription = { navController.navigate(Screen.SubscriptionManagement) },
                     onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) },
                     onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) }
                 )
@@ -255,7 +255,7 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() },
                     onNavigateToSettings = { navController.navigate(Screen.Settings) },
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
-                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToSubscription = { navController.navigate(Screen.SubscriptionManagement) },
                     onNavigateToPrivacy = { navController.navigate(Screen.PrivacyPolicy) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp },
@@ -368,8 +368,8 @@ fun MainApp(navController: NavHostController) {
                 PrivacyPolicyScreen(onBack = { navController.popBackStack() })
             }
 
-            composable<Screen.PresetSourceManager> {
-                PresetSourceManagerScreen(onBack = { navController.popBackStack() })
+            composable<Screen.SubscriptionManagement> {
+                SubscriptionScreen(onBack = { navController.popBackStack() }, onScrollStateChanged = {})
             }
 
             composable<Screen.UpdateChannel> {

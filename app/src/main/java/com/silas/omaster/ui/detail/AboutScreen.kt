@@ -69,7 +69,7 @@ fun AboutScreen(
     onBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToNotificationSettings: () -> Unit,
-    onNavigateToPresetSourceManager: () -> Unit,
+    onNavigateToSubscription: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToTerms: () -> Unit,
     onScrollStateChanged: (Boolean) -> Unit,
@@ -314,7 +314,7 @@ private fun QuickActionsCard(
             QuickActionItem(
                 icon = Icons.Default.Settings,
                 label = stringResource(R.string.settings_title),
-                description = "主题、深色模式、通知、预设源等",
+                description = "主题、深色模式、通知、订阅等",
                 onClick = onNavigateToSettings
             )
             HorizontalDivider(

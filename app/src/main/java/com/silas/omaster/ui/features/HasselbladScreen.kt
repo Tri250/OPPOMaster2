@@ -13,9 +13,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -29,6 +32,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -43,6 +47,7 @@ import androidx.core.content.FileProvider
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.FilmPreset
 import com.silas.omaster.model.HasselbladParams
+import com.silas.omaster.model.SceneCategory
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
@@ -58,38 +63,22 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 哈苏色彩科学页面 - 哈苏之眼完整流程
- * HNCS 3.0 自然色彩解决方案
+ * 哈苏之眼 (Hasselblad Eye) - HNCS 3.0 自然色彩解决方案
  *
- * 完整流程：
- * 1. 用户选择色彩模式并调节参数
- * 2. 点击「拍照」按钮启动相机
- * 3. 拍照后展示光圈分析动画
- * 4. AI 分析照片并给出推荐
- * 5. 预览应用哈苏色彩科学后的效果
- * 6. 确认保存最终图像
+ * 产品流程：
+ * 1. READY    → 品牌展示 + 拍照/选图入口
+ * 2. ANALYZING → 光圈动画 + AI 场景分析
+ * 3. RESULTS  → 场景画像 + 推荐色彩模式 + 哈苏参数 + 胶片 + 大师建议
+ * 4. PREVIEW  → 应用哈苏色彩科学前后对比
+ * 5. DONE     → 保存完成
  */
-
-/**
- * 色彩模式定义
- * 使用 @Immutable 让 Compose 跳过 equals 比较，避免重组
- */
-@androidx.compose.runtime.Immutable
-data class ColorMode(
-    val id: String,
-    val name: String,
-    val description: String,
-    val color: Color,
-    val icon: ImageVector,
-    val params: Map<String, Int>
-)
 
 /**
  * 哈苏之眼工作流阶段
  */
 enum class HasselbladEyeStage {
-    /** 初始状态：选择色彩模式 + 调节参数 */
-    SETUP,
+    /** 初始状态：显示拍照/选图按钮 */
+    READY,
     /** 分析中：光圈动画 + AI推理 */
     ANALYZING,
     /** 展示分析结果和推荐 */
@@ -108,8 +97,58 @@ data class AnalysisResult(
     val recommendedFilms: List<FilmPreset>,
     val masterTips: List<String>,
     val suggestedColorMode: String,
+    val suggestedColorModeId: String,
     val paramAdjustments: Map<String, Int>
 )
+
+/**
+ * 色彩模式定义（用于结果页自动推荐 + 可切换）
+ */
+@androidx.compose.runtime.Immutable
+data class ColorMode(
+    val id: String,
+    val name: String,
+    val description: String,
+    val color: Color,
+    val icon: ImageVector,
+    val params: Map<String, Int>
+)
+
+/** 可选色彩模式列表 */
+val colorModes = listOf(
+    ColorMode(
+        "natural", "哈苏自然色彩", "HNCS 3.0 自然色彩解决方案",
+        HasselbladOrange, Icons.Default.Visibility,
+        mapOf("saturation" to 0, "contrast" to 5, "warmth" to 0, "vibrance" to 5, "clarity" to 0)
+    ),
+    ColorMode(
+        "portrait", "人像肤色优化", "自然美化肤色，保留细节",
+        Color(0xFFFF6B9D), Icons.Default.Face,
+        mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "vibrance" to 0, "skinTone" to 10, "clarity" to 0)
+    ),
+    ColorMode(
+        "landscape", "风景色彩增强", "增强风景色彩层次",
+        Color(0xFF4ECDC4), Icons.Default.Landscape,
+        mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "vibrance" to 0, "clarity" to 10)
+    ),
+    ColorMode(
+        "classic", "哈苏经典胶片", "复古胶片色彩质感",
+        Color(0xFF9C27B0), Icons.Default.AutoAwesome,
+        mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "vibrance" to 0, "grain" to 5, "clarity" to 0)
+    ),
+    ColorMode(
+        "bw", "哈苏黑白", "经典黑白摄影风格",
+        Color(0xFF808080), Icons.Default.DarkMode,
+        mapOf("saturation" to -100, "contrast" to 20, "warmth" to 0, "vibrance" to 0, "clarity" to 15)
+    ),
+    ColorMode(
+        "vivid", "鲜艳色彩", "鲜艳饱满的色彩表现",
+        Color(0xFFFF9800), Icons.Default.Palette,
+        mapOf("saturation" to 20, "contrast" to 10, "warmth" to 0, "vibrance" to 15, "clarity" to 0)
+    )
+)
+
+private val colorModesMap = colorModes.associateBy { it.id }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,60 +161,10 @@ fun HasselbladScreen(
     val context = LocalContext.current
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
 
-    // 色彩模式列表（与Web端完全对齐，remember 避免每次重组重建）
-    val colorModes = remember {
-        listOf(
-            ColorMode(
-                "natural", "哈苏自然色彩", "HNCS 3.0 自然色彩解决方案",
-                HasselbladOrange, Icons.Default.Visibility,
-                mapOf("saturation" to 0, "contrast" to 5, "warmth" to 0, "vibrance" to 5, "clarity" to 0)
-            ),
-            ColorMode(
-                "portrait", "人像肤色优化", "自然美化肤色，保留细节",
-                Color(0xFFFF6B9D), Icons.Default.Face,
-                mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "vibrance" to 0, "skinTone" to 10, "clarity" to 0)
-            ),
-            ColorMode(
-                "landscape", "风景色彩增强", "增强风景色彩层次",
-                Color(0xFF4ECDC4), Icons.Default.Landscape,
-                mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "vibrance" to 0, "clarity" to 10)
-            ),
-            ColorMode(
-                "classic", "哈苏经典胶片", "复古胶片色彩质感",
-                Color(0xFF9C27B0), Icons.Default.AutoAwesome,
-                mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "vibrance" to 0, "grain" to 5, "clarity" to 0)
-            ),
-            ColorMode(
-                "bw", "哈苏黑白", "经典黑白摄影风格",
-                Color(0xFF808080), Icons.Default.DarkMode,
-                mapOf("saturation" to -100, "contrast" to 20, "warmth" to 0, "vibrance" to 0, "clarity" to 15)
-            ),
-            ColorMode(
-                "vivid", "鲜艳色彩", "鲜艳饱满的色彩表现",
-                Color(0xFFFF9800), Icons.Default.Palette,
-                mapOf("saturation" to 20, "contrast" to 10, "warmth" to 0, "vibrance" to 15, "clarity" to 0)
-            )
-        )
-    }
-    val colorModesMap = remember(colorModes) { colorModes.associateBy { it.id } }
-
     // 核心状态
-    var selectedMode by remember { mutableStateOf("natural") }
-    val params = remember {
-        mutableStateMapOf(
-            "saturation" to 0,
-            "contrast" to 5,
-            "warmth" to 0,
-            "vibrance" to 5,
-            "clarity" to 0,
-        )
-    }
-    var stage by remember { mutableStateOf(HasselbladEyeStage.SETUP) }
-
-    // 拍照相关
+    var stage by remember { mutableStateOf(HasselbladEyeStage.READY) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var capturedUri by remember { mutableStateOf<Uri?>(null) }
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
     // 分析相关
     var analysisResult by remember { mutableStateOf<AnalysisResult?>(null) }
@@ -191,53 +180,20 @@ fun HasselbladScreen(
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
+    // 结果页选中的色彩模式（AI 推荐后可切换）
+    var selectedColorModeId by remember { mutableStateOf("natural") }
+
+    // 相机
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
     // 相机权限
-    var hasCameraPermission by remember { mutableStateOf(false) }
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        hasCameraPermission = granted
         if (!granted) {
             Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
         }
     }
-
-    // 计算 BitmapFactory 采样率：保持最长边不超过 maxSize
-    fun calculateInSampleSize(width: Int, height: Int, maxSize: Int): Int {
-        var sample = 1
-        var w = width
-        var h = height
-        while (w / 2 >= maxSize || h / 2 >= maxSize) {
-            w /= 2
-            h /= 2
-            sample *= 2
-        }
-        return sample
-    }
-
-    // 协程内异步解码并按需缩放，避免主线程 IO / 阻塞
-    suspend fun loadBitmapFromUriAsync(uri: Uri, maxSize: Int = 2048): Bitmap? =
-        withContext(Dispatchers.IO) {
-            try {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    // 第一次只读取尺寸
-                    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeStream(input, null, opts)
-                    val sample = calculateInSampleSize(opts.outWidth, opts.outHeight, maxSize)
-                    // 第二次按采样率实际解码
-                    val realOpts = BitmapFactory.Options().apply {
-                        inSampleSize = sample
-                        inPreferredConfig = Bitmap.Config.ARGB_8888
-                    }
-                    context.contentResolver.openInputStream(uri)?.use { input2 ->
-                        BitmapFactory.decodeStream(input2, null, realOpts)
-                    }
-                }
-            } catch (e: Throwable) {
-                android.util.Log.e("HasselbladScreen", "decodeStream failed: ${e.message}", e)
-                null
-            }
-        }
 
     // 相机拍照启动器
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -245,7 +201,7 @@ fun HasselbladScreen(
     ) { success: Boolean ->
         if (success && cameraImageUri != null) {
             scope.launch {
-                val bitmap = loadBitmapFromUriAsync(cameraImageUri!!)
+                val bitmap = loadBitmapFromUriAsync(context, cameraImageUri!!)
                 if (bitmap != null) {
                     capturedBitmap = bitmap
                     capturedUri = cameraImageUri
@@ -253,8 +209,6 @@ fun HasselbladScreen(
                     startAnalysis(
                         bitmap = bitmap,
                         inferenceEngine = inferenceEngine,
-                        selectedMode = selectedMode,
-                        colorModes = colorModes,
                         onProgressUpdate = { progress, message, steps ->
                             analysisProgress = progress
                             analysisMessage = message
@@ -267,6 +221,7 @@ fun HasselbladScreen(
                         },
                         onComplete = { result ->
                             analysisResult = result
+                            selectedColorModeId = result.suggestedColorModeId
                             stage = HasselbladEyeStage.RESULTS
                         },
                         onError = { error ->
@@ -288,7 +243,7 @@ fun HasselbladScreen(
     ) { uri: Uri? ->
         uri?.let {
             scope.launch {
-                val bitmap = loadBitmapFromUriAsync(it)
+                val bitmap = loadBitmapFromUriAsync(context, it)
                 if (bitmap != null) {
                     capturedBitmap = bitmap
                     capturedUri = it
@@ -296,8 +251,6 @@ fun HasselbladScreen(
                     startAnalysis(
                         bitmap = bitmap,
                         inferenceEngine = inferenceEngine,
-                        selectedMode = selectedMode,
-                        colorModes = colorModes,
                         onProgressUpdate = { progress, message, steps ->
                             analysisProgress = progress
                             analysisMessage = message
@@ -310,6 +263,7 @@ fun HasselbladScreen(
                         },
                         onComplete = { result ->
                             analysisResult = result
+                            selectedColorModeId = result.suggestedColorModeId
                             stage = HasselbladEyeStage.RESULTS
                         },
                         onError = { error ->
@@ -325,24 +279,12 @@ fun HasselbladScreen(
         }
     }
 
-    // 选择模式时更新参数（使用 O(1) Map 索引，避免 list.find）
-    fun selectMode(modeId: String) {
-        val mode = colorModesMap[modeId]
-        if (mode != null) {
-            selectedMode = modeId
-            mode.params.forEach { (key, value) ->
-                params[key] = value
-            }
-        }
-    }
-
     // 启动相机
     fun launchCamera() {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        val permission = android.content.pm.PackageManager.PERMISSION_GRANTED
         val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
             context, android.Manifest.permission.CAMERA
-        ) == permission
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
             val photoUri = createTempImageUri(context)
@@ -357,102 +299,22 @@ fun HasselbladScreen(
         }
     }
 
-    /**
-     * 应用哈苏色彩科学（核心接口）
-     * 将场景分析得到的 HasselbladParams 与用户选择的色彩模式风格叠加
-     */
-    fun applyHasselbladColorScience(
-        source: Bitmap,
-        hasselbladParams: HasselbladParams,
-        colorModeParams: Map<String, Int> = emptyMap()
-    ): Bitmap {
-        // 叠加场景参数和色彩模式参数
-        val saturation = ((hasselbladParams.saturation + (colorModeParams["saturation"] ?: 0)) / 100f).coerceIn(-1f, 1f)
-        val contrast = 1f + ((hasselbladParams.contrast + (colorModeParams["contrast"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
-        val warmth = ((hasselbladParams.colorTemp + (colorModeParams["warmth"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
-        val tone = (hasselbladParams.tone / 100f).coerceIn(-0.3f, 0.3f)
-        val clarity = ((hasselbladParams.clarity + (colorModeParams["clarity"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
-
-        val matrix = ColorMatrix().apply {
-            // 基础饱和度调整
-            setSaturation(1f + saturation)
-            // 对比度、色温、色调叠加
-            val postMatrix = ColorMatrix(floatArrayOf(
-                contrast, 0f, 0f, 0f, tone * 25f + clarity * 10f,
-                0f, contrast, 0f, 0f, tone * 10f + clarity * 5f,
-                0f, 0f, contrast, 0f, -warmth * 15f - clarity * 5f,
-                0f, 0f, 0f, 1f, 0f
-            ))
-            setConcat(this, postMatrix)
-        }
-
-        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(matrix)
-            isFilterBitmap = true
-        }
-        canvas.drawBitmap(source, 0f, 0f, paint)
-
-        // 暗角效果
-        if (hasselbladParams.vignette > 0) {
-            val vignettePaint = Paint().apply { isFilterBitmap = true }
-            val cx = output.width / 2f
-            val cy = output.height / 2f
-            val radius = maxOf(cx, cy)
-            val shader = android.graphics.RadialGradient(
-                cx, cy, radius,
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.argb(
-                    (hasselbladParams.vignette * 8.5f).toInt().coerceIn(0, 255), 0, 0, 0
-                ),
-                android.graphics.Shader.TileMode.CLAMP
-            )
-            vignettePaint.shader = shader
-            canvas.drawRect(0f, 0f, output.width.toFloat(), output.height.toFloat(), vignettePaint)
-        }
-
-        return output
+    // 重置到初始状态
+    fun resetToReady() {
+        stage = HasselbladEyeStage.READY
+        capturedBitmap = null
+        capturedUri = null
+        analysisResult = null
+        analysisError = null
+        previewBitmap = null
+        apertureState = ApertureState.CLOSED
+        analysisProgress = 0f
+        analysisSteps = defaultAnalysisSteps()
+        analysisMessage = "正在读取光影信息..."
+        selectedColorModeId = "natural"
     }
 
-    // 保存图片到相册
-    fun saveImageToGallery(bitmap: Bitmap) {
-        scope.launch {
-            isSaving = true
-            val success = withContext(Dispatchers.IO) {
-                try {
-                    val filename = "Hasselblad_${System.currentTimeMillis()}.jpg"
-                    val contentValues = android.content.ContentValues().apply {
-                        put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                        put(MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad")
-                    }
-                    val uri = context.contentResolver.insert(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        contentValues
-                    )
-                    uri?.let {
-                        context.contentResolver.openOutputStream(it)?.use { out ->
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                        }
-                        true
-                    } ?: false
-                } catch (e: Exception) {
-                    android.util.Log.e("HasselbladScreen", "Save failed", e)
-                    false
-                }
-            }
-            isSaving = false
-            if (success) {
-                stage = HasselbladEyeStage.DONE
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            } else {
-                Toast.makeText(context, "保存失败，请重试", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    // 根据阶段渲染不同内容
+    // 主布局
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -463,7 +325,7 @@ fun HasselbladScreen(
             title = {
                 Text(
                     when (stage) {
-                        HasselbladEyeStage.SETUP -> "哈苏大师"
+                        HasselbladEyeStage.READY -> "哈苏之眼"
                         HasselbladEyeStage.ANALYZING -> "哈苏之眼 · 分析中"
                         HasselbladEyeStage.RESULTS -> "哈苏之眼 · 分析结果"
                         HasselbladEyeStage.PREVIEW -> "哈苏之眼 · 预览"
@@ -477,7 +339,7 @@ fun HasselbladScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     when (stage) {
                         HasselbladEyeStage.RESULTS -> {
-                            stage = HasselbladEyeStage.SETUP
+                            stage = HasselbladEyeStage.READY
                             capturedBitmap = null
                             analysisResult = null
                             analysisError = null
@@ -486,12 +348,7 @@ fun HasselbladScreen(
                             stage = HasselbladEyeStage.RESULTS
                             previewBitmap = null
                         }
-                        HasselbladEyeStage.DONE -> {
-                            stage = HasselbladEyeStage.SETUP
-                            capturedBitmap = null
-                            analysisResult = null
-                            previewBitmap = null
-                        }
+                        HasselbladEyeStage.DONE -> resetToReady()
                         else -> onBack()
                     }
                 }) {
@@ -504,7 +361,6 @@ fun HasselbladScreen(
             )
         )
 
-        // 根据阶段切换内容
         AnimatedContent(
             targetState = stage,
             transitionSpec = {
@@ -513,13 +369,9 @@ fun HasselbladScreen(
             label = "hasselblad_stage"
         ) { currentStage ->
             when (currentStage) {
-                HasselbladEyeStage.SETUP -> SetupContent(
-                    colorModes = colorModes,
-                    selectedMode = selectedMode,
-                    onSelectMode = { selectMode(it) },
+                HasselbladEyeStage.READY -> ReadyContent(
                     onLaunchCamera = { launchCamera() },
-                    onPickFromGallery = { galleryLauncher.launch("image/*") },
-                    haptic = haptic
+                    onPickFromGallery = { galleryLauncher.launch("image/*") }
                 )
 
                 HasselbladEyeStage.ANALYZING -> AnalyzingContent(
@@ -534,25 +386,22 @@ fun HasselbladScreen(
                     result = analysisResult,
                     error = analysisError,
                     capturedBitmap = capturedBitmap,
+                    selectedColorModeId = selectedColorModeId,
+                    onSelectColorMode = { selectedColorModeId = it },
                     onApplyAndPreview = {
                         val bmp = capturedBitmap
                         val result = analysisResult
                         if (bmp != null && result != null) {
                             scope.launch {
                                 previewBitmap = withContext(Dispatchers.Default) {
-                                    val modeParams = colorModesMap[selectedMode]?.params ?: emptyMap()
+                                    val modeParams = colorModesMap[selectedColorModeId]?.params ?: emptyMap()
                                     applyHasselbladColorScience(bmp, result.sceneProfile.hasselbladParams, modeParams)
                                 }
                                 stage = HasselbladEyeStage.PREVIEW
                             }
                         }
                     },
-                    onRetake = {
-                        stage = HasselbladEyeStage.SETUP
-                        capturedBitmap = null
-                        analysisResult = null
-                        analysisError = null
-                    }
+                    onRetake = { resetToReady() }
                 )
 
                 HasselbladEyeStage.PREVIEW -> PreviewContent(
@@ -560,23 +409,25 @@ fun HasselbladScreen(
                     previewBitmap = previewBitmap,
                     isSaving = isSaving,
                     onConfirm = {
-                        previewBitmap?.let { saveImageToGallery(it) }
+                        previewBitmap?.let { bmp ->
+                            isSaving = true
+                            scope.launch {
+                                val success = saveImageToGallery(context, bmp)
+                                isSaving = false
+                                if (success) {
+                                    stage = HasselbladEyeStage.DONE
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else {
+                                    Toast.makeText(context, "保存失败，请重试", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
                     },
-                    onRetake = {
-                        stage = HasselbladEyeStage.SETUP
-                        capturedBitmap = null
-                        analysisResult = null
-                        previewBitmap = null
-                    }
+                    onRetake = { resetToReady() }
                 )
 
                 HasselbladEyeStage.DONE -> DoneContent(
-                    onNewPhoto = {
-                        stage = HasselbladEyeStage.SETUP
-                        capturedBitmap = null
-                        analysisResult = null
-                        previewBitmap = null
-                    },
+                    onNewPhoto = { resetToReady() },
                     onBack = onBack
                 )
             }
@@ -584,24 +435,22 @@ fun HasselbladScreen(
     }
 }
 
+// ==================== Stage Composables ====================
+
 /**
- * 阶段1：设置内容 - 色彩模式选择 + 参数调节 + 拍照按钮
+ * READY 阶段：品牌展示 + 拍照/选图入口
  */
 @Composable
-private fun SetupContent(
-    colorModes: List<ColorMode>,
-    selectedMode: String,
-    onSelectMode: (String) -> Unit,
+private fun ReadyContent(
     onLaunchCamera: () -> Unit,
-    onPickFromGallery: () -> Unit,
-    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
+    onPickFromGallery: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero Section - HNCS 3.0介绍
+        // HNCS 3.0 品牌卡片
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -664,129 +513,51 @@ private fun SetupContent(
             }
         }
 
-        // 色彩模式选择
+        // 大圆形拍照按钮
         item {
-            Text(
-                text = "色彩模式",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                colorModes.forEach { mode ->
-                    ColorModeCard(
-                        mode = mode,
-                        isSelected = selectedMode == mode.id,
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onSelectMode(mode.id)
-                        }
-                    )
-                }
-            }
-        }
-
-        // 核心特性
-        item {
-            Text(
-                text = "核心特性",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                FeatureItem(
-                    icon = Icons.Default.CameraAlt,
-                    iconBgColor = HasselbladOrange,
-                    title = "自然肤色还原",
-                    description = "智能识别肤色区域，自然美化不偏色"
-                )
-                FeatureItem(
-                    icon = Icons.Default.Layers,
-                    iconBgColor = Color(0xFF2196F3),
-                    title = "色彩层次增强",
-                    description = "智能增强色彩过渡，层次更丰富"
-                )
-                FeatureItem(
-                    icon = Icons.Default.AutoAwesome,
-                    iconBgColor = Color(0xFF9C27B0),
-                    title = "16-bit 色彩深度",
-                    description = "超高色彩精度，细节分毫毕现"
-                )
-            }
-        }
-
-        // 拍照按钮区域
-        item {
-            Text(
-                text = "哈苏之眼",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        "选择一张照片，让哈苏之眼为你分析",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // 拍照按钮（主按钮）
-                    Button(
-                        onClick = onLaunchCamera,
-                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                        shape = RoundedCornerShape(16.dp),
+                    // 外圈光环
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(HasselbladOrange.copy(alpha = 0.1f))
+                            .clickable { onLaunchCamera() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "拍照",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        // 内圈按钮
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .clip(CircleShape)
+                                .background(HasselbladOrange),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = "拍照",
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    // 相册选择按钮
-                    OutlinedButton(
-                        onClick = onPickFromGallery,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, HasselbladOrange)
-                    ) {
+                    // 从相册选择
+                    TextButton(onClick = onPickFromGallery) {
                         Icon(
                             Icons.Default.PhotoLibrary,
-                            null,
+                            contentDescription = null,
                             tint = HasselbladOrange,
                             modifier = Modifier.size(20.dp)
                         )
@@ -794,14 +565,38 @@ private fun SetupContent(
                         Text(
                             "从相册选择",
                             color = HasselbladOrange,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
         }
 
-        // 底部间距
+        // 特性亮点
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FeatureHighlightItem(
+                    icon = Icons.Default.AutoAwesome,
+                    iconBgColor = HasselbladOrange,
+                    title = "AI场景识别",
+                    description = "智能识别拍摄场景，自动推荐最佳色彩方案"
+                )
+                FeatureHighlightItem(
+                    icon = Icons.Default.Palette,
+                    iconBgColor = Color(0xFF2196F3),
+                    title = "哈苏色彩科学",
+                    description = "HNCS 3.0 自然色彩还原，大师级调色参数"
+                )
+                FeatureHighlightItem(
+                    icon = Icons.Default.Movie,
+                    iconBgColor = Color(0xFF9C27B0),
+                    title = "大师参数推荐",
+                    description = "场景匹配胶片风格与拍摄建议"
+                )
+            }
+        }
+
         item {
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -809,7 +604,7 @@ private fun SetupContent(
 }
 
 /**
- * 阶段2：分析中 - 光圈动画 + 分析进度
+ * ANALYZING 阶段：光圈动画 + 分析进度
  */
 @Composable
 private fun AnalyzingContent(
@@ -843,7 +638,7 @@ private fun AnalyzingContent(
                             drawCircle(
                                 color = HasselbladOrange.copy(alpha = 0.3f),
                                 radius = size.minDimension / 2,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                                style = Stroke(width = 2.dp.toPx())
                             )
                         }
                     )
@@ -941,13 +736,15 @@ private fun AnalyzingContent(
 }
 
 /**
- * 阶段3：分析结果 - 场景识别 + 推荐参数 + 操作按钮
+ * RESULTS 阶段：场景画像 + 推荐色彩模式 + 哈苏参数 + 胶片 + 大师建议
  */
 @Composable
 private fun ResultsContent(
     result: AnalysisResult?,
     error: String?,
     capturedBitmap: Bitmap?,
+    selectedColorModeId: String,
+    onSelectColorMode: (String) -> Unit,
     onApplyAndPreview: () -> Unit,
     onRetake: () -> Unit
 ) {
@@ -957,7 +754,6 @@ private fun ResultsContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (error != null) {
-            // 错误状态
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -969,8 +765,7 @@ private fun ResultsContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            Icons.Default.Error,
-                            null,
+                            Icons.Default.Error, null,
                             tint = Color(0xFFD32F2F),
                             modifier = Modifier.size(48.dp)
                         )
@@ -1023,13 +818,12 @@ private fun ResultsContent(
                     colors = CardDefaults.cardColors(
                         containerColor = HasselbladOrange.copy(alpha = 0.1f)
                     ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.3f))
+                    border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.3f))
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Default.Visibility,
-                                null,
+                                Icons.Default.Visibility, null,
                                 tint = HasselbladOrange,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -1043,7 +837,6 @@ private fun ResultsContent(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // 场景名称和置信度
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1068,6 +861,13 @@ private fun ResultsContent(
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            profile.category.displayName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HasselbladOrange.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Medium
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             profile.description,
@@ -1078,7 +878,7 @@ private fun ResultsContent(
                 }
             }
 
-            // 推荐色彩模式
+            // 推荐色彩模式（AI 自动推荐，可切换）
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1088,8 +888,7 @@ private fun ResultsContent(
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Default.Palette,
-                                null,
+                                Icons.Default.Palette, null,
                                 tint = HasselbladOrange,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1100,14 +899,33 @@ private fun ResultsContent(
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                "AI 推荐",
+                                color = HasselbladOrange,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .background(
+                                        HasselbladOrange.copy(alpha = 0.15f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            result.suggestedColorMode,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = HasselbladOrange
-                        )
+
+                        // 色彩模式选择列表
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            colorModes.forEach { mode ->
+                                ColorModeOption(
+                                    mode = mode,
+                                    isSelected = selectedColorModeId == mode.id,
+                                    isRecommended = mode.id == result.suggestedColorModeId,
+                                    onClick = { onSelectColorMode(mode.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1122,8 +940,7 @@ private fun ResultsContent(
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Default.Tune,
-                                null,
+                                Icons.Default.Tune, null,
                                 tint = HasselbladOrange,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1182,8 +999,7 @@ private fun ResultsContent(
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Default.Movie,
-                                    null,
+                                    Icons.Default.Movie, null,
                                     tint = HasselbladOrange,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -1253,8 +1069,7 @@ private fun ResultsContent(
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Default.Lightbulb,
-                                    null,
+                                    Icons.Default.Lightbulb, null,
                                     tint = HasselbladOrange,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -1304,7 +1119,7 @@ private fun ResultsContent(
                     onClick = onRetake,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -1318,7 +1133,7 @@ private fun ResultsContent(
                 ) {
                     Icon(Icons.Default.Visibility, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("预览效果", color = Color.White)
+                    Text("应用并预览", color = Color.White)
                 }
             }
         }
@@ -1330,7 +1145,7 @@ private fun ResultsContent(
 }
 
 /**
- * 阶段4：预览 - 原图/效果对比 + 保存按钮
+ * PREVIEW 阶段：原图/效果对比 + 保存按钮
  */
 @Composable
 private fun PreviewContent(
@@ -1429,7 +1244,7 @@ private fun PreviewContent(
                 onClick = onRetake,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.weight(1f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -1461,7 +1276,7 @@ private fun PreviewContent(
 }
 
 /**
- * 阶段5：完成 - 保存成功提示
+ * DONE 阶段：保存成功提示
  */
 @Composable
 private fun DoneContent(
@@ -1475,7 +1290,6 @@ private fun DoneContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 成功动画图标
         Box(
             modifier = Modifier
                 .size(96.dp)
@@ -1483,8 +1297,7 @@ private fun DoneContent(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Default.CheckCircle,
-                null,
+                Icons.Default.CheckCircle, null,
                 tint = SuccessGreen,
                 modifier = Modifier.size(64.dp)
             )
@@ -1540,74 +1353,89 @@ private fun DoneContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Text("返回")
         }
     }
 }
 
+// ==================== Shared UI Components ====================
+
 /**
- * 色彩模式卡片
+ * 色彩模式选项（用于 Results 页面）
  */
 @Composable
-private fun ColorModeCard(
+private fun ColorModeOption(
     mode: ColorMode,
     isSelected: Boolean,
+    isRecommended: Boolean,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-            ),
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surface
         ),
-        border = if (isSelected) {
-            androidx.compose.foundation.BorderStroke(2.dp, HasselbladOrange)
-        } else {
-            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-        }
+        border = if (isSelected) BorderStroke(2.dp, HasselbladOrange)
+            else BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f))
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(mode.color.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(mode.icon, null, tint = mode.color, modifier = Modifier.size(20.dp))
+                Icon(mode.icon, null, tint = mode.color, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = mode.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = mode.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground
+                    )
+                    if (isRecommended) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "推荐",
+                            color = HasselbladOrange,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .background(
+                                    HasselbladOrange.copy(alpha = 0.15f),
+                                    RoundedCornerShape(3.dp)
+                                )
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
                 Text(
                     text = mode.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             if (isSelected) {
                 Icon(
-                    Icons.Default.Check,
-                    null,
+                    Icons.Default.Check, null,
                     tint = HasselbladOrange,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -1615,10 +1443,10 @@ private fun ColorModeCard(
 }
 
 /**
- * 特性项
+ * 特性亮点项（READY 阶段）
  */
 @Composable
-private fun FeatureItem(
+private fun FeatureHighlightItem(
     icon: ImageVector,
     iconBgColor: Color,
     title: String,
@@ -1662,7 +1490,7 @@ private fun FeatureItem(
 }
 
 /**
- * 光圈叶片动画（简化版，用于分析阶段）
+ * 光圈叶片动画
  */
 @Composable
 private fun ApertureBladesAnimated(state: ApertureState) {
@@ -1782,7 +1610,7 @@ private fun AnalysisStepItem(step: AnalysisStep) {
                                 drawCircle(
                                     color = pendingColor,
                                     radius = size.minDimension / 2,
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                                    style = Stroke(width = 1.dp.toPx())
                                 )
                             }
                         )
@@ -1806,14 +1634,98 @@ private fun AnalysisStepItem(step: AnalysisStep) {
     }
 }
 
+// ==================== Core Processing Functions ====================
+
+/**
+ * 应用哈苏色彩科学（核心接口）
+ * 将场景分析得到的 HasselbladParams 与用户选择的色彩模式风格叠加
+ */
+fun applyHasselbladColorScience(
+    source: Bitmap,
+    hasselbladParams: HasselbladParams,
+    colorModeParams: Map<String, Int> = emptyMap()
+): Bitmap {
+    val saturation = ((hasselbladParams.saturation + (colorModeParams["saturation"] ?: 0)) / 100f).coerceIn(-1f, 1f)
+    val contrast = 1f + ((hasselbladParams.contrast + (colorModeParams["contrast"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
+    val warmth = ((hasselbladParams.colorTemp + (colorModeParams["warmth"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
+    val tone = (hasselbladParams.tone / 100f).coerceIn(-0.3f, 0.3f)
+    val clarity = ((hasselbladParams.clarity + (colorModeParams["clarity"] ?: 0)) / 100f).coerceIn(-0.5f, 0.5f)
+
+    val matrix = ColorMatrix().apply {
+        setSaturation(1f + saturation)
+        val postMatrix = ColorMatrix(floatArrayOf(
+            contrast, 0f, 0f, 0f, tone * 25f + clarity * 10f,
+            0f, contrast, 0f, 0f, tone * 10f + clarity * 5f,
+            0f, 0f, contrast, 0f, -warmth * 15f - clarity * 5f,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        setConcat(this, postMatrix)
+    }
+
+    val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(output)
+    val paint = Paint().apply {
+        colorFilter = ColorMatrixColorFilter(matrix)
+        isFilterBitmap = true
+    }
+    canvas.drawBitmap(source, 0f, 0f, paint)
+
+    // 暗角效果
+    if (hasselbladParams.vignette > 0) {
+        val vignettePaint = Paint().apply { isFilterBitmap = true }
+        val cx = output.width / 2f
+        val cy = output.height / 2f
+        val radius = maxOf(cx, cy)
+        val shader = android.graphics.RadialGradient(
+            cx, cy, radius,
+            android.graphics.Color.TRANSPARENT,
+            android.graphics.Color.argb(
+                (hasselbladParams.vignette * 8.5f).toInt().coerceIn(0, 255), 0, 0, 0
+            ),
+            android.graphics.Shader.TileMode.CLAMP
+        )
+        vignettePaint.shader = shader
+        canvas.drawRect(0f, 0f, output.width.toFloat(), output.height.toFloat(), vignettePaint)
+    }
+
+    return output
+}
+
+/**
+ * 保存图片到相册
+ */
+private suspend fun saveImageToGallery(context: android.content.Context, bitmap: Bitmap): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            val filename = "Hasselblad_${System.currentTimeMillis()}.jpg"
+            val contentValues = android.content.ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad")
+            }
+            val uri = context.contentResolver.insert(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues
+            )
+            uri?.let {
+                context.contentResolver.openOutputStream(it)?.use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                true
+            } ?: false
+        } catch (e: Exception) {
+            android.util.Log.e("HasselbladScreen", "Save failed", e)
+            false
+        }
+    }
+}
+
 /**
  * 启动分析流程
  */
 private fun startAnalysis(
     bitmap: Bitmap,
     inferenceEngine: MasterInferenceEngine,
-    selectedMode: String,
-    colorModes: List<ColorMode>,
     onProgressUpdate: (Float, String, List<AnalysisStep>) -> Unit,
     onComplete: (AnalysisResult) -> Unit,
     onError: (String) -> Unit,
@@ -1849,7 +1761,7 @@ private fun startAnalysis(
 
             val shadowClip = profile.histogramData?.shadowClipping == true
             val highlightClip = profile.histogramData?.highlightClipping == true
-            delay(100) // 短暂视觉过渡
+            delay(100)
 
             steps[1] = steps[1].copy(status = AnalysisStatus.COMPLETED)
             val lightMsg = if (shadowClip || highlightClip) {
@@ -1894,7 +1806,8 @@ private fun startAnalysis(
             }
 
             // 根据场景推荐色彩模式
-            val suggestedColorMode = suggestColorMode(profile, colorModes)
+            val suggestedColorMode = suggestColorMode(profile)
+            val suggestedColorModeId = suggestColorModeId(profile)
 
             // 参数调整建议
             val paramAdjustments = mapParamAdjustments(profile.hasselbladParams)
@@ -1910,6 +1823,7 @@ private fun startAnalysis(
                     recommendedFilms = films,
                     masterTips = masterTips,
                     suggestedColorMode = suggestedColorMode,
+                    suggestedColorModeId = suggestedColorModeId,
                     paramAdjustments = paramAdjustments
                 )
             )
@@ -1921,9 +1835,9 @@ private fun startAnalysis(
 }
 
 /**
- * 根据场景推荐色彩模式
+ * 根据场景推荐色彩模式名称
  */
-private fun suggestColorMode(profile: SceneProfile, colorModes: List<ColorMode>): String {
+private fun suggestColorMode(profile: SceneProfile): String {
     val category = profile.category.name
     val modeMapping = mapOf(
         "PORTRAIT" to "人像肤色优化",
@@ -1937,6 +1851,24 @@ private fun suggestColorMode(profile: SceneProfile, colorModes: List<ColorMode>)
         "UNKNOWN" to "哈苏自然色彩"
     )
     return modeMapping[category] ?: "哈苏自然色彩"
+}
+
+/**
+ * 根据场景推荐色彩模式 ID
+ */
+private fun suggestColorModeId(profile: SceneProfile): String {
+    val category = profile.category
+    return when (category) {
+        SceneCategory.PORTRAIT -> "portrait"
+        SceneCategory.LANDSCAPE -> "landscape"
+        SceneCategory.NIGHT -> "classic"
+        SceneCategory.FOOD -> "vivid"
+        SceneCategory.URBAN -> "classic"
+        SceneCategory.STILL_LIFE -> "natural"
+        SceneCategory.MACRO -> "vivid"
+        SceneCategory.EVENT -> "natural"
+        SceneCategory.UNKNOWN -> "natural"
+    }
 }
 
 /**
@@ -1954,7 +1886,6 @@ private fun mapParamAdjustments(params: HasselbladParams): Map<String, Int> {
 
 /**
  * 创建临时图片Uri用于相机拍照保存
- * 使用应用私有缓存目录 + FileProvider
  */
 private fun createTempImageUri(context: android.content.Context): Uri {
     return try {
@@ -1974,5 +1905,47 @@ private fun createTempImageUri(context: android.content.Context): Uri {
     } catch (e: Exception) {
         android.util.Log.e("HasselbladScreen", "创建相机临时文件失败", e)
         Uri.EMPTY
+    }
+}
+
+/**
+ * 计算 BitmapFactory 采样率
+ */
+private fun calculateInSampleSize(width: Int, height: Int, maxSize: Int): Int {
+    var sample = 1
+    var w = width
+    var h = height
+    while (w / 2 >= maxSize || h / 2 >= maxSize) {
+        w /= 2
+        h /= 2
+        sample *= 2
+    }
+    return sample
+}
+
+/**
+ * 异步解码并按需缩放
+ */
+private suspend fun loadBitmapFromUriAsync(
+    context: android.content.Context,
+    uri: Uri,
+    maxSize: Int = 2048
+): Bitmap? = withContext(Dispatchers.IO) {
+    try {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(input, null, opts)
+            val sample = calculateInSampleSize(opts.outWidth, opts.outHeight, maxSize)
+            val realOpts = BitmapFactory.Options().apply {
+                inSampleSize = sample
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            context.contentResolver.openInputStream(uri)?.use { input2 ->
+                BitmapFactory.decodeStream(input2, null, realOpts)
+            }
+        }
+    } catch (e: Throwable) {
+        android.util.Log.e("HasselbladScreen", "decodeStream failed: ${e.message}", e)
+        null
     }
 }

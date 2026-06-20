@@ -129,8 +129,8 @@ android {
         // 当前版本: v1.6.2
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
         // 1.6.2 → 1*10000 + 6*100 + 2 = 10602
-        versionCode = 10700
-        versionName = "1.7.0"
+        versionCode = 10801
+        versionName = "1.8.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

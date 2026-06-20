@@ -65,7 +65,7 @@ sealed class Screen {
     data object PrivacyPolicy : Screen()
 
     @Serializable
-    data object PresetSourceManager : Screen()
+    data object SubscriptionManagement : Screen()
 
     @Serializable
     data object UpdateChannel : Screen()
