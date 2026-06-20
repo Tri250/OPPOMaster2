@@ -22,8 +22,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.silas.omaster.cloud.CloudSyncManager
-import com.silas.omaster.cloud.SyncState
+import com.silas.omaster.data.repository.CloudSyncState
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -46,14 +46,14 @@ fun CloudSyncScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val syncManager = remember { CloudSyncManager.getInstance(context) }
+    val repository = remember { PresetRepository.getInstance(context) }
 
-    // 从 CloudSyncManager 读取真实同步状态
-    val syncState by syncManager.syncState.collectAsState()
-    val lastSyncTimestamp by syncManager.lastSyncTime.collectAsState()
-    val cloudPresets by syncManager.cloudPresets.collectAsState()
+    // 从 PresetRepository 读取真实同步状态
+    val syncState by repository.syncState.collectAsState()
+    val lastSyncTimestamp by repository.lastSyncTime.collectAsState()
+    val cloudPresets by repository.cloudPresets.collectAsState()
 
-    val isSyncing = syncState is SyncState.Syncing
+    val isSyncing = syncState is CloudSyncState.Syncing
 
     // 格式化最后同步时间
     val lastSyncTimeText = remember(lastSyncTimestamp) {
@@ -91,7 +91,7 @@ fun CloudSyncScreen(
     // 从 CloudSyncManager 获取真实的云服务提供商列表
     // 依赖 cloudPresets State，确保同步完成后 UI 重新计算连接状态
     val presetProviders = remember(cloudPresets) {
-        val urls = syncManager.getCloudPresetUrls()
+        val urls = repository.getCloudPresetUrls()
         val brandColors = mapOf(
             "oppo" to 0xFF1E90FF,
             "realme" to 0xFFFFD700,
@@ -162,10 +162,10 @@ fun CloudSyncScreen(
                             color = HasselbladOrange
                         )
                         val (statusText, statusColor) = when (syncState) {
-                            is SyncState.Syncing -> "正在同步中..." to HasselbladOrange
-                            is SyncState.Success -> "同步成功" to SuccessGreen
-                            is SyncState.Error -> {
-                                val msg = (syncState as SyncState.Error).message
+                            is CloudSyncState.Syncing -> "正在同步中..." to HasselbladOrange
+                            is CloudSyncState.Success -> "同步成功" to SuccessGreen
+                            is CloudSyncState.Error -> {
+                                val msg = (syncState as CloudSyncState.Error).message
                                 if (msg.contains("网络", ignoreCase = true) || msg.contains("Network", ignoreCase = true) || msg.contains("Connect", ignoreCase = true)) {
                                     "同步失败：网络不可用" to Color(0xFFFFA726)
                                 } else {
@@ -184,8 +184,8 @@ fun CloudSyncScreen(
                         )
 
                         // 错误/离线详情
-                        if (syncState is SyncState.Error) {
-                            val errorMessage = (syncState as SyncState.Error).message
+                        if (syncState is CloudSyncState.Error) {
+                            val errorMessage = (syncState as CloudSyncState.Error).message
                             if (errorMessage.isNotBlank()) {
                                 Text(
                                     text = errorMessage,
@@ -210,7 +210,7 @@ fun CloudSyncScreen(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 scope.launch {
                                     try {
-                                        syncManager.sync()
+                                        repository.syncFromCloud()
                                     } catch (e: Exception) {
                                         android.util.Log.e("CloudSyncScreen", "Sync failed", e)
                                     }
@@ -253,7 +253,7 @@ fun CloudSyncScreen(
                                 provider = provider,
                                 onConnect = {
                                     scope.launch {
-                                        syncManager.sync()
+                                        repository.syncFromCloud()
                                     }
                                 }
                             )

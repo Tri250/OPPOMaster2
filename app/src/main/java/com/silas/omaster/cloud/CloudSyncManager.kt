@@ -31,6 +31,7 @@ import java.util.UUID
  * 
  * 使用 Ktor HttpClient 统一网络层，与 PresetRemoteManager 保持一致
  */
+@Deprecated("Use PresetRepository for cloud sync")
 class CloudSyncManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
     private val appContext = context.applicationContext

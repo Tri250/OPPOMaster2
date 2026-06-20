@@ -129,8 +129,8 @@ android {
         // 当前版本: v1.6.2
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
         // 1.6.2 → 1*10000 + 6*100 + 2 = 10602
-        versionCode = 10602
-        versionName = "1.6.2"
+        versionCode = 10700
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -317,8 +317,8 @@ android {
         // release 构建时检查
         checkReleaseBuilds = true
         // 忽略警告（谨慎使用）
-        ignore.add("IconLauncherShape")
-        ignore.add("IconMissingDensityFolder")
+        disable.add("IconLauncherShape")
+        disable.add("IconMissingDensityFolder")
         // 错误严重级别配置
         error.add("HardcodedText")
         error.add("MissingTranslation")

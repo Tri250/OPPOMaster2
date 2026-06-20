@@ -275,15 +275,25 @@ class OMasterApplication : Application() {
 
                 // 预初始化云同步：首次启动时自动同步预设源
                 try {
-                    val cloudSyncManager = com.silas.omaster.cloud.CloudSyncManager.getInstance(this@OMasterApplication)
-                    if (cloudSyncManager.shouldSync()) {
+                    val repository = PresetRepository.getInstance(this@OMasterApplication)
+                    if (repository.shouldSync()) {
                         kotlinx.coroutines.runBlocking {
-                            cloudSyncManager.sync()
+                            repository.syncFromCloud()
                         }
                         StartupLogger.logStep("云同步初始同步", SystemClock.elapsedRealtime() - lazyStart)
                     }
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "云同步初始同步失败", e)
+                }
+
+                // 如果用户已同意隐私政策（之前同意过），初始化友盟
+                try {
+                    if (hasUserAgreed() && SettingsManager.getInstance(this@OMasterApplication).isAnalyticsEnabled) {
+                        initUMeng()
+                        StartupLogger.logStep("友盟SDK初始化(已同意)", SystemClock.elapsedRealtime() - lazyStart)
+                    }
+                } catch (e: Throwable) {
+                    Log.w("OMasterApplication", "友盟延迟初始化失败", e)
                 }
 
             } catch (e: Throwable) {

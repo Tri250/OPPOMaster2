@@ -33,6 +33,16 @@ import java.io.File
 import kotlin.math.abs
 
 /**
+ * 云同步状态（从 CloudSyncManager 迁移）
+ */
+sealed class CloudSyncState {
+    object Idle : CloudSyncState()
+    object Syncing : CloudSyncState()
+    data class Success(val newCount: Int, val updatedCount: Int) : CloudSyncState()
+    data class Error(val message: String) : CloudSyncState()
+}
+
+/**
  * 预设管理器 - 完整版
  * 实现所有PM系列功能用例
  */
@@ -54,6 +64,16 @@ class PresetRepository private constructor(context: Context) {
 
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+
+    // 云同步状态（从 CloudSyncManager 迁移）
+    private val _syncState = MutableStateFlow<CloudSyncState>(CloudSyncState.Idle)
+    val syncState: StateFlow<CloudSyncState> = _syncState.asStateFlow()
+
+    private val _lastSyncTime = MutableStateFlow(settingsManager.lastSyncTime)
+    val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
+
+    private val _cloudPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
+    val cloudPresets: StateFlow<List<MasterPreset>> = _cloudPresets.asStateFlow()
 
     // 设备型号（WM-003）
     private var deviceModel: String = Build.MODEL
@@ -454,6 +474,7 @@ class PresetRepository private constructor(context: Context) {
      * - 内部带有重试与指数退避
      */
     suspend fun syncFromCloud(): Result<SyncResult> = withContext(Dispatchers.IO) {
+        _syncState.value = CloudSyncState.Syncing
         var lastError: Throwable? = null
         val maxRetries = 3
 
@@ -462,9 +483,17 @@ class PresetRepository private constructor(context: Context) {
                 Log.d(TAG, "云同步第 ${attempt}/${maxRetries} 次尝试")
                 val result = fetchFromCDN()
                 if (result.isSuccess) {
-                    settingsManager.lastSyncTime = System.currentTimeMillis()
+                    val syncResult = result.getOrNull()!!
+                    val currentTime = System.currentTimeMillis()
+                    settingsManager.lastSyncTime = currentTime
+                    _lastSyncTime.value = currentTime
                     settingsManager.cloudSyncStatus =
                         com.silas.omaster.data.local.CloudSyncStatus.SYNCED
+                    _syncState.value = CloudSyncState.Success(syncResult.imported, syncResult.conflicts.size)
+
+                    // 更新云端预设缓存
+                    _cloudPresets.value = _presets.value.map { it.toMasterPreset() }
+
                     return@withContext result
                 }
                 lastError = result.exceptionOrNull()
@@ -481,6 +510,7 @@ class PresetRepository private constructor(context: Context) {
 
         settingsManager.cloudSyncStatus =
             com.silas.omaster.data.local.CloudSyncStatus.ERROR
+        _syncState.value = CloudSyncState.Error(lastError?.message ?: "同步失败：达到最大重试次数")
         Result.failure(lastError ?: Exception("同步失败：达到最大重试次数"))
     }
 
@@ -1076,6 +1106,34 @@ class PresetRepository private constructor(context: Context) {
             .onFailure { Log.w(TAG, "关闭 HttpClient 时发生异常", it) }
     }
 
+    // ==================== 云同步便捷方法（从 CloudSyncManager 迁移） ====================
+
+    /**
+     * 检查是否需要同步
+     * 每24小时自动同步一次
+     */
+    fun shouldSync(): Boolean {
+        if (!settingsManager.isCloudSyncEnabled) return false
+        val lastSync = settingsManager.lastSyncTime
+        val currentTime = System.currentTimeMillis()
+        return currentTime - lastSync > 24 * 60 * 60 * 1000
+    }
+
+    /**
+     * 切换云同步开关
+     */
+    fun toggleCloudSync(enabled: Boolean) {
+        settingsManager.isCloudSyncEnabled = enabled
+        if (!enabled) {
+            settingsManager.cloudSyncStatus = com.silas.omaster.data.local.CloudSyncStatus.DISABLED
+        }
+    }
+
+    /**
+     * 获取云端预设URL列表
+     */
+    fun getCloudPresetUrls(): Map<String, String> = settingsManager.cloudPresetUrls
+
     companion object {
         private const val TAG = "PresetRepository"
         private const val CACHE_FILE_NAME = "presets_cache.json"
@@ -1268,7 +1326,7 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
     paramsMap.putIfAbsent("brightness", 0)
 
     return PresetItem(
-        id = id ?: "preset_${abs(name.hashCode())}_${System.nanoTime()}",
+        id = id ?: "${resolvedBrand}_${name.hashCode().toUInt()}",
         name = name,
         brand = resolvedBrand,
         scene = resolvedScene,
