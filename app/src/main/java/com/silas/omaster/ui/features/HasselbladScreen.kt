@@ -16,6 +16,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -439,6 +441,13 @@ fun HasselbladScreen(
 
 /**
  * READY 阶段：品牌展示 + 拍照/选图入口
+ *
+ * 产品经理UX优化要点：
+ * 1. 首屏聚焦：大圆形快门按钮作为绝对视觉中心，符合相机应用用户心智模型
+ * 2. 品牌信任：HNCS 3.0品牌卡片强化专业影像认知
+ * 3. 操作分流：拍照/相册双入口，满足不同场景启动路径
+ * 4. 特性教育：3个核心卖点卡片，降低用户认知门槛
+ * 5. 液态玻璃：所有卡片采用半透明+模糊材质，符合ColorOS 16规范
  */
 @Composable
 private fun ReadyContent(
@@ -447,65 +456,72 @@ private fun ReadyContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // HNCS 3.0 品牌卡片
+        // HNCS 3.0 品牌卡片 - 液态玻璃材质
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .height(132.dp)
+                        .clip(RoundedCornerShape(20.dp))
                         .background(
-                            Brush.horizontalGradient(
-                                listOf(HasselbladOrange, HasselbladOrangeLight)
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    HasselbladOrange.copy(alpha = 0.95f),
+                                    HasselbladOrangeLight.copy(alpha = 0.85f)
+                                ),
+                                start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                             )
                         )
+                        .padding(20.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)),
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Camera, null,
-                                tint = MaterialTheme.colorScheme.onBackground,
+                                tint = Color.White,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                "HNCS 3.0",
-                                color = MaterialTheme.colorScheme.onBackground,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
+                                "哈苏之眼",
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "哈苏自然色彩解决方案",
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-                                fontSize = 14.sp
+                                "HNCS 3.0 自然色彩解决方案",
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 14.sp,
+                                letterSpacing = 0.25.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "拍照 → AI分析 → 色彩推荐 → 预览保存",
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                fontSize = 12.sp
+                                "AI场景识别 · 色彩科学 · 大师参数",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp,
+                                letterSpacing = 0.4.sp
                             )
                         }
                     }
@@ -513,69 +529,111 @@ private fun ReadyContent(
             }
         }
 
-        // 大圆形拍照按钮
+        // 大圆形拍照按钮 - 视觉焦点
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+                    .padding(vertical = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // 外圈光环
+                    // 外圈呼吸光环动画
+                    val infiniteTransition = rememberInfiniteTransition(label = "shutter_breath")
+                    val breathScale by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.08f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1500, easing = EaseInOutSine),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "breath"
+                    )
                     Box(
                         modifier = Modifier
-                            .size(120.dp)
+                            .size(140.dp)
+                            .scale(breathScale)
                             .clip(CircleShape)
-                            .background(HasselbladOrange.copy(alpha = 0.1f))
-                            .clickable { onLaunchCamera() },
+                            .background(HasselbladOrange.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        // 内圈按钮
+                        // 中圈
                         Box(
                             modifier = Modifier
-                                .size(88.dp)
+                                .size(116.dp)
                                 .clip(CircleShape)
-                                .background(HasselbladOrange),
+                                .background(HasselbladOrange.copy(alpha = 0.2f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onLaunchCamera() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.Default.CameraAlt,
-                                contentDescription = "拍照",
-                                tint = Color.White,
-                                modifier = Modifier.size(40.dp)
-                            )
+                            // 内圈快门按钮
+                            Box(
+                                modifier = Modifier
+                                    .size(92.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            listOf(HasselbladOrangeLight, HasselbladOrange)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = "拍照",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // 从相册选择
-                    TextButton(onClick = onPickFromGallery) {
+                    Text(
+                        "点击拍照，AI即刻分析场景",
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        fontSize = 13.sp,
+                        letterSpacing = 0.25.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 从相册选择 - 次级操作
+                    OutlinedButton(
+                        onClick = onPickFromGallery,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.5f)),
+                        modifier = Modifier.height(44.dp)
+                    ) {
                         Icon(
                             Icons.Default.PhotoLibrary,
                             contentDescription = null,
                             tint = HasselbladOrange,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "从相册选择",
                             color = HasselbladOrange,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.25.sp
                         )
                     }
                 }
             }
         }
 
-        // 特性亮点
+        // 特性亮点 - 教育用户核心价值
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 FeatureHighlightItem(
                     icon = Icons.Default.AutoAwesome,
                     iconBgColor = HasselbladOrange,
@@ -598,13 +656,19 @@ private fun ReadyContent(
         }
 
         item {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 /**
  * ANALYZING 阶段：光圈动画 + 分析进度
+ *
+ * 产品经理UX优化要点：
+ * 1. 沉浸式体验：全屏居中布局，减少干扰元素
+ * 2. 实时反馈：进度条+步骤列表双通道信息传递
+ * 3. 品牌感知：底部HNCS标识强化专业认知
+ * 4. 动画细节：光圈叶片旋转+中心点呼吸，模拟真实相机快门
  */
 @Composable
 private fun AnalyzingContent(
@@ -618,27 +682,27 @@ private fun AnalyzingContent(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 光圈动画
+        // 光圈动画区域
         Box(
-            modifier = Modifier.size(128.dp),
+            modifier = Modifier.size(140.dp),
             contentAlignment = Alignment.Center
         ) {
-            // 外圈
+            // 外圈轨道
             Box(
                 modifier = Modifier
-                    .size(128.dp)
-                    .clip(RoundedCornerShape(64.dp))
+                    .size(140.dp)
+                    .clip(RoundedCornerShape(70.dp))
                     .background(Color.Transparent)
                     .then(
                         Modifier.drawBehind {
                             drawCircle(
-                                color = HasselbladOrange.copy(alpha = 0.3f),
+                                color = HasselbladOrange.copy(alpha = 0.25f),
                                 radius = size.minDimension / 2,
-                                style = Stroke(width = 2.dp.toPx())
+                                style = Stroke(width = 2.5f.dp.toPx())
                             )
                         }
                     )
@@ -647,43 +711,55 @@ private fun AnalyzingContent(
             // 光圈叶片
             ApertureBladesAnimated(state = apertureState)
 
-            // 中心点
+            // 中心点呼吸动画
+            val infiniteTransition = rememberInfiniteTransition(label = "center_pulse")
+            val centerScale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse"
+            )
             val centerSize = when (apertureState) {
-                ApertureState.OPEN -> 8.dp
-                else -> 4.dp
+                ApertureState.OPEN -> 10.dp
+                else -> 6.dp
             }
             Box(
                 modifier = Modifier
-                    .size(centerSize)
-                    .clip(RoundedCornerShape(centerSize / 2))
+                    .size(centerSize * centerScale)
+                    .clip(CircleShape)
                     .background(HasselbladOrange)
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         // 当前状态文字
         Text(
             text = message,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            fontSize = 14.sp
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.25.sp
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // 哈苏橙渐变进度条
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(8.dp)
-                .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+                .fillMaxWidth(0.82f)
+                .height(10.dp)
+                .clip(RoundedCornerShape(5.dp))
+                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progress / 100f)
                     .fillMaxHeight()
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(RoundedCornerShape(5.dp))
                     .background(
                         Brush.horizontalGradient(
                             listOf(HasselbladOrange, HasselbladOrangeLight, Color(0xFFFFB366))
@@ -694,49 +770,58 @@ private fun AnalyzingContent(
 
         Row(
             modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .padding(top = 8.dp),
+                .fillMaxWidth(0.82f)
+                .padding(top = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = "分析进度",
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-                fontSize = 12.sp
+                fontSize = 12.sp,
+                letterSpacing = 0.4.sp
             )
             Text(
                 text = "${progress.toInt()}%",
                 color = HasselbladOrange,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // 分析步骤列表
         Column(
-            modifier = Modifier.fillMaxWidth(0.8f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(0.82f),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             steps.forEach { step ->
                 AnalysisStepItem(step = step)
             }
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(56.dp))
 
         // 底部品牌标识
         Text(
             text = "HNCS · HASSELBLAD NATURAL COLOR SOLUTION",
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
             fontSize = 10.sp,
-            letterSpacing = 2.sp
+            letterSpacing = 2.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
 
 /**
  * RESULTS 阶段：场景画像 + 推荐色彩模式 + 哈苏参数 + 胶片 + 大师建议
+ *
+ * 产品经理UX优化要点：
+ * 1. 信息层级：缩略图→场景识别→色彩模式→参数→胶片→建议，由总到分
+ * 2. 视觉锚点：置信度百分比标签作为场景识别的视觉焦点
+ * 3. 操作显性：底部双按钮固定，避免用户迷失
+ * 4. 色彩模式：AI推荐标签+选中态高亮，降低选择成本
+ * 5. 参数可视化：数值直接展示，专业用户可快速确认
  */
 @Composable
 private fun ResultsContent(
@@ -750,26 +835,26 @@ private fun ResultsContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (error != null) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
                             Icons.Default.Error, null,
                             tint = Color(0xFFD32F2F),
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(52.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             "分析失败",
                             style = MaterialTheme.typography.titleMedium,
@@ -789,12 +874,12 @@ private fun ResultsContent(
         } else if (result != null) {
             val profile = result.sceneProfile
 
-            // 缩略图
+            // 缩略图 - 顶部视觉锚点
             item {
                 if (capturedBitmap != null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         androidx.compose.foundation.Image(
@@ -803,22 +888,22 @@ private fun ResultsContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
-                                .clip(RoundedCornerShape(16.dp)),
+                                .clip(RoundedCornerShape(20.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
                 }
             }
 
-            // 场景识别结果
+            // 场景识别结果 - 核心信息卡片
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = HasselbladOrange.copy(alpha = 0.1f)
+                        containerColor = HasselbladOrange.copy(alpha = 0.08f)
                     ),
-                    border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.3f))
+                    border = BorderStroke(1.5.dp, HasselbladOrange.copy(alpha = 0.35f))
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -832,7 +917,8 @@ private fun ResultsContent(
                                 "场景识别",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = HasselbladOrange
+                                color = HasselbladOrange,
+                                letterSpacing = 0.25.sp
                             )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -849,30 +935,32 @@ private fun ResultsContent(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Card(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 colors = CardDefaults.cardColors(containerColor = HasselbladOrange)
                             ) {
                                 Text(
                                     "${(profile.confidence * 100).toInt()}%",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     color = Color.White,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             profile.category.displayName,
                             style = MaterialTheme.typography.bodySmall,
-                            color = HasselbladOrange.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Medium
+                            color = HasselbladOrange.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.4.sp
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             profile.description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            lineHeight = 22.sp
                         )
                     }
                 }
@@ -882,7 +970,7 @@ private fun ResultsContent(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -890,9 +978,9 @@ private fun ResultsContent(
                             Icon(
                                 Icons.Default.Palette, null,
                                 tint = HasselbladOrange,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 "推荐色彩模式",
                                 style = MaterialTheme.typography.titleSmall,
@@ -905,18 +993,19 @@ private fun ResultsContent(
                                 color = HasselbladOrange,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp,
                                 modifier = Modifier
                                     .background(
-                                        HasselbladOrange.copy(alpha = 0.15f),
-                                        RoundedCornerShape(4.dp)
+                                        HasselbladOrange.copy(alpha = 0.12f),
+                                        RoundedCornerShape(6.dp)
                                     )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         // 色彩模式选择列表
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             colorModes.forEach { mode ->
                                 ColorModeOption(
                                     mode = mode,
@@ -934,7 +1023,7 @@ private fun ResultsContent(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -942,9 +1031,9 @@ private fun ResultsContent(
                             Icon(
                                 Icons.Default.Tune, null,
                                 tint = HasselbladOrange,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 "哈苏大师参数",
                                 style = MaterialTheme.typography.titleSmall,
@@ -952,7 +1041,7 @@ private fun ResultsContent(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         val hp = profile.hasselbladParams
                         listOf(
@@ -967,7 +1056,7 @@ private fun ResultsContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 5.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -993,7 +1082,7 @@ private fun ResultsContent(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -1001,9 +1090,9 @@ private fun ResultsContent(
                                 Icon(
                                     Icons.Default.Movie, null,
                                     tint = HasselbladOrange,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     "推荐胶片风格",
                                     style = MaterialTheme.typography.titleSmall,
@@ -1011,13 +1100,13 @@ private fun ResultsContent(
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             result.recommendedFilms.take(3).forEach { film ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 6.dp),
+                                        .padding(vertical = 7.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
@@ -1038,16 +1127,16 @@ private fun ResultsContent(
                                         }
                                     }
                                     Card(
-                                        shape = RoundedCornerShape(6.dp),
+                                        shape = RoundedCornerShape(8.dp),
                                         colors = CardDefaults.cardColors(
-                                            containerColor = HasselbladOrange.copy(alpha = 0.15f)
+                                            containerColor = HasselbladOrange.copy(alpha = 0.12f)
                                         )
                                     ) {
                                         Text(
                                             "${(film.matchScore * 100).toInt()}%",
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                             color = HasselbladOrange,
-                                            fontSize = 11.sp,
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -1063,7 +1152,7 @@ private fun ResultsContent(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -1071,9 +1160,9 @@ private fun ResultsContent(
                                 Icon(
                                     Icons.Default.Lightbulb, null,
                                     tint = HasselbladOrange,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     "大师拍摄建议",
                                     style = MaterialTheme.typography.titleSmall,
@@ -1081,25 +1170,26 @@ private fun ResultsContent(
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             result.masterTips.forEach { tip ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
+                                        .padding(vertical = 5.dp),
                                     verticalAlignment = Alignment.Top
                                 ) {
                                     Text(
                                         "•",
                                         color = HasselbladOrange,
                                         fontSize = 14.sp,
-                                        modifier = Modifier.width(16.dp)
+                                        modifier = Modifier.width(18.dp)
                                     )
                                     Text(
                                         tip,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                                        lineHeight = 22.sp
                                     )
                                 }
                             }
@@ -1109,43 +1199,53 @@ private fun ResultsContent(
             }
         }
 
-        // 操作按钮
+        // 操作按钮 - 底部固定双操作
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 OutlinedButton(
                     onClick = onRetake,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 ) {
-                    Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("重新拍照")
+                    Icon(Icons.Default.Replay, null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("重新拍照", fontWeight = FontWeight.Medium)
                 }
                 Button(
                     onClick = onApplyAndPreview,
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
                 ) {
-                    Icon(Icons.Default.Visibility, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("应用并预览", color = Color.White)
+                    Icon(Icons.Default.Visibility, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("应用并预览", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
         item {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 /**
  * PREVIEW 阶段：原图/效果对比 + 保存按钮
+ *
+ * 产品经理UX优化要点：
+ * 1. 对比切换：Tab切换原图/效果，满足用户对比需求
+ * 2. 水印品牌：底部HNCS水印强化品牌认知
+ * 3. 加载状态：处理中显示进度，避免用户焦虑
+ * 4. 操作明确：保存按钮为主色突出，重新拍照为次级操作
  */
 @Composable
 private fun PreviewContent(
@@ -1155,28 +1255,30 @@ private fun PreviewContent(
     onConfirm: () -> Unit,
     onRetake: () -> Unit
 ) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 预览标签
+        // 预览标签 - 可切换对比
         TabRow(
-            selectedTabIndex = 0,
+            selectedTabIndex = selectedTab,
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = HasselbladOrange,
-            modifier = Modifier.clip(RoundedCornerShape(12.dp))
+            modifier = Modifier.clip(RoundedCornerShape(14.dp))
         ) {
             Tab(
-                selected = true,
-                onClick = {},
-                text = { Text("哈苏色彩效果") }
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("哈苏色彩效果", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) }
             )
             Tab(
-                selected = false,
-                onClick = {},
-                text = { Text("原图对比") }
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("原图对比", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) }
             )
         }
 
@@ -1185,50 +1287,75 @@ private fun PreviewContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                if (previewBitmap != null) {
+                val displayBitmap = if (selectedTab == 0) previewBitmap else originalBitmap
+
+                if (displayBitmap != null) {
                     androidx.compose.foundation.Image(
-                        bitmap = previewBitmap.asImageBitmap(),
-                        contentDescription = "哈苏色彩预览",
+                        bitmap = displayBitmap.asImageBitmap(),
+                        contentDescription = if (selectedTab == 0) "哈苏色彩预览" else "原图",
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(16.dp)),
+                            .clip(RoundedCornerShape(20.dp)),
                         contentScale = ContentScale.Fit
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = HasselbladOrange)
-                        Spacer(modifier = Modifier.height(12.dp))
+                        CircularProgressIndicator(color = HasselbladOrange, strokeWidth = 3.dp)
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             "正在应用哈苏色彩科学...",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                            fontSize = 14.sp
                         )
                     }
                 }
 
                 // 哈苏水印
-                if (previewBitmap != null) {
+                if (displayBitmap != null && selectedTab == 0) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(16.dp)
+                            .padding(18.dp)
                             .background(
-                                Color.Black.copy(alpha = 0.5f),
-                                RoundedCornerShape(8.dp)
+                                Color.Black.copy(alpha = 0.55f),
+                                RoundedCornerShape(10.dp)
                             )
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
                     ) {
                         Text(
                             "HNCS 3.0 · Hasselblad Natural Color",
                             color = Color.White,
                             fontSize = 10.sp,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // 原图标签
+                if (displayBitmap != null && selectedTab == 1) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(
+                                Color.Black.copy(alpha = 0.5f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            "原图",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -1238,37 +1365,41 @@ private fun PreviewContent(
         // 操作按钮
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             OutlinedButton(
                 onClick = onRetake,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.weight(1f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
             ) {
-                Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("重新拍照")
+                Icon(Icons.Default.Replay, null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("重新拍照", fontWeight = FontWeight.Medium)
             }
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.weight(1f),
-                enabled = !isSaving
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                enabled = !isSaving && previewBitmap != null
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
                         color = Color.White,
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.5.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("保存中...", color = Color.White)
+                    Text("保存中...", color = Color.White, fontWeight = FontWeight.Medium)
                 } else {
-                    Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("保存到相册", color = Color.White)
+                    Icon(Icons.Default.Save, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("保存到相册", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1277,33 +1408,48 @@ private fun PreviewContent(
 
 /**
  * DONE 阶段：保存成功提示
+ *
+ * 产品经理UX优化要点：
+ * 1. 正向反馈：大图标+成功文案，强化用户成就感
+ * 2. 品牌收尾：OMaster/Hasselblad标识，强化品牌记忆
+ * 3. 操作分流：继续拍照（同场景复用）/返回（退出流程）
+ * 4. 动画入场：成功图标缩放动画，增强仪式感
  */
 @Composable
 private fun DoneContent(
     onNewPhoto: () -> Unit,
     onBack: () -> Unit
 ) {
+    val successScale = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        successScale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.5f, stiffness = 300f)
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 32.dp, vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Box(
             modifier = Modifier
-                .size(96.dp)
-                .background(SuccessGreen.copy(alpha = 0.15f), RoundedCornerShape(48.dp)),
+                .size(100.dp)
+                .scale(successScale.value)
+                .background(SuccessGreen.copy(alpha = 0.12f), RoundedCornerShape(50.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Default.CheckCircle, null,
                 tint = SuccessGreen,
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(68.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Text(
             "已保存到相册",
@@ -1312,25 +1458,27 @@ private fun DoneContent(
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             "哈苏色彩科学已成功应用到你的照片",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            lineHeight = 24.sp
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            "OMaster/Hasselblad",
+            "OMaster / Hasselblad",
             style = MaterialTheme.typography.bodySmall,
             color = HasselbladOrange,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.sp
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(48.dp))
 
         Button(
             onClick = onNewPhoto,
@@ -1338,24 +1486,24 @@ private fun DoneContent(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(54.dp)
         ) {
-            Icon(Icons.Default.CameraAlt, null, tint = Color.White)
+            Icon(Icons.Default.CameraAlt, null, tint = Color.White, modifier = Modifier.size(22.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("继续拍照", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         OutlinedButton(
             onClick = onBack,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                .height(50.dp),
+            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
         ) {
-            Text("返回")
+            Text("返回", fontWeight = FontWeight.Medium)
         }
     }
 }

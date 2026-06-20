@@ -123,27 +123,16 @@ fun CoreFeaturesScreen(
     // 定义所有功能数据 - 同步Web端features数组
     val allFeatures = remember {
         listOf(
-            // AI智能功能 (前4个)
+            // 核心影像 (前3个)
             FeatureData(
                 id = "ai-scene",
-                title = "哈苏大师",
+                title = "哈苏之眼",
                 subtitle = "AI场景识别 + 哈苏色彩科学，一键拍出大师级作品",
                 icon = Icons.Default.CameraAlt,
                 gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
                 description = FeatureDescription(
                     desc = "AI场景识别 + 哈苏色彩科学，一键拍出大师级作品",
                     tips = listOf("人像", "风景", "夜景", "美食", "建筑", "自然")
-                )
-            ),
-            FeatureData(
-                id = "ai-fine-tune",
-                title = "AI 微调",
-                subtitle = "一键智能微调，色彩风格精准控制",
-                icon = Icons.Default.ColorLens,
-                gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
-                description = FeatureDescription(
-                    desc = "一键智能微调，精准控制色彩风格",
-                    tips = listOf("饱和度", "对比度", "亮度", "色温", "锐度")
                 )
             ),
             FeatureData(
@@ -193,7 +182,7 @@ fun CoreFeaturesScreen(
                 ),
                 showToggle = false
             ),
-            // 品牌特色 (3个)
+            // 品牌特色 (2个)
             FeatureData(
                 id = "lut-share",
                 title = "LUT 资源分享",
@@ -221,9 +210,9 @@ fun CoreFeaturesScreen(
     }
 
     // 功能分类 - 同步Web端
-    val aiFeatures = allFeatures.slice(0..3)
-    val toolFeatures = allFeatures.slice(4..5)
-    val brandFeatures = allFeatures.slice(6..7)
+    val coreFeatures = allFeatures.slice(0..2)
+    val toolFeatures = allFeatures.slice(3..4)
+    val brandFeatures = allFeatures.slice(5..6)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -267,26 +256,25 @@ fun CoreFeaturesScreen(
             }
         }
 
-        // AI智能功能区域
+        // 核心影像功能区域
         item {
             SectionHeader(
-                title = "AI 智能功能",
-                description = "智能识别与自动优化",
-                icon = Icons.Default.AutoAwesome,
-                count = aiFeatures.size
+                title = "核心影像",
+                description = "哈苏影像系统核心功能",
+                icon = Icons.Default.CameraAlt,
+                count = coreFeatures.size
             )
         }
 
-        aiFeatures.forEach { feature ->
+        coreFeatures.forEach { feature ->
             item {
                 val isEnabled = when (feature.id) {
                     "ai-scene" -> aiSceneEnabled
-                    "ai-fine-tune" -> aiFineTuneEnabled
                     "smart-optimize" -> smartOptimizeEnabled
                     "watermark" -> watermarkEnabled
                     else -> true
                 }
-                
+
                 FeatureCard(
                     feature = feature,
                     isEnabled = isEnabled,
@@ -296,10 +284,6 @@ fun CoreFeaturesScreen(
                             "ai-scene" -> {
                                 aiSceneEnabled = enabled
                                 settingsManager.isAISceneRecognitionEnabled = enabled
-                            }
-                            "ai-fine-tune" -> {
-                                aiFineTuneEnabled = enabled
-                                settingsManager.isAIFineTuneEnabled = enabled
                             }
                             "smart-optimize" -> {
                                 smartOptimizeEnabled = enabled
@@ -314,7 +298,6 @@ fun CoreFeaturesScreen(
                     onClick = {
                         when (feature.id) {
                             "ai-scene" -> onNavigateToSceneRecognition()
-                            "ai-fine-tune" -> onNavigateToAIFineTune()
                             "smart-optimize" -> onNavigateToSmartOptimize()
                             "watermark" -> onNavigateToWatermarkEditor()
                         }
