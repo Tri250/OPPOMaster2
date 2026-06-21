@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Image
@@ -107,6 +108,7 @@ fun CoreFeaturesScreen(
     onNavigateToLUTShare: () -> Unit,
     onNavigateToHasselbladColor: () -> Unit,
     onNavigateToCloudSync: () -> Unit,
+    onNavigateToSceneAnalysisReport: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -182,7 +184,7 @@ fun CoreFeaturesScreen(
                 ),
                 showToggle = false
             ),
-            // 品牌特色 (3个：原哈苏色彩科学改名为哈苏之眼)
+            // 品牌特色 (4个：原哈苏色彩科学改名为哈苏之眼)
             FeatureData(
                 id = "lut-share",
                 title = "LUT 资源分享",
@@ -207,6 +209,18 @@ fun CoreFeaturesScreen(
                 )
             ),
             FeatureData(
+                id = "scene-report",
+                title = "大师洞察",
+                subtitle = "拍摄数据看板 · 胶片风格排行 · 大师建议",
+                icon = Icons.Default.Analytics,
+                gradientColors = listOf(Color(0xFF00695C), Color(0xFF00897B)),
+                description = FeatureDescription(
+                    desc = "基于哈苏之眼配方历史，生成场景分布与拍摄习惯洞察",
+                    tips = listOf("场景分布", "胶片排行", "连续拍摄", "大师建议")
+                ),
+                showToggle = false
+            ),
+            FeatureData(
                 id = "cloud-sync",
                 title = "云同步",
                 subtitle = "多平台云同步，数据永不丢失",
@@ -223,7 +237,7 @@ fun CoreFeaturesScreen(
     // 功能分类 - 同步Web端
     val aiFeatures = allFeatures.slice(0..2)
     val toolFeatures = allFeatures.slice(3..4)
-    val brandFeatures = allFeatures.slice(5..7)
+    val brandFeatures = allFeatures.slice(5..8)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -385,6 +399,7 @@ fun CoreFeaturesScreen(
                         when (feature.id) {
                             "lut-share" -> onNavigateToLUTShare()
                             "hasselblad" -> onNavigateToHasselbladColor()
+                            "scene-report" -> onNavigateToSceneAnalysisReport()
                             "cloud-sync" -> onNavigateToCloudSync()
                         }
                     }

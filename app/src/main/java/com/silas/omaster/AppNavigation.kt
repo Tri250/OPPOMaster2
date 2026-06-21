@@ -35,7 +35,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
+import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.PillNavBar
@@ -283,6 +285,7 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
                     onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) },
+                    onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
             }
@@ -383,7 +386,12 @@ fun MainApp(navController: NavHostController) {
                     onApply = { settings ->
                         // 应用主题设置并持久化
                         val manager = SettingsManager.getInstance(context)
-                        manager.applyThemeSettings(settings)
+                        manager.currentTheme = BrandTheme.fromId(settings.theme)
+                        manager.darkMode = when (settings.darkMode) {
+                            "light" -> DarkMode.LIGHT
+                            "dark" -> DarkMode.DARK
+                            else -> DarkMode.SYSTEM
+                        }
                         navController.popBackStack()
                     }
                 )

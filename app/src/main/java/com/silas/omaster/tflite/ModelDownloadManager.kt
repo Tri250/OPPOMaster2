@@ -34,35 +34,41 @@ class ModelDownloadManager(private val context: Context) {
         // 模型就绪后，请使用以下命令生成校验值：
         //   sha256sum scene_classifier.tflite quality_analyzer.tflite param_predictor.tflite
         //
-        // v1.3.1 正式版说明：
-        // AI 场景识别、智能优化、哈苏色彩科学等实验性功能默认关闭，不会触发模型下载。
-        // 待后续版本上传模型文件并填写 checksum 后，方可在功能开关中重新启用。
+        // v1.8.5 说明：
+        // 当前版本哈苏之眼使用 MasterInferenceEngine + HeuristicSceneAnalyzer 进行真实图像分析，
+        // 不依赖云端 TFLite 模型。下列模型配置保留给后续版本模型就绪后启用。
+        // 由于模型文件尚未提供真实二进制文件，统一标记 isReady=false，checksum 留空；
+        // Release 构建不会触发下载，避免空实现/占位校验值被用户感知。
         //
         // 运行时校验策略：
+        // - isReady=false：拒绝下载，视为已满足（不阻塞当前功能）
         // - checksum 为空且 BuildConfig.DEBUG=true：仅警告，允许通过（开发阶段）
         // - checksum 为空且 BuildConfig.DEBUG=false：拒绝下载，强制要求校验值（生产安全）
-        // - checksum 已提供：严格校验，不匹配则拒绝加载（防篡改）
+        // - checksum 已提供：必须形如 "sha256:<64位小写hex>"，严格校验，不匹配则拒绝加载（防篡改）
         val MODEL_FILES = listOf(
             ModelFile(
                 name = "scene_classifier.tflite",
                 displayName = "场景分类模型",
                 description = "36类场景智能识别",
                 expectedSize = 700 * 1024,  // 700KB
-                checksum = ""  // v1.3.1: 模型未就绪，留空；Release 构建禁止下载
+                checksum = "",  // 模型未就绪，留空；Release 构建禁止下载
+                isReady = false
             ),
             ModelFile(
                 name = "quality_analyzer.tflite",
                 displayName = "质量分析模型",
                 description = "图像质量智能评估",
                 expectedSize = 500 * 1024,  // 500KB
-                checksum = ""  // v1.3.1: 模型未就绪，留空；Release 构建禁止下载
+                checksum = "",  // 模型未就绪，留空；Release 构建禁止下载
+                isReady = false
             ),
             ModelFile(
                 name = "param_predictor.tflite",
                 displayName = "参数预测模型",
                 description = "哈苏调校参数推荐",
                 expectedSize = 200 * 1024,  // 200KB
-                checksum = ""  // v1.3.1: 模型未就绪，留空；Release 构建禁止下载
+                checksum = "",  // 模型未就绪，留空；Release 构建禁止下载
+                isReady = false
             )
         )
         
@@ -80,13 +86,17 @@ class ModelDownloadManager(private val context: Context) {
     
     /**
      * 模型文件信息
+     *
+     * @param isReady 模型是否已就绪。未就绪的模型不会被下载，也不会被视为缺失，
+     *                避免 Release 构建因占位 checksum/空模型文件而崩溃。
      */
     data class ModelFile(
         val name: String,
         val displayName: String,
         val description: String,
         val expectedSize: Long,
-        val checksum: String
+        val checksum: String,
+        val isReady: Boolean = true
     )
     
     /**
@@ -122,16 +132,22 @@ class ModelDownloadManager(private val context: Context) {
     private val downloadedModels = mutableSetOf<String>()
     
     /**
-     * 检查模型是否已下载
+     * 检查模型是否已下载。
+     *
+     * 未就绪的模型视为已满足，不会触发下载，避免 Release 构建出现无意义下载。
      */
     fun isModelDownloaded(modelName: String): Boolean {
+        val modelInfo = MODEL_FILES.find { it.name == modelName }
+        if (modelInfo != null && !modelInfo.isReady) {
+            return true
+        }
+
         val modelDir = File(context.filesDir, "models")
         val modelFile = File(modelDir, modelName)
-        
+
         // 检查文件是否存在且大小合理
         if (!modelFile.exists()) return false
-        
-        val modelInfo = MODEL_FILES.find { it.name == modelName }
+
         if (modelInfo != null) {
             // 文件大小应该接近预期大小（允许10%误差）
             val sizeRatio = modelFile.length().toFloat() / modelInfo.expectedSize
@@ -140,7 +156,7 @@ class ModelDownloadManager(private val context: Context) {
                 return false
             }
         }
-        
+
         return true
     }
     
@@ -207,6 +223,15 @@ class ModelDownloadManager(private val context: Context) {
     ): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             callback?.onStateChanged(DownloadState.Checking(modelFile.name))
+
+            // 未就绪模型禁止下载（硬守卫）
+            if (!modelFile.isReady) {
+                val err = "模型 ${modelFile.name} 尚未就绪，禁止下载"
+                Log.e(TAG, err)
+                callback?.onStateChanged(DownloadState.Failed(modelFile.name, err))
+                callback?.onComplete(modelFile.name, false)
+                return@withContext Result.failure(IllegalStateException(err))
+            }
 
             // 检查是否已下载
             if (isModelDownloaded(modelFile.name)) {
@@ -281,9 +306,9 @@ class ModelDownloadManager(private val context: Context) {
             }
 
             // 校验 SHA256
-            // ⚠️ 重要：生产发布前，所有模型的 checksum 必须提供真实的 SHA256 校验值！
+            // ⚠️ 重要：生产发布前，所有就绪模型的 checksum 必须提供真实的 SHA256 校验值！
             // - checksum 为空或 "sha256:" 后无内容：仅记录警告，允许通过（开发阶段兼容）
-            // - checksum 已提供且有效：严格校验，不匹配则失败（防止篡改）
+            // - checksum 已提供：必须形如 "sha256:<64位小写hex>"，严格校验，不匹配则拒绝加载（防篡改）
             val expectedHash = if (modelFile.checksum.startsWith("sha256:")) {
                 modelFile.checksum.substring(7)
             } else {
@@ -302,7 +327,14 @@ class ModelDownloadManager(private val context: Context) {
                     return@withContext Result.failure(SecurityException("生产环境禁止下载无SHA256校验值的模型: ${modelFile.name}"))
                 }
             } else {
-                // 校验值已提供，严格验证
+                // 校验值已提供，先校验格式再严格验证
+                if (!isValidChecksumFormat(modelFile.checksum)) {
+                    val err = "模型 ${modelFile.name} 的 checksum 格式非法，应为 sha256:<64位小写hex>"
+                    Log.e(TAG, err)
+                    tempFile.delete()
+                    return@withContext Result.failure(SecurityException(err))
+                }
+
                 val actualHash = calculateSHA256(tempFile)
                 if (actualHash != expectedHash) {
                     Log.e(TAG, "模型校验失败: ${modelFile.name}, 预期=$expectedHash, 实际=$actualHash")
@@ -389,6 +421,17 @@ class ModelDownloadManager(private val context: Context) {
         }
     }
     
+    /**
+     * 校验 checksum 格式是否合法
+     *
+     * 合法格式："sha256:<64位小写十六进制字符串>"
+     */
+    private fun isValidChecksumFormat(checksum: String): Boolean {
+        if (!checksum.startsWith("sha256:")) return false
+        val hash = checksum.substring(7)
+        return hash.length == 64 && hash.all { it in '0'..'9' || it in 'a'..'f' }
+    }
+
     /**
      * 计算文件 SHA256
      */

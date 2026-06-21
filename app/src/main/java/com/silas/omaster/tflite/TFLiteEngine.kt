@@ -328,15 +328,17 @@ class TFLiteEngine private constructor(private val context: Context) {
             if (interpreter == null) {
                 // 模型不存在，使用启发式降级策略
                 Log.d(TAG, "模型不存在，使用启发式降级策略: $modelName")
-                
-                // 如果输入是Bitmap，使用基于图像特征的启发式推理
+
+                // 如果输入是Bitmap，使用基于图像特征的启发式推理；
+                // 非Bitmap输入不再返回模拟占位结果，而是明确失败，避免空实现误导调用方。
                 val heuristicResult = if (input is Bitmap) {
                     getHeuristicResultFromBitmap(modelName, input)
                 } else {
-                    // 否则使用默认启发式结果
-                    getSimulatedResult(modelName)
+                    return@withContext Result.failure(
+                        Exception("模型 $modelName 未找到，且输入类型 ${input::class.simpleName} 不支持启发式降级")
+                    )
                 }
-                
+
                 @Suppress("UNCHECKED_CAST")
                 return@withContext Result.success(heuristicResult as T)
             }
@@ -385,175 +387,6 @@ class TFLiteEngine private constructor(private val context: Context) {
     }
     
     /**
-     * 获取启发式推理结果
-     * 当模型文件不存在时使用真实启发式算法生成
-     * 
-     * 降级策略：
-     * - 场景分类：基于颜色、亮度、纹理的真实分析
-     * - 质量评估：基于图像特征的质量评分
-     * - 参数预测：基于场景特征的参数推荐
-     */
-    private fun getSimulatedResult(modelName: String): Any {
-        Log.d(TAG, "使用启发式算法生成推理结果: $modelName")
-        
-        return when (modelName) {
-            MODEL_SCENE_CLASSIFIER -> {
-                // 场景分类输出（36个场景的概率分布）
-                // 使用基于颜色和纹理的启发式算法生成
-                generateHeuristicSceneProbabilities()
-            }
-            MODEL_QUALITY_ANALYZER -> {
-                // 质量评估输出
-                // 使用基于图像特征的真实质量评分
-                generateHeuristicQualityScores()
-            }
-            MODEL_PARAM_PREDICTOR -> {
-                // 参数预测输出（18个参数）
-                // 使用基于场景特征的参数推荐
-                generateHeuristicParamPrediction()
-            }
-            else -> FloatArray(0)
-        }
-    }
-
-    /**
-     * 生成启发式场景概率分布
-     * 基于颜色、亮度、纹理特征计算场景概率
-     */
-    private fun generateHeuristicSceneProbabilities(): FloatArray {
-        // 36个场景的概率分布
-        val probabilities = FloatArray(36)
-        
-        // 基于启发式规则分配概率
-        // 场景索引映射：
-        // 0-5: 人像类（portrait, portrait-backlit, portrait-couple, portrait-group, portrait-child, portrait-selfie）
-        // 6-11: 风景类（landscape, landscape-forest, landscape-sky, landscape-beach, landscape-sunset, landscape-snow）
-        // 12-17: 夜景类（night-city, night-neon, night-starry, night-candle, night-traffic, night-stage）
-        // 18-23: 美食类（food-restaurant, food-dessert, food-drink, food-cooking, food-fruit, food-vegetable）
-        // 24-29: 街拍类（urban-street, urban-cafe, urban-architecture, urban-museum, urban-market, urban-traffic）
-        // 30-35: 其他类（macro-insect, macro-texture, event-party, event-concert, still-product, unknown）
-        
-        // 默认概率分布（基于常见场景频率）
-        probabilities[0] = 0.12f   // portrait - 人像最常见
-        probabilities[6] = 0.10f   // landscape - 风景常见
-        probabilities[12] = 0.08f  // night-city - 夜景常见
-        probabilities[18] = 0.07f  // food-restaurant - 美食常见
-        probabilities[24] = 0.06f  // urban-street - 街拍常见
-        probabilities[30] = 0.05f  // macro - 微距
-        
-        // 其他场景分配较小概率
-        for (i in probabilities.indices) {
-            if (probabilities[i] == 0f) {
-                probabilities[i] = 0.02f + (i % 10) * 0.005f
-            }
-        }
-        
-        // 归一化
-        val sum = probabilities.sum()
-        for (i in probabilities.indices) {
-            probabilities[i] = probabilities[i] / sum
-        }
-        
-        Log.d(TAG, "场景概率分布生成完成，最高概率场景索引: ${probabilities.indices.maxByOrNull { probabilities[it] }}")
-        return probabilities
-    }
-
-    /**
-     * 生成启发式质量评分
-     * 基于图像特征计算质量分数
-     */
-    private fun generateHeuristicQualityScores(): FloatArray {
-        // 5个质量指标：亮度、对比度、噪点、清晰度、总体
-        val scores = FloatArray(5)
-        
-        // 基于启发式规则生成合理评分（范围0-100）
-        // 亮度评分：基于典型曝光水平
-        scores[0] = 75f  // 亮度适中
-        
-        // 对比度评分：基于典型对比度水平
-        scores[1] = 68f  // 对比度良好
-        
-        // 噪点评分：基于典型噪点水平（越高越好，噪点越少）
-        scores[2] = 82f  // 噪点控制良好
-        
-        // 清晰度评分：基于典型锐度水平
-        scores[3] = 70f  // 清晰度适中
-        
-        // 总体评分：综合加权
-        scores[4] = (scores[0] * 0.2f + scores[1] * 0.2f + scores[2] * 0.25f + scores[3] * 0.35f)
-        
-        Log.d(TAG, "质量评分生成完成: 亮度=${scores[0]}, 对比度=${scores[1]}, 噪点=${scores[2]}, 清晰度=${scores[3]}, 总体=${scores[4]}")
-        return scores
-    }
-
-    /**
-     * 生成启发式参数预测
-     * 基于场景特征推荐调整参数
-     */
-    private fun generateHeuristicParamPrediction(): FloatArray {
-        // 18个参数：曝光、对比度、高光、阴影、白、黑、清晰度、自然饱和度、饱和度、色温、色调、锐度、降噪、暗角、颗粒、褪色、分色调高光、分色调阴影
-        val params = FloatArray(18)
-        
-        // 基于启发式规则生成合理参数（范围-100到100或0到100）
-        // 曝光（-100到100）
-        params[0] = 0f  // 默认曝光
-        
-        // 对比度（-100到100）
-        params[1] = 50f  // 适度对比度
-        
-        // 高光（-100到100）
-        params[2] = 0f  // 默认高光
-        
-        // 阴影（-100到100）
-        params[3] = 0f  // 默认阴影
-        
-        // 白色（-100到100）
-        params[4] = 0f  // 默认白色
-        
-        // 黑色（-100到100）
-        params[5] = 0f  // 默认黑色
-        
-        // 清晰度（0到100）
-        params[6] = 0f  // 默认清晰度
-        
-        // 自然饱和度（-100到100）
-        params[7] = 0f  // 默认自然饱和度
-        
-        // 饱和度（-100到100）
-        params[8] = 0f  // 默认饱和度
-        
-        // 色温（-100到100）
-        params[9] = 0f  // 默认色温
-        
-        // 色调（-100到100）
-        params[10] = 0f  // 默认色调
-        
-        // 锐度（0到100）
-        params[11] = 25f  // 适度锐度
-        
-        // 降噪（0到100）
-        params[12] = 25f  // 适度降噪
-        
-        // 暗角（0到100）
-        params[13] = 0f  // 默认暗角
-        
-        // 颗粒（0到100）
-        params[14] = 0f  // 默认颗粒
-        
-        // 褪色（0到100）
-        params[15] = 0f  // 默认褪色
-        
-        // 分色调高光（-100到100）
-        params[16] = 0f  // 默认分色调高光
-        
-        // 分色调阴影（-100到100）
-        params[17] = 0f  // 默认分色调阴影
-        
-        Log.d(TAG, "参数预测生成完成: 对比度=${params[1]}, 锐度=${params[11]}, 降噪=${params[12]}")
-        return params
-    }
-
-    /**
      * 基于Bitmap生成启发式推理结果
      * 使用真实图像特征进行计算
      */
@@ -562,13 +395,13 @@ class TFLiteEngine private constructor(private val context: Context) {
         bitmap: Bitmap
     ): Any = withContext(Dispatchers.Default) {
         Log.d(TAG, "基于图像特征生成启发式结果: $modelName")
-        
+
         try {
             // 提取图像特征
             val colorProfile = extractColorProfile(bitmap)
             val brightnessLevel = computeBrightnessLevel(bitmap)
             val edgeDensity = computeEdgeDensity(bitmap)
-            
+
             when (modelName) {
                 MODEL_SCENE_CLASSIFIER -> {
                     // 基于颜色和亮度特征生成场景概率
@@ -586,7 +419,7 @@ class TFLiteEngine private constructor(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.e(TAG, "启发式分析失败: ${e.message}")
-            getSimulatedResult(modelName)
+            throw e
         }
     }
 

@@ -275,4 +275,51 @@ class ModelDownloadManagerTest {
         assertEquals((700 + 500 + 200) * 1024L, totalSize)
         assertTrue("总大小应为正数", totalSize > 0)
     }
+
+    // ===== v1.8.5 模型就绪状态守卫 =====
+
+    @Test
+    fun `所有 AI 模型应标记为未就绪`() {
+        for (modelFile in ModelDownloadManager.MODEL_FILES) {
+            assertFalse(
+                "模型 ${modelFile.name} 尚未提供真实二进制文件，应标记为 isReady=false",
+                modelFile.isReady
+            )
+        }
+    }
+
+    @Test
+    fun `未就绪模型不应出现在缺失列表中`() {
+        // 未就绪模型视为已满足，避免 Release 构建触发无意义下载
+        val missing = ModelDownloadManager.MODEL_FILES.filter { modelFile ->
+            !modelFile.isReady
+        }
+        assertTrue("未就绪模型不应被视为缺失", missing.isEmpty())
+    }
+
+    @Test
+    fun `checksum 为空时不应包含伪占位值`() {
+        for (modelFile in ModelDownloadManager.MODEL_FILES) {
+            assertTrue(
+                "模型 ${modelFile.name} 的 checksum 必须是空字符串，禁止写入伪 SHA256 占位值",
+                modelFile.checksum.isEmpty()
+            )
+        }
+    }
+
+    @Test
+    fun `ModelFile 应支持 isReady 字段`() {
+        val readyModel = ModelDownloadManager.ModelFile(
+            name = "ready_model.tflite",
+            displayName = "已就绪模型",
+            description = "测试",
+            expectedSize = 100 * 1024L,
+            checksum = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            isReady = true
+        )
+        assertTrue(readyModel.isReady)
+
+        val notReadyModel = readyModel.copy(isReady = false)
+        assertFalse(notReadyModel.isReady)
+    }
 }

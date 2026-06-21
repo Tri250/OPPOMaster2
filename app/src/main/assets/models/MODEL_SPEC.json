@@ -10,6 +10,7 @@
       "displayName": "场景分类模型",
       "description": "基于 MobileNetV3-Small 的 36 类场景分类模型",
       "version": "1.2.0",
+      "status": "not_ready",
       "architecture": {
         "type": "MobileNetV3-Small",
         "framework": "TensorFlow 2.14",
@@ -351,6 +352,7 @@
       "displayName": "图像质量分析模型",
       "description": "基于 NIMA 变体的图像质量评估模型",
       "version": "1.2.0",
+      "status": "not_ready",
       "architecture": {
         "type": "NIMA-MobileNetV2",
         "framework": "TensorFlow 2.14",
@@ -533,6 +535,7 @@
       "displayName": "参数预测模型",
       "description": "基于全连接网络的哈苏调校参数预测模型",
       "version": "1.2.0",
+      "status": "not_ready",
       "architecture": {
         "type": "MLP",
         "framework": "TensorFlow 2.14",
@@ -855,50 +858,54 @@
   },
   "download": {
     "baseUrl": "https://releases.omaster.app/models",
+    "note": "v1.8.5：模型文件尚未就绪，所有 checksum 留空，禁止 Release 构建下载占位模型。",
     "versions": {
       "1.0.0": {
         "releaseDate": "2024-01-01",
+        "status": "not_ready",
         "scene_classifier": {
           "url": "https://releases.omaster.app/models/v1.0/scene_classifier.tflite",
-          "checksum": "sha256:a1b2c3d4e5f6..."
+          "checksum": ""
         },
         "quality_analyzer": {
           "url": "https://releases.omaster.app/models/v1.0/quality_analyzer.tflite",
-          "checksum": "sha256:b2c3d4e5f6g7..."
+          "checksum": ""
         },
         "param_predictor": {
           "url": "https://releases.omaster.app/models/v1.0/param_predictor.tflite",
-          "checksum": "sha256:c3d4e5f6g7h8..."
+          "checksum": ""
         }
       },
       "1.1.0": {
         "releaseDate": "2024-06-01",
+        "status": "not_ready",
         "scene_classifier": {
           "url": "https://releases.omaster.app/models/v1.1/scene_classifier.tflite",
-          "checksum": "sha256:d4e5f6g7h8i9..."
+          "checksum": ""
         },
         "quality_analyzer": {
           "url": "https://releases.omaster.app/models/v1.1/quality_analyzer.tflite",
-          "checksum": "sha256:e5f6g7h8i9j0..."
+          "checksum": ""
         },
         "param_predictor": {
           "url": "https://releases.omaster.app/models/v1.1/param_predictor.tflite",
-          "checksum": "sha256:f6g7h8i9j0k1..."
+          "checksum": ""
         }
       },
       "1.2.0": {
         "releaseDate": "2024-12-01",
+        "status": "not_ready",
         "scene_classifier": {
           "url": "https://releases.omaster.app/models/v1.2/scene_classifier.tflite",
-          "checksum": "sha256:g7h8i9j0k1l2..."
+          "checksum": ""
         },
         "quality_analyzer": {
           "url": "https://releases.omaster.app/models/v1.2/quality_analyzer.tflite",
-          "checksum": "sha256:h8i9j0k1l2m3..."
+          "checksum": ""
         },
         "param_predictor": {
           "url": "https://releases.omaster.app/models/v1.2/param_predictor.tflite",
-          "checksum": "sha256:i9j0k1l2m3n4..."
+          "checksum": ""
         }
       }
     }
