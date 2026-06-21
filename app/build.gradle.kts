@@ -109,13 +109,13 @@ val finalKeyPassword = keystoreProperties.getProperty("keyPassword") ?: releaseK
 
 android {
     namespace = "com.silas.omaster"
-    compileSdk = 35
-    buildToolsVersion = "35.0.0"
+    compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.silas.omaster"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         // 版本号规范：
         // versionCode: 内部版本号，每次发布必须递增
         // versionName: 对外显示版本号，格式 主.次.修订
@@ -126,11 +126,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v1.8.5
+        // 当前版本: v1.9.0
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 1.8.5 → 1*10000 + 8*100 + 5 = 10805
-        versionCode = 10805
-        versionName = "1.8.5"
+        // 1.9.0 → 1*10000 + 9*100 + 0 = 10900
+        versionCode = 10900
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

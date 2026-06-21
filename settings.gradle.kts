@@ -14,7 +14,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         maven { url = uri("/workspace/local-maven-repo") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
