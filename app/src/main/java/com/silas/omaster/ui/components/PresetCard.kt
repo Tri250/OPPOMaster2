@@ -2,6 +2,7 @@ package com.silas.omaster.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,17 +25,24 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
@@ -42,6 +51,7 @@ import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.hapticClickable
+import com.silas.omaster.util.perform
 
 /**
  * 统一预设卡片组件（对齐Web端样式）
@@ -347,5 +357,89 @@ fun PresetCardPlaceholder(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }
+    }
+}
+
+/**
+ * 可滑动删除的预设卡片包装器
+ * 支持向左滑动显示删除操作
+ */
+@Composable
+fun SwipeablePresetCard(
+    preset: MasterPreset,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit = {},
+    onDeleteClick: () -> Unit = {},
+    imageHeight: Int = 200,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    var showDeleteAction by remember { mutableStateOf(false) }
+
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        // 删除背景操作
+        if (showDeleteAction) {
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(imageHeight.dp)
+                    .background(
+                        color = Color.Red.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        haptic.perform(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        onDeleteClick()
+                        showDeleteAction = false
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "删除",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // 预设卡片
+        PresetCard(
+            preset = preset,
+            onClick = onClick,
+            onFavoriteClick = onFavoriteClick,
+            imageHeight = imageHeight,
+            modifier = Modifier
+                .offset {
+                    if (showDeleteAction) {
+                        androidx.compose.ui.unit.IntOffset(-80, 0)
+                    } else {
+                        androidx.compose.ui.unit.IntOffset.Zero
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            showDeleteAction = !showDeleteAction
+                        },
+                        onDragCancel = {
+                            showDeleteAction = false
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            if (dragAmount < -50) {
+                                showDeleteAction = true
+                            } else if (dragAmount > 50) {
+                                showDeleteAction = false
+                            }
+                        }
+                    )
+                }
+        )
     }
 }

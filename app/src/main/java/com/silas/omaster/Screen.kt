@@ -78,4 +78,7 @@ sealed class Screen {
 
     @Serializable
     data object SceneAnalysisReport : Screen()
+
+    @Serializable
+    data object Onboarding : Screen()
 }

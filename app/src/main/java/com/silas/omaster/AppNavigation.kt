@@ -36,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import com.silas.omaster.data.local.DarkMode
+import com.silas.omaster.data.local.OnboardingManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.repository.PresetRepository
@@ -57,6 +58,7 @@ import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
+import com.silas.omaster.ui.onboarding.OnboardingScreen
 import com.silas.omaster.ui.subscription.SubscriptionScreen
 import com.silas.omaster.ui.screens.SceneAnalysisReportScreen
 import com.silas.omaster.ui.settings.ApiConfigScreen
@@ -90,6 +92,12 @@ fun MainApp(navController: NavHostController) {
     val settingsManager = remember { SettingsManager.getInstance(context) }
     var showMigrationDialog by remember { mutableStateOf(false) }
 
+    // 首次启动引导页检测
+    val onboardingManager = remember { OnboardingManager.getInstance(context) }
+    var showOnboarding by remember {
+        mutableStateOf(onboardingManager.shouldShowOnboarding(VersionInfo.VERSION_CODE.toLong()))
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -110,7 +118,6 @@ fun MainApp(navController: NavHostController) {
                 showMigrationDialog = false
             },
             onPostpone = {
-                // 标记为已处理，不再反复弹出
                 settingsManager.setMigrationHandled(true)
                 showMigrationDialog = false
             },
@@ -121,11 +128,19 @@ fun MainApp(navController: NavHostController) {
                         duration = SnackbarDuration.Short
                     )
                 }
-                // 标记为已处理，不再反复弹出
                 settingsManager.setMigrationHandled(true)
                 showMigrationDialog = false
             }
         )
+    }
+
+    // 首次启动引导页导航
+    LaunchedEffect(showOnboarding) {
+        if (showOnboarding) {
+            navController.navigate(Screen.Onboarding) {
+                popUpTo(Screen.Home) { inclusive = true }
+            }
+        }
     }
 
     val showBottomNav = currentRoute?.contains("Home") == true ||
@@ -401,6 +416,19 @@ fun MainApp(navController: NavHostController) {
                 SceneAnalysisReportScreen(
                     onBack = { navController.popBackStack() },
                     onViewDetails = { /* 可选：跳转详情页 */ }
+                )
+            }
+
+            composable<Screen.Onboarding> {
+                OnboardingScreen(
+                    onComplete = {
+                        onboardingManager.markOnboardingShown(VersionInfo.VERSION_CODE.toLong())
+                        showOnboarding = false
+                    },
+                    onSkip = {
+                        onboardingManager.skipOnboarding(VersionInfo.VERSION_CODE.toLong())
+                        showOnboarding = false
+                    }
                 )
             }
         }

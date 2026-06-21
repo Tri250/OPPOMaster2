@@ -61,6 +61,10 @@ class HomeViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    // 加载状态
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     // 用于管理收集任务的 Job
     private var allPresetsJob: Job? = null
     private var favoritesJob: Job? = null
@@ -80,10 +84,13 @@ class HomeViewModel(
         favoritesJob?.cancel()
         customPresetsJob?.cancel()
 
+        _isLoading.value = true
+
         // 启动新的收集任务
         allPresetsJob = viewModelScope.launch {
             repository.getAllPresets().collect { presets ->
                 _allPresets.value = presets
+                _isLoading.value = false
             }
         }
 

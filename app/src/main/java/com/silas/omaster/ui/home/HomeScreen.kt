@@ -34,8 +34,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -83,6 +85,7 @@ import com.silas.omaster.ui.animation.ListItemFadeInSpec
 import com.silas.omaster.ui.animation.ListItemPlacementSpec
 import com.silas.omaster.ui.animation.calculateStaggerDelay
 import com.silas.omaster.ui.components.PresetCard
+import com.silas.omaster.ui.components.ShimmerPresetGrid
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
@@ -123,6 +126,7 @@ fun HomeScreen(
     val selectedBrand by viewModel.selectedBrand.collectAsState()
     val sortType by viewModel.sortType.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     // 当 refreshTrigger 变化时刷新数据
     LaunchedEffect(refreshTrigger) {
@@ -210,6 +214,7 @@ fun HomeScreen(
             PresetGrid(
                 presets = filteredPresets,
                 selectedTab = selectedTab,
+                isLoading = isLoading && allPresets.isEmpty(),
                 onNavigateToDetail = onNavigateToDetail,
                 onToggleFavorite = { viewModel.toggleFavorite(it) },
                 onDeletePreset = {
@@ -628,6 +633,7 @@ private fun BrandFilterButton(
 private fun PresetGrid(
     presets: List<MasterPreset>,
     selectedTab: Int,
+    isLoading: Boolean = false,
     onNavigateToDetail: (MasterPreset) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onDeletePreset: (String) -> Unit,
@@ -685,17 +691,24 @@ private fun PresetGrid(
             .fillMaxSize()
             .pullRefresh(pullRefreshState)
     ) {
-        if (presets.isEmpty()) {
-            androidx.compose.foundation.lazy.LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                item {
-                    EmptyState(selectedTab)
+        when {
+            isLoading -> {
+                // 骨架屏加载状态
+                ShimmerPresetGrid(itemCount = 6)
+            }
+            presets.isEmpty() -> {
+                // 空状态
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    item {
+                        EnhancedEmptyState(selectedTab)
+                    }
                 }
             }
-        } else {
+            else -> {
             val visibleStartIndex by remember {
                 derivedStateOf {
                     listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: 0
@@ -752,6 +765,7 @@ private fun PresetGrid(
                 item(span = StaggeredGridItemSpan.FullLine) {
                     LoadingMoreTip()
                 }
+            }
             }
         }
 
@@ -816,6 +830,68 @@ private fun PresetCardItem(
             },
             imageHeight = imageHeight
         )
+    }
+}
+
+@Composable
+private fun EnhancedEmptyState(tabIndex: Int) {
+    val message = when (tabIndex) {
+        0 -> stringResource(R.string.empty_no_presets)
+        1 -> stringResource(R.string.empty_no_favorites)
+        2 -> "暂无哈苏预设"
+        3 -> "暂无上新预设"
+        else -> stringResource(R.string.empty_no_data)
+    }
+
+    val subMessage = when (tabIndex) {
+        0 -> stringResource(R.string.empty_hint_add_presets)
+        1 -> stringResource(R.string.empty_hint_favorite)
+        2 -> "敬请期待更多哈苏色彩科学预设"
+        3 -> "新预设正在路上，敬请期待"
+        else -> ""
+    }
+
+    val icon = when (tabIndex) {
+        0 -> Icons.Default.Search
+        1 -> Icons.Outlined.FavoriteBorder
+        2 -> Icons.Default.ColorLens
+        3 -> Icons.Default.Refresh
+        else -> Icons.Default.Search
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 图标
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center
+            )
+            if (subMessage.isNotEmpty()) {
+                Text(
+                    text = subMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     }
 }
 

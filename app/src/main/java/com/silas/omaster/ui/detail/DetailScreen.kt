@@ -10,8 +10,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
+import com.silas.omaster.data.local.HistoryManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
@@ -116,12 +119,25 @@ fun DetailScreen(
     val preset by viewModel.preset.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
 
+    // 记录浏览历史（必须在 preset 声明之后）
+    val historyManager = remember { HistoryManager.getInstance(context) }
+    LaunchedEffect(preset) {
+        preset?.let { p ->
+            p.id?.let { id ->
+                historyManager.record(id, p.name, "viewed")
+            }
+        }
+    }
+
     // 悬浮窗引导对话框状态
     var showFloatingWindowGuide by remember { mutableStateOf(false) }
     val guideManager = remember { FloatingWindowGuideManager.getInstance(context) }
 
     // 悬浮窗控制器（全局单例，已在 MainActivity 中注册）
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
+
+    // 对比视图状态
+    var isComparing by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -243,11 +259,48 @@ fun DetailScreen(
                 ) {
                     // 图片画廊（支持自动轮播和手动切换）
                     preset?.let {
-                        ImageGallery(
-                            images = it.allImages,
-                            modifier = Modifier.fillMaxWidth(),
-                            autoPlayInterval = 3000L
-                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            ImageGallery(
+                                images = it.allImages,
+                                modifier = Modifier.fillMaxWidth(),
+                                autoPlayInterval = 3000L
+                            )
+                            
+                            // 对比视图切换按钮
+                            androidx.compose.material3.FilledTonalButton(
+                                onClick = {
+                                    haptic.perform(HapticFeedbackType.LongPress)
+                                    isComparing = !isComparing
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(8.dp),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Compare,
+                                    contentDescription = "对比",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isComparing) "原图" else "对比",
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        
+                        // 对比视图提示
+                        if (isComparing) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            androidx.compose.material3.Text(
+                                text = "长按图片可查看原图效果对比",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HasselbladOrange,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
                         

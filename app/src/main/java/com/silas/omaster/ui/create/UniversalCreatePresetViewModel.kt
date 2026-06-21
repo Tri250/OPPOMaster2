@@ -10,6 +10,7 @@ import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.util.UndoRedoManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,44 @@ class UniversalCreatePresetViewModel(
     
     private var isLoaded = false
     private var editingPresetId: String? = null
+
+    // 撤销/重做管理器
+    private val undoRedoManager = UndoRedoManager<UniversalPresetUiState>(maxHistory = 30)
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
+    private val _canRedo = MutableStateFlow(false)
+    val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
+
+    private fun updateStateWithUndo(newState: UniversalPresetUiState) {
+        undoRedoManager.pushState(_uiState.value)
+        _uiState.value = newState
+        _canUndo.value = undoRedoManager.canUndo()
+        _canRedo.value = undoRedoManager.canRedo()
+    }
+
+    fun undo() {
+        val currentState = _uiState.value
+        undoRedoManager.undo(currentState)?.let { prevState ->
+            _uiState.value = prevState
+            _canUndo.value = undoRedoManager.canUndo()
+            _canRedo.value = undoRedoManager.canRedo()
+        }
+    }
+
+    fun redo() {
+        val currentState = _uiState.value
+        undoRedoManager.redo(currentState)?.let { nextState ->
+            _uiState.value = nextState
+            _canUndo.value = undoRedoManager.canUndo()
+            _canRedo.value = undoRedoManager.canRedo()
+        }
+    }
+
+    fun clearUndoHistory() {
+        undoRedoManager.clear()
+        _canUndo.value = false
+        _canRedo.value = false
+    }
 
     // 加载模版或者现有预设
     fun loadTemplate(presetId: String?) {
@@ -93,25 +132,25 @@ class UniversalCreatePresetViewModel(
     }
 
     fun updateName(name: String) {
-        _uiState.value = _uiState.value.copy(name = name)
+        updateStateWithUndo(_uiState.value.copy(name = name))
     }
 
     fun updateImageUri(uri: Uri?) {
-        _uiState.value = _uiState.value.copy(imageUri = uri)
+        updateStateWithUndo(_uiState.value.copy(imageUri = uri))
     }
 
     fun addSection(title: String) {
         val newSection = PresetSection(title = title, items = emptyList())
         val currentSections = _uiState.value.sections.toMutableList()
         currentSections.add(newSection)
-        _uiState.value = _uiState.value.copy(sections = currentSections)
+        updateStateWithUndo(_uiState.value.copy(sections = currentSections))
     }
 
     fun removeSection(index: Int) {
         val currentSections = _uiState.value.sections.toMutableList()
         if (index in currentSections.indices) {
             currentSections.removeAt(index)
-            _uiState.value = _uiState.value.copy(sections = currentSections)
+            updateStateWithUndo(_uiState.value.copy(sections = currentSections))
         }
     }
 
@@ -122,7 +161,7 @@ class UniversalCreatePresetViewModel(
             val newItems = section.items.toMutableList()
             newItems.add(item)
             currentSections[sectionIndex] = section.copy(items = newItems)
-            _uiState.value = _uiState.value.copy(sections = currentSections)
+            updateStateWithUndo(_uiState.value.copy(sections = currentSections))
         }
     }
 
@@ -134,7 +173,7 @@ class UniversalCreatePresetViewModel(
             if (itemIndex in newItems.indices) {
                 newItems.removeAt(itemIndex)
                 currentSections[sectionIndex] = section.copy(items = newItems)
-                _uiState.value = _uiState.value.copy(sections = currentSections)
+                updateStateWithUndo(_uiState.value.copy(sections = currentSections))
             }
         }
     }
@@ -147,7 +186,7 @@ class UniversalCreatePresetViewModel(
             if (itemIndex in newItems.indices) {
                 newItems[itemIndex] = newItem
                 currentSections[sectionIndex] = section.copy(items = newItems)
-                _uiState.value = _uiState.value.copy(sections = currentSections)
+                updateStateWithUndo(_uiState.value.copy(sections = currentSections))
             }
         }
     }
