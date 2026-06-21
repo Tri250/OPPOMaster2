@@ -115,7 +115,6 @@ fun CoreFeaturesScreen(
     val haptic = LocalHapticFeedback.current
 
     // 功能开关状态
-    var aiSceneEnabled by remember { mutableStateOf(settingsManager.isAISceneRecognitionEnabled) }
     var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
     var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
@@ -125,18 +124,7 @@ fun CoreFeaturesScreen(
     // 定义所有功能数据 - 同步Web端features数组
     val allFeatures = remember {
         listOf(
-            // AI智能功能 (前4个)
-            FeatureData(
-                id = "ai-scene",
-                title = "哈苏之眼",
-                subtitle = "智能识别50+拍摄场景，自动推荐最佳参数",
-                icon = Icons.Default.CameraAlt,
-                gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
-                description = FeatureDescription(
-                    desc = "支持36+拍摄场景智能识别",
-                    tips = listOf("人像", "风景", "夜景", "美食", "建筑", "自然")
-                )
-            ),
+            // AI智能功能 (3个：去掉原哈苏之眼)
             FeatureData(
                 id = "ai-fine-tune",
                 title = "AI 微调",
@@ -195,7 +183,7 @@ fun CoreFeaturesScreen(
                 ),
                 showToggle = false
             ),
-            // 品牌特色 (3个)
+            // 品牌特色 (3个：原哈苏色彩科学改名为哈苏之眼)
             FeatureData(
                 id = "lut-share",
                 title = "LUT 资源分享",
@@ -210,13 +198,13 @@ fun CoreFeaturesScreen(
             ),
             FeatureData(
                 id = "hasselblad",
-                title = "哈苏色彩科学",
-                subtitle = "HNCS 3.0 自然色彩解决方案",
-                icon = Icons.Default.Image,
+                title = "哈苏之眼",
+                subtitle = "OPPO Find X9 系列 · HNCS 3.0 哈苏大师体验",
+                icon = Icons.Default.CameraAlt,
                 gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
                 description = FeatureDescription(
-                    desc = "HNCS 3.0 自然色彩解决方案",
-                    tips = listOf("自然色彩", "肤色优化", "风景增强", "黑白胶片")
+                    desc = "真实场景识别，哈苏大师参数推荐，HNCS 3.0 自然色彩",
+                    tips = listOf("人像大师", "风景增强", "夜景星空", "美食胶片", "建筑几何")
                 )
             ),
             FeatureData(
@@ -234,9 +222,9 @@ fun CoreFeaturesScreen(
     }
 
     // 功能分类 - 同步Web端
-    val aiFeatures = allFeatures.slice(0..3)
-    val toolFeatures = allFeatures.slice(4..5)
-    val brandFeatures = allFeatures.slice(6..8)
+    val aiFeatures = allFeatures.slice(0..2)
+    val toolFeatures = allFeatures.slice(3..4)
+    val brandFeatures = allFeatures.slice(5..7)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -293,23 +281,18 @@ fun CoreFeaturesScreen(
         aiFeatures.forEach { feature ->
             item {
                 val isEnabled = when (feature.id) {
-                    "ai-scene" -> aiSceneEnabled
                     "ai-fine-tune" -> aiFineTuneEnabled
                     "smart-optimize" -> smartOptimizeEnabled
                     "watermark" -> watermarkEnabled
                     else -> true
                 }
-                
+
                 FeatureCard(
                     feature = feature,
                     isEnabled = isEnabled,
                     onToggle = { enabled ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when (feature.id) {
-                            "ai-scene" -> {
-                                aiSceneEnabled = enabled
-                                settingsManager.isAISceneRecognitionEnabled = enabled
-                            }
                             "ai-fine-tune" -> {
                                 aiFineTuneEnabled = enabled
                                 settingsManager.isAIFineTuneEnabled = enabled
@@ -326,7 +309,6 @@ fun CoreFeaturesScreen(
                     },
                     onClick = {
                         when (feature.id) {
-                            "ai-scene" -> onNavigateToSceneRecognition()
                             "ai-fine-tune" -> onNavigateToAIFineTune()
                             "smart-optimize" -> onNavigateToSmartOptimize()
                             "watermark" -> onNavigateToWatermarkEditor()
