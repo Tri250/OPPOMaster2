@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import android.net.Uri
 import com.silas.omaster.data.local.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -210,9 +211,16 @@ class WatermarkEditorManager private constructor(context: Context) {
      */
     suspend fun applyWatermark(
         bitmap: Bitmap,
-        deviceModel: String = "OPPO Find X8 Pro",
-        params: String = "f/1.6 1/500s ISO100"
+        imageUri: Uri? = null,
+        deviceModel: String? = null,
+        params: String? = null
     ): Bitmap = withContext(Dispatchers.Default) {
+        // 从EXIF提取真实数据，避免硬编码
+        val exifProvider = ExifWatermarkProvider(context)
+        val exifData = imageUri?.let { exifProvider.extractFromUri(it) }
+            ?: exifProvider.getFallbackData()
+        val resolvedDeviceModel = deviceModel ?: exifData.getFullDevice()
+        val resolvedParams = params ?: exifData.getFormattedParams()
         val config = _watermarkConfig.value
         val elementConfig = _elementConfig.value
 
@@ -254,11 +262,11 @@ class WatermarkEditorManager private constructor(context: Context) {
         }
 
         if (elementConfig.showModel) {
-            drawTextAtPosition(canvas, deviceModel, modelPaint, elementConfig.modelPosition, bitmap)
+            drawTextAtPosition(canvas, resolvedDeviceModel, modelPaint, elementConfig.modelPosition, bitmap)
         }
 
         if (elementConfig.showParams) {
-            drawTextAtPosition(canvas, params, paramsPaint, elementConfig.paramsPosition, bitmap)
+            drawTextAtPosition(canvas, resolvedParams, paramsPaint, elementConfig.paramsPosition, bitmap)
         }
 
         if (elementConfig.showTimestamp) {

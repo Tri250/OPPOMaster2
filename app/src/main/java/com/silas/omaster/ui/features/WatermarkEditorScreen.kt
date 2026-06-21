@@ -264,11 +264,11 @@ fun WatermarkEditorScreen(
     var showBeforeAfter by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // 元素文本
+    // 元素文本 - 使用设备真实信息作为初始值
     var brandText by remember { mutableStateOf("OMaster") }
-    var modelText by remember { mutableStateOf("OPPO Find X8 Pro") }
-    var paramsText by remember { mutableStateOf("f/1.8 1/125 ISO100") }
-    var dateText by remember { mutableStateOf("2026-06-09") }
+    var modelText by remember { mutableStateOf(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL) }
+    var paramsText by remember { mutableStateOf("") }
+    var dateText by remember { mutableStateOf(java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())) }
 
     // 智能颜色推荐
     val defaultRecommendedColor = MaterialTheme.colorScheme.onBackground

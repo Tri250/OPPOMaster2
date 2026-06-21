@@ -248,11 +248,12 @@ object ShareExportUtils {
     suspend fun exportImageWithWatermark(
         context: Context,
         originalBitmap: Bitmap,
-        watermarkConfig: WatermarkConfigDef
+        watermarkConfig: WatermarkConfigDef,
+        imageUri: Uri? = null
     ): String? = withContext(Dispatchers.IO) {
         try {
             // 渲染水印
-            val watermarkedBitmap = renderWatermark(context, originalBitmap, watermarkConfig)
+            val watermarkedBitmap = renderWatermark(context, originalBitmap, watermarkConfig, imageUri)
 
             // 导出到相册
             exportImageToGallery(context, watermarkedBitmap)
@@ -375,13 +376,16 @@ object ShareExportUtils {
     private fun renderWatermark(
         context: Context,
         bitmap: Bitmap,
-        config: WatermarkConfigDef
+        config: WatermarkConfigDef,
+        imageUri: Uri? = null
     ): Bitmap {
         val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(result)
 
         // 修复 P2-14: 使用公开的 getFallbackData() 方法，避免使用不存在的文件
-        val exifData = ExifWatermarkProvider(context).getFallbackData()
+        val exifProvider = ExifWatermarkProvider(context)
+        val exifData = imageUri?.let { exifProvider.extractFromUri(it) }
+            ?: exifProvider.getFallbackData()
 
         // 直接使用 getVisibleLayers()，内部已经按 sortOrder 降序排序
         val visibleLayers = config.getVisibleLayers()

@@ -130,17 +130,17 @@ class HomeViewModel(
 
     /**
      * 获取过滤后的预设列表（对齐Web端）
+     * 修复：收藏Tab使用独立的 _favorites 数据源，而非从 _allPresets 中按 isFavorite 过滤
      */
     fun getFilteredPresets(): List<MasterPreset> {
-        val baseList = _allPresets.value
-        var result = baseList.toList()
-
-        // Tab 过滤
-        when (_selectedTab.value) {
-            1 -> result = result.filter { it.isFavorite } // 收藏
-            2 -> result = result.filter { it.isHncs }     // 哈苏
-            3 -> result = result.filter { it.isNew }      // 上新
+        // 根据Tab选择基础列表
+        val baseList: List<MasterPreset> = when (_selectedTab.value) {
+            1 -> _favorites.value              // 收藏：使用独立数据源
+            2 -> _allPresets.value.filter { it.isHncs }   // 哈苏
+            3 -> _allPresets.value.filter { it.isNew }     // 上新
+            else -> _allPresets.value          // 发现：全部
         }
+        var result = baseList.toList()
 
         // 品牌过滤
         if (_selectedBrand.value != "all") {
@@ -169,13 +169,14 @@ class HomeViewModel(
 
     /**
      * 获取Tab计数（对齐Web端）
+     * 修复：与 getFilteredPresets() 使用一致的数据源，收藏Tab使用 _favorites
      */
     fun getTabCount(tabIndex: Int): Int {
         return when (tabIndex) {
-            0 -> _allPresets.value.size      // 发现
-            1 -> _favorites.value.size       // 收藏
-            2 -> _allPresets.value.filter { it.isHncs }.size  // 哈苏
-            3 -> _allPresets.value.filter { it.isNew }.size   // 上新
+            0 -> _allPresets.value.size                              // 发现
+            1 -> _favorites.value.size                               // 收藏：使用独立数据源
+            2 -> _allPresets.value.count { it.isHncs }               // 哈苏
+            3 -> _allPresets.value.count { it.isNew }                // 上新
             else -> 0
         }
     }
