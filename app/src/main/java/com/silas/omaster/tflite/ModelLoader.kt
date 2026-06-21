@@ -367,6 +367,7 @@ class ModelLoader(private val context: Context) {
     
     /**
      * 获取模型缓存目录大小
+     * 限制最大遍历文件数防止性能问题
      */
     fun getCacheSize(): Long {
         val modelDir = File(context.filesDir, MODELS_DIR)
@@ -374,6 +375,7 @@ class ModelLoader(private val context: Context) {
         
         return modelDir.walkTopDown()
             .filter { it.isFile }
+            .take(100) // 限制最大遍历文件数
             .map { it.length() }
             .sum()
     }

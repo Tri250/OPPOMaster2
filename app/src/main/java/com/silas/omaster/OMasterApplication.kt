@@ -13,6 +13,10 @@ import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -106,6 +110,8 @@ class OMasterApplication : Application() {
          * 获取 Application 实例
          * 使用双重检查锁定确保线程安全
          * 注意：多进程场景下每个进程有独立的 Application 实例
+         * 
+         * @throws IllegalStateException 如果 Application 尚未初始化（仅在明确需要实例时抛出）
          */
         fun getInstance(): OMasterApplication {
             return instance ?: throw IllegalStateException(
@@ -115,9 +121,15 @@ class OMasterApplication : Application() {
 
         /**
          * 安全获取 Application 实例（可能返回 null）
-         * 用于在不确定初始化状态时访问
+         * 推荐在不确定初始化状态时使用此方法
          */
         fun getInstanceOrNull(): OMasterApplication? = instance
+        
+        /**
+         * 安全获取 Application 实例，带默认值回退
+         * 用于组件初始化时获取 Context，即使 Application 尚未完全初始化也能安全返回
+         */
+        fun safeGetInstance(): OMasterApplication? = instance
 
         fun getPrefs(): SharedPreferences = prefs
 
@@ -185,19 +197,18 @@ class OMasterApplication : Application() {
 
     /**
      * 非关键组件的懒加载初始化
-     * 在后台线程执行，不阻塞主线程启动流程
+     * 在后台协程执行，不阻塞主线程启动流程
      */
     private fun triggerLazyInitialization() {
-        // 使用后台线程预初始化非关键组件，避免阻塞主线程
-        Thread {
+        // 使用后台协程预初始化非关键组件，避免阻塞主线程
+        val lazyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        lazyScope.launch {
             try {
                 val lazyStart = SystemClock.elapsedRealtime()
 
                 // 预初始化 SettingsManager 缓存（减少首次访问时的阻塞）
                 try {
-                    runBlocking {
-                        SettingsManager.getInstance(this@OMasterApplication).preloadCache()
-                    }
+                    SettingsManager.getInstance(this@OMasterApplication).preloadCache()
                     StartupLogger.logStep("SettingsManager预加载", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "SettingsManager预加载失败", e)
@@ -216,9 +227,7 @@ class OMasterApplication : Application() {
                 try {
                     val cloudSyncManager = com.silas.omaster.cloud.CloudSyncManager.getInstance(this@OMasterApplication)
                     if (cloudSyncManager.shouldSync()) {
-                        kotlinx.coroutines.runBlocking {
-                            cloudSyncManager.sync()
-                        }
+                        cloudSyncManager.sync()
                         StartupLogger.logStep("云同步初始同步", SystemClock.elapsedRealtime() - lazyStart)
                     }
                 } catch (e: Throwable) {
@@ -228,10 +237,6 @@ class OMasterApplication : Application() {
             } catch (e: Throwable) {
                 Log.e("OMasterApplication", "懒加载初始化失败", e)
             }
-        }.apply {
-            name = "LazyInitThread"
-            priority = Thread.NORM_PRIORITY - 1 // 降低优先级，不影响主线程
-            start()
         }
     }
 

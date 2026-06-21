@@ -53,6 +53,9 @@ sealed class DownloadResult {
  */
 class ImageCacheManager private constructor(private val context: Context) : ComponentCallbacks2 {
 
+    // 始终使用 applicationContext 避免 Activity 内存泄漏
+    private val appContext = context.applicationContext
+
     companion object {
         private const val TAG = "ImageCacheManager"
         private const val CACHE_DIR = "presets/images"
@@ -141,7 +144,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
     fun registerMemoryCallbacks() {
         if (!registeredForCallbacks) {
-            context.registerComponentCallbacks(this)
+            appContext.registerComponentCallbacks(this)
             registeredForCallbacks = true
             Log.d(TAG, "已注册 ComponentCallbacks2")
         }
@@ -149,7 +152,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
     fun unregisterMemoryCallbacks() {
         if (registeredForCallbacks) {
-            context.unregisterComponentCallbacks(this)
+            appContext.unregisterComponentCallbacks(this)
             registeredForCallbacks = false
             Log.d(TAG, "已注销 ComponentCallbacks2")
         }
@@ -568,6 +571,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
     /**
      * 获取缓存大小（MB）
+     * 限制最大遍历文件数防止超大缓存目录导致性能问题
      */
     fun getCacheSize(context: Context): Double {
         val cacheDir = File(context.filesDir, CACHE_DIR)
@@ -575,6 +579,7 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
 
         val size = cacheDir.walkTopDown()
             .filter { it.isFile }
+            .take(500) // 限制最大遍历文件数，防止 O(N) 性能问题
             .map { it.length() }
             .sum()
 
