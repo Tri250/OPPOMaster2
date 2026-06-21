@@ -339,15 +339,82 @@ fun AIFineTuneScreen(
                 if (selectedImageUri != null) {
                     // 显示已选图片作为实时预览（应用ColorMatrix滤镜）
                     val colorMatrix = remember(renderParams) { renderParams.toColorMatrix() }
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = "预览图片",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.colorMatrix(colorMatrix)
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // 原图（底层）
+                        AsyncImage(
+                            model = selectedImageUri,
+                            contentDescription = "原图",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                        // 处理后图片（叠加层，支持对比开关）
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = !showCompare,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "实时预览",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentScale = ContentScale.Fit,
+                                colorFilter = ColorFilter.colorMatrix(colorMatrix)
+                            )
+                        }
+                        // 对比模式：左右分屏对比
+                        if (showCompare) {
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    AsyncImage(
+                                        model = selectedImageUri,
+                                        contentDescription = "原图",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Text(
+                                        "原图",
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(bottom = 8.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    AsyncImage(
+                                        model = selectedImageUri,
+                                        contentDescription = "效果预览",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                        colorFilter = ColorFilter.colorMatrix(colorMatrix)
+                                    )
+                                    Text(
+                                        "效果",
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(bottom = 8.dp)
+                                            .background(
+                                                HasselbladOrange.copy(alpha = 0.6f),
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                     // 导出按钮
                     IconButton(
                         onClick = {
@@ -1437,19 +1504,33 @@ private fun updateRenderParam(params: RenderParameters, key: String, value: Floa
 
 /**
  * 根据渲染参数生成ColorMatrix（实时预览效果）
- * 将RenderParameters转换为Compose可用的ColorMatrix
+ * 将RenderParameters转换为Compose可用的ColorMatrix，支持18个参数中的主要参数。
  */
 private fun RenderParameters.toColorMatrix(): ColorMatrix {
-    // 归一化参数到 [-1, 1] 或 [0, 1] 范围
-    val sat = 1f + (saturation / 100f)  // 0.0 ~ 2.0
-    val con = 1f + (contrast / 100f)    // 0.0 ~ 2.0
-    val bri = brightness / 100f         // -1.0 ~ 1.0
-    val war = warmth / 100f             // -1.0 ~ 1.0
+    // 归一化参数
+    val sat = 1f + (saturation / 100f)
+    val con = 1f + (contrast / 100f)
+    val bri = (brightness + exposure * 0.5f) / 100f
+    val war = warmth / 100f
+    val vibranceFactor = 1f + (vibrance / 100f * 0.5f)
+    val fadeFactor = fade / 100f
+    val highlightLift = highlights / 100f * 60f
+    val shadowLift = shadows / 100f * 60f
 
     // 饱和度矩阵
     val saturationMatrix = ColorMatrix().apply {
         setToSaturation(sat.coerceIn(0f, 2f))
     }
+
+    // 自然饱和度（vibrance）：对低饱和度通道影响更大，近似实现
+    val vibranceMatrix = ColorMatrix(
+        floatArrayOf(
+            vibranceFactor, 0f, 0f, 0f, 0f,
+            0f, vibranceFactor, 0f, 0f, 0f,
+            0f, 0f, vibranceFactor, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
 
     // 对比度矩阵
     val contrastMatrix = ColorMatrix(
@@ -1474,7 +1555,6 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
     // 色温矩阵（暖色/冷色调整）
     val warmthMatrix = ColorMatrix().apply {
         if (war > 0) {
-            // 暖色调：增加红色，减少蓝色
             val warmFactor = war * 0.3f
             set(ColorMatrix(
                 floatArrayOf(
@@ -1485,7 +1565,6 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
                 )
             ))
         } else if (war < 0) {
-            // 冷色调：减少红色，增加蓝色
             val coolFactor = -war * 0.3f
             set(ColorMatrix(
                 floatArrayOf(
@@ -1498,11 +1577,40 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
         }
     }
 
+    // 高光/阴影（近似）：高光抬升、阴影补偿
+    val toneMatrix = ColorMatrix(
+        floatArrayOf(
+            1f, 0f, 0f, 0f, highlightLift + shadowLift * 0.5f,
+            0f, 1f, 0f, 0f, highlightLift + shadowLift * 0.5f,
+            0f, 0f, 1f, 0f, highlightLift + shadowLift * 0.5f,
+            0f, 0f, 0f, 1f, 0f
+        )
+    )
+
+    // 褪色（fade）：降低对比度并整体提亮
+    val fadeMatrix = ColorMatrix().apply {
+        if (fadeFactor > 0) {
+            val fadeCon = 1f - fadeFactor * 0.4f
+            val fadeLift = fadeFactor * 40f
+            set(ColorMatrix(
+                floatArrayOf(
+                    fadeCon, 0f, 0f, 0f, fadeLift,
+                    0f, fadeCon, 0f, 0f, fadeLift,
+                    0f, 0f, fadeCon, 0f, fadeLift,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            ))
+        }
+    }
+
     // 合并所有矩阵（按顺序应用）
     val result = ColorMatrix()
     result.set(saturationMatrix)
+    result.timesAssign(vibranceMatrix)
     result.timesAssign(contrastMatrix)
+    result.timesAssign(fadeMatrix)
     result.timesAssign(brightnessMatrix)
+    result.timesAssign(toneMatrix)
     result.timesAssign(warmthMatrix)
 
     return result

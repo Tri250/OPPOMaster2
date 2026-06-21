@@ -3,7 +3,6 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -106,7 +105,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.FilmPreset
@@ -125,10 +123,6 @@ import com.silas.omaster.util.hapticClickable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TAG = "HasselbladEye"
@@ -173,7 +167,7 @@ fun HasselbladScreen(
     val analysisMessage by viewModel.analysisMessage.collectAsState()
     val analysisProgress by viewModel.analysisProgress.collectAsState()
 
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraController = remember { HasselbladCameraController() }
     var recentShots by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -181,25 +175,6 @@ fun HasselbladScreen(
     ) { granted ->
         if (!granted) {
             Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            val uri = cameraImageUri
-            if (uri != null) {
-                scope.launch {
-                    val bitmap = loadBitmapFromUri(context, uri)
-                    if (bitmap != null) {
-                        recentShots = (listOf(uri) + recentShots).take(3)
-                        viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
-                    } else {
-                        Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
         }
     }
 
@@ -216,25 +191,6 @@ fun HasselbladScreen(
                     Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-    }
-
-    fun launchCamera() {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context, android.Manifest.permission.CAMERA
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-        if (hasPermission) {
-            val photoUri = createTempImageUri(context)
-            if (photoUri != Uri.EMPTY) {
-                cameraImageUri = photoUri
-                cameraLauncher.launch(photoUri)
-            } else {
-                Toast.makeText(context, "无法创建相机临时文件", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
         }
     }
 
@@ -350,21 +306,38 @@ fun HasselbladScreen(
                 .padding(innerPadding)
         ) { currentStage: HasselbladEyeStage ->
             when (currentStage) {
-                HasselbladEyeStage.SETUP -> SetupContent(
-                recentShots = recentShots,
-                onLaunchCamera = ::launchCamera,
-                onPickFromGallery = ::onPickFromGallery,
-                onRecentShotClick = { uri ->
-                    scope.launch {
-                        val bitmap = loadBitmapFromUri(context, uri)
-                        if (bitmap != null) {
-                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
-                        } else {
-                            Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                HasselbladEyeStage.SETUP -> CameraSetupContent(
+                    recentShots = recentShots,
+                    cameraController = cameraController,
+                    onCaptured = { uri ->
+                        scope.launch {
+                            val bitmap = loadBitmapFromUri(context, uri)
+                            if (bitmap != null) {
+                                recentShots = (listOf(uri) + recentShots).take(3)
+                                viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                            } else {
+                                Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    },
+                    onPickFromGallery = ::onPickFromGallery,
+                    onRecentShotClick = { uri ->
+                        scope.launch {
+                            val bitmap = loadBitmapFromUri(context, uri)
+                            if (bitmap != null) {
+                                viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                            } else {
+                                Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    onRequestCameraPermission = {
+                        cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                    },
+                    onError = { error ->
+                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                     }
-                }
-            )
+                )
 
                 HasselbladEyeStage.ANALYZING -> AnalyzingContent(
                     apertureState = apertureState,
@@ -527,39 +500,149 @@ private fun GlassCard(
 // ==================== SETUP 阶段 ====================
 
 @Composable
-private fun SetupContent(
+private fun CameraSetupContent(
     recentShots: List<Uri>,
-    onLaunchCamera: () -> Unit,
+    cameraController: HasselbladCameraController,
+    onCaptured: (Uri) -> Unit,
     onPickFromGallery: () -> Unit,
-    onRecentShotClick: (Uri) -> Unit
+    onRecentShotClick: (Uri) -> Unit,
+    onRequestCameraPermission: () -> Unit,
+    onError: (String) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item { HeroCard() }
+    val context = LocalContext.current
+    val hasCameraPermission = ContextCompat.checkSelfPermission(
+        context, android.Manifest.permission.CAMERA
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
-        item {
-            ShutterCard(
-                onLaunchCamera = onLaunchCamera,
-                onPickFromGallery = onPickFromGallery
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (hasCameraPermission) {
+            HasselbladCameraPreview(
+                controller = cameraController,
+                modifier = Modifier.fillMaxSize(),
+                onError = onError
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(HasselbladOrange.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "相机权限",
+                        tint = HasselbladOrange,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "需要相机权限",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "哈苏之眼需要访问相机以提供实时取景和拍照分析功能",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onRequestCameraPermission,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = "授予相机权限", color = Color.White)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onPickFromGallery,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, HasselbladOrange)
+                ) {
+                    Text(text = "从相册选择", color = HasselbladOrange)
+                }
+            }
+        }
+
+        // 顶部品牌水印
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 24.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.Black.copy(alpha = 0.4f))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "哈苏之眼 · HNCS 3.0",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
             )
         }
 
-        if (recentShots.isNotEmpty()) {
-            item {
-                SectionTitle(title = "最近拍摄")
-            }
-            item {
+        // 底部控制栏
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = 32.dp, start = 24.dp, end = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (recentShots.isNotEmpty()) {
                 RecentShotsRow(
                     recentShots = recentShots,
                     onShotClick = onRecentShotClick
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onPickFromGallery,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.4f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = "从相册选择",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                HasselbladCameraShutterButton(
+                    controller = cameraController,
+                    onCaptured = onCaptured,
+                    onError = onError,
+                    enabled = hasCameraPermission,
+                    modifier = Modifier.size(80.dp)
+                )
+
+                // 占位，保持快门居中
+                Box(modifier = Modifier.size(56.dp))
             }
         }
-
-        item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
 
@@ -571,67 +654,6 @@ private fun SectionTitle(title: String) {
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onBackground
     )
-}
-
-@Composable
-private fun HeroCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(HasselbladOrange, HasselbladOrangeLight)
-                    )
-                )
-                .padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "哈苏之眼 · HNCS 3.0",
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "OPPO Find X9 系列 · 哈苏大师影像",
-                        color = Color.White.copy(alpha = 0.95f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "真实场景识别 · 哈苏大师参数 · HNCS 3.0 自然色彩科学",
-                        color = Color.White.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -734,7 +756,7 @@ private fun ParamsPanel(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (isParamsLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = null,
+                    contentDescription = if (isParamsLocked) "参数已锁定" else "参数未锁定",
                     tint = if (isParamsLocked) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp)
                 )
@@ -825,7 +847,7 @@ private fun ParamsPanel(
         ) {
             Icon(
                 imageVector = Icons.Default.Done,
-                contentDescription = null,
+                contentDescription = "重置为推荐参数",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(18.dp)
             )
@@ -882,71 +904,6 @@ private fun ParamSlider(
                 disabledThumbColor = HasselbladOrange.copy(alpha = 0.3f)
             )
         )
-    }
-}
-
-@Composable
-private fun ShutterCard(
-    onLaunchCamera: () -> Unit,
-    onPickFromGallery: () -> Unit
-) {
-    GlassCard {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "选择一张照片，让哈苏之眼为你分析",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = onLaunchCamera,
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                shape = CircleShape,
-                modifier = Modifier
-                    .size(88.dp)
-                    .graphicsLayer { shadowElevation = 20.dp.toPx() },
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "拍照",
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "点击拍照",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = onPickFromGallery,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, HasselbladOrange)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PhotoLibrary,
-                    contentDescription = null,
-                    tint = HasselbladOrange,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "从相册选择", color = HasselbladOrange)
-            }
-        }
     }
 }
 
@@ -1174,7 +1131,7 @@ private fun AnalyzingContent(
         ) {
             Icon(
                 imageVector = Icons.Default.Cancel,
-                contentDescription = null,
+                contentDescription = "取消分析",
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -1391,7 +1348,7 @@ private fun ResultsContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
+                        contentDescription = "生成预览图",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1815,7 +1772,7 @@ private fun PreviewContent(
                 } else {
                     Icon(
                         imageVector = Icons.Default.Save,
-                        contentDescription = null,
+                        contentDescription = "保存到相册",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1841,7 +1798,7 @@ private fun PreviewContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Share,
-                        contentDescription = null,
+                        contentDescription = "分享",
                         tint = HasselbladOrange,
                         modifier = Modifier.size(18.dp)
                     )
@@ -1856,7 +1813,7 @@ private fun PreviewContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Cancel,
-                        contentDescription = null,
+                        contentDescription = "重新拍摄",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -2163,7 +2120,7 @@ private fun DoneContent(
         ) {
             Icon(
                 imageVector = Icons.Default.Share,
-                contentDescription = null,
+                contentDescription = "分享图片",
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
@@ -2187,7 +2144,7 @@ private fun DoneContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.PhotoLibrary,
-                    contentDescription = null,
+                    contentDescription = "查看图片",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2205,7 +2162,7 @@ private fun DoneContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
+                    contentDescription = "再调一张",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2226,7 +2183,7 @@ private fun DoneContent(
         ) {
             Icon(
                 imageVector = Icons.Default.CameraAlt,
-                contentDescription = null,
+                contentDescription = "重新拍摄",
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(20.dp)
             )
@@ -2301,19 +2258,4 @@ private suspend fun loadBitmapFromUri(
     }
 }
 
-private fun createTempImageUri(context: android.content.Context): Uri {
-    return try {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Hasselblad").apply {
-            if (!exists()) mkdirs()
-        }
-        val imageFile = File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
-        FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            imageFile
-        )
-    } catch (e: Exception) {
-        Uri.EMPTY
-    }
-}
+

@@ -446,7 +446,7 @@ fun ApplyPresetButton(
     val coroutineScope = rememberCoroutineScope()
     
     val buttonColor by animateColorAsState(
-        targetValue = if (applied) Color(0xFF4CAF50) else HasselbladOrange,
+        targetValue = if (applied) MaterialTheme.colorScheme.primary else HasselbladOrange,
         animationSpec = tween(durationMillis = 300),
         label = "buttonColor"
     )
@@ -490,9 +490,9 @@ fun FavoriteButton(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isFavorite) Color.Red.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
-    val textColor = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-    val borderColor = if (isFavorite) Color.Red.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+    val backgroundColor = if (isFavorite) MaterialTheme.colorScheme.error.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
+    val textColor = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+    val borderColor = if (isFavorite) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
     
     Button(
         onClick = onToggle,

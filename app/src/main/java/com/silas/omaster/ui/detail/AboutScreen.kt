@@ -26,7 +26,11 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import android.widget.Toast
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,8 +66,11 @@ import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.data.local.UpdateChannel
+import com.silas.omaster.util.UpdateChecker
 import com.silas.omaster.util.VersionInfo
 import com.silas.omaster.util.perform
+import kotlinx.coroutines.launch
 
 @Composable
 fun AboutScreen(
@@ -82,6 +90,38 @@ fun AboutScreen(
     val haptic = LocalHapticFeedback.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
     val currentTheme by settingsManager.themeFlow.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    // 版本更新检查状态
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+
+    fun checkForUpdate() {
+        if (isCheckingUpdate) return
+        haptic.perform(HapticFeedbackType.LongPress)
+        isCheckingUpdate = true
+        scope.launch {
+            val info = UpdateChecker.checkUpdate(context, currentVersionCode, UpdateChannel.GITEE)
+            isCheckingUpdate = false
+            updateInfo = info
+            when {
+                info == null -> {
+                    Toast.makeText(context, R.string.version_check_failed, Toast.LENGTH_SHORT).show()
+                }
+                info.isNewer -> {
+                    showUpdateDialog = true
+                }
+                else -> {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.version_latest),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
 
     // 滚动方向检测
     var isScrollingUp by remember { mutableStateOf(false) }
@@ -139,7 +179,9 @@ fun AboutScreen(
             // App Info Card - Logo + Version
             AppInfoCard(
                 currentVersionName = currentVersionName,
-                currentTheme = currentTheme
+                currentTheme = currentTheme,
+                isCheckingUpdate = isCheckingUpdate,
+                onCheckUpdate = ::checkForUpdate
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -168,12 +210,77 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+
+    // 版本更新对话框
+    if (showUpdateDialog) {
+        val info = updateInfo
+        if (info != null) {
+            AlertDialog(
+                onDismissRequest = { showUpdateDialog = false },
+                title = { Text(text = stringResource(R.string.version_new_available)) },
+                text = {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.version_new_found, info.versionName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.update_notes_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = info.releaseNotes,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showUpdateDialog = false
+                            val downloadId = UpdateChecker.downloadAndInstall(
+                                context,
+                                info.downloadUrl,
+                                info.versionName
+                            )
+                            if (downloadId != -1L) {
+                                Toast.makeText(
+                                    context,
+                                    "开始下载 v${info.versionName}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "下载启动失败",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.version_download_btn))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showUpdateDialog = false }) {
+                        Text(text = stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+    }
 }
 
 @Composable
 private fun AppInfoCard(
     currentVersionName: String,
-    currentTheme: BrandTheme
+    currentTheme: BrandTheme,
+    isCheckingUpdate: Boolean,
+    onCheckUpdate: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -288,6 +395,35 @@ private fun AppInfoCard(
                         color = currentTheme.primaryColor
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 检查更新按钮
+                TextButton(
+                    onClick = onCheckUpdate,
+                    enabled = !isCheckingUpdate
+                ) {
+                    if (isCheckingUpdate) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = currentTheme.primaryColor,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.version_checking),
+                            color = currentTheme.primaryColor,
+                            fontSize = 13.sp
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.version_check),
+                            color = currentTheme.primaryColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
@@ -396,7 +532,7 @@ private fun QuickActionItem(
         }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
+            contentDescription = "进入",
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
             modifier = Modifier.size(16.dp)
         )

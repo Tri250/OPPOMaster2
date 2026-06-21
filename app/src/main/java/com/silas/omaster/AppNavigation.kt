@@ -407,7 +407,7 @@ fun MainApp(navController: NavHostController) {
 
         if (showBottomNav) {
             PillNavBar(
-                visible = isHomeScrollingUp,
+                visible = true,
                 currentRoute = when {
                     currentRoute?.contains("Home") == true -> "home"
                     currentRoute?.contains("Subscription") == true -> "subscription"

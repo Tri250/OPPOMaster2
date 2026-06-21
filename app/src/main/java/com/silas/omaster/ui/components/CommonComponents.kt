@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.silas.omaster.R
@@ -308,30 +310,35 @@ fun PresetImage(
             // 路径为空时显示占位图
             ImagePlaceholder()
         } else {
-            AsyncImage(
+            // 使用 rememberAsyncImagePainter 监听加载状态，失败时兜底显示占位图
+            val painter = rememberAsyncImagePainter(
                 model = ImageRequest.Builder(context)
                     .data(imageUri)
                     .crossfade(AnimationSpecs.FastTween.durationMillis)
                     .diskCachePolicy(CachePolicy.ENABLED)
                     .memoryCachePolicy(CachePolicy.ENABLED)
-                    .build(),
+                    .build()
+            )
+            val painterState = painter.state
+            val isError = painterState is AsyncImagePainter.State.Error
+            val isLoading = painterState is AsyncImagePainter.State.Loading
+
+            androidx.compose.foundation.Image(
+                painter = painter,
                 contentDescription = preset.name,
                 contentScale = contentScale,
-                modifier = Modifier.fillMaxSize(),
-                onError = {
-                    android.util.Log.w("PresetImage", "图片加载失败: $imageUri, error: ${it.result.throwable?.message}")
-                }
+                modifier = Modifier.fillMaxSize()
             )
-        }
 
-        // 显示加载状态
-        if (showDownloadIndicator && downloadState is DownloadState.Downloading) {
-            LoadingIndicator()
-        }
+            // 加载中显示指示器
+            if (showDownloadIndicator && (isLoading || downloadState is DownloadState.Downloading)) {
+                LoadingIndicator()
+            }
 
-        // 加载失败时显示占位图
-        if (downloadState is DownloadState.Error && imageUri.startsWith("http")) {
-            ImagePlaceholder()
+            // 本地/网络图片加载失败，或下载失败时显示占位图
+            if (isError || (downloadState is DownloadState.Error && imageUri.startsWith("http"))) {
+                ImagePlaceholder()
+            }
         }
     }
 }
