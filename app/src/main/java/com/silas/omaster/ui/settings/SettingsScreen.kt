@@ -109,7 +109,10 @@ fun SettingsScreen(
     var updateChannel by remember { mutableStateOf(settingsManager.updateChannel) }
     var showChannelDialog by remember { mutableStateOf(false) }
     var analyticsEnabled by remember { mutableStateOf(settingsManager.isAnalyticsEnabled) }
-    var cacheSize by remember { mutableStateOf(ImageCacheManager.getInstance(context).getCacheSize(context)) }
+    var cacheSize by remember { mutableStateOf(0.0) }
+    LaunchedEffect(Unit) {
+        cacheSize = ImageCacheManager.getInstance(context).getCacheSize(context)
+    }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
 
@@ -321,12 +324,12 @@ fun SettingsScreen(
                     Text(
                         text = "30%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "70%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -346,11 +349,7 @@ fun SettingsScreen(
                 onCheckedChange = { enabled ->
                     cloudSyncEnabled = enabled
                     settingsManager.isCloudSyncEnabled = enabled
-                    if (enabled) {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                    } else {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                    }
+                    haptic.perform(HapticFeedbackType.LongPress)
                 }
             )
 
@@ -446,11 +445,7 @@ fun SettingsScreen(
                 onCheckedChange = { enabled ->
                     analyticsEnabled = enabled
                     settingsManager.isAnalyticsEnabled = enabled
-                    if (enabled) {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                    } else {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                    }
+                    haptic.perform(HapticFeedbackType.LongPress)
                 }
             )
 
@@ -604,14 +599,14 @@ private fun SettingsSwitchItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = "图标",
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -654,7 +649,7 @@ private fun SettingsClickableItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -663,7 +658,7 @@ private fun SettingsClickableItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = "图标",
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -671,8 +666,8 @@ private fun SettingsClickableItem(
         trailingContent = trailingContent ?: {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "图标",
-                tint = Color.Gray
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         modifier = Modifier.clickable(onClick = onClick),
@@ -682,7 +677,6 @@ private fun SettingsClickableItem(
     )
 }
 
-@Composable
 private fun getTabName(tabIndex: Int): String {
     return when (tabIndex) {
         0 -> "发现"
@@ -719,7 +713,7 @@ fun ThemeSelectionDialog(
                             onClick = { onThemeSelected(theme) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = theme.primaryColor,
-                                unselectedColor = Color.Gray
+                                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -842,7 +836,7 @@ fun TabSelectionDialog(
                             onClick = { onTabSelected(index) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary,
-                                unselectedColor = Color.Gray
+                                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -896,7 +890,7 @@ fun UpdateChannelDialog(
                             onClick = { onChannelSelected(channel) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary,
-                                unselectedColor = Color.Gray
+                                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -912,7 +906,7 @@ fun UpdateChannelDialog(
                                     UpdateChannel.GITHUB -> "国际访问，国内可能需要代理"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -962,7 +956,7 @@ fun DarkModeDialog(
                             onClick = { onModeSelected(mode) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary,
-                                unselectedColor = Color.Gray
+                                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -975,7 +969,7 @@ fun DarkModeDialog(
                             Text(
                                 text = desc,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

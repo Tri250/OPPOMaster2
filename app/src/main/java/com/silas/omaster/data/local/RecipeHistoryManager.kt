@@ -7,6 +7,9 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 配方历史管理器
@@ -26,6 +29,9 @@ class RecipeHistoryManager private constructor(context: Context) {
         Context.MODE_PRIVATE
     )
     private val gson = Gson()
+
+    // 预创建日期格式化器，避免重复创建（SimpleDateFormat 非线程安全，但本类单例且仅在主线程使用）
+    private val dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
 
     private val _recipesFlow = MutableStateFlow<List<RecipeRecord>>(emptyList())
     val recipesFlow: StateFlow<List<RecipeRecord>> = _recipesFlow.asStateFlow()
@@ -138,8 +144,7 @@ class RecipeHistoryManager private constructor(context: Context) {
      * 格式化日期
      */
     private fun formatDate(timestamp: Long): String {
-        val sdf = java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.getDefault())
-        return sdf.format(java.util.Date(timestamp))
+        return dateFormat.format(Date(timestamp))
     }
 
     companion object {
@@ -165,21 +170,19 @@ class RecipeHistoryManager private constructor(context: Context) {
  * 配方记录数据类
  */
 data class RecipeRecord(
-    val id: String,                    // 唯一标识
-    val sceneId: String,               // 场景ID（如 portrait-standard）
-    val sceneName: String,             // 场景名称（如 标准人像）
-    val sceneCategory: String,         // 场景分类（如 PORTRAIT）
-    val filmId: String?,               // 推荐胶片ID
-    val filmName: String?,             // 推荐胶片名称
-    val timestamp: Long,               // 记录时间戳
-    val confidence: Float = 0.85f,     // 识别置信度
-    val thumbnail: String? = null      // 缩略图路径（可选）
+    val id: String,
+    val sceneId: String,
+    val sceneName: String,
+    val sceneCategory: String,
+    val filmId: String?,
+    val filmName: String?,
+    val timestamp: Long,
+    val confidence: Float = 0.85f,
+    val thumbnail: String? = null
 ) {
-    /**
-     * 格式化日期显示
-     */
-    fun formatDate(): String {
-        val sdf = java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.getDefault())
-        return sdf.format(java.util.Date(timestamp))
+    companion object {
+        private val dateFormat = java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.getDefault())
     }
+
+    fun formatDate(): String = dateFormat.format(java.util.Date(timestamp))
 }

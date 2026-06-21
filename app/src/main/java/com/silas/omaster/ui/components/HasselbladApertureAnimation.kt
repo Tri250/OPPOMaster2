@@ -86,7 +86,8 @@ fun HasselbladApertureAnimation(
     var rotationAngle by remember { mutableFloatStateOf(0f) }
 
     // 真实分析：使用 MasterInferenceEngine.analyzeImage
-    LaunchedEffect(bitmap) {
+    // 使用 bitmap?.hashCode() 作为稳定 key，避免 Bitmap 对象引用变化导致重复执行
+    LaunchedEffect(bitmap?.hashCode()) {
         // Phase 1: 闭合状态 - 初始化
         apertureState = ApertureState.CLOSED
         currentMessage = "正在读取光影信息..."

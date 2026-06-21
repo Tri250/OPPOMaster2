@@ -26,6 +26,9 @@ class ExifWatermarkProvider(private val context: Context) {
 
     companion object {
         private const val TAG = "ExifWatermarkProvider"
+        // 预创建日期格式化器，避免重复创建
+        private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     }
 
     /**
@@ -74,16 +77,14 @@ class ExifWatermarkProvider(private val context: Context) {
          * 获取格式化的日期字符串
          */
         fun getFormattedDate(): String {
-            return dateTaken ?: SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                .format(Date())
+            return dateTaken ?: dateFormat.format(Date())
         }
 
         /**
          * 获取格式化的时间字符串
          */
         fun getFormattedTime(): String {
-            return timeTaken ?: SimpleDateFormat("HH:mm", Locale.getDefault())
-                .format(Date())
+            return timeTaken ?: timeFormat.format(Date())
         }
 
         /**
@@ -441,8 +442,8 @@ class ExifWatermarkProvider(private val context: Context) {
      * 修复 P2-14: 提供公开方法，避免使用不存在的文件
      */
     fun getFallbackData(): ExifWatermarkData {
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        val currentDate = dateFormat.format(Date())
+        val currentTime = timeFormat.format(Date())
         
         return ExifWatermarkData(
             make = Build.MANUFACTURER,

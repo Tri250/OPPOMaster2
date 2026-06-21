@@ -13,7 +13,12 @@ import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 启动初始化日志记录器
@@ -185,19 +190,18 @@ class OMasterApplication : Application() {
 
     /**
      * 非关键组件的懒加载初始化
-     * 在后台线程执行，不阻塞主线程启动流程
+     * 使用协程替代原始 Thread，实现结构化并发
      */
+    private val lazyInitScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private fun triggerLazyInitialization() {
-        // 使用后台线程预初始化非关键组件，避免阻塞主线程
-        Thread {
+        lazyInitScope.launch {
             try {
                 val lazyStart = SystemClock.elapsedRealtime()
 
                 // 预初始化 SettingsManager 缓存（减少首次访问时的阻塞）
                 try {
-                    runBlocking {
-                        SettingsManager.getInstance(this@OMasterApplication).preloadCache()
-                    }
+                    SettingsManager.getInstance(this@OMasterApplication).preloadCache()
                     StartupLogger.logStep("SettingsManager预加载", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "SettingsManager预加载失败", e)
@@ -205,7 +209,6 @@ class OMasterApplication : Application() {
 
                 // 预初始化 FaceDetectorSingleton（非关键，首次使用时才真正加载模型）
                 try {
-                    // 仅触发初始化，实际模型加载延迟到首次使用时
                     FaceDetectorSingleton
                     StartupLogger.logStep("FaceDetector预初始化", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
@@ -216,9 +219,7 @@ class OMasterApplication : Application() {
                 try {
                     val cloudSyncManager = com.silas.omaster.cloud.CloudSyncManager.getInstance(this@OMasterApplication)
                     if (cloudSyncManager.shouldSync()) {
-                        kotlinx.coroutines.runBlocking {
-                            cloudSyncManager.sync()
-                        }
+                        cloudSyncManager.sync()
                         StartupLogger.logStep("云同步初始同步", SystemClock.elapsedRealtime() - lazyStart)
                     }
                 } catch (e: Throwable) {
@@ -228,10 +229,6 @@ class OMasterApplication : Application() {
             } catch (e: Throwable) {
                 Log.e("OMasterApplication", "懒加载初始化失败", e)
             }
-        }.apply {
-            name = "LazyInitThread"
-            priority = Thread.NORM_PRIORITY - 1 // 降低优先级，不影响主线程
-            start()
         }
     }
 
@@ -307,6 +304,9 @@ class OMasterApplication : Application() {
      * 推荐在组件的生命周期回调中调用，而非依赖 onTerminate
      */
     fun releaseResources() {
+        // 取消懒加载协程
+        lazyInitScope.cancel()
+
         try {
             FaceDetectorSingleton.release()
             android.util.Log.i("OMasterApplication", "FaceDetectorSingleton 已释放")

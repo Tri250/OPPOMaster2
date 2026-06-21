@@ -29,6 +29,27 @@ import com.silas.omaster.util.perform
 import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.net.URI
+
+/**
+ * 验证预设源 URL 是否合法，防止 SSRF 攻击
+ */
+private fun isValidPresetSourceUrl(url: String): Boolean {
+    if (url.isBlank()) return false
+    return try {
+        val uri = URI(url)
+        val scheme = uri.scheme?.lowercase()
+        if (scheme != "https" && scheme != "http") return false
+        val host = uri.host ?: return false
+        if (host == "localhost" || host == "127.0.0.1" || host == "0.0.0.0") return false
+        if (host.startsWith("10.") || host.startsWith("192.168.") || host.startsWith("169.254.")) return false
+        if (host.matches(Regex("^172\\.(1[6-9]|2[0-9]|3[01])\\..*"))) return false
+        if (!host.contains(".")) return false
+        true
+    } catch (_: Exception) {
+        false
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,33 +67,37 @@ fun PresetSourceManagerScreen(
     var editingSource by remember { mutableStateOf<PresetSource?>(null) }
     var fetchedPresetCount by remember { mutableStateOf(0) }
     var syncError by remember { mutableStateOf<String?>(null) }
-    
-    // 加载预设 - 使用 CloudSyncManager 统一同步
-    LaunchedEffect(sources) {
-        if (sources.any { it.enabled }) {
-            isLoading = true
-            syncError = null
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    cloudSyncManager.sync()
-                }
-                when (result) {
-                    is com.silas.omaster.cloud.SyncResult.Success -> {
-                        fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
-                    }
-                    is com.silas.omaster.cloud.SyncResult.Error -> {
-                        syncError = result.message
-                    }
-                    is com.silas.omaster.cloud.SyncResult.Disabled -> {
-                        // 云同步被禁用，尝试手动加载
-                        fetchedPresetCount = 0
-                    }
-                }
-            } catch (e: Exception) {
-                syncError = e.message ?: "同步失败"
-            } finally {
-                isLoading = false
+
+    // 同步操作抽取为独立函数，避免 LaunchedEffect(sources) 导致频繁触发
+    suspend fun doSync() {
+        isLoading = true
+        syncError = null
+        try {
+            val result = withContext(Dispatchers.IO) {
+                cloudSyncManager.sync()
             }
+            when (result) {
+                is com.silas.omaster.cloud.SyncResult.Success -> {
+                    fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
+                }
+                is com.silas.omaster.cloud.SyncResult.Error -> {
+                    syncError = result.message
+                }
+                is com.silas.omaster.cloud.SyncResult.Disabled -> {
+                    fetchedPresetCount = 0
+                }
+            }
+        } catch (e: Exception) {
+            syncError = e.message ?: "同步失败"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    // 仅在首次进入时自动同步
+    LaunchedEffect(Unit) {
+        if (sources.any { it.enabled }) {
+            doSync()
         }
     }
     
@@ -90,38 +115,16 @@ fun PresetSourceManagerScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回")
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                 }
             },
             actions = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
-                    // 刷新：重新触发同步
-                    scope.launch {
-                        isLoading = true
-                        syncError = null
-                        try {
-                            val result = withContext(Dispatchers.IO) {
-                                cloudSyncManager.sync()
-                            }
-                            when (result) {
-                                is com.silas.omaster.cloud.SyncResult.Success -> {
-                                    fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
-                                }
-                                is com.silas.omaster.cloud.SyncResult.Error -> {
-                                    syncError = result.message
-                                }
-                                else -> {}
-                            }
-                        } catch (e: Exception) {
-                            syncError = e.message ?: "刷新失败"
-                        } finally {
-                            isLoading = false
-                        }
-                    }
+                    scope.launch { doSync() }
                 }) {
                     Icon(
-                        Icons.Default.Refresh, "刷新",
+                        Icons.Default.Refresh, contentDescription = "刷新",
                         tint = if (isLoading) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -129,7 +132,7 @@ fun PresetSourceManagerScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     showAddDialog = true
                 }) {
-                    Icon(Icons.Default.Add, "添加", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.Default.Add, contentDescription = "添加", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -277,7 +280,7 @@ private fun PresetSourceCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (isEditing) {
@@ -322,7 +325,12 @@ private fun PresetSourceCard(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onSave(editName, editUrl) },
+                        onClick = {
+                            if (isValidPresetSourceUrl(editUrl)) {
+                                onSave(editName, editUrl)
+                            }
+                        },
+                        enabled = editName.isNotBlank() && isValidPresetSourceUrl(editUrl),
                         colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                     ) {
                         Text("保存")
@@ -356,8 +364,8 @@ private fun PresetSourceCard(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                             checkedTrackColor = SuccessGreen,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                         )
                     )
                 }
@@ -371,13 +379,13 @@ private fun PresetSourceCard(
                 ) {
                     IconButton(onClick = onEdit) {
                         Icon(
-                            Icons.Default.Edit, "编辑",
+                            Icons.Default.Edit, contentDescription = "编辑",
                             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
                     }
                     IconButton(onClick = onDelete) {
                         Icon(
-                            Icons.Default.Delete, "删除",
+                            Icons.Default.Delete, contentDescription = "删除",
                             tint = ErrorRed
                         )
                     }
@@ -434,9 +442,10 @@ private fun AddSourceDialog(
             }
         },
         confirmButton = {
+            val isValidUrl = url.isNotBlank() && isValidPresetSourceUrl(url)
             Button(
                 onClick = { onAdd(name, url) },
-                enabled = name.isNotBlank() && url.isNotBlank(),
+                enabled = name.isNotBlank() && isValidUrl,
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
             ) {
                 Text("添加")

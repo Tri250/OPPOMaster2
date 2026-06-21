@@ -79,7 +79,7 @@ fun BeforeAfterSlider(
                 .data(afterImage)
                 .crossfade(true)
                 .build(),
-            contentDescription = "After",
+            contentDescription = "调色后",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -96,7 +96,7 @@ fun BeforeAfterSlider(
                     .data(beforeImage)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Before",
+                contentDescription = "调色前",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -125,7 +125,7 @@ fun BeforeAfterSlider(
         ) {
             Icon(
                 imageVector = Icons.Default.Compare,
-                contentDescription = "Compare",
+                contentDescription = "对比滑杆",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(24.dp)
             )

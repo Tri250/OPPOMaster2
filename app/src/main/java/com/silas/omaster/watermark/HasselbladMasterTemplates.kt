@@ -150,14 +150,16 @@ object HasselbladColorPalette {
  */
 object HasselbladMasterTemplates {
 
-    /**
-     * 获取所有哈苏大师模板
-     */
-    fun getAll(): List<WatermarkTemplateDef> = listOf(
+    private val cachedTemplates by lazy { listOf(
         hasselbladMasterTemplate(),
         hasselbladHncsTemplate(),
         hasselbladXpanTemplate()
-    )
+    ) }
+
+    /**
+     * 获取所有哈苏大师模板
+     */
+    fun getAll(): List<WatermarkTemplateDef> = cachedTemplates
 
     /**
      * 模板 1：哈苏大师印记 (hasselblad-master)

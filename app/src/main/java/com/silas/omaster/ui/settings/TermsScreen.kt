@@ -51,7 +51,7 @@ fun TermsScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回")
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -88,7 +88,7 @@ fun TermsScreen(
                     ) {
                         Icon(
                             Icons.Default.Schedule,
-                            null,
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             modifier = Modifier.size(16.dp)
                         )
@@ -115,7 +115,7 @@ fun TermsScreen(
                     ) {
                         Icon(
                             Icons.Default.CheckCircle,
-                            null,
+                            contentDescription = null,
                             tint = Color(0xFF9C27B0),
                             modifier = Modifier.size(40.dp)
                         )
@@ -244,7 +244,7 @@ private fun KeyTermItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -257,7 +257,7 @@ private fun KeyTermItem(
                     .background(HasselbladOrange.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = HasselbladOrange, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = title, tint = HasselbladOrange, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {

@@ -66,12 +66,19 @@ fun PillNavBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val navItems = listOf(
-        NavItem("home", stringResource(R.string.nav_home), Icons.Default.Home),
-        NavItem("subscription", stringResource(R.string.nav_featured), Icons.Default.Star),
-        NavItem("features", stringResource(R.string.nav_core_features), Icons.Default.AutoAwesome),
-        NavItem("about", stringResource(R.string.nav_about), Icons.Default.Info)
-    )
+    val homeTitle = stringResource(R.string.nav_home)
+    val featuredTitle = stringResource(R.string.nav_featured)
+    val featuresTitle = stringResource(R.string.nav_core_features)
+    val aboutTitle = stringResource(R.string.nav_about)
+
+    val navItems = remember(homeTitle, featuredTitle, featuresTitle, aboutTitle) {
+        listOf(
+            NavItem("home", homeTitle, Icons.Default.Home),
+            NavItem("subscription", featuredTitle, Icons.Default.Star),
+            NavItem("features", featuresTitle, Icons.Default.AutoAwesome),
+            NavItem("about", aboutTitle, Icons.Default.Info)
+        )
+    }
 
     // 使用动画控制底部导航栏显示/隐藏，固定在底部
     // 将 modifier（包含 align）应用在外层 Box 上，确保定位不受动画影响

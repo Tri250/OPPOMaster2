@@ -55,20 +55,16 @@ class DetailViewModel(
         loadJob?.cancel()
         currentPresetId = presetId
 
-        android.util.Log.d("DetailViewModel", "Loading preset with id: $presetId")
-
         loadJob = viewModelScope.launch {
             _isLoading.value = true
             try {
                 val presetData = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
                 // 检查是否仍然是当前要加载的预设（可能被取消了）
                 if (presetId == currentPresetId) {
-                    android.util.Log.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")
                     _preset.value = presetData
                     _isFavorite.value = presetData?.isFavorite ?: false
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("DetailViewModel", "Error loading preset: $presetId", e)
+            } catch (_: Exception) {
                 if (presetId == currentPresetId) {
                     _preset.value = null
                     _isFavorite.value = false
@@ -93,8 +89,8 @@ class DetailViewModel(
                 _isFavorite.value = isNowFavorite
                 // 更新预设数据
                 _preset.value = _preset.value?.copy(isFavorite = isNowFavorite)
-            } catch (e: Exception) {
-                android.util.Log.e("DetailViewModel", "Error toggling favorite: $id", e)
+            } catch (_: Exception) {
+                // 收藏操作失败，静默处理
             }
         }
     }

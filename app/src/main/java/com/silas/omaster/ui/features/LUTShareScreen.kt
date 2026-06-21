@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.net.URL
+import java.net.HttpURLConnection
+import java.net.URI
 import java.util.Locale
 
 /**
@@ -294,21 +295,20 @@ fun LUTShareScreen(
                                 downloadingId = lut.id
                                 scope.launch(Dispatchers.IO) {
                                     try {
-                                        if (!lut.downloadUrl.startsWith("https://")) {
+                                        val validationError = validateLUTDownload(lut.downloadUrl, lut.nameEn, lut.format)
+                                        if (validationError != null) {
                                             withContext(Dispatchers.Main) {
                                                 downloadingId = null
-                                                Toast.makeText(context, "下载地址无效", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, validationError, Toast.LENGTH_SHORT).show()
                                             }
                                             return@launch
                                         }
                                         val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
                                         if (!dir.exists()) dir.mkdirs()
-                                        val file = File(dir, "${lut.nameEn}.${lut.format}")
-                                        URL(lut.downloadUrl).openStream().use { input ->
-                                            FileOutputStream(file).use { output ->
-                                                input.copyTo(output)
-                                            }
-                                        }
+                                        val safeName = sanitizeFileName(lut.nameEn)
+                                        val safeFormat = sanitizeFileName(lut.format)
+                                        val file = File(dir, "$safeName.$safeFormat")
+                                        downloadFileSafely(lut.downloadUrl, file)
                                         withContext(Dispatchers.Main) {
                                             if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
                                             downloadingId = null
@@ -366,21 +366,20 @@ fun LUTShareScreen(
                 downloadingId = lut.id
                 scope.launch(Dispatchers.IO) {
                     try {
-                        if (!lut.downloadUrl.startsWith("https://")) {
+                        val validationError = validateLUTDownload(lut.downloadUrl, lut.nameEn, lut.format)
+                        if (validationError != null) {
                             withContext(Dispatchers.Main) {
                                 downloadingId = null
-                                Toast.makeText(context, "下载地址无效", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, validationError, Toast.LENGTH_SHORT).show()
                             }
                             return@launch
                         }
                         val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
                         if (!dir.exists()) dir.mkdirs()
-                        val file = File(dir, "${lut.nameEn}.${lut.format}")
-                        URL(lut.downloadUrl).openStream().use { input ->
-                            FileOutputStream(file).use { output ->
-                                input.copyTo(output)
-                            }
-                        }
+                        val safeName = sanitizeFileName(lut.nameEn)
+                        val safeFormat = sanitizeFileName(lut.format)
+                        val file = File(dir, "$safeName.$safeFormat")
+                        downloadFileSafely(lut.downloadUrl, file)
                         withContext(Dispatchers.Main) {
                             if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
                             downloadingId = null
@@ -980,6 +979,97 @@ private fun DetailInfoRow(label: String, value: String) {
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
         Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+// ==================== 安全下载工具函数 ====================
+
+/** 允许的下载域名白名单 */
+private val ALLOWED_DOWNLOAD_HOSTS = setOf(
+    "omaster.com", "cdn.omaster.com", "lut.omaster.com",
+    "github.com", "raw.githubusercontent.com",
+    "dl.omaster.cn"
+)
+
+/**
+ * 验证 LUT 下载请求的合法性（SSRF 防护 + 路径遍历防护）。
+ * @return 错误信息，null 表示验证通过
+ */
+private fun validateLUTDownload(downloadUrl: String, nameEn: String, format: String): String? {
+    // URL 格式验证
+    val uri = try {
+        URI(downloadUrl)
+    } catch (e: Exception) {
+        return "下载地址格式无效"
+    }
+
+    // 协议必须为 HTTPS
+    if (uri.scheme?.lowercase() != "https") {
+        return "仅支持 HTTPS 协议下载"
+    }
+
+    // 主机名白名单验证（SSRF 防护）
+    val host = uri.host?.lowercase() ?: return "下载地址缺少主机名"
+    val isAllowed = ALLOWED_DOWNLOAD_HOSTS.any { allowed ->
+        host == allowed || host.endsWith(".$allowed")
+    }
+    if (!isAllowed) {
+        return "不支持从该域名下载"
+    }
+
+    // 路径遍历防护
+    if (nameEn.contains("..") || nameEn.contains("/") || nameEn.contains("\\") ||
+        format.contains("..") || format.contains("/") || format.contains("\\")
+    ) {
+        return "文件名包含非法字符"
+    }
+
+    return null
+}
+
+/**
+ * 清理文件名中的路径遍历字符，只保留安全字符。
+ */
+private fun sanitizeFileName(name: String): String {
+    return name.replace("..", "")
+        .replace("/", "")
+        .replace("\\", "")
+        .replace("\u0000", "")
+}
+
+/**
+ * 使用 HttpURLConnection 安全下载文件（替代 URL.openStream，防止 SSRF）。
+ * 限制最大下载大小为 50MB，防止资源耗尽。
+ */
+private fun downloadFileSafely(url: String, targetFile: File) {
+    val maxFileSize = 50L * 1024 * 1024 // 50MB
+    val connection = URI(url).toURL().openConnection() as HttpURLConnection
+    connection.connectTimeout = 15_000
+    connection.readTimeout = 30_000
+    connection.instanceFollowRedirects = true
+
+    try {
+        connection.inputStream.use { input ->
+            val contentLength = connection.contentLengthLong
+            if (contentLength > maxFileSize) {
+                throw SecurityException("文件大小超过限制（${contentLength / 1024 / 1024}MB）")
+            }
+            FileOutputStream(targetFile).use { output ->
+                val buffer = ByteArray(8192)
+                var totalRead = 0L
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    output.write(buffer, 0, bytesRead)
+                    totalRead += bytesRead
+                    if (totalRead > maxFileSize) {
+                        targetFile.delete()
+                        throw SecurityException("文件大小超过限制")
+                    }
+                }
+            }
+        }
+    } finally {
+        connection.disconnect()
     }
 }
 

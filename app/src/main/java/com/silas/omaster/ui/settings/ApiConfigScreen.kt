@@ -31,6 +31,29 @@ import android.widget.Toast
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.components.OMasterTopAppBar
+import java.net.URI
+
+/**
+ * 验证 URL 是否为合法的 HTTPS 端点，防止 SSRF 攻击
+ */
+private fun isValidApiEndpoint(url: String): Boolean {
+    if (url.isBlank()) return false
+    return try {
+        val uri = URI(url)
+        val scheme = uri.scheme?.lowercase()
+        // 仅允许 HTTPS 协议，禁止 HTTP 和其他协议
+        if (scheme != "https") return false
+        val host = uri.host ?: return false
+        // 禁止内网地址和回环地址
+        if (host == "localhost" || host == "127.0.0.1" || host == "0.0.0.0") return false
+        if (host.startsWith("10.") || host.startsWith("192.168.") || host.startsWith("169.254.")) return false
+        if (host.matches(Regex("^172\\.(1[6-9]|2[0-9]|3[01])\\..*"))) return false
+        if (!host.contains(".")) return false
+        true
+    } catch (_: Exception) {
+        false
+    }
+}
 
 @Composable
 fun ApiConfigScreen(
@@ -120,6 +143,12 @@ fun ApiConfigScreen(
 
             Button(
                 onClick = {
+                    val endpoints = listOf(aiEndpoint, presetEndpoint, authEndpoint)
+                    val invalidUrls = endpoints.filter { it.isNotBlank() && !isValidApiEndpoint(it) }
+                    if (invalidUrls.isNotEmpty()) {
+                        Toast.makeText(context, "URL 格式无效：仅支持 HTTPS 协议，且不允许内网地址", Toast.LENGTH_LONG).show()
+                        return@Button
+                    }
                     settingsManager.setCustomApiEndpoints(
                         aiEndpoint = aiEndpoint,
                         presetEndpoint = presetEndpoint,

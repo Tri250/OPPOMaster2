@@ -1,6 +1,6 @@
 package com.silas.omaster.ui.create
 
-import android.content.Context
+import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -23,13 +23,14 @@ import java.io.IOException
  * 支持基于 sections 的灵活配置
  */
 class UniversalCreatePresetViewModel(
-    private val context: Context,
+    private val application: Application,
     private val repository: PresetRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UniversalPresetUiState())
     val uiState: StateFlow<UniversalPresetUiState> = _uiState.asStateFlow()
     
+    @Volatile
     private var isLoaded = false
     private var editingPresetId: String? = null
 
@@ -243,10 +244,10 @@ class UniversalCreatePresetViewModel(
     @Throws(IOException::class)
     private fun saveImageToInternalStorage(uri: Uri): String {
         val fileName = "custom_${System.currentTimeMillis()}.jpg"
-        val file = File(context.filesDir, "presets/$fileName")
+        val file = File(application.filesDir, "presets/$fileName")
         file.parentFile?.mkdirs()
         
-        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+        application.contentResolver.openInputStream(uri)?.use { inputStream ->
             FileOutputStream(file).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
@@ -265,13 +266,13 @@ data class UniversalPresetUiState(
 )
 
 class UniversalCreatePresetViewModelFactory(
-    private val context: Context,
+    private val application: Application,
     private val repository: PresetRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(UniversalCreatePresetViewModel::class.java)) {
-            return UniversalCreatePresetViewModel(context, repository) as T
+            return UniversalCreatePresetViewModel(application, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

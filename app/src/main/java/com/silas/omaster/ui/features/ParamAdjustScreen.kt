@@ -809,7 +809,7 @@ private fun FocusModeCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FocusMode.values().forEach { mode ->
+                FocusMode.entries.forEach { mode ->
                     val isSelected = selectedMode == mode
                     val animatedWeight by animateFloatAsState(
                         targetValue = if (isSelected) 1.2f else 1f,
@@ -885,7 +885,7 @@ private fun MeteringModeCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MeteringMode.values().forEach { mode ->
+                MeteringMode.entries.forEach { mode ->
                     val isSelected = selectedMode == mode
                     val animatedWeight by animateFloatAsState(
                         targetValue = if (isSelected) 1.2f else 1f,

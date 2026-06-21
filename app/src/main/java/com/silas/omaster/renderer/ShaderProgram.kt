@@ -20,9 +20,6 @@ class ShaderProgram private constructor(
     companion object {
         private const val TAG = "ShaderProgram"
         
-        // Uniform位置缓存
-        private val uniformLocationCache = mutableMapOf<String, Int>()
-        
         /**
          * 从assets创建着色器程序
          * @param context Android上下文
@@ -185,6 +182,9 @@ class ShaderProgram private constructor(
         }
     }
     
+    // Uniform位置缓存（实例级别，避免多实例共享冲突）
+    private val uniformLocationCache = mutableMapOf<String, Int>()
+    
     /**
      * 使用此着色器程序
      */
@@ -196,9 +196,7 @@ class ShaderProgram private constructor(
      * 获取uniform位置（带缓存）
      */
     fun getUniformLocation(name: String): Int {
-        val cacheKey = "${programId}_$name"
-        
-        return uniformLocationCache.getOrPut(cacheKey) {
+        return uniformLocationCache.getOrPut(name) {
             val location = GLES30.glGetUniformLocation(programId, name)
             if (location == -1) {
                 Log.w(TAG, "Uniform not found: $name")
@@ -317,7 +315,7 @@ class ShaderProgram private constructor(
      * 清除uniform缓存
      */
     fun clearUniformCache() {
-        uniformLocationCache.keys.removeIf { it.startsWith("${programId}_") }
+        uniformLocationCache.clear()
     }
     
     /**

@@ -87,7 +87,7 @@ fun WatermarkTemplateSelector(
     onTemplateSelected: (String) -> Unit,
     onEditTemplate: (WatermarkTemplate) -> Unit
 ) {
-    val templates by remember { mutableStateOf(watermarkManager.templates) }
+    val allBuiltInTemplates = remember(watermarkManager.templates) { watermarkManager.templates }
     val selectedTemplate by watermarkManager.selectedTemplate.collectAsState()
     val customTemplates by watermarkManager.customTemplates.collectAsState()
     val haptic = LocalHapticFeedback.current
@@ -96,7 +96,7 @@ fun WatermarkTemplateSelector(
         // 品牌水印
         WatermarkTemplateSection(
             title = "品牌水印",
-            templates = templates.filter { it.type == com.silas.omaster.watermark.WatermarkType.BRAND },
+            templates = allBuiltInTemplates.filter { it.type == com.silas.omaster.watermark.WatermarkType.BRAND },
             selectedId = selectedTemplate?.id,
             onSelect = {
                 haptic.perform(HapticFeedbackType.LongPress)
@@ -111,7 +111,7 @@ fun WatermarkTemplateSelector(
         // 功能水印
         WatermarkTemplateSection(
             title = "功能水印",
-            templates = templates.filter { it.type == com.silas.omaster.watermark.WatermarkType.FUNCTIONAL },
+            templates = allBuiltInTemplates.filter { it.type == com.silas.omaster.watermark.WatermarkType.FUNCTIONAL },
             selectedId = selectedTemplate?.id,
             onSelect = {
                 haptic.perform(HapticFeedbackType.LongPress)
@@ -126,7 +126,7 @@ fun WatermarkTemplateSelector(
         // 风格水印
         WatermarkTemplateSection(
             title = "风格水印",
-            templates = templates.filter { it.type == com.silas.omaster.watermark.WatermarkType.STYLE },
+            templates = allBuiltInTemplates.filter { it.type == com.silas.omaster.watermark.WatermarkType.STYLE },
             selectedId = selectedTemplate?.id,
             onSelect = {
                 haptic.perform(HapticFeedbackType.LongPress)
@@ -224,7 +224,7 @@ private fun WatermarkTemplateItem(
                         com.silas.omaster.watermark.WatermarkType.STYLE -> Icons.Default.ColorLens
                         com.silas.omaster.watermark.WatermarkType.CUSTOM -> Icons.Default.Add
                     },
-                    contentDescription = "图片",
+                    contentDescription = template.name,
                     tint = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(24.dp)
                 )

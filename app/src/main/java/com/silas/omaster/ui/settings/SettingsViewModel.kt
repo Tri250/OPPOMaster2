@@ -60,6 +60,10 @@ class SettingsViewModel(
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
+    // 同步结果
+    private val _syncSuccess = MutableStateFlow(false)
+    val syncSuccess: StateFlow<Boolean> = _syncSuccess.asStateFlow()
+
     // 默认启动Tab
     private val _defaultStartTab = MutableStateFlow(settingsManager.defaultStartTab)
     val defaultStartTab: StateFlow<Int> = _defaultStartTab.asStateFlow()
@@ -92,6 +96,11 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsManager.themeFlow.collect { theme ->
                 _currentTheme.value = theme
+            }
+        }
+        viewModelScope.launch {
+            settingsManager.darkModeFlow.collect { mode ->
+                _darkMode.value = mode
             }
         }
     }
@@ -139,10 +148,12 @@ class SettingsViewModel(
     /**
      * 执行云同步
      * 先通过 CloudSyncManager 从 CDN 拉取各品牌预设，再刷新本地 PresetRepository。
+     * 结果通过 syncSuccess 和 errorMessage StateFlow 暴露。
      */
-    fun performCloudSync(onComplete: (Boolean) -> Unit) {
+    fun performCloudSync() {
         viewModelScope.launch {
             _isSyncing.value = true
+            _syncSuccess.value = false
             try {
                 val cloudSyncManager = CloudSyncManager.getInstance(application)
                 val result = withContext(Dispatchers.IO) {
@@ -153,19 +164,17 @@ class SettingsViewModel(
                     withContext(Dispatchers.IO) {
                         presetRepository.reloadDefaultPresets()
                     }
-                    _lastSyncTime.value = settingsManager.lastSyncTime
-                    onComplete(true)
+                    _lastSyncTime.value = System.currentTimeMillis()
+                    settingsManager.lastSyncTime = _lastSyncTime.value
+                    _syncSuccess.value = true
                 } else if (result is SyncResult.Disabled) {
                     _errorMessage.value = "云同步未开启"
-                    onComplete(false)
                 } else {
                     val errorResult = result as? SyncResult.Error
                     _errorMessage.value = "同步失败: ${errorResult?.message ?: "未知错误"}"
-                    onComplete(false)
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "同步失败: ${e.message}"
-                onComplete(false)
             } finally {
                 _isSyncing.value = false
             }

@@ -145,7 +145,7 @@ fun ShootingTipsDetailCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Camera,
-                        contentDescription = "图片",
+                        contentDescription = "拍摄建议",
                         tint = HasselbladOrange,
                         modifier = Modifier.size(16.dp)
                     )
@@ -403,11 +403,10 @@ private fun RelatedPresetItem(
                     ) {
                         Icon(
                             Icons.Default.Camera,
-                            contentDescription = "图片",
+                            contentDescription = "预设封面",
                             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
                             modifier = Modifier.size(24.dp)
                         )
-                    }
                 }
             }
 
@@ -467,7 +466,7 @@ fun ApplyPresetButton(
     ) {
         Icon(
             imageVector = if (applied) Icons.Default.CheckCircle else Icons.Default.AutoAwesome,
-            contentDescription = "图标",
+            contentDescription = if (applied) "已应用" else "应用配方",
             tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.size(16.dp)
         )
@@ -502,7 +501,7 @@ fun FavoriteButton(
     ) {
         Icon(
             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-            contentDescription = "图标",
+            contentDescription = if (isFavorite) "已收藏" else "收藏",
             tint = textColor,
             modifier = Modifier.size(16.dp)
         )

@@ -122,8 +122,8 @@ fun MasterWorkflow(
     var isComplete by remember { mutableStateOf(false) }
     var workflowResult by remember { mutableStateOf<WorkflowResult?>(null) }
 
-    // 启动工作流
-    LaunchedEffect(imageUrl, bitmap) {
+    // 启动工作流（使用 bitmap 的稳定标识作为 key，避免 Bitmap 对象引用变化导致重复执行）
+    LaunchedEffect(imageUrl, bitmap?.hashCode()) {
         val sourceBitmap = bitmap
         if (sourceBitmap == null) {
             // 没有图片数据时不做任何处理
@@ -143,6 +143,7 @@ fun MasterWorkflow(
                 inferenceEngine.analyzeImage(sourceBitmap, imagePath = null)
             }
         } catch (e: Exception) {
+            android.util.Log.e("MasterWorkflow", "图像分析失败", e)
             return@LaunchedEffect
         }
         val eyeDuration = (System.nanoTime() - eyeStart) / 1_000_000
@@ -263,7 +264,7 @@ fun MasterWorkflow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
-                contentDescription = "图标",
+                contentDescription = "大师工作流",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(20.dp)
             )
@@ -320,7 +321,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "图标",
+                                contentDescription = "工作流完成",
                                 tint = HasselbladOrange,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -339,7 +340,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Camera,
-                                contentDescription = "图标",
+                                contentDescription = "场景",
                                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -366,7 +367,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Movie,
-                                contentDescription = "图标",
+                                contentDescription = "胶片",
                                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -388,7 +389,7 @@ fun MasterWorkflow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Tune,
-                                contentDescription = "图标",
+                                contentDescription = "参数",
                                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 modifier = Modifier.size(14.dp)
                             )
@@ -497,7 +498,7 @@ private fun WorkflowStepItem(
                     when (step.status) {
                         WorkflowStatus.COMPLETED -> Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "图标",
+                            contentDescription = "步骤完成",
                             tint = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.size(16.dp)
                         )
@@ -524,7 +525,7 @@ private fun WorkflowStepItem(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = step.icon,
-                            contentDescription = "图标",
+                            contentDescription = step.title,
                             tint = iconColor,
                             modifier = Modifier.size(16.dp)
                         )

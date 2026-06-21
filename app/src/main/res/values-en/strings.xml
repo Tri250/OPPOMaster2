@@ -439,4 +439,13 @@
     <string name="floating_vignette_icon">◍</string>
     <string name="floating_vignette_label">Vignette</string>
 
+    <!-- Migration Dialog -->
+    <string name="migration_dialog_title">Data Structure Update</string>
+    <string name="migration_dialog_message">Preset data version is outdated. Migration is required to support new features.\n\nTap \"Migrate Data\" to reset built-in presets (your custom presets and favorites will not be lost).</string>
+    <string name="migration_dialog_confirm">Migrate Data</string>
+    <string name="migration_dialog_dismiss">Later</string>
+
+    <!-- Accessibility -->
+    <string name="image_placeholder">Image placeholder</string>
+
 </resources>

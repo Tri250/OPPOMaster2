@@ -263,7 +263,7 @@ class WatermarkEditorManager private constructor(context: Context) {
 
         if (elementConfig.showTimestamp) {
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-                .format(java.util.Date())
+                .format(java.util.Date(System.currentTimeMillis()))
             val timestampPaint = Paint().apply {
                 color = elementConfig.timestampColor
                 alpha = (elementConfig.timestampAlpha * 255).toInt()
@@ -334,18 +334,20 @@ class WatermarkEditorManager private constructor(context: Context) {
      * WM-001: 导出为JPG
      */
     suspend fun exportAsJpg(bitmap: Bitmap, quality: Int = 95): ByteArray = withContext(Dispatchers.Default) {
-        val outputStream = java.io.ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
-        outputStream.toByteArray()
+        java.io.ByteArrayOutputStream().use { outputStream ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+            outputStream.toByteArray()
+        }
     }
 
     /**
      * WM-001: 导出为PNG
      */
     suspend fun exportAsPng(bitmap: Bitmap): ByteArray = withContext(Dispatchers.Default) {
-        val outputStream = java.io.ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-        outputStream.toByteArray()
+        java.io.ByteArrayOutputStream().use { outputStream ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            outputStream.toByteArray()
+        }
     }
 
     /**

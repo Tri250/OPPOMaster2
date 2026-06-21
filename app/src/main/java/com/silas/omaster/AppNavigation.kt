@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavBackStackEntry
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -448,47 +449,17 @@ private fun MigrationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("数据结构更新") },
+        title = { Text(stringResource(R.string.migration_dialog_title)) },
         text = {
-            Text(
-                "检测到预设数据版本过旧，需要迁移数据以支持新功能。\n\n" +
-                    "点击\"迁移数据\"将重置内置预设（您的自定义预设和收藏不会丢失）。"
-            )
+            Text(stringResource(R.string.migration_dialog_message))
         },
         confirmButton = {
-            TextButton(onClick = onMigrate) { Text("迁移数据") }
+            TextButton(onClick = onMigrate) { Text(stringResource(R.string.migration_dialog_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onPostpone) { Text("稍后处理") }
+            TextButton(onClick = onPostpone) { Text(stringResource(R.string.migration_dialog_dismiss)) }
         }
     )
-}
-
-/**
- * 应用预设参数到相机设置，并通过 Snackbar 反馈结果
- */
-private fun applyPresetAndToast(
-    context: android.content.Context,
-    snackbarHostState: SnackbarHostState,
-    coroutineScope: CoroutineScope,
-    preset: MasterPreset
-) {
-    val settingsManager = SettingsManager.getInstance(context)
-    settingsManager.applyPresetParams(
-        saturation = preset.saturation ?: 0,
-        contrast = preset.tone ?: 0,
-        warmth = preset.warmCool ?: 0,
-        sharpness = preset.sharpness ?: 0,
-        clarity = 0,
-        brightness = 0
-    )
-    coroutineScope.launch {
-        snackbarHostState.showSnackbar(
-            message = "已应用预设：${preset.name}",
-            actionLabel = "确定",
-            duration = SnackbarDuration.Short
-        )
-    }
 }
 
 /**

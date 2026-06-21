@@ -286,6 +286,10 @@ object SmartWatermarkColor {
         val stepX = max(1, bitmap.width / 50)
         val stepY = max(1, bitmap.height / 50)
 
+        // 批量读取像素，避免逐像素 getPixel 的性能开销
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+
         var totalBrightness = 0f
         var totalR = 0f
         var totalG = 0f
@@ -294,7 +298,7 @@ object SmartWatermarkColor {
 
         for (x in 0 until bitmap.width step stepX) {
             for (y in 0 until bitmap.height step stepY) {
-                val pixel = bitmap.getPixel(x, y)
+                val pixel = pixels[y * bitmap.width + x]
                 val r = Color.red(pixel) / 255f
                 val g = Color.green(pixel) / 255f
                 val b = Color.blue(pixel) / 255f

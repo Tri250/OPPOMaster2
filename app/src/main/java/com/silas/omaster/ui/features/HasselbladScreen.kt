@@ -154,7 +154,7 @@ fun HasselbladScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val viewModel: HasselbladEyeViewModel = viewModel()
-    val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
+    val inferenceEngine = remember { MasterInferenceEngine.getInstance(context) }
 
     val stage by viewModel.stage.collectAsState()
     val params by viewModel.params.collectAsState()
@@ -2276,29 +2276,34 @@ private suspend fun loadBitmapFromUri(
     maxDimension: Int = 2048
 ): Bitmap? = withContext(Dispatchers.IO) {
     try {
-        // 使用 ParcelFileDescriptor 避免重复打开 InputStream
-        context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-            val fd = pfd.fileDescriptor
-            val options = android.graphics.BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
-            android.graphics.BitmapFactory.decodeFileDescriptor(fd, null, options)
+        // 先解码边界获取尺寸
+        val boundsOptions = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            android.graphics.BitmapFactory.decodeStream(stream, null, boundsOptions)
+        }
 
-            if (maxDimension > 0 && options.outWidth > 0 && options.outHeight > 0) {
-                var inSampleSize = 1
-                val halfHeight = options.outHeight / 2
-                val halfWidth = options.outWidth / 2
+        if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) return@withContext null
+
+        // 计算降采样率
+        val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+            var inSampleSize = 1
+            val halfHeight = boundsOptions.outHeight / 2
+            val halfWidth = boundsOptions.outWidth / 2
+            if (maxDimension > 0) {
                 while (halfHeight / inSampleSize >= maxDimension && halfWidth / inSampleSize >= maxDimension) {
                     inSampleSize *= 2
                 }
-                options.inSampleSize = inSampleSize
             }
-            options.inJustDecodeBounds = false
-            options.inPreferredConfig = Bitmap.Config.ARGB_8888
+            this.inSampleSize = inSampleSize
+            inJustDecodeBounds = false
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
 
-            // 重置文件描述符位置后重新解码
-            pfd.seekTo(0)
-            android.graphics.BitmapFactory.decodeFileDescriptor(fd, null, options)
+        // 重新打开流进行实际解码
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            android.graphics.BitmapFactory.decodeStream(stream, null, decodeOptions)
         }
     } catch (e: Exception) {
         android.util.Log.e("HasselbladScreen", "loadBitmapFromUri failed", e)

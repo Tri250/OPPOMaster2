@@ -93,7 +93,11 @@ object HasselbladColorEngine {
         var working = prepareSource(source, exportQuality)
 
         // 1. 基础 ColorMatrix（饱和度、对比度、色温、影调、青品调、黑白）
-        working = applyColorMatrix(working, buildColorMatrix(params))
+        val afterColorMatrix = applyColorMatrix(working, buildColorMatrix(params))
+        if (afterColorMatrix !== working && afterColorMatrix !== source) {
+            working.recycle()
+        }
+        working = afterColorMatrix
 
         // 2. 高光 / 阴影 / 鲜艳度（逐像素单通道）
         applyHighlightsShadowsAndVibrance(working, params.highlights, params.shadows, params.vibrance)

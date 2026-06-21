@@ -103,9 +103,9 @@ data class HSLValue(
     val id: String,
     val name: String,
     val color: Color,
-    var hue: Int = 0,
-    var saturation: Int = 0,
-    var luminance: Int = 0
+    val hue: Int = 0,
+    val saturation: Int = 0,
+    val luminance: Int = 0
 )
 
 /**
@@ -190,9 +190,9 @@ fun AIFineTuneScreen(
         if (success && cameraImageUri != null) {
             selectedImageUri = cameraImageUri
             try {
-                val inputStream = context.contentResolver.openInputStream(cameraImageUri!!)
-                selectedBitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
+                context.contentResolver.openInputStream(cameraImageUri!!)?.use { stream ->
+                    selectedBitmap = decodeSampledBitmap(stream, 2048)
+                }
             } catch (e: Exception) {
                 Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -1636,4 +1636,29 @@ private fun createTempImageUri(context: android.content.Context): Uri {
         android.util.Log.e("AIFineTune", "创建相机临时文件失败", e)
         Uri.EMPTY
     }
+}
+
+/**
+ * 安全解码 Bitmap（从 InputStream），带降采样防止 OOM。
+ */
+private fun decodeSampledBitmap(inputStream: java.io.InputStream, maxDimension: Int): Bitmap? {
+    val data = inputStream.readBytes()
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeByteArray(data, 0, data.size, options)
+
+    if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+    var inSampleSize = 1
+    val halfHeight = options.outHeight / 2
+    val halfWidth = options.outWidth / 2
+    while (halfHeight / inSampleSize >= maxDimension && halfWidth / inSampleSize >= maxDimension) {
+        inSampleSize *= 2
+    }
+    options.inSampleSize = inSampleSize
+    options.inJustDecodeBounds = false
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+    return BitmapFactory.decodeByteArray(data, 0, data.size, options)
 }

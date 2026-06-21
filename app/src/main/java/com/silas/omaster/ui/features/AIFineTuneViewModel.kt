@@ -236,12 +236,12 @@ class AIFineTuneViewModel(
         val index = current.indexOfFirst { it.id == hslId }
         if (index >= 0) {
             val hsl = current[index]
-            when (type) {
-                "hue" -> hsl.hue = value
-                "saturation" -> hsl.saturation = value
-                "luminance" -> hsl.luminance = value
+            current[index] = when (type) {
+                "hue" -> hsl.copy(hue = value)
+                "saturation" -> hsl.copy(saturation = value)
+                "luminance" -> hsl.copy(luminance = value)
+                else -> hsl
             }
-            current[index] = hsl
             _hslValues.value = current
         }
     }

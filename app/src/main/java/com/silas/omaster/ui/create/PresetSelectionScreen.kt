@@ -68,7 +68,7 @@ fun PresetSelectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "添加", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_section), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         stringResource(R.string.start_from_scratch),
@@ -83,7 +83,7 @@ fun PresetSelectionScreen(
                 stringResource(R.string.or_choose_template),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             // Option 2: Select from existing
@@ -93,7 +93,7 @@ fun PresetSelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(presets) { preset ->
+                items(presets, key = { it.id }) { preset ->
                     PresetCard(
                         preset = preset,
                         onClick = { onPresetSelected(preset.id) },

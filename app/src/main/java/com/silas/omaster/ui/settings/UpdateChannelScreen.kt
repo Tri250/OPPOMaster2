@@ -61,7 +61,7 @@ fun UpdateChannelScreen(
         TopAppBar(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Download, null, tint = HasselbladOrange)
+                    Icon(Icons.Default.Download, contentDescription = null, tint = HasselbladOrange)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("更新设置", fontWeight = FontWeight.Bold)
                 }
@@ -71,7 +71,7 @@ fun UpdateChannelScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -139,7 +139,7 @@ fun UpdateChannelScreen(
                             autoCheckEnabled = it
                         }
                     )
-                    Divider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
                     UpdateOptionRow(
                         title = "仅 Wi-Fi 下下载",
                         checked = wifiOnlyEnabled,
@@ -148,7 +148,7 @@ fun UpdateChannelScreen(
                             wifiOnlyEnabled = it
                         }
                     )
-                    Divider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
                     UpdateOptionRow(
                         title = "夜间自动安装",
                         checked = autoInstallEnabled,
@@ -214,7 +214,7 @@ private fun CurrentVersionCard() {
                             .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.Check, contentDescription = "已是最新版本", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(28.dp))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -235,7 +235,7 @@ private fun CurrentVersionCard() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.Schedule,
-                        null,
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         modifier = Modifier.size(14.dp)
                     )
@@ -288,7 +288,7 @@ private fun ChannelOptionRow(
                 .background(channel.color.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(channel.icon, null, tint = channel.color, modifier = Modifier.size(20.dp))
+            Icon(channel.icon, contentDescription = channel.name, tint = channel.color, modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -305,7 +305,7 @@ private fun ChannelOptionRow(
             )
         }
         if (isSelected) {
-            Icon(Icons.Default.Check, null, tint = HasselbladOrange)
+            Icon(Icons.Default.Check, contentDescription = "已选择", tint = HasselbladOrange)
         }
     }
 }

@@ -68,7 +68,7 @@ fun ThemeSettingsScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -80,7 +80,7 @@ fun ThemeSettingsScreen(
                         darkMode = darkMode
                     ))
                 }) {
-                    Icon(Icons.Default.Check, "应用", tint = HasselbladOrange)
+                    Icon(Icons.Default.Check, contentDescription = "应用主题", tint = HasselbladOrange)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -119,7 +119,7 @@ fun ThemeSettingsScreen(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
         )
@@ -167,7 +167,12 @@ fun ThemeSettingsScreen(
                                     "dark" -> Icons.Default.DarkMode
                                     else -> Icons.Default.Settings
                                 },
-                                null,
+                                contentDescription = when (mode) {
+                                    "system" -> "跟随系统"
+                                    "light" -> "浅色"
+                                    "dark" -> "深色"
+                                    else -> mode
+                                },
                                 tint = if (darkMode == mode) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -187,7 +192,7 @@ fun ThemeSettingsScreen(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
         )
@@ -335,7 +340,7 @@ private fun ThemeOptionCard(
             if (selected) {
                 Icon(
                     Icons.Default.Check,
-                    null,
+                    contentDescription = "已选择",
                     tint = theme.color
                 )
             }

@@ -43,7 +43,14 @@ class BitmapPool(private val maxPoolSize: Int = 8) {
                 return bitmap
             }
         }
-        return Bitmap.createBitmap(width, height, config)
+        return try {
+            Bitmap.createBitmap(width, height, config)
+        } catch (e: OutOfMemoryError) {
+            Log.e("BitmapPool", "OOM creating bitmap ${width}x${height}", e)
+            // 清空池后重试
+            clear()
+            Bitmap.createBitmap(width, height, config)
+        }
     }
 
     @Synchronized

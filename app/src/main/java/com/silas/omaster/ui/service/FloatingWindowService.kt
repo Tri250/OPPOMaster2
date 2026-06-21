@@ -52,6 +52,7 @@ class FloatingWindowService : Service() {
     private var floatingView: View? = null
     private var params: WindowManager.LayoutParams? = null
     private var isExpanded = true
+    private var snapAnimator: ValueAnimator? = null
 
     // 配色方案 - 从 SettingsManager 动态读取主题色
     private fun getPrimaryColor(context: Context): Int {
@@ -204,6 +205,7 @@ class FloatingWindowService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        snapAnimator?.cancel()
         removeWindow()
         instance = null
     }
@@ -1021,15 +1023,21 @@ class FloatingWindowService : Service() {
         }
 
         // 使用动画平滑移动
+        snapAnimator?.cancel()
         val animator = ValueAnimator.ofInt(p.x, targetX)
         animator.duration = 300
         animator.interpolator = DecelerateInterpolator()
         animator.addUpdateListener { animation ->
             if (floatingView != null) {
                 p.x = animation.animatedValue as Int
-                wm.updateViewLayout(view, p)
+                try {
+                    wm.updateViewLayout(view, p)
+                } catch (e: Exception) {
+                    Log.w(TAG, "snapToEdge updateViewLayout failed", e)
+                }
             }
         }
+        snapAnimator = animator
         animator.start()
     }
 

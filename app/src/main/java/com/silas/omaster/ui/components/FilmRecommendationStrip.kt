@@ -52,7 +52,7 @@ fun FilmRecommendationStrip(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Camera,
-                    null,
+                    contentDescription = "胶片推荐",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(16.dp)
                 )
@@ -158,7 +158,7 @@ private fun FilmCard(
                 if (selected) {
                     Icon(
                         Icons.Default.Check,
-                        null,
+                        contentDescription = "已选中",
                         tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier
                             .size(16.dp)
@@ -198,7 +198,7 @@ private fun FilmCard(
                 
                 Icon(
                     Icons.Default.Star,
-                    null,
+                    contentDescription = "匹配度",
                     tint = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.size(12.dp)
                 )
@@ -314,7 +314,7 @@ fun FilmDetailDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
             ) {
-                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Check, contentDescription = "应用", modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("应用此胶片")
             }

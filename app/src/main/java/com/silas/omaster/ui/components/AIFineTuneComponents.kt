@@ -49,6 +49,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -106,11 +107,12 @@ fun AIFineTuneDialog(
         aiFineTuneManager.generateAISuggestion(basePresetId)
     }
 
-    // 更新选中列表
-    LaunchedEffect(suggestion) {
+    // 初始化选中列表（仅在 suggestion 首次从 null 变为非 null 时执行）
+    LaunchedEffect(suggestion != null) {
         suggestion?.let {
-            selectedFields.clear()
-            selectedFields.addAll(it.suggestions.filter { s -> s.isSelected }.map { s -> s.field })
+            if (selectedFields.isEmpty()) {
+                selectedFields.addAll(it.suggestions.filter { s -> s.isSelected }.map { s -> s.field })
+            }
         }
     }
 
@@ -266,7 +268,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
     ) {
         Icon(
             imageVector = Icons.Default.Check,
-            contentDescription = "图标",
+            contentDescription = "AI建议",
             tint = HasselbladOrange,
             modifier = Modifier.size(20.dp)
         )
@@ -288,7 +290,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.CloudOff,
-                    contentDescription = "图标",
+                    contentDescription = "离线模式",
                     tint = com.silas.omaster.ui.theme.WarningYellow,
                     modifier = Modifier.size(14.dp)
                 )
@@ -309,7 +311,7 @@ private fun SuggestionHeader(suggestion: AISuggestion) {
 @Composable
 private fun ParamComparisonTable(
     suggestions: List<ParamComparison>,
-    selectedFields: MutableList<String>,
+    selectedFields: SnapshotStateList<String>,
     onToggle: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -366,7 +368,7 @@ private fun ParamComparisonRow(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "图标",
+                    contentDescription = "已选中",
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(16.dp)
                 )
@@ -393,7 +395,7 @@ private fun ParamComparisonRow(
                 )
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "图标",
+                    contentDescription = "建议值",
                     tint = HasselbladOrange,
                     modifier = Modifier
                         .padding(horizontal = 4.dp)

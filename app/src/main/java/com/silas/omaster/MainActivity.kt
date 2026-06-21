@@ -65,9 +65,9 @@ class MainActivity : ComponentActivity() {
                 val currentTheme by settingsManager.themeFlow.collectAsState()
                 val darkMode by settingsManager.darkModeFlow.collectAsState()
                 val hasUserAgreed = remember {
-                    mutableStateOf(OMasterApplication.getInstance().hasUserAgreed())
+                    OMasterApplication.getInstance().hasUserAgreed()
                 }
-                var showWelcomeFlow by hasUserAgreed
+                var showWelcomeFlow by remember { mutableStateOf(!hasUserAgreed) }
                 val navController = rememberNavController()
 
                 OMasterTheme(

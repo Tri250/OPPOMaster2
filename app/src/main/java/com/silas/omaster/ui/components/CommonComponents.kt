@@ -272,16 +272,17 @@ fun PresetImage(
     var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
 
     // 使用 ImageCacheManager 获取加载路径（优先本地缓存）
-    val imageUri = ImageCacheManager.getInstance(context).getImageLoadPath(context, preset.coverPath)
+    val cacheManager = ImageCacheManager.getInstance(context)
+    val imageUri = cacheManager.getImageLoadPath(context, preset.coverPath)
 
     // 如果是网络图片且未缓存，后台下载
     LaunchedEffect(preset.coverPath) {
         if (preset.coverPath.isNotBlank() && preset.coverPath.startsWith("http") &&
-            !ImageCacheManager.getInstance(context).isImageCached(context, preset.coverPath)) {
+            !cacheManager.isImageCached(context, preset.coverPath)) {
 
             downloadState = DownloadState.Downloading
 
-            val result = ImageCacheManager.getInstance(context).downloadAndCacheImage(
+            val result = cacheManager.downloadAndCacheImage(
                 context, preset.coverPath,
                 callback = object : ImageDownloadCallback {
                     override fun onStart(url: String) {}
@@ -296,9 +297,12 @@ fun PresetImage(
                 }
             )
 
-            downloadState = when (result) {
-                is DownloadResult.Success -> DownloadState.Success
-                is DownloadResult.Error -> DownloadState.Error("下载失败")
+            // 仅在回调未更新状态时，用返回值兜底
+            if (downloadState is DownloadState.Downloading) {
+                downloadState = when (result) {
+                    is DownloadResult.Success -> DownloadState.Success
+                    is DownloadResult.Error -> DownloadState.Error("下载失败")
+                }
             }
         }
     }

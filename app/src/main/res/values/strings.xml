@@ -485,4 +485,13 @@
     <string name="floating_vignette_icon">◍</string>
     <string name="floating_vignette_label">暗角</string>
 
+    <!-- 迁移对话框 -->
+    <string name="migration_dialog_title">数据结构更新</string>
+    <string name="migration_dialog_message">检测到预设数据版本过旧，需要迁移数据以支持新功能。\n\n点击\"迁移数据\"将重置内置预设（您的自定义预设和收藏不会丢失）。</string>
+    <string name="migration_dialog_confirm">迁移数据</string>
+    <string name="migration_dialog_dismiss">稍后处理</string>
+
+    <!-- 无障碍 -->
+    <string name="image_placeholder">图片占位</string>
+
 </resources>

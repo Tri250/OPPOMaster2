@@ -531,7 +531,9 @@ object LUTResourceRepository {
     }
 
     fun formatDownloads(count: Int): String = when {
-        count >= 10000 -> String.format(java.util.Locale.US, "%.1f万", count / 10000f)
+        count >= 100000000 -> String.format(java.util.Locale.US, "%.1fB", count / 100000000f)
+        count >= 1000000 -> String.format(java.util.Locale.US, "%.1fM", count / 1000000f)
+        count >= 10000 -> String.format(java.util.Locale.US, "%.1fK", count / 1000f)
         else -> count.toString()
     }
 }

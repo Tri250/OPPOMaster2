@@ -102,7 +102,7 @@ fun SubscriptionScreen(
             Box(modifier = Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
                 if (subscriptions.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = stringResource(R.string.sub_empty), color = Color.Gray)
+                        Text(text = stringResource(R.string.sub_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     LazyColumn(
@@ -285,7 +285,7 @@ fun SubscriptionItem(
                     Text(
                         text = "作者: ${sub.author} | Build: ${sub.build}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -322,7 +322,7 @@ fun SubscriptionItem(
                 )
 
                 if (sub.lastUpdateTime > 0) {
-                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                    val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
                     Text(
                         text = stringResource(R.string.sub_last_update, sdf.format(Date(sub.lastUpdateTime))),
                         style = MaterialTheme.typography.bodySmall,
@@ -351,7 +351,7 @@ fun SubscriptionDetailBottomSheet(
         containerColor = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onBackground,
         scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) }
     ) {
         Column(
             modifier = Modifier
@@ -379,7 +379,7 @@ fun SubscriptionDetailBottomSheet(
                     DetailRow(label = "预设数量", value = sub.presetCount.toString())
                     
                     if (sub.lastUpdateTime > 0) {
-                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
                         DetailRow(label = "最后更新", value = sdf.format(Date(sub.lastUpdateTime)))
                     }
                     
@@ -400,7 +400,7 @@ fun SubscriptionDetailBottomSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = "编辑", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.edit))
                 }
@@ -411,7 +411,7 @@ fun SubscriptionDetailBottomSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
@@ -444,7 +444,7 @@ fun SubscriptionDetailBottomSheet(
 @Composable
 fun DetailRow(label: String, value: String, isLink: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,

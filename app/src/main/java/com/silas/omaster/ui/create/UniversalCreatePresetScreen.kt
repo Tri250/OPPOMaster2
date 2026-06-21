@@ -65,7 +65,7 @@ fun UniversalCreatePresetScreen(
                 title = { Text(if (uiState.isEditMode) stringResource(R.string.edit_preset_title) else stringResource(R.string.create_preset_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text(stringResource(R.string.cancel), color = Color.Gray)
+                        Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 actions = {
@@ -80,7 +80,7 @@ fun UniversalCreatePresetScreen(
                         },
                         enabled = isSaveEnabled
                     ) {
-                        Text(stringResource(R.string.save), color = if (isSaveEnabled) MaterialTheme.colorScheme.primary else Color.Gray)
+                        Text(stringResource(R.string.save), color = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             )
@@ -128,7 +128,6 @@ fun UniversalCreatePresetScreen(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else if (uiState.originalCoverPath != null) {
-                                val context = LocalContext.current
                                 val imageModel = remember(uiState.originalCoverPath) {
                                       val path = uiState.originalCoverPath ?: ""
                                       when {
@@ -151,7 +150,7 @@ fun UniversalCreatePresetScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Add,
-                                        contentDescription = "添加",
+                                        contentDescription = stringResource(R.string.add_section),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                         modifier = Modifier.size(48.dp)
                                     )
@@ -344,7 +343,7 @@ fun SectionCard(
                 onClick = onAddItem,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "添加")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_item))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(stringResource(R.string.add_item))
             }

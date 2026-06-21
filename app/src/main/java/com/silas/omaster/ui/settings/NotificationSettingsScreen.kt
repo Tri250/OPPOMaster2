@@ -133,7 +133,7 @@ fun NotificationSettingsScreen(
                         haptic.perform(HapticFeedbackType.LongPress)
                         onBack()
                     }) {
-                        Icon(Icons.Default.ArrowBack, "返回")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -167,7 +167,7 @@ fun NotificationSettingsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.Notifications,
-                                null,
+                                contentDescription = "推送通知",
                                 tint = HasselbladOrange,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -208,8 +208,8 @@ fun NotificationSettingsScreen(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                                 checkedTrackColor = HasselbladOrange,
-                                uncheckedThumbColor = Color.Gray,
-                                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
                         )
                     }
@@ -331,7 +331,7 @@ fun NotificationSettingsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -342,7 +342,7 @@ fun NotificationSettingsScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Default.DoNotDisturb,
-                                    null,
+                                    contentDescription = "免打扰",
                                     tint = Color(0xFF9C27B0),
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -359,8 +359,8 @@ fun NotificationSettingsScreen(
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                                     checkedTrackColor = Color(0xFF9C27B0),
-                                    uncheckedThumbColor = Color.Gray,
-                                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                                 )
                             )
                         }
@@ -405,7 +405,7 @@ private fun NotificationSettingCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
@@ -435,8 +435,8 @@ private fun NotificationSettingCard(
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                     checkedTrackColor = HasselbladOrange,
-                    uncheckedThumbColor = Color.Gray,
-                    uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 )
             )
         }

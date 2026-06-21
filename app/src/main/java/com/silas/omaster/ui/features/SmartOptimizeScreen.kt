@@ -117,7 +117,7 @@ fun SmartOptimizeScreen(
     val scope = rememberCoroutineScope()
 
     // AI 推理引擎实例
-    val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
+    val inferenceEngine = remember { MasterInferenceEngine.getInstance(context) }
 
     // 原图与优化后图片状态
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -135,7 +135,7 @@ fun SmartOptimizeScreen(
             selectedImageUri = it
             try {
                 context.contentResolver.openInputStream(it)?.use { stream ->
-                    originalBitmap = BitmapFactory.decodeStream(stream)
+                    originalBitmap = decodeSampledBitmap(stream, 2048)
                     optimizedBitmap = null
                     previewMode = "before"
                 }
@@ -167,13 +167,13 @@ fun SmartOptimizeScreen(
     var optimizationTotalSteps by remember { mutableStateOf(0) }
     var optimizationProgress by remember { mutableFloatStateOf(0f) }
     var optimizationCurrentName by remember { mutableStateOf("") }
-    var optimizedOptions = remember { mutableStateListOf<String>() }
+    val optimizedOptions = remember { mutableStateListOf<String>() }
 
     // 从 assets 加载示例预览图
     LaunchedEffect(Unit) {
         try {
             context.assets.open("images/placeholder.webp").use { stream ->
-                originalBitmap = BitmapFactory.decodeStream(stream)
+                originalBitmap = decodeSampledBitmap(stream, 2048)
             }
         } catch (e: IOException) {
             // 资源不存在时保持空，将显示占位提示
@@ -868,3 +868,29 @@ data class OptimizeParams(
     val colorCorrectionEnabled: Boolean = true,
     val colorCorrectionStrength: Float = 20f
 )
+
+/**
+ * 安全解码 Bitmap，带降采样防止 OOM。
+ * @param maxDimension 最大边长，超过则按比例缩小
+ */
+private fun decodeSampledBitmap(inputStream: java.io.InputStream, maxDimension: Int): Bitmap? {
+    val data = inputStream.readBytes()
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeByteArray(data, 0, data.size, options)
+
+    if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+    var inSampleSize = 1
+    val halfHeight = options.outHeight / 2
+    val halfWidth = options.outWidth / 2
+    while (halfHeight / inSampleSize >= maxDimension && halfWidth / inSampleSize >= maxDimension) {
+        inSampleSize *= 2
+    }
+    options.inSampleSize = inSampleSize
+    options.inJustDecodeBounds = false
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+    return BitmapFactory.decodeByteArray(data, 0, data.size, options)
+}

@@ -43,6 +43,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -67,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -196,7 +198,7 @@ fun FeaturedPresetsScreen(
                     Text(
                         text = stringResource(R.string.clear_filter),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -208,7 +210,7 @@ fun FeaturedPresetsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.material3.CircularProgressIndicator(
+                CircularProgressIndicator(
                     color = HasselbladOrange
                 )
             }
@@ -222,7 +224,7 @@ fun FeaturedPresetsScreen(
                 }
             )
         } else {
-            val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+            val configuration = LocalConfiguration.current
             val screenWidthDp = configuration.screenWidthDp
             // 小屏手机(<360dp)用单列，普通手机双列，平板大屏3列
             val columnCount = when {
@@ -236,7 +238,7 @@ fun FeaturedPresetsScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredPresets) { preset ->
+                items(filteredPresets, key = { it.id }) { preset ->
                     FeaturedPresetCard(
                         preset = preset,
                         isFavorite = favoriteIds.contains(preset.id),
@@ -293,12 +295,12 @@ private fun FeaturedHeader(
 
         // 搜索按钮
         IconButton(onClick = onFilterClick) {
-            Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onBackground)
+            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search), tint = MaterialTheme.colorScheme.onBackground)
         }
 
         // 筛选按钮
         IconButton(onClick = onFilterClick) {
-            Icon(Icons.Default.FilterList, "筛选", tint = MaterialTheme.colorScheme.onBackground)
+            Icon(Icons.Default.FilterList, contentDescription = stringResource(R.string.filter), tint = MaterialTheme.colorScheme.onBackground)
         }
     }
 }
@@ -452,7 +454,7 @@ private fun FeaturedPresetCard(
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "收藏",
+                        contentDescription = stringResource(R.string.favorite),
                         tint = if (isFavorite) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -478,14 +480,14 @@ private fun FeaturedPresetCard(
                     Text(
                         text = preset.author,
                         style = MaterialTheme.typography.labelMedium,
-                        color = LightGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     if (preset.isHncs == true) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             Icons.Default.Check,
-                            null,
+                            contentDescription = stringResource(R.string.hncs_certified),
                             tint = HasselbladOrange,
                             modifier = Modifier.size(12.dp)
                         )
@@ -511,7 +513,7 @@ private fun FeaturedPresetCard(
                 ) {
                     Icon(
                         Icons.Default.AutoAwesome,
-                        null,
+                        contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = HasselbladOrange
                     )
@@ -541,7 +543,7 @@ private fun EmptyState(
         Icon(
             Icons.Default.Info,
             null,
-            tint = Color.Gray,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(64.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -553,7 +555,7 @@ private fun EmptyState(
         Text(
             text = stringResource(R.string.empty_hint_filter),
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -680,7 +682,7 @@ private fun SearchBar(
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "搜索",
+                contentDescription = stringResource(R.string.search),
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.size(16.dp)
             )

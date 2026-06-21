@@ -68,11 +68,6 @@ fun FloatingWindowGuideDialog(
         canClick = true
     }
 
-    // 调试日志
-    LaunchedEffect(Unit) {
-        android.util.Log.d("FloatingWindowGuideDialog", "对话框显示")
-    }
-
     AnimatedVisibility(
         visible = isVisible,
         enter = fadeIn(),
@@ -129,7 +124,7 @@ fun FloatingWindowGuideDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
-                            contentDescription = "图标",
+                            contentDescription = "悬浮窗引导",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(36.dp)
                         )
@@ -253,7 +248,7 @@ fun FloatingWindowGuideDialog(
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = if (canClick) stringResource(R.string.guide_btn_open) else stringResource(R.string.guide_btn_open),
+                                    text = stringResource(R.string.guide_btn_open),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )

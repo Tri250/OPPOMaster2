@@ -772,8 +772,15 @@ private suspend fun validateProviderConnection(
             return apiKey.length >= 15
         }
         CloudProviderType.WEBDAV -> {
-            // WebDAV 地址验证：必须是 HTTPS 协议
-            return apiKey.lowercase().startsWith("https://")
+            // WebDAV 地址验证：必须是 HTTPS 协议，且包含有效主机名（SSRF 防护）
+            val isHttps = apiKey.lowercase().startsWith("https://")
+            val hasValidHost = try {
+                val host = java.net.URI(apiKey).host
+                host != null && host.contains(".") && !host.startsWith("127.") && !host.startsWith("10.") && !host.startsWith("192.168.") && !host.startsWith("169.254.") && host != "localhost"
+            } catch (e: Exception) {
+                false
+            }
+            isHttps && hasValidHost
         }
     }
 }

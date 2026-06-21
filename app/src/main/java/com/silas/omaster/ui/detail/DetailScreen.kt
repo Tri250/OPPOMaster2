@@ -140,12 +140,10 @@ fun DetailScreen(
                     onClick = {
                         preset?.let { p ->
                             val isFirstTime = guideManager.isFirstTimeUseFloatingWindow()
-                            android.util.Log.d("DetailScreen", "悬浮窗按钮点击，是否首次使用: $isFirstTime")
                             // 检查是否是首次使用悬浮窗
                             if (isFirstTime) {
                                 showFloatingWindowGuide = true
                                 guideManager.markGuideShown()
-                                android.util.Log.d("DetailScreen", "显示悬浮窗引导对话框")
                             } else {
                                 // 非首次使用，直接处理悬浮窗逻辑（预设列表已在 HomeScreen 中设置）
                                 handleFloatingWindowClick(context, p)

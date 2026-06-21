@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.util.perform
+import kotlin.math.abs
 
 /**
  * 现代化滑块组件
@@ -75,7 +76,7 @@ fun ModernSlider(
             value = value,
             onValueChange = { newValue ->
                 onValueChange(newValue)
-                if (kotlin.math.abs(newValue - lastHapticValue) >= stepSize) {
+                if (abs(newValue - lastHapticValue) >= stepSize) {
                     haptic.perform(HapticFeedbackType.TextHandleMove)
                     lastHapticValue = newValue
                 }

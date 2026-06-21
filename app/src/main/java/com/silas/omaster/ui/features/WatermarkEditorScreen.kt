@@ -283,7 +283,7 @@ fun WatermarkEditorScreen(
                 isLoading = true
                 try {
                     val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)
+                        decodeSampledBitmap(stream, 2048)
                     }
                     originalBitmap = bitmap
 
@@ -304,7 +304,9 @@ fun WatermarkEditorScreen(
                     }
 
                     if (bitmap != null) {
-                        recommendedColor = analyzeDominantColor(bitmap)
+                        recommendedColor = withContext(Dispatchers.Default) {
+                            analyzeDominantColor(bitmap)
+                        }
                     }
                 } catch (e: Exception) {
                     Log.w("WatermarkEditor", "Image load failed", e)
@@ -364,7 +366,7 @@ fun WatermarkEditorScreen(
         isLoading = true
         try {
             val bitmap = if (imagePath != null) {
-                BitmapFactory.decodeFile(imagePath)
+                decodeSampledBitmapFromFile(imagePath, 2048)
             } else {
                 null
             }
@@ -379,7 +381,9 @@ fun WatermarkEditorScreen(
             }
 
             if (bitmap != null) {
-                recommendedColor = analyzeDominantColor(bitmap)
+                recommendedColor = withContext(Dispatchers.Default) {
+                    analyzeDominantColor(bitmap)
+                }
             }
         } catch (e: Exception) {
             Log.w("WatermarkEditor", "Init image load failed", e)
@@ -396,38 +400,40 @@ fun WatermarkEditorScreen(
         watermarkOffset, watermarkScale
     ) {
         originalBitmap?.let { bitmap ->
-            previewBitmap = renderWatermarkPreview(
-                bitmap = bitmap,
-                config = watermarkConfig.copy(
-                    enabled = isWatermarkEnabled,
-                    showBrand = showBrand,
-                    showModel = showModel,
-                    showParams = showParams,
-                    showDate = showDate,
-                    showLocation = showLocation,
-                    showPhotographer = showPhotographer,
-                    showVignette = showVignette,
-                    brandText = brandText,
-                    modelText = modelText,
-                    paramsText = paramsText,
-                    dateText = dateText,
-                    locationText = locationText,
-                    photographerText = photographerText,
-                    position = selectedPosition,
-                    textColor = selectedColor,
-                    textSize = textSize,
-                    opacity = opacity,
-                    rotation = rotation,
-                    shadowEnabled = shadowEnabled,
-                    shadowBlur = shadowBlur,
-                    padding = padding,
-                    letterSpacing = letterSpacing,
-                    fontWeight = fontWeight,
-                    bgOpacity = bgOpacity,
-                    offset = watermarkOffset,
-                    scale = watermarkScale
+            previewBitmap = withContext(Dispatchers.Default) {
+                renderWatermarkPreview(
+                    bitmap = bitmap,
+                    config = watermarkConfig.copy(
+                        enabled = isWatermarkEnabled,
+                        showBrand = showBrand,
+                        showModel = showModel,
+                        showParams = showParams,
+                        showDate = showDate,
+                        showLocation = showLocation,
+                        showPhotographer = showPhotographer,
+                        showVignette = showVignette,
+                        brandText = brandText,
+                        modelText = modelText,
+                        paramsText = paramsText,
+                        dateText = dateText,
+                        locationText = locationText,
+                        photographerText = photographerText,
+                        position = selectedPosition,
+                        textColor = selectedColor,
+                        textSize = textSize,
+                        opacity = opacity,
+                        rotation = rotation,
+                        shadowEnabled = shadowEnabled,
+                        shadowBlur = shadowBlur,
+                        padding = padding,
+                        letterSpacing = letterSpacing,
+                        fontWeight = fontWeight,
+                        bgOpacity = bgOpacity,
+                        offset = watermarkOffset,
+                        scale = watermarkScale
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -1823,6 +1829,55 @@ private fun analyzeDominantColor(bitmap: Bitmap): Color {
 
     val avgBrightness = totalBrightness / (20 * 20)
     return if (avgBrightness > 128) NearBlack else OffWhite
+}
+
+/**
+ * 安全解码 Bitmap（从 InputStream），带降采样防止 OOM。
+ */
+private fun decodeSampledBitmap(inputStream: java.io.InputStream, maxDimension: Int): Bitmap? {
+    val data = inputStream.readBytes()
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeByteArray(data, 0, data.size, options)
+
+    if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+    var inSampleSize = 1
+    val halfHeight = options.outHeight / 2
+    val halfWidth = options.outWidth / 2
+    while (halfHeight / inSampleSize >= maxDimension && halfWidth / inSampleSize >= maxDimension) {
+        inSampleSize *= 2
+    }
+    options.inSampleSize = inSampleSize
+    options.inJustDecodeBounds = false
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+    return BitmapFactory.decodeByteArray(data, 0, data.size, options)
+}
+
+/**
+ * 安全解码 Bitmap（从文件路径），带降采样防止 OOM。
+ */
+private fun decodeSampledBitmapFromFile(path: String, maxDimension: Int): Bitmap? {
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeFile(path, options)
+
+    if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+    var inSampleSize = 1
+    val halfHeight = options.outHeight / 2
+    val halfWidth = options.outWidth / 2
+    while (halfHeight / inSampleSize >= maxDimension && halfWidth / inSampleSize >= maxDimension) {
+        inSampleSize *= 2
+    }
+    options.inSampleSize = inSampleSize
+    options.inJustDecodeBounds = false
+    options.inPreferredConfig = Bitmap.Config.ARGB_8888
+
+    return BitmapFactory.decodeFile(path, options)
 }
 
 private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bitmap {

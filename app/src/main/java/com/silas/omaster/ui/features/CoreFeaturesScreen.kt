@@ -234,10 +234,10 @@ fun CoreFeaturesScreen(
         )
     }
 
-    // 功能分类 - 同步Web端
-    val aiFeatures = allFeatures.slice(0..2)
-    val toolFeatures = allFeatures.slice(3..4)
-    val brandFeatures = allFeatures.slice(5..8)
+    // 功能分类 - 同步Web端（按 id 前缀分类，避免硬编码索引）
+    val aiFeatures = allFeatures.filter { it.id in listOf("ai-fine-tune", "smart-optimize", "watermark") }
+    val toolFeatures = allFeatures.filter { it.id in listOf("param-adjust", "preset-manager") }
+    val brandFeatures = allFeatures.filter { it.id in listOf("lut-share", "hasselblad", "scene-report", "cloud-sync") }
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
