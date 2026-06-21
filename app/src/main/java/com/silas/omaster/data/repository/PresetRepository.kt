@@ -124,12 +124,12 @@ class PresetRepository private constructor(context: Context) {
                 }
             }
 
-            // 本地预设加载完成后，触发后台云同步以获取最新云端预设
+            // 本地预设加载完成后，触发后台订阅源同步以获取最新预设
             try {
                 triggerBackgroundSync(brand = null)
-                Log.i(TAG, "初始云同步完成: ${_presets.value.size} 条预设")
+                Log.i(TAG, "初始订阅源同步完成: ${_presets.value.size} 条预设")
             } catch (e: Exception) {
-                Log.w(TAG, "初始云同步失败，使用本地缓存", e)
+                Log.w(TAG, "初始订阅源同步失败，使用本地缓存", e)
             }
         }
     }
@@ -453,7 +453,7 @@ class PresetRepository private constructor(context: Context) {
      * - 全部失败：返回失败，并保留已有缓存
      * - 内部带有重试与指数退避
      */
-    suspend fun syncFromSubscriptions(): Result<SyncResult> = withContext(Dispatchers.IO) {
+    suspend fun syncFromSubscriptions(): Result<SubscriptionSyncResult> = withContext(Dispatchers.IO) {
         var lastError: Throwable? = null
         val maxRetries = 3
 
@@ -482,7 +482,7 @@ class PresetRepository private constructor(context: Context) {
     /**
      * 从 jsDelivr CDN 拉取所有启用品牌的预设数据
      */
-    private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
+    private suspend fun fetchFromCDN(): Result<SubscriptionSyncResult> = withContext(Dispatchers.IO) {
         val cloudUrls = UrlConstants.PRESET_SOURCE_URLS
         if (cloudUrls.isEmpty()) {
             Log.w(TAG, "未配置数据源 URL，跳过同步")
@@ -530,15 +530,15 @@ class PresetRepository private constructor(context: Context) {
             _presets.value = newList
             try {
                 saveToCache()
-                Log.d(TAG, "云同步成功，新增 ${imported.size} 条，冲突 ${conflicts.size} 条")
+                Log.d(TAG, "订阅源同步成功，新增 ${imported.size} 条，冲突 ${conflicts.size} 条")
             } catch (e: Exception) {
-                Log.e(TAG, "云同步结果写入本地缓存失败", e)
+                Log.e(TAG, "订阅源同步结果写入本地缓存失败", e)
             }
         } else {
-            Log.d(TAG, "云端无新增数据（可能全部冲突或最新）")
+            Log.d(TAG, "订阅源无新增数据（可能全部冲突或最新）")
         }
 
-        Result.success(SyncResult(imported = imported.size, conflicts = conflicts))
+        Result.success(SubscriptionSyncResult(imported = imported.size, conflicts = conflicts))
     }
 
     /**
@@ -1352,9 +1352,9 @@ data class ImportResult(
 )
 
 /**
- * 同步结果
+ * 订阅源同步结果
  */
-data class SyncResult(
+data class SubscriptionSyncResult(
     val imported: Int,
     val conflicts: List<PresetItem>
 )

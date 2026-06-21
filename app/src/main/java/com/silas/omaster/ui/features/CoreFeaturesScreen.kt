@@ -173,12 +173,12 @@ fun CoreFeaturesScreen(
             FeatureData(
                 id = "preset-manager",
                 title = "预设管理",
-                subtitle = "云端预设库，收藏、创建、分享",
+                subtitle = "订阅源预设库，收藏、创建、分享",
                 icon = Icons.Default.PhotoFilter,
                 gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
                 description = FeatureDescription(
-                    desc = "云端预设库，收藏、创建、分享",
-                    tips = listOf("云端同步", "本地管理", "批量操作")
+                    desc = "订阅源预设库，收藏、创建、分享",
+                    tips = listOf("订阅加载", "本地管理", "批量操作")
                 ),
                 showToggle = false
             ),

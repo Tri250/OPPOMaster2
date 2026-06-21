@@ -126,7 +126,7 @@
     <string name="empty_hint_add_presets">请调整筛选条件</string>
     <string name="empty_hint_favorite">点击心形图标收藏预设</string>
     <string name="empty_hint_create">点击右下角按钮创建预设</string>
-    <string name="empty_no_featured">暂无精选预设</string>
+    <string name="empty_no_featured">暂无作品</string>
     <string name="empty_hint_filter">请调整筛选条件</string>
     <string name="filter_result_count">已筛选 %1$d 条</string>
     <string name="clear_filter">清空筛选</string>
@@ -346,7 +346,7 @@
     <string name="update_channel_gitee">稳定版</string>
     <string name="update_channel_github">GitHub</string>
     <string name="notification_settings_title">通知设置</string>
-    <string name="preset_source_title">预设源管理</string>
+    <string name="preset_source_title">订阅管理</string>
     <string name="privacy_policy_title">隐私政策</string>
     <string name="user_agreement_title">用户协议</string>
     

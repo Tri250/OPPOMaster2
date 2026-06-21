@@ -213,7 +213,7 @@ data class MasterPreset(
     val shootingTips: String? = null,
     val sections: List<PresetSection>? = null,
     val tags: List<String>? = emptyList(),
-    // 云同步相关字段
+    // 订阅源相关字段
     val brand: String? = null,           // 品牌: oppo/realme/vivo/honor
     val version: Int? = null,              // 版本号
     val build: Int = 1,                    // 构建号，用于增量更新
@@ -299,7 +299,7 @@ data class MasterPreset(
         parcel.writeString(shootingTips)
         parcel.writeTypedList(sections)
         parcel.writeStringList(tags)
-        // 云同步相关字段
+        // 订阅源相关字段
         parcel.writeString(brand)
         parcel.writeValue(version)
         parcel.writeInt(build)
