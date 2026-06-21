@@ -49,15 +49,45 @@ class SubscriptionManager private constructor(context: Context) {
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
-            // 首次使用，添加默认订阅
-            val defaultSub = Subscription(
-                url = UpdateConfigManager.DEFAULT_PRESET_URL,
-                name = "官方内置预设",
-                author = "@OMaster",
-                build = 1,
-                isEnabled = true
+            // 首次使用，添加默认订阅（包含官方预设 + 四个品牌预设）
+            val defaultSubs = listOf(
+                Subscription(
+                    url = UpdateConfigManager.DEFAULT_PRESET_URL,
+                    name = "官方内置预设",
+                    author = "@OMaster",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = com.silas.omaster.util.UrlConstants.PRESET_OPPO,
+                    name = "OPPO 预设库",
+                    author = "OMaster Community",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = com.silas.omaster.util.UrlConstants.PRESET_REALME,
+                    name = "realme 预设库",
+                    author = "OMaster Community",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = com.silas.omaster.util.UrlConstants.PRESET_VIVO,
+                    name = "vivo 预设库",
+                    author = "OMaster Community",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = com.silas.omaster.util.UrlConstants.PRESET_HONOR,
+                    name = "荣耀 预设库",
+                    author = "OMaster Community",
+                    build = 1,
+                    isEnabled = true
+                )
             )
-            _subscriptionsFlow.value = listOf(defaultSub)
+            _subscriptionsFlow.value = defaultSubs
             saveSubscriptions()
         }
     }

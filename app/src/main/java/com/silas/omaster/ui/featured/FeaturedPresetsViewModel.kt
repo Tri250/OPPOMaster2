@@ -16,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 精选推荐 ViewModel
+ * 作品收集 ViewModel
  * 管理精选预设列表、筛选、搜索和收藏状态
  */
 class FeaturedPresetsViewModel(

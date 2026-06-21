@@ -586,7 +586,7 @@ object SceneToHasselbladMapping {
         val targetParams = getParams(targetSceneId)
         val adjustments = mutableListOf<ParamAdjustment>()
 
-        // 计算各参数差异
+        // 计算各参数差异（对齐 OPPO 哈苏大师模式参数命名）
         if (currentParams.tone != targetParams.tone) {
             adjustments.add(ParamAdjustment(
                 param = "tone",
@@ -623,6 +623,15 @@ object SceneToHasselbladMapping {
                 delta = targetParams.colorTemp - currentParams.colorTemp
             ))
         }
+        if (currentParams.sharpness != targetParams.sharpness) {
+            adjustments.add(ParamAdjustment(
+                param = "sharpness",
+                displayName = "锐度",
+                currentValue = currentParams.sharpness,
+                targetValue = targetParams.sharpness,
+                delta = targetParams.sharpness - currentParams.sharpness
+            ))
+        }
         if (currentParams.vignette != targetParams.vignette) {
             adjustments.add(ParamAdjustment(
                 param = "vignette",
@@ -630,6 +639,42 @@ object SceneToHasselbladMapping {
                 currentValue = currentParams.vignette,
                 targetValue = targetParams.vignette,
                 delta = targetParams.vignette - currentParams.vignette
+            ))
+        }
+        if (currentParams.cyanMagenta != targetParams.cyanMagenta) {
+            adjustments.add(ParamAdjustment(
+                param = "cyanMagenta",
+                displayName = "青品调",
+                currentValue = currentParams.cyanMagenta,
+                targetValue = targetParams.cyanMagenta,
+                delta = targetParams.cyanMagenta - currentParams.cyanMagenta
+            ))
+        }
+        if (currentParams.highlights != targetParams.highlights) {
+            adjustments.add(ParamAdjustment(
+                param = "highlights",
+                displayName = "高光",
+                currentValue = currentParams.highlights,
+                targetValue = targetParams.highlights,
+                delta = targetParams.highlights - currentParams.highlights
+            ))
+        }
+        if (currentParams.shadows != targetParams.shadows) {
+            adjustments.add(ParamAdjustment(
+                param = "shadows",
+                displayName = "阴影",
+                currentValue = currentParams.shadows,
+                targetValue = targetParams.shadows,
+                delta = targetParams.shadows - currentParams.shadows
+            ))
+        }
+        if (currentParams.clarity != targetParams.clarity) {
+            adjustments.add(ParamAdjustment(
+                param = "clarity",
+                displayName = "清晰度",
+                currentValue = currentParams.clarity,
+                targetValue = targetParams.clarity,
+                delta = targetParams.clarity - currentParams.clarity
             ))
         }
 

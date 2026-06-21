@@ -2304,7 +2304,7 @@ private suspend fun loadBitmapFromUri(
 private fun createTempImageUri(context: android.content.Context): Uri {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Hasselblad").apply {
+        val storageDir = File(context.cacheDir, "camera").apply {
             if (!exists()) mkdirs()
         }
         val imageFile = File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)

@@ -88,7 +88,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 精选推荐页面
+ * 作品收集页面
  * 展示精选预设样张，支持点击查看参数和应用功能
  */
 @Composable
@@ -277,7 +277,7 @@ private fun FeaturedHeader(
     ) {
         Column {
             Text(
-                text = "精选推荐",
+                text = "作品收集",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground

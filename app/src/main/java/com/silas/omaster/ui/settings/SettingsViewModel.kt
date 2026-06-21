@@ -4,12 +4,9 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.silas.omaster.cloud.CloudSyncManager
-import com.silas.omaster.cloud.SyncResult
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
-import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.util.ImageCacheManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,18 +15,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * 设置页面 ViewModel
- * 管理所有设置状态：主题、深色模式、振动、云同步等
+ * 管理所有设置状态：主题、深色模式、振动等
  */
 class SettingsViewModel(
     private val application: Application,
-    private val settingsManager: SettingsManager,
-    private val presetRepository: PresetRepository
+    private val settingsManager: SettingsManager
 ) : ViewModel() {
 
     // 主题设置
@@ -47,18 +40,6 @@ class SettingsViewModel(
     // 分析开关
     private val _analyticsEnabled = MutableStateFlow(settingsManager.isAnalyticsEnabled)
     val analyticsEnabled: StateFlow<Boolean> = _analyticsEnabled.asStateFlow()
-
-    // 云同步开关
-    private val _cloudSyncEnabled = MutableStateFlow(settingsManager.isCloudSyncEnabled)
-    val cloudSyncEnabled: StateFlow<Boolean> = _cloudSyncEnabled.asStateFlow()
-
-    // 最后同步时间
-    private val _lastSyncTime = MutableStateFlow(settingsManager.lastSyncTime)
-    val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
-
-    // 同步状态
-    private val _isSyncing = MutableStateFlow(false)
-    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     // 默认启动Tab
     private val _defaultStartTab = MutableStateFlow(settingsManager.defaultStartTab)
@@ -129,60 +110,6 @@ class SettingsViewModel(
     }
 
     /**
-     * 设置云同步开关
-     */
-    fun setCloudSyncEnabled(enabled: Boolean) {
-        settingsManager.isCloudSyncEnabled = enabled
-        _cloudSyncEnabled.value = enabled
-    }
-
-    /**
-     * 执行云同步
-     * 先通过 CloudSyncManager 从 CDN 拉取各品牌预设，再刷新本地 PresetRepository。
-     */
-    fun performCloudSync(onComplete: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            _isSyncing.value = true
-            try {
-                val cloudSyncManager = CloudSyncManager.getInstance(application)
-                val result = withContext(Dispatchers.IO) {
-                    cloudSyncManager.sync()
-                }
-                if (result is SyncResult.Success) {
-                    // 同步成功后刷新本地预设列表与缓存
-                    withContext(Dispatchers.IO) {
-                        presetRepository.reloadDefaultPresets()
-                    }
-                    _lastSyncTime.value = settingsManager.lastSyncTime
-                    onComplete(true)
-                } else if (result is SyncResult.Disabled) {
-                    _errorMessage.value = "云同步未开启"
-                    onComplete(false)
-                } else {
-                    val errorResult = result as? SyncResult.Error
-                    _errorMessage.value = "同步失败: ${errorResult?.message ?: "未知错误"}"
-                    onComplete(false)
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "同步失败: ${e.message}"
-                onComplete(false)
-            } finally {
-                _isSyncing.value = false
-            }
-        }
-    }
-
-    /**
-     * 格式化最后同步时间
-     */
-    fun formatLastSyncTime(): String {
-        val time = _lastSyncTime.value
-        if (time == 0L) return "从未同步"
-        val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        return format.format(Date(time))
-    }
-
-    /**
      * 设置默认启动Tab
      */
     fun setDefaultStartTab(tab: Int) {
@@ -249,13 +176,12 @@ class SettingsViewModel(
  */
 class SettingsViewModelFactory(
     private val application: Application,
-    private val settingsManager: SettingsManager,
-    private val presetRepository: PresetRepository
+    private val settingsManager: SettingsManager
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-            return SettingsViewModel(application, settingsManager, presetRepository) as T
+            return SettingsViewModel(application, settingsManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

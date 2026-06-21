@@ -19,16 +19,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.data.model.PresetSource
-import com.silas.omaster.cloud.CloudSyncManager
+import com.silas.omaster.model.Subscription
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
-import com.silas.omaster.util.UrlConstants
-import com.silas.omaster.util.perform
-import kotlinx.coroutines.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,44 +35,31 @@ fun PresetSourceManagerScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val cloudSyncManager = remember { CloudSyncManager.getInstance(context) }
-    
-    var sources by remember { mutableStateOf(getDefaultSources()) }
+    val subscriptionManager = remember { SubscriptionManager.getInstance(context) }
+
+    val subscriptions by subscriptionManager.subscriptionsFlow.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<PresetSource?>(null) }
-    var fetchedPresetCount by remember { mutableStateOf(0) }
     var syncError by remember { mutableStateOf<String?>(null) }
-    
-    // 加载预设 - 使用 CloudSyncManager 统一同步
-    LaunchedEffect(sources) {
-        if (sources.any { it.enabled }) {
-            isLoading = true
-            syncError = null
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    cloudSyncManager.sync()
-                }
-                when (result) {
-                    is com.silas.omaster.cloud.SyncResult.Success -> {
-                        fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
-                    }
-                    is com.silas.omaster.cloud.SyncResult.Error -> {
-                        syncError = result.message
-                    }
-                    is com.silas.omaster.cloud.SyncResult.Disabled -> {
-                        // 云同步被禁用，尝试手动加载
-                        fetchedPresetCount = 0
-                    }
-                }
-            } catch (e: Exception) {
-                syncError = e.message ?: "同步失败"
-            } finally {
-                isLoading = false
-            }
+
+    // 将 Subscription 转换为 PresetSource 用于 UI 展示
+    val sources = remember(subscriptions) {
+        subscriptions.map { sub ->
+            PresetSource(
+                id = sub.url,
+                name = sub.name,
+                url = sub.url,
+                enabled = sub.isEnabled,
+                lastUpdated = sub.lastUpdateTime
+            )
         }
     }
-    
+
+    val fetchedPresetCount = remember(subscriptions) {
+        subscriptions.filter { it.isEnabled }.sumOf { it.presetCount.toInt() }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -84,10 +68,10 @@ fun PresetSourceManagerScreen(
     ) {
         // 标题栏
         TopAppBar(
-            title = { Text("预设源管理", fontWeight = FontWeight.Bold) },
+            title = { Text("订阅管理", fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回")
@@ -95,27 +79,16 @@ fun PresetSourceManagerScreen(
             },
             actions = {
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    // 刷新：重新触发同步
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    // 刷新：重新加载订阅状态
+                    isLoading = true
+                    syncError = null
                     scope.launch {
-                        isLoading = true
-                        syncError = null
                         try {
-                            val result = withContext(Dispatchers.IO) {
-                                cloudSyncManager.sync()
-                            }
-                            when (result) {
-                                is com.silas.omaster.cloud.SyncResult.Success -> {
-                                    fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
-                                }
-                                is com.silas.omaster.cloud.SyncResult.Error -> {
-                                    syncError = result.message
-                                }
-                                else -> {}
-                            }
+                            // 触发订阅更新逻辑（如果有网络拉取需求可在此扩展）
+                            isLoading = false
                         } catch (e: Exception) {
                             syncError = e.message ?: "刷新失败"
-                        } finally {
                             isLoading = false
                         }
                     }
@@ -126,7 +99,7 @@ fun PresetSourceManagerScreen(
                     )
                 }
                 IconButton(onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     showAddDialog = true
                 }) {
                     Icon(Icons.Default.Add, "添加", tint = MaterialTheme.colorScheme.onBackground)
@@ -137,7 +110,7 @@ fun PresetSourceManagerScreen(
                 titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
-        
+
         // 统计信息
         Card(
             modifier = Modifier
@@ -172,7 +145,7 @@ fun PresetSourceManagerScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "预设源",
+                            text = "订阅源",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
@@ -185,7 +158,7 @@ fun PresetSourceManagerScreen(
                             color = if (syncError != null) ErrorRed else SuccessGreen
                         )
                         Text(
-                            text = if (syncError != null) "同步失败" else "已加载预设",
+                            text = if (syncError != null) "加载失败" else "已加载预设",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (syncError != null) ErrorRed else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                         )
@@ -202,7 +175,7 @@ fun PresetSourceManagerScreen(
                 }
             }
         }
-        
+
         // 预设源列表
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -214,17 +187,22 @@ fun PresetSourceManagerScreen(
                     source = source,
                     isEditing = editingSource?.id == source.id,
                     onToggle = { enabled ->
-                        haptic.perform(HapticFeedbackType.LongPress)
-                        sources = sources.map {
-                            if (it.id == source.id) it.copy(enabled = enabled) else it
-                        }
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        subscriptionManager.toggleSubscription(source.url)
                     },
                     onEdit = {
                         editingSource = source
                     },
                     onSave = { name, url ->
-                        sources = sources.map {
-                            if (it.id == source.id) it.copy(name = name, url = url) else it
+                        // 如果 URL 改变，先移除旧订阅再添加新订阅
+                        val oldUrl = editingSource?.url ?: ""
+                        if (oldUrl.isNotBlank() && oldUrl != url) {
+                            subscriptionManager.removeSubscription(oldUrl)
+                            subscriptionManager.addSubscription(url, name)
+                        } else if (oldUrl.isNotBlank()) {
+                            // 仅名称改变：通过更新状态实现（SubscriptionManager 暂无直接改名 API，采用 remove+add 模拟）
+                            subscriptionManager.removeSubscription(oldUrl)
+                            subscriptionManager.addSubscription(url, name)
                         }
                         editingSource = null
                     },
@@ -232,29 +210,24 @@ fun PresetSourceManagerScreen(
                         editingSource = null
                     },
                     onDelete = {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                        sources = sources.filter { it.id != source.id }
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        subscriptionManager.removeSubscription(source.url)
                     }
                 )
             }
-            
+
             item {
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
-    
+
     // 添加对话框
     if (showAddDialog) {
         AddSourceDialog(
             onDismiss = { showAddDialog = false },
             onAdd = { name, url ->
-                sources = sources + PresetSource(
-                    id = System.currentTimeMillis().toString(),
-                    name = name,
-                    url = url,
-                    enabled = true
-                )
+                subscriptionManager.addSubscription(url, name)
                 showAddDialog = false
             }
         )
@@ -273,7 +246,7 @@ private fun PresetSourceCard(
 ) {
     var editName by remember(source) { mutableStateOf(source.name) }
     var editUrl by remember(source) { mutableStateOf(source.url) }
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -348,7 +321,7 @@ private fun PresetSourceCard(
                             maxLines = 1
                         )
                     }
-                    
+
                     // 开关
                     Switch(
                         checked = source.enabled,
@@ -361,9 +334,9 @@ private fun PresetSourceCard(
                         )
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 // 操作按钮
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -394,12 +367,13 @@ private fun AddSourceDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
-    
+    var error by remember { mutableStateOf<String?>(null) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.outline,
         title = {
-            Text("添加预设源", color = MaterialTheme.colorScheme.onBackground)
+            Text("添加订阅源", color = MaterialTheme.colorScheme.onBackground)
         },
         text = {
             Column {
@@ -419,7 +393,10 @@ private fun AddSourceDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = url,
-                    onValueChange = { url = it },
+                    onValueChange = {
+                        url = it
+                        error = null
+                    },
                     label = { Text("URL", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -429,13 +406,25 @@ private fun AddSourceDialog(
                         unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
                     ),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    isError = error != null,
+                    supportingText = {
+                        if (error != null) {
+                            Text(error!!, color = ErrorRed)
+                        }
+                    }
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onAdd(name, url) },
+                onClick = {
+                    if (!url.lowercase().startsWith("https://")) {
+                        error = "仅支持 HTTPS 链接"
+                        return@Button
+                    }
+                    onAdd(name, url)
+                },
                 enabled = name.isNotBlank() && url.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
             ) {
@@ -449,30 +438,3 @@ private fun AddSourceDialog(
         }
     )
 }
-
-private fun getDefaultSources(): List<PresetSource> = listOf(
-    PresetSource(
-        id = "oppo",
-        name = "OPPO 预设库",
-        url = UrlConstants.PRESET_OPPO,
-        enabled = true
-    ),
-    PresetSource(
-        id = "realme",
-        name = "realme 预设库",
-        url = UrlConstants.PRESET_REALME,
-        enabled = true
-    ),
-    PresetSource(
-        id = "vivo",
-        name = "vivo 预设库",
-        url = UrlConstants.PRESET_VIVO,
-        enabled = true
-    ),
-    PresetSource(
-        id = "honor",
-        name = "荣耀 预设库",
-        url = UrlConstants.PRESET_HONOR,
-        enabled = true
-    )
-)

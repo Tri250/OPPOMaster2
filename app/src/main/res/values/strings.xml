@@ -20,7 +20,7 @@
     <!-- 底部导航 -->
     <string name="nav_home">首页</string>
     <string name="nav_subscription">订阅</string>
-    <string name="nav_featured">精选推荐</string>
+    <string name="nav_featured">作品收集</string>
     <string name="nav_core_features">核心功能</string>
     <string name="nav_settings">设置</string>
     <string name="nav_about">关于</string>

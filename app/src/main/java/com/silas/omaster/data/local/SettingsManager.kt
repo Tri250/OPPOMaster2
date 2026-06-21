@@ -351,7 +351,7 @@ class SettingsManager private constructor(private val context: Context) {
             setDataSync(KEY_CUSTOM_QUICK_PRESETS, jsonStr)
         }
 
-    // 应用预设参数（精选推荐功能）
+    // 应用预设参数（作品收集功能）
     fun applyPresetParams(
         saturation: Int = 0,
         contrast: Int = 0,
