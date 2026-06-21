@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
@@ -12,6 +13,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
@@ -25,6 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -56,8 +59,18 @@ class HasselbladEyeViewModel : ViewModel() {
     private val _isParamsLocked = MutableStateFlow(false)
     val isParamsLocked: StateFlow<Boolean> = _isParamsLocked.asStateFlow()
 
-    private val _selectedModeId = MutableStateFlow("natural")
-    val selectedModeId: StateFlow<String> = _selectedModeId.asStateFlow()
+    // 场景模式与色彩模式独立选择（两者互不互斥）
+    private val _selectedSceneModeId = MutableStateFlow("scene-natural")
+    val selectedSceneModeId: StateFlow<String> = _selectedSceneModeId.asStateFlow()
+
+    private val _selectedSceneParams = MutableStateFlow(emptyMap<String, Int>())
+    val selectedSceneParams: StateFlow<Map<String, Int>> = _selectedSceneParams.asStateFlow()
+
+    private val _selectedColorModeId = MutableStateFlow("natural")
+    val selectedColorModeId: StateFlow<String> = _selectedColorModeId.asStateFlow()
+
+    private val _selectedColorParams = MutableStateFlow(emptyMap<String, Int>())
+    val selectedColorParams: StateFlow<Map<String, Int>> = _selectedColorParams.asStateFlow()
 
     private val _analysisResult = MutableStateFlow<AnalysisResult?>(null)
     val analysisResult: StateFlow<AnalysisResult?> = _analysisResult.asStateFlow()
@@ -92,10 +105,31 @@ class HasselbladEyeViewModel : ViewModel() {
     private val _exportFormat = MutableStateFlow(ExportFormat.JPEG)
     val exportFormat: StateFlow<ExportFormat> = _exportFormat.asStateFlow()
 
+    private val _lastSavedUri = MutableStateFlow<android.net.Uri?>(null)
+    val lastSavedUri: StateFlow<android.net.Uri?> = _lastSavedUri.asStateFlow()
+
     // ================== 协程任务 ==================
 
     private var analysisJob: Job? = null
     private var previewJob: Job? = null
+
+    init {
+        // 参数变化 250ms 后自动触发低分辨率实时预览
+        viewModelScope.launch {
+            _params.debounce(250).collect {
+                triggerRealtimePreview()
+            }
+        }
+    }
+
+    /**
+     * 在合适的阶段触发低分辨率实时预览。
+     */
+    private fun triggerRealtimePreview() {
+        val source = _originalBitmap.value ?: return
+        if (_stage.value != HasselbladEyeStage.RESULTS && _stage.value != HasselbladEyeStage.PREVIEW) return
+        updatePreviewAsync(source, emptyMap())
+    }
 
     // ================== 核心方法 ==================
 
@@ -131,9 +165,10 @@ class HasselbladEyeViewModel : ViewModel() {
                 steps[0] = steps[0].copy(status = AnalysisStatus.PROCESSING)
                 updateAnalysisProgress(20f, "色彩分析中...", steps)
 
-                val profile = withContext(Dispatchers.Default) {
-                    inferenceEngine.analyzeImage(bitmap, imagePath = null)
+                val analysisDetail = withContext(Dispatchers.Default) {
+                    inferenceEngine.analyzeImageWithDetails(bitmap, imagePath = null)
                 }
+                val profile = analysisDetail.profile
 
                 steps[0] = steps[0].copy(status = AnalysisStatus.COMPLETED)
                 val meanLuma = profile.histogramData?.meanLuminance?.toInt() ?: 0
@@ -217,11 +252,18 @@ class HasselbladEyeViewModel : ViewModel() {
                 delay(300)
 
                 _recommendedParams.value = profile.hasselbladParams
+
+                // P1-10：将细粒度识别结果映射到粗粒度 UI 模式，并自动选中推荐色彩模式
+                val sceneModeId = mapSceneProfileToSceneModeId(profile)
+                val colorModeId = resolveColorModeId(suggestedColorMode)
+                applyAnalyzedModes(sceneModeId, colorModeId)
+
                 if (!_isParamsLocked.value) {
                     _params.value = profile.hasselbladParams
                 }
                 _analysisResult.value = AnalysisResult(
                     sceneProfile = profile,
+                    alternativeScenes = analysisDetail.alternatives,
                     recommendedFilms = films,
                     masterTips = masterTips,
                     suggestedColorMode = suggestedColorMode,
@@ -282,12 +324,58 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
+     * 切换选中的场景模式。参数被锁定时仅更新模式 ID，不会应用模式参数。
+     */
+    fun updateSelectedSceneMode(modeId: String, modeParams: Map<String, Int>) {
+        _selectedSceneModeId.value = modeId
+        _selectedSceneParams.value = modeParams
+        if (_isParamsLocked.value) return
+        rebuildParamsFromModes()
+    }
+
+    /**
      * 切换选中的色彩模式。参数被锁定时仅更新模式 ID，不会应用模式参数。
      */
-    fun updateSelectedMode(modeId: String, modeParams: Map<String, Int>) {
-        _selectedModeId.value = modeId
+    fun updateSelectedColorMode(modeId: String, modeParams: Map<String, Int>) {
+        _selectedColorModeId.value = modeId
+        _selectedColorParams.value = modeParams
         if (_isParamsLocked.value) return
-        applyParamsMap(modeParams)
+        rebuildParamsFromModes()
+    }
+
+    /**
+     * 应用推荐胶片的参数到当前参数。参数被锁定时不会执行覆盖。
+     */
+    fun applyFilmPreset(filmId: String) {
+        if (_isParamsLocked.value) return
+        applyParamsMap(FilmAdjustments.get(filmId))
+    }
+
+    /**
+     * 根据当前场景模式和色彩模式重新构建基础参数。
+     */
+    private fun rebuildParamsFromModes() {
+        var base = HasselbladParams()
+        base = applyParamsMapToBase(base, _selectedSceneParams.value)
+        base = applyParamsMapToBase(base, _selectedColorParams.value)
+        _params.value = base
+    }
+
+    /**
+     * 应用分析推荐的场景与色彩模式。参数被锁定时仅更新模式 ID，不覆盖当前参数。
+     */
+    fun applyAnalysisRecommendations(
+        sceneModeId: String,
+        sceneParams: Map<String, Int>,
+        colorModeId: String,
+        colorParams: Map<String, Int>
+    ) {
+        _selectedSceneModeId.value = sceneModeId
+        _selectedSceneParams.value = sceneParams
+        _selectedColorModeId.value = colorModeId
+        _selectedColorParams.value = colorParams
+        if (_isParamsLocked.value) return
+        rebuildParamsFromModes()
     }
 
     /**
@@ -295,6 +383,32 @@ class HasselbladEyeViewModel : ViewModel() {
      */
     fun setParamsLocked(locked: Boolean) {
         _isParamsLocked.value = locked
+    }
+
+    /**
+     * P1-10：应用分析结果对应的 UI 模式（只切换模式 ID，不覆盖当前已调参数）。
+     * 参数被锁定时仍然会更新模式选中状态，保证界面与分析结果一致。
+     */
+    fun applyAnalyzedModes(sceneModeId: String, colorModeId: String) {
+        val sceneMode = allSceneModes.find { it.id == sceneModeId }
+        val colorMode = allColorModes.find { it.id == colorModeId }
+        _selectedSceneModeId.value = sceneModeId
+        _selectedSceneParams.value = sceneMode?.params ?: emptyMap()
+        _selectedColorModeId.value = colorModeId
+        _selectedColorParams.value = colorMode?.params ?: emptyMap()
+    }
+
+    /**
+     * P1-10：用户从备选/子模式中选择一个细粒度场景时，
+     * 同时更新粗粒度模式选中态、色彩模式，并应用该细粒度场景的哈苏参数。
+     */
+    fun applyFineGrainedScene(sceneProfile: SceneProfile) {
+        val sceneModeId = mapSceneProfileToSceneModeId(sceneProfile)
+        val colorModeId = suggestColorModeIdByCategory(sceneProfile.category)
+        applyAnalyzedModes(sceneModeId, colorModeId)
+        if (!_isParamsLocked.value) {
+            _params.value = sceneProfile.hasselbladParams
+        }
     }
 
     /**
@@ -320,14 +434,16 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
-     * 生成全分辨率效果图，并进入 PREVIEW 阶段。
+     * 生成预览效果图，并进入 PREVIEW 阶段。
+     * 为防止大图 OOM，source 会先采样到 [PREVIEW_MAX_DIMENSION]。
      */
     fun generateFullPreview(source: Bitmap, modeParams: Map<String, Int>) {
         previewJob?.cancel()
         previewJob = viewModelScope.launch {
             val result = withContext(Dispatchers.Default) {
                 val targetParams = mergeParams(modeParams)
-                applyHasselbladColorScience(source, targetParams)
+                val scaled = createThumbnail(source, maxDimension = PREVIEW_MAX_DIMENSION)
+                applyHasselbladColorScience(scaled, targetParams)
             }
             _previewBitmap.value = result
             _stage.value = HasselbladEyeStage.PREVIEW
@@ -336,6 +452,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
     /**
      * 保存图片到相册。保存结果通过 [isSaving] 与 [stage] 状态暴露。
+     * 为防止大图 OOM，bitmap 会先采样到 [EXPORT_MAX_DIMENSION]。
      */
     fun saveImage(
         context: Context,
@@ -344,7 +461,7 @@ class HasselbladEyeViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _isSaving.value = true
-            val success = try {
+            val savedUri = try {
                 withContext(Dispatchers.IO) {
                     try {
                         val (compressFormat, extension) = when (format) {
@@ -357,6 +474,7 @@ class HasselbladEyeViewModel : ViewModel() {
                             ExportFormat.PNG -> "image/png"
                             ExportFormat.WEBP -> "image/webp"
                         }
+                        val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
                         val filename = "Hasselblad_${System.currentTimeMillis()}.$extension"
                         val contentValues = ContentValues().apply {
                             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
@@ -370,21 +488,28 @@ class HasselbladEyeViewModel : ViewModel() {
                             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                             contentValues
                         )
-                        uri?.let {
+                        uri?.also {
                             context.contentResolver.openOutputStream(it)?.use { out ->
-                                bitmap.compress(compressFormat, 95, out)
+                                scaled.compress(compressFormat, 95, out)
                             }
-                            true
-                        } ?: false
+                            // 通知系统相册立即索引
+                            MediaScannerConnection.scanFile(
+                                context,
+                                arrayOf(it.toString()),
+                                arrayOf(mimeType),
+                                null
+                            )
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Save image failed", e)
-                        false
+                        null
                     }
                 }
             } finally {
                 _isSaving.value = false
             }
-            if (success) {
+            if (savedUri != null) {
+                _lastSavedUri.value = savedUri
                 _stage.value = HasselbladEyeStage.DONE
             }
         }
@@ -432,7 +557,10 @@ class HasselbladEyeViewModel : ViewModel() {
         _params.value = HasselbladParams()
         _recommendedParams.value = null
         _isParamsLocked.value = false
-        _selectedModeId.value = "natural"
+        _selectedSceneModeId.value = "scene-natural"
+        _selectedSceneParams.value = emptyMap()
+        _selectedColorModeId.value = "natural"
+        _selectedColorParams.value = emptyMap()
         _analysisResult.value = null
         _analysisError.value = null
         _analysisProgress.value = 0f
@@ -444,6 +572,7 @@ class HasselbladEyeViewModel : ViewModel() {
         _thumbnailPreview.value = null
         _isSaving.value = false
         _exportFormat.value = ExportFormat.JPEG
+        _lastSavedUri.value = null
     }
 
     // ================== 生命周期 ==================
@@ -479,26 +608,33 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     private fun mergeParams(modeParams: Map<String, Int>): HasselbladParams {
-        var base = _params.value
+        return applyParamsMapToBase(_params.value, modeParams)
+    }
+
+    private fun applyParamsMapToBase(
+        base: HasselbladParams,
+        modeParams: Map<String, Int>
+    ): HasselbladParams {
+        var result = base
         modeParams.forEach { (key, value) ->
-            base = when (key) {
-                "tone" -> base.copy(tone = value)
-                "saturation" -> base.copy(saturation = value)
-                "contrast" -> base.copy(contrast = value)
-                "colorTemp", "warmth" -> base.copy(colorTemp = value)
-                "sharpness" -> base.copy(sharpness = value)
-                "vignette" -> base.copy(vignette = value)
-                "cyanMagenta" -> base.copy(cyanMagenta = value)
-                "softLight" -> base.copy(
+            result = when (key) {
+                "tone" -> result.copy(tone = value)
+                "saturation" -> result.copy(saturation = value)
+                "contrast" -> result.copy(contrast = value)
+                "colorTemp", "warmth" -> result.copy(colorTemp = value)
+                "sharpness" -> result.copy(sharpness = value)
+                "vignette" -> result.copy(vignette = value)
+                "cyanMagenta" -> result.copy(cyanMagenta = value)
+                "softLight" -> result.copy(
                     softLight = SoftLightMode.entries.getOrNull(value) ?: SoftLightMode.NONE
                 )
-                "highlights" -> base.copy(highlights = value)
-                "shadows" -> base.copy(shadows = value)
-                "clarity" -> base.copy(clarity = value)
-                else -> base
+                "highlights" -> result.copy(highlights = value)
+                "shadows" -> result.copy(shadows = value)
+                "clarity" -> result.copy(clarity = value)
+                else -> result
             }
         }
-        return base
+        return result
     }
 
     private fun createThumbnail(source: Bitmap, maxDimension: Int): Bitmap {
@@ -567,5 +703,11 @@ class HasselbladEyeViewModel : ViewModel() {
 
     companion object {
         private const val TAG = "HasselbladEyeViewModel"
+
+        /** 预览图最大边长，防止大图 OOM */
+        const val PREVIEW_MAX_DIMENSION = 1080
+
+        /** 导出图最大边长，兼顾画质与内存 */
+        const val EXPORT_MAX_DIMENSION = 2560
     }
 }

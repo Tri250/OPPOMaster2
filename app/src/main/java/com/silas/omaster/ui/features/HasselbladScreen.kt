@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -87,6 +88,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -95,6 +98,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -117,6 +121,7 @@ import com.silas.omaster.ui.components.defaultAnalysisSteps
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
 import com.silas.omaster.util.formatSigned
+import com.silas.omaster.util.hapticClickable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -128,87 +133,15 @@ import kotlin.math.roundToInt
 
 private const val TAG = "HasselbladEye"
 
-private data class SceneMode(
-    val id: String,
-    val name: String,
-    val description: String,
-    val category: SceneCategory,
-    val confidence: Float,
-    val params: Map<String, Int>,
-    val icon: String
-)
-
-data class ColorMode(
-    val id: String,
-    val name: String,
-    val description: String,
-    val color: Long,
-    val params: Map<String, Int>
-)
-
 enum class HasselbladEyeStage { SETUP, ANALYZING, RESULTS, PREVIEW, DONE }
 
 data class AnalysisResult(
     val sceneProfile: SceneProfile,
+    val alternativeScenes: List<SceneProfile>,
     val recommendedFilms: List<FilmPreset>,
     val masterTips: List<String>,
     val suggestedColorMode: String,
     val paramAdjustments: Map<String, Int>
-)
-
-private val allSceneModes: List<SceneMode> = listOf(
-    SceneMode("scene-portrait", "人像大师", "肤色自然 · 背景虚化 · 柔和色调", SceneCategory.PORTRAIT, 0.92f,
-        mapOf("tone" to -3, "saturation" to 10, "contrast" to -15, "colorTemp" to 5, "vignette" to 8), "👤"),
-    SceneMode("scene-landscape", "风景增强", "天空湛蓝 · 植被浓郁 · 层次分明", SceneCategory.LANDSCAPE, 0.88f,
-        mapOf("tone" to 5, "saturation" to 15, "contrast" to 12, "clarity" to 10, "highlights" to -5), "🏔️"),
-    SceneMode("scene-night", "夜景星空", "降噪保留细节 · 暗部纯净 · 星芒锐利", SceneCategory.NIGHT, 0.85f,
-        mapOf("tone" to -15, "contrast" to 25, "colorTemp" to -5, "sharpness" to 8, "clarity" to 5), "🌃"),
-    SceneMode("scene-food", "美食胶片", "色彩鲜艳 · 质感润泽 · 食欲诱惑", SceneCategory.FOOD, 0.87f,
-        mapOf("tone" to -5, "saturation" to 15, "colorTemp" to 10, "sharpness" to 5), "🍜"),
-    SceneMode("scene-urban", "城市街拍", "对比鲜明 · 质感硬朗 · 电影感强", SceneCategory.URBAN, 0.83f,
-        mapOf("tone" to -5, "saturation" to 5, "contrast" to 18, "cyanMagenta" to -8), "🏢"),
-    SceneMode("scene-still", "静物小品", "色彩细腻 · 质感丰富 · 主体突出", SceneCategory.STILL_LIFE, 0.86f,
-        mapOf("saturation" to 15, "tone" to 5, "sharpness" to 10, "clarity" to 8), "📦"),
-    SceneMode("scene-macro", "微距世界", "细节锐利 · 色彩鲜艳 · 背景虚化", SceneCategory.MACRO, 0.84f,
-        mapOf("sharpness" to 25, "contrast" to 15, "saturation" to 10, "clarity" to 10), "🔍"),
-    SceneMode("scene-event", "活动纪实", "抓拍精彩 · 动态丰富 · 真实感人", SceneCategory.EVENT, 0.82f,
-        mapOf("tone" to 5, "saturation" to 10, "colorTemp" to 10, "sharpness" to 5), "🎉"),
-    SceneMode("scene-natural", "自然色彩", "HNCS 3.0 哈苏自然色彩科学（默认推荐）", SceneCategory.UNKNOWN, 0.0f,
-        emptyMap(), "✨")
-)
-
-private val allColorModes: List<ColorMode> = listOf(
-    ColorMode("natural", "自然色彩", "HNCS 3.0 自然色彩，哈苏色彩克制哲学", 0xFFFF6B35,
-        mapOf("saturation" to 0, "contrast" to 5, "warmth" to 0, "clarity" to 0, "highlights" to 0)),
-    ColorMode("portrait", "人像肤色", "自然美化肤色，保留细节，柔和背景", 0xFFFF6B9D,
-        mapOf("saturation" to 5, "contrast" to 8, "warmth" to 3, "tone" to 3, "clarity" to 0)),
-    ColorMode("landscape", "风景色彩", "天空湛蓝，植被浓郁，层次分明", 0xFF4CAF50,
-        mapOf("saturation" to 12, "contrast" to 10, "warmth" to 5, "clarity" to 10, "tone" to 5)),
-    ColorMode("classic", "经典胶片", "复古胶片色彩质感，棕调浓郁", 0xFF9C27B0,
-        mapOf("saturation" to 8, "contrast" to 15, "warmth" to 8, "clarity" to 0, "tone" to -3, "vignette" to 10)),
-    ColorMode("bw", "哈苏黑白", "经典黑白摄影，高对比，暗部丰富", 0xFF212121,
-        mapOf("saturation" to -30, "contrast" to 20, "clarity" to 15, "shadows" to -5, "highlights" to -10)),
-    ColorMode("vivid", "鲜艳色彩", "鲜艳饱满的色彩表现，视觉冲击力强", 0xFFFF9800,
-        mapOf("saturation" to 20, "contrast" to 10, "warmth" to 0, "clarity" to 5)),
-    ColorMode("film-portra", "Portra 400", "柯达 Portra 400 胶片，温暖柔和人像胶片", 0xFFF4A460,
-        mapOf("saturation" to 8, "contrast" to 8, "warmth" to 10, "tone" to 5)),
-    ColorMode("film-cc", "CC 经典负片", "柯达 ColorPlus 200 风格，温暖怀旧色彩", 0xFFE4B060,
-        mapOf("saturation" to 10, "contrast" to 12, "warmth" to 8, "tone" to 3, "vignette" to 6)),
-    ColorMode("film-bw", "TX400 黑白", "Kodak Tri-X 400，高对比颗粒感黑白", 0xFF333333,
-        mapOf("saturation" to -30, "contrast" to 25, "clarity" to 18, "tone" to -5))
-)
-
-private fun paramsToMap(params: HasselbladParams): Map<String, Int> = mapOf(
-    "tone" to params.tone,
-    "saturation" to params.saturation,
-    "contrast" to params.contrast,
-    "colorTemp" to params.colorTemp,
-    "sharpness" to params.sharpness,
-    "vignette" to params.vignette,
-    "cyanMagenta" to params.cyanMagenta,
-    "highlights" to params.highlights,
-    "shadows" to params.shadows,
-    "clarity" to params.clarity
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -226,13 +159,16 @@ fun HasselbladScreen(
     val stage by viewModel.stage.collectAsState()
     val params by viewModel.params.collectAsState()
     val isParamsLocked by viewModel.isParamsLocked.collectAsState()
-    val selectedModeId by viewModel.selectedModeId.collectAsState()
+    val selectedSceneModeId by viewModel.selectedSceneModeId.collectAsState()
+    val selectedColorModeId by viewModel.selectedColorModeId.collectAsState()
     val analysisResult by viewModel.analysisResult.collectAsState()
     val apertureState by viewModel.apertureState.collectAsState()
     val originalBitmap by viewModel.originalBitmap.collectAsState()
     val previewBitmap by viewModel.previewBitmap.collectAsState()
+    val thumbnailPreview by viewModel.thumbnailPreview.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val exportFormat by viewModel.exportFormat.collectAsState()
+    val lastSavedUri by viewModel.lastSavedUri.collectAsState()
     val analysisSteps by viewModel.analysisSteps.collectAsState()
     val analysisMessage by viewModel.analysisMessage.collectAsState()
     val analysisProgress by viewModel.analysisProgress.collectAsState()
@@ -309,12 +245,18 @@ fun HasselbladScreen(
 
     fun onSceneModeSelected(sceneMode: SceneMode) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.updateSelectedMode(sceneMode.id, sceneMode.params)
+        viewModel.updateSelectedSceneMode(sceneMode.id, sceneMode.params)
+        if (isParamsLocked) {
+            Toast.makeText(context, "参数已锁定：场景模式仅作参考，未覆盖当前参数", Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun onColorModeSelected(colorMode: ColorMode) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.updateSelectedMode(colorMode.id, colorMode.params)
+        viewModel.updateSelectedColorMode(colorMode.id, colorMode.params)
+        if (isParamsLocked) {
+            Toast.makeText(context, "参数已锁定：色彩模式仅作参考，未覆盖当前参数", Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun onParamChanged(key: String, value: Int) {
@@ -409,30 +351,20 @@ fun HasselbladScreen(
         ) { currentStage: HasselbladEyeStage ->
             when (currentStage) {
                 HasselbladEyeStage.SETUP -> SetupContent(
-                    sceneModes = allSceneModes,
-                    colorModes = allColorModes,
-                    selectedModeId = selectedModeId,
-                    params = params,
-                    isParamsLocked = isParamsLocked,
-                    recentShots = recentShots,
-                    onSceneModeSelected = ::onSceneModeSelected,
-                    onColorModeSelected = ::onColorModeSelected,
-                    onParamChanged = ::onParamChanged,
-                    onParamsLockedChanged = { onToggleLock() },
-                    onLaunchCamera = ::launchCamera,
-                    onPickFromGallery = ::onPickFromGallery,
-                    onRecentShotClick = { uri ->
-                        scope.launch {
-                            val bitmap = loadBitmapFromUri(context, uri)
-                            if (bitmap != null) {
-                                viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
-                            } else {
-                                Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
-                            }
+                recentShots = recentShots,
+                onLaunchCamera = ::launchCamera,
+                onPickFromGallery = ::onPickFromGallery,
+                onRecentShotClick = { uri ->
+                    scope.launch {
+                        val bitmap = loadBitmapFromUri(context, uri)
+                        if (bitmap != null) {
+                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                        } else {
+                            Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
                         }
-                    },
-                    onResetParams = ::onResetParams
-                )
+                    }
+                }
+            )
 
                 HasselbladEyeStage.ANALYZING -> AnalyzingContent(
                     apertureState = apertureState,
@@ -448,17 +380,30 @@ fun HasselbladScreen(
                 HasselbladEyeStage.RESULTS -> ResultsContent(
                     sceneModes = allSceneModes,
                     colorModes = allColorModes,
-                    selectedModeId = selectedModeId,
+                    selectedSceneModeId = selectedSceneModeId,
+                    selectedColorModeId = selectedColorModeId,
                     params = params,
                     isParamsLocked = isParamsLocked,
                     originalBitmap = originalBitmap,
+                    thumbnailPreview = thumbnailPreview,
                     result = analysisResult,
                     onSceneModeSelected = ::onSceneModeSelected,
                     onColorModeSelected = ::onColorModeSelected,
                     onParamChanged = ::onParamChanged,
                     onParamsLockedChanged = { onToggleLock() },
                     onPreviewEffect = ::onPreviewEffect,
-                    onResetParams = ::onResetParams
+                    onResetParams = ::onResetParams,
+                    onFilmClick = { film ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.applyFilmPreset(film.id)
+                    },
+                    onFineGrainedSceneSelected = { sceneProfile ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.applyFineGrainedScene(sceneProfile)
+                        if (isParamsLocked) {
+                            Toast.makeText(context, "参数已锁定：仅切换参考模式，未覆盖当前参数", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 )
 
                 HasselbladEyeStage.PREVIEW -> PreviewContent(
@@ -475,6 +420,25 @@ fun HasselbladScreen(
 
                 HasselbladEyeStage.DONE -> DoneContent(
                     onShare = ::onShareImage,
+                    onViewImage = {
+                        val uri = lastSavedUri
+                        if (uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(uri, "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "无法打开相册", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "图片未保存", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onEditAnother = {
+                        viewModel.clear()
+                    },
                     onRetake = ::onRetake,
                     onBack = onBack
                 )
@@ -483,22 +447,80 @@ fun HasselbladScreen(
     }
 }
 
-// ==================== 辅助组件：GlassCard ====================
+// ==================== 辅助组件：GlassCard / ColorOS 16 动效 ====================
+
+/**
+ * P2-14：ColorOS 16 风格的入场动效修饰符
+ * 给卡片添加淡入 + 轻微上滑的弹簧入场效果。
+ */
+@Composable
+private fun Modifier.colorOsEntrance(delayMillis: Int = 0): Modifier {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(delayMillis.toLong())
+        visible = true
+    }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 500, easing = androidx.compose.animation.core.EaseOutCubic),
+        label = "entrance_alpha"
+    )
+    val offsetY by animateFloatAsState(
+        targetValue = if (visible) 0f else 24f,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 350f),
+        label = "entrance_offset"
+    )
+    return this.graphicsLayer {
+        this.alpha = alpha
+        translationY = offsetY
+    }
+}
 
 @Composable
 private fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    // P2-14：ColorOS 16 液态玻璃近似效果（多层渐变 + 高光描边）
+    val gradientBrush = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.25f),
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+    )
+    val highlightBrush = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.12f),
+            Color.White.copy(alpha = 0.02f),
+            Color.Transparent
+        )
+    )
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = BorderStroke(
+            0.5.dp,
+            Brush.linearGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.25f),
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                    Color.White.copy(alpha = 0.15f)
+                )
+            )
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp), content = content)
+        Box(
+            modifier = Modifier
+                .background(gradientBrush)
+                .background(highlightBrush)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), content = content)
+        }
     }
 }
 
@@ -506,20 +528,10 @@ private fun GlassCard(
 
 @Composable
 private fun SetupContent(
-    sceneModes: List<SceneMode>,
-    colorModes: List<ColorMode>,
-    selectedModeId: String,
-    params: HasselbladParams,
-    isParamsLocked: Boolean,
     recentShots: List<Uri>,
-    onSceneModeSelected: (SceneMode) -> Unit,
-    onColorModeSelected: (ColorMode) -> Unit,
-    onParamChanged: (String, Int) -> Unit,
-    onParamsLockedChanged: (Boolean) -> Unit,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
-    onRecentShotClick: (Uri) -> Unit,
-    onResetParams: () -> Unit
+    onRecentShotClick: (Uri) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -527,60 +539,6 @@ private fun SetupContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { HeroCard() }
-
-        item {
-            SectionTitle(title = "场景模式")
-        }
-
-        item {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(sceneModes) { scene ->
-                    SceneModeChip(
-                        sceneMode = scene,
-                        isSelected = selectedModeId == scene.id,
-                        onClick = { onSceneModeSelected(scene) }
-                    )
-                }
-            }
-        }
-
-        item {
-            SectionTitle(title = "色彩模式")
-        }
-
-        item {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(colorModes) { mode ->
-                    ColorModeChip(
-                        mode = mode,
-                        isSelected = selectedModeId == mode.id,
-                        onClick = { onColorModeSelected(mode) }
-                    )
-                }
-            }
-        }
-
-        item {
-            SectionTitle(title = "大师参数调节")
-        }
-
-        item {
-            ParamsPanel(
-                params = params,
-                isParamsLocked = isParamsLocked,
-                onParamChanged = onParamChanged,
-                onParamsLockedChanged = onParamsLockedChanged,
-                onResetParams = onResetParams
-            )
-        }
-
-        item {
-            SectionTitle(title = "哈苏之眼")
-        }
 
         item {
             ShutterCard(
@@ -781,11 +739,18 @@ private fun ParamsPanel(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "锁定参数",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                )
+                Column {
+                    Text(
+                        text = "锁定当前参数",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = "开启后切换场景/色彩模式不会覆盖已调参数",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    )
+                }
             }
             Switch(
                 checked = isParamsLocked,
@@ -943,7 +908,9 @@ private fun ShutterCard(
                 onClick = onLaunchCamera,
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
                 shape = CircleShape,
-                modifier = Modifier.size(88.dp),
+                modifier = Modifier
+                    .size(88.dp)
+                    .graphicsLayer { shadowElevation = 20.dp.toPx() },
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
@@ -1299,17 +1266,21 @@ private fun AnalysisStepRow(step: AnalysisStep) {
 private fun ResultsContent(
     sceneModes: List<SceneMode>,
     colorModes: List<ColorMode>,
-    selectedModeId: String,
+    selectedSceneModeId: String,
+    selectedColorModeId: String,
     params: HasselbladParams,
     isParamsLocked: Boolean,
     originalBitmap: Bitmap?,
+    thumbnailPreview: Bitmap?,
     result: AnalysisResult?,
     onSceneModeSelected: (SceneMode) -> Unit,
     onColorModeSelected: (ColorMode) -> Unit,
     onParamChanged: (String, Int) -> Unit,
     onParamsLockedChanged: (Boolean) -> Unit,
     onPreviewEffect: () -> Unit,
-    onResetParams: () -> Unit
+    onResetParams: () -> Unit,
+    onFilmClick: (FilmPreset) -> Unit,
+    onFineGrainedSceneSelected: (SceneProfile) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1318,11 +1289,24 @@ private fun ResultsContent(
     ) {
         if (result != null) {
             item {
-                ResultPhotoCard(bitmap = originalBitmap)
+                ResultPhotoCard(bitmap = originalBitmap, preview = thumbnailPreview)
             }
 
             item {
                 SceneRecognitionCard(profile = result.sceneProfile)
+            }
+
+            // P1-10：展示 Top-3 备选场景，支持一键切换
+            if (result.alternativeScenes.isNotEmpty()) {
+                item {
+                    SectionTitle(title = "备选场景")
+                }
+                item {
+                    AlternativeScenesRow(
+                        alternatives = result.alternativeScenes,
+                        onSceneSelected = onFineGrainedSceneSelected
+                    )
+                }
             }
 
             if (result.masterTips.isNotEmpty()) {
@@ -1338,7 +1322,10 @@ private fun ResultsContent(
                 SectionTitle(title = "推荐胶片")
             }
             item {
-                RecommendedFilmsRow(films = result.recommendedFilms)
+                RecommendedFilmsRow(
+                    films = result.recommendedFilms,
+                    onFilmClick = onFilmClick
+                )
             }
 
             item {
@@ -1349,11 +1336,20 @@ private fun ResultsContent(
                     items(sceneModes) { scene ->
                         SceneModeChip(
                             sceneMode = scene,
-                            isSelected = selectedModeId == scene.id,
+                            isSelected = selectedSceneModeId == scene.id,
                             onClick = { onSceneModeSelected(scene) }
                         )
                     }
                 }
+            }
+
+            // P1-10：当前粗粒度模式展开 2-4 个细分子模式
+            item {
+                SubSceneModesPanel(
+                    selectedSceneModeId = selectedSceneModeId,
+                    currentSceneId = result.sceneProfile.id,
+                    onSceneSelected = onFineGrainedSceneSelected
+                )
             }
 
             item {
@@ -1364,7 +1360,7 @@ private fun ResultsContent(
                     items(colorModes) { mode ->
                         ColorModeChip(
                             mode = mode,
-                            isSelected = selectedModeId == mode.id,
+                            isSelected = selectedColorModeId == mode.id,
                             onClick = { onColorModeSelected(mode) }
                         )
                     }
@@ -1430,11 +1426,12 @@ private fun ResultsContent(
 }
 
 @Composable
-private fun ResultPhotoCard(bitmap: Bitmap?) {
+private fun ResultPhotoCard(bitmap: Bitmap?, preview: Bitmap?) {
+    val displayBitmap = preview ?: bitmap
     GlassCard {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "原图预览",
+                text = if (preview != null) "实时预览" else "原图预览",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -1448,10 +1445,10 @@ private fun ResultPhotoCard(bitmap: Bitmap?) {
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (bitmap != null) {
+                if (displayBitmap != null) {
                     Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "原图",
+                        bitmap = displayBitmap.asImageBitmap(),
+                        contentDescription = if (preview != null) "实时预览" else "原图",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )
@@ -1543,7 +1540,10 @@ private fun MasterTipsCard(tips: List<String>) {
 }
 
 @Composable
-private fun RecommendedFilmsRow(films: List<FilmPreset>) {
+private fun RecommendedFilmsRow(
+    films: List<FilmPreset>,
+    onFilmClick: (FilmPreset) -> Unit
+) {
     if (films.isEmpty()) {
         GlassCard {
             Text(
@@ -1556,15 +1556,20 @@ private fun RecommendedFilmsRow(films: List<FilmPreset>) {
     }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(films) { film ->
-            FilmCard(film = film)
+            FilmCard(film = film, onClick = { onFilmClick(film) })
         }
     }
 }
 
 @Composable
-private fun FilmCard(film: FilmPreset) {
+private fun FilmCard(
+    film: FilmPreset,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.width(200.dp),
+        modifier = Modifier
+            .width(200.dp)
+            .hapticClickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -1616,6 +1621,128 @@ private fun FilmCard(film: FilmPreset) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
+        }
+    }
+}
+
+// P1-10：备选场景横向列表
+@Composable
+private fun AlternativeScenesRow(
+    alternatives: List<SceneProfile>,
+    onSceneSelected: (SceneProfile) -> Unit
+) {
+    val top3 = alternatives.take(3)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(top3) { scene ->
+            AlternativeSceneCard(scene = scene, onClick = { onSceneSelected(scene) })
+        }
+    }
+}
+
+@Composable
+private fun AlternativeSceneCard(
+    scene: SceneProfile,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        modifier = Modifier.width(160.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = scene.category.icon,
+                fontSize = 24.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = scene.name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "置信度 ${(scene.confidence * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = HasselbladOrange
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = scene.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// P1-10：当前粗粒度模式下的细分子模式面板
+@Composable
+private fun SubSceneModesPanel(
+    selectedSceneModeId: String,
+    currentSceneId: String,
+    onSceneSelected: (SceneProfile) -> Unit
+) {
+    val subScenes = getSubSceneProfiles(selectedSceneModeId)
+    if (subScenes.isEmpty()) return
+
+    // 优先展示 2-4 个细分子模式，当前识别到的排最前
+    val sorted = subScenes.sortedByDescending { it.id == currentSceneId }
+    val displayScenes = sorted.take(4)
+
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "细分子模式",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(displayScenes) { scene ->
+                    val isCurrent = scene.id == currentSceneId
+                    FilterChip(
+                        selected = isCurrent,
+                        onClick = { onSceneSelected(scene) },
+                        label = {
+                            Column {
+                                Text(
+                                    text = scene.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                                )
+                                Text(
+                                    text = scene.description,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = HasselbladOrange.copy(alpha = 0.15f),
+                            selectedLabelColor = HasselbladOrange
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            selectedBorderColor = HasselbladOrange,
+                            enabled = true,
+                            selected = isCurrent
+                        )
+                    )
+                }
+            }
         }
     }
 }
@@ -1744,6 +1871,7 @@ private fun PreviewContent(
 
 @Composable
 private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
+    val haptic = LocalHapticFeedback.current
     GlassCard {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
@@ -1767,63 +1895,77 @@ private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
-                            detectDragGestures { _, dragAmount ->
+                            detectDragGestures(
+                                onDragStart = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                                onDragEnd = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            ) { _, dragAmount ->
                                 splitFraction = (splitFraction + dragAmount.x / maxW).coerceIn(0f, 1f)
                             }
                         }
                 ) {
+                    // 底层：处理后图（右侧）
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (processed != null) {
+                            Image(
+                                bitmap = processed.asImageBitmap(),
+                                contentDescription = "哈苏处理",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+
+                    // 上层裁剪：原图（左侧）
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth(splitFraction)
+                            .fillMaxHeight()
                     ) {
                         if (original != null) {
                             Image(
                                 bitmap = original.asImageBitmap(),
                                 contentDescription = "原图",
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
+                                contentScale = ContentScale.Crop
                             )
                         }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(splitFraction)
-                            .fillMaxHeight()
-                    ) {
-                        if (processed != null) {
-                            Image(
-                                bitmap = processed.asImageBitmap(),
-                                contentDescription = "处理后",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                    }
-
+                    // 分割线
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
                             .width(3.dp)
-                            .offset(x = (maxW * splitFraction - 1.5f).dp)
+                            .offset(x = with(LocalDensity.current) { (maxW * splitFraction - 1.5f).toDp() })
                             .background(HasselbladOrange)
                     )
 
+                    // 拖动圆点 + 百分比
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
                             .offset(
-                                x = (maxW * splitFraction - 16).dp,
-                                y = (maxH / 2 - 16).dp
+                                x = with(LocalDensity.current) { (maxW * splitFraction - 16).toDp() },
+                                y = with(LocalDensity.current) { (maxH / 2 - 16).toDp() }
                             )
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(HasselbladOrange)
                             .border(2.dp, Color.White, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "⇄", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${(splitFraction * 100).toInt()}%",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
+                    // 标签：左侧原图，右侧哈苏
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -1832,7 +1974,7 @@ private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
                             .background(Color.Black.copy(alpha = 0.6f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "处理后", color = Color.White, fontSize = 11.sp)
+                        Text(text = "原图 ORIGINAL", color = Color.White, fontSize = 11.sp)
                     }
 
                     Box(
@@ -1840,10 +1982,10 @@ private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black.copy(alpha = 0.6f))
+                            .background(HasselbladOrange.copy(alpha = 0.9f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "原图", color = Color.White, fontSize = 11.sp)
+                        Text(text = "哈苏 HASSELBLAD", color = Color.White, fontSize = 11.sp)
                     }
                 }
             }
@@ -1964,6 +2106,8 @@ private fun ExportFormatSelector(
 @Composable
 private fun DoneContent(
     onShare: () -> Unit,
+    onViewImage: () -> Unit,
+    onEditAnother: () -> Unit,
     onRetake: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -2029,22 +2173,65 @@ private fun DoneContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onViewImage,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                border = BorderStroke(1.dp, HasselbladOrange)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "查看图片", color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+            }
+
+            OutlinedButton(
+                onClick = onEditAnother,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                border = BorderStroke(1.dp, HasselbladOrange)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "再调一张", color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         OutlinedButton(
             onClick = onRetake,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
-            border = BorderStroke(1.dp, HasselbladOrange)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
         ) {
             Icon(
                 imageVector = Icons.Default.CameraAlt,
                 contentDescription = null,
-                tint = HasselbladOrange,
+                tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "重新拍摄", color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+            Text(text = "重新拍摄", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -2086,7 +2273,7 @@ private fun DoneContent(
 private suspend fun loadBitmapFromUri(
     context: android.content.Context,
     uri: Uri,
-    maxDimension: Int = 0
+    maxDimension: Int = 2048
 ): Bitmap? = withContext(Dispatchers.IO) {
     try {
         val options = android.graphics.BitmapFactory.Options().apply {

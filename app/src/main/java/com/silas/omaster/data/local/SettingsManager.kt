@@ -269,18 +269,6 @@ class SettingsManager private constructor(private val context: Context) {
             }
         }
 
-    // 哈苏之眼开关（带 StateFlow 支持）
-    // v1.6.0 默认开启：所有核心功能默认启用
-    private val _isAISceneRecognitionEnabledFlow = MutableStateFlow(getDataSync(KEY_AI_SCENE_ENABLED, true))
-    val isAISceneRecognitionEnabledFlow: StateFlow<Boolean> = _isAISceneRecognitionEnabledFlow.asStateFlow()
-
-    var isAISceneRecognitionEnabled: Boolean
-        get() = _isAISceneRecognitionEnabledFlow.value
-        set(value) {
-            setDataSync(KEY_AI_SCENE_ENABLED, value)
-            _isAISceneRecognitionEnabledFlow.value = value
-        }
-
     // AI 微调开关
     // v1.6.0 默认开启：所有核心功能默认启用
     var isAIFineTuneEnabled: Boolean

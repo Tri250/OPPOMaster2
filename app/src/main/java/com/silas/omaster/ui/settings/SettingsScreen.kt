@@ -94,7 +94,9 @@ fun SettingsScreen(
     onNavigateToTerms: (() -> Unit)? = null,
     onNavigateToPresetSourceManager: (() -> Unit)? = null,
     onNavigateToUpdateChannel: (() -> Unit)? = null,
-    onNavigateToApiConfig: (() -> Unit)? = null
+    onNavigateToApiConfig: (() -> Unit)? = null,
+    onNavigateToThemeSettings: (() -> Unit)? = null,
+    onNavigateToSceneAnalysisReport: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -256,7 +258,7 @@ fun SettingsScreen(
                             .background(currentTheme.primaryColor)
                     )
                 },
-                onClick = { showThemeDialog = true }
+                onClick = { onNavigateToThemeSettings?.invoke() }
             )
         }
 

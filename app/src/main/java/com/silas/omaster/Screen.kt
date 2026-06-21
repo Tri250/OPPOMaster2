@@ -38,9 +38,6 @@ sealed class Screen {
     data object AIFineTune : Screen()
 
     @Serializable
-    data object SceneRecognition : Screen()
-
-    @Serializable
     data class WatermarkEditor(val imagePath: String? = null) : Screen()
 
     @Serializable
@@ -75,4 +72,10 @@ sealed class Screen {
 
     @Serializable
     data object ApiConfig : Screen()
+
+    @Serializable
+    data object ThemeSettings : Screen()
+
+    @Serializable
+    data object SceneAnalysisReport : Screen()
 }

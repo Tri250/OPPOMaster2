@@ -67,7 +67,18 @@ class MasterInferenceEngine private constructor(context: Context) {
     suspend fun analyzeImage(
         bitmap: Bitmap,
         imagePath: String? = null
-    ): SceneProfile = withContext(Dispatchers.Default) {
+    ): SceneProfile = analyzeImageWithDetails(bitmap, imagePath).profile
+
+    /**
+     * 分析图片并生成完整场景分析详情（含主场景 + 备选场景）。
+     *
+     * P1-10：统一场景识别模型与 UI 模式，将启发式分析器输出的细粒度场景
+     * 以及 Top-3 备选场景完整返回给上层，供结果页展开与切换。
+     */
+    suspend fun analyzeImageWithDetails(
+        bitmap: Bitmap,
+        imagePath: String? = null
+    ): SceneAnalysisDetail = withContext(Dispatchers.Default) {
         // 提取EXIF数据
         val exifData = imagePath?.let { extractExifData(it) }
 
@@ -90,13 +101,26 @@ class MasterInferenceEngine private constructor(context: Context) {
         }
 
         // 更新扩展数据
-        sceneProfile.copy(
+        val profile = sceneProfile.copy(
             exifData = exifData,
             histogramData = convertToHistogramData(analysisResult.colorProfile),
             faceData = faceData,
             confidence = analysisResult.confidence
         )
+
+        SceneAnalysisDetail(
+            profile = profile,
+            alternatives = analysisResult.alternativeScenes
+        )
     }
+
+    /**
+     * 场景分析详情
+     */
+    data class SceneAnalysisDetail(
+        val profile: SceneProfile,
+        val alternatives: List<SceneProfile>
+    )
 
     /**
      * 使用 ML Kit 真实人脸检测

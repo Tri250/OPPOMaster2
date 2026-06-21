@@ -100,7 +100,6 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit,
-    onNavigateToSceneRecognition: () -> Unit = {},
     onNavigateToAIFineTune: () -> Unit = {},
     onNavigateToWatermarkEditor: () -> Unit = {},
     onNavigateToSmartOptimize: () -> Unit = {},

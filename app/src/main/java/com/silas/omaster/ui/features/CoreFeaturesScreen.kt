@@ -99,7 +99,6 @@ data class FeatureData(
  */
 @Composable
 fun CoreFeaturesScreen(
-    onNavigateToSceneRecognition: () -> Unit,
     onNavigateToAIFineTune: () -> Unit,
     onNavigateToWatermarkEditor: () -> Unit,
     onNavigateToSmartOptimize: () -> Unit,

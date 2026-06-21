@@ -47,7 +47,6 @@ import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
-import com.silas.omaster.ui.features.AISceneRecognitionScreen
 import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
@@ -57,12 +56,14 @@ import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
 import com.silas.omaster.ui.subscription.SubscriptionScreen
+import com.silas.omaster.ui.screens.SceneAnalysisReportScreen
+import com.silas.omaster.ui.settings.ApiConfigScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
 import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
+import com.silas.omaster.ui.settings.ThemeSettingsScreen
 import com.silas.omaster.ui.settings.UpdateChannelScreen
-import com.silas.omaster.ui.settings.ApiConfigScreen
 import com.silas.omaster.util.JsonUtil
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.CoroutineScope
@@ -160,7 +161,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToCreate = {
                         navController.navigate(Screen.PresetSelection)
                     },
-                    onNavigateToSceneRecognition = { navController.navigate(Screen.SceneRecognition) },
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
@@ -246,7 +246,9 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
                     onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
                     onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) },
-                    onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) }
+                    onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) },
+                    onNavigateToThemeSettings = { navController.navigate(Screen.ThemeSettings) },
+                    onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) }
                 )
             }
 
@@ -273,7 +275,6 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.CoreFeatures> {
                 CoreFeaturesScreen(
-                    onNavigateToSceneRecognition = { navController.navigate(Screen.SceneRecognition) },
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
@@ -288,10 +289,6 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.AIFineTune> {
                 AIFineTuneScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<Screen.SceneRecognition> {
-                AISceneRecognitionScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.WatermarkEditor> { backStackEntry ->
@@ -378,6 +375,25 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.ApiConfig> {
                 ApiConfigScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.ThemeSettings> {
+                ThemeSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onApply = { settings ->
+                        // 应用主题设置并持久化
+                        val manager = SettingsManager.getInstance(context)
+                        manager.applyThemeSettings(settings)
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable<Screen.SceneAnalysisReport> {
+                SceneAnalysisReportScreen(
+                    onBack = { navController.popBackStack() },
+                    onViewDetails = { /* 可选：跳转详情页 */ }
+                )
             }
         }
 
