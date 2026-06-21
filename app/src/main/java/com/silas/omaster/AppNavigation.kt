@@ -46,7 +46,6 @@ import com.silas.omaster.ui.create.UniversalCreatePresetViewModelFactory
 import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
-import com.silas.omaster.ui.featured.FeaturedPresetsScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.AISceneRecognitionScreen
 import com.silas.omaster.ui.features.CloudSyncScreen
@@ -57,6 +56,7 @@ import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
+import com.silas.omaster.ui.subscription.SubscriptionScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
 import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.settings.SettingsScreen
@@ -265,13 +265,8 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.Subscription> {
-                FeaturedPresetsScreen(
-                    onNavigateToDetail = { preset ->
-                        navController.navigate(Screen.Detail(preset.id ?: ""))
-                    },
-                    onApplyPreset = { preset ->
-                        applyPresetAndToast(context, snackbarHostState, coroutineScope, preset)
-                    },
+                SubscriptionScreen(
+                    onBack = { navController.popBackStack() },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
             }
