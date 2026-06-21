@@ -49,15 +49,45 @@ class SubscriptionManager private constructor(context: Context) {
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
-            // 首次使用，添加默认订阅
-            val defaultSub = Subscription(
-                url = UpdateConfigManager.DEFAULT_PRESET_URL,
-                name = "官方内置预设",
-                author = "@OMaster",
-                build = 1,
-                isEnabled = true
+            // 首次使用，添加默认订阅（包含官方预设 + 4个品牌社区预设）
+            val defaultSubs = listOf(
+                Subscription(
+                    url = UpdateConfigManager.DEFAULT_PRESET_URL,
+                    name = "官方内置预设",
+                    author = "@OMaster",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json",
+                    name = "OPPO 社区预设",
+                    author = "@OMaster-Community",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json",
+                    name = "realme 社区预设",
+                    author = "@OMaster-Community",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json",
+                    name = "vivo 社区预设",
+                    author = "@OMaster-Community",
+                    build = 1,
+                    isEnabled = true
+                ),
+                Subscription(
+                    url = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json",
+                    name = "荣耀社区预设",
+                    author = "@OMaster-Community",
+                    build = 1,
+                    isEnabled = true
+                )
             )
-            _subscriptionsFlow.value = listOf(defaultSub)
+            _subscriptionsFlow.value = defaultSubs
             saveSubscriptions()
         }
     }
@@ -105,13 +135,18 @@ class SubscriptionManager private constructor(context: Context) {
             android.util.Log.w("SubscriptionManager", "URL为空,拒绝添加订阅")
             return
         }
-        // HTTPS 安全校验
-        if (!url.lowercase().startsWith("https://")) {
-            android.util.Log.w("SubscriptionManager", "非HTTPS URL,拒绝添加: $url")
+        // 自动补全协议头
+        var normalizedUrl = url.trim()
+        if (!normalizedUrl.lowercase().startsWith("http://") && !normalizedUrl.lowercase().startsWith("https://")) {
+            normalizedUrl = "https://$normalizedUrl"
+        }
+        // 允许 HTTP 和 HTTPS 协议（CDN 链接可能使用 HTTP）
+        if (!normalizedUrl.lowercase().startsWith("http://") && !normalizedUrl.lowercase().startsWith("https://")) {
+            android.util.Log.w("SubscriptionManager", "非法URL协议,拒绝添加: $normalizedUrl")
             return
         }
-        if (_subscriptionsFlow.value.any { it.url == url }) return
-        val newSub = Subscription(url = url, name = name, author = author, build = build)
+        if (_subscriptionsFlow.value.any { it.url == normalizedUrl }) return
+        val newSub = Subscription(url = normalizedUrl, name = name, author = author, build = build)
         _subscriptionsFlow.value = _subscriptionsFlow.value + newSub
         saveSubscriptions()
     }

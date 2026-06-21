@@ -277,7 +277,7 @@ private fun FeaturedHeader(
     ) {
         Column {
             Text(
-                text = "精选推荐",
+                text = "作品收集",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground

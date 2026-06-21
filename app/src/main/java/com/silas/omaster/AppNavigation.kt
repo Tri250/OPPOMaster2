@@ -49,7 +49,7 @@ import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
-import com.silas.omaster.ui.features.CloudSyncScreen
+
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
@@ -350,10 +350,6 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.HasselbladColor> {
                 HasselbladScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<Screen.CloudSync> {
-                CloudSyncScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.NotificationSettings> {

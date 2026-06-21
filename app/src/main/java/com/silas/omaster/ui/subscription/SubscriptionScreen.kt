@@ -516,7 +516,16 @@ fun AddSubscriptionDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (url.isNotEmpty()) onConfirm(url) },
+                onClick = {
+                    if (url.isNotEmpty()) {
+                        // 自动补全协议头
+                        var normalized = url.trim()
+                        if (!normalized.lowercase().startsWith("http://") && !normalized.lowercase().startsWith("https://")) {
+                            normalized = "https://$normalized"
+                        }
+                        onConfirm(normalized)
+                    }
+                },
                 enabled = url.isNotEmpty()
             ) {
                 Text(stringResource(R.string.confirm))

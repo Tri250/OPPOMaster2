@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
+import androidx.core.content.ContextCompat
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -105,9 +106,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.io.File
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.FilmPreset
 import com.silas.omaster.model.HasselbladParams
@@ -2304,16 +2305,19 @@ private suspend fun loadBitmapFromUri(
 private fun createTempImageUri(context: android.content.Context): Uri {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Hasselblad").apply {
+        // 使用 cacheDir/camera 目录，与 file_paths.xml 中配置的 cache-path 保持一致
+        val storageDir = File(context.cacheDir, "camera").apply {
             if (!exists()) mkdirs()
         }
-        val imageFile = File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
+        val imageFile = File(storageDir, "IMG_${timeStamp}_.jpg")
+        imageFile.createNewFile()
         FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             imageFile
         )
     } catch (e: Exception) {
+        android.util.Log.e("HasselbladScreen", "创建相机临时文件失败", e)
         Uri.EMPTY
     }
 }
