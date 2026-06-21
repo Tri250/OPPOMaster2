@@ -446,25 +446,22 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * PM-009: 预设数据导入（云端）
+     * PM-009: 预设数据导入（订阅源）
      *
      * 流程：尝试从 jsDelivr CDN 拉取所有启用品牌的预设 JSON
      * - 任一品牌成功：合并入内存、写入本地缓存、返回成功
      * - 全部失败：返回失败，并保留已有缓存
      * - 内部带有重试与指数退避
      */
-    suspend fun syncFromCloud(): Result<SyncResult> = withContext(Dispatchers.IO) {
+    suspend fun syncFromSubscriptions(): Result<SyncResult> = withContext(Dispatchers.IO) {
         var lastError: Throwable? = null
         val maxRetries = 3
 
         for (attempt in 1..maxRetries) {
             try {
-                Log.d(TAG, "云同步第 ${attempt}/${maxRetries} 次尝试")
+                Log.d(TAG, "订阅同步第 ${attempt}/${maxRetries} 次尝试")
                 val result = fetchFromCDN()
                 if (result.isSuccess) {
-                    settingsManager.lastSyncTime = System.currentTimeMillis()
-                    settingsManager.cloudSyncStatus =
-                        com.silas.omaster.data.local.CloudSyncStatus.SYNCED
                     return@withContext result
                 }
                 lastError = result.exceptionOrNull()
@@ -479,8 +476,6 @@ class PresetRepository private constructor(context: Context) {
             }
         }
 
-        settingsManager.cloudSyncStatus =
-            com.silas.omaster.data.local.CloudSyncStatus.ERROR
         Result.failure(lastError ?: Exception("同步失败：达到最大重试次数"))
     }
 
@@ -488,10 +483,10 @@ class PresetRepository private constructor(context: Context) {
      * 从 jsDelivr CDN 拉取所有启用品牌的预设数据
      */
     private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
-        val cloudUrls = settingsManager.cloudPresetUrls
+        val cloudUrls = UrlConstants.PRESET_SOURCE_URLS
         if (cloudUrls.isEmpty()) {
-            Log.w(TAG, "未配置云端数据源 URL，跳过同步")
-            return@withContext Result.failure(IllegalStateException("未配置云端数据源 URL"))
+            Log.w(TAG, "未配置数据源 URL，跳过同步")
+            return@withContext Result.failure(IllegalStateException("未配置数据源 URL"))
         }
 
         val imported = mutableListOf<PresetItem>()
@@ -840,22 +835,10 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * 在后台尝试一次云同步，结果合并到 _presets 并写回缓存
+     * 在后台尝试一次订阅同步，结果合并到 _presets 并写回缓存
      * 失败时静默降级，不影响主流程
      */
     private suspend fun triggerBackgroundSync(brand: String?) {
-        if (!settingsManager.isCloudSyncEnabled) {
-            Log.d(TAG, "云同步开关未启用，跳过后台同步")
-            return
-        }
-        // 节流：距上次同步不足 5 分钟则跳过
-        val now = System.currentTimeMillis()
-        val lastSync = settingsManager.lastSyncTime
-        if (lastSync > 0 && now - lastSync < BACKGROUND_SYNC_INTERVAL_MS) {
-            Log.d(TAG, "距上次同步不足 ${BACKGROUND_SYNC_INTERVAL_MS / 1000}s，跳过")
-            return
-        }
-
         try {
             val result = fetchFromCDN()
             result.onSuccess { syncResult ->

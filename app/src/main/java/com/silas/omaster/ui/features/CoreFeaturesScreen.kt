@@ -107,7 +107,6 @@ fun CoreFeaturesScreen(
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToLUTShare: () -> Unit,
     onNavigateToHasselbladColor: () -> Unit,
-    onNavigateToCloudSync: () -> Unit,
     onNavigateToSceneAnalysisReport: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
@@ -120,7 +119,6 @@ fun CoreFeaturesScreen(
     var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
     var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
     var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
-    var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
 
     // 定义所有功能数据 - 同步Web端features数组
     val allFeatures = remember {
@@ -220,24 +218,13 @@ fun CoreFeaturesScreen(
                 ),
                 showToggle = false
             ),
-            FeatureData(
-                id = "cloud-sync",
-                title = "云同步",
-                subtitle = "多平台云同步，数据永不丢失",
-                icon = Icons.Default.Cloud,
-                gradientColors = listOf(Color(0xFF1A237E), Color(0xFF303F9F)),
-                description = FeatureDescription(
-                    desc = "多平台云同步，数据永不丢失",
-                    tips = listOf("OPPO", "realme", "vivo", "荣耀")
-                )
-            )
         )
     }
 
     // 功能分类 - 同步Web端
     val aiFeatures = allFeatures.slice(0..2)
     val toolFeatures = allFeatures.slice(3..4)
-    val brandFeatures = allFeatures.slice(5..8)
+    val brandFeatures = allFeatures.slice(5..7)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -375,10 +362,9 @@ fun CoreFeaturesScreen(
             item {
                 val isEnabled = when (feature.id) {
                     "hasselblad" -> hasselbladEnabled
-                    "cloud-sync" -> cloudSyncEnabled
                     else -> true
                 }
-                
+
                 FeatureCard(
                     feature = feature,
                     isEnabled = isEnabled,
@@ -389,10 +375,6 @@ fun CoreFeaturesScreen(
                                 hasselbladEnabled = enabled
                                 settingsManager.isHasselbladColorEnabled = enabled
                             }
-                            "cloud-sync" -> {
-                                cloudSyncEnabled = enabled
-                                settingsManager.isCloudSyncEnabled = enabled
-                            }
                         }
                     },
                     onClick = {
@@ -400,7 +382,6 @@ fun CoreFeaturesScreen(
                             "lut-share" -> onNavigateToLUTShare()
                             "hasselblad" -> onNavigateToHasselbladColor()
                             "scene-report" -> onNavigateToSceneAnalysisReport()
-                            "cloud-sync" -> onNavigateToCloudSync()
                         }
                     }
                 )

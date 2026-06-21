@@ -150,7 +150,7 @@ class AIFineTuneManager private constructor(context: Context) {
         return ContextCompat.checkSelfPermission(
             appContext,
             android.Manifest.permission.INTERNET
-        ) == PackageManager.PERMISSION_GRANTED || !settingsManager.isCloudSyncEnabled
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     /**
@@ -161,12 +161,11 @@ class AIFineTuneManager private constructor(context: Context) {
     }
 
     /**
-     * 检查云端AI是否可用（网络正常、质量达标、云同步开启、API密钥有效）
+     * 检查云端AI是否可用（网络正常、质量达标、API密钥有效）
      */
     fun isCloudAIAvailable(): Boolean {
         return isNetworkAvailable()
                 && isNetworkQualityGood()
-                && settingsManager.isCloudSyncEnabled
                 && getApiKey() != null
     }
 

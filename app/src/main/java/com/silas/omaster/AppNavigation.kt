@@ -49,7 +49,6 @@ import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
-import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
@@ -284,7 +283,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
-                    onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) },
                     onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
@@ -350,10 +348,6 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.HasselbladColor> {
                 HasselbladScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<Screen.CloudSync> {
-                CloudSyncScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.NotificationSettings> {

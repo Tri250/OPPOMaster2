@@ -62,16 +62,6 @@ enum class DarkMode {
 }
 
 /**
- * 云同步状态枚举
- */
-enum class CloudSyncStatus {
-    DISABLED,     // 未启用
-    SYNCING,      // 同步中
-    SYNCED,       // 已同步
-    ERROR         // 同步出错
-}
-
-/**
  * API配置数据类
  */
 @Serializable
@@ -222,41 +212,7 @@ class SettingsManager private constructor(private val context: Context) {
             }
         }
 
-    // 云同步开关（默认开启）
-    var isCloudSyncEnabled: Boolean
-        get() = getDataSync(KEY_CLOUD_SYNC_ENABLED, true)
-        set(value) {
-            setDataSync(KEY_CLOUD_SYNC_ENABLED, value)
-        }
 
-    // 云端预设数据源 URL
-    val cloudPresetUrls: Map<String, String>
-        get() = UrlConstants.PRESET_SOURCE_URLS
-
-    // 云同步状态（默认 SYNCED，与 isCloudSyncEnabled 默认 true 保持一致）
-    var cloudSyncStatus: CloudSyncStatus
-        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.SYNCED.name), CloudSyncStatus.SYNCED)
-        set(value) {
-            setDataSync(KEY_CLOUD_SYNC_STATUS, value.name)
-        }
-
-    // 最后同步时间
-    var lastSyncTime: Long
-        get() = getDataSync(KEY_LAST_SYNC_TIME, 0L)
-        set(value) {
-            setDataSync(KEY_LAST_SYNC_TIME, value)
-        }
-
-    // 用户ID（用于云同步）
-    var userId: String?
-        get() = getDataSyncOrNull(KEY_USER_ID)
-        set(value) {
-            if (value != null) {
-                setDataSync(KEY_USER_ID, value)
-            } else {
-                removeDataSync(KEY_USER_ID)
-            }
-        }
 
     // 云端API密钥（用于云端AI推理）
     var cloudApiKey: String?
@@ -827,10 +783,6 @@ class SettingsManager private constructor(private val context: Context) {
 
         // 新增功能 Key
         private val KEY_DARK_MODE = stringPreferencesKey("dark_mode")
-        private val KEY_CLOUD_SYNC_ENABLED = booleanPreferencesKey("cloud_sync_enabled")
-        private val KEY_CLOUD_SYNC_STATUS = stringPreferencesKey("cloud_sync_status")
-        private val KEY_LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
-        private val KEY_USER_ID = stringPreferencesKey("user_id")
         private val KEY_CLOUD_API_KEY = stringPreferencesKey("cloud_api_key")
         private val KEY_AI_SCENE_ENABLED = booleanPreferencesKey("ai_scene_enabled")
         private val KEY_LAST_WATERMARK_TEMPLATE = stringPreferencesKey("last_watermark_template")
