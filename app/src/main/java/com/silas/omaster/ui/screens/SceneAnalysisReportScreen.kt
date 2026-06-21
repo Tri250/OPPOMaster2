@@ -130,11 +130,15 @@ fun SceneAnalysisReportScreen(
         // 获取指定时间范围的配方记录
         val savedRecipes = recipeHistoryManager.getRecipesByTimeRange(timeRange)
 
-        // 计算场景统计
-        val sceneCounts = mutableMapOf<String, MutablePair<String, Int>>()
+        // 计算场景统计（使用标准库 Pair 替代自定义 MutablePair）
+        val sceneCounts = mutableMapOf<String, Pair<String, Int>>()
         savedRecipes.forEach { recipe ->
-            val existing = sceneCounts.getOrPut(recipe.sceneId) { MutablePair(recipe.sceneName, 0) }
-            existing.second++
+            val existing = sceneCounts[recipe.sceneId]
+            sceneCounts[recipe.sceneId] = if (existing != null) {
+                existing.copy(second = existing.second + 1)
+            } else {
+                Pair(recipe.sceneName, 1)
+            }
         }
 
         val totalScenes = sceneCounts.values.sumOf { it.second }
@@ -696,13 +700,8 @@ private fun MasterTipsCard(tips: List<String>) {
                 Text("开始拍摄你的第一张照片，哈苏大师将为你提供个性化建议。", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 14.sp)
             }
         }
-    }
+    })
 }
-
-/**
- * 辅助类：可变Pair
- */
-class MutablePair<T1, T2>(var first: T1, var second: T2)
 
 /**
  * 格式化日期

@@ -116,6 +116,11 @@ fun OMasterTheme(
             windowInsetsController.isAppearanceLightStatusBars = !darkTheme
             // 配置导航栏图标颜色
             windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
+
+            // Edge-to-Edge 支持：透明状态栏和导航栏
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+            }
         }
     }
 

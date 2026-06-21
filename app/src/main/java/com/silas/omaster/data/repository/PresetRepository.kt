@@ -17,7 +17,8 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,13 +99,13 @@ class PresetRepository private constructor(context: Context) {
         }
     }
 
-    // 协程作用域用于结构化并发
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // 协程作用域用于结构化并发（使用 MainScope 以便与生命周期绑定）
+    private val repositoryScope = kotlinx.coroutines.MainScope()
 
     init {
         // 使用协程替代原始 Thread，实现结构化并发
         // 优势：可取消、异常处理更完善、与生命周期更好绑定
-        repositoryScope.launch {
+        repositoryScope.launch(Dispatchers.IO) {
             var attempts = 0
             val maxAttempts = 3
             while (attempts < maxAttempts) {
@@ -132,6 +133,15 @@ class PresetRepository private constructor(context: Context) {
                 Log.w(TAG, "初始云同步失败，使用本地缓存", e)
             }
         }
+    }
+
+    /**
+     * 释放资源：在 Application.onTrimMemory 或测试时调用
+     */
+    fun dispose() {
+        repositoryScope.cancel()
+        runCatching { httpClient.close() }
+            .onFailure { Log.w(TAG, "关闭 HttpClient 时发生异常", it) }
     }
 
     /**
@@ -1263,9 +1273,21 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         parseParamsFromSections(sections, paramsMap)
     }
 
-    // 默认值
-    paramsMap.putIfAbsent("clarity", 0)
-    paramsMap.putIfAbsent("brightness", 0)
+    // 默认值：使用 getOrPut 统一处理，确保所有参数都有默认值
+    val defaultParams = mapOf(
+        "clarity" to 0,
+        "brightness" to 0,
+        "saturation" to 0,
+        "contrast" to 0,
+        "warmth" to 0,
+        "sharpness" to 0,
+        "cyan_magenta" to 0,
+        "color_temperature" to 0,
+        "color_hue" to 0
+    )
+    defaultParams.forEach { (key, defaultValue) ->
+        paramsMap.getOrPut(key) { defaultValue }
+    }
 
     return PresetItem(
         id = id ?: "preset_${abs(name.hashCode())}_${System.nanoTime()}",
@@ -1348,10 +1370,12 @@ private fun parseParamsFromSections(
  * 支持: "+19" -> 19, "-5" -> -5, "15" -> 15, "0" -> 0
  * 不支持: "复古 100%", "无", "开", "关" 等非纯数值字符串
  */
+// 预编译正则，避免每次调用重复创建
+private val NUMERIC_REGEX = Regex("^([+-]?)(\\d+)$")
+
 private fun parseNumericValue(value: String): Int? {
     val trimmed = value.trim()
-    // 匹配可选正负号后跟数字的模式
-    val match = Regex("^([+-]?)(\\d+)$").find(trimmed)
+    val match = NUMERIC_REGEX.find(trimmed)
     return match?.let {
         val sign = if (it.groupValues[1] == "-") -1 else 1
         val num = it.groupValues[2].toIntOrNull() ?: return null

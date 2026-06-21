@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.silas.omaster.ai.*
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.CyanAccent
@@ -156,18 +157,27 @@ fun AIFineTuneScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedBitmap by remember { mutableStateOf<Bitmap?>(bitmap) }
 
-    // 相册选择启动器
+    // 相册选择启动器（使用 Coil 异步加载，带内存优化）
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            selectedImageUri = it
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                selectedBitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        uri?.let { selectedUri ->
+            selectedImageUri = selectedUri
+            scope.launch {
+                try {
+                    val request = ImageRequest.Builder(context)
+                        .data(selectedUri)
+                        .allowHardware(false)
+                        .build()
+                    val result = context.imageLoader.execute(request)
+                    if (result is SuccessResult) {
+                        selectedBitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    } else {
+                        Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -1435,9 +1445,13 @@ private fun updateRenderParam(params: RenderParameters, key: String, value: Floa
     }
 }
 
+// 复用的基础矩阵常量，避免每次重组重复创建
+private val IDENTITY_COLOR_MATRIX = ColorMatrix()
+
 /**
  * 根据渲染参数生成ColorMatrix（实时预览效果）
  * 将RenderParameters转换为Compose可用的ColorMatrix
+ * 优化：使用 remember 在调用处缓存，此处保持纯函数
  */
 private fun RenderParameters.toColorMatrix(): ColorMatrix {
     // 归一化参数到 [-1, 1] 或 [0, 1] 范围
@@ -1472,30 +1486,30 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
     )
 
     // 色温矩阵（暖色/冷色调整）
-    val warmthMatrix = ColorMatrix().apply {
-        if (war > 0) {
-            // 暖色调：增加红色，减少蓝色
+    val warmthMatrix = when {
+        war > 0 -> {
             val warmFactor = war * 0.3f
-            set(ColorMatrix(
+            ColorMatrix(
                 floatArrayOf(
                     1f + warmFactor, 0f, 0f, 0f, 0f,
                     0f, 1f, 0f, 0f, 0f,
                     0f, 0f, 1f - warmFactor, 0f, 0f,
                     0f, 0f, 0f, 1f, 0f
                 )
-            ))
-        } else if (war < 0) {
-            // 冷色调：减少红色，增加蓝色
+            )
+        }
+        war < 0 -> {
             val coolFactor = -war * 0.3f
-            set(ColorMatrix(
+            ColorMatrix(
                 floatArrayOf(
                     1f - coolFactor, 0f, 0f, 0f, 0f,
                     0f, 1f, 0f, 0f, 0f,
                     0f, 0f, 1f + coolFactor, 0f, 0f,
                     0f, 0f, 0f, 1f, 0f
                 )
-            ))
+            )
         }
+        else -> IDENTITY_COLOR_MATRIX
     }
 
     // 合并所有矩阵（按顺序应用）
@@ -1503,7 +1517,9 @@ private fun RenderParameters.toColorMatrix(): ColorMatrix {
     result.set(saturationMatrix)
     result.timesAssign(contrastMatrix)
     result.timesAssign(brightnessMatrix)
-    result.timesAssign(warmthMatrix)
+    if (war != 0f) {
+        result.timesAssign(warmthMatrix)
+    }
 
     return result
 }
@@ -1516,14 +1532,24 @@ private suspend fun saveImageToGallery(
     bitmap: Bitmap?,
     renderParams: RenderParameters = RenderParameters()
 ): Boolean {
-    if (bitmap == null) return false
+    if (bitmap == null || bitmap.isRecycled) return false
+
+    // 存储空间检查：预估需要至少 20MB 可用空间
+    val estimatedBytes = bitmap.byteCount.toLong()
+    val availableSpace = context.cacheDir.usableSpace
+    if (availableSpace < estimatedBytes + 20 * 1024 * 1024) {
+        android.util.Log.e("AIFineTune", "存储空间不足，无法保存图片")
+        return false
+    }
+
     return withContext(Dispatchers.IO) {
         try {
             // 应用ColorMatrix滤镜效果到bitmap
             val filteredBitmap = applyColorMatrixToBitmap(bitmap, renderParams)
+                ?: return@withContext false
 
             val filename = "omaster_ai_${System.currentTimeMillis()}.jpg"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val contentValues = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, filename)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -1555,6 +1581,12 @@ private suspend fun saveImageToGallery(
                 context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 true
             }
+
+            // 释放临时 bitmap
+            if (filteredBitmap != bitmap) {
+                filteredBitmap.recycle()
+            }
+            saved
         } catch (e: Exception) {
             android.util.Log.e("AIFineTune", "Save image failed", e)
             false

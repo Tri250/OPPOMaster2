@@ -112,37 +112,52 @@ object PerformanceHelper {
     }
 
     /**
-     * 优化Bitmap内存
+     * 优化Bitmap内存（带OOM防护）
      * @param bitmap Bitmap对象
      * @param maxWidth 最大宽度
      * @param maxHeight 最大高度
      * @return 优化后的Bitmap
      */
     fun optimizeBitmap(bitmap: Bitmap?, maxWidth: Int, maxHeight: Int): Bitmap? {
-        if (bitmap == null) return null
-        
+        if (bitmap == null || bitmap.isRecycled) return null
+
         val width = bitmap.width
         val height = bitmap.height
-        
+
         // 如果尺寸合适，直接返回
         if (width <= maxWidth && height <= maxHeight) {
             return bitmap
         }
-        
+
         // 计算缩放比例
         val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
         val newWidth = (width * scale).toInt()
         val newHeight = (height * scale).toInt()
-        
-        // 创建缩放后的Bitmap
-        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
-        
-        // 回收原始Bitmap（如果不是同一个对象）
-        if (scaledBitmap != bitmap) {
-            bitmap.recycle()
+
+        // OOM 防护：预估内存并检查
+        val estimatedBytes = newWidth * newHeight * 4L
+        val runtime = Runtime.getRuntime()
+        val maxMemory = runtime.maxMemory()
+        val usedMemory = runtime.totalMemory() - runtime.freeMemory()
+        if (usedMemory + estimatedBytes > maxMemory * 0.9) {
+            Log.e(TAG, "Bitmap缩放内存不足，跳过: ${estimatedBytes / 1024 / 1024}MB")
+            return null
         }
-        
-        return scaledBitmap
+
+        return try {
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+            // 回收原始Bitmap（如果不是同一个对象）
+            if (scaledBitmap != bitmap) {
+                bitmap.recycle()
+            }
+            scaledBitmap
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "Bitmap缩放OOM", e)
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "Bitmap缩放失败", e)
+            null
+        }
     }
 
     /**
@@ -219,14 +234,23 @@ object PerformanceHelper {
     }
 
     /**
-     * 取消并清理协程作用域
+     * 取消并清理协程作用域（带空安全检查）
      * @param name 作用域名称
      */
     fun cancelScope(name: String) {
-        scopeMap[name]?.get()?.let { scope ->
-            scope.cancel()
-            Log.d(TAG, "取消协程作用域: $name")
+        val ref = scopeMap[name]
+        if (ref == null) {
+            Log.w(TAG, "cancelScope: 作用域 $name 不存在")
+            return
         }
+        val scope = ref.get()
+        if (scope == null) {
+            Log.w(TAG, "cancelScope: 作用域 $name 已被GC回收")
+            scopeMap.remove(name)
+            return
+        }
+        scope.cancel()
+        Log.d(TAG, "取消协程作用域: $name")
         scopeMap.remove(name)
     }
 

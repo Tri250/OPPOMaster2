@@ -142,6 +142,12 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
         }
     }
 
+    // 预编译正则表达式，避免每次调用重复创建
+    private val PATH_REGEX_DATA = Regex("/data/data/[a-zA-Z0-9._-]+/[a-zA-Z0-9/_-]+", RegexOption.MULTILINE)
+    private val PATH_REGEX_STORAGE = Regex("/storage/emulated/[0-9]+/[a-zA-Z0-9/_-]+", RegexOption.MULTILINE)
+    private val IP_REGEX = Regex("\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}\\b")
+    private val CREDENTIAL_REGEX = Regex("(token|key|secret|password|credential)\\s*[=:]\\s*\\S+", RegexOption.IGNORE_CASE)
+
     /**
      * 清理崩溃报告中的敏感信息
      * 移除：文件路径、IP地址、可能的凭证信息
@@ -149,12 +155,12 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     private fun sanitizeCrashReport(content: String): String {
         return content
             // 移除文件路径（保留文件名）
-            .replace(Regex("/data/data/[a-zA-Z0-9._-]+/[a-zA-Z0-9/_-]+", RegexOption.MULTILINE), "[PATH_REDACTED]")
-            .replace(Regex("/storage/emulated/[0-9]+/[a-zA-Z0-9/_-]+", RegexOption.MULTILINE), "[PATH_REDACTED]")
+            .replace(PATH_REGEX_DATA, "[PATH_REDACTED]")
+            .replace(PATH_REGEX_STORAGE, "[PATH_REDACTED]")
             // 移除 IP 地址
-            .replace(Regex("\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}\\b"), "[IP_REDACTED]")
+            .replace(IP_REGEX, "[IP_REDACTED]")
             // 移除可能的 token/key（简单启发式）
-            .replace(Regex("(token|key|secret|password|credential)\\s*[=:]\\s*\\S+", RegexOption.IGNORE_CASE), "$1=[REDACTED]")
+            .replace(CREDENTIAL_REGEX, "$1=[REDACTED]")
     }
 
     /**

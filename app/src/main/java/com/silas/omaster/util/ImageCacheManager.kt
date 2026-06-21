@@ -13,6 +13,7 @@ import coil.request.CachePolicy
 import com.silas.omaster.model.MasterPreset
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.call.body
@@ -128,6 +129,11 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
                 connectTimeoutMillis = TIMEOUT_MS
                 socketTimeoutMillis = TIMEOUT_MS
             }
+            install(HttpRequestRetry) {
+                retryOnServerErrors(maxRetries = 2)
+                exponentialDelay(base = 2.0, maxDelayMs = 4_000L)
+            }
+            expectSuccess = false
         }
     }
 

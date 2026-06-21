@@ -3,8 +3,13 @@ package com.silas.omaster.util
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
@@ -123,24 +128,22 @@ object SafetyHelper {
         }
     }
 
+    // 安全协程作用域，用于替代原始 Thread
+    private val safetyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /**
-     * 安全执行异步操作
+     * 安全执行异步操作（使用协程替代原始 Thread）
      * @param block 异步操作
      * @param onError 错误回调
      */
-    fun safeAsync(block: () -> Unit, onError: ((Exception) -> Unit)? = null) {
-        try {
-            Thread {
-                try {
-                    block()
-                } catch (e: Exception) {
-                    Log.e(TAG, "safeAsync 异常: ${e.message}", e)
-                    onError?.invoke(e)
-                }
-            }.start()
-        } catch (e: Exception) {
-            Log.e(TAG, "safeAsync 启动线程异常: ${e.message}", e)
-            onError?.invoke(e)
+    fun safeAsync(block: suspend () -> Unit, onError: ((Exception) -> Unit)? = null) {
+        safetyScope.launch {
+            try {
+                block()
+            } catch (e: Exception) {
+                Log.e(TAG, "safeAsync 异常: ${e.message}", e)
+                onError?.invoke(e)
+            }
         }
     }
 
@@ -241,13 +244,13 @@ object SafetyHelper {
     }
 
     /**
-     * 安全执行多次尝试
+     * 安全执行多次尝试（使用挂起函数替代 Thread.sleep）
      * @param maxRetries 最大重试次数
      * @param delayMs 重试间隔（毫秒）
      * @param block 要执行的操作
      * @return 操作结果
      */
-    fun <T> safeRetry(maxRetries: Int, delayMs: Long, block: (Int) -> T): T? {
+    suspend fun <T> safeRetry(maxRetries: Int, delayMs: Long, block: suspend (Int) -> T): T? {
         var lastException: Exception? = null
         for (i in 0 until maxRetries) {
             try {
@@ -256,7 +259,7 @@ object SafetyHelper {
                 lastException = e
                 Log.w(TAG, "safeRetry 第${i + 1}次失败: ${e.message}")
                 if (i < maxRetries - 1) {
-                    Thread.sleep(delayMs)
+                    delay(delayMs)
                 }
             }
         }

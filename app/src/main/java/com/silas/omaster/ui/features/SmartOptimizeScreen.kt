@@ -223,9 +223,15 @@ fun SmartOptimizeScreen(
                     optimizationProgress = (index.toFloat()) / selectedOptimizeIds.size
 
                     // 调用 AI 推理引擎执行真实优化处理
-                    workingBitmap = withContext(Dispatchers.Default) {
+                    val newBitmap = withContext(Dispatchers.Default) {
                         inferenceEngine.applyOptimization(workingBitmap, id)
                     }
+
+                    // 释放中间 bitmap（避免内存泄漏），但保留原始 source
+                    if (workingBitmap != source && workingBitmap != newBitmap) {
+                        workingBitmap.recycle()
+                    }
+                    workingBitmap = newBitmap
 
                     optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
                     optimizedOptions.add(id)

@@ -46,12 +46,16 @@ object UrlConstants {
     /** 荣耀 Magic 影像预设 */
     const val PRESET_HONOR = "$CDN_JSDELIVR/presets/v2/honor.json"
 
+    /** 小米 徕卡影像预设 */
+    const val PRESET_XIAOMI = "$CDN_JSDELIVR/presets/v2/xiaomi.json"
+
     /** 预设源 URL 映射（品牌 -> URL） */
     val PRESET_SOURCE_URLS: Map<String, String> = mapOf(
         "oppo" to PRESET_OPPO,
         "realme" to PRESET_REALME,
         "vivo" to PRESET_VIVO,
-        "honor" to PRESET_HONOR
+        "honor" to PRESET_HONOR,
+        "xiaomi" to PRESET_XIAOMI
     )
 
     // ===== 更新相关 =====
@@ -80,7 +84,8 @@ object UrlConstants {
         PresetSourceInfo("OPPO", "一加/OPPO 大师模式官方预设", "OPPO & OnePlus 大师模式预设合集", PRESET_OPPO),
         PresetSourceInfo("realme", "realme GT 大师模式官方预设", "realme GT 系列大师模式预设", PRESET_REALME),
         PresetSourceInfo("vivo", "vivo 蔡司自然色彩官方预设", "vivo ZEISS 自然色彩预设", PRESET_VIVO),
-        PresetSourceInfo("honor", "荣耀 Magic 影像官方预设", "荣耀 Magic 系列影像预设", PRESET_HONOR)
+        PresetSourceInfo("honor", "荣耀 Magic 影像官方预设", "荣耀 Magic 系列影像预设", PRESET_HONOR),
+        PresetSourceInfo("xiaomi", "小米 徕卡影像官方预设", "小米 Leica 影像预设", PRESET_XIAOMI)
     )
 
     // ===== LUT 资源 CDN 路径 =====

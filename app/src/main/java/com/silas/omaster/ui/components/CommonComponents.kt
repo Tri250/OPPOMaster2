@@ -370,7 +370,7 @@ fun ImagePlaceholder(
     ) {
         Icon(
             imageVector = Icons.Filled.Image,
-            contentDescription = "图标",
+            contentDescription = stringResource(R.string.image_placeholder),
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
             modifier = Modifier.size(32.dp)
         )
@@ -489,7 +489,7 @@ fun DescriptionCard(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Lightbulb,
-                contentDescription = "图标",
+                    contentDescription = stringResource(R.string.shooting_tips),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )

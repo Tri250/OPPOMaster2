@@ -8,9 +8,13 @@ import com.silas.omaster.model.MasterPreset
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 排序类型枚举（对齐Web端）
@@ -129,27 +133,34 @@ class HomeViewModel(
     }
 
     /**
-     * 获取过滤后的预设列表（对齐Web端）
+     * 过滤后的预设列表 - 使用 StateFlow + combine 实现真正的响应式
+     * 避免每次重组时重新计算，提升性能
      */
-    fun getFilteredPresets(): List<MasterPreset> {
-        val baseList = _allPresets.value
-        var result = baseList.toList()
+    val filteredPresets: StateFlow<List<MasterPreset>> = combine(
+        _allPresets,
+        _favorites,
+        _selectedTab,
+        _selectedBrand,
+        _sortType,
+        _searchQuery
+    ) { allPresets, favorites, selectedTab, selectedBrand, sortType, searchQuery ->
+        var result = allPresets.toList()
 
         // Tab 过滤
-        when (_selectedTab.value) {
+        when (selectedTab) {
             1 -> result = result.filter { it.isFavorite } // 收藏
             2 -> result = result.filter { it.isHncs }     // 哈苏
             3 -> result = result.filter { it.isNew }      // 上新
         }
 
         // 品牌过滤
-        if (_selectedBrand.value != "all") {
-            result = result.filter { it.brand == _selectedBrand.value }
+        if (selectedBrand != "all") {
+            result = result.filter { it.brand == selectedBrand }
         }
 
         // 搜索过滤
-        if (_searchQuery.value.isNotEmpty()) {
-            val query = _searchQuery.value.lowercase()
+        if (searchQuery.isNotEmpty()) {
+            val query = searchQuery.lowercase()
             result = result.filter { preset ->
                 preset.name.lowercase().contains(query) ||
                 preset.author.lowercase().contains(query) ||
@@ -157,15 +168,19 @@ class HomeViewModel(
             }
         }
 
-        // 排序
-        result = when (_sortType.value) {
-            SortType.NEWEST -> result.sortedByDescending { it.isNew }
+        // 排序：NEWEST 按 createdAt 降序，而非 isNew Boolean
+        result = when (sortType) {
+            SortType.NEWEST -> result.sortedByDescending { it.createdAt }
             SortType.POPULAR -> result.sortedByDescending { it.downloads ?: 0 }
             SortType.RATING -> result.sortedByDescending { it.rating ?: 0f }
         }
 
-        return result
-    }
+        result
+    }.stateIn(
+        scope = viewModelScope,
+        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     /**
      * 获取Tab计数（对齐Web端）
@@ -200,13 +215,16 @@ class HomeViewModel(
 
     /**
      * 刷新数据
-     * 修复：现在会正确取消旧任务并重新收集
+     * 使用 Flow 的 collect 等待数据加载完成，而非固定 delay
      */
     fun refresh(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             repository.reloadDefaultPresets()
             loadPresets()
-            delay(500) // 给予足够时间让 Flow 发射新值并让 UI 感知
+            // 等待 Flow 发射至少一次数据，而非固定 delay
+            kotlinx.coroutines.withTimeoutOrNull(3000) {
+                allPresets.first { it.isNotEmpty() || _allPresets.value.isEmpty() }
+            }
             onComplete()
         }
     }

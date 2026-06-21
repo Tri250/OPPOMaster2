@@ -363,6 +363,9 @@ object ShareExportUtils {
         return file
     }
 
+    // 复用 ExifWatermarkProvider 实例，避免每次渲染都创建
+    private var exifProvider: ExifWatermarkProvider? = null
+
     /**
      * 渲染水印到图片
      *
@@ -377,11 +380,24 @@ object ShareExportUtils {
         bitmap: Bitmap,
         config: WatermarkConfigDef
     ): Bitmap {
-        val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        // OOM 防护：检查 bitmap 是否有效
+        if (bitmap.isRecycled) {
+            throw IllegalStateException("Bitmap已被回收，无法渲染水印")
+        }
+
+        val result = try {
+            bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "水印渲染OOM，返回原图", e)
+            return bitmap
+        }
         val canvas = Canvas(result)
 
-        // 修复 P2-14: 使用公开的 getFallbackData() 方法，避免使用不存在的文件
-        val exifData = ExifWatermarkProvider(context).getFallbackData()
+        // 复用 ExifWatermarkProvider 实例
+        val provider = exifProvider ?: ExifWatermarkProvider(context.applicationContext).also {
+            exifProvider = it
+        }
+        val exifData = provider.getFallbackData()
 
         // 直接使用 getVisibleLayers()，内部已经按 sortOrder 降序排序
         val visibleLayers = config.getVisibleLayers()

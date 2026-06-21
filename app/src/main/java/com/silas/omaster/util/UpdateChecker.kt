@@ -13,14 +13,23 @@ import androidx.core.content.FileProvider
 import com.silas.omaster.BuildConfig
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.util.UrlConstants
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileInputStream
-import java.math.BigInteger
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -35,14 +44,28 @@ object UpdateChecker {
     private const val TAG = "UpdateChecker"
 
     // GitHub 配置
-    private const val GITHUB_OWNER = "Tri250"
-    private const val GITHUB_REPO = "OPPOMaster2"
     private const val GITHUB_API_URL = UrlConstants.GITHUB_API_RELEASES
 
     // Gitee 配置
-    private const val GITEE_OWNER = "Tri250"
-    private const val GITEE_REPO = "OPPOMaster2"
     private const val GITEE_API_URL = UrlConstants.GITEE_API_RELEASES
+
+    // Ktor HTTP 客户端（复用，与项目其他网络请求一致）
+    private val ktorClient: HttpClient by lazy {
+        HttpClient(CIO) {
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15000
+                connectTimeoutMillis = 15000
+                socketTimeoutMillis = 15000
+            }
+            install(HttpRequestRetry) {
+                retryOnServerErrors(maxRetries = 2)
+                exponentialDelay(base = 2.0, maxDelayMs = 4_000L)
+            }
+            expectSuccess = false
+        }
+    }
+
+    private val jsonParser = Json { ignoreUnknownKeys = true }
 
     data class UpdateInfo(
         val versionName: String,
@@ -85,51 +108,45 @@ object UpdateChecker {
     }
 
     /**
-     * 通用 API 检查逻辑
+     * 通用 API 检查逻辑（使用 Ktor 替代 HttpURLConnection）
      */
-    private fun checkUpdateFromApi(
+    private suspend fun checkUpdateFromApi(
         context: Context,
         currentVersionCode: Int,
         apiUrl: String,
         isGitee: Boolean
-    ): UpdateInfo? {
+    ): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
-            val url = URL(apiUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.apply {
-                requestMethod = "GET"
-                connectTimeout = 15000
-                readTimeout = 15000
-                // GitHub 需要特殊请求头
+            val response = ktorClient.get(apiUrl) {
                 if (!isGitee) {
-                    setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    header("Accept", "application/vnd.github.v3+json")
                 }
             }
 
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(response)
+            if (response.status.isSuccess()) {
+                val body = response.bodyAsText()
+                val json = jsonParser.parseToJsonElement(body).jsonObject
 
-                val tagName = json.getString("tag_name")
+                val tagName = json["tag_name"]?.jsonPrimitive?.content ?: return@withContext null
                 val versionName = tagName.removePrefix("v")
                 val versionCode = VersionInfo.parseVersionCode(versionName)
 
                 // 获取 app-universal-release.apk 下载链接
-                val assets = json.getJSONArray("assets")
+                val assets = json["assets"]?.jsonArray ?: return@withContext null
                 var downloadUrl = ""
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val assetName = asset.getString("name")
-                    // 两个渠道都使用固定文件名
+                for (asset in assets) {
+                    val assetObj = asset.jsonObject
+                    val assetName = assetObj["name"]?.jsonPrimitive?.content ?: continue
                     if (assetName == "app-universal-release.apk") {
-                        downloadUrl = asset.getString("browser_download_url")
+                        downloadUrl = assetObj["browser_download_url"]?.jsonPrimitive?.content ?: ""
                         break
                     }
                 }
 
-                val releaseNotes = json.optString("body", context.getString(R.string.no_release_notes))
+                val releaseNotes = json["body"]?.jsonPrimitive?.content
+                    ?: context.getString(R.string.no_release_notes)
 
-                return UpdateInfo(
+                return@withContext UpdateInfo(
                     versionName = versionName,
                     versionCode = versionCode,
                     downloadUrl = downloadUrl,
@@ -137,12 +154,12 @@ object UpdateChecker {
                     isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
                 )
             } else {
-                Log.e(TAG, "检查更新失败，HTTP 状态码: ${connection.responseCode}")
-                return null
+                Log.e(TAG, "检查更新失败，HTTP 状态码: ${response.status}")
+                return@withContext null
             }
         } catch (e: Exception) {
             Log.e(TAG, "检查更新出错 [${if (isGitee) "Gitee" else "GitHub"}]", e)
-            return null
+            return@withContext null
         }
     }
 
@@ -220,6 +237,9 @@ object UpdateChecker {
         downloadManager.remove(downloadId)
     }
 
+    // SHA-256 计算缓冲区大小（提取为常量）
+    private const val SHA_BUFFER_SIZE = 8192
+
     /**
      * 计算文件的 SHA-256 哈希值
      * @param file 目标文件
@@ -229,7 +249,7 @@ object UpdateChecker {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
             FileInputStream(file).use { fis ->
-                val buffer = ByteArray(8192)
+                val buffer = ByteArray(SHA_BUFFER_SIZE)
                 var bytesRead: Int
                 while (fis.read(buffer).also { bytesRead = it } != -1) {
                     digest.update(buffer, 0, bytesRead)

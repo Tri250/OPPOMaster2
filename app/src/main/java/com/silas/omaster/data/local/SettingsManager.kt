@@ -148,12 +148,13 @@ class SettingsManager private constructor(private val context: Context) {
     val darkModeFlow: StateFlow<DarkMode>
 
     init {
-        // 首次启动时迁移旧数据
-        runBlocking {
+        // 首次启动时迁移旧数据：使用非阻塞方式初始化，避免 ANR
+        // 迁移在后台协程中执行，首次访问时若缓存未命中会读取旧 SharedPreferences
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             migrateFromSharedPreferences()
         }
-        
-        // 初始化 Flow
+
+        // 初始化 Flow（使用默认值，后台迁移完成后下次启动生效）
         val themeId = getDataSync(KEY_THEME_ID, BrandTheme.Hasselblad.id)
         _themeFlow = MutableStateFlow(BrandTheme.fromId(themeId))
         themeFlow = _themeFlow.asStateFlow()
@@ -161,7 +162,7 @@ class SettingsManager private constructor(private val context: Context) {
         val darkModeValue = getDataSync(KEY_DARK_MODE, DarkMode.DARK.name)
         _darkModeFlow = MutableStateFlow(safeValueOf(darkModeValue, DarkMode.DARK))
         darkModeFlow = _darkModeFlow.asStateFlow()
-        
+
         // 初始化震动设置
         _isVibrationEnabledFlow.value = getDataSync(KEY_VIBRATION_ENABLED, true)
     }

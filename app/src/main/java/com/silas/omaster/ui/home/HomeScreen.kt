@@ -68,6 +68,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -91,11 +93,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.ExperimentalMaterial3Api
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
@@ -116,12 +118,8 @@ fun HomeScreen(
     )
     val haptic = LocalHapticFeedback.current
 
-    val allPresets by viewModel.allPresets.collectAsState()
-    val favorites by viewModel.favorites.collectAsState()
-    val customPresets by viewModel.customPresets.collectAsState()
+    val filteredPresets by viewModel.filteredPresets.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
-    val selectedBrand by viewModel.selectedBrand.collectAsState()
-    val sortType by viewModel.sortType.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     // 当 refreshTrigger 变化时刷新数据
@@ -144,11 +142,6 @@ fun HomeScreen(
 
     // 全局悬浮窗控制器
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
-
-    // 获取过滤后的预设列表
-    val filteredPresets = remember(selectedTab, selectedBrand, sortType, searchQuery, allPresets) {
-        viewModel.getFilteredPresets()
-    }
 
     // 当预设列表变化时，更新到全局控制器
     LaunchedEffect(filteredPresets, selectedTab) {
@@ -229,7 +222,7 @@ fun HomeScreen(
                     onNavigateToCreate()
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onBackground,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(20.dp),
                 elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(
                     defaultElevation = 8.dp,
@@ -239,6 +232,7 @@ fun HomeScreen(
                     .align(Alignment.BottomEnd)
                     .padding(end = 24.dp, bottom = 100.dp)
                     .size(64.dp)
+                    .semantics { contentDescription = "添加自定义预设" }
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -637,12 +631,24 @@ private fun PresetGrid(
     val listState = rememberLazyStaggeredGridState()
     val haptic = LocalHapticFeedback.current
 
-    // Pull-to-refresh state
+    // Pull-to-refresh state (Material3)
     var refreshing by remember { mutableStateOf(false) }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
-        refreshing = true
-        onRefresh { refreshing = false }
-    })
+    val pullToRefreshState = rememberPullToRefreshState()
+
+    if (pullToRefreshState.isRefreshing) {
+        LaunchedEffect(Unit) {
+            refreshing = true
+            onRefresh { refreshing = false }
+        }
+    }
+
+    LaunchedEffect(refreshing) {
+        if (refreshing) {
+            pullToRefreshState.startRefresh()
+        } else {
+            pullToRefreshState.endRefresh()
+        }
+    }
 
     // 滚动状态检测
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -683,7 +689,6 @@ private fun PresetGrid(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pullRefresh(pullRefreshState)
     ) {
         if (presets.isEmpty()) {
             androidx.compose.foundation.lazy.LazyColumn(
@@ -755,11 +760,11 @@ private fun PresetGrid(
             }
         }
 
-        PullRefreshIndicator(
-            refreshing = refreshing,
-            state = pullRefreshState,
+        PullToRefreshContainer(
+            state = pullToRefreshState,
             modifier = Modifier.align(Alignment.TopCenter),
-            contentColor = MaterialTheme.colorScheme.primary
+            contentColor = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     }
 }
