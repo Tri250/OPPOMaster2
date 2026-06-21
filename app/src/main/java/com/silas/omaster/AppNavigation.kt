@@ -284,7 +284,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
-                    onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) },
                     onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )

@@ -212,19 +212,6 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "FaceDetector预初始化失败", e)
                 }
 
-                // 预初始化云同步：首次启动时自动同步预设源
-                try {
-                    val cloudSyncManager = com.silas.omaster.cloud.CloudSyncManager.getInstance(this@OMasterApplication)
-                    if (cloudSyncManager.shouldSync()) {
-                        kotlinx.coroutines.runBlocking {
-                            cloudSyncManager.sync()
-                        }
-                        StartupLogger.logStep("云同步初始同步", SystemClock.elapsedRealtime() - lazyStart)
-                    }
-                } catch (e: Throwable) {
-                    Log.w("OMasterApplication", "云同步初始同步失败", e)
-                }
-
             } catch (e: Throwable) {
                 Log.e("OMasterApplication", "懒加载初始化失败", e)
             }

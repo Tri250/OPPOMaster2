@@ -84,7 +84,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         exif: ExifData? = null,
         userContext: UserContext? = null
     ): AnalysisResult = withContext(Dispatchers.Default) {
-        // 1. 颜色分析（采样策略：取中心 60% 区域，避免边缘干扰）
+        // 1. 颜色分析（采样策略：上中下分3个采样区，避免边缘干扰）
         val colorProfile = sampleColorProfile(bitmap, sampleRatio = 0.6f)
 
         // 2. 亮度分析
@@ -96,7 +96,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 4. 纹理分析（边缘密度）
         val edgeDensity = computeEdgeDensity(bitmap)
 
-        // 5. 多特征投票
+        // 5. 构图分析（三分法/中心构图检测）
+        val compositionScore = analyzeComposition(bitmap)
+
+        // 6. 色彩多样性分析（判断场景色彩丰富度）
+        val colorDiversity = analyzeColorDiversity(bitmap)
+
+        // 7. 多特征投票
         val candidates = mutableListOf<SceneCandidate>()
 
         // 颜色投票
@@ -114,13 +120,20 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         }
         // 纹理投票
         candidates.addAll(voteByTexture(edgeDensity, colorProfile))
+        // 构图投票
+        candidates.addAll(voteByComposition(compositionScore, colorProfile))
+        // 色彩多样性投票
+        candidates.addAll(voteByColorDiversity(colorDiversity, colorProfile))
 
-        // 6. 加权融合
-        val fused = fuseVotes(candidates, userContext)
+        // 8. 加权融合（增强版：引入分析置信度权重）
+        val fused = fuseVotes(candidates, userContext, faceCount, edgeDensity, colorDiversity)
 
-        // 7. 构建分析详情
+        // 9. 构建分析详情
         val analysisDetails = buildAnalysisDetails(
             colorProfile, brightnessLevel, faceCount, edgeDensity, exif
+        ) + mapOf(
+            "composition_score" to compositionScore,
+            "color_diversity" to colorDiversity
         )
 
         AnalysisResult(
@@ -469,6 +482,83 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         return (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt()
     }
 
+    // ==================== 新增分析维度 ====================
+
+    /**
+     * 构图分析：检测三分法交点附近的视觉重心
+     * 返回 0-1 的构图得分，越高表示主体越位于三分法交点
+     */
+    private fun analyzeComposition(bitmap: Bitmap): Float {
+        val width = bitmap.width
+        val height = bitmap.height
+        val step = maxOf(width, height) / 50
+
+        // 三分法交点
+        val intersections = listOf(
+            (width * 0.33).toInt() to (height * 0.33).toInt(),
+            (width * 0.67).toInt() to (height * 0.33).toInt(),
+            (width * 0.33).toInt() to (height * 0.67).toInt(),
+            (width * 0.67).toInt() to (height * 0.67).toInt()
+        )
+
+        var totalEdgeAtIntersections = 0f
+        var totalEdges = 0f
+
+        for (y in step until height - step step step) {
+            for (x in step until width - step step step) {
+                val gx = sobelX(bitmap, x, y)
+                val gy = sobelY(bitmap, x, y)
+                val gradient = sqrt(gx * gx + gy * gy)
+                totalEdges += gradient
+
+                // 检查是否在交点附近
+                val nearIntersection = intersections.any { (ix, iy) ->
+                    kotlin.math.abs(x - ix) < width * 0.1 && kotlin.math.abs(y - iy) < height * 0.1
+                }
+                if (nearIntersection) {
+                    totalEdgeAtIntersections += gradient
+                }
+            }
+        }
+
+        return if (totalEdges > 0) (totalEdgeAtIntersections / totalEdges * 4f).coerceIn(0f, 1f) else 0.5f
+    }
+
+    /**
+     * 色彩多样性分析：计算图片中不同颜色的丰富程度
+     * 返回 0-1，越高表示色彩越丰富（如市场、节日场景）
+     */
+    private fun analyzeColorDiversity(bitmap: Bitmap): Float {
+        val width = bitmap.width
+        val height = bitmap.height
+        val step = when {
+            width > 1000 -> 10
+            width > 500 -> 6
+            else -> 4
+        }
+
+        val colorSet = mutableSetOf<Int>()
+        var pixelCount = 0
+
+        for (y in 0 until height step step) {
+            for (x in 0 until width step step) {
+                val pixel = bitmap.getPixel(x, y)
+                // 量化颜色到粗粒度（减少噪声影响）
+                val quantized = (Color.red(pixel) / 16 shl 8) or
+                        (Color.green(pixel) / 16 shl 4) or
+                        (Color.blue(pixel) / 16)
+                colorSet.add(quantized)
+                pixelCount++
+            }
+        }
+
+        // 理论最大颜色数 16^3 = 4096，实际采样点数约为 pixelCount
+        val maxPossibleColors = (pixelCount).coerceAtMost(4096)
+        return if (maxPossibleColors > 0) {
+            (colorSet.size.toFloat() / maxPossibleColors).coerceIn(0f, 1f)
+        } else 0f
+    }
+
     // ==================== 投票机制 ====================
 
     /**
@@ -737,23 +827,77 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     }
 
     /**
-     * 加权融合投票结果
+     * 构图→场景投票
+     */
+    private fun voteByComposition(compositionScore: Float, cp: ColorProfile): List<SceneCandidate> {
+        val votes = mutableListOf<SceneCandidate>()
+
+        // 高构图得分（主体在三分法交点）→ 专业摄影场景
+        if (compositionScore > 0.6f) {
+            votes.add(SceneCandidate("portrait-standard", 0.55f, "composition"))
+            votes.add(SceneCandidate("landscape-standard", 0.50f, "composition"))
+        }
+
+        // 低构图得分（主体居中）→ 快照/纪念照
+        if (compositionScore < 0.3f) {
+            votes.add(SceneCandidate("event-party", 0.45f, "composition"))
+            votes.add(SceneCandidate("portrait-group", 0.40f, "composition"))
+        }
+
+        return votes
+    }
+
+    /**
+     * 色彩多样性→场景投票
+     */
+    private fun voteByColorDiversity(diversity: Float, cp: ColorProfile): List<SceneCandidate> {
+        val votes = mutableListOf<SceneCandidate>()
+
+        // 高色彩多样性 → 市场/节日/城市夜景
+        if (diversity > 0.6f) {
+            votes.add(SceneCandidate("urban-street", 0.55f, "color-diversity"))
+            votes.add(SceneCandidate("night-neon", 0.50f, "color-diversity"))
+            votes.add(SceneCandidate("event-party", 0.45f, "color-diversity"))
+        }
+
+        // 低色彩多样性 → 极简/雪景/黑白
+        if (diversity < 0.2f) {
+            votes.add(SceneCandidate("landscape-snow", 0.50f, "color-diversity"))
+            votes.add(SceneCandidate("still-product", 0.45f, "color-diversity"))
+            votes.add(SceneCandidate("portrait-bw", 0.40f, "color-diversity"))
+        }
+
+        // 暖色调 + 中等多样性 → 美食
+        if (diversity in 0.2f..0.5f && cp.warmthRatio > 0.4f) {
+            votes.add(SceneCandidate("food-restaurant", 0.50f, "color-diversity"))
+        }
+
+        return votes
+    }
+
+    /**
+     * 加权融合投票结果（增强版）
      */
     private fun fuseVotes(
         candidates: List<SceneCandidate>,
-        userContext: UserContext?
+        userContext: UserContext?,
+        faceCount: Int = 0,
+        edgeDensity: Float = 0f,
+        colorDiversity: Float = 0f
     ): FusedResult {
         // 按场景ID分组并累加分数
         val scoreMap = mutableMapOf<String, Float>()
         val sourceMap = mutableMapOf<String, MutableList<String>>()
 
-        // 权重配置
+        // 权重配置（增强版：新增构图和色彩多样性权重）
         val weights = mapOf(
             "color" to 1.0f,
             "brightness" to 0.8f,
-            "face" to 1.2f,      // 人脸检测权重最高
+            "face" to 1.2f,           // 人脸检测权重最高
             "exif" to 0.9f,
-            "texture" to 0.7f
+            "texture" to 0.7f,
+            "composition" to 0.6f,    // 新增：构图分析
+            "color-diversity" to 0.65f // 新增：色彩多样性
         )
 
         for (candidate in candidates) {

@@ -692,12 +692,19 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     private fun mapParamAdjustments(params: HasselbladParams): Map<String, Int> {
+        // 对齐 OPPO 哈苏大师模式参数名称与范围映射
         return mapOf(
             "saturation" to (params.saturation * 3.3f).toInt().coerceIn(-100, 100),
             "contrast" to (params.contrast * 3.3f).toInt().coerceIn(-100, 100),
             "warmth" to (params.colorTemp * 3.3f).toInt().coerceIn(-100, 100),
             "vibrance" to (params.saturation * 2f).toInt().coerceIn(-100, 100),
-            "clarity" to (params.clarity * 3.3f).toInt().coerceIn(-100, 100)
+            "clarity" to (params.clarity * 3.3f).toInt().coerceIn(-100, 100),
+            "tone" to (params.tone * 3.3f).toInt().coerceIn(-100, 100),
+            "sharpness" to (params.sharpness * 3.3f).toInt().coerceIn(-100, 100),
+            "vignette" to (params.vignette * 3.3f).toInt().coerceIn(-100, 100),
+            "cyanMagenta" to (params.cyanMagenta * 3.3f).toInt().coerceIn(-100, 100),
+            "highlights" to (params.highlights * 3.3f).toInt().coerceIn(-100, 100),
+            "shadows" to (params.shadows * 3.3f).toInt().coerceIn(-100, 100)
         )
     }
 

@@ -91,7 +91,6 @@ fun NotificationSettingsScreen(
 
     var generalEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_GENERAL)) }
     var recommendationEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_RECOMMENDATION)) }
-    var syncEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_SYNC)) }
     var systemAnnounceEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_GENERAL)) }
     var dailyTipEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_RECOMMENDATION)) }
 
@@ -105,7 +104,6 @@ fun NotificationSettingsScreen(
         // 确保各渠道已创建（默认开启）
         createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", generalEnabled)
         createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", recommendationEnabled)
-        createOrUpdateChannel(CHANNEL_SYNC, "云同步提醒", syncEnabled)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -258,23 +256,6 @@ fun NotificationSettingsScreen(
                             recommendationEnabled = newValue
                             dailyTipEnabled = newValue
                             createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", newValue)
-                        }
-                    }
-                )
-            }
-
-            item {
-                NotificationSettingCard(
-                    title = "云同步提醒",
-                    description = "同步状态变更通知",
-                    isEnabled = syncEnabled,
-                    onToggle = { newValue ->
-                        haptic.perform(HapticFeedbackType.LongPress)
-                        if (!masterEnabled) {
-                            openNotificationSettings()
-                        } else {
-                            syncEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_SYNC, "云同步提醒", newValue)
                         }
                     }
                 )

@@ -124,13 +124,8 @@ class PresetRepository private constructor(context: Context) {
                 }
             }
 
-            // 本地预设加载完成后，触发后台云同步以获取最新云端预设
-            try {
-                triggerBackgroundSync(brand = null)
-                Log.i(TAG, "初始云同步完成: ${_presets.value.size} 条预设")
-            } catch (e: Exception) {
-                Log.w(TAG, "初始云同步失败，使用本地缓存", e)
-            }
+            // 本地预设加载完成后，通过订阅管理自动获取最新预设
+            // 云同步功能已移除，预设通过 SubscriptionManager 的订阅源自动更新
         }
     }
 
@@ -840,33 +835,9 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * 在后台尝试一次云同步，结果合并到 _presets 并写回缓存
-     * 失败时静默降级，不影响主流程
+     * 后台同步已移除
+     * 预设更新现在通过 SubscriptionManager 的订阅源自动管理
      */
-    private suspend fun triggerBackgroundSync(brand: String?) {
-        if (!settingsManager.isCloudSyncEnabled) {
-            Log.d(TAG, "云同步开关未启用，跳过后台同步")
-            return
-        }
-        // 节流：距上次同步不足 5 分钟则跳过
-        val now = System.currentTimeMillis()
-        val lastSync = settingsManager.lastSyncTime
-        if (lastSync > 0 && now - lastSync < BACKGROUND_SYNC_INTERVAL_MS) {
-            Log.d(TAG, "距上次同步不足 ${BACKGROUND_SYNC_INTERVAL_MS / 1000}s，跳过")
-            return
-        }
-
-        try {
-            val result = fetchFromCDN()
-            result.onSuccess { syncResult ->
-                Log.i(TAG, "后台同步完成: 新增 ${syncResult.imported} 条")
-            }.onFailure { e ->
-                Log.w(TAG, "后台同步失败，已使用本地缓存: ${e.message}")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "后台同步异常，已使用本地缓存", e)
-        }
-    }
 
     private fun applyPinningAndSorting(presets: List<PresetItem>): List<PresetItem> {
         val pinned = presets.filter { _pinnedIds.value.contains(it.id) }

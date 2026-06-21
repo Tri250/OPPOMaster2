@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
-import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -38,43 +37,13 @@ fun PresetSourceManagerScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val cloudSyncManager = remember { CloudSyncManager.getInstance(context) }
-    
+
     var sources by remember { mutableStateOf(getDefaultSources()) }
     var isLoading by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<PresetSource?>(null) }
     var fetchedPresetCount by remember { mutableStateOf(0) }
     var syncError by remember { mutableStateOf<String?>(null) }
-    
-    // 加载预设 - 使用 CloudSyncManager 统一同步
-    LaunchedEffect(sources) {
-        if (sources.any { it.enabled }) {
-            isLoading = true
-            syncError = null
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    cloudSyncManager.sync()
-                }
-                when (result) {
-                    is com.silas.omaster.cloud.SyncResult.Success -> {
-                        fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
-                    }
-                    is com.silas.omaster.cloud.SyncResult.Error -> {
-                        syncError = result.message
-                    }
-                    is com.silas.omaster.cloud.SyncResult.Disabled -> {
-                        // 云同步被禁用，尝试手动加载
-                        fetchedPresetCount = 0
-                    }
-                }
-            } catch (e: Exception) {
-                syncError = e.message ?: "同步失败"
-            } finally {
-                isLoading = false
-            }
-        }
-    }
     
     Column(
         modifier = Modifier
@@ -96,23 +65,14 @@ fun PresetSourceManagerScreen(
             actions = {
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
-                    // 刷新：重新触发同步
+                    // 刷新：重新加载预设源
                     scope.launch {
                         isLoading = true
                         syncError = null
                         try {
-                            val result = withContext(Dispatchers.IO) {
-                                cloudSyncManager.sync()
-                            }
-                            when (result) {
-                                is com.silas.omaster.cloud.SyncResult.Success -> {
-                                    fetchedPresetCount = cloudSyncManager.getCloudPresetCount()
-                                }
-                                is com.silas.omaster.cloud.SyncResult.Error -> {
-                                    syncError = result.message
-                                }
-                                else -> {}
-                            }
+                            // 通过 PresetRepository 重新加载预设
+                            com.silas.omaster.data.repository.PresetRepository.getInstance(context).reloadDefaultPresets()
+                            fetchedPresetCount = sources.count { it.enabled }
                         } catch (e: Exception) {
                             syncError = e.message ?: "刷新失败"
                         } finally {
