@@ -24,6 +24,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.os.Build
+import android.os.Environment
+import android.media.MediaScannerConnection
+import android.provider.MediaStore
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +78,9 @@ import com.silas.omaster.ui.settings.UpdateChannelScreen
 import com.silas.omaster.util.JsonUtil
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 主应用 NavHost 容器 + 底部导航栏 + 全局 Snackbar 宿主
@@ -307,7 +315,27 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.AIFineTune> {
-                AIFineTuneScreen(onBack = { navController.popBackStack() })
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() },
+                    onApply = { params ->
+                        val settingsManager = SettingsManager.getInstance(context)
+                        settingsManager.applyPresetParams(
+                            saturation = params.saturation.toInt(),
+                            contrast = params.contrast.toInt(),
+                            warmth = params.warmth.toInt(),
+                            sharpness = params.sharpness.toInt(),
+                            clarity = params.clarity.toInt(),
+                            brightness = params.brightness.toInt()
+                        )
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "AI 微调参数已应用",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable<Screen.WatermarkEditor> { backStackEntry ->
@@ -315,8 +343,28 @@ fun MainApp(navController: NavHostController) {
                 WatermarkEditorScreen(
                     imagePath = route.imagePath,
                     onBack = { navController.popBackStack() },
-                    onSave = { navController.popBackStack() },
-                    onExport = { _, _ -> navController.popBackStack() }
+                    onSave = { config ->
+                        // 保存水印配置到本地设置（简化表示：仅记录最后使用模板标识）
+                        val settingsManager = SettingsManager.getInstance(context)
+                        settingsManager.lastWatermarkTemplate = config.brandText
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "水印配置已保存",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        navController.popBackStack()
+                    },
+                    onExport = { bitmap, _ ->
+                        coroutineScope.launch {
+                            val success = saveBitmapToGallery(context, bitmap)
+                            snackbarHostState.showSnackbar(
+                                message = if (success) "图片已保存到相册" else "图片保存失败",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        navController.popBackStack()
+                    }
                 )
             }
 
@@ -440,7 +488,13 @@ fun MainApp(navController: NavHostController) {
                 CameraXViewfinderScreen(
                     onBack = { navController.popBackStack() },
                     onPhotoCaptured = { uri ->
-                        // 拍照后可以导航到 HasselbladScreen 进行分析
+                        // 拍照完成后返回，并通过 Snackbar 提示保存成功
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "照片已保存",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                         navController.popBackStack()
                     }
                 )
@@ -530,6 +584,46 @@ private fun applyPresetAndToast(
             actionLabel = "确定",
             duration = SnackbarDuration.Short
         )
+    }
+}
+
+/**
+ * 将 Bitmap 保存到系统相册
+ * @return 是否保存成功
+ */
+private suspend fun saveBitmapToGallery(context: android.content.Context, bitmap: Bitmap): Boolean {
+    if (bitmap.isRecycled) return false
+    return withContext(Dispatchers.IO) {
+        try {
+            val filename = "omaster_${System.currentTimeMillis()}.jpg"
+            val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster")
+                }
+                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                uri?.let { imageUri ->
+                    context.contentResolver.openOutputStream(imageUri)?.use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    } ?: return@let false
+                    true
+                } ?: false
+            } else {
+                val dir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                val file = java.io.File(dir, "OMaster/$filename")
+                file.parentFile?.mkdirs()
+                file.outputStream().use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg"), null)
+                true
+            }
+            success
+        } catch (e: Exception) {
+            android.util.Log.e("AppNavigation", "保存图片失败", e)
+            false
+        }
     }
 }
 

@@ -261,20 +261,78 @@ class CameraXManager(
 
     /**
      * 将 ImageProxy 转换为 Bitmap
+     *
+     * CameraX ImageAnalysis 默认输出 YUV_420_888 格式，无法直接用 BitmapFactory 解码。
+     * 这里做真正的 YUV -> RGB 转换，并应用旋转角度。
      */
     private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
-        val buffer: ByteBuffer = imageProxy.planes[0].buffer
-        val bytes = ByteArray(buffer.remaining())
-        buffer.get(bytes)
+        return try {
+            val bitmap = yuv420888ToBitmap(imageProxy)
+            val rotation = imageProxy.imageInfo.rotationDegrees
+            if (rotation != 0) {
+                val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true).also {
+                    bitmap.recycle()
+                }
+            } else {
+                bitmap
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "ImageProxy 转 Bitmap 失败: ${e.message}", e)
+            null
+        }
+    }
 
-        val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        // 旋转修正
-        val rotation = imageProxy.imageInfo.rotationDegrees
-        return if (rotation != 0) {
-            val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
-            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        } else {
-            bitmap
+    /**
+     * YUV_420_888 -> ARGB_8888 Bitmap
+     *
+     * 支持两种常见排布：
+     * - 平面型（Y/U/V 分别一个 plane）
+     * - 半平面型（Y 一个 plane，UV 交错一个 plane）
+     *
+     * 转换公式（YCbCr -> RGB，ITU-R BT.601 限定范围）：
+     *   R = Y + 1.402 * (V - 128)
+     *   G = Y - 0.344136 * (U - 128) - 0.714136 * (V - 128)
+     *   B = Y + 1.772 * (U - 128)
+     */
+    private fun yuv420888ToBitmap(image: ImageProxy): Bitmap {
+        val width = image.width
+        val height = image.height
+        val planes = image.planes
+
+        val yBuffer = planes[0].buffer
+        val uBuffer = planes[1].buffer
+        val vBuffer = planes[2].buffer
+
+        val yRowStride = planes[0].rowStride
+        val uvRowStride = planes[1].rowStride
+        val uvPixelStride = planes[1].pixelStride
+
+        val ySize = width * height
+        val out = IntArray(ySize)
+
+        var yPos = 0
+        for (row in 0 until height) {
+            var yRowStart = row * yRowStride
+            var uvRowStart = (row shr 1) * uvRowStride
+
+            for (col in 0 until width) {
+                val y = (yBuffer[yRowStart + col].toInt() and 0xFF)
+
+                val uvIndex = uvRowStart + (col shr 1) * uvPixelStride
+                val u = (uBuffer[uvIndex].toInt() and 0xFF) - 128
+                val v = (vBuffer[uvIndex].toInt() and 0xFF) - 128
+
+                val r = (y + 1.402f * v).toInt().coerceIn(0, 255)
+                val g = (y - 0.344136f * u - 0.714136f * v).toInt().coerceIn(0, 255)
+                val b = (y + 1.772f * u).toInt().coerceIn(0, 255)
+
+                out[yPos++] = 0xFF000000.toInt() or (r shl 16) or (g shl 8) or b
+            }
+        }
+
+        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            setPixels(out, 0, width, 0, 0, width, height)
         }
     }
 

@@ -1517,14 +1517,15 @@ private suspend fun saveImageToGallery(
     bitmap: Bitmap?,
     renderParams: RenderParameters = RenderParameters()
 ): Boolean {
-    if (bitmap == null) return false
+    if (bitmap == null || bitmap.isRecycled) return false
     return withContext(Dispatchers.IO) {
+        var filteredBitmap: Bitmap? = null
         try {
             // 应用ColorMatrix滤镜效果到bitmap
-            val filteredBitmap = applyColorMatrixToBitmap(bitmap, renderParams)
+            filteredBitmap = applyColorMatrixToBitmap(bitmap, renderParams)
 
             val filename = "omaster_ai_${System.currentTimeMillis()}.jpg"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val contentValues = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, filename)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -1534,10 +1535,10 @@ private suspend fun saveImageToGallery(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 )
-                uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { out ->
+                uri?.let { imageUri ->
+                    context.contentResolver.openOutputStream(imageUri)?.use { out ->
                         filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                    }
+                    } ?: false
                     true
                 } ?: false
             } else {
@@ -1552,9 +1553,12 @@ private suspend fun saveImageToGallery(
                 MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg"), null)
                 true
             }
+            saved
         } catch (e: Exception) {
             android.util.Log.e("AIFineTune", "Save image failed", e)
             false
+        } finally {
+            filteredBitmap?.recycle()
         }
     }
 }
