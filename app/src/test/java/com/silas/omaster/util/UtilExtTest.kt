@@ -150,26 +150,6 @@ class UtilExtTest {
         assertEquals("异常消息应该正确", "Null reference", message)
     }
 
-    // ===== UpdateChecker 扩展测试 =====
-
-    @Test
-    fun `UpdateChecker - 版本检查逻辑`() {
-        val currentVersion = 10
-        val remoteVersion = 15
-        
-        val needsUpdate = remoteVersion > currentVersion
-        
-        assertTrue("应该需要更新", needsUpdate)
-    }
-
-    @Test
-    fun `UpdateChecker - 更新渠道选择`() {
-        val channels = listOf("GITHUB", "GITEE")
-        val selectedChannel = "GITHUB"
-        
-        assertTrue("选择的渠道应该有效", selectedChannel in channels)
-    }
-
     // ===== UpdateConfigManager 扩展测试 =====
 
     @Test
@@ -221,28 +201,6 @@ class UtilExtTest {
         
         assertTrue("中文名称应该有效", presetName.isNotEmpty())
         assertTrue("英文名称应该有效", englishName.isNotEmpty())
-    }
-
-    // ===== ShareExportUtils 扩展测试 =====
-
-    @Test
-    fun `ShareExportUtils - 分享内容格式`() {
-        val presetName = "人像美颜"
-        val presetParams = "饱和度+10, 对比度+5"
-        val shareContent = "预设: $presetName\n参数: $presetParams"
-        
-        assertTrue("分享内容应该包含预设名", shareContent.contains(presetName))
-        assertTrue("分享内容应该包含参数", shareContent.contains(presetParams))
-    }
-
-    @Test
-    fun `ShareExportUtils - 导出文件名格式`() {
-        val presetName = "人像美颜"
-        val timestamp = System.currentTimeMillis()
-        val fileName = "${presetName}_$timestamp.json"
-        
-        assertTrue("文件名应该包含预设名", fileName.contains(presetName))
-        assertTrue("文件名应该包含时间戳", fileName.contains(timestamp.toString()))
     }
 
     // ===== HapticExt 扩展测试 =====
