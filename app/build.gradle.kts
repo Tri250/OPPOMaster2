@@ -142,7 +142,7 @@ android {
         // 防止 APK 反编译后直接提取明文 AppKey
         val obfuscationKey = getObfuscationKey(localProperties)
         buildConfigField("String", "UMENG_APPKEY", "\"${obfuscateXor(umengAppKey, obfuscationKey)}\"")
-        buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"$umengMessageSecret\"")
+        buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"${obfuscateXor(umengMessageSecret, obfuscationKey)}\"")
         buildConfigField("String", "OBFUSCATION_KEY", "\"$obfuscationKey\"")
     }
 
@@ -402,11 +402,6 @@ dependencies {
 
     // ML Kit 人脸检测
     implementation(libs.mlkit.face.detection)
-
-    // TensorFlow Lite 推理引擎
-    implementation(libs.tensorflow.lite)
-    implementation(libs.tensorflow.lite.gpu)
-    implementation(libs.tensorflow.lite.support)
 
     // CameraX 实时相机预览 - P2 深度优化
     implementation(libs.camerax.core)

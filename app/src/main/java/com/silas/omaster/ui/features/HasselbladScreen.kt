@@ -227,7 +227,7 @@ fun HasselbladScreen(
 
         if (hasPermission) {
             val photoUri = createTempImageUri(context)
-            if (photoUri != Uri.EMPTY) {
+            if (photoUri != null) {
                 cameraImageUri = photoUri
                 cameraLauncher.launch(photoUri)
             } else {
@@ -2301,7 +2301,7 @@ private suspend fun loadBitmapFromUri(
     }
 }
 
-private fun createTempImageUri(context: android.content.Context): Uri {
+private fun createTempImageUri(context: android.content.Context): Uri? {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Hasselblad").apply {
@@ -2314,6 +2314,7 @@ private fun createTempImageUri(context: android.content.Context): Uri {
             imageFile
         )
     } catch (e: Exception) {
-        Uri.EMPTY
+        android.util.Log.e("HasselbladScreen", "创建相机临时文件失败", e)
+        null
     }
 }

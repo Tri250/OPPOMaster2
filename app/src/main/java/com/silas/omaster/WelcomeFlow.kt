@@ -42,7 +42,11 @@ fun WelcomeFlow(
         } else {
             WelcomeDialog(
                 onAgree = onAgree,
-                onDisagree = onDisagree,
+                onDisagree = {
+                    // 不同意时仅禁用统计和云同步，允许使用本地功能
+                    OMasterApplication.getInstance().setUserAgreed(false)
+                    onDisagree()
+                },
                 onViewPrivacyPolicy = {
                     showPrivacyPolicy = true
                 }

@@ -84,14 +84,6 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- 下载完成广播接收器 -->
-        <receiver
-            android:name=".util.DownloadCompleteReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
-            </intent-filter>
-        </receiver>
     </application>
 
 </manifest>

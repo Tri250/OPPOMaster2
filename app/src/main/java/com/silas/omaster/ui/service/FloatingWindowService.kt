@@ -27,6 +27,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.silas.omaster.MainActivity
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
@@ -115,13 +116,13 @@ class FloatingWindowService : Service() {
                 // 获取动态生成的 sections
                 val sections = preset.getDisplaySections(context)
                 putParcelableArrayListExtra(EXTRA_SECTIONS, ArrayList(sections))
-                
+
                 putExtra(EXTRA_PRESET_ID, preset.id ?: "")
                 putExtra(EXTRA_PRESET_INDEX, presetIndex)
                 putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
                 putExtra(EXTRA_IS_EXPANDED, true)
             }
-            context.startService(intent)
+            ContextCompat.startForegroundService(context, intent)
         }
 
         /**
@@ -133,13 +134,13 @@ class FloatingWindowService : Service() {
                 putExtra(EXTRA_NAME, preset.name)
                 val sections = preset.getDisplaySections(context)
                 putParcelableArrayListExtra(EXTRA_SECTIONS, ArrayList(sections))
-                
+
                 putExtra(EXTRA_PRESET_ID, preset.id ?: "")
                 putExtra(EXTRA_PRESET_INDEX, presetIndex)
                 putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
                 putExtra(EXTRA_IS_EXPANDED, instance?.isExpanded ?: true)
             }
-            context.startService(intent)
+            ContextCompat.startForegroundService(context, intent)
         }
 
         fun hide(context: Context) {

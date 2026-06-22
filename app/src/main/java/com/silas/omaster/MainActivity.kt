@@ -87,7 +87,9 @@ class MainActivity : ComponentActivity() {
                                     showWelcomeFlow = false
                                 },
                                 onDisagree = {
-                                    finish()
+                                    // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
+                                    OMasterApplication.getInstance().setUserAgreed(false)
+                                    showWelcomeFlow = false
                                 }
                             )
                         } else {

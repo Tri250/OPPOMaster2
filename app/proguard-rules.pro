@@ -90,12 +90,6 @@
 }
 
 # ========================================
-# TensorFlow Lite 相关规则（精简）
-# ========================================
--keep class org.tensorflow.lite.Interpreter { *; }
--dontwarn org.tensorflow.**
-
-# ========================================
 # ML Kit 人脸检测相关规则（精简）
 # ========================================
 -keep class com.google.mlkit.vision.face.FaceDetector { *; }

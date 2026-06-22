@@ -254,9 +254,10 @@ class OMasterApplication : Application() {
 
         try {
             UMConfigure.setLogEnabled(false)
-            // 使用解混淆后的 AppKey（BuildConfig 中存储的是 XOR+Base64 混淆值）
+            // 使用解混淆后的 AppKey 和 MessageSecret（BuildConfig 中存储的是 XOR+Base64 混淆值）
             val appKey = deobfuscateKey(BuildConfig.UMENG_APPKEY, OBFUSCATION_KEY)
-            UMConfigure.init(this, appKey, "default", UMConfigure.DEVICE_TYPE_PHONE, null)
+            val messageSecret = deobfuscateKey(BuildConfig.UMENG_MESSAGE_SECRET, OBFUSCATION_KEY)
+            UMConfigure.init(this, appKey, "default", UMConfigure.DEVICE_TYPE_PHONE, messageSecret)
             android.util.Log.i("OMasterApplication", "友盟统计初始化成功")
         } catch (e: Throwable) {
             android.util.Log.e("OMasterApplication", "友盟初始化失败", e)

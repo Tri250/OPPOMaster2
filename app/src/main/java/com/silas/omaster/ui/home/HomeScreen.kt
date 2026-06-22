@@ -52,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.snapshotFlow
@@ -146,8 +147,14 @@ fun HomeScreen(
         }
     }
 
-    // 全局悬浮窗控制器
+    // 全局悬浮窗控制器：注册/注销生命周期管理
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
+    DisposableEffect(floatingWindowController) {
+        floatingWindowController.register()
+        onDispose {
+            floatingWindowController.unregister()
+        }
+    }
 
     // 获取过滤后的预设列表
     val filteredPresets = remember(selectedTab, selectedBrand, sortType, searchQuery, allPresets) {

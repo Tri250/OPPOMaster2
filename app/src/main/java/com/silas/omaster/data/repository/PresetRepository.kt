@@ -328,9 +328,12 @@ class PresetRepository private constructor(context: Context) {
         _pinnedIds.value = pinned
         savePinned(pinned)
 
-        // 删除封面文件
+        // 删除封面文件（使用应用私有目录拼接完整路径）
         preset.coverPath?.let { path ->
-            runCatching { File(path).delete() }
+            runCatching {
+                val file = if (File(path).isAbsolute) File(path) else File(appContext.filesDir, path)
+                file.delete()
+            }
                 .onSuccess { deleted -> Log.d(TAG, "删除封面文件: $path, 成功=$deleted") }
                 .onFailure { e -> Log.w(TAG, "删除封面文件失败: $path", e) }
         }

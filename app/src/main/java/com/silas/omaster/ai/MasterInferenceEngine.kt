@@ -269,7 +269,8 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 锐化增强：使用 Unsharp Mask 提升边缘清晰度
+     * 锐化增强：使用 Unsharp Mask 提升边缘清晰度。
+     * 调用方负责回收返回的 Bitmap。
      */
     private fun applySharpen(bitmap: Bitmap): Bitmap {
         val blurred = applyFastBlur(bitmap, radius = 4)
@@ -283,6 +284,7 @@ class MasterInferenceEngine private constructor(context: Context) {
             alpha = 150
         }
         canvas.drawBitmap(blurred, 0f, 0f, paint)
+        blurred.recycle()
         return output
     }
 

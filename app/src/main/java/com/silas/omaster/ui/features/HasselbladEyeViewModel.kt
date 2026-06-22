@@ -547,7 +547,7 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
-     * 重置所有状态。
+     * 重置所有状态，并释放持有的 Bitmap 防止内存泄漏。
      */
     fun clear() {
         analysisJob?.cancel()
@@ -569,9 +569,15 @@ class HasselbladEyeViewModel : ViewModel() {
         _analysisMessage.value = "正在读取光影信息..."
         _analysisSteps.value = defaultAnalysisSteps()
         _apertureState.value = ApertureState.CLOSED
+
+        // 释放 Bitmap 防止 OOM
+        _originalBitmap.value?.recycle()
         _originalBitmap.value = null
+        _previewBitmap.value?.recycle()
         _previewBitmap.value = null
+        _thumbnailPreview.value?.recycle()
         _thumbnailPreview.value = null
+
         _isSaving.value = false
         _exportFormat.value = ExportFormat.JPEG
         _lastSavedUri.value = null
@@ -583,6 +589,13 @@ class HasselbladEyeViewModel : ViewModel() {
         super.onCleared()
         analysisJob?.cancel()
         previewJob?.cancel()
+        // ViewModel 销毁时释放 Bitmap
+        _originalBitmap.value?.recycle()
+        _originalBitmap.value = null
+        _previewBitmap.value?.recycle()
+        _previewBitmap.value = null
+        _thumbnailPreview.value?.recycle()
+        _thumbnailPreview.value = null
     }
 
     // ================== 私有辅助方法 ==================
