@@ -88,8 +88,12 @@ class HomeViewModel(
 
         // 启动新的收集任务
         allPresetsJob = viewModelScope.launch {
-            repository.getAllPresets().collect { presets ->
-                _allPresets.value = presets
+            try {
+                repository.getAllPresets().collect { presets ->
+                    _allPresets.value = presets
+                    _isLoading.value = false
+                }
+            } catch (e: Exception) {
                 _isLoading.value = false
             }
         }

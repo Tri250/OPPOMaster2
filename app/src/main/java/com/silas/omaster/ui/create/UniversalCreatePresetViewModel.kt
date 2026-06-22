@@ -81,6 +81,7 @@ class UniversalCreatePresetViewModel(
         if (presetId == null) {
             // 从零开始
             _uiState.value = UniversalPresetUiState()
+            clearUndoHistory()
             return
         }
 
@@ -110,6 +111,7 @@ class UniversalCreatePresetViewModel(
         if (isLoaded) return
         isLoaded = true
         editingPresetId = presetId
+        clearUndoHistory()
         
         viewModelScope.launch {
             val preset = repository.presets.value.find { it.id == presetId }?.toMasterPreset()

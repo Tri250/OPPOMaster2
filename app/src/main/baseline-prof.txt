@@ -1,0 +1,12 @@
+HSPLandroidx/compose/runtime/ComposerImpl;-><init>(Landroidx/compose/runtime/CompositionContext;Landroidx/compose/runtime/MutableState;Lkotlin/jvm/functions/Function0;)V
+HSPLandroidx/compose/runtime/ComposerImpl;->apply$runtime_release()V
+HSPLandroidx/compose/runtime/ComposerImpl;->startRestartGroup(I)V
+HSPLandroidx/compose/runtime/ComposerImpl;->endRestartGroup()Landroidx/compose/runtime/ScopeUpdateScope;
+HSPLcom/silas/omaster/OMasterApplication;->onCreate()V
+HSPLcom/silas/omaster/ui/home/HomeScreenKt;->HomeScreen(Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
+HSPLcom/silas/omaster/ui/home/HomeViewModel;-><init>(Lcom/silas/omaster/data/repository/PresetRepository;)V
+HSPLcom/silas/omaster/data/repository/PresetRepository;->getInstance(Landroid/content/Context;)Lcom/silas/omaster/data/repository/PresetRepository;
+HSPLcom/silas/omaster/data/local/SettingsManager;->getInstance(Landroid/content/Context;)Lcom/silas/omaster/data/local/SettingsManager;
+HSPLcom/silas/omaster/AppNavigationKt;->OMasterNavHost(Landroidx/navigation/NavHostController;Landroidx/compose/runtime/Composer;I)V
+HSPLandroidx/compose/material3/MaterialThemeKt;->MaterialTheme(Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+HSPLandroidx/lifecycle/viewmodel/compose/ViewModelKt;->viewModel(Lkotlin/reflect/KClass;Landroidx/lifecycle/ViewModelStoreOwner;Ljava/lang/String;Landroidx/lifecycle/ViewModelProvider$Factory;Landroidx/lifecycle/viewmodel/CreationExtras;Landroidx/compose/runtime/Composer;II)Landroidx/lifecycle/ViewModel;

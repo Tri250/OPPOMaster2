@@ -40,9 +40,9 @@ import java.io.FileOutputStream
  */
 class HasselbladEyeViewModel : ViewModel() {
 
-    /** 导出格式 */
+    /** 导出格式 - P2 HEIF支持 */
     enum class ExportFormat {
-        JPEG, PNG, WEBP
+        JPEG, PNG, WEBP, HEIF
     }
 
     // ================== StateFlow 状态 ==================
@@ -468,11 +468,13 @@ class HasselbladEyeViewModel : ViewModel() {
                             ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg"
                             ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png"
                             ExportFormat.WEBP -> Bitmap.CompressFormat.WEBP to "webp"
+                            ExportFormat.HEIF -> Bitmap.CompressFormat.JPEG to "heic"
                         }
                         val mimeType = when (format) {
                             ExportFormat.JPEG -> "image/jpeg"
                             ExportFormat.PNG -> "image/png"
                             ExportFormat.WEBP -> "image/webp"
+                            ExportFormat.HEIF -> "image/heif"
                         }
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
                         val filename = "Hasselblad_${System.currentTimeMillis()}.$extension"

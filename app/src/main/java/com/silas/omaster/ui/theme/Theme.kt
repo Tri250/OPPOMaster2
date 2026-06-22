@@ -9,9 +9,11 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
 import com.silas.omaster.data.local.DarkMode
@@ -119,9 +121,22 @@ fun OMasterTheme(
         }
     }
 
+    // P2: 限制字体缩放最大为 1.5x，防止极端布局破坏，同时保持无障碍支持
+    val currentDensity = LocalDensity.current
+    val fontScale = currentDensity.fontScale
+    val constrainedDensity = if (fontScale > 1.5f) {
+        androidx.compose.ui.unit.Density(currentDensity.density, 1.5f)
+    } else {
+        currentDensity
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = {
+            CompositionLocalProvider(LocalDensity provides constrainedDensity) {
+                content()
+            }
+        }
     )
 }

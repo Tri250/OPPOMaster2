@@ -1,7 +1,5 @@
 package com.silas.omaster.util
 
-import com.silas.omaster.model.PresetSection
-
 /**
  * 撤销/重做管理器
  * 用于预设编辑时支持 Undo/Redo 操作

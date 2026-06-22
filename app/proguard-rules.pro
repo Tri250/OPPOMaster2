@@ -218,7 +218,7 @@
 # ========================================
 # 混淆配置
 # ========================================
--useuniqueclassmembernames
+# -useuniqueclassmembernames (R8 不支持此选项，已移除)
 
 -keepclassmembernames class * {
     java.lang.Class class$(java.lang.String);

@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -288,18 +289,36 @@ fun DetailScreen(
                                     fontSize = 12.sp
                                 )
                             }
-                        }
-                        
-                        // 对比视图提示
-                        if (isComparing) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            androidx.compose.material3.Text(
-                                text = "长按图片可查看原图效果对比",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = HasselbladOrange,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
+
+                            // 对比模式：半透明遮罩 + 标签
+                            if (isComparing) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(280.dp)
+                                        .background(
+                                            Color.White.copy(alpha = 0.3f)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        androidx.compose.material3.Text(
+                                            text = "原始效果",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = Color.Black.copy(alpha = 0.7f),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        androidx.compose.material3.Text(
+                                            text = "对比模式 - 点击按钮切换回预设效果",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.Black.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))

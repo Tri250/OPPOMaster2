@@ -50,6 +50,7 @@ import com.silas.omaster.ui.detail.AboutScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
+import com.silas.omaster.ui.features.CameraXViewfinderScreen
 import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
@@ -424,10 +425,23 @@ fun MainApp(navController: NavHostController) {
                     onComplete = {
                         onboardingManager.markOnboardingShown(VersionInfo.VERSION_CODE.toLong())
                         showOnboarding = false
+                        navController.popBackStack()
                     },
                     onSkip = {
                         onboardingManager.skipOnboarding(VersionInfo.VERSION_CODE.toLong())
                         showOnboarding = false
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable<Screen.CameraXViewfinder> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.CameraXViewfinder>()
+                CameraXViewfinderScreen(
+                    onBack = { navController.popBackStack() },
+                    onPhotoCaptured = { uri ->
+                        // 拍照后可以导航到 HasselbladScreen 进行分析
+                        navController.popBackStack()
                     }
                 )
             }
