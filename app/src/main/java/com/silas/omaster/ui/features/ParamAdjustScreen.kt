@@ -544,7 +544,7 @@ private fun HistogramPlaceholder(
     shutterSpeed: Float,
     aperture: Float
 ) {
-    // 模拟直方图 - 基于参数生成伪随机分布
+    // 基于曝光参数计算预览直方图（非真实图像直方图，用于参数关系可视化）
     val brightness = calculateBrightness(iso, shutterSpeed, aperture)
     val barHeights = remember(brightness) {
         (0..31).map { i ->

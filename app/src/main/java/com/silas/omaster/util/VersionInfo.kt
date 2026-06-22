@@ -30,8 +30,11 @@ object VersionInfo {
      */
     fun parseVersionCode(versionName: String): Int {
         // 移除前缀 'v' 如果有
-        val cleanVersion = versionName.removePrefix("v")
-        
+        var cleanVersion = versionName.removePrefix("v")
+
+        // 忽略构建类型后缀（如 -debug / -release），避免 debug 构建版本号为负
+        cleanVersion = cleanVersion.replace(Regex("-(debug|release)$", RegexOption.IGNORE_CASE), "")
+
         // 分离主版本和预发布标识
         val (mainVersion, prerelease) = when {
             cleanVersion.contains("-") -> {
@@ -44,32 +47,31 @@ object VersionInfo {
             }
             else -> cleanVersion to null
         }
-        
+
         val parts = mainVersion.split(".")
         val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
         val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
-        
-        // 修复：patch 部分可能包含预发布标识（如 "0-beta1"）
+
+        // patch 部分可能包含预发布标识（如 "0-beta1"）
         val patchPart = parts.getOrNull(2) ?: "0"
         val patch = patchPart.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
-        
+
         // 基础版本号
         val baseCode = major * 10000 + minor * 100 + patch
-        
+
         // 预发布版本处理：返回负数，确保正式版 > 预发布版
         return if (prerelease != null) {
-            // 预发布版本解析为负数，按预发布类型排序
-            // alpha < beta < rc < 其他
-            val prereleaseCode = when {
-                prerelease.startsWith("alpha", ignoreCase = true) -> -4
-                prerelease.startsWith("beta", ignoreCase = true) -> -3
-                prerelease.startsWith("rc", ignoreCase = true) -> -2
-                else -> -1
+            // 预发布版本按类型排序：alpha < beta < rc < 其他
+            val rank = when {
+                prerelease.startsWith("alpha", ignoreCase = true) -> 4
+                prerelease.startsWith("beta", ignoreCase = true) -> 3
+                prerelease.startsWith("rc", ignoreCase = true) -> 2
+                else -> 1
             }
             // 提取预发布版本号（如 beta1 -> 1）
             val prereleaseNum = prerelease.filter { it.isDigit() }.toIntOrNull() ?: 0
-            // 组合：基础版本号为负，加上预发布类型和版本号
-            -(baseCode * 100 + prereleaseCode * 10 + prereleaseNum)
+            // rank 越大越靠前（越负），同类型版本号越大越靠后（越接近 0）
+            -(baseCode * 1000 + rank * 100 - prereleaseNum)
         } else {
             baseCode
         }

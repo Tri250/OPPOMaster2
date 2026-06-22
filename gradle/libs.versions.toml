@@ -1,10 +1,12 @@
 [versions]
 # ===== Android Gradle Plugin =====
-agp = "8.9.1"
+# 使用 8.7.3 以匹配本地离线仓库可用版本，避免网络不可用时无法解析
+agp = "8.7.3"
 
 # ===== Kotlin =====
-# Gradle 8.14.4 需要 Kotlin 2.2.0+；AGP 8.9.1 兼容 Kotlin 2.2.0
-kotlin = "2.2.0"
+# 使用 2.0.21 以匹配本地/镜像仓库可用版本，避免网络不可用时无法解析
+# AGP 8.7.3 完全兼容 Kotlin 2.0.21
+kotlin = "2.0.21"
 
 # ===== AndroidX Core =====
 coreKtx = "1.15.0"

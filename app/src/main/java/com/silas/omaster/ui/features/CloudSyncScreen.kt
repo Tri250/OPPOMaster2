@@ -27,7 +27,9 @@ import com.silas.omaster.cloud.SyncState
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 import com.silas.omaster.ui.theme.SuccessGreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -368,7 +370,7 @@ fun CloudSyncScreen(
                 cloudProviders = cloudProviders.map {
                     if (it.type == provider) {
                         val updated = it.copy(isConnecting = true, apiKey = apiKey)
-                        // 模拟连接验证
+                        // 执行真实连接验证（格式校验 + 云端可达性检查）
                         scope.launch {
                             try {
                                 // 验证 API Key / WebDAV 地址
@@ -753,27 +755,91 @@ private fun CloudProviderConnectDialog(
 
 /**
  * 验证云服务提供商连接
- * 实际应用中将通过 HTTP 请求验证 API 密钥或 WebDAV 地址的有效性
+ * 执行真实 HTTP(S) 探测，校验 API Key / WebDAV 地址是否可用
  */
 private suspend fun validateProviderConnection(
     providerType: CloudProviderType,
     apiKey: String
-): Boolean {
-    // 基础验证：检查格式
-    if (apiKey.isBlank()) return false
+): Boolean = withContext(Dispatchers.IO) {
+    if (apiKey.isBlank()) return@withContext false
 
     when (providerType) {
         CloudProviderType.GOOGLE_DRIVE -> {
-            // Google Drive API Key 验证：通常为 39 字符的字母数字字符串
-            return apiKey.length >= 20
+            if (apiKey.length < 20) return@withContext false
+            return@withContext pingGoogleDrive(apiKey)
         }
         CloudProviderType.DROPBOX -> {
-            // Dropbox API Key 验证：通常以 "sl." 开头
-            return apiKey.length >= 15
+            if (apiKey.length < 15) return@withContext false
+            return@withContext pingDropbox(apiKey)
         }
         CloudProviderType.WEBDAV -> {
-            // WebDAV 地址验证：必须是 HTTPS 协议
-            return apiKey.lowercase().startsWith("https://")
+            if (!apiKey.lowercase().startsWith("https://")) return@withContext false
+            return@withContext pingWebDav(apiKey)
         }
     }
 }
+
+/**
+ * 探测 Google Drive API Key 是否有效
+ */
+private fun pingGoogleDrive(apiKey: String): Boolean {
+    return try {
+        val url = java.net.URL("https://www.googleapis.com/drive/v3/about?key=$apiKey&fields=user")
+        val connection = url.openConnection() as java.net.HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.connectTimeout = 8_000
+        connection.readTimeout = 8_000
+        connection.useCaches = false
+        val responseCode = connection.responseCode
+        connection.disconnect()
+        responseCode == 200
+    } catch (e: Exception) {
+        android.util.Log.w("CloudSync", "Google Drive 连接验证失败", e)
+        false
+    }
+}
+
+/**
+ * 探测 Dropbox Access Token 是否有效
+ */
+private fun pingDropbox(token: String): Boolean {
+    return try {
+        val url = java.net.URL("https://api.dropboxapi.com/2/check/user")
+        val connection = url.openConnection() as java.net.HttpURLConnection
+        connection.requestMethod = "POST"
+        connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.connectTimeout = 8_000
+        connection.readTimeout = 8_000
+        connection.doOutput = true
+        connection.outputStream.use { it.write("{}".toByteArray()) }
+        val responseCode = connection.responseCode
+        connection.disconnect()
+        responseCode == 200
+    } catch (e: Exception) {
+        android.util.Log.w("CloudSync", "Dropbox 连接验证失败", e)
+        false
+    }
+}
+
+/**
+ * 探测 WebDAV 服务器是否可达
+ */
+private fun pingWebDav(serverUrl: String): Boolean {
+    return try {
+        val url = java.net.URL(serverUrl)
+        val connection = url.openConnection() as java.net.HttpURLConnection
+        connection.requestMethod = "HEAD"
+        connection.connectTimeout = 8_000
+        connection.readTimeout = 8_000
+        connection.useCaches = false
+        val responseCode = connection.responseCode
+        connection.disconnect()
+        responseCode in 200..399
+    } catch (e: Exception) {
+        android.util.Log.w("CloudSync", "WebDAV 连接验证失败", e)
+        false
+    }
+}
+
+
