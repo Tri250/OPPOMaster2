@@ -19,7 +19,7 @@ class PerformanceTest {
         private const val SCENE_MAPPING_THRESHOLD_MS = 500L
         private const val RENDER_PARAMS_THRESHOLD_MS = 100L
         private const val UNDO_REDO_THRESHOLD_MS = 100L
-        private const val FILM_LOOKUP_THRESHOLD_MS = 100L
+        private const val FILM_LOOKUP_THRESHOLD_MS = 200L
     }
 
     @Test

@@ -195,20 +195,20 @@ class InterruptionTest {
         val manager = UndoRedoManager<Int>()
         var current = 0
 
-        // 第一次编辑
-        manager.pushState(1)
+        // 保存初始状态后进行第一次编辑
+        manager.pushState(current)
         current = 1
 
-        // 第一次中断恢复
-        manager.pushState(2)
+        // 保存状态1后进行第二次编辑
+        manager.pushState(current)
         current = 2
 
-        // 第二次中断恢复
+        // 第二次中断恢复：撤销到状态1
         current = manager.undo(current) ?: current
         assertEquals(1, current)
 
-        // 第三次中断恢复后继续编辑
-        manager.pushState(3)
+        // 继续编辑到状态3
+        manager.pushState(current)
         current = 3
 
         assertTrue(manager.canUndo())

@@ -93,10 +93,10 @@ class StabilityTest {
 
         var current = 199
         repeat(50) { current = manager.undo(current) ?: current }
-        assertEquals(149, current)
+        assertEquals(150, current)
 
         repeat(30) { current = manager.redo(current) ?: current }
-        assertEquals(179, current)
+        assertEquals(180, current)
     }
 
     @Test

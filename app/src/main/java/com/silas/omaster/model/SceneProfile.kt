@@ -161,7 +161,7 @@ data class HasselbladParams(
      * 格式化参数显示
      */
     fun formatParamValue(value: Int): String {
-        return if (value >= 0) "+$value" else "$value"
+        return if (value > 0) "+$value" else "$value"
     }
 }
 

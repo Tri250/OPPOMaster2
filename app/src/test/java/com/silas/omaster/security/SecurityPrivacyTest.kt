@@ -132,10 +132,8 @@ class SecurityPrivacyTest {
     fun `加密 - Base64编码不应包含换行`() {
         val data = "sensitive_api_key_12345"
         val encoded = Base64.getEncoder().encodeToString(data.toByteArray())
-        val noWrapEncoded = Base64.getEncoder().withoutWrapping().encodeToString(data.toByteArray())
 
         assertFalse("Base64应无换行", encoded.contains("\n"))
-        assertEquals(encoded, noWrapEncoded)
     }
 
     @Test

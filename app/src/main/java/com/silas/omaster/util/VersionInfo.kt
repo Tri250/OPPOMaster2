@@ -9,6 +9,11 @@ import com.silas.omaster.BuildConfig
 object VersionInfo {
 
     /**
+     * 预编译构建类型后缀正则，避免每次解析版本号时重复创建
+     */
+    private val BUILD_TYPE_SUFFIX_REGEX = Regex("-(debug|release)$", RegexOption.IGNORE_CASE)
+
+    /**
      * 对外显示版本号，例如 "1.1.0"
      * 对应 build.gradle.kts 中的 versionName
      */
@@ -33,7 +38,7 @@ object VersionInfo {
         var cleanVersion = versionName.removePrefix("v")
 
         // 忽略构建类型后缀（如 -debug / -release），避免 debug 构建版本号为负
-        cleanVersion = cleanVersion.replace(Regex("-(debug|release)$", RegexOption.IGNORE_CASE), "")
+        cleanVersion = cleanVersion.replace(BUILD_TYPE_SUFFIX_REGEX, "")
 
         // 分离主版本和预发布标识
         val (mainVersion, prerelease) = when {

@@ -4,34 +4,30 @@
 
 pluginManagement {
     repositories {
-        // 本地 Maven 仓库（CI 离线构建用）优先解析 AGP 等插件
-        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
-        // 阿里云 Gradle 插件镜像（Kotlin Android plugin 等）
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        // 阿里云 Google 镜像（AGP 等）
+        // 阿里云 Google 镜像（AGP、Kotlin Android plugin 等）
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+        // 阿里云 Gradle 插件镜像
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         // 阿里云公共仓库
         maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // 官方仓库（保底）—— 国内环境下解析较慢，放在最后
-        mavenCentral()
+        // 本地 Maven 仓库（CI 离线构建用兜底）
+        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        // 本地 Maven 仓库（CI 离线构建用）
-        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
-        // 阿里云 Google 镜像（AndroidX、Compose、CameraX 等）
+        // 阿里云 Google 镜像（AndroidX、Compose、CameraX、AGP 等）
         maven { url = uri("https://maven.aliyun.com/repository/google") }
+        // 阿里云 Central 镜像（Kotlin、Ktor、MockK 等）
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
         // 阿里云公共仓库（Kotlin、Ktor、Coil、Gson 等）
         maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // 阿里云 Central 镜像
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
         // 友盟 SDK 仓库（umeng-common、umeng-asms）
         maven { url = uri("https://developer.umeng.com/sdk/repo") }
-        // 官方仓库（保底）—— 国内环境下解析较慢，放在最后
-        mavenCentral()
+        // 本地 Maven 仓库（CI 离线构建用兜底）
+        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
     }
 }
 

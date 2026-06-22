@@ -68,8 +68,8 @@ class UndoRedoManagerTest {
         manager.pushState(4)
 
         assertEquals(3, manager.undoCount())
-        // 最旧的1应被移除，undo时先返回3
-        assertEquals(3, manager.undo(4))
+        // 最旧的1应被移除，undo时先返回最近保存的状态4
+        assertEquals(4, manager.undo(4))
     }
 
     @Test

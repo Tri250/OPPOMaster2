@@ -323,6 +323,18 @@ object ScenePresets {
             HasselbladParams(contrast = 15, sharpness = 20, saturation = 10),
             listOf("tx400", "cc"),
             listOf("捕捉运动瞬间", "使用快速快门", "注意构图动态")
+        ),
+        eventScene("event-travel", "旅行",
+            "记录旅途中的精彩瞬间",
+            HasselbladParams(tone = 5, saturation = 12, contrast = 8),
+            listOf("rdp3", "nh"),
+            listOf("把握黄金时刻", "注意环境故事性", "保持轻便灵活")
+        ),
+        eventScene("event-graduation", "毕业",
+            "青春难忘的毕业场景",
+            HasselbladParams(tone = 3, saturation = 10, colorTemp = 5),
+            listOf("portra", "cc"),
+            listOf("捕捉真挚笑容", "注意人群构图", "记录难忘时刻")
         )
     )
 
