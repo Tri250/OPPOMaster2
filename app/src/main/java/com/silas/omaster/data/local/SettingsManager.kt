@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -596,127 +595,53 @@ class SettingsManager private constructor(private val context: Context) {
     // ==================== DataStore 操作方法 ====================
 
     /**
-     * 同步获取 String 数据（带内存缓存 + 超时保护，避免主线程 ANR）
-     * 优先从缓存读取；缓存未命中时使用 runBlocking 读取 DataStore（带超时），
-     * 若读取失败/超时则返回默认值，成功后写入缓存。
+     * 同步获取 String 数据（纯内存缓存读取，零阻塞）
+     *
+     * 实现说明：
+     * - 优先从内存缓存读取；命中则直接返回
+     * - 缓存未命中时返回 defaultValue，避免任何主线程阻塞
+     * - 真实值由 init{} / preloadCache() / setDataSync() 异步填充到缓存
      */
     private fun getDataSync(key: Preferences.Key<String>, defaultValue: String): String {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as String }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            defaultValue
-        }
-        cache[key.name] = value
-        return value
+        return defaultValue
     }
-    
+
     private fun getDataSyncOrNull(key: Preferences.Key<String>): String? {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as String? }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            null
-        }
-        if (value != null) cache[key.name] = value
-        return value
+        return null
     }
-    
+
     private fun getDataSync(key: Preferences.Key<Boolean>, defaultValue: Boolean): Boolean {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Boolean }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            defaultValue
-        }
-        cache[key.name] = value
-        return value
+        return defaultValue
     }
-    
+
     private fun getDataSync(key: Preferences.Key<Int>, defaultValue: Int): Int {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Int }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            defaultValue
-        }
-        cache[key.name] = value
-        return value
+        return defaultValue
     }
-    
+
     private fun getDataSync(key: Preferences.Key<Long>, defaultValue: Long): Long {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Long }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            defaultValue
-        }
-        cache[key.name] = value
-        return value
+        return defaultValue
     }
 
     private fun getDataSync(key: Preferences.Key<Float>, defaultValue: Float): Float {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Float }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            defaultValue
-        }
-        cache[key.name] = value
-        return value
+        return defaultValue
     }
-    
+
     private fun getDataSetSync(key: Preferences.Key<Set<String>>, defaultValue: Set<String>): Set<String> {
         @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Set<String> }
-        val value = try {
-            runBlocking {
-                withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.data.map { prefs -> prefs[key] ?: defaultValue }.first()
-                }
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("SettingsManager", "读取设置超时/失败: ${key.name}", e)
-            defaultValue
-        }
-        cache[key.name] = value
-        return value
+        return defaultValue
     }
     
     /**

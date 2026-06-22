@@ -12,6 +12,8 @@ from pathlib import Path
 
 REPO_DIR = Path("/workspace/local-maven-repo")
 REPOS = [
+    "https://maven.aliyun.com/repository/google",
+    "https://maven.aliyun.com/repository/public",
     "https://repo1.maven.org/maven2",
     "https://dl.google.com/android/maven2",
 ]
@@ -155,12 +157,16 @@ def parse_pom_dependencies(pom_path: Path) -> list[tuple[str, str, str, str]]:
 def main():
     # Seed artifacts to download (AGP and Kotlin Gradle plugin)
     seeds = [
-        ("com.android.tools.build", "gradle", "8.7.3"),
-        ("org.jetbrains.kotlin", "kotlin-gradle-plugin", "2.1.20"),
-        ("org.jetbrains.kotlin.android", "org.jetbrains.kotlin.android.gradle.plugin", "2.1.20"),
-        ("org.jetbrains.kotlin.plugin.compose", "org.jetbrains.kotlin.plugin.compose.gradle.plugin", "2.1.20"),
-        ("org.jetbrains.kotlin.plugin.serialization", "org.jetbrains.kotlin.plugin.serialization.gradle.plugin", "2.1.20"),
-        ("org.jetbrains.kotlin.plugin.parcelize", "org.jetbrains.kotlin.plugin.parcelize.gradle.plugin", "2.1.20"),
+        # AGP 8.9.1 与 libs.versions.toml 保持一致
+        ("com.android.tools.build", "gradle", "8.9.1"),
+        ("com.android.application", "com.android.application.gradle.plugin", "8.9.1"),
+        ("com.android.library", "com.android.library.gradle.plugin", "8.9.1"),
+        # Kotlin 2.2.0 与 libs.versions.toml / Gradle 8.14.4 保持一致
+        ("org.jetbrains.kotlin", "kotlin-gradle-plugin", "2.2.0"),
+        ("org.jetbrains.kotlin.android", "org.jetbrains.kotlin.android.gradle.plugin", "2.2.0"),
+        ("org.jetbrains.kotlin.plugin.compose", "org.jetbrains.kotlin.plugin.compose.gradle.plugin", "2.2.0"),
+        ("org.jetbrains.kotlin.plugin.serialization", "org.jetbrains.kotlin.plugin.serialization.gradle.plugin", "2.2.0"),
+        ("org.jetbrains.kotlin.plugin.parcelize", "org.jetbrains.kotlin.plugin.parcelize.gradle.plugin", "2.2.0"),
     ]
 
     queue = list(seeds)

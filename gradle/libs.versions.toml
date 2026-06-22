@@ -3,6 +3,7 @@
 agp = "8.9.1"
 
 # ===== Kotlin =====
+# Gradle 8.14.4 需要 Kotlin 2.2.0+；AGP 8.9.1 兼容 Kotlin 2.2.0
 kotlin = "2.2.0"
 
 # ===== AndroidX Core =====
@@ -46,6 +47,9 @@ kotlinx-coroutines-play-services = "1.10.1"
 
 # ===== DataStore =====
 datastore = "1.1.1"
+
+# ===== ProfileInstaller =====
+profileinstaller = "1.4.1"
 
 # ===== Testing =====
 junit = "4.13.2"
@@ -113,7 +117,7 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 # ===== ProfileInstaller (ART 配置文件，启动性能优化) =====
-androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version = "1.4.1" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 
 # ===== Testing Libraries =====
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

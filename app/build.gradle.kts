@@ -368,8 +368,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
 
-    // ⚠️ 替换硬编码的 Material 依赖
-    implementation(libs.androidx.compose.material)    // 对应 "androidx.compose.material:material:1.7.0"
+    // Compose Material（pull-to-refresh 等兼容场景）- 已迁移到 catalog
+    implementation(libs.androidx.compose.material)    // 对应 androidx.compose.material:material:1.7.7
 
     // 导航组件（已使用 catalog）
     implementation(libs.androidx.navigation.compose)
