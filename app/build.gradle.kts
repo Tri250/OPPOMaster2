@@ -135,6 +135,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // 资源优化：只保留需要的语言资源
+        @Suppress("DEPRECATION")
         resourceConfigurations += listOf("en", "zh", "zh-rCN", "zh-rTW")
         
         // ===== 安全配置注入到 BuildConfig =====
@@ -208,16 +209,15 @@ android {
     }
 
     // Kotlin 编译选项
-    kotlinOptions {
-        jvmTarget = "17"
-        // 启用实验性 API opt-in，避免编译警告
-        freeCompilerArgs += listOf(
-            "-opt-in=kotlin.RequiresOptIn",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-            "-opt-in=androidx.compose.animation.ExperimentalAnimationApi",
-            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
-        )
+    kotlin {
+        jvmToolchain(17)
+        compilerOptions {
+            optIn.add("kotlin.RequiresOptIn")
+            optIn.add("androidx.compose.material3.ExperimentalMaterial3Api")
+            optIn.add("androidx.compose.foundation.ExperimentalFoundationApi")
+            optIn.add("androidx.compose.animation.ExperimentalAnimationApi")
+            optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
+        }
     }
 
     buildFeatures {
@@ -272,7 +272,7 @@ android {
     afterEvaluate {
         tasks.matching { it.name == "assembleRelease" }.configureEach {
             doLast {
-                val mappingFile = file("${project.buildDir}/outputs/mapping/release/mapping.txt")
+                val mappingFile = file("${layout.buildDirectory.get()}/outputs/mapping/release/mapping.txt")
                 if (mappingFile.exists()) {
                     val backupDir = file("${project.projectDir}/mapping")
                     if (!backupDir.exists()) backupDir.mkdirs()
@@ -306,8 +306,8 @@ android {
         // release 构建时检查
         checkReleaseBuilds = true
         // 忽略警告（谨慎使用）
-        ignore.add("IconLauncherShape")
-        ignore.add("IconMissingDensityFolder")
+        disable.add("IconLauncherShape")
+        disable.add("IconMissingDensityFolder")
         // 错误严重级别配置
         error.add("HardcodedText")
         error.add("MissingTranslation")
@@ -389,11 +389,8 @@ dependencies {
     // Gson（已使用 catalog）
     implementation(libs.gson)
 
-    // Room 数据库已移除，使用 DataStore 替代 SharedPreferences
-    // DataStore - 异步配置存储，避免 SP 主线程 ANR
+    // DataStore - 异步配置存储，替代 SharedPreferences
     implementation(libs.androidx.datastore.preferences)
-    implementation("androidx.datastore:datastore-preferences-android:1.1.1")
-    implementation("androidx.datastore:datastore-core-android:1.1.1")
 
     // ⚠️ 替换友盟硬编码依赖
 // 友盟
@@ -411,7 +408,7 @@ dependencies {
     implementation(libs.camerax.extensions)
 
     // ProfileInstaller - 启动性能优化（ART 配置文件）
-    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    implementation(libs.androidx.profileinstaller)
 
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
