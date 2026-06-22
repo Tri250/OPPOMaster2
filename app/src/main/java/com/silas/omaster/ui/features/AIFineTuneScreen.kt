@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.media.MediaScannerConnection
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
@@ -1540,19 +1541,15 @@ private suspend fun saveImageToGallery(
                     true
                 } ?: false
             } else {
-                @Suppress("DEPRECATION")
-                val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                // Android 9 及以下：使用应用外部私有目录，无需权限且卸载自动清理
+                val dir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
                 val file = java.io.File(dir, "OMaster/$filename")
                 file.parentFile?.mkdirs()
                 file.outputStream().use { out ->
                     filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
                 }
                 // 通知相册扫描
-                val values = ContentValues().apply {
-                    put(MediaStore.Images.Media.DATA, file.absolutePath)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                }
-                context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg"), null)
                 true
             }
         } catch (e: Exception) {

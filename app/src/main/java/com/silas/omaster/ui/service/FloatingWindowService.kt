@@ -109,7 +109,37 @@ class FloatingWindowService : Service() {
         @Volatile
         private var instance: FloatingWindowService? = null
 
+        /**
+         * 检查是否有悬浮窗权限（Android 6.0+）
+         */
+        fun canDrawOverlays(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.provider.Settings.canDrawOverlays(context)
+            } else {
+                true
+            }
+        }
+
+        /**
+         * 引导用户去设置开启悬浮窗权限
+         */
+        fun requestOverlayPermission(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val intent = Intent(
+                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:${context.packageName}")
+                )
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+        }
+
         fun show(context: Context, preset: com.silas.omaster.model.MasterPreset, presetIndex: Int = 0, presetIds: List<String> = emptyList()) {
+            if (!canDrawOverlays(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                requestOverlayPermission(context)
+                return
+            }
             val intent = Intent(context, FloatingWindowService::class.java).apply {
                 putExtra(EXTRA_ACTION, ACTION_SHOW)
                 putExtra(EXTRA_NAME, preset.name)
@@ -129,6 +159,11 @@ class FloatingWindowService : Service() {
          * 更新悬浮窗内容（不重启服务，避免闪动）
          */
         fun update(context: Context, preset: com.silas.omaster.model.MasterPreset, presetIndex: Int = 0, presetIds: List<String> = emptyList()) {
+            if (!canDrawOverlays(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                requestOverlayPermission(context)
+                return
+            }
             val intent = Intent(context, FloatingWindowService::class.java).apply {
                 putExtra(EXTRA_ACTION, ACTION_UPDATE)
                 putExtra(EXTRA_NAME, preset.name)

@@ -627,11 +627,11 @@ class ImageCacheManager private constructor(private val context: Context) : Comp
                 "$path.webp"
             }
         } catch (e: Exception) {
-            val md5 = MessageDigest.getInstance("MD5")
+            val sha256 = MessageDigest.getInstance("SHA-256")
                 .digest(url.toByteArray())
                 .joinToString("") { "%02x".format(it) }
-                .take(8)
-            "$md5.webp"
+                .take(16)
+            "$sha256.webp"
         }
     }
 

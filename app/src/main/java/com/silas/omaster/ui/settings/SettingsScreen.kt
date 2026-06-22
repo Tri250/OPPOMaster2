@@ -496,7 +496,13 @@ fun SettingsScreen(
                 } else {
                     stringResource(R.string.clear_cache_desc)
                 },
-                onClick = { showClearCacheDialog = true }
+                onClick = {
+                    if (cacheSize <= 0) {
+                        Toast.makeText(context, "暂无缓存需要清理", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showClearCacheDialog = true
+                    }
+                }
             )
         }
 
@@ -521,11 +527,7 @@ fun SettingsScreen(
                 title = { Text(stringResource(R.string.clear_cache)) },
                 text = {
                     Text(
-                        if (cacheSize > 0) {
-                            "当前缓存大小为 %.2f MB，清理后将释放存储空间，下次浏览时需要重新下载图片。".format(cacheSize)
-                        } else {
-                            "当前没有缓存图片"
-                        }
+                        "当前缓存大小为 %.2f MB，清理后将释放存储空间，下次浏览时需要重新下载图片。此操作不可恢复，是否继续？".format(cacheSize)
                     )
                 },
                 confirmButton = {
@@ -535,10 +537,10 @@ fun SettingsScreen(
                             cacheSize = 0.0
                             showClearCacheDialog = false
                             haptic.perform(HapticFeedbackType.LongPress)
-                        },
-                        enabled = cacheSize > 0
+                            Toast.makeText(context, "缓存已清理", Toast.LENGTH_SHORT).show()
+                        }
                     ) {
-                        Text("清理")
+                        Text("确定清理", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {

@@ -79,6 +79,15 @@ class PresetRepository private constructor(context: Context) {
      */
     private val httpClient: HttpClient by lazy {
         HttpClient(CIO) {
+            engine {
+                maxConnectionsCount = 32
+                endpoint {
+                    maxConnectionsPerRoute = 8
+                    connectTimeout = NETWORK_TIMEOUT_MS
+                    requestTimeout = NETWORK_TIMEOUT_MS
+                    socketTimeout = NETWORK_TIMEOUT_MS
+                }
+            }
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
@@ -905,38 +914,56 @@ class PresetRepository private constructor(context: Context) {
      */
     private fun validateCloudUrl(url: String): String? {
         if (url.isBlank()) return "URL 不能为空"
-        if (!url.lowercase().startsWith("https://")) return "仅支持 HTTPS 协议"
 
-        // 防止 SSRF：禁止访问内网地址
-        val lower = url.lowercase()
-        val hostStart = lower.indexOf("https://") + 8
-        val hostEnd = lower.indexOf('/', startIndex = hostStart).let { if (it < 0) lower.length else it }
-        val host = lower.substring(hostStart, hostEnd)
-
-        // 检查端口（只允许标准 HTTPS 端口 443）
-        val portIndex = host.indexOf(':')
-        if (portIndex != -1) {
-            val port = host.substring(portIndex + 1).toIntOrNull()
-            if (port != null && port != 443) {
-                return "仅允许标准 HTTPS 端口 (443)"
-            }
+        // 使用 URI 标准化解析，避免手动字符串分割被绕过
+        val uri = try {
+            java.net.URI(url.trim())
+        } catch (e: Exception) {
+            return "URL 格式不合法"
         }
 
-        // 禁止访问内网和本地地址
+        // 协议检查
+        if (uri.scheme?.lowercase() != "https") return "仅支持 HTTPS 协议"
+
+        val host = uri.host ?: return "无法解析主机名"
+
+        // 禁止 @ 绕过（如 https://evil.com@cdn.jsdelivr.net/...）
+        val userInfo = uri.userInfo
+        if (!userInfo.isNullOrBlank()) return "URL 中不允许包含用户信息"
+
+        // 端口检查：只允许 443，禁止端口 0 和其他非标准端口
+        val port = uri.port
+        if (port != -1 && port != 443) {
+            return "仅允许标准 HTTPS 端口 (443)"
+        }
+
+        val lowerHost = host.lowercase()
+
+        // 禁止访问内网和本地地址（含 IPv4 和 IPv6）
         val blockedPrefixes = listOf(
             "localhost", "127.", "0.0.0.0", "::1",
             "10.", "192.168.", "172.16.", "172.17.", "172.18.", "172.19.",
             "172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
             "172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
-            "172.30.", "172.31.", "169.254.", "fc00:", "fe80:"
+            "172.30.", "172.31.", "169.254.", "fc00:", "fe80:", "ff00:", "ff02:"
         )
 
-        if (blockedPrefixes.any { host.startsWith(it) || host == it.trimEnd('.') }) {
+        if (blockedPrefixes.any { lowerHost.startsWith(it) || lowerHost == it.trimEnd('.') }) {
             return "禁止访问内网或本地地址"
         }
 
-        // 验证域名格式（防止 IP 地址绕过）
-        if (host.matches(Regex("^\\d+\\.\\d+\\.\\d+\\.\\d+$"))) {
+        // IPv6 地址检测（含方括号形式如 [::1]）
+        if (lowerHost.startsWith("[") && lowerHost.endsWith("]")) {
+            return "禁止直接使用 IP 地址"
+        }
+
+        // 验证域名格式（防止 IPv4 地址绕过）
+        if (lowerHost.matches(Regex("^\\d+\\.\\d+\\.\\d+\\.\\d+$"))) {
+            return "禁止直接使用 IP 地址"
+        }
+
+        // 额外检查：确保 host 不是纯数字（某些 IPv6 缩写或畸形地址）
+        if (lowerHost.all { it.isDigit() || it == ':' || it == '.' }) {
             return "禁止直接使用 IP 地址"
         }
 

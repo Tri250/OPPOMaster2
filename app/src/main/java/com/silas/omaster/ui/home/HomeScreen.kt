@@ -711,7 +711,11 @@ private fun PresetGrid(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item {
-                        EnhancedEmptyState(selectedTab)
+                        EnhancedEmptyState(
+                            tabIndex = selectedTab,
+                            onNavigateToCreate = onNavigateToCreate,
+                            onRefresh = { onRefresh {} }
+                        )
                     }
                 }
             }
@@ -841,7 +845,11 @@ private fun PresetCardItem(
 }
 
 @Composable
-private fun EnhancedEmptyState(tabIndex: Int) {
+private fun EnhancedEmptyState(
+    tabIndex: Int,
+    onNavigateToCreate: (() -> Unit)? = null,
+    onRefresh: (() -> Unit)? = null
+) {
     val message = when (tabIndex) {
         0 -> stringResource(R.string.empty_no_presets)
         1 -> stringResource(R.string.empty_no_favorites)
@@ -866,6 +874,14 @@ private fun EnhancedEmptyState(tabIndex: Int) {
         else -> Icons.Default.Search
     }
 
+    val contentDescription = when (tabIndex) {
+        0 -> "搜索图标"
+        1 -> "收藏图标"
+        2 -> "色彩图标"
+        3 -> "刷新图标"
+        else -> "空状态图标"
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -874,10 +890,9 @@ private fun EnhancedEmptyState(tabIndex: Int) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 图标
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
             )
@@ -898,45 +913,21 @@ private fun EnhancedEmptyState(tabIndex: Int) {
                     textAlign = TextAlign.Center
                 )
             }
-        }
-    }
-}
 
-@Composable
-private fun EmptyState(tabIndex: Int) {
-    val message = when (tabIndex) {
-        0 -> stringResource(R.string.empty_no_presets)
-        1 -> stringResource(R.string.empty_no_favorites)
-        2 -> stringResource(R.string.empty_no_presets) // 哈苏
-        3 -> stringResource(R.string.empty_no_presets) // 上新
-        else -> stringResource(R.string.empty_no_data)
-    }
-
-    val subMessage = when (tabIndex) {
-        0 -> stringResource(R.string.empty_hint_add_presets)
-        1 -> stringResource(R.string.empty_hint_favorite)
-        else -> ""
-    }
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center
-            )
-            if (subMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = subMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Center
-                )
+            // 操作按钮引导
+            when (tabIndex) {
+                0 -> {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { onRefresh?.invoke() }) {
+                        Text("刷新数据")
+                    }
+                }
+                1 -> {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { onNavigateToCreate?.invoke() }) {
+                        Text("去添加预设")
+                    }
+                }
             }
         }
     }

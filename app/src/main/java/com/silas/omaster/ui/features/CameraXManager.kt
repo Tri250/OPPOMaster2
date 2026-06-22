@@ -16,6 +16,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.silas.omaster.model.HasselbladParams
 import java.nio.ByteBuffer
@@ -34,11 +35,12 @@ import kotlinx.coroutines.flow.asStateFlow
  * - 高质量拍照（ImageCapture）
  * - 前后摄像头切换
  * - 闪光灯控制
+ * - 生命周期感知：onPause 自动释放，onResume 自动恢复
  */
 class CameraXManager(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner
-) {
+) : DefaultLifecycleObserver {
     companion object {
         private const val TAG = "CameraXManager"
     }
@@ -70,10 +72,33 @@ class CameraXManager(
     // 当前应用的预设参数
     private var currentParams: HasselbladParams = HasselbladParams()
 
+    // 保存的 PreviewView，用于生命周期恢复
+    private var savedPreviewView: PreviewView? = null
+
+    init {
+        lifecycleOwner.lifecycle.addObserver(this)
+    }
+
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+        savedPreviewView?.let { startCamera(it) }
+    }
+
+    override fun onPause(owner: LifecycleOwner) {
+        super.onPause(owner)
+        releaseCamera()
+    }
+
+    override fun onDestroy(owner: LifecycleOwner) {
+        super.onDestroy(owner)
+        release()
+    }
+
     /**
      * 启动相机，绑定到 PreviewView
      */
     fun startCamera(previewView: PreviewView) {
+        savedPreviewView = previewView
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
@@ -321,16 +346,27 @@ class CameraXManager(
     }
 
     /**
-     * 释放相机资源
+     * 仅释放相机绑定（保留 executor，用于 onPause/onResume 切换）
      */
-    fun release() {
-        cameraExecutor.shutdown()
+    private fun releaseCamera() {
         cameraProvider?.unbindAll()
         camera = null
         preview = null
         imageCapture = null
         imageAnalysis = null
         _isCameraReady.value = false
-        Log.d(TAG, "CameraX 资源已释放")
+        Log.d(TAG, "CameraX 相机已解绑")
+    }
+
+    /**
+     * 完全释放所有相机资源（用于 onDestroy）
+     */
+    fun release() {
+        lifecycleOwner.lifecycle.removeObserver(this)
+        releaseCamera()
+        if (!cameraExecutor.isShutdown) {
+            cameraExecutor.shutdown()
+        }
+        Log.d(TAG, "CameraX 资源已完全释放")
     }
 }

@@ -100,17 +100,34 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
      */
     private fun getStackTraceSafe(throwable: Throwable, maxDepth: Int): String {
         return try {
-            val sw = StringWriter()
-            val pw = PrintWriter(sw)
-            throwable.printStackTrace(pw)
-            val full = sw.toString()
-            // 限制行数
-            val lines = full.split('\n')
-            if (lines.size > maxDepth) {
-                lines.take(maxDepth).joinToString("\n") + "\n... (truncated, total ${lines.size} lines)"
-            } else {
-                full
+            val sb = StringBuilder()
+            // 手动构建堆栈，避免 printStackTrace 输出到系统日志
+            sb.append(throwable.toString()).append('\n')
+            val stackTrace = throwable.stackTrace
+            val limit = minOf(stackTrace.size, maxDepth)
+            for (i in 0 until limit) {
+                sb.append("\tat ").append(stackTrace[i]).append('\n')
             }
+            if (stackTrace.size > maxDepth) {
+                sb.append("\t... (truncated, total ${stackTrace.size} frames)\n")
+            }
+            // 处理 cause 链（限深避免循环引用）
+            var cause = throwable.cause
+            var depth = 0
+            while (cause != null && depth < 3) {
+                sb.append("Caused by: ").append(cause.toString()).append('\n')
+                val causeTrace = cause.stackTrace
+                val causeLimit = minOf(causeTrace.size, maxDepth)
+                for (i in 0 until causeLimit) {
+                    sb.append("\tat ").append(causeTrace[i]).append('\n')
+                }
+                if (causeTrace.size > maxDepth) {
+                    sb.append("\t... (truncated, total ${causeTrace.size} frames)\n")
+                }
+                cause = cause.cause
+                depth++
+            }
+            sb.toString()
         } catch (e: OutOfMemoryError) {
             "Stack trace unavailable (OOM while printing): ${throwable.javaClass.name}"
         } catch (e: Throwable) {

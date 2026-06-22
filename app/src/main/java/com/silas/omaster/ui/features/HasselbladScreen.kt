@@ -603,7 +603,7 @@ private fun HeroCard() {
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
+                        contentDescription = "相机图标",
                         tint = Color.White,
                         modifier = Modifier.size(32.dp)
                     )
@@ -734,7 +734,7 @@ private fun ParamsPanel(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (isParamsLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = null,
+                    contentDescription = if (isParamsLocked) "参数已锁定" else "参数未锁定",
                     tint = if (isParamsLocked) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp)
                 )
@@ -825,7 +825,7 @@ private fun ParamsPanel(
         ) {
             Icon(
                 imageVector = Icons.Default.Done,
-                contentDescription = null,
+                contentDescription = "重置参数",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(18.dp)
             )
@@ -939,7 +939,7 @@ private fun ShutterCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.PhotoLibrary,
-                    contentDescription = null,
+                    contentDescription = "从相册选择",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1174,7 +1174,7 @@ private fun AnalyzingContent(
         ) {
             Icon(
                 imageVector = Icons.Default.Cancel,
-                contentDescription = null,
+                contentDescription = "取消分析",
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -1391,7 +1391,7 @@ private fun ResultsContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
+                        contentDescription = "生成预览图",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1815,7 +1815,7 @@ private fun PreviewContent(
                 } else {
                     Icon(
                         imageVector = Icons.Default.Save,
-                        contentDescription = null,
+                        contentDescription = "保存到相册",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1841,7 +1841,7 @@ private fun PreviewContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Share,
-                        contentDescription = null,
+                        contentDescription = "分享",
                         tint = HasselbladOrange,
                         modifier = Modifier.size(18.dp)
                     )
@@ -1856,7 +1856,7 @@ private fun PreviewContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Cancel,
-                        contentDescription = null,
+                        contentDescription = "重新拍摄",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -2163,7 +2163,7 @@ private fun DoneContent(
         ) {
             Icon(
                 imageVector = Icons.Default.Share,
-                contentDescription = null,
+                contentDescription = "分享图片",
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
@@ -2187,7 +2187,7 @@ private fun DoneContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.PhotoLibrary,
-                    contentDescription = null,
+                    contentDescription = "查看图片",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2205,7 +2205,7 @@ private fun DoneContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
+                    contentDescription = "再调一张",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2226,7 +2226,7 @@ private fun DoneContent(
         ) {
             Icon(
                 imageVector = Icons.Default.CameraAlt,
-                contentDescription = null,
+                contentDescription = "重新拍摄",
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(20.dp)
             )
