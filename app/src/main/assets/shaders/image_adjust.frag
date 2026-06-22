@@ -32,7 +32,7 @@ uniform float uWarmth;          // 色温 [-1, 1]，负值偏冷，正值偏暖
 // 细节增强参数 [0, 1]
 uniform float uSharpness;       // 锐度 [0, 1]
 uniform float uClarity;         // 清晰度 [0, 1]
-uniform float uTexture;         // 纹理 [-1, 1]
+uniform float uTextureStrength; // 纹理 [-1, 1]（原 uTexture 名称与 sampler2D uTexture 冲突，已重命名）
 
 // 色彩调整参数 [-1, 1]
 uniform float uVibrance;        // 鲜艳度 [-1, 1]
@@ -537,8 +537,8 @@ void main() {
     // ========== 6. 细节增强 ==========
     
     // 纹理增强
-    if (abs(uTexture) > 0.01) {
-        color = enhanceTexture(uTexture, vTexCoord, uTexture);
+    if (abs(uTextureStrength) > 0.01) {
+        color = enhanceTexture(uTexture, vTexCoord, uTextureStrength);
     }
     
     // 清晰度增强

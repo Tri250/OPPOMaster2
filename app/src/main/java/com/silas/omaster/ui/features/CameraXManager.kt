@@ -59,8 +59,9 @@ class CameraXManager(
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var flashMode = ImageCapture.FLASH_MODE_OFF
 
-    // 实时分析帧回调
+    // 实时分析帧回调（始终在主线程触发，方便 Compose state 直接更新）
     private var onFrameAnalyzed: ((Bitmap) -> Unit)? = null
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     // 状态
     private val _isCameraReady = MutableStateFlow(false)
@@ -168,7 +169,15 @@ class CameraXManager(
             if (bitmap != null) {
                 // 应用预设参数到实时帧
                 val processedBitmap = applyPresetToFrame(bitmap, currentParams)
-                onFrameAnalyzed?.invoke(processedBitmap)
+                // 切到主线程再回调，避免在后台线程修改 Compose state
+                val callback = onFrameAnalyzed
+                if (callback != null) {
+                    mainHandler.post { callback(processedBitmap) }
+                } else {
+                    // 没有订阅者时回收，避免内存泄漏
+                    if (processedBitmap !== bitmap) processedBitmap.recycle()
+                    if (!bitmap.isRecycled) bitmap.recycle()
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "帧分析失败: ${e.message}", e)
@@ -271,35 +280,34 @@ class CameraXManager(
 
     /**
      * 应用预设参数到帧
+     *
+     * 实现说明：
+     * 1. 使用「source → dest」位图乒乓模式：每一步都把当前累积结果画到新位图，
+     *    避免在 canvas 与 source 同位图时的不确定行为。
+     * 2. 按 saturation → contrast → warmth → tone → vignette 的顺序叠加，
+     *    与 web 端 CameraParams 应用顺序保持一致。
      */
     private fun applyPresetToFrame(bitmap: Bitmap, params: HasselbladParams): Bitmap {
-        val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val canvas = android.graphics.Canvas(result)
-        val paint = android.graphics.Paint()
+        var current: Bitmap = bitmap
+        val paint = android.graphics.Paint().apply { isAntiAlias = false }
 
-        var needsFilter = false
-
-        // 饱和度调整
+        // 1) 饱和度调整
         val saturation = (params.saturation + 30) / 60f * 2f
         if (saturation != 1f) {
             val cm = android.graphics.ColorMatrix()
             cm.setSaturation(saturation)
-            paint.colorFilter = android.graphics.ColorMatrixColorFilter(cm)
-            canvas.drawBitmap(result, 0f, 0f, paint)
-            needsFilter = true
+            current = drawWithColorFilter(current, cm, paint)
         }
 
-        // 对比度调整
+        // 2) 对比度调整
         val contrast = (params.contrast + 30) / 60f * 2f
         if (contrast != 1f) {
             val cm = android.graphics.ColorMatrix()
             cm.setScale(contrast, contrast, contrast, 1f)
-            paint.colorFilter = android.graphics.ColorMatrixColorFilter(cm)
-            canvas.drawBitmap(if (needsFilter) result else bitmap, 0f, 0f, paint)
-            needsFilter = true
+            current = drawWithColorFilter(current, cm, paint)
         }
 
-        // 色温调整
+        // 3) 色温调整
         if (params.colorTemp != 0) {
             val warmth = params.colorTemp / 30f * 0.3f
             val cm = android.graphics.ColorMatrix()
@@ -309,40 +317,59 @@ class CameraXManager(
                 0f, 0f, 1f - warmth, 0f, 0f,
                 0f, 0f, 0f, 1f, 0f
             ))
-            paint.colorFilter = android.graphics.ColorMatrixColorFilter(cm)
-            canvas.drawBitmap(if (needsFilter) result else bitmap, 0f, 0f, paint)
-            needsFilter = true
+            current = drawWithColorFilter(current, cm, paint)
         }
 
-        // 影调调整
+        // 4) 影调（亮度）调整
         if (params.tone != 0) {
             val toneScale = 1f + params.tone / 30f * 0.3f
             val cm = android.graphics.ColorMatrix()
             cm.setScale(toneScale, toneScale, toneScale, 1f)
-            paint.colorFilter = android.graphics.ColorMatrixColorFilter(cm)
-            canvas.drawBitmap(if (needsFilter) result else bitmap, 0f, 0f, paint)
-            needsFilter = true
+            current = drawWithColorFilter(current, cm, paint)
         }
 
-        // 暗角效果
+        // 5) 暗角效果
         if (params.vignette != 0) {
             val vignetteStrength = params.vignette / 30f
+            val output = Bitmap.createBitmap(current.width, current.height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(output)
+            canvas.drawBitmap(current, 0f, 0f, null)
             val vignettePaint = android.graphics.Paint().apply {
                 isAntiAlias = true
                 style = android.graphics.Paint.Style.FILL
                 shader = android.graphics.RadialGradient(
-                    bitmap.width / 2f, bitmap.height / 2f,
-                    maxOf(bitmap.width, bitmap.height) * 0.7f,
+                    current.width / 2f, current.height / 2f,
+                    maxOf(current.width, current.height) * 0.7f,
                     intArrayOf(0x00000000, 0x00000000, (vignetteStrength * 180).toInt() shl 24),
                     floatArrayOf(0f, 0.6f, 1f),
                     android.graphics.Shader.TileMode.CLAMP
                 )
             }
-            canvas.drawRect(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat(), vignettePaint)
+            canvas.drawRect(0f, 0f, current.width.toFloat(), current.height.toFloat(), vignettePaint)
+            // 回收上一步 current（如果不是原始输入 bitmap）
+            if (current !== bitmap) current.recycle()
+            current = output
         }
 
-        paint.colorFilter = null
-        return result
+        return current
+    }
+
+    /**
+     * 将 source 位图按 colorMatrix 绘制到新位图上，并返回新位图。
+     * 该函数保证 source 与输出位图不同实例，避免在 Android 上 source == destination 时的
+     * 不确定行为。
+     */
+    private fun drawWithColorFilter(
+        source: Bitmap,
+        colorMatrix: android.graphics.ColorMatrix,
+        sharedPaint: android.graphics.Paint
+    ): Bitmap {
+        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(output)
+        sharedPaint.colorFilter = android.graphics.ColorMatrixColorFilter(colorMatrix)
+        canvas.drawBitmap(source, 0f, 0f, sharedPaint)
+        sharedPaint.colorFilter = null
+        return output
     }
 
     /**

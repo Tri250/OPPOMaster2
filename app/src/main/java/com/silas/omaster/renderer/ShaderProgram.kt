@@ -310,7 +310,7 @@ class ShaderProgram private constructor(
         setUniform1f("uDenoise", params.denoise / 100f)
         setUniform1f("uSkinSmooth", params.skinSmooth / 100f)
         setUniform1f("uExposure", params.exposure / 100f)
-        setUniform1f("uTexture", params.texture / 100f)
+        setUniform1f("uTextureStrength", params.texture / 100f)
     }
     
     /**

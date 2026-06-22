@@ -51,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +91,9 @@ fun CameraXViewfinderScreen(
     // 持有 PreviewView 引用，用于切换摄像头
     var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
 
+    // 实时处理后的帧（用于在 PreviewView 之上叠加显示预设效果）
+    var processedFrame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+
     // 相机权限请求
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -113,6 +118,18 @@ fun CameraXViewfinderScreen(
     DisposableEffect(presetParams) {
         cameraManager.updatePresetParams(presetParams)
         onDispose { }
+    }
+
+    // 订阅 CameraXManager 的实时处理结果，在 PreviewView 之上叠加显示
+    DisposableEffect(cameraManager) {
+        cameraManager.setOnFrameAnalyzed { bitmap ->
+            processedFrame = bitmap
+        }
+        onDispose {
+            cameraManager.setOnFrameAnalyzed(null)
+            processedFrame?.recycle()
+            processedFrame = null
+        }
     }
 
     // 释放相机资源
@@ -175,6 +192,18 @@ fun CameraXViewfinderScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // 实时叠加预设效果帧
+                processedFrame?.let { frame ->
+                    if (!frame.isRecycled) {
+                        androidx.compose.foundation.Image(
+                            bitmap = frame.asImageBitmap(),
+                            contentDescription = "实时预设效果",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
 
                 // 预设参数叠加标签
                 if (showParamsOverlay) {

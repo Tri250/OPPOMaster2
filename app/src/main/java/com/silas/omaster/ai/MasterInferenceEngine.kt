@@ -6,8 +6,6 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.media.ExifInterface
@@ -270,20 +268,45 @@ class MasterInferenceEngine private constructor(context: Context) {
 
     /**
      * 锐化增强：使用 Unsharp Mask 提升边缘清晰度。
+     * 公式：output = clamp(original + strength * (original - blurred), 0, 255)
+     * 通道级别混合，避免 PorterDuff 在锐化场景下的不可预期行为。
      * 调用方负责回收返回的 Bitmap。
      */
     private fun applySharpen(bitmap: Bitmap): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
         val blurred = applyFastBlur(bitmap, radius = 4)
-        val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        val paint = Paint().apply {
-            // 原图
-            canvas.drawBitmap(bitmap, 0f, 0f, this)
-            // 叠加（原图 - 模糊）* 锐化强度
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.LIGHTEN)
-            alpha = 150
+        val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val strength = 1.4f // 锐化强度：1.0 表示原图，越大越锐利
+
+        // 取出原图与模糊图的像素，逐通道做 unsharp mask
+        val srcPixels = IntArray(width * height)
+        val blurPixels = IntArray(width * height)
+        val outPixels = IntArray(width * height)
+        bitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
+        blurred.getPixels(blurPixels, 0, width, 0, 0, width, height)
+
+        for (i in srcPixels.indices) {
+            val s = srcPixels[i]
+            val b = blurPixels[i]
+            val sa = (s ushr 24) and 0xFF
+            val sr = (s shr 16) and 0xFF
+            val sg = (s shr 8) and 0xFF
+            val sb = s and 0xFF
+
+            val br = (b shr 16) and 0xFF
+            val bg = (b shr 8) and 0xFF
+            val bb = b and 0xFF
+
+            // unsharp mask：增强 (原图 - 模糊) 的高频分量
+            val or = (sr + strength * (sr - br)).toInt().coerceIn(0, 255)
+            val og = (sg + strength * (sg - bg)).toInt().coerceIn(0, 255)
+            val ob = (sb + strength * (sb - bb)).toInt().coerceIn(0, 255)
+
+            outPixels[i] = (sa shl 24) or (or shl 16) or (og shl 8) or ob
         }
-        canvas.drawBitmap(blurred, 0f, 0f, paint)
+
+        output.setPixels(outPixels, 0, width, 0, 0, width, height)
         blurred.recycle()
         return output
     }
