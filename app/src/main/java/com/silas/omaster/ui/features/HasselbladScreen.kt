@@ -3,7 +3,6 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -2304,7 +2303,9 @@ private suspend fun loadBitmapFromUri(
 private fun createTempImageUri(context: android.content.Context): Uri? {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Hasselblad").apply {
+        // 使用应用私有缓存目录下的 camera/ 子目录，与 file_paths.xml 中的 cache-path 保持一致，
+        // 确保 FileProvider 可以正确生成 content URI。
+        val storageDir = File(context.cacheDir, "camera").apply {
             if (!exists()) mkdirs()
         }
         val imageFile = File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)

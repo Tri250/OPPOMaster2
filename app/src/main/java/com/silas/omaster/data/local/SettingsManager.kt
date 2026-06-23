@@ -237,20 +237,20 @@ class SettingsManager private constructor(private val context: Context) {
             }
         }
 
-    // 云同步开关（默认开启）
+    // 云同步开关（默认关闭：v1.9.2 起云同步功能关闭，JSON 链接迁移至订阅管理）
     var isCloudSyncEnabled: Boolean
-        get() = getDataSync(KEY_CLOUD_SYNC_ENABLED, true)
+        get() = getDataSync(KEY_CLOUD_SYNC_ENABLED, false)
         set(value) {
             setDataSync(KEY_CLOUD_SYNC_ENABLED, value)
         }
 
-    // 云端预设数据源 URL
+    // 云端预设数据源 URL（已迁移至订阅管理，此处返回空映射以关闭旧云同步）
     val cloudPresetUrls: Map<String, String>
-        get() = UrlConstants.PRESET_SOURCE_URLS
+        get() = emptyMap()
 
-    // 云同步状态（默认 SYNCED，与 isCloudSyncEnabled 默认 true 保持一致）
+    // 云同步状态（默认 DISABLED，与 isCloudSyncEnabled 默认 false 保持一致）
     var cloudSyncStatus: CloudSyncStatus
-        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.SYNCED.name), CloudSyncStatus.SYNCED)
+        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.DISABLED.name), CloudSyncStatus.DISABLED)
         set(value) {
             setDataSync(KEY_CLOUD_SYNC_STATUS, value.name)
         }

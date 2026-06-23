@@ -672,7 +672,8 @@ class HasselbladEyeViewModel : ViewModel() {
 
     private fun shareBitmapToUri(context: Context, bitmap: Bitmap): Uri? {
         return try {
-            val cacheDir = File(context.cacheDir, "share").apply {
+            // 与 file_paths.xml 中的 cache-path path="camera/" 保持一致
+            val cacheDir = File(context.cacheDir, "camera").apply {
                 if (!exists()) mkdirs()
             }
             val file = File(cacheDir, "hasselblad_share_${System.currentTimeMillis()}.jpg")

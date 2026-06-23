@@ -5,6 +5,7 @@ import com.silas.omaster.model.Subscription
 import com.silas.omaster.model.SubscriptionList
 import com.silas.omaster.util.SecurityCrypto
 import com.silas.omaster.util.UpdateConfigManager
+import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +60,41 @@ class SubscriptionManager private constructor(context: Context) {
             )
             _subscriptionsFlow.value = listOf(defaultSub)
             saveSubscriptions()
+        }
+
+        // v1.9.2：将原云同步 JSON 链接迁移为订阅源
+        migrateCloudSyncUrlsToSubscriptions()
+    }
+
+    /**
+     * 将云同步预设源 URL 迁移为订阅项。
+     * 仅添加尚未存在的 URL，避免重复。
+     */
+    private fun migrateCloudSyncUrlsToSubscriptions() {
+        val sourceInfoMap = UrlConstants.PRESET_SOURCE_INFO_LIST.associateBy { it.url }
+        var migrated = false
+        val existing = _subscriptionsFlow.value.toMutableList()
+
+        UrlConstants.PRESET_SOURCE_URLS.values.forEach { url ->
+            if (existing.none { it.url == url }) {
+                val info = sourceInfoMap[url]
+                existing.add(
+                    Subscription(
+                        url = url,
+                        name = info?.displayName ?: "官方预设",
+                        author = "@OMaster",
+                        build = 1,
+                        isEnabled = true
+                    )
+                )
+                migrated = true
+            }
+        }
+
+        if (migrated) {
+            _subscriptionsFlow.value = existing
+            saveSubscriptions()
+            android.util.Log.d("SubscriptionManager", "云同步 URL 已迁移至订阅管理")
         }
     }
 
