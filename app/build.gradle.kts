@@ -337,6 +337,15 @@ android {
             excludes += "linuxMain/**"
             excludes += "nativeMain/**"
             excludes += "commonMain/**"
+            excludes += "nonJvmMain/**"
+            excludes += "posixMain/**"
+            excludes += "nixMain/**"
+            excludes += "jsMain/**"
+            excludes += "wasmJsMain/**"
+            excludes += "appleMain/**"
+            excludes += "androidNativeMain/**"
+            excludes += "**/default/manifest"
+            excludes += "**/default/linkdata/**"
             excludes += "META-INF/kotlin-project-structure-metadata.json"
             excludes += "META-INF/versions/**"
         }
@@ -377,11 +386,12 @@ dependencies {
     // Kotlin Serialization（已使用 catalog）
     implementation(libs.kotlinx.serialization.json)
 
-    // ⚠️ 替换所有 Ktor 硬编码依赖
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    // ⚠️ Ktor 3.x 在 Android/JVM 上需要使用 -jvm artifact
+    // 多平台 artifact (ktor-client-core) 只包含 metadata，无法编译
+    implementation("io.ktor:ktor-client-core-jvm:3.0.3")
+    implementation("io.ktor:ktor-client-cio-jvm:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation-jvm:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:3.0.3")
 
     // Coil（已使用 catalog）
     implementation(libs.coil.compose)

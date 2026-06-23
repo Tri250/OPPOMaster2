@@ -12,6 +12,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -396,7 +397,7 @@ fun AIFineTuneScreen(
                     }
                     // 更换图片按钮
                     IconButton(
-                        onClick = { imagePickerLauncher.launch("image/*") },
+                        onClick = { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(8.dp)
@@ -440,7 +441,7 @@ fun AIFineTuneScreen(
                             Card(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .clickable { imagePickerLauncher.launch("image/*") },
+                                    .clickable { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                             ) {
                                 Row(

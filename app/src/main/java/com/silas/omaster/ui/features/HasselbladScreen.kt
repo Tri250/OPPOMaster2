@@ -7,6 +7,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -46,8 +47,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -82,6 +85,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -105,6 +109,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -260,7 +266,7 @@ fun HasselbladScreen(
 
     fun onPickFromGallery() {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        galleryLauncher.launch("image/*")
+        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
     fun onSceneModeSelected(sceneMode: SceneMode) {
@@ -427,7 +433,10 @@ fun HasselbladScreen(
                         if (isParamsLocked) {
                             Toast.makeText(context, "参数已锁定：仅切换参考模式，未覆盖当前参数", Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    },
+                    viewModel = viewModel,
+                    context = context,
+                    haptic = haptic
                 )
 
                 HasselbladEyeStage.PREVIEW -> PreviewContent(
@@ -1304,7 +1313,10 @@ private fun ResultsContent(
     onPreviewEffect: () -> Unit,
     onResetParams: () -> Unit,
     onFilmClick: (FilmPreset) -> Unit,
-    onFineGrainedSceneSelected: (SceneProfile) -> Unit
+    onFineGrainedSceneSelected: (SceneProfile) -> Unit,
+    viewModel: HasselbladEyeViewModel,
+    context: android.content.Context,
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -3046,16 +3058,16 @@ private fun ARGuideOverlay(
                 }
                 ARGuideType.SPIRAL -> {
                     // 简化斐波那契螺旋
-                    val phi = 1.618f
+                    val phi = 1.618
                     val steps = 60
                     val spiralPoints = mutableListOf<Offset>()
                     var cx = w * 0.618f
                     var cy = h * 0.382f
                     for (i in 0..steps) {
-                        val t = i.toFloat() / steps * 3f * Math.PI.toFloat()
-                        val r = 8f * Math.pow(phi.toDouble(), t / (2f * Math.PI.toFloat())).toFloat()
-                        val x = cx + r * cos(t)
-                        val y = cy + r * sin(t)
+                        val t = i.toDouble() / steps * 3.0 * Math.PI
+                        val r = 8f * Math.pow(phi, t / (2.0 * Math.PI)).toFloat()
+                        val x = cx + r * cos(t).toFloat()
+                        val y = cy + r * sin(t).toFloat()
                         if (x in 0f..w && y in 0f..h) {
                             spiralPoints.add(Offset(x, y))
                         }
@@ -3067,8 +3079,16 @@ private fun ARGuideOverlay(
                 }
                 ARGuideType.FRAME -> {
                     val inset = 0.2f
-                    drawRect(guideColor, topLeft = Offset(w * inset, h * inset), size = Size(w * (1 - 2 * inset), h * (1 - 2 * inset), ), strokeWidth = 2f)
-                    drawRect(guideColor.copy(alpha = 0.3f), strokeWidth = 1f)
+                    drawRect(
+                        color = guideColor,
+                        topLeft = Offset(w * inset, h * inset),
+                        size = Size(w * (1 - 2 * inset), h * (1 - 2 * inset)),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f)
+                    )
+                    drawRect(
+                        color = guideColor.copy(alpha = 0.3f),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f)
+                    )
                 }
                 ARGuideType.HORIZON -> {
                     drawLine(guideColor, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 2f)

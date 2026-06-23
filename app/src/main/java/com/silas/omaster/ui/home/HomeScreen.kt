@@ -229,7 +229,8 @@ fun HomeScreen(
                     showDeleteConfirm = true
                 },
                 onScrollStateChanged = onScrollStateChanged,
-                onRefresh = { onComplete -> viewModel.refresh(onComplete) }
+                onRefresh = { onComplete -> viewModel.refresh(onComplete) },
+                onNavigateToCreate = onNavigateToCreate
             )
         }
 
@@ -645,7 +646,8 @@ private fun PresetGrid(
     onToggleFavorite: (String) -> Unit,
     onDeletePreset: (String) -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {},
-    onRefresh: (onComplete: () -> Unit) -> Unit = {}
+    onRefresh: (onComplete: () -> Unit) -> Unit = {},
+    onNavigateToCreate: () -> Unit = {}
 ) {
     val listState = rememberLazyStaggeredGridState()
     val haptic = LocalHapticFeedback.current

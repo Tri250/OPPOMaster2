@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -387,7 +388,7 @@ fun SmartOptimizeScreen(
 
                 // 选择图片按钮
                 IconButton(
-                    onClick = { imagePickerLauncher.launch("image/*") },
+                    onClick = { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
