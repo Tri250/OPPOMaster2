@@ -5,16 +5,16 @@
 pluginManagement {
     repositories {
         // 本地 Maven 仓库（CI 离线构建用）
-        // 临时禁用：仓库中部分 jar 已损坏，待重新同步后恢复
-        // maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
         // 阿里云 Gradle 插件镜像
         maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         // 阿里云 Google 镜像（AGP 等）
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         // 阿里云公共仓库
         maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // 官方仓库（保底）
+        // Gradle 插件门户（Kotlin 插件等）
         gradlePluginPortal()
+        // 官方仓库（保底）
         google()
         mavenCentral()
     }
