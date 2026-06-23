@@ -20,6 +20,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -63,6 +64,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -89,6 +91,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -126,6 +130,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.cos
+import kotlin.math.sin
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -2360,6 +2366,8 @@ private fun createTempImageUri(context: android.content.Context): Uri? {
  * - 居中对称构图
  * - 框架构图
  * - 黄金螺旋构图
+ * - AR引导线叠加
+ * - 场景智能推荐
  */
 data class CompositionGuide(
     val id: String,
@@ -2368,8 +2376,70 @@ data class CompositionGuide(
     val icon: String,
     val tips: List<String>,
     val applicableCategories: List<SceneCategory>,
-    val difficulty: String // "入门" / "进阶" / "大师"
+    val difficulty: String, // "入门" / "进阶" / "大师"
+    val arGuideType: ARGuideType, // AR引导线类型
+    val sceneMode: CompositionSceneMode, // 适用场景模式
+    val arOverlayDescription: String // AR引导线叠加描述
 )
+
+/**
+ * AR引导线类型
+ * 定义在相机预览画面上叠加的辅助线类型
+ */
+enum class ARGuideType(
+    val displayName: String,
+    val description: String
+) {
+    THIRDS("三分线", "画面横竖各三等分，4个交叉点为最佳主体位置"),
+    GOLDEN_RATIO("黄金分割线", "1:1.618比例分割，比三分法更精准"),
+    DIAGONAL("对角线", "两条对角线交叉，增强画面动感"),
+    CENTER_CROSS("中心十字", "水平+垂直中线，适合居中对称构图"),
+    SPIRAL("黄金螺旋", "斐波那契螺旋线，自然界最和谐比例"),
+    FRAME("框架线", "内缩矩形框，提示画中画构图区域"),
+    HORIZON("水平线", "水平参考线，确保地平线水平"),
+    TRIANGLE("三角构图", "三角形顶点连线，稳定且有张力")
+}
+
+/**
+ * 构图场景模式
+ * 对应4大核心应用场景
+ */
+enum class CompositionSceneMode(
+    val displayName: String,
+    val icon: String,
+    val description: String,
+    val recommendedGuides: List<String>, // 推荐构图ID列表
+    val arTip: String // AR引导提示
+) {
+    TRAVEL(
+        displayName = "旅行摄影",
+        icon = "🏔️",
+        description = "山川湖海、城市地标、街头巷尾",
+        recommendedGuides = listOf("rule-of-thirds", "leading-lines", "frame-in-frame", "center-symmetry"),
+        arTip = "AI实时分析光线与构图，AR引导线提示最佳拍摄角度"
+    ),
+    PORTRAIT(
+        displayName = "人像记录",
+        icon = "👤",
+        description = "聚会合影、个人写真、儿童成长",
+        recommendedGuides = listOf("rule-of-thirds", "golden-ratio", "negative-space", "center-symmetry"),
+        arTip = "人像模式自动优化肤色与光影，虚化背景突出主体"
+    ),
+    FOOD(
+        displayName = "美食探店",
+        icon = "🍽️",
+        description = "餐厅打卡、菜品特写、咖啡拉花",
+        recommendedGuides = listOf("diagonal", "rule-of-thirds", "center-symmetry", "golden-ratio"),
+        arTip = "AI识别食物主体，自动调整焦段与亮度"
+    ),
+    PET(
+        displayName = "宠物捕捉",
+        icon = "🐾",
+        description = "猫咪嬉戏、狗狗奔跑、互动瞬间",
+        recommendedGuides = listOf("rule-of-thirds", "diagonal", "leading-lines", "negative-space"),
+        arTip = "AR引导线稳定追踪动态主体，解决手抖或构图偏差"
+    )
+}
 
 /**
  * 基于DOKA算法的构图指南库
@@ -2387,7 +2457,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "人像眼睛放在上1/3线上，增强视觉引导"
         ),
         applicableCategories = listOf(SceneCategory.PORTRAIT, SceneCategory.LANDSCAPE, SceneCategory.URBAN, SceneCategory.FOOD),
-        difficulty = "入门"
+        difficulty = "入门",
+        arGuideType = ARGuideType.THIRDS,
+        sceneMode = CompositionSceneMode.TRAVEL,
+        arOverlayDescription = "叠加三分线网格，4个交叉点高亮闪烁提示最佳主体位置"
     ),
     CompositionGuide(
         id = "golden-ratio",
@@ -2400,7 +2473,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "哈苏大师常用构图法，自然和谐"
         ),
         applicableCategories = listOf(SceneCategory.PORTRAIT, SceneCategory.STILL_LIFE, SceneCategory.LANDSCAPE),
-        difficulty = "进阶"
+        difficulty = "进阶",
+        arGuideType = ARGuideType.GOLDEN_RATIO,
+        sceneMode = CompositionSceneMode.PORTRAIT,
+        arOverlayDescription = "叠加黄金分割线，4个黄金交叉点以圆圈标注"
     ),
     CompositionGuide(
         id = "leading-lines",
@@ -2413,7 +2489,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "多条汇聚线形成消失点，营造强烈空间感"
         ),
         applicableCategories = listOf(SceneCategory.URBAN, SceneCategory.LANDSCAPE, SceneCategory.NIGHT),
-        difficulty = "入门"
+        difficulty = "入门",
+        arGuideType = ARGuideType.HORIZON,
+        sceneMode = CompositionSceneMode.TRAVEL,
+        arOverlayDescription = "检测画面中的引导线并高亮标注，箭头指向消失点"
     ),
     CompositionGuide(
         id = "diagonal",
@@ -2426,7 +2505,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "从左下到右上更符合阅读习惯"
         ),
         applicableCategories = listOf(SceneCategory.FOOD, SceneCategory.URBAN, SceneCategory.EVENT, SceneCategory.MACRO),
-        difficulty = "入门"
+        difficulty = "入门",
+        arGuideType = ARGuideType.DIAGONAL,
+        sceneMode = CompositionSceneMode.FOOD,
+        arOverlayDescription = "叠加两条对角线，主体建议放置于对角线1/3处"
     ),
     CompositionGuide(
         id = "center-symmetry",
@@ -2439,7 +2521,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "可搭配广角镜头增强对称气势"
         ),
         applicableCategories = listOf(SceneCategory.LANDSCAPE, SceneCategory.URBAN, SceneCategory.STILL_LIFE),
-        difficulty = "进阶"
+        difficulty = "进阶",
+        arGuideType = ARGuideType.CENTER_CROSS,
+        sceneMode = CompositionSceneMode.TRAVEL,
+        arOverlayDescription = "叠加中心十字线与对称轴，偏移时红色警示"
     ),
     CompositionGuide(
         id = "frame-in-frame",
@@ -2452,7 +2537,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "框架与主体形成明暗对比，突出主体"
         ),
         applicableCategories = listOf(SceneCategory.LANDSCAPE, SceneCategory.URBAN, SceneCategory.PORTRAIT),
-        difficulty = "进阶"
+        difficulty = "进阶",
+        arGuideType = ARGuideType.FRAME,
+        sceneMode = CompositionSceneMode.TRAVEL,
+        arOverlayDescription = "叠加内缩矩形框，提示画中画构图区域"
     ),
     CompositionGuide(
         id = "golden-spiral",
@@ -2465,7 +2553,10 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "哈苏X系统经典构图法，大师级运用"
         ),
         applicableCategories = listOf(SceneCategory.MACRO, SceneCategory.STILL_LIFE, SceneCategory.LANDSCAPE),
-        difficulty = "大师"
+        difficulty = "大师",
+        arGuideType = ARGuideType.SPIRAL,
+        sceneMode = CompositionSceneMode.PORTRAIT,
+        arOverlayDescription = "叠加斐波那契螺旋线，螺旋中心高亮标注"
     ),
     CompositionGuide(
         id = "negative-space",
@@ -2478,23 +2569,64 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
             "东方美学核心构图法，少即是多"
         ),
         applicableCategories = listOf(SceneCategory.LANDSCAPE, SceneCategory.PORTRAIT, SceneCategory.STILL_LIFE),
-        difficulty = "大师"
+        difficulty = "大师",
+        arGuideType = ARGuideType.THIRDS,
+        sceneMode = CompositionSceneMode.PET,
+        arOverlayDescription = "叠加三分线并标注建议留白区域，主体位置高亮"
+    ),
+    CompositionGuide(
+        id = "triangle",
+        name = "三角构图",
+        description = "三个视觉重点形成三角形，稳定且有张力",
+        icon = "△",
+        tips = listOf(
+            "三个主体形成三角形分布，画面最稳定",
+            "正三角稳定庄重，倒三角动感张力",
+            "适合多人合影、建筑群、静物组合"
+        ),
+        applicableCategories = listOf(SceneCategory.PORTRAIT, SceneCategory.STILL_LIFE, SceneCategory.EVENT),
+        difficulty = "进阶",
+        arGuideType = ARGuideType.TRIANGLE,
+        sceneMode = CompositionSceneMode.PORTRAIT,
+        arOverlayDescription = "叠加三角形辅助线，三个顶点标注建议主体位置"
+    ),
+    CompositionGuide(
+        id = "pet-tracking",
+        name = "动态追踪构图",
+        description = "AR引导线追踪运动主体，实时调整构图",
+        icon = "🎯",
+        tips = listOf(
+            "AR引导线自动追踪宠物运动轨迹",
+            "主体保持在三分线交叉点附近",
+            "高帧率模式配合轻量化滤镜，快速抓拍灵动表情"
+        ),
+        applicableCategories = listOf(SceneCategory.PORTRAIT, SceneCategory.EVENT),
+        difficulty = "进阶",
+        arGuideType = ARGuideType.THIRDS,
+        sceneMode = CompositionSceneMode.PET,
+        arOverlayDescription = "AR动态追踪框锁定主体，三分线实时调整保持构图"
     )
 )
 
 /**
- * 根据场景类型获取推荐的构图指南
- * 按匹配度排序：完全匹配 > 部分匹配 > 通用
+ * 根据场景类型和拍摄模式获取推荐的构图指南
+ * 优先排序：场景模式推荐 > 场景类型匹配 > 通用
  */
-private fun getRecommendedGuides(category: SceneCategory): List<CompositionGuide> {
-    val matched = compositionGuideLibrary.filter { category in it.applicableCategories }
-    val others = compositionGuideLibrary.filter { category !in it.applicableCategories }
-    return matched + others
+private fun getRecommendedGuides(
+    category: SceneCategory,
+    sceneMode: CompositionSceneMode? = null
+): List<CompositionGuide> {
+    val sceneModePreferred = if (sceneMode != null) {
+        compositionGuideLibrary.filter { it.sceneMode == sceneMode }
+    } else emptyList()
+    val categoryMatched = compositionGuideLibrary.filter { category in it.applicableCategories && it !in sceneModePreferred }
+    val others = compositionGuideLibrary.filter { category !in it.applicableCategories && it !in sceneModePreferred && it !in categoryMatched }
+    return sceneModePreferred + categoryMatched + others
 }
 
 /**
  * AI构图技巧卡片（参考DOKA算法）
- * 展示基于当前场景的推荐构图方式，支持切换查看
+ * 展示基于当前场景的推荐构图方式，支持场景模式切换和AR引导
  */
 @Composable
 private fun CompositionGuideCard(
@@ -2502,12 +2634,69 @@ private fun CompositionGuideCard(
     onGuideClick: (CompositionGuide) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    val guides = remember(sceneCategory) { getRecommendedGuides(sceneCategory) }
+    var selectedSceneMode by remember { mutableStateOf(CompositionSceneMode.TRAVEL) }
+    val guides = remember(sceneCategory, selectedSceneMode) {
+        getRecommendedGuides(sceneCategory, selectedSceneMode)
+    }
     var selectedGuideIndex by remember { mutableStateOf(0) }
     val currentGuide = guides[selectedGuideIndex]
+    var showARPreview by remember { mutableStateOf(false) }
 
     GlassCard {
         Column(modifier = Modifier.fillMaxWidth()) {
+            // 场景模式选择标签
+            Text(
+                text = "拍摄场景",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(CompositionSceneMode.entries.toList()) { mode ->
+                    FilterChip(
+                        selected = mode == selectedSceneMode,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            selectedSceneMode = mode
+                            selectedGuideIndex = 0
+                        },
+                        label = {
+                            Text(
+                                text = "${mode.icon} ${mode.displayName}",
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = HasselbladOrange.copy(alpha = 0.15f),
+                            selectedLabelColor = HasselbladOrange
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            selectedBorderColor = HasselbladOrange,
+                            enabled = true,
+                            selected = mode == selectedSceneMode
+                        )
+                    )
+                }
+            }
+
+            // 场景描述
+            Text(
+                text = selectedSceneMode.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+            )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+
             // 标题行
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2559,7 +2748,37 @@ private fun CompositionGuideCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // AR引导线说明
+            Surface(
+                color = HasselbladOrange.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "AR引导",
+                        tint = HasselbladOrange,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "AR ${currentGuide.arGuideType.displayName}：${currentGuide.arOverlayDescription}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HasselbladOrange,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 构图技巧列表
             currentGuide.tips.forEachIndexed { index, tip ->
@@ -2630,30 +2849,201 @@ private fun CompositionGuideCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 应用构图按钮
-            OutlinedButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onGuideClick(currentGuide)
-                },
-                shape = RoundedCornerShape(10.dp),
+            // 操作按钮行
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, HasselbladOrange)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "应用构图",
-                    tint = HasselbladOrange,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "应用「${currentGuide.name}」构图",
-                    color = HasselbladOrange,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
+                // AR预览按钮
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        showARPreview = !showARPreview
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, if (showARPreview) HasselbladOrange else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "AR预览",
+                        tint = if (showARPreview) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (showARPreview) "关闭AR" else "AR引导",
+                        color = if (showARPreview) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                // 应用构图按钮
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onGuideClick(currentGuide)
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "应用构图",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "应用构图",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // AR预览叠加区域
+            if (showARPreview) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ARGuideOverlay(
+                    guideType = currentGuide.arGuideType,
+                    sceneMode = selectedSceneMode
                 )
             }
         }
+    }
+}
+
+/**
+ * AR引导线叠加预览组件
+ * 在卡片内显示构图辅助线预览
+ */
+@Composable
+private fun ARGuideOverlay(
+    guideType: ARGuideType,
+    sceneMode: CompositionSceneMode
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF1A1A1A))
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val guideColor = HasselbladOrange.copy(alpha = 0.7f)
+            val pointColor = HasselbladOrange
+
+            when (guideType) {
+                ARGuideType.THIRDS -> {
+                    // 三分线
+                    for (i in 1..2) {
+                        drawLine(guideColor, Offset(0f, h * i / 3), Offset(w, h * i / 3), strokeWidth = 1.5f)
+                        drawLine(guideColor, Offset(w * i / 3, 0f), Offset(w * i / 3, h), strokeWidth = 1.5f)
+                    }
+                    // 交叉点
+                    for (i in 1..2) for (j in 1..2) {
+                        drawCircle(pointColor, radius = 5f, center = Offset(w * i / 3, h * j / 3))
+                    }
+                }
+                ARGuideType.GOLDEN_RATIO -> {
+                    val ratio = 0.618f
+                    drawLine(guideColor, Offset(0f, h * ratio), Offset(w, h * ratio), strokeWidth = 1.5f)
+                    drawLine(guideColor, Offset(0f, h * (1 - ratio)), Offset(w, h * (1 - ratio)), strokeWidth = 1.5f)
+                    drawLine(guideColor, Offset(w * ratio, 0f), Offset(w * ratio, h), strokeWidth = 1.5f)
+                    drawLine(guideColor, Offset(w * (1 - ratio), 0f), Offset(w * (1 - ratio), h), strokeWidth = 1.5f)
+                    for (x in listOf(ratio, 1 - ratio)) for (y in listOf(ratio, 1 - ratio)) {
+                        drawCircle(pointColor, radius = 5f, center = Offset(w * x, h * y))
+                    }
+                }
+                ARGuideType.DIAGONAL -> {
+                    drawLine(guideColor, Offset(0f, 0f), Offset(w, h), strokeWidth = 1.5f)
+                    drawLine(guideColor, Offset(w, 0f), Offset(0f, h), strokeWidth = 1.5f)
+                    drawCircle(pointColor, radius = 5f, center = Offset(w / 3, h / 3))
+                    drawCircle(pointColor, radius = 5f, center = Offset(w * 2 / 3, h * 2 / 3))
+                }
+                ARGuideType.CENTER_CROSS -> {
+                    drawLine(guideColor, Offset(w / 2, 0f), Offset(w / 2, h), strokeWidth = 1.5f)
+                    drawLine(guideColor, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 1.5f)
+                    drawCircle(pointColor, radius = 5f, center = Offset(w / 2, h / 2))
+                }
+                ARGuideType.SPIRAL -> {
+                    // 简化斐波那契螺旋
+                    val phi = 1.618f
+                    val steps = 60
+                    val spiralPoints = mutableListOf<Offset>()
+                    var cx = w * 0.618f
+                    var cy = h * 0.382f
+                    for (i in 0..steps) {
+                        val t = i.toFloat() / steps * 3f * Math.PI.toFloat()
+                        val r = 8f * Math.pow(phi.toDouble(), t / (2f * Math.PI.toFloat())).toFloat()
+                        val x = cx + r * cos(t)
+                        val y = cy + r * sin(t)
+                        if (x in 0f..w && y in 0f..h) {
+                            spiralPoints.add(Offset(x, y))
+                        }
+                    }
+                    for (i in 0 until spiralPoints.size - 1) {
+                        drawLine(guideColor, spiralPoints[i], spiralPoints[i + 1], strokeWidth = 1.5f)
+                    }
+                    drawCircle(pointColor, radius = 6f, center = Offset(cx, cy))
+                }
+                ARGuideType.FRAME -> {
+                    val inset = 0.2f
+                    drawRect(guideColor, topLeft = Offset(w * inset, h * inset), size = Size(w * (1 - 2 * inset), h * (1 - 2 * inset), ), strokeWidth = 2f)
+                    drawRect(guideColor.copy(alpha = 0.3f), strokeWidth = 1f)
+                }
+                ARGuideType.HORIZON -> {
+                    drawLine(guideColor, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 2f)
+                    // 水平仪指示
+                    drawLine(Color.Green.copy(alpha = 0.5f), Offset(w * 0.3f, h / 2), Offset(w * 0.7f, h / 2), strokeWidth = 3f)
+                }
+                ARGuideType.TRIANGLE -> {
+                    val p1 = Offset(w / 2, h * 0.15f)
+                    val p2 = Offset(w * 0.15f, h * 0.85f)
+                    val p3 = Offset(w * 0.85f, h * 0.85f)
+                    drawLine(guideColor, p1, p2, strokeWidth = 1.5f)
+                    drawLine(guideColor, p2, p3, strokeWidth = 1.5f)
+                    drawLine(guideColor, p3, p1, strokeWidth = 1.5f)
+                    drawCircle(pointColor, radius = 5f, center = p1)
+                    drawCircle(pointColor, radius = 5f, center = p2)
+                    drawCircle(pointColor, radius = 5f, center = p3)
+                }
+            }
+        }
+
+        // 场景模式标签
+        Surface(
+            color = Color.Black.copy(alpha = 0.6f),
+            shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            Text(
+                text = "${sceneMode.icon} ${sceneMode.displayName} · ${guideType.displayName}",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
+
+        // AR提示
+        Text(
+            text = sceneMode.arTip,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 10.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp, start = 12.dp, end = 12.dp)
+        )
     }
 }
