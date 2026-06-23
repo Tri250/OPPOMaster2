@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -54,6 +56,12 @@ class PresetRepository private constructor(context: Context) {
 
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+
+    /**
+     * forceReloadFromFiles 专用锁，防止多线程并发调用导致数据竞态
+     * 解决：两个线程同时调用时，_presets.value = emptyList() 导致互相覆盖的问题
+     */
+    private val forceReloadLock = Mutex()
 
     // 设备型号（WM-003）
     private var deviceModel: String = Build.MODEL
@@ -1012,16 +1020,21 @@ class PresetRepository private constructor(context: Context) {
     /**
      * 强制从文件重新加载预设（清空内存缓存后重新读取）
      * 用于订阅更新后刷新数据，解决 loadFromCacheOrNetwork 因内存缓存非空而跳过文件读取的问题
+     *
+     * 使用 Mutex 确保多线程并发调用时的数据一致性（避免 A 线程清空后被 B 线程覆盖）
+     * 同步失败不影响返回值的正确性（loadLocalPresets 已提供有效的本地数据）
      */
     suspend fun forceReloadFromFiles(): List<PresetItem> = withContext(Dispatchers.IO) {
-        _presets.value = emptyList()
-        loadLocalPresets()
-        try {
-            triggerBackgroundSync(brand = null)
-        } catch (e: Exception) {
-            Log.w(TAG, "后台同步失败", e)
+        forceReloadLock.withLock {
+            _presets.value = emptyList()
+            loadLocalPresets()
+            try {
+                triggerBackgroundSync(brand = null)
+            } catch (e: Exception) {
+                Log.w(TAG, "后台同步失败，已返回本地文件数据", e)
+            }
+            _presets.value
         }
-        _presets.value
     }
 
     // ==================== HomeViewModel 需要的方法 ====================

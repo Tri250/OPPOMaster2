@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -204,9 +205,8 @@ fun HasselbladScreen(
                         withContext(Dispatchers.Main) {
                             recentShots = (listOf(uri) + recentShots).take(3)
                         }
-                        withContext(Dispatchers.Default) {
-                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
-                        }
+                        // startAnalysis 内部已用 viewModelScope.launch 启动协程，无需外层调度器
+                        viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
                     } else {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
@@ -380,9 +380,7 @@ fun HasselbladScreen(
                             loadBitmapFromUri(context, uri)
                         }
                         if (bitmap != null) {
-                            withContext(Dispatchers.Default) {
-                                viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
-                            }
+                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
                         } else {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
@@ -2661,9 +2659,30 @@ private fun CompositionGuideCard(
     val guides = remember(sceneCategory, selectedSceneMode) {
         getRecommendedGuides(sceneCategory, selectedSceneMode)
     }
-    var selectedGuideIndex by remember { mutableStateOf(0) }
+    // 安全边界：若推荐列表为空则显示空状态，避免 guides[0] 崩溃
+    if (guides.isEmpty()) {
+        GlassCard {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "暂无推荐构图，请切换场景模式",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
+        }
+        return@CompositionGuideCard
+    }
+    var selectedGuideIndex by remember(guides) { mutableIntStateOf(0.coerceIn(0, (guides.size - 1).coerceAtLeast(0))) }
     val currentGuide = guides[selectedGuideIndex]
-    var showARPreview by remember { mutableStateOf(false) }
+    // AR预览状态：默认关闭，应用构图后自动开启（与 ViewModel.isARGuideEnabled 保持单向同步）
+    var showARPreview by remember(appliedGuideId, selectedGuideIndex) {
+        mutableStateOf(appliedGuideId != null && appliedGuideId == currentGuide.id)
+    }
     val isCurrentApplied = appliedGuideId == currentGuide.id
 
     GlassCard {
@@ -2703,7 +2722,10 @@ private fun CompositionGuideCard(
                             selectedBorderColor = HasselbladOrange,
                             enabled = true,
                             selected = mode == selectedSceneMode
-                        )
+                        ),
+                        modifier = Modifier.semantics {
+                            contentDescription = "场景模式：${mode.displayName}，${if (mode == selectedSceneMode) "已选中" else "未选中"}"
+                        }
                     )
                 }
             }
@@ -2839,7 +2861,11 @@ private fun CompositionGuideCard(
 
             // 构图方式切换
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = "构图方式列表，当前选择：${currentGuide.name}，难度${currentGuide.difficulty}"
+                    },
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 guides.take(5).forEachIndexed { index, guide ->
@@ -2866,7 +2892,10 @@ private fun CompositionGuideCard(
                             selectedBorderColor = HasselbladOrange,
                             enabled = true,
                             selected = index == selectedGuideIndex
-                        )
+                        ),
+                        modifier = Modifier.semantics {
+                            contentDescription = "构图方式：${guide.name}，${if (index == selectedGuideIndex) "已选中" else "未选中"}，难度${guide.difficulty}"
+                        }
                     )
                 }
             }
@@ -2904,7 +2933,12 @@ private fun CompositionGuideCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                // 应用构图按钮 - 根据 ViewModel 状态显示"应用构图"或"已应用"
+                // 应用构图按钮 - 根据 ViewModel 状态显示"应用构图"或"已应用"，颜色有过渡动画
+                val buttonColor by animateColorAsState(
+                    targetValue = if (isCurrentApplied) Color(0xFF4CAF50) else HasselbladOrange,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "buttonColor"
+                )
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2918,13 +2952,7 @@ private fun CompositionGuideCard(
                     },
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isCurrentApplied) {
-                            Color(0xFF4CAF50)
-                        } else {
-                            HasselbladOrange
-                        }
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Icon(

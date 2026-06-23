@@ -2,10 +2,10 @@ package com.silas.omaster.ui.features
 
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
@@ -547,10 +547,13 @@ class HasselbladEyeViewModel : ViewModel() {
                         val contentValues = ContentValues().apply {
                             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
                             put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-                            put(
-                                MediaStore.Images.Media.RELATIVE_PATH,
-                                Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad"
-                            )
+                            // RELATIVE_PATH 仅 API 29+ 支持；旧版本通过 MediaScanner 补充路径
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                put(
+                                    MediaStore.Images.Media.RELATIVE_PATH,
+                                    Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad"
+                                )
+                            }
                         }
                         val uri = context.contentResolver.insert(
                             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
