@@ -54,7 +54,16 @@
         <service
             android:name=".ui.service.FloatingWindowService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <!--
+              Android 14+ 要求 specialUse 类型前台服务必须声明用途属性
+              用途：实时显示相机预设参数悬浮窗，便于用户在不离开相机界面的情况下
+                    切换和查看不同预设效果，是核心功能（相机调参助手）的必要组成部分。
+            -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="camera_preset_overlay" />
+        </service>
 
         <activity
             android:name=".MainActivity"
