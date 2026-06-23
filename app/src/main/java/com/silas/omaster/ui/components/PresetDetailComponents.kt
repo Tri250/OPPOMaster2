@@ -156,7 +156,9 @@ fun ShootingTipsDetailCard(
                         text = "拍摄建议",
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 
@@ -300,7 +302,9 @@ private fun CommentItem(
                 text = comment.user,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         
@@ -310,7 +314,9 @@ private fun CommentItem(
         Text(
             text = comment.content,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            fontSize = 12.sp
+            fontSize = 12.sp,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

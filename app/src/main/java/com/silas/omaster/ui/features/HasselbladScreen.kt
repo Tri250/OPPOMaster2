@@ -204,7 +204,9 @@ fun HasselbladScreen(
                         withContext(Dispatchers.Main) {
                             recentShots = (listOf(uri) + recentShots).take(3)
                         }
-                        viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                        withContext(Dispatchers.Default) {
+                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                        }
                     } else {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
@@ -378,7 +380,9 @@ fun HasselbladScreen(
                             loadBitmapFromUri(context, uri)
                         }
                         if (bitmap != null) {
-                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                            withContext(Dispatchers.Default) {
+                                viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                            }
                         } else {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
@@ -1347,9 +1351,21 @@ private fun ResultsContent(
             item {
                 CompositionGuideCard(
                     sceneCategory = result.sceneProfile.category,
+                    appliedGuideId = viewModel.appliedCompositionGuideId.collectAsState().value,
                     onGuideClick = { guide ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        Toast.makeText(context, "已选择构图：${guide.name}", Toast.LENGTH_SHORT).show()
+                        // 真正应用构图：写入 ViewModel 状态 + 自动开启AR引导 + 提示用户
+                        viewModel.applyCompositionGuide(guide)
+                        Toast.makeText(
+                            context,
+                            "已应用构图：${guide.name}，AR引导线已开启",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onClearComposition = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.clearAppliedComposition()
+                        Toast.makeText(context, "已清除当前构图", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -2627,11 +2643,18 @@ private fun getRecommendedGuides(
 /**
  * AI构图技巧卡片（参考DOKA算法）
  * 展示基于当前场景的推荐构图方式，支持场景模式切换和AR引导
+ *
+ * @param sceneCategory 当前 AI 识别出的场景分类
+ * @param appliedGuideId 当前已应用的构图 ID（来自 ViewModel），用于显示"已应用"状态
+ * @param onGuideClick 点击"应用构图"时回调，会真正写入 ViewModel 状态
+ * @param onClearComposition 清除当前已应用的构图
  */
 @Composable
 private fun CompositionGuideCard(
     sceneCategory: SceneCategory,
-    onGuideClick: (CompositionGuide) -> Unit
+    appliedGuideId: String? = null,
+    onGuideClick: (CompositionGuide) -> Unit,
+    onClearComposition: () -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
     var selectedSceneMode by remember { mutableStateOf(CompositionSceneMode.TRAVEL) }
@@ -2641,6 +2664,7 @@ private fun CompositionGuideCard(
     var selectedGuideIndex by remember { mutableStateOf(0) }
     val currentGuide = guides[selectedGuideIndex]
     var showARPreview by remember { mutableStateOf(false) }
+    val isCurrentApplied = appliedGuideId == currentGuide.id
 
     GlassCard {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -2880,26 +2904,42 @@ private fun CompositionGuideCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                // 应用构图按钮
+                // 应用构图按钮 - 根据 ViewModel 状态显示"应用构图"或"已应用"
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onGuideClick(currentGuide)
+                        if (isCurrentApplied) {
+                            // 已应用：再次点击则清除
+                            onClearComposition()
+                        } else {
+                            // 未应用：写入 ViewModel 状态
+                            onGuideClick(currentGuide)
+                        }
                     },
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isCurrentApplied) {
+                            Color(0xFF4CAF50)
+                        } else {
+                            HasselbladOrange
+                        }
+                    ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "应用构图",
+                        imageVector = if (isCurrentApplied) {
+                            Icons.Default.CheckCircle
+                        } else {
+                            Icons.Default.AutoAwesome
+                        },
+                        contentDescription = if (isCurrentApplied) "已应用" else "应用构图",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "应用构图",
+                        text = if (isCurrentApplied) "已应用" else "应用构图",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,

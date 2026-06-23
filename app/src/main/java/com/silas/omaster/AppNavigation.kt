@@ -114,7 +114,8 @@ fun MainApp(navController: NavHostController) {
         MigrationDialog(
             onMigrate = {
                 JsonUtil.deleteRemotePresets(context)
-                coroutineScope.launch { repository.reloadDefaultPresets() }
+                // 迁移后强制从文件重新加载预设，避免使用旧内存缓存
+                coroutineScope.launch { repository.forceReloadFromFiles() }
                 settingsManager.setMigrationHandled(true)
                 showMigrationDialog = false
             },

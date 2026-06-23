@@ -108,6 +108,70 @@ class HasselbladEyeViewModel : ViewModel() {
     private val _lastSavedUri = MutableStateFlow<android.net.Uri?>(null)
     val lastSavedUri: StateFlow<android.net.Uri?> = _lastSavedUri.asStateFlow()
 
+    // ================== AI 构图辅助状态 ==================
+
+    /**
+     * 当前已选中的构图指南 ID（null 表示未应用）
+     * 选中后会在 Stage 切换、文件命名、保存分享等处生效
+     */
+    private val _appliedCompositionGuideId = MutableStateFlow<String?>(null)
+    val appliedCompositionGuideId: StateFlow<String?> = _appliedCompositionGuideId.asStateFlow()
+
+    /**
+     * 当前应用的构图场景模式
+     */
+    private val _appliedCompositionSceneMode = MutableStateFlow<CompositionSceneMode?>(null)
+    val appliedCompositionSceneMode: StateFlow<CompositionSceneMode?> = _appliedCompositionSceneMode.asStateFlow()
+
+    /**
+     * 当前应用的 AR 引导线类型
+     */
+    private val _appliedARGuideType = MutableStateFlow<ARGuideType?>(null)
+    val appliedARGuideType: StateFlow<ARGuideType?> = _appliedARGuideType.asStateFlow()
+
+    /**
+     * 是否启用 AR 构图引导线显示
+     * 启用后会在拍照页和预览页叠加引导线
+     */
+    private val _isARGuideEnabled = MutableStateFlow(false)
+    val isARGuideEnabled: StateFlow<Boolean> = _isARGuideEnabled.asStateFlow()
+
+    /**
+     * 应用指定的构图指南
+     * 会同时设置：构图 ID、场景模式、AR 引导线类型，并自动开启 AR 引导显示
+     * 取消时传入 null
+     */
+    fun applyCompositionGuide(guide: CompositionGuide?) {
+        if (guide == null) {
+            _appliedCompositionGuideId.value = null
+            _appliedCompositionSceneMode.value = null
+            _appliedARGuideType.value = null
+            _isARGuideEnabled.value = false
+        } else {
+            _appliedCompositionGuideId.value = guide.id
+            _appliedCompositionSceneMode.value = guide.sceneMode
+            _appliedARGuideType.value = guide.arGuideType
+            _isARGuideEnabled.value = true
+        }
+    }
+
+    /**
+     * 切换 AR 引导线显示开关
+     */
+    fun toggleARGuide() {
+        _isARGuideEnabled.value = !_isARGuideEnabled.value
+    }
+
+    /**
+     * 清除已应用的构图（用于重置分析）
+     */
+    fun clearAppliedComposition() {
+        _appliedCompositionGuideId.value = null
+        _appliedCompositionSceneMode.value = null
+        _appliedARGuideType.value = null
+        _isARGuideEnabled.value = false
+    }
+
     // ================== 协程任务 ==================
 
     private var analysisJob: Job? = null
@@ -477,7 +541,9 @@ class HasselbladEyeViewModel : ViewModel() {
                             ExportFormat.HEIF -> "image/heif"
                         }
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
-                        val filename = "Hasselblad_${System.currentTimeMillis()}.$extension"
+                        // 文件名包含构图名，便于用户追溯使用的构图方案
+                        val compositionTag = _appliedCompositionGuideId.value?.let { "_${it}" } ?: ""
+                        val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.$extension"
                         val contentValues = ContentValues().apply {
                             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
                             put(MediaStore.Images.Media.MIME_TYPE, mimeType)

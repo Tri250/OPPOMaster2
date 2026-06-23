@@ -211,11 +211,11 @@ class HomeViewModel(
 
     /**
      * 刷新数据
-     * 修复：现在会正确取消旧任务并重新收集
+     * 修复：使用 forceReloadFromFiles 强制从文件重新加载，避免内存缓存非空导致数据不更新
      */
     fun refresh(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            repository.reloadDefaultPresets()
+            repository.forceReloadFromFiles()
             loadPresets()
             delay(500) // 给予足够时间让 Flow 发射新值并让 UI 感知
             onComplete()

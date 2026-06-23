@@ -149,9 +149,9 @@ class SettingsViewModel(
                     cloudSyncManager.sync()
                 }
                 if (result is SyncResult.Success) {
-                    // 同步成功后刷新本地预设列表与缓存
+                    // 同步成功后强制从文件重新加载预设，刷新本地缓存
                     withContext(Dispatchers.IO) {
-                        presetRepository.reloadDefaultPresets()
+                        presetRepository.forceReloadFromFiles()
                     }
                     _lastSyncTime.value = settingsManager.lastSyncTime
                     onComplete(true)

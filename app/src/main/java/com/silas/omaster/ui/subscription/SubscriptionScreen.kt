@@ -191,7 +191,8 @@ fun SubscriptionScreen(
                                 author = presetList.author,
                                 build = presetList.build
                             )
-                            PresetRepository.getInstance(context).reloadDefaultPresets()
+                            // 重新从文件加载预设，确保订阅添加后数据立即可用
+                            PresetRepository.getInstance(context).forceReloadFromFiles()
                             Toast.makeText(context, "订阅添加成功", Toast.LENGTH_SHORT).show()
                         }.onFailure { error ->
                             errorMsg = error.message ?: "导入失败"
@@ -222,7 +223,8 @@ fun SubscriptionScreen(
                                     author = presetList.author,
                                     build = presetList.build
                                 )
-                                PresetRepository.getInstance(context).reloadDefaultPresets()
+                                // 重新从文件加载预设，确保订阅更新后数据立即可用
+                                PresetRepository.getInstance(context).forceReloadFromFiles()
                                 Toast.makeText(context, "订阅更新成功", Toast.LENGTH_SHORT).show()
                             }.onFailure { error ->
                                 errorMsg = error.message ?: "更新失败"
