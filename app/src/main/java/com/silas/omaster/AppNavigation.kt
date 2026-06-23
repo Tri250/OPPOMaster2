@@ -414,15 +414,16 @@ fun MainApp(navController: NavHostController) {
                     onComplete = {
                         onboardingManager.markOnboardingShown(VersionInfo.VERSION_CODE.toLong())
                         showOnboarding = false
+                        // 弹出引导页并回到唯一的 Home，避免产生重复 Home 实例
                         navController.navigate(Screen.Home) {
-                            popUpTo(Screen.Onboarding) { inclusive = true }
+                            popUpTo(Screen.Home) { inclusive = true }
                         }
                     },
                     onSkip = {
                         onboardingManager.skipOnboarding(VersionInfo.VERSION_CODE.toLong())
                         showOnboarding = false
                         navController.navigate(Screen.Home) {
-                            popUpTo(Screen.Onboarding) { inclusive = true }
+                            popUpTo(Screen.Home) { inclusive = true }
                         }
                     }
                 )
