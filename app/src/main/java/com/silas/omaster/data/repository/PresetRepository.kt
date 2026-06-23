@@ -1009,6 +1009,21 @@ class PresetRepository private constructor(context: Context) {
      */
     suspend fun reloadDefaultPresets(): List<PresetItem> = loadPresets(brand = null)
 
+    /**
+     * 强制从文件重新加载预设（清空内存缓存后重新读取）
+     * 用于订阅更新后刷新数据，解决 loadFromCacheOrNetwork 因内存缓存非空而跳过文件读取的问题
+     */
+    suspend fun forceReloadFromFiles(): List<PresetItem> = withContext(Dispatchers.IO) {
+        _presets.value = emptyList()
+        loadLocalPresets()
+        try {
+            triggerBackgroundSync(brand = null)
+        } catch (e: Exception) {
+            Log.w(TAG, "后台同步失败", e)
+        }
+        _presets.value
+    }
+
     // ==================== HomeViewModel 需要的方法 ====================
 
     /**

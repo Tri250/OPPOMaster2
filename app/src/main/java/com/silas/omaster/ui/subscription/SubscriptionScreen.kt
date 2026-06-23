@@ -74,7 +74,7 @@ fun SubscriptionScreen(
                     }
                 }
                 if (enabledSubs.isNotEmpty()) {
-                    PresetRepository.getInstance(context).reloadDefaultPresets()
+                    PresetRepository.getInstance(context).forceReloadFromFiles()
                     val message = when {
                         successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
                         successCount > 0 -> "成功更新 ${successCount} 个订阅"

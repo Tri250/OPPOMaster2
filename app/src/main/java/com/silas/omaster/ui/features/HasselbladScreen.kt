@@ -191,12 +191,18 @@ fun HasselbladScreen(
             val uri = cameraImageUri
             if (uri != null) {
                 scope.launch {
-                    val bitmap = loadBitmapFromUri(context, uri)
+                    val bitmap = withContext(Dispatchers.IO) {
+                        loadBitmapFromUri(context, uri)
+                    }
                     if (bitmap != null) {
-                        recentShots = (listOf(uri) + recentShots).take(3)
+                        withContext(Dispatchers.Main) {
+                            recentShots = (listOf(uri) + recentShots).take(3)
+                        }
                         viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
                     } else {
-                        Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -208,12 +214,18 @@ fun HasselbladScreen(
     ) { uri ->
         uri?.let {
             scope.launch {
-                val bitmap = loadBitmapFromUri(context, it)
+                val bitmap = withContext(Dispatchers.IO) {
+                    loadBitmapFromUri(context, it)
+                }
                 if (bitmap != null) {
-                    recentShots = (listOf(it) + recentShots).take(3)
+                    withContext(Dispatchers.Main) {
+                        recentShots = (listOf(it) + recentShots).take(3)
+                    }
                     viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
                 } else {
-                    Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -356,11 +368,15 @@ fun HasselbladScreen(
                 onPickFromGallery = ::onPickFromGallery,
                 onRecentShotClick = { uri ->
                     scope.launch {
-                        val bitmap = loadBitmapFromUri(context, uri)
+                        val bitmap = withContext(Dispatchers.IO) {
+                            loadBitmapFromUri(context, uri)
+                        }
                         if (bitmap != null) {
                             viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
                         } else {
-                            Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
@@ -1316,6 +1332,20 @@ private fun ResultsContent(
                 item {
                     MasterTipsCard(tips = result.masterTips)
                 }
+            }
+
+            // AI构图技巧（参考DOKA算法）
+            item {
+                SectionTitle(title = "AI构图技巧")
+            }
+            item {
+                CompositionGuideCard(
+                    sceneCategory = result.sceneProfile.category,
+                    onGuideClick = { guide ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        Toast.makeText(context, "已选择构图：${guide.name}", Toast.LENGTH_SHORT).show()
+                    }
+                )
             }
 
             item {
@@ -2316,5 +2346,314 @@ private fun createTempImageUri(context: android.content.Context): Uri? {
     } catch (e: Exception) {
         android.util.Log.e("HasselbladScreen", "创建相机临时文件失败", e)
         null
+    }
+}
+
+// ==================== AI构图技巧模块（参考DOKA算法） ====================
+
+/**
+ * 构图指南数据模型
+ * 参考DOKA软件的构图算法功能点：
+ * - 三分法/黄金分割构图
+ * - 引导线构图
+ * - 对角线构图
+ * - 居中对称构图
+ * - 框架构图
+ * - 黄金螺旋构图
+ */
+data class CompositionGuide(
+    val id: String,
+    val name: String,
+    val description: String,
+    val icon: String,
+    val tips: List<String>,
+    val applicableCategories: List<SceneCategory>,
+    val difficulty: String // "入门" / "进阶" / "大师"
+)
+
+/**
+ * 基于DOKA算法的构图指南库
+ * 根据场景类型推荐最佳构图方式
+ */
+private val compositionGuideLibrary: List<CompositionGuide> = listOf(
+    CompositionGuide(
+        id = "rule-of-thirds",
+        name = "三分法构图",
+        description = "将画面横竖各三等分，主体置于交叉点",
+        icon = "⊞",
+        tips = listOf(
+            "将主体放在四分线交叉点上，视觉最稳定",
+            "地平线放在上1/3或下1/3处，避免居中",
+            "人像眼睛放在上1/3线上，增强视觉引导"
+        ),
+        applicableCategories = listOf(SceneCategory.PORTRAIT, SceneCategory.LANDSCAPE, SceneCategory.URBAN, SceneCategory.FOOD),
+        difficulty = "入门"
+    ),
+    CompositionGuide(
+        id = "golden-ratio",
+        name = "黄金分割",
+        description = "1:1.618黄金比例，比三分法更精准的视觉焦点",
+        icon = "ϕ",
+        tips = listOf(
+            "黄金分割点比三分法更靠近中心，画面更紧凑",
+            "适合需要突出主体同时保持背景的场景",
+            "哈苏大师常用构图法，自然和谐"
+        ),
+        applicableCategories = listOf(SceneCategory.PORTRAIT, SceneCategory.STILL_LIFE, SceneCategory.LANDSCAPE),
+        difficulty = "进阶"
+    ),
+    CompositionGuide(
+        id = "leading-lines",
+        name = "引导线构图",
+        description = "利用线条引导视线至主体或消失点",
+        icon = "⟋",
+        tips = listOf(
+            "道路、河流、栏杆都是天然引导线",
+            "引导线从画面边缘指向主体，增强纵深感",
+            "多条汇聚线形成消失点，营造强烈空间感"
+        ),
+        applicableCategories = listOf(SceneCategory.URBAN, SceneCategory.LANDSCAPE, SceneCategory.NIGHT),
+        difficulty = "入门"
+    ),
+    CompositionGuide(
+        id = "diagonal",
+        name = "对角线构图",
+        description = "主体沿对角线分布，增加画面动感与张力",
+        icon = "⟍",
+        tips = listOf(
+            "对角线构图比水平构图更有动感",
+            "适合拍摄运动、建筑、食物等主题",
+            "从左下到右上更符合阅读习惯"
+        ),
+        applicableCategories = listOf(SceneCategory.FOOD, SceneCategory.URBAN, SceneCategory.EVENT, SceneCategory.MACRO),
+        difficulty = "入门"
+    ),
+    CompositionGuide(
+        id = "center-symmetry",
+        name = "居中对称",
+        description = "主体居中，左右或上下对称，庄重稳定",
+        icon = "◎",
+        tips = listOf(
+            "建筑、倒影等对称场景最佳选择",
+            "确保对称轴完全居中，偏移会破坏效果",
+            "可搭配广角镜头增强对称气势"
+        ),
+        applicableCategories = listOf(SceneCategory.LANDSCAPE, SceneCategory.URBAN, SceneCategory.STILL_LIFE),
+        difficulty = "进阶"
+    ),
+    CompositionGuide(
+        id = "frame-in-frame",
+        name = "框架构图",
+        description = "利用前景元素形成画中画，增加层次感",
+        icon = "⬜",
+        tips = listOf(
+            "门框、窗户、树枝都是天然框架",
+            "框架不必完整，半框也能增强纵深感",
+            "框架与主体形成明暗对比，突出主体"
+        ),
+        applicableCategories = listOf(SceneCategory.LANDSCAPE, SceneCategory.URBAN, SceneCategory.PORTRAIT),
+        difficulty = "进阶"
+    ),
+    CompositionGuide(
+        id = "golden-spiral",
+        name = "黄金螺旋",
+        description = "基于斐波那契螺旋线，自然界最和谐的比例",
+        icon = "🌀",
+        tips = listOf(
+            "螺旋中心放置主体，线条引导视线流动",
+            "适合花朵、贝壳等自然螺旋形态",
+            "哈苏X系统经典构图法，大师级运用"
+        ),
+        applicableCategories = listOf(SceneCategory.MACRO, SceneCategory.STILL_LIFE, SceneCategory.LANDSCAPE),
+        difficulty = "大师"
+    ),
+    CompositionGuide(
+        id = "negative-space",
+        name = "留白构图",
+        description = "大面积留白衬托小主体，极简意境",
+        icon = "◻",
+        tips = listOf(
+            "主体占画面1/4以下，留白占3/4以上",
+            "留白方向给主体留出视线或运动空间",
+            "东方美学核心构图法，少即是多"
+        ),
+        applicableCategories = listOf(SceneCategory.LANDSCAPE, SceneCategory.PORTRAIT, SceneCategory.STILL_LIFE),
+        difficulty = "大师"
+    )
+)
+
+/**
+ * 根据场景类型获取推荐的构图指南
+ * 按匹配度排序：完全匹配 > 部分匹配 > 通用
+ */
+private fun getRecommendedGuides(category: SceneCategory): List<CompositionGuide> {
+    val matched = compositionGuideLibrary.filter { category in it.applicableCategories }
+    val others = compositionGuideLibrary.filter { category !in it.applicableCategories }
+    return matched + others
+}
+
+/**
+ * AI构图技巧卡片（参考DOKA算法）
+ * 展示基于当前场景的推荐构图方式，支持切换查看
+ */
+@Composable
+private fun CompositionGuideCard(
+    sceneCategory: SceneCategory,
+    onGuideClick: (CompositionGuide) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val guides = remember(sceneCategory) { getRecommendedGuides(sceneCategory) }
+    var selectedGuideIndex by remember { mutableStateOf(0) }
+    val currentGuide = guides[selectedGuideIndex]
+
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // 标题行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = currentGuide.icon,
+                        fontSize = 24.sp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = currentGuide.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = currentGuide.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                // 难度标签
+                Surface(
+                    color = when (currentGuide.difficulty) {
+                        "入门" -> Color(0xFF4CAF50).copy(alpha = 0.15f)
+                        "进阶" -> HasselbladOrange.copy(alpha = 0.15f)
+                        else -> Color(0xFF9C27B0).copy(alpha = 0.15f)
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = currentGuide.difficulty,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = when (currentGuide.difficulty) {
+                            "入门" -> Color(0xFF4CAF50)
+                            "进阶" -> HasselbladOrange
+                            else -> Color(0xFF9C27B0)
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 构图技巧列表
+            currentGuide.tips.forEachIndexed { index, tip ->
+                Row(verticalAlignment = Alignment.Top) {
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(HasselbladOrange.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = HasselbladOrange,
+                            fontSize = 10.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = tip,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(top = 1.dp)
+                    )
+                }
+                if (index < currentGuide.tips.lastIndex) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 构图方式切换
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                guides.take(5).forEachIndexed { index, guide ->
+                    FilterChip(
+                        selected = index == selectedGuideIndex,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            selectedGuideIndex = index
+                        },
+                        label = {
+                            Text(
+                                text = "${guide.icon} ${guide.name}",
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = HasselbladOrange.copy(alpha = 0.15f),
+                            selectedLabelColor = HasselbladOrange
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            selectedBorderColor = HasselbladOrange,
+                            enabled = true,
+                            selected = index == selectedGuideIndex
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 应用构图按钮
+            OutlinedButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onGuideClick(currentGuide)
+                },
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, HasselbladOrange)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "应用构图",
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "应用「${currentGuide.name}」构图",
+                    color = HasselbladOrange,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
