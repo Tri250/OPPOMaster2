@@ -157,7 +157,7 @@ fun AIFineTuneScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedBitmap by remember { mutableStateOf<Bitmap?>(bitmap) }
 
-    // 相册选择启动器（使用 PickVisualMedia 符合 Android 16 隐私最佳实践）
+    // 相册选择启动器（使用 PickVisualMedia 符合 Android 16 隐私最佳实践，仅限图片）
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->

@@ -1,6 +1,6 @@
 package com.silas.omaster
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -27,8 +27,9 @@ fun WelcomeFlow(
 ) {
     var showPrivacyPolicy by remember { mutableStateOf(false) }
 
-    // 处理系统返回键：在隐私政策页时返回欢迎页
-    BackHandler(enabled = showPrivacyPolicy) {
+    // 处理系统返回键：使用 PredictiveBackHandler 支持 Android 16 预测性返回动画
+    // 在隐私政策页时返回欢迎页
+    PredictiveBackHandler(enabled = showPrivacyPolicy) { _ ->
         showPrivacyPolicy = false
     }
 

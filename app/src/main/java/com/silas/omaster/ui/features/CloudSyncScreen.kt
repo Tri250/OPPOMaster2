@@ -386,20 +386,22 @@ fun CloudSyncScreen(
                                         ) else cp
                                     }
                                 } else {
+                                    // 验证失败：保留用户输入的 Key 以便修改后重试
                                     cloudProviders = cloudProviders.map { cp ->
                                         if (cp.type == provider) cp.copy(
                                             isConnected = false,
                                             isConnecting = false,
-                                            apiKey = ""
+                                            apiKey = apiKey
                                         ) else cp
                                     }
                                 }
                             } catch (e: Exception) {
+                                // 异常：同样保留用户输入的 Key
                                 cloudProviders = cloudProviders.map { cp ->
                                     if (cp.type == provider) cp.copy(
                                         isConnected = false,
                                         isConnecting = false,
-                                        apiKey = ""
+                                        apiKey = apiKey
                                     ) else cp
                                 }
                             }
@@ -761,7 +763,7 @@ private fun CloudProviderConnectDialog(
  * 对每种提供商发起真实的网络探测：
  * - Google Drive: 调用 about API 验证 token 有效性
  * - Dropbox: 调用 /2/users/get_current_account 验证 token
- * - WebDAV: 发送 PROPFIND 请求验证地址可达性与认证
+ * - WebDAV: 发送 PROPFIND 请求验证地址可达性
  */
 private suspend fun validateProviderConnection(
     providerType: CloudProviderType,
@@ -770,27 +772,26 @@ private suspend fun validateProviderConnection(
     // 基础验证：检查格式
     if (apiKey.isBlank()) return@withContext false
 
+    var conn: HttpURLConnection? = null
     try {
         when (providerType) {
             CloudProviderType.GOOGLE_DRIVE -> {
                 // Google Drive: 使用 about API 验证 OAuth token
                 if (apiKey.length < 20) return@withContext false
                 val url = URL("https://www.googleapis.com/drive/v3/about?fields=user")
-                val conn = (url.openConnection() as HttpURLConnection).apply {
+                conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     setRequestProperty("Authorization", "Bearer $apiKey")
                     connectTimeout = 10_000
                     readTimeout = 10_000
                 }
-                val responseCode = conn.responseCode
-                conn.disconnect()
-                responseCode == 200
+                conn.responseCode == 200
             }
             CloudProviderType.DROPBOX -> {
                 // Dropbox: 调用 get_current_account 验证 token
                 if (apiKey.length < 15) return@withContext false
                 val url = URL("https://api.dropboxapi.com/2/users/get_current_account")
-                val conn = (url.openConnection() as HttpURLConnection).apply {
+                conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     setRequestProperty("Authorization", "Bearer $apiKey")
                     setRequestProperty("Content-Type", "application/json")
@@ -799,27 +800,30 @@ private suspend fun validateProviderConnection(
                     readTimeout = 10_000
                 }
                 conn.outputStream.use { it.write("{}".toByteArray()) }
-                val responseCode = conn.responseCode
-                conn.disconnect()
-                responseCode == 200
+                conn.responseCode == 200
             }
             CloudProviderType.WEBDAV -> {
                 // WebDAV: 发送 PROPFIND 请求验证地址可达性
                 if (!apiKey.lowercase().startsWith("https://")) return@withContext false
                 val url = URL(apiKey.trimEnd('/'))
-                val conn = (url.openConnection() as HttpURLConnection).apply {
+                conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "PROPFIND"
+                    setRequestProperty("Depth", "0")
                     connectTimeout = 10_000
                     readTimeout = 10_000
                 }
-                val responseCode = conn.responseCode
-                conn.disconnect()
                 // 207 Multi-Status 或 200 OK 均表示地址可达
-                responseCode == 207 || responseCode == 200
+                val code = conn.responseCode
+                code == 207 || code == 200
             }
         }
     } catch (e: Exception) {
-        // 网络异常视为验证失败
+        // 网络异常视为验证失败（含 SSLHandshakeException、UnknownHostException、ConnectException 等）
         false
+    } finally {
+        // 确保连接资源被释放，避免 Socket 泄漏
+        try { conn?.disconnect() } catch (_: Exception) { /* 忽略关闭异常 */ }
+        try { conn?.inputStream?.close() } catch (_: Exception) { /* 忽略 */ }
+        try { conn?.errorStream?.close() } catch (_: Exception) { /* 忽略 */ }
     }
 }

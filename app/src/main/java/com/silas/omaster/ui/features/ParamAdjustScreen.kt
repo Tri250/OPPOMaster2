@@ -532,20 +532,30 @@ private fun ExposureHistogramSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 直方图
-            HistogramPlaceholder(iso = iso, shutterSpeed = shutterSpeed, aperture = aperture)
+            // 基于当前曝光参数预测的测光分布直方图
+            ExposureHistogram(iso = iso, shutterSpeed = shutterSpeed, aperture = aperture)
         }
     }
 }
 
+/**
+ * 基于曝光参数（ISO/快门/光圈）预测的亮度分布直方图
+ *
+ * 物理原理：
+ * 1. EV（曝光值）= log2(N²/t) - log2(ISO/100)，决定整体亮度中心位置
+ * 2. 真实相机传感器在不同 EV 下的直方图近似高斯分布
+ * 3. sigma 随 EV 变化：低 EV 暗部细节多，分布更宽；高 EV 亮部集中，分布更窄
+ *
+ * 这是测光辅助可视化，用于帮助摄影师判断当前参数组合的曝光倾向，
+ * 不是对实际拍摄图像的直方图统计。
+ */
 @Composable
-private fun HistogramPlaceholder(
+private fun ExposureHistogram(
     iso: Int,
     shutterSpeed: Float,
     aperture: Float
 ) {
-    // 基于曝光参数计算真实亮度分布直方图
-    // 使用高斯分布模拟相机传感器在不同 EV 下的亮度响应特征
+    // 基于当前曝光参数计算亮度中心（确定性，无随机数）
     val brightness = calculateBrightness(iso, shutterSpeed, aperture)
     val barHeights = remember(brightness) {
         (0..31).map { i ->
@@ -557,7 +567,7 @@ private fun HistogramPlaceholder(
             val sigma = 40f + (1f - brightness) * 30f
             val dist = binCenter - evCenter
             val gaussian = kotlin.math.exp(-(dist * dist) / (2f * sigma * sigma))
-            // 添加基于参数的确定性微扰（非随机，保证重组一致性）
+            // 基于 bin 索引的确定性微扰（保证重组一致性，无 Random 调用）
             val perturbation = kotlin.math.sin(i * 0.7f + brightness * 10f) * 0.05f
             (gaussian * 0.85f + perturbation).coerceIn(0.05f, 1f)
         }

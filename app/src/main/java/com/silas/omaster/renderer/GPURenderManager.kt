@@ -708,9 +708,12 @@ class GPURenderManager private constructor(private val context: Context) {
     
     /**
      * 生成请求ID
+     * 基于时间戳+计数器（避免 Random 在 Compose Recomposition 中产生不同的 ID）
      */
+    private val requestIdCounter = java.util.concurrent.atomic.AtomicLong(0)
     private fun generateRequestId(): String {
-        return "render_${System.currentTimeMillis()}_${(0..9999).random()}"
+        val counter = requestIdCounter.incrementAndGet()
+        return "render_${System.currentTimeMillis()}_$counter"
     }
     
     /**

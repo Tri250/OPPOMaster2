@@ -213,9 +213,9 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "SettingsManager预加载失败", e)
                 }
 
-                // 预初始化 FaceDetectorSingleton（非关键，首次使用时才真正加载模型）
+                // 预初始化 FaceDetectorSingleton（非关键，触发单例创建）
+                // 实际人脸检测模型由 Google ML Kit 按需加载，无需用户配置
                 try {
-                    // 仅触发初始化，实际模型加载延迟到首次使用时
                     FaceDetectorSingleton
                     StartupLogger.logStep("FaceDetector预初始化", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
