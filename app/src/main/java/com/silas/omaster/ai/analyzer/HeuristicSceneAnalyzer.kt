@@ -19,7 +19,7 @@ import kotlin.math.sqrt
  * 优先级 2: EXIF 元数据分析（即时，无模型依赖）
  * 优先级 3: 亮度与纹理分析
  * 优先级 4: 用户上下文推断
- * 未来: TFLite 模型（MediaPipe Image Classifier）
+ * 未来: TFLite 模型（待模型文件就绪后替换启发式管道）
  */
 class HeuristicSceneAnalyzer(private val context: Context) {
 

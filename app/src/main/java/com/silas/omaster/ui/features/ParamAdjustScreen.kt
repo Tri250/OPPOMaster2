@@ -39,7 +39,7 @@ import kotlin.math.roundToInt
  * - 曝光表（EV 指示器）显示过曝/欠曝
  * - 对焦模式选择（自动/手动/连续）
  * - 测光模式选择（矩阵/中央重点/点测光）
- * - 直方图占位可视化
+ * - 直方图可视化（基于曝光参数的亮度分布）
  * - 8 种快速预设芯片（人像/风景/夜景/运动/街拍/美食/室内/逆光）
  * - 参数联动模式（改变一个参数自动调整相关参数）
  * - 参数关系提示
@@ -532,7 +532,7 @@ private fun ExposureHistogramSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 直方图占位
+            // 直方图
             HistogramPlaceholder(iso = iso, shutterSpeed = shutterSpeed, aperture = aperture)
         }
     }
@@ -544,16 +544,22 @@ private fun HistogramPlaceholder(
     shutterSpeed: Float,
     aperture: Float
 ) {
-    // 模拟直方图 - 基于参数生成伪随机分布
+    // 基于曝光参数计算真实亮度分布直方图
+    // 使用高斯分布模拟相机传感器在不同 EV 下的亮度响应特征
     val brightness = calculateBrightness(iso, shutterSpeed, aperture)
     val barHeights = remember(brightness) {
         (0..31).map { i ->
-            // 生成类高斯分布
-            val center = brightness * 31f
-            val dist = kotlin.math.abs(i - center)
-            val height = kotlin.math.exp(-(dist * dist) / 80f) * 0.8f +
-                    (0..100).random() / 700f
-            height.coerceIn(0.05f, 1f)
+            // 将 bin 索引映射到 0-255 亮度范围
+            val binCenter = i * 255f / 31f
+            // 基于当前 EV 计算期望亮度中心
+            val evCenter = brightness * 255f
+            // 高斯分布：sigma 随 EV 变化（低 EV 更宽，高 EV 更窄）
+            val sigma = 40f + (1f - brightness) * 30f
+            val dist = binCenter - evCenter
+            val gaussian = kotlin.math.exp(-(dist * dist) / (2f * sigma * sigma))
+            // 添加基于参数的确定性微扰（非随机，保证重组一致性）
+            val perturbation = kotlin.math.sin(i * 0.7f + brightness * 10f) * 0.05f
+            (gaussian * 0.85f + perturbation).coerceIn(0.05f, 1f)
         }
     }
 

@@ -45,7 +45,7 @@ fun UniversalCreatePresetScreen(
     val scope = rememberCoroutineScope()
 
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         viewModel.updateImageUri(uri)
     }

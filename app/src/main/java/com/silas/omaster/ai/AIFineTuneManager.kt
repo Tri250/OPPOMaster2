@@ -25,7 +25,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import kotlin.math.abs
 
 /**
- * AI 微调管理器 - 真实AI推理版本
+ * AI 微调管理器 - 端云协同推理
  * 
  * 功能用例实现：
  * FT-001/002/003: AI微调核心功能
@@ -33,9 +33,13 @@ import kotlin.math.abs
  * FT-006: AI微调权限与隐私
  * 
  * 端云协同架构：
- * - 本地优先：TFLite + 启发式分析器（实时响应）
- * - 云端增强：API调用（高质量推理）
- * - 降级策略：TFLite失败 → 规则引擎
+ * - 本地优先：启发式场景分析器 + ML Kit 人脸检测（实时响应，无需模型文件）
+ * - 云端增强：API调用（高质量推理，需网络与有效 API Key）
+ * - 降级策略：推理超时 → 规则引擎保守建议
+ * 
+ * 注意：当前本地推理使用启发式算法（HeuristicSceneAnalyzer），非 TFLite 模型推理。
+ * TFLite 模型文件尚未就绪（见 assets/models/MODEL_SPEC.json status: "not_ready"），
+ * 待模型训练完成后将替换为真实模型推理管道。
  */
 class AIFineTuneManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
@@ -221,7 +225,7 @@ class AIFineTuneManager private constructor(context: Context) {
                     Log.d(TAG, "云端AI不可用，直接使用本地推理")
                 }
 
-                // 本地TFLite推理（真实AI分析）
+                // 本地启发式推理（真实图像分析）
                 val localResult = generateLocalSuggestionFromImage(bitmap, currentParams)
                 appliedSuggestions.add(localResult)
                 _suggestedParams.value = localResult
@@ -921,7 +925,7 @@ class AIFineTuneManager private constructor(context: Context) {
 
     /**
      * 降级策略：规则引擎
-     * 当TFLite推理失败或超时时使用
+     * 当启发式推理超时时使用
      */
     private fun generateFallbackSuggestion(currentParams: Map<String, Int>): AISuggestion {
         Log.d(TAG, "使用规则引擎降级策略")

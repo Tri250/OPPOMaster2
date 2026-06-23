@@ -36,7 +36,8 @@ import kotlin.coroutines.resumeWithException
  * - 场景→哈苏参数映射
  *
  * 已修复：使用新版 SceneProfile 数据模型，与 ScenePresets 对齐
- * 已修复：人脸检测改用 ML Kit 真实检测结果，不再使用模拟数据
+ * 已修复：人脸检测改用 ML Kit 真实检测结果
+ * 注意：当前场景识别使用启发式分析器（HeuristicSceneAnalyzer），非 TFLite 模型推理
  */
 class MasterInferenceEngine private constructor(context: Context) {
 

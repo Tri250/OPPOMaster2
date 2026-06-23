@@ -126,10 +126,10 @@ fun SmartOptimizeScreen(
     // 预览模式
     var previewMode by remember { mutableStateOf("before") }
 
-    // 图片选择器
+    // 图片选择器（使用 PickVisualMedia 符合 Android 16 隐私最佳实践）
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
             selectedImageUri = it

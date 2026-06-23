@@ -27,7 +27,11 @@ import com.silas.omaster.cloud.SyncState
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 import com.silas.omaster.ui.theme.SuccessGreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -368,7 +372,7 @@ fun CloudSyncScreen(
                 cloudProviders = cloudProviders.map {
                     if (it.type == provider) {
                         val updated = it.copy(isConnecting = true, apiKey = apiKey)
-                        // 模拟连接验证
+                        // 真实 HTTP 连接验证
                         scope.launch {
                             try {
                                 // 验证 API Key / WebDAV 地址
@@ -752,28 +756,70 @@ private fun CloudProviderConnectDialog(
 }
 
 /**
- * 验证云服务提供商连接
- * 实际应用中将通过 HTTP 请求验证 API 密钥或 WebDAV 地址的有效性
+ * 验证云服务提供商连接（真实 HTTP 请求验证）
+ *
+ * 对每种提供商发起真实的网络探测：
+ * - Google Drive: 调用 about API 验证 token 有效性
+ * - Dropbox: 调用 /2/users/get_current_account 验证 token
+ * - WebDAV: 发送 PROPFIND 请求验证地址可达性与认证
  */
 private suspend fun validateProviderConnection(
     providerType: CloudProviderType,
     apiKey: String
-): Boolean {
+): Boolean = withContext(Dispatchers.IO) {
     // 基础验证：检查格式
-    if (apiKey.isBlank()) return false
+    if (apiKey.isBlank()) return@withContext false
 
-    when (providerType) {
-        CloudProviderType.GOOGLE_DRIVE -> {
-            // Google Drive API Key 验证：通常为 39 字符的字母数字字符串
-            return apiKey.length >= 20
+    try {
+        when (providerType) {
+            CloudProviderType.GOOGLE_DRIVE -> {
+                // Google Drive: 使用 about API 验证 OAuth token
+                if (apiKey.length < 20) return@withContext false
+                val url = URL("https://www.googleapis.com/drive/v3/about?fields=user")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    setRequestProperty("Authorization", "Bearer $apiKey")
+                    connectTimeout = 10_000
+                    readTimeout = 10_000
+                }
+                val responseCode = conn.responseCode
+                conn.disconnect()
+                responseCode == 200
+            }
+            CloudProviderType.DROPBOX -> {
+                // Dropbox: 调用 get_current_account 验证 token
+                if (apiKey.length < 15) return@withContext false
+                val url = URL("https://api.dropboxapi.com/2/users/get_current_account")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Authorization", "Bearer $apiKey")
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                    connectTimeout = 10_000
+                    readTimeout = 10_000
+                }
+                conn.outputStream.use { it.write("{}".toByteArray()) }
+                val responseCode = conn.responseCode
+                conn.disconnect()
+                responseCode == 200
+            }
+            CloudProviderType.WEBDAV -> {
+                // WebDAV: 发送 PROPFIND 请求验证地址可达性
+                if (!apiKey.lowercase().startsWith("https://")) return@withContext false
+                val url = URL(apiKey.trimEnd('/'))
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "PROPFIND"
+                    connectTimeout = 10_000
+                    readTimeout = 10_000
+                }
+                val responseCode = conn.responseCode
+                conn.disconnect()
+                // 207 Multi-Status 或 200 OK 均表示地址可达
+                responseCode == 207 || responseCode == 200
+            }
         }
-        CloudProviderType.DROPBOX -> {
-            // Dropbox API Key 验证：通常以 "sl." 开头
-            return apiKey.length >= 15
-        }
-        CloudProviderType.WEBDAV -> {
-            // WebDAV 地址验证：必须是 HTTPS 协议
-            return apiKey.lowercase().startsWith("https://")
-        }
+    } catch (e: Exception) {
+        // 网络异常视为验证失败
+        false
     }
 }

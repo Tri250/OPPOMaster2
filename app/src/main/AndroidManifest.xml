@@ -61,6 +61,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:enableOnBackInvokedCallback="true"
             android:theme="@style/Theme.OMaster">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
