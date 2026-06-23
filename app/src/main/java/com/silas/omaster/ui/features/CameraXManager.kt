@@ -189,7 +189,7 @@ class CameraXManager(
     /**
      * 注册帧分析回调
      */
-    fun setOnFrameAnalyzed(callback: (Bitmap) -> Unit) {
+    fun setOnFrameAnalyzed(callback: ((Bitmap) -> Unit)?) {
         onFrameAnalyzed = callback
     }
 

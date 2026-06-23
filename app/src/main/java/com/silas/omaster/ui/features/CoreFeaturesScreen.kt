@@ -29,9 +29,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Image
@@ -209,7 +209,7 @@ fun CoreFeaturesScreen(
                 id = "scene-report",
                 title = "大师洞察",
                 subtitle = "拍摄数据看板 · 胶片风格排行 · 大师建议",
-                icon = Icons.Default.Analytics,
+                icon = Icons.Default.BarChart,
                 gradientColors = listOf(Color(0xFF00695C), Color(0xFF00897B)),
                 description = FeatureDescription(
                     desc = "基于哈苏之眼配方历史，生成场景分布与拍摄习惯洞察",

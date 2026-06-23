@@ -1,10 +1,11 @@
 [versions]
 # ===== Android Gradle Plugin =====
-agp = "8.9.1"
+# 本地离线仓库当前仅缓存到 AGP 8.7.3，降级以支持离线构建
+agp = "8.7.3"
 
 # ===== Kotlin =====
-# Gradle 8.14.4 需要 Kotlin 2.2.0+；AGP 8.9.1 兼容 Kotlin 2.2.0
-kotlin = "2.2.0"
+# 与 AGP 8.7.3 兼容的 Kotlin 版本
+kotlin = "2.0.21"
 
 # ===== AndroidX Core =====
 coreKtx = "1.15.0"

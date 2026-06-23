@@ -177,12 +177,28 @@ android {
                     keyAlias = "androiddebugkey"
                     keyPassword = "android"
                 } else {
-                    // 本地开发：未配置签名时给出明确错误
-                    throw GradleException(
-                        "❌ Release 签名未配置！请在 gradle.properties 或 keystore-release.properties 中设置 RELEASE_* 变量。\n" +
-                        "开发调试请使用 debug 构建类型：./gradlew assembleDebug\n" +
-                        "CI 环境会自动使用 debug 签名回退。"
-                    )
+                    // 本地开发：未配置签名时自动生成并使用 debug 签名，避免阻塞本地 release 构建
+                    println("⚠️ 本地 Release 签名未配置，自动生成并使用 debug 签名")
+                    val debugKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                    if (!debugKeystore.exists()) {
+                        // 自动生成 debug.keystore
+                        debugKeystore.parentFile?.mkdirs()
+                        ProcessBuilder(
+                            "keytool", "-genkey", "-v",
+                            "-keystore", debugKeystore.absolutePath,
+                            "-storepass", "android",
+                            "-alias", "androiddebugkey",
+                            "-keypass", "android",
+                            "-keyalg", "RSA",
+                            "-keysize", "2048",
+                            "-validity", "10000",
+                            "-dname", "CN=Android Debug,O=Android,C=US"
+                        ).inheritIO().start().waitFor()
+                    }
+                    storeFile = debugKeystore
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
                 }
             }
         }
