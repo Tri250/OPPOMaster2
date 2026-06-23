@@ -18,12 +18,21 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.BuildConfig
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
+import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * 更新渠道页面（对齐 Web 端 UpdateChannelPage.tsx）
@@ -38,7 +47,14 @@ fun UpdateChannelScreen(
     onBack: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var selectedChannelId by remember { mutableStateOf("stable") }
+
+    // 更新检查状态
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateCheckResult by remember { mutableStateOf<String?>(null) }
+    var lastCheckTime by remember { mutableStateOf<String?>(null) }
 
     // 更新选项状态（对齐 Web 端 UPDATE_SETTINGS）
     var autoCheckEnabled by remember { mutableStateOf(true) }
@@ -241,22 +257,69 @@ private fun CurrentVersionCard() {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "最后检查：刚刚",
+                        text = if (lastCheckTime != null) "最后检查：$lastCheckTime" else "尚未检查",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = { /* 检查更新 */ },
+                    onClick = {
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        scope.launch {
+                            isCheckingUpdate = true
+                            updateCheckResult = null
+                            try {
+                                val result = checkForUpdate(context, selectedChannelId)
+                                updateCheckResult = result
+                                lastCheckTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                                    .format(java.util.Date())
+                            } catch (e: Exception) {
+                                updateCheckResult = "检查失败: ${e.message}"
+                            } finally {
+                                isCheckingUpdate = false
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !isCheckingUpdate,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                         contentColor = MaterialTheme.colorScheme.onBackground
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("检查更新", fontWeight = FontWeight.Medium)
+                    if (isCheckingUpdate) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("正在检查...", fontWeight = FontWeight.Medium)
+                    } else {
+                        Text("检查更新", fontWeight = FontWeight.Medium)
+                    }
+                }
+
+                // 显示检查结果
+                updateCheckResult?.let { result ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (result.startsWith("发现新版本"))
+                                HasselbladOrange.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = result,
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                 }
             }
         }
@@ -368,3 +431,79 @@ private data class UpdateChannelInfo(
     val icon: ImageVector,
     val color: Color
 )
+
+/**
+ * 真实检查更新：从 GitHub/Gitee Release API 获取最新版本信息
+ *
+ * 链路：选择渠道 → 确定 API URL → HTTPS 请求 → JSON 解析 → 版本比较 → 返回结果
+ */
+private suspend fun checkForUpdate(context: android.content.Context, channel: String): String =
+    withContext(Dispatchers.IO) {
+        try {
+            // 根据渠道选择 API 端点
+            val apiUrl = when (channel) {
+                "stable" -> UrlConstants.GITHUB_API_RELEASES
+                "beta" -> UrlConstants.GITHUB_API_RELEASES
+                "dev" -> UrlConstants.GITEE_API_RELEASES
+                else -> UrlConstants.GITHUB_API_RELEASES
+            }
+
+            val url = URL(apiUrl)
+            var conn: HttpURLConnection? = null
+            try {
+                conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    connectTimeout = 15_000
+                    readTimeout = 15_000
+                }
+
+                val responseCode = conn.responseCode
+                if (responseCode != 200) {
+                    return@withContext "检查失败: HTTP $responseCode"
+                }
+
+                val jsonString = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(jsonString)
+
+                val latestVersion = json.optString("tag_name", "").removePrefix("v")
+                val releaseName = json.optString("name", "")
+                val htmlUrl = json.optString("html_url", "")
+                val body = json.optString("body", "")
+
+                if (latestVersion.isBlank()) {
+                    return@withContext "无法获取版本信息"
+                }
+
+                // 版本比较
+                val currentVersion = BuildConfig.VERSION_NAME
+                val comparison = compareVersions(latestVersion, currentVersion)
+
+                if (comparison > 0) {
+                    "发现新版本: v$latestVersion ($releaseName)\n${if (htmlUrl.isNotBlank()) "下载: $htmlUrl" else ""}\n\n${body.take(200)}"
+                } else {
+                    "当前已是最新版本 (v$currentVersion)"
+                }
+            } finally {
+                try { conn?.disconnect() } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            "检查失败: ${e.message}"
+        }
+    }
+
+/**
+ * 语义化版本比较
+ * @return 正数表示 v1 > v2，负数表示 v1 < v2，0 表示相等
+ */
+private fun compareVersions(v1: String, v2: String): Int {
+    val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
+    val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
+    val maxLen = maxOf(parts1.size, parts2.size)
+    for (i in 0 until maxLen) {
+        val p1 = parts1.getOrElse(i) { 0 }
+        val p2 = parts2.getOrElse(i) { 0 }
+        if (p1 != p2) return p1 - p2
+    }
+    return 0
+}
