@@ -238,6 +238,8 @@ class HasselbladEyeViewModel : ViewModel() {
                     inferenceEngine.getMasterTips(profile.id)
                 }
 
+                val compositionTips = generateCompositionTips(profile.id)
+
                 val suggestedColorMode = suggestColorMode(profile, colorModes)
                 val paramAdjustments = mapParamAdjustments(profile.hasselbladParams)
 
@@ -266,6 +268,7 @@ class HasselbladEyeViewModel : ViewModel() {
                     alternativeScenes = analysisDetail.alternatives,
                     recommendedFilms = films,
                     masterTips = masterTips,
+                    compositionTips = compositionTips,
                     suggestedColorMode = suggestedColorMode,
                     paramAdjustments = paramAdjustments
                 )
@@ -705,6 +708,104 @@ class HasselbladEyeViewModel : ViewModel() {
         )
         val displayName = modeMapping[profile.category.name] ?: "哈苏自然色彩"
         return colorModes.find { it.name == displayName }?.name ?: displayName
+    }
+
+    private fun generateCompositionTips(sceneId: String): List<String> {
+        val portraitTips = listOf(
+            "三分法构图：将人物眼睛放在画面上三分之一处，目光朝向画面纵深方向，营造呼吸感",
+            "黄金分割点：将主体放置在黄金分割点（0.618 位置，视觉重心最稳定",
+            "留白构图：人物前方留出更多空间，视线方向留白让画面更舒展",
+            "框架构图：利用门窗、树叶等形成天然画框，突出人物主体",
+            "对角线构图：让人物身体沿对角线分布，增加动感与张力",
+            "对称构图：利用水面、镜面等创造对称画面，营造仪式感"
+        )
+        val landscapeTips = listOf(
+            "三分法构图：地平线放在上三分线或下三分线，避免居中分割",
+            "引导线构图：利用道路、河流、栏杆引导视线向远方延伸",
+            "前景构图：加入前景元素增加画面层次感与纵深感",
+            "框架构图：利用树枝、岩石形成天然画框，聚焦远景",
+            "对称构图：利用水面倒影创造上下对称，增强画面美感",
+            "黄金螺旋：将视觉重心放在黄金螺旋终点，画面更具韵律感"
+        )
+        val nightTips = listOf(
+            "三分法构图：将主要光源放在三分线交点，避免居中",
+            "低角度仰拍：贴近地面拍摄，展现建筑纵深感",
+            "长曝光构图：车流、水流形成丝滑轨迹，增加画面动感",
+            "星芒效果：缩小光圈让点光源呈放射状星芒",
+            "倒影构图：利用水面、玻璃反射增加画面层次",
+            "负空间构图：大面积黑暗突出主体，营造氛围"
+        )
+        val foodTips = listOf(
+            "三分法构图：将主菜放在画面偏左或偏右，避免呆板",
+            "俯拍45度：45度角俯拍最具食欲感，是美食经典角度",
+            "对称构图：正上方俯拍创造规整的摆盘对称美",
+            "前景点缀：加入餐具、餐巾等前景元素增加故事感",
+            "留白构图：画面留出适量留白，突出食物主体",
+            "对角线构图：餐具沿对角线摆放，增加画面活力"
+        )
+        val urbanTips = listOf(
+            "引导线构图：利用街道、建筑线条引导视线",
+            "对称构图：建筑对称构图展现建筑庄严感",
+            "低角度仰拍：贴近地面仰拍建筑，展现气势",
+            "框架构图：利用拱门、窗框框架突出主体",
+            "对角线构图：建筑边缘沿对角线分布，增加动感",
+            "黄金分割：将建筑主体放在黄金分割点"
+        )
+        val stillLifeTips = listOf(
+            "三分法构图：主体放在三分线交点，画面平衡",
+            "三角形构图：物体呈三角排列，画面稳定",
+            "对角线构图：主体沿对角线分布，增加动感",
+            "对称构图：左右对称展现静物之美",
+            "框架构图：利用环境元素框架主体",
+            "负空间构图：大量留白突出主体质感"
+        )
+        val macroTips = listOf(
+            "中心构图：将主体放在画面中心，突出细节",
+            "三分法构图：主体偏置增加画面动感",
+            "对角线构图：主体沿对角线分布",
+            "框架构图：利用周围植物叶片框架主体",
+            "前景虚化：大光圈虚化前景，增加层次感",
+            "对称构图：花瓣、叶片对称展现自然之美"
+        )
+        val eventTips = listOf(
+            "三分法构图：主体人物放在三分线交点",
+            "抓拍瞬间：捕捉人物自然表情与动作",
+            "框架构图：利用环境元素框架主体",
+            "对角线构图：增加画面动感与活力",
+            "留白构图：人物视线方向留出空间",
+            "群体构图：多人场景注意人物关系与互动"
+        )
+        val generalTips = listOf(
+            "三分法构图：将主体放在画面三分线交点，视觉最稳定",
+            "黄金分割：主体放在黄金分割点 0.618 位置，画面最具美感",
+            "引导线构图：利用画面中的线条引导观者视线",
+            "框架构图：利用环境元素形成天然画框",
+            "对称构图：左右或上下对称，画面平衡稳定",
+            "对角线构图：主体沿对角线分布，增加动感"
+        )
+
+        val tipsMap = mapOf(
+            "PORTRAIT" to portraitTips,
+            "PORTRAIT_GROUP" to portraitTips,
+            "PORTRAIT_CLOSEUP" to portraitTips,
+            "PORTRAIT_FULL" to portraitTips,
+            "LANDSCAPE" to landscapeTips,
+            "LANDSCAPE_MOUNTAIN" to landscapeTips,
+            "LANDSCAPE_SEA" to landscapeTips,
+            "LANDSCAPE_SUNSET" to landscapeTips,
+            "NIGHT" to nightTips,
+            "NIGHT_CITY" to nightTips,
+            "NIGHT_STAR" to nightTips,
+            "FOOD" to foodTips,
+            "URBAN" to urbanTips,
+            "STILL_LIFE" to stillLifeTips,
+            "MACRO" to macroTips,
+            "EVENT" to eventTips
+        )
+
+        val sceneCategory = sceneId.substringBefore("_")
+        val tips = tipsMap[sceneId] ?: tipsMap[sceneCategory] ?: generalTips
+        return tips.shuffled().take(4)
     }
 
     private fun mapParamAdjustments(params: HasselbladParams): Map<String, Int> {

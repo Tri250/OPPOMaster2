@@ -64,25 +64,40 @@ fun SubscriptionScreen(
                 refreshing = true
                 var successCount = 0
                 var upToDateCount = 0
+                var failCount = 0
                 val enabledSubs = subscriptions.filter { it.isEnabled }
+                if (enabledSubs.isEmpty()) {
+                    Toast.makeText(context, "暂无启用的订阅，点击右下角 + 添加", Toast.LENGTH_SHORT).show()
+                    refreshing = false
+                    return@launch
+                }
                 for (sub in enabledSubs) {
-                    val result = PresetRemoteManager.fetchAndSave(context, sub.url)
-                    if (result.isSuccess) {
-                        successCount++
-                    } else if (result.exceptionOrNull()?.message == "无需更新") {
-                        upToDateCount++
+                    try {
+                        val result = PresetRemoteManager.fetchAndSave(context, sub.url)
+                        if (result.isSuccess) {
+                            successCount++
+                        } else {
+                            val msg = result.exceptionOrNull()?.message
+                            if (msg == "无需更新") {
+                                upToDateCount++
+                            } else {
+                                failCount++
+                            }
+                        }
+                    } catch (e: Exception) {
+                        failCount++
+                        android.util.Log.w("SubscriptionScreen", "刷新订阅失败: ${sub.url}", e)
                     }
                 }
-                if (enabledSubs.isNotEmpty()) {
-                    PresetRepository.getInstance(context).reloadDefaultPresets()
-                    val message = when {
-                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                        upToDateCount > 0 -> "所有订阅均已是最新"
-                        else -> "更新失败，请检查网络"
-                    }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                PresetRepository.getInstance(context).reloadDefaultPresets()
+                val message = when {
+                    successCount > 0 && failCount == 0 && upToDateCount == 0 -> "成功更新 ${successCount} 个订阅"
+                    successCount > 0 && failCount == 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
+                    successCount > 0 -> "部分更新成功（${successCount}/${enabledSubs.size}）"
+                    upToDateCount > 0 && failCount == 0 -> "所有订阅均已是最新"
+                    else -> "更新失败，请检查网络后重试"
                 }
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 refreshing = false
             }
         }

@@ -1,7 +1,12 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -455,7 +460,6 @@ fun ApplyPresetButton(
         onClick = {
             applied = true
             onApply()
-            // 2秒后恢复（使用rememberCoroutineScope避免内存泄漏）
             coroutineScope.launch {
                 delay(2000)
                 applied = false
@@ -465,19 +469,34 @@ fun ApplyPresetButton(
         colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Icon(
-            imageVector = if (applied) Icons.Default.CheckCircle else Icons.Default.AutoAwesome,
-            contentDescription = "图标",
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = if (applied) "已应用哈苏配方" else "一键应用哈苏配方",
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
+        AnimatedContent(
+            targetState = applied,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200)))
+                    .using(SizeTransform(clip = false))
+            },
+            label = "buttonContent"
+        ) { isApplied ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = if (isApplied) Icons.Default.CheckCircle else Icons.Default.AutoAwesome,
+                    contentDescription = "图标",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (isApplied) "已应用哈苏配方" else "一键应用哈苏配方",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    softWrap = false
+                )
+            }
+        }
     }
 }
 

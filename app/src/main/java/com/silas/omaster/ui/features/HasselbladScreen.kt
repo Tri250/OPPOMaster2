@@ -45,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Grid4x4
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -139,6 +140,7 @@ data class AnalysisResult(
     val alternativeScenes: List<SceneProfile>,
     val recommendedFilms: List<FilmPreset>,
     val masterTips: List<String>,
+    val compositionTips: List<String>,
     val suggestedColorMode: String,
     val paramAdjustments: Map<String, Int>
 )
@@ -174,6 +176,7 @@ fun HasselbladScreen(
 
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
     var recentShots by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var isLaunchingCamera by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -225,12 +228,20 @@ fun HasselbladScreen(
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            val photoUri = createTempImageUri(context)
-            if (photoUri != null) {
-                cameraImageUri = photoUri
-                cameraLauncher.launch(photoUri)
-            } else {
-                Toast.makeText(context, "无法创建相机临时文件", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                isLaunchingCamera = true
+                val photoUri = withContext(Dispatchers.IO) {
+                    createTempImageUri(context)
+                }
+                if (photoUri != null) {
+                    cameraImageUri = photoUri
+                    cameraLauncher.launch(photoUri)
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "无法创建相机临时文件", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                isLaunchingCamera = false
             }
         } else {
             cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
@@ -351,6 +362,7 @@ fun HasselbladScreen(
             when (currentStage) {
                 HasselbladEyeStage.SETUP -> SetupContent(
                 recentShots = recentShots,
+                isLaunchingCamera = isLaunchingCamera,
                 onLaunchCamera = ::launchCamera,
                 onPickFromGallery = ::onPickFromGallery,
                 onRecentShotClick = { uri ->
@@ -528,6 +540,7 @@ private fun GlassCard(
 @Composable
 private fun SetupContent(
     recentShots: List<Uri>,
+    isLaunchingCamera: Boolean = false,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
     onRecentShotClick: (Uri) -> Unit
@@ -541,6 +554,7 @@ private fun SetupContent(
 
         item {
             ShutterCard(
+                isLaunchingCamera = isLaunchingCamera,
                 onLaunchCamera = onLaunchCamera,
                 onPickFromGallery = onPickFromGallery
             )
@@ -886,6 +900,7 @@ private fun ParamSlider(
 
 @Composable
 private fun ShutterCard(
+    isLaunchingCamera: Boolean = false,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit
 ) {
@@ -905,6 +920,7 @@ private fun ShutterCard(
 
             Button(
                 onClick = onLaunchCamera,
+                enabled = !isLaunchingCamera,
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
                 shape = CircleShape,
                 modifier = Modifier
@@ -912,18 +928,26 @@ private fun ShutterCard(
                     .graphicsLayer { shadowElevation = 20.dp.toPx() },
                 contentPadding = PaddingValues(0.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "拍照",
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
-                )
+                if (isLaunchingCamera) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(32.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "拍照",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "点击拍照",
+                text = if (isLaunchingCamera) "准备中..." else "点击拍照",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
@@ -1317,6 +1341,15 @@ private fun ResultsContent(
                 }
             }
 
+            if (result.compositionTips.isNotEmpty()) {
+                item {
+                    SectionTitle(title = "AI 构图技巧")
+                }
+                item {
+                    CompositionTipsCard(tips = result.compositionTips)
+                }
+            }
+
             item {
                 SectionTitle(title = "推荐胶片")
             }
@@ -1531,6 +1564,31 @@ private fun MasterTipsCard(tips: List<String>) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                         modifier = Modifier.padding(top = 1.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompositionTipsCard(tips: List<String>) {
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            tips.forEach { tip ->
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        imageVector = Icons.Default.Grid4x4,
+                        contentDescription = null,
+                        tint = HasselbladOrange,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = tip,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(top = 0.dp)
                     )
                 }
             }
