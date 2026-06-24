@@ -253,7 +253,7 @@ fun FloatingWindowGuideDialog(
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = if (canClick) stringResource(R.string.guide_btn_open) else stringResource(R.string.guide_btn_open),
+                                    text = if (canClick) stringResource(R.string.guide_btn_open) else "${countdown}s",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )

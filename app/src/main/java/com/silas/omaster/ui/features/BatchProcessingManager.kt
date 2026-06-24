@@ -101,13 +101,16 @@ class BatchProcessingManager(
                 }
 
                 // 检查 volatile 取消标志
+                var shouldBreak = false
                 synchronized(lock) {
                     if (isCancelled) {
                         results.add(BatchResult(uri, null, "已取消"))
-                        break
+                        shouldBreak = true
+                    } else {
+                        _batchState.value = _batchState.value.copy(currentIndex = index)
                     }
-                    _batchState.value = _batchState.value.copy(currentIndex = index)
                 }
+                if (shouldBreak) break
                 onProgress(index + 1, imageUris.size, uri)
 
                 try {

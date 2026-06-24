@@ -343,6 +343,13 @@ class ShaderProgram private constructor(
         setUniform1fv("uCurveRedLut", params.curveRedLut)
         setUniform1fv("uCurveGreenLut", params.curveGreenLut)
         setUniform1fv("uCurveBlueLut", params.curveBlueLut)
+
+        // 3D LUT：启用时绑定纹理并开启 uLUT3DEnabled，否则显式关闭避免残留
+        if (params.lutEnabled && params.lutTextureId != 0) {
+            setLUT3DParams(params.lutTextureId, params.lutSize, params.lutStrength)
+        } else {
+            setUniform1f("uLUT3DEnabled", 0.0f)
+        }
     }
 
     /**

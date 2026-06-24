@@ -45,6 +45,7 @@ import com.silas.omaster.data.local.OnboardingManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.PillNavBar
 import com.silas.omaster.ui.create.PresetSelectionScreen
@@ -102,9 +103,10 @@ fun MainApp(navController: NavHostController) {
 
     // 首次启动引导页检测
     val onboardingManager = remember { OnboardingManager.getInstance(context) }
-    var showOnboarding by remember {
-        mutableStateOf(onboardingManager.shouldShowOnboarding(VersionInfo.VERSION_CODE.toLong()))
+    val initialShowOnboarding = remember {
+        onboardingManager.shouldShowOnboarding(VersionInfo.VERSION_CODE.toLong())
     }
+    var showOnboarding by remember { mutableStateOf(initialShowOnboarding) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -143,17 +145,6 @@ fun MainApp(navController: NavHostController) {
         )
     }
 
-    // 首次启动引导页导航
-    LaunchedEffect(showOnboarding) {
-        if (showOnboarding) {
-            navController.navigate(Screen.Onboarding) {
-                // 保留 Home 在回退栈中，使引导页完成后可 popBackStack 回到首页
-                // 修复 V1.9.3: inclusive=true 会移除 Home，导致"开始体验"按钮无法进入下一步
-                popUpTo(Screen.Home) { inclusive = false }
-            }
-        }
-    }
-
     val showBottomNav = currentRoute?.contains("Home") == true ||
         currentRoute?.contains("About") == true ||
         currentRoute?.contains("Subscription") == true ||
@@ -170,7 +161,7 @@ fun MainApp(navController: NavHostController) {
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Home,
+            startDestination = if (initialShowOnboarding) Screen.Onboarding else Screen.Home,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = if (showBottomNav) 80.dp else 0.dp),
@@ -192,8 +183,9 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
-                    onNavigateToPresetManager = { navController.navigate(Screen.Home) },
+                    onNavigateToPresetManager = { navController.navigate(Screen.PresetSourceManager) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
+                    onNavigateToHasselbladEye = { navController.navigate(Screen.HasselbladColor) },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     },
@@ -307,7 +299,7 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
-                    onNavigateToPresetManager = { navController.navigate(Screen.Home) },
+                    onNavigateToPresetManager = { navController.navigate(Screen.PresetSourceManager) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
@@ -410,7 +402,7 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.LUTShare> {
                 LUTShareScreen(
                     onBack = { navController.popBackStack() },
-                    onDownload = { /* LUT download handled internally by LUTManager */ },
+                    onDownload = { },
                     onApplyLUT = { lutResource ->
                         navController.navigate(Screen.HasselbladColor)
                     },
@@ -431,7 +423,12 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.HasselbladColor> {
-                HasselbladScreen(onBack = { navController.popBackStack() })
+                HasselbladScreen(
+                    onBack = { navController.popBackStack() },
+                    onLaunchViewfinder = {
+                        navController.navigate(Screen.CameraXViewfinder(presetId = null))
+                    }
+                )
             }
 
             composable<Screen.CloudSync> {
@@ -482,7 +479,9 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.SceneAnalysisReport> {
                 SceneAnalysisReportScreen(
                     onBack = { navController.popBackStack() },
-                    onViewDetails = { /* 可选：跳转详情页 */ }
+                    onViewDetails = {
+                        navController.popBackStack(Screen.Home, false)
+                    }
                 )
             }
 
@@ -491,22 +490,52 @@ fun MainApp(navController: NavHostController) {
                     onComplete = {
                         onboardingManager.markOnboardingShown(VersionInfo.VERSION_CODE.toLong())
                         showOnboarding = false
-                        navController.popBackStack()
+                        // 若 Onboarding 为起始页，回退栈为空，需导航到 Home 作为新根
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Screen.Home) {
+                                popUpTo(Screen.Onboarding) { inclusive = true }
+                            }
+                        }
                     },
                     onSkip = {
                         onboardingManager.skipOnboarding(VersionInfo.VERSION_CODE.toLong())
                         showOnboarding = false
-                        navController.popBackStack()
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Screen.Home) {
+                                popUpTo(Screen.Onboarding) { inclusive = true }
+                            }
+                        }
                     }
                 )
             }
 
             composable<Screen.CameraXViewfinder> { backStackEntry ->
                 val route = backStackEntry.toRoute<Screen.CameraXViewfinder>()
+                var presetParams by remember { mutableStateOf(HasselbladParams()) }
+                var presetName by remember { mutableStateOf("") }
+
+                LaunchedEffect(route.presetId) {
+                    val pid = route.presetId ?: return@LaunchedEffect
+                    val presetItem = repository.presets.value.find { it.id == pid }
+                        ?: repository.loadPresets().find { it.id == pid }
+                    val preset = presetItem?.toMasterPreset()
+                    if (preset != null) {
+                        presetName = preset.name
+                        presetParams = HasselbladParams(
+                            tone = preset.tone ?: 0,
+                            saturation = preset.saturation ?: 0,
+                            colorTemp = preset.warmCool ?: 0,
+                            sharpness = preset.sharpness ?: 0
+                        )
+                    }
+                }
+
                 CameraXViewfinderScreen(
+                    presetParams = presetParams,
+                    presetName = presetName,
                     onBack = { navController.popBackStack() },
                     onPhotoCaptured = { uri ->
-                        // 拍照后可以导航到 HasselbladScreen 进行分析
+                        // 拍照后返回上一页
                         navController.popBackStack()
                     }
                 )
@@ -576,33 +605,6 @@ private fun MigrationDialog(
             TextButton(onClick = onPostpone) { Text("稍后处理") }
         }
     )
-}
-
-/**
- * 应用预设参数到相机设置，并通过 Snackbar 反馈结果
- */
-private fun applyPresetAndToast(
-    context: android.content.Context,
-    snackbarHostState: SnackbarHostState,
-    coroutineScope: CoroutineScope,
-    preset: MasterPreset
-) {
-    val settingsManager = SettingsManager.getInstance(context)
-    settingsManager.applyPresetParams(
-        saturation = preset.saturation ?: 0,
-        contrast = preset.tone ?: 0,
-        warmth = preset.warmCool ?: 0,
-        sharpness = preset.sharpness ?: 0,
-        clarity = 0,
-        brightness = 0
-    )
-    coroutineScope.launch {
-        snackbarHostState.showSnackbar(
-            message = "已应用预设：${preset.name}",
-            actionLabel = "确定",
-            duration = SnackbarDuration.Short
-        )
-    }
 }
 
 /**

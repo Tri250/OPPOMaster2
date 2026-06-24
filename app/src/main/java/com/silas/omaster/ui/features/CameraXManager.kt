@@ -8,13 +8,12 @@ import android.util.Log
 import android.util.Size
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.ResolutionSelector
-import androidx.camera.core.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -88,7 +87,7 @@ class CameraXManager(
 
     // 当前应用的预设参数
     @Volatile
-    private var currentParams: HasselbladParams = HasselbladParams()
+    private var currentPresetParams: HasselbladParams = HasselbladParams()
 
     // 保存的 PreviewView，用于生命周期恢复
     private var savedPreviewView: PreviewView? = null
@@ -152,30 +151,21 @@ class CameraXManager(
             .build()
 
         // 构建 Preview
-        val previewResolutionSelector = ResolutionSelector.Builder()
-            .setResolutionStrategy(ResolutionStrategy(Size(1920, 1080), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
-            .build()
         preview = Preview.Builder()
-            .setResolutionSelector(previewResolutionSelector)
+            .setTargetResolution(Size(1920, 1080))
             .build()
             .also { it.setSurfaceProvider(previewView.surfaceProvider) }
 
         // 构建 ImageCapture
-        val captureResolutionSelector = ResolutionSelector.Builder()
-            .setResolutionStrategy(ResolutionStrategy(Size(1920, 1080), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
-            .build()
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setResolutionSelector(captureResolutionSelector)
+            .setTargetResolution(Size(1920, 1080))
             .setFlashMode(flashMode)
             .build()
 
         // 构建 ImageAnalysis（实时分析）
-        val analysisResolutionSelector = ResolutionSelector.Builder()
-            .setResolutionStrategy(ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
-            .build()
         imageAnalysis = ImageAnalysis.Builder()
-            .setResolutionSelector(analysisResolutionSelector)
+            .setTargetResolution(Size(640, 480))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { analysis ->
@@ -218,7 +208,7 @@ class CameraXManager(
             val bitmap = imageProxyToBitmap(imageProxy)
             if (bitmap != null) {
                 // 应用预设参数到实时帧
-                val processedBitmap = applyPresetToFrame(bitmap, currentParams)
+                val processedBitmap = applyPresetToFrame(bitmap, currentPresetParams)
                 // 切到主线程再回调，避免在后台线程修改 Compose state
                 val callback = onFrameAnalyzed
                 if (callback != null && !isReleased) {
@@ -259,12 +249,81 @@ class CameraXManager(
      * 更新当前预设参数
      */
     fun updatePresetParams(params: HasselbladParams) {
-        currentParams = params
+        currentPresetParams = params
+    }
+
+    /**
+     * 点击对焦：将屏幕坐标转换为测光点并触发对焦+测光
+     *
+     * 依赖已绑定的 PreviewView 的 meteringPointFactory 进行坐标映射。
+     */
+    fun tapToFocus(x: Float, y: Float) {
+        val camera = camera ?: return
+        val previewView = savedPreviewView ?: return
+        val point = previewView.meteringPointFactory.createPoint(x, y)
+        val action = FocusMeteringAction.Builder(
+            point,
+            FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+        ).build()
+        camera.cameraControl.startFocusAndMetering(action)
+    }
+
+    /**
+     * 设置变焦倍数（自动钳制到设备支持范围）
+     */
+    fun setZoomRatio(ratio: Float) {
+        val camera = camera ?: return
+        val maxRatio = camera.cameraInfo.zoomState.value?.maxZoomRatio ?: 1f
+        val clamped = ratio.coerceIn(1f, maxRatio)
+        camera.cameraControl.setZoomRatio(clamped)
+    }
+
+    /**
+     * 设置曝光补偿索引（自动钳制到设备支持范围）
+     */
+    fun setExposureCompensation(index: Int) {
+        val camera = camera ?: return
+        val exposureState = camera.cameraInfo.exposureState
+        if (!exposureState.isExposureCompensationSupported) return
+        val range = exposureState.exposureCompensationRange
+        val clamped = index.coerceIn(range.lower, range.upper)
+        camera.cameraControl.setExposureCompensationIndex(clamped)
+    }
+
+    /**
+     * 获取曝光补偿支持范围，不支持时返回 0..0
+     */
+    fun getExposureCompensationRange(): IntRange {
+        val camera = camera ?: return 0..0
+        val exposureState = camera.cameraInfo.exposureState
+        return if (exposureState.isExposureCompensationSupported) {
+            val range = exposureState.exposureCompensationRange
+            range.lower..range.upper
+        } else {
+            0..0
+        }
+    }
+
+    /**
+     * 获取设备支持的最大变焦倍数
+     */
+    fun getMaxZoomRatio(): Float {
+        val camera = camera ?: return 1f
+        return camera.cameraInfo.zoomState.value?.maxZoomRatio ?: 1f
+    }
+
+    /**
+     * 获取当前变焦倍数
+     */
+    fun getCurrentZoomRatio(): Float {
+        val camera = camera ?: return 1f
+        return camera.cameraInfo.zoomState.value?.zoomRatio ?: 1f
     }
 
     /**
      * 拍照
      *
+     * 使用 OnImageCapturedCallback 在内存中获取图像，应用哈苏色彩科学后再保存到文件。
      * 在相机未绑定或未就绪时通过 onError 回调通知调用方。
      */
     fun takePhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
@@ -278,26 +337,47 @@ class CameraXManager(
             return
         }
 
-        val photoFile = java.io.File(
-            context.cacheDir,
-            "camerax_${System.currentTimeMillis()}.jpg"
-        )
-
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
         imageCapture.takePicture(
-            outputOptions,
             cameraExecutor,
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val savedUri = output.savedUri ?: Uri.fromFile(photoFile)
-                    Log.d(TAG, "照片已保存: $savedUri")
-                    onPhotoSaved(savedUri)
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    try {
+                        val bitmap = imageProxyToBitmap(imageProxy)
+                        imageProxy.close()
+                        if (bitmap == null) {
+                            mainHandler.post { onError("图像解码失败") }
+                            return
+                        }
+                        // 应用哈苏色彩科学处理
+                        val processedBitmap = applyHasselbladColorEngine(
+                            source = bitmap,
+                            hasselbladParams = currentPresetParams
+                        )
+                        // 回收原始 bitmap（若处理后为不同实例）
+                        if (processedBitmap !== bitmap && !bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                        // 保存到文件
+                        val photoFile = java.io.File(
+                            context.cacheDir,
+                            "camerax_${System.currentTimeMillis()}.jpg"
+                        )
+                        photoFile.outputStream().use { out ->
+                            processedBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                        }
+                        processedBitmap.recycle()
+                        val savedUri = Uri.fromFile(photoFile)
+                        Log.d(TAG, "照片已保存（已应用哈苏色彩）: $savedUri")
+                        mainHandler.post { onPhotoSaved(savedUri) }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "拍照处理失败: ${e.message}", e)
+                        mainHandler.post { onError(e.message ?: "拍照失败") }
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
                     Log.e(TAG, "拍照失败: ${exception.message}", exception)
-                    onError(exception.message ?: "拍照失败")
+                    mainHandler.post { onError(exception.message ?: "拍照失败") }
                 }
             }
         )
@@ -353,64 +433,60 @@ class CameraXManager(
     /**
      * 应用预设参数到帧
      *
-     * 优化策略：将所有 ColorMatrix 操作（饱和度、对比度、色温、影调）合并为
+     * 优化策略：将所有 ColorMatrix 操作（饱和度、对比度、色温、影调、青品调）合并为
      * 单一 ColorMatrix，仅执行一次 Bitmap 绘制，从 5 次分配降低到 1 次。
      * 暗角效果因使用 RadialGradient 无法合并，仍需单独绘制。
      *
      * ColorMatrix 乘法满足结合律：(A × B × C × D) × pixel = A(B(C(D(pixel)))
      * 因此可以预计算合并矩阵 M = A × B × C × D，然后 M × pixel。
+     *
+     * 参数映射统一使用 normalizeSigned / normalizeUnsigned（与 HasselbladColorEngine 一致），
+     * 确保实时预览与导出的色彩处理结果一致。
      */
     private fun applyPresetToFrame(bitmap: Bitmap, params: HasselbladParams): Bitmap {
-        // 1) 合并所有 ColorMatrix 操作为单一矩阵
+        // 使用 normalizeSigned 统一参数映射（与 HasselbladColorEngine.mergeParams 一致）
+        val saturation = normalizeSigned(params.saturation, 30)
+        val contrast = normalizeSigned(params.contrast, 30)
+        val colorTemp = normalizeSigned(params.colorTemp, 30)
+        val tone = normalizeSigned(params.tone, 30)
+        val cyanMagenta = normalizeSigned(params.cyanMagenta, 30)
+        val vignette = normalizeUnsigned(params.vignette, 30)
+
+        // 1) 构建 ColorMatrix（与 HasselbladColorEngine.buildColorMatrix 一致）
         val combinedMatrix = android.graphics.ColorMatrix()
 
-        // 饱和度调整
-        val saturation = (params.saturation + 30) / 60f * 2f
-        if (saturation != 1f) {
-            val satMatrix = android.graphics.ColorMatrix()
-            satMatrix.setSaturation(saturation)
-            combinedMatrix.postConcat(satMatrix)
-        }
-
-        // 对比度调整
-        val contrast = (params.contrast + 30) / 60f * 2f
-        if (contrast != 1f) {
-            val contrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
-                contrast, 0f, 0f, 0f, 0f,
-                0f, contrast, 0f, 0f, 0f,
-                0f, 0f, contrast, 0f, 0f,
+        // 饱和度：接近 -1 时执行基于亮度的黑白转换
+        if (saturation <= -0.95f) {
+            val bwMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                0.299f, 0.587f, 0.114f, 0f, 0f,
+                0.299f, 0.587f, 0.114f, 0f, 0f,
+                0.299f, 0.587f, 0.114f, 0f, 0f,
                 0f, 0f, 0f, 1f, 0f
             ))
-            combinedMatrix.postConcat(contrastMatrix)
+            combinedMatrix.set(bwMatrix)
+        } else if (saturation != 0f) {
+            combinedMatrix.setSaturation(1f + saturation)
         }
 
-        // 色温调整
-        if (params.colorTemp != 0) {
-            val warmth = params.colorTemp / 30f * 0.3f
-            val tempMatrix = android.graphics.ColorMatrix(floatArrayOf(
-                1f + warmth, 0f, 0f, 0f, 0f,
-                0f, 1f, 0f, 0f, 0f,
-                0f, 0f, 1f - warmth, 0f, 0f,
+        // 对比度 + 影调 + 色温 + 青品调（合并为单一后置矩阵）
+        val hasPostMatrix = contrast != 0f || tone != 0f || colorTemp != 0f || cyanMagenta != 0f
+        if (hasPostMatrix) {
+            val contrastValue = 1f + contrast
+            val postMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                // R: 对比度 + 影调偏移 + 青品调（正值偏品，负值偏青）
+                contrastValue, 0f, 0f, 0f, tone * 25f + cyanMagenta * 25f,
+                // G: 对比度 + 影调偏移 - 青品调
+                0f, contrastValue, 0f, 0f, tone * 10f - cyanMagenta * 20f,
+                // B: 对比度 + 色温（正值减蓝偏暖，负值加蓝偏冷）+ 青品调
+                0f, 0f, contrastValue, 0f, -colorTemp * 15f + cyanMagenta * 15f,
                 0f, 0f, 0f, 1f, 0f
             ))
-            combinedMatrix.postConcat(tempMatrix)
-        }
-
-        // 影调（亮度）调整
-        if (params.tone != 0) {
-            val toneScale = 1f + params.tone / 30f * 0.3f
-            val toneMatrix = android.graphics.ColorMatrix(floatArrayOf(
-                toneScale, 0f, 0f, 0f, 0f,
-                0f, toneScale, 0f, 0f, 0f,
-                0f, 0f, toneScale, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
-            ))
-            combinedMatrix.postConcat(toneMatrix)
+            combinedMatrix.postConcat(postMatrix)
         }
 
         // 检查是否有任何 ColorMatrix 操作
-        val hasColorMatrixOps = saturation != 1f || contrast != 1f || params.colorTemp != 0 || params.tone != 0
-        val hasVignette = params.vignette != 0
+        val hasColorMatrixOps = saturation != 0f || hasPostMatrix
+        val hasVignette = vignette > 0.005f
 
         // 如果无任何操作，直接返回原图
         if (!hasColorMatrixOps && !hasVignette) {
@@ -432,7 +508,6 @@ class CameraXManager(
 
         // 3) 暗角效果（无法合并到 ColorMatrix，需单独绘制）
         if (hasVignette) {
-            val vignetteStrength = params.vignette / 30f
             val output = Bitmap.createBitmap(current.width, current.height, Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(output)
             canvas.drawBitmap(current, 0f, 0f, null)
@@ -442,7 +517,7 @@ class CameraXManager(
                 shader = android.graphics.RadialGradient(
                     current.width / 2f, current.height / 2f,
                     maxOf(current.width, current.height) * 0.7f,
-                    intArrayOf(0x00000000, 0x00000000, (vignetteStrength * 180).toInt() shl 24),
+                    intArrayOf(0x00000000, 0x00000000, (vignette * 180).toInt() shl 24),
                     floatArrayOf(0f, 0.6f, 1f),
                     android.graphics.Shader.TileMode.CLAMP
                 )
@@ -455,6 +530,18 @@ class CameraXManager(
 
         return current
     }
+
+    /**
+     * 有符号参数归一化到 [-1, 1]（与 HasselbladColorEngine.normalizeSigned 一致）
+     */
+    private fun normalizeSigned(value: Int, max: Int): Float =
+        if (max == 0) 0f else (value.toFloat() / max.toFloat()).coerceIn(-1f, 1f)
+
+    /**
+     * 无符号参数归一化到 [0, 1]（与 HasselbladColorEngine.normalizeUnsigned 一致）
+     */
+    private fun normalizeUnsigned(value: Int, max: Int): Float =
+        if (max == 0) 0f else (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
 
     /**
      * 仅释放相机绑定（保留 executor，用于 onPause/onResume 切换）

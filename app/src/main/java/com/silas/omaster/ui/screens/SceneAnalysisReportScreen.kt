@@ -121,6 +121,7 @@ fun SceneAnalysisReportScreen(
     var filmUsage by remember { mutableStateOf<List<FilmUsage>>(emptyList()) }
     var habits by remember { mutableStateOf<ShootingHabits?>(null) }
     var masterTips by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showDetails by remember { mutableStateOf(false) }
 
     // 从本地存储加载真实数据
     LaunchedEffect(timeRange) {
@@ -335,6 +336,11 @@ fun SceneAnalysisReportScreen(
                     // 大师建议
                     MasterTipsCard(masterTips)
 
+                    // 详细数据（可展开/折叠）
+                    AnimatedVisibility(visible = showDetails) {
+                        habits?.let { DetailedDataCard(it, sceneStats, filmUsage) }
+                    }
+
                     // 底部间距
                     Spacer(modifier = Modifier.height(80.dp))
                 }
@@ -348,7 +354,7 @@ fun SceneAnalysisReportScreen(
                         .padding(vertical = 12.dp)
                 ) {
                     Button(
-                        onClick = onViewDetails,
+                        onClick = { showDetails = !showDetails },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
@@ -357,7 +363,7 @@ fun SceneAnalysisReportScreen(
                     ) {
                         Icon(Icons.Default.Visibility, null, tint = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("查看详细数据", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+                        Text(if (showDetails) "收起详细数据" else "查看详细数据", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -696,6 +702,54 @@ private fun MasterTipsCard(tips: List<String>) {
                 Text("开始拍摄你的第一张照片，哈苏大师将为你提供个性化建议。", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 14.sp)
             }
         }
+    }
+}
+
+/**
+ * 详细数据卡片（可展开/折叠，无需导航）
+ */
+@Composable
+private fun DetailedDataCard(
+    habits: ShootingHabits,
+    scenes: List<SceneDistribution>,
+    films: List<FilmUsage>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Analytics, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("详细数据", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            DetailedStatRow("总照片数", habits.totalPhotos.toString())
+            DetailedStatRow("独立场景数", habits.totalRecipes.toString())
+            DetailedStatRow("连续拍摄天数", "${habits.streakDays} 天")
+            DetailedStatRow("平均置信度", "${Math.round(habits.avgConfidence * 100)}%")
+            DetailedStatRow("最爱场景", habits.favoriteScene)
+            DetailedStatRow("最爱胶片", habits.favoriteFilm)
+            DetailedStatRow("最后拍摄日期", habits.lastShootDate)
+            DetailedStatRow("场景类型数", scenes.size.toString())
+            DetailedStatRow("胶片类型数", films.size.toString())
+        }
+    }
+}
+
+@Composable
+private fun DetailedStatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 12.sp)
+        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 

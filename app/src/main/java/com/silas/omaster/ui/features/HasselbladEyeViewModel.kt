@@ -18,6 +18,8 @@ import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
+import com.silas.omaster.camera.CameraApplyResult
+import com.silas.omaster.camera.OPPOCameraManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
@@ -47,6 +49,17 @@ class HasselbladEyeViewModel : ViewModel() {
     /** 导出格式 - P2 HEIF支持 */
     enum class ExportFormat {
         JPEG, PNG, WEBP, HEIF
+    }
+
+    /**
+     * 应用到 OPPO 大师模式相机的状态。
+     * UI 层通过 [oppoApplyState] 观察并在状态变更时展示 Toast/SnackBar。
+     */
+    sealed class OPOApplyState {
+        object Idle : OPOApplyState()
+        object Applying : OPOApplyState()
+        data class Success(val method: String) : OPOApplyState()
+        data class Failed(val reason: String) : OPOApplyState()
     }
 
     // ================== StateFlow 状态 ==================
@@ -125,6 +138,10 @@ class HasselbladEyeViewModel : ViewModel() {
     /** 保存/分享操作错误信息（null 表示无错误），UI 层消费后调用 clearOperationError 清除 */
     private val _operationError = MutableStateFlow<String?>(null)
     val operationError: StateFlow<String?> = _operationError.asStateFlow()
+
+    /** 应用到 OPPO 大师模式相机的状态，UI 层消费后调用 resetOPOApplyState 重置 */
+    private val _oppoApplyState = MutableStateFlow<OPOApplyState>(OPOApplyState.Idle)
+    val oppoApplyState: StateFlow<OPOApplyState> = _oppoApplyState.asStateFlow()
 
     // ================== AI 构图辅助状态 ==================
 
@@ -732,14 +749,11 @@ class HasselbladEyeViewModel : ViewModel() {
 
         try {
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                // 使用 Android R+ 的 Bitmap.compress HEIF_LOSSY 格式
-                // 该格式在 API 31+ 可用；API 30 使用 HEVC 编码器手动封装
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 95, outputStream)
-                } else {
-                    // Android R (API 30)：使用 MediaCodec HEVC 编码器
-                    encodeBitmapToHeif(bitmap, outputStream)
-                }
+                // 统一使用 MediaCodec HEVC 编码器生成真正的 HEIF 容器。
+                // 注意：Bitmap.CompressFormat.WEBP_LOSSY 并非 HEIF 编码，会导致 .heic 文件
+                // 实际内容为 WEBP；而 Bitmap.compress 的 HEIF 格式直到 API 34 才支持，
+                // API 30-33 无原生 Bitmap HEIF 编码能力，因此统一走 MediaCodec 路径。
+                encodeBitmapToHeif(bitmap, outputStream)
             }
             MediaScannerConnection.scanFile(
                 context,
@@ -774,7 +788,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
         // 配置 HEVC 编码器
         val mediaFormat = android.media.MediaFormat.createVideoFormat(
-            android.media.MediaFormat.MIMETYPE_HEVC,
+            android.media.MediaFormat.MIMETYPE_VIDEO_HEVC,
             width,
             height
         ).apply {
@@ -786,7 +800,7 @@ class HasselbladEyeViewModel : ViewModel() {
                 android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
         }
 
-        val encoder = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_HEVC)
+        val encoder = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_VIDEO_HEVC)
         encoder.configure(mediaFormat, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE)
         val inputSurface = encoder.createInputSurface()
         encoder.start()
@@ -923,6 +937,42 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
+     * 将当前调好的哈苏参数应用到 OPPO 大师模式相机。
+     *
+     * 调用 [OPPOCameraManager.applyHasselbladParams]，按 ContentProvider → System Settings
+     * → Camera Intent → Clipboard 的优先级尝试应用。应用结果通过 [oppoApplyState] 暴露，
+     * UI 层消费后应调用 [resetOPOApplyState] 重置回 Idle。
+     */
+    fun applyToOPPOMaster(context: Context) {
+        viewModelScope.launch {
+            _oppoApplyState.value = OPOApplyState.Applying
+            try {
+                val params = _params.value
+                val cameraManager = OPPOCameraManager.getInstance(context)
+                val result = cameraManager.applyHasselbladParams(params)
+                when (result) {
+                    is CameraApplyResult.Success ->
+                        _oppoApplyState.value = OPOApplyState.Success(result.method.name)
+                    is CameraApplyResult.PartialSuccess ->
+                        _oppoApplyState.value = OPOApplyState.Success(result.method.name)
+                    is CameraApplyResult.Failed ->
+                        _oppoApplyState.value = OPOApplyState.Failed(result.reason)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "applyToOPPOMaster failed", e)
+                _oppoApplyState.value = OPOApplyState.Failed(e.message ?: "未知错误")
+            }
+        }
+    }
+
+    /**
+     * 重置 OPPO 应用状态为 Idle（UI 消费完结果后调用）。
+     */
+    fun resetOPOApplyState() {
+        _oppoApplyState.value = OPOApplyState.Idle
+    }
+
+    /**
      * 重置所有状态，并释放持有的 Bitmap 防止内存泄漏。
      */
     fun clear() {
@@ -958,6 +1008,7 @@ class HasselbladEyeViewModel : ViewModel() {
         _exportFormat.value = ExportFormat.JPEG
         _lastSavedUri.value = null
         _operationError.value = null
+        _oppoApplyState.value = OPOApplyState.Idle
     }
 
     // ================== 生命周期 ==================
@@ -1085,18 +1136,20 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     private fun suggestColorMode(profile: SceneProfile, colorModes: List<ColorMode>): String {
+        // 返回的名称必须与 allColorModes 中 ColorMode.name 完全一致，
+        // 否则 resolveColorModeId 会找不到匹配而回退到 "natural"。
         val modeMapping = mapOf(
-            "PORTRAIT" to "人像肤色优化",
-            "LANDSCAPE" to "风景色彩增强",
-            "NIGHT" to "哈苏经典胶片",
+            "PORTRAIT" to "人像肤色",
+            "LANDSCAPE" to "风景色彩",
+            "NIGHT" to "经典胶片",
             "FOOD" to "鲜艳色彩",
-            "URBAN" to "哈苏经典胶片",
-            "STILL_LIFE" to "哈苏自然色彩",
+            "URBAN" to "经典胶片",
+            "STILL_LIFE" to "自然色彩",
             "MACRO" to "鲜艳色彩",
-            "EVENT" to "哈苏自然色彩",
-            "UNKNOWN" to "哈苏自然色彩"
+            "EVENT" to "自然色彩",
+            "UNKNOWN" to "自然色彩"
         )
-        val displayName = modeMapping[profile.category.name] ?: "哈苏自然色彩"
+        val displayName = modeMapping[profile.category.name] ?: "自然色彩"
         return colorModes.find { it.name == displayName }?.name ?: displayName
     }
 

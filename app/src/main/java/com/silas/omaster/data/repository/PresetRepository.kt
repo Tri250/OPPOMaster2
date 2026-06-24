@@ -1115,6 +1115,60 @@ class PresetRepository private constructor(context: Context) {
         }
     }
 
+    /**
+     * 合并云端预设到本地缓存并刷新 Flow
+     *
+     * 由 CloudSyncManager 在同步完成后调用，打通云同步页面与主界面的数据流：
+     * CloudSyncScreen "立即同步" → CloudSyncManager.sync() → mergeCloudPresets
+     * → _presets Flow 刷新 → HomeViewModel 预设列表更新
+     *
+     * 合并策略：
+     * - 按 "brand::name" 去重，云端预设覆盖本地同名预设
+     * - 已存在的同名预设保留本地 id，以维护收藏/置顶关系
+     * - 保留本地自定义预设
+     * - 合并后原子写入缓存文件并更新 Flow
+     *
+     * @param cloudPresets 云端拉取的预设列表
+     * @return 合并后写入的云端预设数量
+     */
+    suspend fun mergeCloudPresets(cloudPresets: List<MasterPreset>): Int = withContext(Dispatchers.IO) {
+        if (cloudPresets.isEmpty()) {
+            Log.d(TAG, "mergeCloudPresets: 云端预设列表为空，跳过合并")
+            return@withContext 0
+        }
+
+        // 以 "brand::name" 为键建立索引，保留本地已有预设
+        val existingIndex = _presets.value.associateBy { "${it.brand}::${it.name}" }.toMutableMap()
+        var mergedCount = 0
+
+        for (preset in cloudPresets) {
+            val brand = preset.brand?.takeIf { it.isNotBlank() } ?: "unknown"
+            val item = preset.toRepositoryPreset(brand)
+            val key = "${item.brand}::${item.name}"
+            // 已存在的同名预设保留本地 id，维护收藏/置顶关系；新项直接追加
+            val existing = existingIndex[key]
+            if (existing != null) {
+                existingIndex[key] = item.copy(id = existing.id)
+            } else {
+                existingIndex[key] = item
+            }
+            mergedCount++
+        }
+
+        // 合并结果写回 Flow 与缓存
+        val merged = existingIndex.values.toList()
+        _presets.value = merged
+
+        try {
+            saveToCache()
+            Log.i(TAG, "mergeCloudPresets: 合并完成，共 ${merged.size} 条预设（合并 $mergedCount 条云端预设）")
+        } catch (e: Exception) {
+            Log.e(TAG, "mergeCloudPresets: 写入本地缓存失败", e)
+        }
+
+        mergedCount
+    }
+
     // ==================== HomeViewModel 需要的方法 ====================
 
     /**

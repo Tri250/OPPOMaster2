@@ -296,12 +296,16 @@ class AIFineTuneViewModel(
 
     // ==================== GPU 实时预览 ====================
 
-    private suspend fun renderPreviewAsync(context: Context) {
-        val bitmap = _sourceBitmap.value ?: return
+    private suspend fun ensureGPUInitialized(context: Context) {
         if (!gpuInitialized) {
             gpuRenderManager = GPURenderManager.getInstance(context)
             gpuInitialized = gpuRenderManager?.initialize() == true
         }
+    }
+
+    private suspend fun renderPreviewAsync(context: Context) {
+        val bitmap = _sourceBitmap.value ?: return
+        ensureGPUInitialized(context)
         val renderer = gpuRenderManager ?: return
 
         val result = renderer.renderPreview(bitmap, buildEffectiveParams())
@@ -742,7 +746,18 @@ class AIFineTuneViewModel(
 
     private fun buildEffectiveParams(): RenderParameters {
         // 智能优化已经合并到 _currentParams，这里直接返回
-        return _currentParams.value
+        val params = _currentParams.value
+        // 注入当前 3D LUT 状态，使预览与导出共享 GPU 管线内的 LUT 色彩映射
+        return if (_active3DLUTId.value != null && _lut3DTextureId != 0) {
+            params.copy(
+                lutEnabled = true,
+                lutTextureId = _lut3DTextureId,
+                lutSize = _lut3DSize,
+                lutStrength = _lut3DStrength.value
+            )
+        } else {
+            params.copy(lutEnabled = false, lutTextureId = 0)
+        }
     }
 
     override fun onCleared() {
@@ -761,9 +776,16 @@ class AIFineTuneViewModel(
     private val _lut3DStrength = MutableStateFlow(1.0f)
     val lut3DStrength: StateFlow<Float> = _lut3DStrength.asStateFlow()
 
+    // 已上传到 GPU 的 3D LUT 纹理 ID 与尺寸（0 表示未上传）
+    private var _lut3DTextureId: Int = 0
+    private var _lut3DSize: Int = 0
+
     /**
      * 应用 3D LUT 到当前图片
-     * LUT 效果叠加在 GPU 渲染管线之后
+     *
+     * GPU 可用时：上传 LUT 为 GL 纹理，由主渲染管线内的 image_adjust.frag 着色器
+     * 在曲线之后、光影调整之前应用（uLUT3DEnabled=1）。
+     * GPU 不可用时：回退到 CPU 三线性插值（LUT3DRenderer.applyLUTCPU）。
      */
     fun apply3DLUT(context: Context, lutId: String, strength: Float = 1.0f) {
         val lutManager = LUTManager.getInstance(context)
@@ -773,11 +795,22 @@ class AIFineTuneViewModel(
         _lut3DStrength.value = strength
 
         viewModelScope.launch {
-            val currentPreview = _previewBitmap.value ?: return@launch
-            val result = withContext(Dispatchers.Default) {
-                LUT3DRenderer.applyLUTCPU(currentPreview, lutData, strength)
+            ensureGPUInitialized(context)
+            val renderer = gpuRenderManager
+            if (renderer != null && gpuInitialized) {
+                // GPU 路径：上传 LUT 纹理，预览渲染时由着色器应用
+                val textureId = renderer.uploadLUT3DTexture(lutData)
+                _lut3DTextureId = textureId
+                _lut3DSize = if (textureId != 0) lutData.size else 0
+                renderPreviewAsync(context)
+            } else {
+                // GPU 不可用，回退到 CPU LUT
+                val currentPreview = _previewBitmap.value ?: _sourceBitmap.value ?: return@launch
+                val result = withContext(Dispatchers.Default) {
+                    LUT3DRenderer.applyLUTCPU(currentPreview, lutData, strength)
+                }
+                _previewBitmap.value = result
             }
-            _previewBitmap.value = result
         }
     }
 
@@ -788,6 +821,10 @@ class AIFineTuneViewModel(
         _active3DLUTId.value = null
         _lut3DStrength.value = 1.0f
         viewModelScope.launch {
+            // 释放 GPU LUT 纹理
+            gpuRenderManager?.releaseLUT3DTexture()
+            _lut3DTextureId = 0
+            _lut3DSize = 0
             renderPreviewAsync(context)
         }
     }

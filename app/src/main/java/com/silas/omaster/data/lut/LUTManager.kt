@@ -112,8 +112,8 @@ class LUTManager private constructor(private val context: Context) {
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
-            connection.requestProperty("Accept", "*/*")
-            connection.requestProperty("User-Agent", "OMaster/1.0")
+            connection.setRequestProperty("Accept", "*/*")
+            connection.setRequestProperty("User-Agent", "OMaster/1.0")
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {

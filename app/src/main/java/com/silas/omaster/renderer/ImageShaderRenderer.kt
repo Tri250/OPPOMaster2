@@ -40,6 +40,36 @@ class ImageShaderRenderer(private val context: Context) {
         // 输出 Bitmap 最大像素尺寸（宽或高），超过此值自动降采样
         // 4096 × 4096 × 4 bytes ≈ 64 MB，在大多数设备上安全
         private const val MAX_OUTPUT_DIMENSION = 4096
+
+        /**
+         * 根据渲染质量返回输入图像的最大边长（像素）。
+         * 超过该尺寸的输入图会在上传纹理前降采样，以平衡性能与质量。
+         */
+        fun maxDimensionForQuality(quality: RenderQuality): Int = when (quality) {
+            RenderQuality.PREVIEW -> 512
+            RenderQuality.STANDARD -> 1024
+            RenderQuality.HIGH -> 2048
+            RenderQuality.ULTRA -> 4096
+        }
+
+        /**
+         * 按 [quality] 限制的尺寸对 [bitmap] 降采样。
+         * 若原图未超限则原样返回（不复制）。
+         */
+        fun downsampleBitmapForQuality(bitmap: Bitmap, quality: RenderQuality): Bitmap {
+            val maxDim = maxDimensionForQuality(quality)
+            val srcMax = maxOf(bitmap.width, bitmap.height)
+            if (srcMax <= maxDim) return bitmap
+            val scale = maxDim.toFloat() / srcMax
+            val w = (bitmap.width * scale).toInt().coerceAtLeast(1)
+            val h = (bitmap.height * scale).toInt().coerceAtLeast(1)
+            return try {
+                Bitmap.createScaledBitmap(bitmap, w, h, true)
+            } catch (e: OutOfMemoryError) {
+                Log.w(TAG, "降采样 OOM，使用原图", e)
+                bitmap
+            }
+        }
     }
     
     // 着色器程序
@@ -346,6 +376,10 @@ class ImageShaderRenderer(private val context: Context) {
         val startTime = System.currentTimeMillis()
 
         try {
+            // RenderQuality 分级：输入纹理的降采样在 createInputTexture/renderToBitmap 阶段完成，
+            // 此处记录质量等级用于性能分析与结果回传
+            Log.d(TAG, "render quality=$quality, size=${imageWidth}x${imageHeight}, lut=${params.lutEnabled}")
+
             // 性能优化：复用输出纹理和FBO，仅在尺寸变化或尚未创建时重建
             if (outputTextureId == 0 || outputWidth != imageWidth || outputHeight != imageHeight) {
                 if (outputTextureId != 0) {
@@ -551,21 +585,9 @@ class ImageShaderRenderer(private val context: Context) {
         params: RenderParameters,
         quality: RenderQuality = RenderQuality.STANDARD
     ): Bitmap? {
-        // 大图降采样：避免纹理上传 OOM
-        val renderBitmap = if (inputBitmap.width > MAX_OUTPUT_DIMENSION || inputBitmap.height > MAX_OUTPUT_DIMENSION) {
-            val scale = MAX_OUTPUT_DIMENSION.toFloat() / maxOf(inputBitmap.width, inputBitmap.height)
-            val scaledWidth = (inputBitmap.width * scale).toInt().coerceAtLeast(1)
-            val scaledHeight = (inputBitmap.height * scale).toInt().coerceAtLeast(1)
-            Log.i(TAG, "renderToBitmap 大图降采样: ${inputBitmap.width}x${inputBitmap.height} → ${scaledWidth}x${scaledHeight}")
-            try {
-                Bitmap.createScaledBitmap(inputBitmap, scaledWidth, scaledHeight, true)
-            } catch (e: OutOfMemoryError) {
-                Log.e(TAG, "降采样 OOM，使用原图", e)
-                inputBitmap
-            }
-        } else {
-            inputBitmap
-        }
+        // 按 RenderQuality 分级降采样：PREVIEW≤512 / STANDARD≤1024 / HIGH≤2048 / ULTRA≤4096
+        // 同时避免纹理上传 OOM
+        val renderBitmap = downsampleBitmapForQuality(inputBitmap, quality)
 
         // 创建输入纹理
         createInputTexture(renderBitmap)

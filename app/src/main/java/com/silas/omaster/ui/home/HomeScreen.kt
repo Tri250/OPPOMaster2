@@ -33,10 +33,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -110,6 +114,7 @@ fun HomeScreen(
     onNavigateToSmartOptimize: () -> Unit = {},
     onNavigateToPresetManager: () -> Unit = {},
     onNavigateToParamAdjustment: () -> Unit = {},
+    onNavigateToHasselbladEye: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0
@@ -184,6 +189,16 @@ fun HomeScreen(
                     haptic.perform(HapticFeedbackType.LongPress)
                     viewModel.refresh()
                 }
+            )
+
+            // 快捷功能入口（横向滚动卡片）
+            QuickFeaturesSection(
+                onNavigateToAIFineTune = onNavigateToAIFineTune,
+                onNavigateToSmartOptimize = onNavigateToSmartOptimize,
+                onNavigateToWatermarkEditor = onNavigateToWatermarkEditor,
+                onNavigateToParamAdjustment = onNavigateToParamAdjustment,
+                onNavigateToHasselbladEye = onNavigateToHasselbladEye,
+                modifier = Modifier.padding(vertical = 8.dp)
             )
 
             // 搜索栏（对齐Web端）
@@ -1071,5 +1086,117 @@ private fun LoadingMoreTip() {
                     )
             )
         }
+    }
+}
+
+/**
+ * 快捷功能入口区域（横向滚动卡片）
+ * 将首页未使用的导航回调接入实际入口
+ */
+@Composable
+private fun QuickFeaturesSection(
+    onNavigateToAIFineTune: () -> Unit,
+    onNavigateToSmartOptimize: () -> Unit,
+    onNavigateToWatermarkEditor: () -> Unit,
+    onNavigateToParamAdjustment: () -> Unit,
+    onNavigateToHasselbladEye: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            QuickFeatureCard(
+                name = "AI微调",
+                icon = Icons.Default.AutoAwesome,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToAIFineTune()
+                }
+            )
+        }
+        item {
+            QuickFeatureCard(
+                name = "智能优化",
+                icon = Icons.Default.Tune,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToSmartOptimize()
+                }
+            )
+        }
+        item {
+            QuickFeatureCard(
+                name = "水印编辑",
+                icon = Icons.Default.Edit,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToWatermarkEditor()
+                }
+            )
+        }
+        item {
+            QuickFeatureCard(
+                name = "参数调节",
+                icon = Icons.Default.Adjust,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToParamAdjustment()
+                }
+            )
+        }
+        item {
+            QuickFeatureCard(
+                name = "哈苏之眼",
+                icon = Icons.Default.ColorLens,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToHasselbladEye()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickFeatureCard(
+    name: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(72.dp)
+            .hapticClickable { onClick() }
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(12.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = name,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+            maxLines = 1,
+            textAlign = TextAlign.Center
+        )
     }
 }

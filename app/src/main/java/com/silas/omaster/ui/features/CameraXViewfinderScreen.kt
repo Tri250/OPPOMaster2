@@ -8,8 +8,12 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,23 +42,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +75,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.ui.theme.HasselbladOrange
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /**
  * CameraX 实时取景器屏幕 - P2 深度优化
@@ -97,6 +112,13 @@ fun CameraXViewfinderScreen(
     // 实时处理后的帧（用于在 PreviewView 之上叠加显示预设效果）
     var processedFrame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
+    // 手势交互状态：点击对焦指示器、变焦、曝光补偿
+    var focusPoint by remember { mutableStateOf<Offset?>(null) }
+    val focusAnimatable = remember { Animatable(0f) }
+    var currentZoom by remember { mutableStateOf(1f) }
+    var exposureIndex by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+
     // 相机权限请求
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -115,6 +137,18 @@ fun CameraXViewfinderScreen(
     // 相机管理器
     val cameraManager = remember {
         CameraXManager(context, lifecycleOwner)
+    }
+
+    // 相机就绪状态：用于在相机绑定后刷新曝光/变焦范围
+    val isCameraReady by cameraManager.isCameraReady.collectAsState()
+    val exposureRange = remember(isCameraReady) { cameraManager.getExposureCompensationRange() }
+    val maxZoomRatio = remember(isCameraReady) { cameraManager.getMaxZoomRatio() }
+
+    // 相机就绪后同步当前变焦倍数
+    LaunchedEffect(isCameraReady) {
+        if (isCameraReady) {
+            currentZoom = cameraManager.getCurrentZoomRatio()
+        }
     }
 
     // 更新预设参数
@@ -219,6 +253,99 @@ fun CameraXViewfinderScreen(
                             .align(Alignment.TopStart)
                             .padding(16.dp)
                     )
+                }
+
+                // 手势交互层：点击对焦 + 双指缩放
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { offset ->
+                                    cameraManager.tapToFocus(offset.x, offset.y)
+                                    focusPoint = offset
+                                    coroutineScope.launch {
+                                        focusAnimatable.snapTo(0f)
+                                        focusAnimatable.animateTo(1f, animationSpec = tween(800))
+                                        focusPoint = null
+                                    }
+                                }
+                            )
+                        }
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                currentZoom = (currentZoom * zoom).coerceIn(1f, maxZoomRatio)
+                                cameraManager.setZoomRatio(currentZoom)
+                            }
+                        }
+                )
+
+                // 对焦指示器（点击位置圆圈，约 1 秒后消失）
+                focusPoint?.let { point ->
+                    val indicatorSize = 80.dp
+                    val indicatorScale = 0.6f + focusAnimatable.value * 0.8f
+                    val indicatorAlpha = (1f - focusAnimatable.value).coerceIn(0f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (point.x - indicatorSize.toPx() / 2).toInt(),
+                                    (point.y - indicatorSize.toPx() / 2).toInt()
+                                )
+                            }
+                            .size(indicatorSize)
+                            .graphicsLayer {
+                                scaleX = indicatorScale
+                                scaleY = indicatorScale
+                                alpha = indicatorAlpha
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    }
+                }
+
+                // 变焦倍数指示器
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = String.format("%.1fx", currentZoom),
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // 曝光补偿滑块（垂直，仅当设备支持时显示）
+                if (exposureRange.first != exposureRange.last) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 16.dp)
+                            .size(width = 200.dp, height = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Slider(
+                            value = exposureIndex.toFloat(),
+                            onValueChange = { newValue ->
+                                val newIndex = newValue.roundToInt()
+                                if (newIndex != exposureIndex) {
+                                    exposureIndex = newIndex
+                                    cameraManager.setExposureCompensation(newIndex)
+                                }
+                            },
+                            valueRange = exposureRange.first.toFloat()..exposureRange.last.toFloat(),
+                            modifier = Modifier.rotate(-90f)
+                        )
+                    }
                 }
             } else {
                 // 无权限提示

@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import androidx.core.graphics.drawable.toBitmap
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.silas.omaster.data.lut.LUTManager
@@ -380,25 +381,15 @@ fun LUTShareScreen(
                     isGeneratingPreview = true
                     scope.launch {
                         try {
-                            // 从预览图 URL 加载源图
+                            // 使用 Coil ImageLoader 加载预览图（带磁盘/内存缓存）
+                            val imageLoader = coil.ImageLoader.Builder(context).build()
+                            val request = ImageRequest.Builder(context)
+                                .data(lut.previewImage)
+                                .crossfade(true)
+                                .build()
                             val sourceBitmap = withContext(Dispatchers.IO) {
-                                try {
-                                    val url = java.net.URL(lut.previewImage)
-                                    val connection = url.openConnection()
-                                    connection.connectTimeout = 10_000
-                                    connection.readTimeout = 10_000
-                                    android.graphics.BitmapFactory.decodeStream(connection.getInputStream())
-                                } catch (e: Exception) {
-                                    // URL 加载失败时使用纯色渐变作为源图
-                                    val bmp = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
-                                    val canvas = android.graphics.Canvas(bmp)
-                                    val paint = android.graphics.Paint()
-                                    val colors = intArrayOf(0xFF4A90D9.toInt(), 0xFFE8B84B.toInt(), 0xFF2ECC71.toInt())
-                                    val gradient = android.graphics.LinearGradient(0f, 0f, 200f, 200f, colors, null, android.graphics.Shader.TileMode.CLAMP)
-                                    paint.shader = gradient
-                                    canvas.drawRect(0f, 0f, 200f, 200f, paint)
-                                    bmp
-                                }
+                                val result = imageLoader.execute(request)
+                                (result as? coil.request.SuccessResult)?.drawable?.toBitmap()
                             }
                             if (sourceBitmap != null) {
                                 val result = lutManager.applyLUTToBitmap(sourceBitmap, lut.id)
@@ -409,14 +400,18 @@ fun LUTShareScreen(
                             } else {
                                 withContext(Dispatchers.Main) {
                                     isGeneratingPreview = false
+                                    Toast.makeText(context, "预览图加载失败，请检查网络后重试", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
                                 isGeneratingPreview = false
+                                Toast.makeText(context, "预览生成失败：${e.message}", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
+                } else {
+                    Toast.makeText(context, "请先下载 LUT 后预览", Toast.LENGTH_SHORT).show()
                 }
             },
             onApply = onApplyLUT?.let { callback -> { callback(lut) } },

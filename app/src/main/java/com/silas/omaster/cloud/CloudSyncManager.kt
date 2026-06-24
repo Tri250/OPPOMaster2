@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.silas.omaster.BuildConfig
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetDescription
 import io.ktor.client.HttpClient
@@ -53,6 +54,9 @@ class CloudSyncManager private constructor(context: Context) {
         Context.MODE_PRIVATE
     )
     private val gson = Gson()
+
+    // PresetRepository 引用：同步完成后将云端预设合并到主界面使用的本地缓存
+    private val presetRepository: PresetRepository by lazy { PresetRepository.getInstance(appContext) }
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
@@ -131,6 +135,15 @@ class CloudSyncManager private constructor(context: Context) {
 
             // 保存到缓存
             saveToCache(allPresets)
+
+            // 将同步结果合并到 PresetRepository，打通云同步页面与主界面的数据流
+            // 主界面 HomeViewModel 通过 PresetRepository.getAllPresets() Flow 观察数据变化
+            try {
+                val mergedCount = presetRepository.mergeCloudPresets(allPresets)
+                android.util.Log.d("CloudSyncManager", "已合并 $mergedCount 条云端预设到本地仓库")
+            } catch (e: Exception) {
+                android.util.Log.e("CloudSyncManager", "合并云端预设到本地仓库失败", e)
+            }
 
             // 更新同步状态
             val currentTime = System.currentTimeMillis()

@@ -95,7 +95,13 @@ data class RenderParameters(
     val curveRgbLut: FloatArray = IDENTITY_CURVE.copyOf(),
     val curveRedLut: FloatArray = IDENTITY_CURVE.copyOf(),
     val curveGreenLut: FloatArray = IDENTITY_CURVE.copyOf(),
-    val curveBlueLut: FloatArray = IDENTITY_CURVE.copyOf()
+    val curveBlueLut: FloatArray = IDENTITY_CURVE.copyOf(),
+
+    // LUT 3D 参数（运行时状态，用于 GPU 管线内的 3D LUT 色彩映射）
+    val lutTextureId: Int = 0,
+    val lutSize: Int = 0,
+    val lutStrength: Float = 0f,
+    val lutEnabled: Boolean = false
 ) : Parcelable {
     
     companion object {
@@ -248,6 +254,9 @@ data class RenderParameters(
         if (!curveGreenLut.contentEquals(IDENTITY_CURVE)) return true
         if (!curveBlueLut.contentEquals(IDENTITY_CURVE)) return true
 
+        // 3D LUT
+        if (lutEnabled && lutTextureId != 0) return true
+
         return false
     }
     
@@ -308,7 +317,12 @@ data class RenderParameters(
             curveRgbLut = if (!curveRgbLut.contentEquals(IDENTITY_CURVE)) curveRgbLut else other.curveRgbLut,
             curveRedLut = if (!curveRedLut.contentEquals(IDENTITY_CURVE)) curveRedLut else other.curveRedLut,
             curveGreenLut = if (!curveGreenLut.contentEquals(IDENTITY_CURVE)) curveGreenLut else other.curveGreenLut,
-            curveBlueLut = if (!curveBlueLut.contentEquals(IDENTITY_CURVE)) curveBlueLut else other.curveBlueLut
+            curveBlueLut = if (!curveBlueLut.contentEquals(IDENTITY_CURVE)) curveBlueLut else other.curveBlueLut,
+            // LUT 为运行时状态，优先保留当前实例的 LUT 配置
+            lutTextureId = if (lutEnabled) lutTextureId else other.lutTextureId,
+            lutSize = if (lutEnabled) lutSize else other.lutSize,
+            lutStrength = if (lutEnabled) lutStrength else other.lutStrength,
+            lutEnabled = lutEnabled || other.lutEnabled
         )
     }
     
@@ -365,7 +379,12 @@ data class RenderParameters(
             curveRgbLut = curveRgbLut,
             curveRedLut = curveRedLut,
             curveGreenLut = curveGreenLut,
-            curveBlueLut = curveBlueLut
+            curveBlueLut = curveBlueLut,
+            // LUT 纹理无法插值，保留当前实例的纹理与尺寸；强度可插值
+            lutTextureId = lutTextureId,
+            lutSize = lutSize,
+            lutStrength = lutStrength + (target.lutStrength - lutStrength) * clampedT,
+            lutEnabled = lutEnabled
         )
     }
 }

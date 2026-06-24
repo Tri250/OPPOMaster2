@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.features
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -77,15 +78,9 @@ fun CloudSyncScreen(
         }
     }
 
-    // 云服务提供商连接状态
+    // 云服务提供商连接状态（从 SharedPreferences 持久化加载，应用重启后恢复）
     var cloudProviders by remember {
-        mutableStateOf(
-            listOf(
-                CloudProviderConnection(CloudProviderType.GOOGLE_DRIVE),
-                CloudProviderConnection(CloudProviderType.DROPBOX),
-                CloudProviderConnection(CloudProviderType.WEBDAV)
-            )
-        )
+        mutableStateOf(loadCloudProviders(context))
     }
 
     // 连接对话框状态
@@ -167,7 +162,10 @@ fun CloudSyncScreen(
                         )
                         val (statusText, statusColor) = when (syncState) {
                             is SyncState.Syncing -> "正在同步中..." to HasselbladOrange
-                            is SyncState.Success -> "同步成功" to SuccessGreen
+                            is SyncState.Success -> {
+                                val s = syncState as SyncState.Success
+                                "同步成功：新增 ${s.newCount} 个，更新 ${s.updatedCount} 个" to SuccessGreen
+                            }
                             is SyncState.Error -> {
                                 val msg = (syncState as SyncState.Error).message
                                 if (msg.contains("网络", ignoreCase = true) || msg.contains("Network", ignoreCase = true) || msg.contains("Connect", ignoreCase = true)) {
@@ -186,6 +184,18 @@ fun CloudSyncScreen(
                             color = statusColor,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+
+                        // 同步成功详情：提示已同步到本地主界面
+                        if (syncState is SyncState.Success) {
+                            val s = syncState as SyncState.Success
+                            val total = s.newCount + s.updatedCount
+                            Text(
+                                text = "已同步 $total 个预设到本地",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SuccessGreen,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
 
                         // 错误/离线详情
                         if (syncState is SyncState.Error) {
@@ -293,6 +303,8 @@ fun CloudSyncScreen(
                                     if (it.type == cp.type) it.copy(isConnected = false, apiKey = "")
                                     else it
                                 }
+                                // 持久化断开状态，清除已保存的 API Key
+                                saveCloudProviderConnection(context, cp.type, isConnected = false, apiKey = "")
                             }
                         )
                     }
@@ -333,19 +345,22 @@ fun CloudSyncScreen(
                         icon = Icons.Default.Shield,
                         iconColor = SuccessGreen,
                         title = "端到端加密",
-                        description = "您的数据完全加密，安全可靠"
+                        description = "您的数据完全加密，安全可靠",
+                        comingSoon = true
                     )
                     FeatureCard(
                         icon = Icons.Default.Wifi,
                         iconColor = Color(0xFF9C27B0),
                         title = "Wi-Fi 自动同步",
-                        description = "仅在 Wi-Fi 下自动同步，节省流量"
+                        description = "仅在 Wi-Fi 下自动同步，节省流量",
+                        comingSoon = true
                     )
                     FeatureCard(
                         icon = Icons.Default.History,
                         iconColor = HasselbladOrange,
                         title = "历史版本",
-                        description = "保留 30 天历史版本，随时回退"
+                        description = "保留 30 天历史版本，随时回退",
+                        comingSoon = true
                     )
                 }
             }
@@ -384,6 +399,16 @@ fun CloudSyncScreen(
                                             isConnecting = false,
                                             apiKey = apiKey
                                         ) else cp
+                                    }
+                                    // 持久化连接状态，应用重启后恢复
+                                    saveCloudProviderConnection(context, provider, isConnected = true, apiKey = apiKey)
+                                    // 连接验证通过后触发同步，将云端预设拉取到本地
+                                    scope.launch {
+                                        try {
+                                            syncManager.sync()
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("CloudSyncScreen", "连接后同步失败", e)
+                                        }
                                     }
                                 } else {
                                     // 验证失败：保留用户输入的 Key 以便修改后重试
@@ -428,6 +453,46 @@ private data class CloudProviderConnection(
     val isConnecting: Boolean = false,
     val apiKey: String = ""
 )
+
+private const val CLOUD_PROVIDER_PREFS = "cloud_provider_connections"
+
+/**
+ * 从 SharedPreferences 加载外部云存储提供商的连接状态
+ * 应用重启后恢复连接状态
+ */
+private fun loadCloudProviders(context: Context): List<CloudProviderConnection> {
+    val prefs = context.getSharedPreferences(CLOUD_PROVIDER_PREFS, Context.MODE_PRIVATE)
+    return CloudProviderType.values().map { type ->
+        val key = type.name.lowercase()
+        CloudProviderConnection(
+            type = type,
+            isConnected = prefs.getBoolean("${key}_connected", false),
+            apiKey = prefs.getString("${key}_api_key", "") ?: ""
+        )
+    }
+}
+
+/**
+ * 持久化外部云存储提供商的连接状态到 SharedPreferences
+ * 断开连接时清除已保存的 API Key
+ */
+private fun saveCloudProviderConnection(
+    context: Context,
+    type: CloudProviderType,
+    isConnected: Boolean,
+    apiKey: String
+) {
+    val prefs = context.getSharedPreferences(CLOUD_PROVIDER_PREFS, Context.MODE_PRIVATE)
+    val key = type.name.lowercase()
+    prefs.edit().apply {
+        putBoolean("${key}_connected", isConnected)
+        if (isConnected && apiKey.isNotEmpty()) {
+            putString("${key}_api_key", apiKey)
+        } else if (!isConnected) {
+            remove("${key}_api_key")
+        }
+    }.apply()
+}
 
 data class ProviderInfo(
     val name: String,
@@ -493,7 +558,7 @@ private fun ProviderCard(provider: ProviderInfo, onConnect: () -> Unit = {}) {
                 Icon(Icons.Default.Check, null, tint = SuccessGreen)
             } else {
                 TextButton(onClick = onConnect) {
-                    Text("连接", color = HasselbladOrange)
+                    Text("同步", color = HasselbladOrange)
                 }
             }
         }
@@ -622,7 +687,8 @@ private fun FeatureCard(
     icon: ImageVector,
     iconColor: Color,
     title: String,
-    description: String
+    description: String,
+    comingSoon: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -645,12 +711,29 @@ private fun FeatureCard(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    if (comingSoon) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(HasselbladOrange.copy(alpha = 0.2f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "即将推出",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HasselbladOrange
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,

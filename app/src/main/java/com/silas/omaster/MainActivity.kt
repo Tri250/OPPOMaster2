@@ -80,7 +80,6 @@ class MainActivity : ComponentActivity() {
                     ) {
                         if (showWelcomeFlow) {
                             WelcomeFlow(
-                                navController = navController,
                                 onAgree = {
                                     OMasterApplication.getInstance().setUserAgreed(true)
                                     OMasterApplication.getInstance().initUMeng()

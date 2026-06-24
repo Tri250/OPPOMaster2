@@ -163,6 +163,7 @@ data class AnalysisResult(
 @Composable
 fun HasselbladScreen(
     onBack: () -> Unit,
+    onLaunchViewfinder: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -199,6 +200,37 @@ fun HasselbladScreen(
         operationError?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             viewModel.clearOperationError()
+        }
+    }
+
+    // 应用到 OPPO 大师模式相机状态：成功/失败时弹出 Toast 提示
+    val oppoApplyState by viewModel.oppoApplyState.collectAsState()
+    LaunchedEffect(oppoApplyState) {
+        when (val state = oppoApplyState) {
+            is HasselbladEyeViewModel.OPOApplyState.Success -> {
+                val methodLabel = when (state.method) {
+                    "CONTENT_PROVIDER" -> "ContentProvider"
+                    "SYSTEM_SETTINGS" -> "系统设置"
+                    "CAMERA_INTENT" -> "相机 Intent"
+                    "CLIPBOARD_FALLBACK" -> "剪贴板"
+                    else -> state.method
+                }
+                Toast.makeText(
+                    context,
+                    "已应用到 OPPO 大师模式（$methodLabel）",
+                    Toast.LENGTH_LONG
+                ).show()
+                viewModel.resetOPOApplyState()
+            }
+            is HasselbladEyeViewModel.OPOApplyState.Failed -> {
+                Toast.makeText(
+                    context,
+                    "应用失败：${state.reason}",
+                    Toast.LENGTH_LONG
+                ).show()
+                viewModel.resetOPOApplyState()
+            }
+            else -> Unit
         }
     }
 
@@ -440,6 +472,7 @@ fun HasselbladScreen(
                 recentShots = recentShots,
                 onLaunchCamera = ::launchCamera,
                 onPickFromGallery = ::onPickFromGallery,
+                onLaunchViewfinder = onLaunchViewfinder,
                 onRecentShotClick = { uri ->
                     scope.launch {
                         val bitmap = withContext(Dispatchers.IO) {
@@ -533,6 +566,10 @@ fun HasselbladScreen(
                         } else {
                             Toast.makeText(context, "请先选择一个色彩模式", Toast.LENGTH_SHORT).show()
                         }
+                    },
+                    onApplyToOPPO = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.applyToOPPOMaster(context)
                     }
                 )
 
@@ -718,6 +755,7 @@ private fun SetupContent(
     recentShots: List<Uri>,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
+    onLaunchViewfinder: () -> Unit,
     onRecentShotClick: (Uri) -> Unit
 ) {
     LazyColumn(
@@ -732,6 +770,11 @@ private fun SetupContent(
                 onLaunchCamera = onLaunchCamera,
                 onPickFromGallery = onPickFromGallery
             )
+        }
+
+        // 实时取景拍摄入口：直接进入 CameraX 取景器进行实时预览与拍摄
+        item {
+            ViewfinderEntryCard(onLaunchViewfinder = onLaunchViewfinder)
         }
 
         // AR 取景器模拟：拍照前预览构图引导线
@@ -1247,6 +1290,60 @@ private fun ShutterCard(
     }
 }
 
+/**
+ * 实时取景拍摄入口卡片
+ * 进入 CameraX 取景器进行实时预览、对焦、变焦与拍照（自动应用哈苏色彩）
+ */
+@Composable
+private fun ViewfinderEntryCard(onLaunchViewfinder: () -> Unit) {
+    GlassCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .hapticClickable { onLaunchViewfinder() }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(HasselbladOrange.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "实时取景拍摄",
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "实时取景拍摄",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "CameraX 实时预览 · 点击对焦 · 双指缩放 · 哈苏色彩",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .size(20.dp)
+                    .rotate(180f)
+            )
+        }
+    }
+}
+
 @Composable
 private fun RecentShotsRow(
     recentShots: List<Uri>,
@@ -1581,7 +1678,8 @@ private fun ResultsContent(
     onFineGrainedSceneSelected: (SceneProfile) -> Unit,
     onGuideClick: (CompositionGuide) -> Unit,
     onClearComposition: () -> Unit,
-    onSaveAsPreset: () -> Unit = {}
+    onSaveAsPreset: () -> Unit = {},
+    onApplyToOPPO: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1740,6 +1838,31 @@ private fun ResultsContent(
                         color = HasselbladOrange,
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp
+                    )
+                }
+            }
+
+            item {
+                Button(
+                    onClick = onApplyToOPPO,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "应用到 OPPO 相机",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "应用到 OPPO 相机",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
                     )
                 }
             }

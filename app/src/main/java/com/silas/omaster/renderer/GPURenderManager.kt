@@ -10,11 +10,14 @@ import android.opengl.EGLContext
 import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
 import android.opengl.GLES30
+import android.opengl.GLUtils
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import com.silas.omaster.data.lut.LUT3DData
+import com.silas.omaster.data.lut.LUT3DParser
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +26,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.abs
 import kotlin.math.pow
+import kotlin.math.sin
 
 /**
  * Bitmap 对象池，减少 GC 压力
@@ -325,6 +330,9 @@ class GPURenderManager private constructor(private val context: Context) {
     // CPU降级渲染器（备用）
     private var cpuFallbackRenderer: CPURenderer? = null
 
+    // 当前已上传的 3D LUT 纹理 ID（0 表示无），用于主渲染管线内的 GPU LUT 路径
+    private var lutTextureId: Int = 0
+
     // ==================== 性能优化组件 ====================
 
     /** Bitmap 对象池，减少 GC 压力 */
@@ -560,11 +568,20 @@ class GPURenderManager private constructor(private val context: Context) {
                     request.quality
                 }
 
-                // 更新输入纹理
-                imageRenderer?.updateInputTexture(request.inputBitmap)
+                // 按 RenderQuality 分级降采样输入图，平衡性能与质量
+                val sourceBitmap = request.inputBitmap
+                val renderBitmap = ImageShaderRenderer.downsampleBitmapForQuality(sourceBitmap, effectiveQuality)
 
-                // 渲染
+                // 更新输入纹理
+                imageRenderer?.updateInputTexture(renderBitmap)
+
+                // 渲染（setRenderParameters 内部会根据 params.lutEnabled 绑定 LUT 纹理到 GL_TEXTURE2）
                 val renderResult = imageRenderer?.render(request.params, effectiveQuality)
+
+                // 回收降采样产生的临时副本（原始 request.inputBitmap 由调用方管理）
+                if (renderBitmap !== sourceBitmap && !renderBitmap.isRecycled) {
+                    renderBitmap.recycle()
+                }
 
                 val processingTime = SystemClock.elapsedRealtime() - startTime
 
@@ -690,13 +707,95 @@ class GPURenderManager private constructor(private val context: Context) {
         params: RenderParameters
     ): Bitmap? {
         val result = renderSync(inputBitmap, params, RenderQuality.PREVIEW)
-        
+
         return when (result) {
             is RenderResult.Success -> result.outputBitmap
             is RenderResult.FallbackToCPU -> result.outputBitmap
             else -> null
         }
     }
+
+    /**
+     * 上传 3D LUT 数据为 GL 纹理，返回纹理 ID。
+     *
+     * 必须在 GPU 可用后调用。内部在渲染线程执行纹理上传，
+     * 返回的纹理 ID 可设置到 [RenderParameters.lutTextureId]，
+     * 由主渲染管线内的 [ShaderProgram.setLUT3DParams] 绑定到 GL_TEXTURE2。
+     *
+     * @param lutData 3D LUT 数据
+     * @return 纹理 ID，失败返回 0
+     */
+    suspend fun uploadLUT3DTexture(lutData: LUT3DData): Int {
+        if (!_isGpuAvailable.value) {
+            Log.w(TAG, "GPU 不可用，无法上传 LUT 纹理")
+            return 0
+        }
+        return runOnRenderThreadBlocking {
+            try {
+                // 释放上一次上传的 LUT 纹理，避免泄漏
+                if (lutTextureId != 0) {
+                    GLES30.glDeleteTextures(1, intArrayOf(lutTextureId), 0)
+                    lutTextureId = 0
+                }
+
+                // 编码为 2D 纹理 Bitmap（RGBA8，兼容性最佳）
+                val bitmap = LUT3DParser.encodeToBitmap(lutData.data, lutData.size)
+
+                val textures = IntArray(1)
+                GLES30.glGenTextures(1, textures, 0)
+                if (textures[0] == 0) {
+                    Log.e(TAG, "glGenTextures 失败 for LUT")
+                    bitmap.recycle()
+                    return@runOnRenderThreadBlocking 0
+                }
+                lutTextureId = textures[0]
+
+                GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, lutTextureId)
+                GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+                GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+                GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+                GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+                GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+                GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+
+                bitmap.recycle()
+
+                val error = GLES30.glGetError()
+                if (error != GLES30.GL_NO_ERROR) {
+                    Log.e(TAG, "LUT 纹理上传 GL 错误: 0x${error.toString(16)}")
+                    GLES30.glDeleteTextures(1, intArrayOf(lutTextureId), 0)
+                    lutTextureId = 0
+                    return@runOnRenderThreadBlocking 0
+                }
+
+                Log.d(TAG, "LUT 纹理上传成功: id=$lutTextureId, size=${lutData.size}")
+                lutTextureId
+            } catch (e: Exception) {
+                Log.e(TAG, "上传 LUT 纹理失败", e)
+                0
+            }
+        }
+    }
+
+    /**
+     * 释放当前已上传的 3D LUT 纹理。
+     * 在渲染线程执行，确保 GL 资源正确释放。
+     */
+    suspend fun releaseLUT3DTexture() {
+        if (lutTextureId == 0) return
+        runOnRenderThreadBlocking {
+            if (lutTextureId != 0) {
+                GLES30.glDeleteTextures(1, intArrayOf(lutTextureId), 0)
+                lutTextureId = 0
+                Log.d(TAG, "LUT 纹理已释放")
+            }
+        }
+    }
+
+    /**
+     * 获取当前已上传的 LUT 纹理 ID（0 表示无）
+     */
+    fun getLUT3DTextureId(): Int = lutTextureId
     
     /**
      * 在渲染线程执行阻塞操作（使用suspendCancellableCoroutine替代runBlocking）
@@ -762,6 +861,12 @@ class GPURenderManager private constructor(private val context: Context) {
      */
     private fun cleanupEGLOnRenderThread() {
         try {
+            // 释放 LUT 纹理
+            if (lutTextureId != 0) {
+                GLES30.glDeleteTextures(1, intArrayOf(lutTextureId), 0)
+                lutTextureId = 0
+            }
+
             imageRenderer?.release()
             imageRenderer = null
 
@@ -802,6 +907,12 @@ class GPURenderManager private constructor(private val context: Context) {
     private fun cleanupEGLOnCurrentThread() {
         try {
             Log.w(TAG, "Cleaning up EGL resources on current thread (timeout fallback)")
+
+            // 释放 LUT 纹理
+            if (lutTextureId != 0) {
+                GLES30.glDeleteTextures(1, intArrayOf(lutTextureId), 0)
+                lutTextureId = 0
+            }
 
             imageRenderer?.release()
             imageRenderer = null
@@ -927,18 +1038,38 @@ class CPURenderer {
      * CPU渲染实现（异步）
      * 使用像素级处理实现基本效果
      * 修复：改为suspend函数，在后台线程执行
+     *
+     * 按照着色器（image_adjust.frag）的执行顺序组织处理流程：
+     * 1. 降噪（卷积）
+     * 2. 肤色平滑（卷积）
+     * 3. 逐像素基础/色彩/光影调整 + 清晰度 + 效果（去霾/褪色/颗粒）
+     * 4. 纹理增强（卷积）
+     * 5. 锐化（卷积）
      */
     suspend fun render(inputBitmap: Bitmap, params: RenderParameters): Bitmap? = withContext(Dispatchers.Default) {
         try {
-            // 大图片分块处理，避免单次处理时间过长
             val outputBitmap = inputBitmap.copy(Bitmap.Config.ARGB_8888, true)
             val width = outputBitmap.width
             val height = outputBitmap.height
+
+            // ========== 1. 降噪（卷积，最先执行） ==========
+            if (params.denoise > 0.01f) {
+                applyDenoisePass(outputBitmap, width, height, params.denoise / 100f)
+                yield()
+            }
+
+            // ========== 2. 肤色平滑（卷积） ==========
+            if (params.skinSmooth > 0.01f) {
+                applySkinSmoothPass(outputBitmap, width, height, params.skinSmooth / 100f)
+                yield()
+            }
+
+            // ========== 3. 逐像素操作 ==========
+            // 包含：曝光、亮度、对比度、饱和度、鲜艳度、色温、
+            //       高光、阴影、白色、黑色、清晰度、去霾、褪色、颗粒
             val totalPixels = width * height
-            
-            // 如果像素数超过阈值，使用分块处理
             val chunkSize = 500_000 // 每次处理50万像素
-            
+
             if (totalPixels > chunkSize) {
                 // 分块异步处理
                 renderInChunks(outputBitmap, width, height, params, chunkSize)
@@ -946,7 +1077,21 @@ class CPURenderer {
                 // 小图片直接处理
                 renderFullImage(outputBitmap, width, height, params)
             }
-            
+
+            // ========== 4. 纹理增强（卷积，读取当前工作图） ==========
+            if (params.texture != 0f) {
+                applyTexturePass(outputBitmap, width, height, params.texture / 100f)
+                yield()
+            }
+
+            // ========== 5. 锐化（卷积，读取当前工作图） ==========
+            if (params.sharpness > 0.01f) {
+                applySharpenPass(outputBitmap, width, height, params.sharpness / 100f)
+                yield()
+            }
+
+            outputBitmap
+
         } catch (e: Exception) {
             Log.e("CPURenderer", "CPU渲染失败", e)
             null
@@ -1029,64 +1174,421 @@ class CPURenderer {
     }
     
     /**
-     * 处理像素数组
+     * 处理像素数组（逐像素操作）
+     *
+     * 按照着色器（image_adjust.frag）的执行顺序实现以下参数：
+     * - 曝光、亮度、对比度（基础调整）
+     * - 饱和度、鲜艳度、色温（色彩调整）
+     * - 高光、阴影、白色、黑色（光影调整）
+     * - 清晰度（逐像素自适应对比度增强）
+     * - 去霾、褪色、颗粒（效果处理）
+     *
+     * 注：降噪、肤色平滑、纹理增强、锐化为卷积操作，在 [render] 中以独立 pass 执行。
      */
     private fun processPixels(pixels: IntArray, params: RenderParameters) {
+        // 归一化参数到 [-1, 1] 或 [0, 1]（与着色器 uniform 一致）
+        val exposure = params.exposure / 100f
+        val brightness = params.brightness / 100f
+        val contrast = params.contrast / 100f
+        val saturation = params.saturation / 100f
+        val vibrance = params.vibrance / 100f
+        val warmth = params.warmth / 100f
+        val highlights = params.highlights / 100f
+        val shadows = params.shadows / 100f
+        val whites = params.whites / 100f
+        val blacks = params.blacks / 100f
+        val clarity = params.clarity / 100f
+        val dehaze = params.dehaze / 100f
+        val fade = params.fade / 100f
+        val grain = params.grain / 100f
+
         for (i in pixels.indices) {
-            var pixel = pixels[i]
-            
-            // 解析RGBA
-            var r = (pixel shr 16) and 0xFF
-            var g = (pixel shr 8) and 0xFF
-            var b = pixel and 0xFF
-            
-            // 应用亮度
-            if (params.brightness != 0f) {
-                val brightnessOffset = params.brightness * 2.55f
-                r = (r + brightnessOffset).toInt().coerceIn(0, 255)
-                g = (g + brightnessOffset).toInt().coerceIn(0, 255)
-                b = (b + brightnessOffset).toInt().coerceIn(0, 255)
+            val pixel = pixels[i]
+            val a = (pixel ushr 24) and 0xFF
+            var r = ((pixel ushr 16) and 0xFF) / 255f
+            var g = ((pixel ushr 8) and 0xFF) / 255f
+            var b = (pixel and 0xFF) / 255f
+
+            // ========== 3. 基础调整 ==========
+
+            // 曝光: color * pow(2.0, uExposure)
+            if (abs(exposure) > 0.01f) {
+                val factor = 2.0.pow(exposure.toDouble()).toFloat()
+                r *= factor; g *= factor; b *= factor
             }
-            
-            // 应用对比度
-            if (params.contrast != 0f) {
-                val contrastFactor = 1f + params.contrast / 100f
-                r = ((r - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
-                g = ((g - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
-                b = ((b - 128) * contrastFactor + 128).toInt().coerceIn(0, 255)
+
+            // 亮度: color + uBrightness * 0.5
+            if (abs(brightness) > 0.01f) {
+                val offset = brightness * 0.5f
+                r += offset; g += offset; b += offset
             }
-            
-            // 应用饱和度
-            if (params.saturation != 0f) {
-                val gray = 0.299f * r + 0.587f * g + 0.114f * b
-                val saturationFactor = 1f + params.saturation / 100f
-                r = (gray + (r - gray) * saturationFactor).toInt().coerceIn(0, 255)
-                g = (gray + (g - gray) * saturationFactor).toInt().coerceIn(0, 255)
-                b = (gray + (b - gray) * saturationFactor).toInt().coerceIn(0, 255)
+
+            // 对比度: mid + (color - mid) * (1.0 + uContrast)
+            if (abs(contrast) > 0.01f) {
+                val factor = 1f + contrast
+                r = 0.5f + (r - 0.5f) * factor
+                g = 0.5f + (g - 0.5f) * factor
+                b = 0.5f + (b - 0.5f) * factor
             }
-            
-            // 应用色温
-            if (params.warmth != 0f) {
-                val warmthFactor = params.warmth / 100f
-                if (warmthFactor > 0) {
-                    r = (r + warmthFactor * 20).toInt().coerceIn(0, 255)
-                    b = (b - warmthFactor * 20).toInt().coerceIn(0, 255)
-                } else {
-                    r = (r + warmthFactor * 20).toInt().coerceIn(0, 255)
-                    b = (b - warmthFactor * 20).toInt().coerceIn(0, 255)
-                }
+
+            // ========== 4. 色彩调整 ==========
+
+            // 饱和度（HSL 空间）
+            if (abs(saturation) > 0.01f) {
+                val hsl = rgb2hsl(r, g, b)
+                hsl[1] = (hsl[1] + saturation).coerceIn(0f, 1f)
+                val rgb = hsl2rgb(hsl[0], hsl[1], hsl[2])
+                r = rgb[0]; g = rgb[1]; b = rgb[2]
             }
-            
-            // 应用曝光
-            if (params.exposure != 0f) {
-                val exposureFactor = 2.0.pow((params.exposure / 50f).toDouble()).toFloat()
-                r = (r * exposureFactor).toInt().coerceIn(0, 255)
-                g = (g * exposureFactor).toInt().coerceIn(0, 255)
-                b = (b * exposureFactor).toInt().coerceIn(0, 255)
+
+            // 鲜艳度：饱和度越低，调整越强（保护已饱和色）
+            if (abs(vibrance) > 0.01f) {
+                val hsl = rgb2hsl(r, g, b)
+                val vibranceAmount = (1f - hsl[1]) * vibrance
+                hsl[1] = (hsl[1] + vibranceAmount * 0.5f).coerceIn(0f, 1f)
+                val rgb = hsl2rgb(hsl[0], hsl[1], hsl[2])
+                r = rgb[0]; g = rgb[1]; b = rgb[2]
             }
-            
-            // 组合像素
-            pixels[i] = (pixel and 0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
+
+            // 色温: r += warmth * 0.1, b -= warmth * 0.1
+            if (abs(warmth) > 0.01f) {
+                r += warmth * 0.1f
+                b -= warmth * 0.1f
+            }
+
+            // ========== 5. 光影调整（基于亮度遮罩） ==========
+
+            // 高光：只调整高亮区域（亮度 > 0.5）
+            if (abs(highlights) > 0.01f) {
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                val mask = smoothstep(0.5f, 1.0f, lum)
+                val adjR = r * (1f + highlights * mask)
+                val adjG = g * (1f + highlights * mask)
+                val adjB = b * (1f + highlights * mask)
+                r = mix(r, adjR, mask); g = mix(g, adjG, mask); b = mix(b, adjB, mask)
+            }
+
+            // 阴影：只调整暗部区域（亮度 < 0.5）
+            if (abs(shadows) > 0.01f) {
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                val mask = smoothstep(0.5f, 0.0f, lum)
+                val adjR = r + shadows * mask * 0.3f
+                val adjG = g + shadows * mask * 0.3f
+                val adjB = b + shadows * mask * 0.3f
+                r = mix(r, adjR, mask); g = mix(g, adjG, mask); b = mix(b, adjB, mask)
+            }
+
+            // 白色色阶：调整最亮区域（亮度 > 0.7）
+            if (abs(whites) > 0.01f) {
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                val mask = smoothstep(0.7f, 1.0f, lum)
+                val adjR = 1f - (1f - r) * (1f - whites * mask)
+                val adjG = 1f - (1f - g) * (1f - whites * mask)
+                val adjB = 1f - (1f - b) * (1f - whites * mask)
+                r = mix(r, adjR, mask); g = mix(g, adjG, mask); b = mix(b, adjB, mask)
+            }
+
+            // 黑色色阶：调整最暗区域（亮度 < 0.3）
+            if (abs(blacks) > 0.01f) {
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                val mask = smoothstep(0.3f, 0.0f, lum)
+                val adjR = r * (1f + blacks * mask)
+                val adjG = g * (1f + blacks * mask)
+                val adjB = b * (1f + blacks * mask)
+                r = mix(r, adjR, mask); g = mix(g, adjG, mask); b = mix(b, adjB, mask)
+            }
+
+            // ========== 6. 清晰度增强（逐像素，基于亮度自适应对比度） ==========
+            if (clarity > 0.01f) {
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                val adaptiveStrength = clarity * (1f - abs(lum - 0.5f) * 0.5f)
+                val newR = 0.5f + (r - 0.5f) * (1f + adaptiveStrength * 2f)
+                val newG = 0.5f + (g - 0.5f) * (1f + adaptiveStrength * 2f)
+                val newB = 0.5f + (b - 0.5f) * (1f + adaptiveStrength * 2f)
+                r = mix(r, newR, clarity); g = mix(g, newG, clarity); b = mix(b, newB, clarity)
+            }
+
+            // ========== 7. 效果处理 ==========
+
+            // 去霾：基于雾度增加对比度和饱和度
+            if (dehaze > 0.01f) {
+                val hsl = rgb2hsl(r, g, b)
+                val fogLevel = hsl[2] * (1f - hsl[1])
+                val ds = dehaze * fogLevel
+                r = 0.5f + (r - 0.5f) * (1f + ds)
+                g = 0.5f + (g - 0.5f) * (1f + ds)
+                b = 0.5f + (b - 0.5f) * (1f + ds)
+                val hsl2 = rgb2hsl(r, g, b)
+                hsl2[1] = (hsl2[1] + ds * 0.5f).coerceIn(0f, 1f)
+                val rgb = hsl2rgb(hsl2[0], hsl2[1], hsl2[2])
+                r = rgb[0]; g = rgb[1]; b = rgb[2]
+            }
+
+            // 褪色：降低对比度 + 提亮暗部 + 降低饱和度
+            if (fade > 0.01f) {
+                r = 0.5f + (r - 0.5f) * (1f - fade * 0.3f)
+                g = 0.5f + (g - 0.5f) * (1f - fade * 0.3f)
+                b = 0.5f + (b - 0.5f) * (1f - fade * 0.3f)
+                r = mix(r, r + 0.1f * fade, fade)
+                g = mix(g, g + 0.1f * fade, fade)
+                b = mix(b, b + 0.1f * fade, fade)
+                val hsl = rgb2hsl(r, g, b)
+                hsl[1] = hsl[1] * (1f - fade * 0.2f)
+                val rgb = hsl2rgb(hsl[0], hsl[1], hsl[2])
+                r = rgb[0]; g = rgb[1]; b = rgb[2]
+            }
+
+            // 胶片颗粒：添加伪随机噪声（暗部颗粒更多）
+            if (grain > 0.01f) {
+                val noiseRaw = abs((sin(i * 12.9898 + 78.233) * 43758.5453) % 1.0)
+                val noise = noiseRaw.toFloat() * 2f - 1f
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                val gs = grain * (1f + (1f - lum) * 0.5f)
+                r += noise * gs * 0.15f
+                g += noise * gs * 0.15f
+                b += noise * gs * 0.15f
+            }
+
+            // 钳制并写回
+            pixels[i] = (a shl 24) or
+                    ((r.coerceIn(0f, 1f) * 255f).toInt() shl 16) or
+                    ((g.coerceIn(0f, 1f) * 255f).toInt() shl 8) or
+                    (b.coerceIn(0f, 1f) * 255f).toInt()
         }
     }
+
+    // ==================== 卷积 pass（降噪 / 肤色平滑 / 纹理 / 锐化） ====================
+
+    /**
+     * 降噪 pass：盒式模糊后按强度混合回工作图
+     */
+    private fun applyDenoisePass(bitmap: Bitmap, width: Int, height: Int, strength: Float) {
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val blurred = boxBlurPixels(pixels, width, height, 2)
+
+        for (i in pixels.indices) {
+            val p = pixels[i]
+            val bp = blurred[i]
+            val r = mix(((p ushr 16) and 0xFF) / 255f, ((bp ushr 16) and 0xFF) / 255f, strength).coerceIn(0f, 1f)
+            val g = mix(((p ushr 8) and 0xFF) / 255f, ((bp ushr 8) and 0xFF) / 255f, strength).coerceIn(0f, 1f)
+            val b = mix((p and 0xFF) / 255f, (bp and 0xFF) / 255f, strength).coerceIn(0f, 1f)
+            val a = (p ushr 24) and 0xFF
+            pixels[i] = (a shl 24) or ((r * 255f).toInt() shl 16) or ((g * 255f).toInt() shl 8) or (b * 255f).toInt()
+        }
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+    }
+
+    /**
+     * 肤色平滑 pass：对肤色区域进行模糊并混合
+     */
+    private fun applySkinSmoothPass(bitmap: Bitmap, width: Int, height: Int, strength: Float) {
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val blurred = boxBlurPixels(pixels, width, height, 3)
+
+        for (i in pixels.indices) {
+            val p = pixels[i]
+            val r = ((p ushr 16) and 0xFF) / 255f
+            val g = ((p ushr 8) and 0xFF) / 255f
+            val b = (p and 0xFF) / 255f
+
+            if (isSkinColor(r, g, b)) {
+                val bp = blurred[i]
+                val br = ((bp ushr 16) and 0xFF) / 255f
+                val bg = ((bp ushr 8) and 0xFF) / 255f
+                val bb = (bp and 0xFF) / 255f
+                val t = strength * 0.5f
+                val nr = mix(r, br, t).coerceIn(0f, 1f)
+                val ng = mix(g, bg, t).coerceIn(0f, 1f)
+                val nb = mix(b, bb, t).coerceIn(0f, 1f)
+                val a = (p ushr 24) and 0xFF
+                pixels[i] = (a shl 24) or ((nr * 255f).toInt() shl 16) or ((ng * 255f).toInt() shl 8) or (nb * 255f).toInt()
+            }
+        }
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+    }
+
+    /**
+     * 纹理增强 pass：高通滤波提取细节并叠加（strength 可为负值以平滑）
+     */
+    private fun applyTexturePass(bitmap: Bitmap, width: Int, height: Int, strength: Float) {
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val output = pixels.copyOf()
+
+        // 3x3 高斯加权核
+        val weights = floatArrayOf(
+            0.0625f, 0.125f, 0.0625f,
+            0.125f, 0.25f, 0.125f,
+            0.0625f, 0.125f, 0.0625f
+        )
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val i = y * width + x
+                val center = pixels[i]
+                val cr = ((center ushr 16) and 0xFF) / 255f
+                val cg = ((center ushr 8) and 0xFF) / 255f
+                val cb = (center and 0xFF) / 255f
+
+                var sr = 0f; var sg = 0f; var sb = 0f
+                var wi = 0
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        val nx = (x + dx).coerceIn(0, width - 1)
+                        val ny = (y + dy).coerceIn(0, height - 1)
+                        val np = pixels[ny * width + nx]
+                        val w = weights[wi++]
+                        sr += ((np ushr 16) and 0xFF) / 255f * w
+                        sg += ((np ushr 8) and 0xFF) / 255f * w
+                        sb += (np and 0xFF) / 255f * w
+                    }
+                }
+
+                // 高频细节 = 中心 - 模糊
+                val nr = (cr + (cr - sr) * strength * 2f).coerceIn(0f, 1f)
+                val ng = (cg + (cg - sg) * strength * 2f).coerceIn(0f, 1f)
+                val nb = (cb + (cb - sb) * strength * 2f).coerceIn(0f, 1f)
+                val a = (center ushr 24) and 0xFF
+                output[i] = (a shl 24) or ((nr * 255f).toInt() shl 16) or ((ng * 255f).toInt() shl 8) or (nb * 255f).toInt()
+            }
+        }
+        bitmap.setPixels(output, 0, width, 0, 0, width, height)
+    }
+
+    /**
+     * 锐化 pass：Laplacian 锐化（与着色器 sharpen 一致：center + s * (center*8 - neighbors)）
+     */
+    private fun applySharpenPass(bitmap: Bitmap, width: Int, height: Int, strength: Float) {
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val output = pixels.copyOf()
+        val s = strength * 0.5f // 与着色器一致: uSharpness * 0.5
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val i = y * width + x
+                val center = pixels[i]
+                val cr = ((center ushr 16) and 0xFF) / 255f
+                val cg = ((center ushr 8) and 0xFF) / 255f
+                val cb = (center and 0xFF) / 255f
+
+                var sr = 0f; var sg = 0f; var sb = 0f
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val nx = (x + dx).coerceIn(0, width - 1)
+                        val ny = (y + dy).coerceIn(0, height - 1)
+                        val np = pixels[ny * width + nx]
+                        sr += ((np ushr 16) and 0xFF) / 255f
+                        sg += ((np ushr 8) and 0xFF) / 255f
+                        sb += (np and 0xFF) / 255f
+                    }
+                }
+
+                val nr = (cr + s * (cr * 8f - sr)).coerceIn(0f, 1f)
+                val ng = (cg + s * (cg * 8f - sg)).coerceIn(0f, 1f)
+                val nb = (cb + s * (cb * 8f - sb)).coerceIn(0f, 1f)
+                val a = (center ushr 24) and 0xFF
+                output[i] = (a shl 24) or ((nr * 255f).toInt() shl 16) or ((ng * 255f).toInt() shl 8) or (nb * 255f).toInt()
+            }
+        }
+        bitmap.setPixels(output, 0, width, 0, 0, width, height)
+    }
+
+    // ==================== 辅助函数 ====================
+
+    /**
+     * 盒式模糊（朴素实现，用于降噪/肤色平滑）
+     */
+    private fun boxBlurPixels(pixels: IntArray, width: Int, height: Int, radius: Int): IntArray {
+        val output = IntArray(width * height)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                var sr = 0; var sg = 0; var sb = 0; var sa = 0; var count = 0
+                for (dy in -radius..radius) {
+                    for (dx in -radius..radius) {
+                        val nx = (x + dx).coerceIn(0, width - 1)
+                        val ny = (y + dy).coerceIn(0, height - 1)
+                        val np = pixels[ny * width + nx]
+                        sr += (np ushr 16) and 0xFF
+                        sg += (np ushr 8) and 0xFF
+                        sb += np and 0xFF
+                        sa += (np ushr 24) and 0xFF
+                        count++
+                    }
+                }
+                output[y * width + x] = ((sa / count) shl 24) or
+                        ((sr / count) shl 16) or
+                        ((sg / count) shl 8) or
+                        (sb / count)
+            }
+        }
+        return output
+    }
+
+    /**
+     * 简化肤色检测（基于 RGB 范围，避免 LAB 转换开销）
+     */
+    private fun isSkinColor(r: Float, g: Float, b: Float): Boolean {
+        val maxC = maxOf(r, g, b)
+        val minC = minOf(r, g, b)
+        val lum = 0.299f * r + 0.587f * g + 0.114f * b
+        return lum > 0.2f && lum < 0.95f &&
+                r > 0.25f && r > g && g > b &&
+                (maxC - minC) > 0.05f
+    }
+
+    /** RGB→HSL（与着色器 rgb2hsl 一致），返回 [h, s, l] 均在 [0, 1] */
+    private fun rgb2hsl(r: Float, g: Float, b: Float): FloatArray {
+        val maxC = maxOf(r, g, b)
+        val minC = minOf(r, g, b)
+        val delta = maxC - minC
+        val l = (maxC + minC) / 2f
+        var h = 0f
+        var s = 0f
+        if (delta > 0.0001f) {
+            s = if (l < 0.5f) delta / (maxC + minC) else delta / (2f - maxC - minC)
+            h = when {
+                r >= maxC -> (g - b) / delta
+                g >= maxC -> 2f + (b - r) / delta
+                else -> 4f + (r - g) / delta
+            }
+            h /= 6f
+            if (h < 0f) h += 1f
+        }
+        return floatArrayOf(h, s, l)
+    }
+
+    /** HSL→RGB（与着色器 hsl2rgb 一致），返回 [r, g, b] 均在 [0, 1] */
+    private fun hsl2rgb(h: Float, s: Float, l: Float): FloatArray {
+        if (s < 0.0001f) return floatArrayOf(l, l, l)
+        val q = if (l < 0.5f) l * (1f + s) else l + s - l * s
+        val p = 2f * l - q
+        return floatArrayOf(
+            hue2rgb(p, q, h + 1f / 3f),
+            hue2rgb(p, q, h),
+            hue2rgb(p, q, h - 1f / 3f)
+        )
+    }
+
+    private fun hue2rgb(p: Float, q: Float, tIn: Float): Float {
+        var t = tIn
+        if (t < 0f) t += 1f
+        if (t > 1f) t -= 1f
+        if (t < 1f / 6f) return p + (q - p) * 6f * t
+        if (t < 1f / 2f) return q
+        if (t < 2f / 3f) return p + (q - p) * (2f / 3f - t) * 6f
+        return p
+    }
+
+    /** GLSL smoothstep */
+    private fun smoothstep(edge0: Float, edge1: Float, x: Float): Float {
+        val t = ((x - edge0) / (edge1 - edge0)).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
+    /** GLSL mix */
+    private fun mix(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 }

@@ -94,6 +94,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -106,6 +107,7 @@ import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -180,7 +182,7 @@ fun SmartOptimizeScreen(
                     previewMode = "before"
                     analysisResult = null
                     // 自动触发 AI 场景识别
-                    analyzeImage(loadedBitmap, inferenceEngine) { result ->
+                    analyzeImage(loadedBitmap, inferenceEngine, scope) { result ->
                         analysisResult = result
                         // 根据场景自动推荐优化项
                         applyAutoRecommendations(result) { hdr, denoise, sharpen, exposure, color,
@@ -929,9 +931,10 @@ private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int,
 private fun analyzeImage(
     bitmap: Bitmap,
     engine: MasterInferenceEngine,
+    scope: CoroutineScope,
     onResult: (SceneProfile) -> Unit
 ) {
-    kotlinx.coroutines.GlobalScope.launch(Dispatchers.Default) {
+    scope.launch(Dispatchers.Default) {
         try {
             val result = engine.analyzeImage(bitmap)
             withContext(Dispatchers.Main) { onResult(result) }
@@ -1025,6 +1028,7 @@ private fun BeforeAfterCompareView(
     modifier: Modifier = Modifier
 ) {
     var dividerOffset by remember { mutableFloatStateOf(0.5f) }
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
 
     Box(modifier = modifier) {
         // 优化后（底层）
@@ -1062,7 +1066,7 @@ private fun BeforeAfterCompareView(
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .offset(x = (dividerOffset * 300).dp) // 近似偏移
+                    .offset(x = (dividerOffset * screenWidthDp).dp)
                     .width(2.dp)
                     .fillMaxHeight()
                     .background(Color.White)
