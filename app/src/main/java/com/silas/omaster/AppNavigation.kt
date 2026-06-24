@@ -6,6 +6,11 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.os.Build
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -329,8 +334,29 @@ fun MainApp(navController: NavHostController) {
                 WatermarkEditorScreen(
                     imagePath = route.imagePath,
                     onBack = { navController.popBackStack() },
-                    onSave = { navController.popBackStack() },
-                    onExport = { _, _ -> navController.popBackStack() }
+                    onSave = { config ->
+                        // 保存水印配置到本地，供批量应用使用
+                        try {
+                            val prefs = context.getSharedPreferences("watermark_config", 0)
+                            prefs.edit().apply {
+                                putString("last_config", config.toString())
+                                putLong("last_save_time", System.currentTimeMillis())
+                                apply()
+                            }
+                            Toast.makeText(context, "水印配置已保存，可批量应用", Toast.LENGTH_SHORT).show()
+                        } catch (_: Exception) {}
+                        navController.popBackStack()
+                    },
+                    onExport = { bitmap, _ ->
+                        // 保存水印图片到相册
+                        val saved = saveWatermarkToGallery(context, bitmap)
+                        if (saved) {
+                            Toast.makeText(context, "水印图片已保存到相册（PNG无损）", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "保存失败，请检查权限", Toast.LENGTH_SHORT).show()
+                        }
+                        navController.popBackStack()
+                    }
                 )
             }
 
@@ -634,5 +660,33 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.computeSlideDirect
         }
         forward -> AnimatedContentTransitionScope.SlideDirection.Left
         else -> AnimatedContentTransitionScope.SlideDirection.Right
+    }
+}
+
+private fun saveWatermarkToGallery(context: android.content.Context, bitmap: Bitmap): Boolean {
+    return try {
+        val filename = "OMaster_Watermark_${System.currentTimeMillis()}.png"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/OMaster")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        if (uri != null) {
+            context.contentResolver.openOutputStream(uri)?.use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                contentValues.clear()
+                contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                context.contentResolver.update(uri, contentValues, null, null)
+            }
+            true
+        } else false
+    } catch (e: Exception) {
+        false
     }
 }

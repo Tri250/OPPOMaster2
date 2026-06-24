@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -92,8 +93,50 @@ val WATERMARK_TEMPLATES = listOf(
         name = "哈苏大师",
         category = WatermarkCategory.BRAND,
         brandText = "HASSELBLAD",
-        defaultPosition = WatermarkPlacement.BOTTOM_CENTER,
+        showModel = true,
+        showParams = true,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT,
+        defaultFontSize = 12f,
+        defaultLetterSpacing = 3f,
+        isBold = true
+    ),
+    WatermarkTemplate(
+        id = "hasselblad_classic",
+        name = "哈苏经典",
+        category = WatermarkCategory.BRAND,
+        brandText = "HASSELBLAD",
+        showModel = true,
+        showParams = true,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT,
+        defaultFontSize = 11f,
         defaultLetterSpacing = 2f,
+        isBold = false
+    ),
+    WatermarkTemplate(
+        id = "oppo_findx9",
+        name = "Find X9 Pro",
+        category = WatermarkCategory.BRAND,
+        brandText = "OPPO Find X9 Pro",
+        showModel = false,
+        showParams = true,
+        showDate = true,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT,
+        defaultFontSize = 13f,
+        defaultLetterSpacing = 1.5f,
+        isBold = true
+    ),
+    WatermarkTemplate(
+        id = "hasselblad_x9",
+        name = "哈苏×Find X9",
+        category = WatermarkCategory.PRO,
+        brandText = "HASSELBLAD",
+        showModel = true,
+        showParams = true,
+        showDate = true,
+        showLocation = false,
+        defaultPosition = WatermarkPlacement.BOTTOM_LEFT,
+        defaultFontSize = 11f,
+        defaultLetterSpacing = 2.5f,
         isBold = true
     ),
     WatermarkTemplate(
@@ -266,9 +309,11 @@ fun WatermarkEditorScreen(
 
     // 元素文本
     var brandText by remember { mutableStateOf("OMaster") }
-    var modelText by remember { mutableStateOf("OPPO Find X8 Pro") }
-    var paramsText by remember { mutableStateOf("f/1.8 1/125 ISO100") }
+    var modelText by remember { mutableStateOf("OPPO Find X9 Pro") }
+    var paramsText by remember { mutableStateOf("f/1.8 · 1/125s · ISO 100") }
     var dateText by remember { mutableStateOf("2026-06-09") }
+    var locationText by remember { mutableStateOf("北京市朝阳区") }
+    var photographerText by remember { mutableStateOf("摄影师") }
 
     // 智能颜色推荐
     val defaultRecommendedColor = MaterialTheme.colorScheme.onBackground
@@ -298,6 +343,21 @@ fun WatermarkEditorScreen(
                                 ?.substring(0, 10)
                                 ?.replace(':', '-')
                             if (!date.isNullOrBlank()) dateText = date
+
+                            // 尝试读取GPS位置
+                            try {
+                                val lat = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE)
+                                val latRef = exif.getAttribute(ExifInterface.TAG_GPS_LATITUDE_REF)
+                                val lon = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE)
+                                val lonRef = exif.getAttribute(ExifInterface.TAG_GPS_LONGITUDE_REF)
+                                if (lat != null && lon != null) {
+                                    val latVal = convertGpsToDecimal(lat, latRef ?: "N")
+                                    val lonVal = convertGpsToDecimal(lon, lonRef ?: "E")
+                                    locationText = String.format("%.4f°%s, %.4f°%s",
+                                        Math.abs(latVal), if (latVal >= 0) "N" else "S",
+                                        Math.abs(lonVal), if (lonVal >= 0) "E" else "W")
+                                }
+                            } catch (_: Exception) {}
                         }
                     } catch (e: Exception) {
                         Log.w("WatermarkEditor", "EXIF read failed", e)
@@ -332,10 +392,6 @@ fun WatermarkEditorScreen(
     var showLocation by remember { mutableStateOf(false) }
     var showPhotographer by remember { mutableStateOf(false) }
     var showVignette by remember { mutableStateOf(false) }
-
-    // 元素文本（续）
-    var locationText by remember { mutableStateOf("北京市朝阳区") }
-    var photographerText by remember { mutableStateOf("摄影师") }
 
     // 样式参数
     var selectedPosition by remember { mutableStateOf(WatermarkPlacement.BOTTOM_LEFT) }
@@ -425,7 +481,8 @@ fun WatermarkEditorScreen(
                     fontWeight = fontWeight,
                     bgOpacity = bgOpacity,
                     offset = watermarkOffset,
-                    scale = watermarkScale
+                    scale = watermarkScale,
+                    fontOption = selectedFont
                 )
             )
         }
@@ -795,7 +852,8 @@ fun WatermarkEditorScreen(
                 OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        // 批量应用功能
+                        Toast.makeText(context, "批量应用：当前水印配置已保存", Toast.LENGTH_SHORT).show()
+                        onSave(watermarkConfig)
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -1800,10 +1858,24 @@ private fun extractExifData(imagePath: String): ExifData {
 }
 
 private fun buildParamsString(exif: ExifInterface): String {
-    val fNumber = exif.getAttribute(ExifInterface.TAG_F_NUMBER) ?: "f/1.8"
-    val exposure = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME) ?: "1/125"
-    val iso = exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS) ?: "100"
-    return "$fNumber $exposure ISO$iso"
+    val fNumber = exif.getAttribute(ExifInterface.TAG_F_NUMBER)
+    val exposure = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)
+    val iso = exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS)
+    val parts = mutableListOf<String>()
+    if (fNumber != null) parts.add("f/$fNumber")
+    if (exposure != null) parts.add("${exposure}s")
+    if (iso != null) parts.add("ISO $iso")
+    return if (parts.isNotEmpty()) parts.joinToString(" · ") else "f/1.8 · 1/125s · ISO 100"
+}
+
+private fun convertGpsToDecimal(gpsString: String, ref: String): Double {
+    val parts = gpsString.split(",")
+    if (parts.size < 3) return 0.0
+    val degrees = parts[0].trim().toDoubleOrNull() ?: 0.0
+    val minutes = parts[1].trim().toDoubleOrNull() ?: 0.0
+    val seconds = parts[2].trim().toDoubleOrNull() ?: 0.0
+    val decimal = degrees + minutes / 60.0 + seconds / 3600.0
+    return if (ref == "S" || ref == "W") -decimal else decimal
 }
 
 private fun analyzeDominantColor(bitmap: Bitmap): Color {
@@ -1830,15 +1902,31 @@ private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bit
     if (!config.enabled) return result
 
     val canvas = Canvas(result)
+
+    // 根据字体选项和粗细映射到 Android Typeface
+    val selectedFont = config.fontOption
+    val typeface = when (config.fontWeight >= FontWeight.Bold) {
+        true -> when (selectedFont) {
+            FontOption.SERIF, FontOption.ELEGANT -> android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+            FontOption.MONOSPACE -> android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+            FontOption.SANS_SERIF -> android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+            FontOption.CURSIVE -> android.graphics.Typeface.DEFAULT_BOLD
+            else -> android.graphics.Typeface.DEFAULT_BOLD
+        }
+        false -> when (selectedFont) {
+            FontOption.SERIF, FontOption.ELEGANT -> android.graphics.Typeface.SERIF
+            FontOption.MONOSPACE -> android.graphics.Typeface.MONOSPACE
+            FontOption.SANS_SERIF -> android.graphics.Typeface.SANS_SERIF
+            FontOption.CURSIVE -> android.graphics.Typeface.DEFAULT // Android has no built-in cursive
+            else -> android.graphics.Typeface.DEFAULT
+        }
+    }
+
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = config.textSize * result.width / 400f
         color = config.textColor.copy(alpha = config.opacity).toArgb()
         letterSpacing = config.letterSpacing
-        typeface = if (config.fontWeight >= FontWeight.Bold) {
-            android.graphics.Typeface.DEFAULT_BOLD
-        } else {
-            android.graphics.Typeface.DEFAULT
-        }
+        this.typeface = typeface
     }
 
     val shadowPaint = if (config.shadowEnabled) Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1846,42 +1934,51 @@ private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bit
         color = android.graphics.Color.argb(((config.opacity * 0.5f * 255).coerceIn(0f, 255f)).toInt(), 0, 0, 0)
         letterSpacing = config.letterSpacing
         maskFilter = BlurMaskFilter(config.shadowBlur * result.width / 400f, BlurMaskFilter.Blur.NORMAL)
-        typeface = if (config.fontWeight >= FontWeight.Bold) {
-            android.graphics.Typeface.DEFAULT_BOLD
-        } else {
-            android.graphics.Typeface.DEFAULT
-        }
+        this.typeface = typeface
     } else null
 
-    // 构建水印文字行
-    val lines = mutableListOf<String>()
-    if (config.showBrand && config.brandText.isNotBlank()) lines.add(config.brandText)
-    if (config.showModel && config.modelText.isNotBlank()) lines.add(config.modelText)
-    if (config.showParams && config.paramsText.isNotBlank()) lines.add(config.paramsText)
-    if (config.showDate && config.dateText.isNotBlank()) lines.add(config.dateText)
-    if (config.showLocation && config.locationText.isNotBlank()) lines.add("📍 ${config.locationText}")
-    if (config.showPhotographer && config.photographerText.isNotBlank()) lines.add("📸 ${config.photographerText}")
+    // 构建水印文字行（支持层级字号：品牌行大字，其余行小字）
+    data class WatermarkLine(val text: String, val isBrand: Boolean = false)
+    val lines = mutableListOf<WatermarkLine>()
+    if (config.showBrand && config.brandText.isNotBlank()) lines.add(WatermarkLine(config.brandText, isBrand = true))
+    if (config.showModel && config.modelText.isNotBlank()) lines.add(WatermarkLine(config.modelText))
+    if (config.showParams && config.paramsText.isNotBlank()) lines.add(WatermarkLine(config.paramsText))
+    if (config.showDate && config.dateText.isNotBlank()) lines.add(WatermarkLine(config.dateText))
+    if (config.showLocation && config.locationText.isNotBlank()) lines.add(WatermarkLine("📍 ${config.locationText}"))
+    if (config.showPhotographer && config.photographerText.isNotBlank()) lines.add(WatermarkLine("📸 ${config.photographerText}"))
 
     if (lines.isEmpty()) return result
 
-    val paddingPx = config.padding * result.width / 400f
-    val lineHeight = paint.textSize * 1.4f
+    // 品牌行字号为普通行的1.5倍，模拟哈苏经典排版
+    val brandTextSize = config.textSize * result.width / 400f * 1.5f
+    val normalTextSize = config.textSize * result.width / 400f
+    val brandLineHeight = brandTextSize * 1.4f
+    val normalLineHeight = normalTextSize * 1.4f
 
-    // 计算起始位置
-    val totalHeight = lineHeight * lines.size
+    // 计算总高度
+    val totalHeight = lines.fold(0f) { acc, line -> acc + if (line.isBrand) brandLineHeight else normalLineHeight }
+    val paddingPx = config.padding * result.width / 400f
+
     val startY = when (config.position) {
         WatermarkPlacement.TOP_LEFT, WatermarkPlacement.TOP_CENTER, WatermarkPlacement.TOP_RIGHT ->
-            paddingPx + lineHeight
+            paddingPx + brandLineHeight
         WatermarkPlacement.CENTER ->
-            (result.height - totalHeight) / 2f + lineHeight
+            (result.height - totalHeight) / 2f + brandLineHeight
         else ->
-            result.height - paddingPx - totalHeight + lineHeight
+            result.height - paddingPx - totalHeight + brandLineHeight
     }
+
+    // 计算最大文本宽度用于定位
+    val brandPaint = Paint(paint).apply { textSize = brandTextSize }
+    val maxTextWidth = lines.maxOfOrNull { line ->
+        val linePaint = if (line.isBrand) brandPaint else paint
+        linePaint.measureText(line.text)
+    } ?: 0f
 
     val startX = when (config.position) {
         WatermarkPlacement.TOP_LEFT, WatermarkPlacement.BOTTOM_LEFT -> paddingPx
         WatermarkPlacement.TOP_CENTER, WatermarkPlacement.CENTER, WatermarkPlacement.BOTTOM_CENTER ->
-            (result.width - paint.measureText(lines.maxByOrNull { it.length } ?: "")) / 2f
+            (result.width - maxTextWidth) / 2f
         else -> result.width - paddingPx
     }
 
@@ -1906,23 +2003,41 @@ private fun renderWatermarkPreview(bitmap: Bitmap, config: WatermarkConfig): Bit
         }
         val bgRect = android.graphics.RectF(
             startX - paddingPx / 2,
-            startY - lineHeight,
-            startX + paint.measureText(lines.maxByOrNull { it.length } ?: "") + paddingPx / 2,
-            startY + (lines.size - 1) * lineHeight + paddingPx / 2
+            startY - brandLineHeight,
+            startX + maxTextWidth + paddingPx / 2,
+            startY + totalHeight - brandLineHeight + paddingPx / 2
         )
         canvas.drawRoundRect(bgRect, 8f, 8f, bgPaint)
     }
 
-    // 绘制文字
+    // 旋转支持
+    val centerX = startX + maxTextWidth / 2f
+    val centerY = startY - brandLineHeight / 2f + (totalHeight - brandLineHeight) / 2f
+
+    if (config.rotation != 0f) {
+        canvas.save()
+        canvas.rotate(config.rotation, centerX, centerY)
+    }
+
+    // 绘制文字（品牌行使用大字号，其余使用普通字号）
+    var currentY = startY
     lines.forEachIndexed { index, line ->
-        val y = startY + index * lineHeight
+        val linePaint = if (line.isBrand) Paint(paint).apply { textSize = brandTextSize } else paint
+        val lineShadowPaint = if (line.isBrand && shadowPaint != null) Paint(shadowPaint).apply { textSize = brandTextSize } else shadowPaint
+        val lineLineHeight = if (line.isBrand) brandLineHeight else normalLineHeight
+
         val x = when (config.position) {
             WatermarkPlacement.TOP_RIGHT, WatermarkPlacement.BOTTOM_RIGHT ->
-                result.width - paddingPx - paint.measureText(line)
+                result.width - paddingPx - linePaint.measureText(line.text)
             else -> startX
         }
-        shadowPaint?.let { canvas.drawText(line, x + 1f, y + 1f, it) }
-        canvas.drawText(line, x, y, paint)
+        lineShadowPaint?.let { canvas.drawText(line.text, x + 1f, currentY + 1f, it) }
+        canvas.drawText(line.text, x, currentY, linePaint)
+        currentY += lineLineHeight
+    }
+
+    if (config.rotation != 0f) {
+        canvas.restore()
     }
 
     return result
@@ -1958,7 +2073,8 @@ data class WatermarkConfig(
     val bgOpacity: Float = 0f,
     val vignetteStrength: Float = 0.5f,
     val offset: Offset = Offset.Zero,
-    val scale: Float = 1f
+    val scale: Float = 1f,
+    val fontOption: FontOption = FontOption.DEFAULT
 )
 
 data class ExifData(
@@ -1974,7 +2090,7 @@ enum class WatermarkPlacement {
 }
 
 /**
- * Canvas绘制水印文本
+ * Canvas绘制水印文本（与renderWatermarkPreview保持一致的渲染逻辑）
  */
 private fun DrawScope.drawWatermarkText(
     config: WatermarkConfig,
@@ -1983,79 +2099,133 @@ private fun DrawScope.drawWatermarkText(
     scale: Float,
     offset: Offset
 ) {
-    val textPaint = androidx.compose.ui.graphics.Paint().asFrameworkPaint().apply {
-        color = config.textColor.toArgb()
-        textSize = config.textSize * scale
-        setShadowLayer(config.shadowBlur, 0f, 0f, NearBlack.toArgb())
+    // 字体映射（与renderWatermarkPreview一致）
+    val typeface = when (config.fontWeight >= FontWeight.Bold) {
+        true -> when (config.fontOption) {
+            FontOption.SERIF, FontOption.ELEGANT -> android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
+            FontOption.MONOSPACE -> android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+            FontOption.SANS_SERIF -> android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+            FontOption.CURSIVE -> android.graphics.Typeface.DEFAULT_BOLD
+            else -> android.graphics.Typeface.DEFAULT_BOLD
+        }
+        false -> when (config.fontOption) {
+            FontOption.SERIF, FontOption.ELEGANT -> android.graphics.Typeface.SERIF
+            FontOption.MONOSPACE -> android.graphics.Typeface.MONOSPACE
+            FontOption.SANS_SERIF -> android.graphics.Typeface.SANS_SERIF
+            FontOption.CURSIVE -> android.graphics.Typeface.DEFAULT
+            else -> android.graphics.Typeface.DEFAULT
+        }
     }
 
-    val paddingPx = config.padding.dp.toPx()
-    val watermarkX = when (config.position) {
-        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.CENTER, WatermarkPlacement.BOTTOM_LEFT -> 
-            imageRect.left + paddingPx + offset.x
-        WatermarkPlacement.TOP_CENTER, WatermarkPlacement.BOTTOM_CENTER -> 
-            imageRect.left + imageRect.width / 2 + offset.x
-        WatermarkPlacement.TOP_RIGHT, WatermarkPlacement.BOTTOM_RIGHT -> 
-            imageRect.right - paddingPx + offset.x
+    val baseTextSize = config.textSize * scale
+    val brandTextSize = baseTextSize * 1.5f
+    val normalLineHeight = baseTextSize * 1.4f
+    val brandLineHeight = brandTextSize * 1.4f
+
+    val normalPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        this.typeface = typeface
+        textSize = baseTextSize
+        color = config.textColor.copy(alpha = config.opacity).toArgb()
+        letterSpacing = config.letterSpacing
+        if (config.shadowEnabled) {
+            setShadowLayer(config.shadowBlur * scale, 0f, 0f, NearBlack.toArgb())
+        }
     }
 
-    val watermarkY = when (config.position) {
-        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.TOP_CENTER, WatermarkPlacement.TOP_RIGHT -> 
-            imageRect.top + paddingPx + offset.y
-        WatermarkPlacement.CENTER -> 
-            imageRect.top + imageRect.height / 2 + offset.y
-        WatermarkPlacement.BOTTOM_LEFT, WatermarkPlacement.BOTTOM_CENTER, WatermarkPlacement.BOTTOM_RIGHT -> 
-            imageRect.bottom - paddingPx + offset.y
+    val brandPaint = android.graphics.Paint(normalPaint).apply {
+        textSize = brandTextSize
     }
 
-    var currentY = watermarkY
+    val paddingPx = config.padding * scale
 
-    if (config.showBrand) {
-        drawContext.canvas.nativeCanvas.drawText(
-            config.brandText,
-            watermarkX,
-            currentY,
-            textPaint
+    // 构建水印行（与renderWatermarkPreview一致）
+    data class PreviewLine(val text: String, val isBrand: Boolean = false)
+    val lines = mutableListOf<PreviewLine>()
+    if (config.showBrand && config.brandText.isNotBlank()) lines.add(PreviewLine(config.brandText, isBrand = true))
+    if (config.showModel && config.modelText.isNotBlank()) lines.add(PreviewLine(config.modelText))
+    if (config.showParams && config.paramsText.isNotBlank()) lines.add(PreviewLine(config.paramsText))
+    if (config.showDate && config.dateText.isNotBlank()) lines.add(PreviewLine(config.dateText))
+    if (config.showLocation && config.locationText.isNotBlank()) lines.add(PreviewLine("📍 ${config.locationText}"))
+    if (config.showPhotographer && config.photographerText.isNotBlank()) lines.add(PreviewLine("📸 ${config.photographerText}"))
+
+    if (lines.isEmpty()) return
+
+    val totalHeight = lines.fold(0f) { acc, line -> acc + if (line.isBrand) brandLineHeight else normalLineHeight }
+    val maxTextWidth = lines.maxOfOrNull { line ->
+        val paint = if (line.isBrand) brandPaint else normalPaint
+        paint.measureText(line.text)
+    } ?: 0f
+
+    // 计算起始位置
+    val startX = when (config.position) {
+        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.BOTTOM_LEFT -> imageRect.left + paddingPx + offset.x
+        WatermarkPlacement.TOP_CENTER, WatermarkPlacement.CENTER, WatermarkPlacement.BOTTOM_CENTER -> imageRect.left + (imageRect.width - maxTextWidth) / 2 + offset.x
+        WatermarkPlacement.TOP_RIGHT, WatermarkPlacement.BOTTOM_RIGHT -> imageRect.right - paddingPx - maxTextWidth + offset.x
+    }
+
+    val startY = when (config.position) {
+        WatermarkPlacement.TOP_LEFT, WatermarkPlacement.TOP_CENTER, WatermarkPlacement.TOP_RIGHT -> imageRect.top + paddingPx + brandLineHeight + offset.y
+        WatermarkPlacement.CENTER -> imageRect.top + (imageRect.height - totalHeight) / 2 + brandLineHeight + offset.y
+        WatermarkPlacement.BOTTOM_LEFT, WatermarkPlacement.BOTTOM_CENTER, WatermarkPlacement.BOTTOM_RIGHT -> imageRect.bottom - paddingPx - totalHeight + brandLineHeight + offset.y
+    }
+
+    // 绘制暗角
+    if (config.showVignette && config.vignetteStrength > 0) {
+        val vignetteRadius = maxOf(imageRect.width, imageRect.height) * 0.5f
+        val vignettePaint = android.graphics.Paint().apply {
+            shader = android.graphics.RadialGradient(
+                imageRect.left + imageRect.width / 2, imageRect.top + imageRect.height / 2,
+                vignetteRadius,
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.argb((config.vignetteStrength * 180).toInt(), 0, 0, 0),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        }
+        drawContext.canvas.nativeCanvas.drawRect(
+            imageRect.left, imageRect.top, imageRect.right, imageRect.bottom, vignettePaint
         )
-        currentY += config.textSize * 1.5f * scale
     }
 
-    if (config.showModel) {
-        drawContext.canvas.nativeCanvas.drawText(
-            config.modelText,
-            watermarkX,
-            currentY,
-            textPaint
+    // 绘制背景
+    if (config.bgOpacity > 0) {
+        val bgPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.argb((config.bgOpacity * 255).toInt(), 0, 0, 0)
+        }
+        val bgRect = android.graphics.RectF(
+            startX - paddingPx / 2,
+            startY - brandLineHeight,
+            startX + maxTextWidth + paddingPx / 2,
+            startY + totalHeight - brandLineHeight + paddingPx / 2
         )
-        currentY += config.textSize * 1.5f * scale
+        drawContext.canvas.nativeCanvas.drawRoundRect(bgRect, 8f * scale, 8f * scale, bgPaint)
     }
 
-    if (config.showParams) {
-        drawContext.canvas.nativeCanvas.drawText(
-            config.paramsText,
-            watermarkX,
-            currentY,
-            textPaint
-        )
-        currentY += config.textSize * 1.5f * scale
+    // 旋转支持
+    val centerX = startX + maxTextWidth / 2f
+    val centerY = startY - brandLineHeight / 2f + (totalHeight - brandLineHeight) / 2f
+
+    if (config.rotation != 0f) {
+        drawContext.canvas.nativeCanvas.save()
+        drawContext.canvas.nativeCanvas.rotate(config.rotation, centerX, centerY)
     }
 
-    if (config.showDate) {
-        drawContext.canvas.nativeCanvas.drawText(
-            config.dateText,
-            watermarkX,
-            currentY,
-            textPaint
-        )
-        currentY += config.textSize * 1.5f * scale
+    // 绘制文字行
+    var currentY = startY
+    lines.forEach { line ->
+        val paint = if (line.isBrand) brandPaint else normalPaint
+        val lineHeight = if (line.isBrand) brandLineHeight else normalLineHeight
+
+        val x = when (config.position) {
+            WatermarkPlacement.TOP_RIGHT, WatermarkPlacement.BOTTOM_RIGHT -> imageRect.right - paddingPx - paint.measureText(line.text) + offset.x
+            WatermarkPlacement.TOP_CENTER, WatermarkPlacement.CENTER, WatermarkPlacement.BOTTOM_CENTER -> startX + (maxTextWidth - paint.measureText(line.text)) / 2f
+            else -> startX
+        }
+
+        drawContext.canvas.nativeCanvas.drawText(line.text, x, currentY, paint)
+        currentY += lineHeight
     }
 
-    if (config.showLocation) {
-        drawContext.canvas.nativeCanvas.drawText(
-            config.locationText,
-            watermarkX,
-            currentY,
-            textPaint
-        )
+    if (config.rotation != 0f) {
+        drawContext.canvas.nativeCanvas.restore()
     }
 }
