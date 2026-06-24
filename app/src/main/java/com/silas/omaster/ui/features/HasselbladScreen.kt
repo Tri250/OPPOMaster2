@@ -272,7 +272,7 @@ fun HasselbladScreen(
                             recentShots = (listOf(uri) + recentShots).take(3)
                         }
                         // startAnalysis 内部已用 viewModelScope.launch 启动协程，无需外层调度器
-                        viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                        viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes, context)
                     } else {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
@@ -295,7 +295,7 @@ fun HasselbladScreen(
                     withContext(Dispatchers.Main) {
                         recentShots = (listOf(it) + recentShots).take(3)
                     }
-                    viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                    viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes, context)
                 } else {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
@@ -446,7 +446,7 @@ fun HasselbladScreen(
                             loadBitmapFromUri(context, uri)
                         }
                         if (bitmap != null) {
-                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes, context)
                         } else {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()

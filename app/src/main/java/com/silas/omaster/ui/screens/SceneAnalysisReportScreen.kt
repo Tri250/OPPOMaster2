@@ -106,7 +106,8 @@ data class ShootingHabits(
 @Composable
 fun SceneAnalysisReportScreen(
     onBack: () -> Unit = {},
-    onViewDetails: () -> Unit = {}
+    onViewDetails: () -> Unit = {},
+    onNavigateToHasselblad: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val recipeHistoryManager = remember { RecipeHistoryManager.getInstance(context) }
@@ -297,6 +298,8 @@ fun SceneAnalysisReportScreen(
                 }
             }
         } else {
+            val hasData = habits?.totalPhotos?.let { it > 0 } ?: false
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -320,20 +323,25 @@ fun SceneAnalysisReportScreen(
                         TimeRangeChip("全部", "all", timeRange == "all") { timeRange = "all" }
                     }
 
-                    // 概览卡片
-                    habits?.let { OverviewCards(it) }
+                    if (!hasData) {
+                        // 空状态引导：提示用户先去哈苏之眼分析
+                        EmptyStateGuide(onNavigateToHasselblad)
+                    } else {
+                        // 概览卡片
+                        habits?.let { OverviewCards(it) }
 
-                    // 拍摄偏好
-                    habits?.let { ShootingPreferenceCard(it) }
+                        // 拍摄偏好
+                        habits?.let { ShootingPreferenceCard(it) }
 
-                    // 场景分布
-                    SceneDistributionCard(sceneStats)
+                        // 场景分布
+                        SceneDistributionCard(sceneStats)
 
-                    // 胶片风格使用排行
-                    FilmUsageCard(filmUsage)
+                        // 胶片风格使用排行
+                        FilmUsageCard(filmUsage)
 
-                    // 大师建议
-                    MasterTipsCard(masterTips)
+                        // 大师建议
+                        MasterTipsCard(masterTips)
+                    }
 
                     // 底部间距
                     Spacer(modifier = Modifier.height(80.dp))
@@ -348,18 +356,79 @@ fun SceneAnalysisReportScreen(
                         .padding(vertical = 12.dp)
                 ) {
                     Button(
-                        onClick = onViewDetails,
+                        onClick = if (hasData) onViewDetails else onNavigateToHasselblad,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                     ) {
-                        Icon(Icons.Default.Visibility, null, tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(
+                            if (hasData) Icons.Default.Visibility else Icons.Default.CameraAlt,
+                            null,
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("查看详细数据", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+                        Text(
+                            if (hasData) "查看详细数据" else "去哈苏之眼分析",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * 空状态引导组件
+ * 当没有配方历史数据时，引导用户前往哈苏之眼进行分析
+ */
+@Composable
+private fun EmptyStateGuide(onNavigateToHasselblad: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onNavigateToHasselblad() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.08f)),
+        border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.2f))
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.CameraAlt,
+                contentDescription = null,
+                tint = HasselbladOrange,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "还没有拍摄分析数据",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "使用「哈苏之眼」分析照片后，这里将展示你的拍摄习惯洞察、\n场景分布统计和大师个性化建议。",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            OutlinedButton(
+                onClick = onNavigateToHasselblad,
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, HasselbladOrange),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = HasselbladOrange)
+            ) {
+                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("打开哈苏之眼", fontWeight = FontWeight.Medium)
             }
         }
     }

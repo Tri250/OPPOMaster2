@@ -18,6 +18,9 @@ import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
+import com.silas.omaster.data.local.RecipeHistoryManager
+import com.silas.omaster.data.local.RecipeRecord
+import com.silas.omaster.model.FilmPreset
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
@@ -225,7 +228,8 @@ class HasselbladEyeViewModel : ViewModel() {
     fun startAnalysis(
         bitmap: Bitmap,
         inferenceEngine: MasterInferenceEngine,
-        colorModes: List<ColorMode>
+        colorModes: List<ColorMode>,
+        context: Context? = null
     ) {
         analysisJob?.cancel()
         analysisJob = viewModelScope.launch {
@@ -352,6 +356,9 @@ class HasselbladEyeViewModel : ViewModel() {
                     paramAdjustments = paramAdjustments
                 )
                 _stage.value = HasselbladEyeStage.RESULTS
+
+                // 写入配方历史，供大师洞察报告页读取
+                recordRecipeHistory(profile, films, context)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 Log.d(TAG, "Analysis cancelled")
                 _stage.value = HasselbladEyeStage.SETUP
@@ -369,6 +376,38 @@ class HasselbladEyeViewModel : ViewModel() {
     fun cancelAnalysis() {
         analysisJob?.cancel()
         analysisJob = null
+    }
+
+    /**
+     * 将分析结果写入配方历史，供大师洞察报告页读取。
+     * 每次分析完成时调用，不依赖用户是否保存图片。
+     */
+    private fun recordRecipeHistory(
+        profile: SceneProfile,
+        films: List<FilmPreset>,
+        context: Context?
+    ) {
+        if (context == null) {
+            Log.w(TAG, "Context 为空，跳过配方历史记录")
+            return
+        }
+        try {
+            val topFilm = films.firstOrNull()
+            val record = RecipeRecord(
+                id = java.util.UUID.randomUUID().toString(),
+                sceneId = profile.id,
+                sceneName = profile.name,
+                sceneCategory = profile.id.substringBefore("-", "UNKNOWN").uppercase(),
+                filmId = topFilm?.id,
+                filmName = topFilm?.name ?: "CC 经典负片",
+                timestamp = System.currentTimeMillis(),
+                confidence = profile.confidence
+            )
+            RecipeHistoryManager.getInstance(context).addRecipe(record)
+            Log.d(TAG, "配方历史已记录: scene=${profile.name}, film=${record.filmName}")
+        } catch (e: Exception) {
+            Log.e(TAG, "写入配方历史失败", e)
+        }
     }
 
     /**

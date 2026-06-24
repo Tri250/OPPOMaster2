@@ -482,7 +482,14 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.SceneAnalysisReport> {
                 SceneAnalysisReportScreen(
                     onBack = { navController.popBackStack() },
-                    onViewDetails = { /* 可选：跳转详情页 */ }
+                    onViewDetails = {
+                        // 查看详细数据：滚动到场景分布区域（当前页面内）
+                    },
+                    onNavigateToHasselblad = {
+                        navController.navigate(Screen.HasselbladColor) {
+                            popUpTo(Screen.SceneAnalysisReport) { inclusive = true }
+                        }
+                    }
                 )
             }
 
