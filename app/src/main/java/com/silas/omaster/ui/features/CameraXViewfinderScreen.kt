@@ -54,7 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,7 +82,10 @@ fun CameraXViewfinderScreen(
     onPhotoCaptured: (android.net.Uri) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = remember {
+        (context as? androidx.lifecycle.LifecycleOwner)
+            ?: throw IllegalStateException("CameraXViewfinderScreen must be used within a LifecycleOwner context")
+    }
     var hasCameraPermission by remember { mutableStateOf(false) }
     var flashMode by remember { mutableStateOf(0) }
     var isCapturing by remember { mutableStateOf(false) }
@@ -123,7 +126,10 @@ fun CameraXViewfinderScreen(
     // 订阅 CameraXManager 的实时处理结果，在 PreviewView 之上叠加显示
     DisposableEffect(cameraManager) {
         cameraManager.setOnFrameAnalyzed { bitmap ->
+            // 回收旧帧，避免 Bitmap 累积导致内存泄漏
+            val oldFrame = processedFrame
             processedFrame = bitmap
+            oldFrame?.recycle()
         }
         onDispose {
             cameraManager.setOnFrameAnalyzed(null)

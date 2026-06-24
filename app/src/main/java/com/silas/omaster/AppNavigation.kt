@@ -347,7 +347,14 @@ fun MainApp(navController: NavHostController) {
                                 apply()
                             }
                             Toast.makeText(context, "水印配置已保存，可批量应用", Toast.LENGTH_SHORT).show()
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "水印配置保存失败：${e.message}",
+                                    duration = SnackbarDuration.Long
+                                )
+                            }
+                        }
                         navController.popBackStack()
                     },
                     onExport = { bitmap, _ ->

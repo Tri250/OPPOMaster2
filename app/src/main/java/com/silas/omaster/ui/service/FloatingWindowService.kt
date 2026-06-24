@@ -660,9 +660,7 @@ class FloatingWindowService : Service() {
             setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(12))
 
             // 上一个预设按钮
-            val prevBtn = createIconButton("◀") {
-                sendPresetSwitchBroadcast("prev")
-            }
+            val prevBtn = createIconButton("◀", { sendPresetSwitchBroadcast("prev") }, "上一个预设")
             addView(prevBtn)
             addView(createSpacing(dpToPx(6)))
 
@@ -692,21 +690,19 @@ class FloatingWindowService : Service() {
 
             // 下一个预设按钮
             addView(createSpacing(dpToPx(6)))
-            val nextBtn = createIconButton("▶") {
-                sendPresetSwitchBroadcast("next")
-            }
+            val nextBtn = createIconButton("▶", { sendPresetSwitchBroadcast("next") }, "下一个预设")
             addView(nextBtn)
 
             addView(createSpacing(dpToPx(6)))
 
             // 收起按钮
-            val collapseBtn = createIconButton("▼") { onCollapse() }
+            val collapseBtn = createIconButton("▼", { onCollapse() }, "收起悬浮窗")
             addView(collapseBtn)
 
             addView(createSpacing(dpToPx(6)))
 
             // 关闭按钮
-            val closeBtn = createIconButton("✕") { stopSelf() }
+            val closeBtn = createIconButton("✕", { stopSelf() }, "关闭悬浮窗")
             addView(closeBtn)
         }
     }
@@ -725,7 +721,7 @@ class FloatingWindowService : Service() {
     /**
      * 创建图标按钮
      */
-    private fun createIconButton(icon: String, onClick: () -> Unit): TextView {
+    private fun createIconButton(icon: String, onClick: () -> Unit, contentDescription: String = icon): TextView {
         return TextView(this).apply {
             text = icon
             textSize = 14f
@@ -737,6 +733,7 @@ class FloatingWindowService : Service() {
                 setColor(cardBackground)
             }
             setOnClickListener { onClick() }
+            this.contentDescription = contentDescription
         }
     }
 
@@ -1074,9 +1071,17 @@ class FloatingWindowService : Service() {
         animator.duration = 300
         animator.interpolator = DecelerateInterpolator()
         animator.addUpdateListener { animation ->
-            if (floatingView != null) {
+            val currentView = floatingView
+            if (currentView != null && currentView.isAttachedToWindow) {
                 p.x = animation.animatedValue as Int
-                wm.updateViewLayout(view, p)
+                try {
+                    wm.updateViewLayout(currentView, p)
+                } catch (e: Exception) {
+                    Log.w(TAG, "snapToEdge updateViewLayout failed", e)
+                    animator.cancel()
+                }
+            } else {
+                animator.cancel()
             }
         }
         animator.start()

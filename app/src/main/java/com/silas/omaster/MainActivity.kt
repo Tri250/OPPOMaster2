@@ -46,7 +46,7 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
  */
 class MainActivity : ComponentActivity() {
 
-    private lateinit var floatingWindowController: FloatingWindowController
+    private var floatingWindowController: FloatingWindowController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
         floatingWindowController = FloatingWindowController.getInstance(this)
         // 仅在已有悬浮窗权限时注册，否则延迟到用户主动启用悬浮窗功能时
         if (Settings.canDrawOverlays(this)) {
-            floatingWindowController.register()
+            floatingWindowController?.register()
         }
 
         setContent {
@@ -104,6 +104,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         // 注销悬浮窗控制器
-        floatingWindowController.unregister()
+        floatingWindowController?.unregister()
     }
 }

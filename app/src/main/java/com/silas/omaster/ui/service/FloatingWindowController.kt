@@ -19,7 +19,9 @@ class FloatingWindowController private constructor(private val context: Context)
     private val _currentPreset = MutableStateFlow<MasterPreset?>(null)
     val currentPreset: StateFlow<MasterPreset?> = _currentPreset.asStateFlow()
 
+    @Volatile
     private var presetList: List<MasterPreset> = emptyList()
+    @Volatile
     private var currentIndex: Int = 0
 
     // 状态标志：避免重复注册或注销
@@ -106,7 +108,9 @@ class FloatingWindowController private constructor(private val context: Context)
             index = 0
         }
 
-        currentIndex = index
+        synchronized(this) {
+            currentIndex = index
+        }
         _currentPreset.value = preset
 
         FloatingWindowService.show(context, preset, currentIndex, presetList.map { it.id ?: "" })
@@ -122,7 +126,7 @@ class FloatingWindowController private constructor(private val context: Context)
 
         if (presets.isEmpty()) {
             // 列表为空时重置状态
-            currentIndex = 0
+            synchronized(this) { currentIndex = 0 }
             _currentPreset.value = null
             return
         }
@@ -136,11 +140,11 @@ class FloatingWindowController private constructor(private val context: Context)
             }
             if (newIndex != -1) {
                 // 当前预设仍在列表中，保持选中
-                currentIndex = newIndex
+                synchronized(this) { currentIndex = newIndex }
                 _currentPreset.value = presets[newIndex]
             } else {
                 // 当前预设不在新列表中，默认选中第一个并更新 StateFlow
-                currentIndex = 0
+                synchronized(this) { currentIndex = 0 }
                 _currentPreset.value = presets[0]
             }
         } else if (currentIndex in presets.indices) {
@@ -148,7 +152,7 @@ class FloatingWindowController private constructor(private val context: Context)
             _currentPreset.value = presets[currentIndex]
         } else {
             // 索引无效，重置为第一个
-            currentIndex = 0
+            synchronized(this) { currentIndex = 0 }
             _currentPreset.value = presets[0]
         }
     }
@@ -164,34 +168,38 @@ class FloatingWindowController private constructor(private val context: Context)
      * 处理预设切换
      */
     private fun handlePresetSwitch(direction: String?) {
-        if (presetList.isEmpty()) {
+        val list = presetList
+        if (list.isEmpty()) {
             android.util.Log.w("FloatingWindowController", "预设列表为空,无法切换")
             return
         }
 
-        // 防御性：currentIndex 越界时重置
-        if (currentIndex !in presetList.indices) {
-            android.util.Log.w("FloatingWindowController", "currentIndex 越界($currentIndex),重置为0")
-            currentIndex = 0
-        }
+        synchronized(this) {
+            // 防御性：currentIndex 越界时重置
+            if (currentIndex !in list.indices) {
+                android.util.Log.w("FloatingWindowController", "currentIndex 越界($currentIndex),重置为0")
+                currentIndex = 0
+            }
 
-        val newIndex = when (direction) {
-            "prev" -> (currentIndex - 1 + presetList.size) % presetList.size
-            "next" -> (currentIndex + 1) % presetList.size
-            else -> {
-                android.util.Log.w("FloatingWindowController", "未知切换方向: $direction")
+            val newIndex = when (direction) {
+                "prev" -> (currentIndex - 1 + list.size) % list.size
+                "next" -> (currentIndex + 1) % list.size
+                else -> {
+                    android.util.Log.w("FloatingWindowController", "未知切换方向: $direction")
+                    return
+                }
+            }
+
+            // 防御性：newIndex 必须有效
+            if (newIndex !in list.indices) {
+                android.util.Log.e("FloatingWindowController", "计算后的索引无效: $newIndex")
                 return
             }
+
+            currentIndex = newIndex
         }
 
-        // 防御性：newIndex 必须有效
-        if (newIndex !in presetList.indices) {
-            android.util.Log.e("FloatingWindowController", "计算后的索引无效: $newIndex")
-            return
-        }
-
-        currentIndex = newIndex
-        val newPreset = presetList[newIndex]
+        val newPreset = list[currentIndex]
         _currentPreset.value = newPreset
 
         // 使用 update 方法更新悬浮窗内容（避免闪动）

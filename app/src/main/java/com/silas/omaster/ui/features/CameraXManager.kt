@@ -13,6 +13,8 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.ResolutionSelector
+import androidx.camera.core.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -71,6 +73,7 @@ class CameraXManager(
     val currentLensFacing: StateFlow<Int> = _currentLensFacing.asStateFlow()
 
     // 当前应用的预设参数
+    @Volatile
     private var currentParams: HasselbladParams = HasselbladParams()
 
     // 保存的 PreviewView，用于生命周期恢复
@@ -122,21 +125,30 @@ class CameraXManager(
             .build()
 
         // 构建 Preview
+        val previewResolutionSelector = ResolutionSelector.Builder()
+            .setResolutionStrategy(ResolutionStrategy(Size(1920, 1080), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+            .build()
         preview = Preview.Builder()
-            .setTargetResolution(Size(1920, 1080))
+            .setResolutionSelector(previewResolutionSelector)
             .build()
             .also { it.setSurfaceProvider(previewView.surfaceProvider) }
 
         // 构建 ImageCapture
+        val captureResolutionSelector = ResolutionSelector.Builder()
+            .setResolutionStrategy(ResolutionStrategy(Size(1920, 1080), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+            .build()
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setTargetResolution(Size(1920, 1080))
+            .setResolutionSelector(captureResolutionSelector)
             .setFlashMode(flashMode)
             .build()
 
         // 构建 ImageAnalysis（实时分析）
+        val analysisResolutionSelector = ResolutionSelector.Builder()
+            .setResolutionStrategy(ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+            .build()
         imageAnalysis = ImageAnalysis.Builder()
-            .setTargetResolution(Size(640, 480))
+            .setResolutionSelector(analysisResolutionSelector)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { analysis ->
@@ -281,55 +293,85 @@ class CameraXManager(
     /**
      * 应用预设参数到帧
      *
-     * 实现说明：
-     * 1. 使用「source → dest」位图乒乓模式：每一步都把当前累积结果画到新位图，
-     *    避免在 canvas 与 source 同位图时的不确定行为。
-     * 2. 按 saturation → contrast → warmth → tone → vignette 的顺序叠加，
-     *    与 web 端 CameraParams 应用顺序保持一致。
+     * 优化策略：将所有 ColorMatrix 操作（饱和度、对比度、色温、影调）合并为
+     * 单一 ColorMatrix，仅执行一次 Bitmap 绘制，从 5 次分配降低到 1 次。
+     * 暗角效果因使用 RadialGradient 无法合并，仍需单独绘制。
+     *
+     * ColorMatrix 乘法满足结合律：(A × B × C × D) × pixel = A(B(C(D(pixel)))
+     * 因此可以预计算合并矩阵 M = A × B × C × D，然后 M × pixel。
      */
     private fun applyPresetToFrame(bitmap: Bitmap, params: HasselbladParams): Bitmap {
-        var current: Bitmap = bitmap
-        val paint = android.graphics.Paint().apply { isAntiAlias = false }
+        // 1) 合并所有 ColorMatrix 操作为单一矩阵
+        val combinedMatrix = android.graphics.ColorMatrix()
 
-        // 1) 饱和度调整
+        // 饱和度调整
         val saturation = (params.saturation + 30) / 60f * 2f
         if (saturation != 1f) {
-            val cm = android.graphics.ColorMatrix()
-            cm.setSaturation(saturation)
-            current = drawWithColorFilter(current, cm, paint)
+            val satMatrix = android.graphics.ColorMatrix()
+            satMatrix.setSaturation(saturation)
+            combinedMatrix.postConcat(satMatrix)
         }
 
-        // 2) 对比度调整
+        // 对比度调整
         val contrast = (params.contrast + 30) / 60f * 2f
         if (contrast != 1f) {
-            val cm = android.graphics.ColorMatrix()
-            cm.setScale(contrast, contrast, contrast, 1f)
-            current = drawWithColorFilter(current, cm, paint)
+            val contrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                contrast, 0f, 0f, 0f, 0f,
+                0f, contrast, 0f, 0f, 0f,
+                0f, 0f, contrast, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+            combinedMatrix.postConcat(contrastMatrix)
         }
 
-        // 3) 色温调整
+        // 色温调整
         if (params.colorTemp != 0) {
             val warmth = params.colorTemp / 30f * 0.3f
-            val cm = android.graphics.ColorMatrix()
-            cm.set(floatArrayOf(
+            val tempMatrix = android.graphics.ColorMatrix(floatArrayOf(
                 1f + warmth, 0f, 0f, 0f, 0f,
                 0f, 1f, 0f, 0f, 0f,
                 0f, 0f, 1f - warmth, 0f, 0f,
                 0f, 0f, 0f, 1f, 0f
             ))
-            current = drawWithColorFilter(current, cm, paint)
+            combinedMatrix.postConcat(tempMatrix)
         }
 
-        // 4) 影调（亮度）调整
+        // 影调（亮度）调整
         if (params.tone != 0) {
             val toneScale = 1f + params.tone / 30f * 0.3f
-            val cm = android.graphics.ColorMatrix()
-            cm.setScale(toneScale, toneScale, toneScale, 1f)
-            current = drawWithColorFilter(current, cm, paint)
+            val toneMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                toneScale, 0f, 0f, 0f, 0f,
+                0f, toneScale, 0f, 0f, 0f,
+                0f, 0f, toneScale, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+            combinedMatrix.postConcat(toneMatrix)
         }
 
-        // 5) 暗角效果
-        if (params.vignette != 0) {
+        // 检查是否有任何 ColorMatrix 操作
+        val hasColorMatrixOps = saturation != 1f || contrast != 1f || params.colorTemp != 0 || params.tone != 0
+        val hasVignette = params.vignette != 0
+
+        // 如果无任何操作，直接返回原图
+        if (!hasColorMatrixOps && !hasVignette) {
+            return bitmap
+        }
+
+        // 2) 应用合并后的 ColorMatrix（仅一次 Bitmap 分配）
+        var current: Bitmap = bitmap
+        if (hasColorMatrixOps) {
+            val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(output)
+            val paint = android.graphics.Paint().apply {
+                isAntiAlias = false
+                colorFilter = android.graphics.ColorMatrixColorFilter(combinedMatrix)
+            }
+            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+            current = output
+        }
+
+        // 3) 暗角效果（无法合并到 ColorMatrix，需单独绘制）
+        if (hasVignette) {
             val vignetteStrength = params.vignette / 30f
             val output = Bitmap.createBitmap(current.width, current.height, Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(output)
@@ -352,24 +394,6 @@ class CameraXManager(
         }
 
         return current
-    }
-
-    /**
-     * 将 source 位图按 colorMatrix 绘制到新位图上，并返回新位图。
-     * 该函数保证 source 与输出位图不同实例，避免在 Android 上 source == destination 时的
-     * 不确定行为。
-     */
-    private fun drawWithColorFilter(
-        source: Bitmap,
-        colorMatrix: android.graphics.ColorMatrix,
-        sharedPaint: android.graphics.Paint
-    ): Bitmap {
-        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(output)
-        sharedPaint.colorFilter = android.graphics.ColorMatrixColorFilter(colorMatrix)
-        canvas.drawBitmap(source, 0f, 0f, sharedPaint)
-        sharedPaint.colorFilter = null
-        return output
     }
 
     /**

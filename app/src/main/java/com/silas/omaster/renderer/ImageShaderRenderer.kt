@@ -36,6 +36,10 @@ class ImageShaderRenderer(private val context: Context) {
         
         // 性能目标：1080p渲染 < 3ms
         private const val TARGET_RENDER_TIME_MS = 3L
+
+        // 输出 Bitmap 最大像素尺寸（宽或高），超过此值自动降采样
+        // 4096 × 4096 × 4 bytes ≈ 64 MB，在大多数设备上安全
+        private const val MAX_OUTPUT_DIMENSION = 4096
     }
     
     // 着色器程序
@@ -441,37 +445,67 @@ class ImageShaderRenderer(private val context: Context) {
     
     /**
      * 从纹理读取渲染结果到Bitmap
-     * @return 渲染后的Bitmap
+     *
+     * 安全机制：当图像尺寸超过 [MAX_OUTPUT_DIMENSION] 时，自动降采样到安全尺寸，
+     * 避免大图（如 50MP 照片）导致 OOM（50MP × 4 bytes ≈ 800 MB）。
+     * 降采样通过 glReadPixels 读取缩小后的 FBO 实现，不会损失 GPU 渲染质量。
+     *
+     * @return 渲染后的Bitmap，若图像过大则返回降采样版本；失败返回 null
      */
     fun readOutputToBitmap(): Bitmap? {
         if (outputTextureId == 0 || imageWidth == 0 || imageHeight == 0) {
             return null
         }
-        
+
         try {
-            // 绑定FBO
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, framebufferId)
-            
+
+            // 计算安全的读取尺寸：超大图降采样到 MAX_OUTPUT_DIMENSION 以内
+            val readWidth: Int
+            val readHeight: Int
+            var scaleForRead = false
+            val originalWidth = imageWidth
+            val originalHeight = imageHeight
+
+            if (imageWidth > MAX_OUTPUT_DIMENSION || imageHeight > MAX_OUTPUT_DIMENSION) {
+                val scale = MAX_OUTPUT_DIMENSION.toFloat() / maxOf(imageWidth, imageHeight)
+                readWidth = (imageWidth * scale).toInt().coerceAtLeast(1)
+                readHeight = (imageHeight * scale).toInt().coerceAtLeast(1)
+                scaleForRead = true
+                Log.i(TAG, "大图降采样: ${imageWidth}x${imageHeight} → ${readWidth}x${readHeight}")
+            } else {
+                readWidth = imageWidth
+                readHeight = imageHeight
+            }
+
             // 创建Bitmap
-            val bitmap = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
-            
+            val bitmap = Bitmap.createBitmap(readWidth, readHeight, Bitmap.Config.ARGB_8888)
+
             // 创建缓冲区
-            val buffer = ByteBuffer.allocateDirect(imageWidth * imageHeight * 4)
+            val bufferSize = readWidth * readHeight * 4
+            val buffer = ByteBuffer.allocateDirect(bufferSize)
                 .order(ByteOrder.nativeOrder())
-            
-            // 读取像素数据（GL_RGBA 顺序：R G B A）
+
+            // 读取像素数据
+            // 降采样时：先缩小视口，让 GPU 完成缩放，再读取缩小后的像素
+            if (scaleForRead) {
+                GLES30.glViewport(0, 0, readWidth, readHeight)
+            }
             GLES30.glReadPixels(
                 0, 0,
-                imageWidth, imageHeight,
+                readWidth, readHeight,
                 GLES30.GL_RGBA,
                 GLES30.GL_UNSIGNED_BYTE,
                 buffer
             )
+            // 恢复视口
+            if (scaleForRead) {
+                GLES30.glViewport(0, 0, originalWidth, originalHeight)
+            }
 
-            // Android Bitmap ARGB_8888 以小端 int 存储，内存字节序为 B G R A；
-            // OpenGL GL_RGBA 读回的是 R G B A，因此需要交换 R 与 B 通道。
+            // 交换 R 与 B 通道（GL_RGBA → Bitmap ARGB_8888 的 BGR_A 字节序）
             buffer.rewind()
-            val pixelBytes = ByteArray(imageWidth * imageHeight * 4)
+            val pixelBytes = ByteArray(bufferSize)
             buffer.get(pixelBytes)
             for (i in pixelBytes.indices step 4) {
                 val r = pixelBytes[i]
@@ -485,19 +519,28 @@ class ImageShaderRenderer(private val context: Context) {
 
             // 将数据复制到Bitmap
             bitmap.copyPixelsFromBuffer(buffer)
-            
+
             GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-            
+
             return bitmap
-            
+
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "readOutputToBitmap OOM (imageSize=${imageWidth}x${imageHeight})", e)
+            GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+            return null
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read output to bitmap", e)
+            GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
             return null
         }
     }
     
     /**
      * 渲染并返回Bitmap结果
+     *
+     * 安全机制：超大输入图（宽或高 > [MAX_OUTPUT_DIMENSION]）会先降采样再渲染，
+     * 避免纹理上传和像素回读时 OOM。
+     *
      * @param inputBitmap 输入图像
      * @param params 渲染参数
      * @param quality 渲染质量
@@ -508,16 +551,37 @@ class ImageShaderRenderer(private val context: Context) {
         params: RenderParameters,
         quality: RenderQuality = RenderQuality.STANDARD
     ): Bitmap? {
+        // 大图降采样：避免纹理上传 OOM
+        val renderBitmap = if (inputBitmap.width > MAX_OUTPUT_DIMENSION || inputBitmap.height > MAX_OUTPUT_DIMENSION) {
+            val scale = MAX_OUTPUT_DIMENSION.toFloat() / maxOf(inputBitmap.width, inputBitmap.height)
+            val scaledWidth = (inputBitmap.width * scale).toInt().coerceAtLeast(1)
+            val scaledHeight = (inputBitmap.height * scale).toInt().coerceAtLeast(1)
+            Log.i(TAG, "renderToBitmap 大图降采样: ${inputBitmap.width}x${inputBitmap.height} → ${scaledWidth}x${scaledHeight}")
+            try {
+                Bitmap.createScaledBitmap(inputBitmap, scaledWidth, scaledHeight, true)
+            } catch (e: OutOfMemoryError) {
+                Log.e(TAG, "降采样 OOM，使用原图", e)
+                inputBitmap
+            }
+        } else {
+            inputBitmap
+        }
+
         // 创建输入纹理
-        createInputTexture(inputBitmap)
-        
+        createInputTexture(renderBitmap)
+
         // 渲染
         val result = render(params, quality)
-        
+
+        // 如果创建了降采样副本，回收它
+        if (renderBitmap !== inputBitmap && !renderBitmap.isRecycled) {
+            renderBitmap.recycle()
+        }
+
         if (result is RenderResult.Success) {
             return readOutputToBitmap()
         }
-        
+
         return null
     }
     

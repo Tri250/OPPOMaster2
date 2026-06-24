@@ -198,9 +198,11 @@ class OMasterApplication : Application() {
      * 非关键组件的懒加载初始化
      * 在后台协程执行，不阻塞主线程启动流程
      */
+    // 懒加载协程作用域，在 onTerminate / releaseResources 中取消
+    private val lazyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private fun triggerLazyInitialization() {
-        // 使用后台协程预初始化非关键组件，避免阻塞主线程
-        val lazyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        // 使用后台协程预初始化非关键组件，避免阻塞主线程启动流程
         lazyScope.launch {
             try {
                 val lazyStart = SystemClock.elapsedRealtime()
@@ -312,6 +314,13 @@ class OMasterApplication : Application() {
      * 推荐在组件的生命周期回调中调用，而非依赖 onTerminate
      */
     fun releaseResources() {
+        // 取消懒加载协程作用域
+        try {
+            lazyScope.cancel()
+        } catch (e: Exception) {
+            android.util.Log.e("OMasterApplication", "取消lazyScope失败", e)
+        }
+
         try {
             FaceDetectorSingleton.release()
             android.util.Log.i("OMasterApplication", "FaceDetectorSingleton 已释放")
