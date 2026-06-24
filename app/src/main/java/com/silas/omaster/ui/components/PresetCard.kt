@@ -132,12 +132,12 @@ fun PresetCard(
                     )
             )
 
-            // HNCS角标（对齐Web端：橙色渐变）
+            // HNCS角标（对齐Web端：橙色渐变，右上角）
             if (preset.isHncs) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
+                        .align(Alignment.TopEnd)
+                        .padding(end = 48.dp, top = 8.dp)
                         .background(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(HasselbladOrange, WarningYellow)
@@ -165,7 +165,7 @@ fun PresetCard(
                 }
             }
 
-            // NEW角标（对齐Web端：绿色，仅当不是HNCS时显示）
+            // NEW角标（对齐Web端：绿色，左上角，仅当不是HNCS时显示）
             if (preset.isNew && !preset.isHncs) {
                 Box(
                     modifier = Modifier

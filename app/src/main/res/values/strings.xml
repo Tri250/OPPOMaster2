@@ -128,6 +128,10 @@
     <string name="empty_hint_create">点击右下角按钮创建预设</string>
     <string name="empty_no_featured">暂无精选预设</string>
     <string name="empty_hint_filter">请调整筛选条件</string>
+    <string name="empty_no_hncs_presets">暂无哈苏预设</string>
+    <string name="empty_hint_hncs_presets">敬请期待更多哈苏色彩科学预设</string>
+    <string name="empty_no_new_presets">暂无上新预设</string>
+    <string name="empty_hint_new_presets">新预设正在路上，敬请期待</string>
     <string name="filter_result_count">已筛选 %1$d 条</string>
     <string name="clear_filter">清空筛选</string>
     <string name="load_more_hint">持续更新 敬请期待</string>
@@ -156,6 +160,7 @@
     <string name="detail_title">预设详情</string>
     <string name="detail_load_failed">预设数据加载失败</string>
     <string name="floating_window">悬浮窗</string>
+    <string name="share_preset">分享预设</string>
 
     <!-- 专业参数 -->
     <string name="param_iso">ISO</string>

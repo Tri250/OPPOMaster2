@@ -235,25 +235,59 @@ class UniversalCreatePresetViewModel(
         }
     }
 
+    /**
+     * 双向映射：资源 ID 后缀 / 中文标签 / 英文标签 -> 参数键名
+     * 优先匹配 @string/ 前缀去除后的资源 ID（如 param_saturation），
+     * 再匹配本地化标签（中文/英文），确保多语言环境下均可正确映射。
+     */
+    private val labelToParamKey: Map<String, String> = mapOf(
+        // 资源 ID 后缀（@string/param_xxx 去除前缀后）
+        "param_saturation" to "saturation",
+        "param_tone_curve" to "contrast",
+        "param_warm_cool" to "warmth",
+        "param_sharpness" to "sharpness",
+        "param_cyan_magenta" to "cyan_magenta",
+        "param_color_temp" to "color_temperature",
+        "param_tone" to "color_hue",
+        "param_exposure" to "exposure_compensation",
+        "param_iso" to "iso",
+        "param_shutter" to "shutter_speed",
+        "param_aperture" to "aperture",
+        "param_white_balance" to "white_balance",
+        // 中文标签
+        "饱和度" to "saturation",
+        "影调" to "contrast",
+        "冷暖" to "warmth",
+        "锐度" to "sharpness",
+        "青品" to "cyan_magenta",
+        "色温" to "color_temperature",
+        "色调" to "color_hue",
+        "曝光补偿" to "exposure_compensation",
+        "快门" to "shutter_speed",
+        "光圈" to "aperture",
+        "白平衡" to "white_balance",
+        // 英文标签
+        "saturation" to "saturation",
+        "contrast" to "contrast",
+        "warmth" to "warmth",
+        "sharpness" to "sharpness",
+        "cyan_magenta" to "cyan_magenta",
+        "color_temperature" to "color_temperature",
+        "color_hue" to "color_hue",
+        "exposure_compensation" to "exposure_compensation",
+        "iso" to "iso",
+        "shutter_speed" to "shutter_speed",
+        "aperture" to "aperture",
+        "white_balance" to "white_balance"
+    )
+
     private fun sectionsToParams(sections: List<PresetSection>): Map<String, Int> {
         val params = mutableMapOf<String, Int>()
         for (section in sections) {
             for (item in section.items) {
-                val key = when (item.label) {
-                    "饱和度" -> "saturation"
-                    "影调" -> "contrast"
-                    "冷暖" -> "warmth"
-                    "锐度" -> "sharpness"
-                    "青品" -> "cyan_magenta"
-                    "色温" -> "color_temperature"
-                    "色调" -> "color_hue"
-                    "曝光补偿" -> "exposure_compensation"
-                    "ISO", "iso" -> "iso"
-                    "快门" -> "shutter_speed"
-                    "光圈" -> "aperture"
-                    "白平衡" -> "white_balance"
-                    else -> item.label
-                }
+                // 优先尝试去除 @string/ 前缀后的资源 ID 匹配
+                val labelKey = item.label.removePrefix("@string/").trim()
+                val key = labelToParamKey[labelKey] ?: labelKey
                 item.value.toIntOrNull()?.let { params[key] = it }
             }
         }

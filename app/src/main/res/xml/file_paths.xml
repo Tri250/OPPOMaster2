@@ -14,4 +14,9 @@
     <external-files-path
         name="hasselblad_images"
         path="Pictures/Hasselblad/" />
+
+    <!-- 预设导出临时文件目录 - 用于分享导出的 JSON 文件 -->
+    <cache-path
+        name="export_cache"
+        path="." />
 </paths>

@@ -65,10 +65,15 @@ class HomeViewModel(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    // 搜索历史
+    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+    val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
+
     // 用于管理收集任务的 Job
     private var allPresetsJob: Job? = null
     private var favoritesJob: Job? = null
     private var customPresetsJob: Job? = null
+    private var searchHistoryJob: Job? = null
 
     init {
         loadPresets()
@@ -83,6 +88,7 @@ class HomeViewModel(
         allPresetsJob?.cancel()
         favoritesJob?.cancel()
         customPresetsJob?.cancel()
+        searchHistoryJob?.cancel()
 
         _isLoading.value = true
 
@@ -107,6 +113,12 @@ class HomeViewModel(
         customPresetsJob = viewModelScope.launch {
             repository.getCustomPresets().collect { custom ->
                 _customPresets.value = custom
+            }
+        }
+
+        searchHistoryJob = viewModelScope.launch {
+            repository.searchHistory.collect { history ->
+                _searchHistory.value = history
             }
         }
     }
@@ -210,6 +222,13 @@ class HomeViewModel(
     }
 
     /**
+     * 清空搜索历史
+     */
+    fun clearSearchHistory() {
+        repository.clearSearchHistory()
+    }
+
+    /**
      * 刷新数据
      * 修复：使用 forceReloadFromFiles 强制从文件重新加载，避免内存缓存非空导致数据不更新
      */
@@ -228,6 +247,7 @@ class HomeViewModel(
         allPresetsJob?.cancel()
         favoritesJob?.cancel()
         customPresetsJob?.cancel()
+        searchHistoryJob?.cancel()
     }
 }
 

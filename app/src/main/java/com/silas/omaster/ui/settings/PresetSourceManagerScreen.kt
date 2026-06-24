@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.model.PresetSource
+import com.silas.omaster.data.model.PresetSourceConfig
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.cloud.CloudSyncManager
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -39,6 +41,7 @@ fun PresetSourceManagerScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val cloudSyncManager = remember { CloudSyncManager.getInstance(context) }
+    val settingsManager = remember { SettingsManager.getInstance(context) }
     
     var sources by remember { mutableStateOf(getDefaultSources()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -46,6 +49,27 @@ fun PresetSourceManagerScreen(
     var editingSource by remember { mutableStateOf<PresetSource?>(null) }
     var fetchedPresetCount by remember { mutableStateOf(0) }
     var syncError by remember { mutableStateOf<String?>(null) }
+    
+    // 从 SettingsManager 加载持久化的预设源配置
+    LaunchedEffect(Unit) {
+        val json = settingsManager.presetSourcesJson
+        if (json.isNotBlank()) {
+            try {
+                val config = Json.decodeFromString<PresetSourceConfig>(json)
+                if (config.sources.isNotEmpty()) {
+                    sources = config.sources
+                }
+            } catch (e: Exception) {
+                // JSON 解析失败，使用默认值
+            }
+        }
+    }
+    
+    // 保存预设源到 SettingsManager
+    fun saveSourcesToSettings() {
+        val config = PresetSourceConfig(sources = sources)
+        settingsManager.presetSourcesJson = Json.encodeToString(config)
+    }
     
     // 加载预设 - 使用 CloudSyncManager 统一同步
     LaunchedEffect(sources) {
@@ -218,6 +242,7 @@ fun PresetSourceManagerScreen(
                         sources = sources.map {
                             if (it.id == source.id) it.copy(enabled = enabled) else it
                         }
+                        saveSourcesToSettings()
                     },
                     onEdit = {
                         editingSource = source
@@ -227,6 +252,7 @@ fun PresetSourceManagerScreen(
                             if (it.id == source.id) it.copy(name = name, url = url) else it
                         }
                         editingSource = null
+                        saveSourcesToSettings()
                     },
                     onCancel = {
                         editingSource = null
@@ -234,6 +260,7 @@ fun PresetSourceManagerScreen(
                     onDelete = {
                         haptic.perform(HapticFeedbackType.LongPress)
                         sources = sources.filter { it.id != source.id }
+                        saveSourcesToSettings()
                     }
                 )
             }
@@ -255,6 +282,7 @@ fun PresetSourceManagerScreen(
                     url = url,
                     enabled = true
                 )
+                saveSourcesToSettings()
                 showAddDialog = false
             }
         )

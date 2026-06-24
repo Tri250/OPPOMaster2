@@ -56,6 +56,7 @@ class PresetRepository private constructor(context: Context) {
 
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+    val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
 
     /**
      * forceReloadFromFiles 专用锁，防止多线程并发调用导致数据竞态
@@ -116,7 +117,10 @@ class PresetRepository private constructor(context: Context) {
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        // 使用协程替代原始 Thread，实现结构化并发
+        // 从 SettingsManager 初始化搜索历史
+        _searchHistory.value = settingsManager.searchHistory
+
+        // 使用协程替代原始 Thread ，实现结构化并发
         // 优势：可取消、异常处理更完善、与生命周期更好绑定
         repositoryScope.launch {
             var attempts = 0
@@ -209,9 +213,90 @@ class PresetRepository private constructor(context: Context) {
                         it.description.contains(searchQuery, ignoreCase = true) ||
                         it.tags.any { tag -> tag.contains(searchQuery, ignoreCase = true) }
             }
+            // 搜索时记录搜索历史
+            addSearchQuery(searchQuery)
         }
 
         return filtered
+    }
+
+    /**
+     * 添加搜索关键词到历史记录
+     * 去重、最多保留20条、新搜索词置顶
+     */
+    fun addSearchQuery(query: String) {
+        if (query.isBlank()) return
+        val current = _searchHistory.value.toMutableList()
+        // 去重：移除已存在的相同搜索词
+        current.remove(query)
+        // 新搜索词置顶
+        current.add(0, query)
+        // 最多保留20条
+        val trimmed = current.take(20)
+        _searchHistory.value = trimmed
+        settingsManager.searchHistory = trimmed
+    }
+
+    /**
+     * 清空搜索历史
+     */
+    fun clearSearchHistory() {
+        _searchHistory.value = emptyList()
+        settingsManager.searchHistory = emptyList()
+    }
+
+    /**
+     * 从哈苏色彩模式创建预设
+     * 将 HasselbladScreen 中的 ColorMode/SceneMode 转换为可保存的自定义预设
+     */
+    suspend fun createPresetFromHasselbladMode(
+        colorMode: com.silas.omaster.ui.features.ColorMode,
+        sceneMode: com.silas.omaster.ui.features.SceneMode? = null
+    ): Result<PresetItem> = withContext(Dispatchers.IO) {
+        val tags = mutableListOf("哈苏", "色彩模式")
+        val description = buildString {
+            append(colorMode.description)
+            if (sceneMode != null) {
+                append("\n场景：${sceneMode.name} - ${sceneMode.description}")
+            }
+        }
+
+        val preset = PresetItem(
+            id = "hasselblad_${colorMode.id}_${System.currentTimeMillis()}",
+            name = colorMode.name,
+            brand = "hasselblad",
+            scene = sceneMode?.name ?: "色彩模式",
+            params = colorMode.params,
+            coverPath = null,
+            galleryImages = null,
+            description = description,
+            isSystem = false,
+            isHncs = true,
+            rating = 0f,
+            ratingCount = null,
+            downloadCount = 0,
+            favoriteCount = 0,
+            comments = null,
+            tags = tags,
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis(),
+            isNew = true,
+            isPinned = false,
+            mode = null,
+            author = "@哈苏色彩科学",
+            sections = null,
+            filter = null,
+            softLight = null,
+            vignette = null
+        )
+
+        val current = _presets.value.toMutableList()
+        current.add(0, preset)
+        _presets.value = current
+
+        saveToCache()
+
+        Result.success(preset)
     }
 
 
@@ -982,11 +1067,7 @@ class PresetRepository private constructor(context: Context) {
     private suspend fun saveToCache() = withContext(Dispatchers.IO) {
         try {
             val currentList = _presets.value
-            if (currentList.isEmpty()) {
-                Log.d(TAG, "预设列表为空，跳过缓存写入")
-                return@withContext
-            }
-
+            // 即使列表为空也写入缓存，避免清空操作后重启数据"复活"
             val cache = PresetCache(
                 version = CACHE_VERSION,
                 timestamp = System.currentTimeMillis(),

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +54,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
 import com.silas.omaster.data.local.HistoryManager
-import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.camera.OPPOCameraManager
+import com.silas.omaster.camera.CameraApplyResult
+import com.silas.omaster.camera.ApplyMethod
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetSection
@@ -152,6 +155,21 @@ fun DetailScreen(
                 onBack()
             },
             actions = {
+                // 分享按钮
+                IconButton(
+                    onClick = {
+                        preset?.let { p ->
+                            sharePreset(context, p)
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = stringResource(R.string.share_preset),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
                 // 悬浮窗按钮
                 IconButton(
                     onClick = {
@@ -511,38 +529,30 @@ private fun handleFloatingWindowClick(
 }
 
 /**
- * 将预设参数写入 SettingsManager，实现“一键应用”真正生效。
- * 写入后可通过 SettingsManager.getAppliedPresetParams() / getAppliedCameraParams() 读取。
+ * 将预设参数通过 OPPOCameraManager 应用到 OPPO 相机大师模式。
+ * 按优先级依次尝试：ContentProvider → System Settings → Camera Intent → Clipboard
  */
 private fun applyPresetParameters(context: android.content.Context, preset: MasterPreset) {
-    val settings = SettingsManager.getInstance(context)
+    val cameraManager = OPPOCameraManager.getInstance(context)
+    val result = cameraManager.applyPreset(preset)
 
-    // 1. 写入调色参数（颜色 grading）
-    settings.applyPresetParams(
-        saturation = preset.saturation ?: 0,
-        contrast = preset.tone ?: 0,
-        warmth = preset.warmCool ?: 0,
-        sharpness = preset.sharpness ?: 0,
-        clarity = 0,
-        brightness = 0
-    )
-
-    // 2. 写入 Pro 拍摄参数（尽可能从字符串字段解析）
-    val iso = preset.iso?.filter { it.isDigit() }?.toIntOrNull() ?: 100
-    val shutterSpeed = parseShutterSpeed(preset.shutterSpeed)
-    val whiteBalance = preset.colorTemperature ?: 5500
-    val exposureCompensation = preset.exposureCompensation
-        ?.replace(Regex("[^0-9.+-]"), "")
-        ?.toFloatOrNull() ?: 0f
-
-    settings.applyCameraParams(
-        iso = iso,
-        shutterSpeed = shutterSpeed,
-        whiteBalance = whiteBalance,
-        exposureCompensation = exposureCompensation
-    )
-
-    Toast.makeText(context, "已应用预设参数：${preset.name}", Toast.LENGTH_SHORT).show()
+    when (result) {
+        is CameraApplyResult.Success -> {
+            val methodLabel = when (result.method) {
+                ApplyMethod.CONTENT_PROVIDER -> "OPPO 大师模式"
+                ApplyMethod.SYSTEM_SETTINGS -> "系统设置"
+                ApplyMethod.CAMERA_INTENT -> "相机 Intent"
+                ApplyMethod.CLIPBOARD_FALLBACK -> "剪贴板"
+            }
+            Toast.makeText(context, "已通过 $methodLabel 应用预设：${preset.name}", Toast.LENGTH_SHORT).show()
+        }
+        is CameraApplyResult.PartialSuccess -> {
+            Toast.makeText(context, "部分参数已应用：${preset.name}（${result.failedParams.joinToString()} 未生效）", Toast.LENGTH_LONG).show()
+        }
+        is CameraApplyResult.Failed -> {
+            Toast.makeText(context, "应用失败：${result.reason}\n${result.suggestion}", Toast.LENGTH_LONG).show()
+        }
+    }
 }
 
 /**
@@ -556,6 +566,43 @@ private fun parseShutterSpeed(shutter: String?): Float {
     } else {
         cleaned.toFloatOrNull() ?: 125f
     }
+}
+
+/**
+ * 分享预设参数
+ */
+private fun sharePreset(context: android.content.Context, preset: MasterPreset) {
+    val paramsBuilder = StringBuilder()
+    preset.getDisplaySections(context).forEach { section ->
+        section.title?.let { title ->
+            if (title.isNotEmpty()) {
+                paramsBuilder.appendLine("【${com.silas.omaster.util.PresetI18n.resolveString(context, title)}】")
+            }
+        }
+        section.items.forEach { item ->
+            val label = com.silas.omaster.util.PresetI18n.resolveString(context, item.label)
+            val value = com.silas.omaster.util.PresetI18n.resolveValue(context, item.value)
+            paramsBuilder.appendLine("  $label: $value")
+        }
+    }
+
+    val shareText = buildString {
+        appendLine("🎨 ${preset.name} by ${preset.author}")
+        appendLine("📱 OMaster 大师模式预设")
+        appendLine()
+        if (paramsBuilder.isNotEmpty()) {
+            appendLine("参数:")
+            append(paramsBuilder.toString())
+            appendLine()
+        }
+        append("下载 OMaster 体验更多预设")
+    }
+
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, shareText)
+    }
+    context.startActivity(Intent.createChooser(intent, "分享预设"))
 }
 
 @Composable

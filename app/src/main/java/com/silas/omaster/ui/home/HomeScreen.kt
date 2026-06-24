@@ -65,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -128,6 +129,7 @@ fun HomeScreen(
     val sortType by viewModel.sortType.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val searchHistory by viewModel.searchHistory.collectAsState()
 
     // 当 refreshTrigger 变化时刷新数据
     LaunchedEffect(refreshTrigger) {
@@ -188,6 +190,9 @@ fun HomeScreen(
             SearchBar(
                 query = searchQuery,
                 onQueryChange = { viewModel.setSearchQuery(it) },
+                searchHistory = searchHistory,
+                onHistoryClick = { viewModel.setSearchQuery(it) },
+                onClearHistory = { viewModel.clearSearchHistory() },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
@@ -379,55 +384,131 @@ private fun HeaderSection(
 private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
+    searchHistory: List<String>,
+    onHistoryClick: (String) -> Unit,
+    onClearHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(24.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(24.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+    var isFocused by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(24.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isFocused)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    else
+                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(24.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = stringResource(R.string.search_hint),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-                modifier = Modifier.size(16.dp)
-            )
-            
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { }),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onBackground
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                modifier = Modifier.fillMaxWidth(),
-                decorationBox = { innerTextField ->
-                    if (query.isEmpty()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = stringResource(R.string.search_hint),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    modifier = Modifier.size(16.dp)
+                )
+
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { }),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            isFocused = focusState.isFocused
+                        },
+                    decorationBox = { innerTextField ->
+                        if (query.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.search_placeholder),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+            }
+        }
+
+        // 搜索历史建议：搜索词为空且搜索栏获得焦点时显示
+        if (query.isEmpty() && isFocused && searchHistory.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "搜索历史",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Medium
+                    )
+                    TextButton(
+                        onClick = onClearHistory,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
                         Text(
-                            text = stringResource(R.string.search_placeholder),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                            text = "清除",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                         )
                     }
-                    innerTextField()
                 }
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+                // 最多显示5条历史
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    searchHistory.take(5).forEach { historyQuery ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)
+                                )
+                                .hapticClickable { onHistoryClick(historyQuery) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = historyQuery,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -530,8 +611,7 @@ private fun BrandAndSortFilter(
         "OPPO" to stringResource(R.string.brand_oppo),
         "realme" to stringResource(R.string.brand_realme),
         "vivo" to stringResource(R.string.brand_vivo),
-        "荣耀" to stringResource(R.string.brand_honor),
-        "小米" to stringResource(R.string.brand_xiaomi)
+        "荣耀" to stringResource(R.string.brand_honor)
     )
 
     val sortOptions = listOf(
@@ -855,16 +935,16 @@ private fun EnhancedEmptyState(
     val message = when (tabIndex) {
         0 -> stringResource(R.string.empty_no_presets)
         1 -> stringResource(R.string.empty_no_favorites)
-        2 -> "暂无哈苏预设"
-        3 -> "暂无上新预设"
+        2 -> stringResource(R.string.empty_no_hncs_presets)
+        3 -> stringResource(R.string.empty_no_new_presets)
         else -> stringResource(R.string.empty_no_data)
     }
 
     val subMessage = when (tabIndex) {
         0 -> stringResource(R.string.empty_hint_add_presets)
         1 -> stringResource(R.string.empty_hint_favorite)
-        2 -> "敬请期待更多哈苏色彩科学预设"
-        3 -> "新预设正在路上，敬请期待"
+        2 -> stringResource(R.string.empty_hint_hncs_presets)
+        3 -> stringResource(R.string.empty_hint_new_presets)
         else -> ""
     }
 

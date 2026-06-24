@@ -360,6 +360,13 @@ class SettingsManager private constructor(private val context: Context) {
             setDataSync(KEY_PRESET_VERSION_MAP, value)
         }
 
+    // 预设源配置（JSON 字符串），用于持久化用户自定义的预设源列表
+    var presetSourcesJson: String
+        get() = getDataSync(KEY_PRESET_SOURCES_JSON, "")
+        set(value) {
+            setDataSync(KEY_PRESET_SOURCES_JSON, value)
+        }
+
     // 收藏的预设ID列表（PM-003）
     var favoritePresetIds: List<String>
         get() = getDataSetSync(KEY_FAVORITE_PRESET_IDS, emptySet()).toList()
@@ -372,6 +379,13 @@ class SettingsManager private constructor(private val context: Context) {
         get() = getDataSetSync(KEY_PINNED_PRESET_IDS, emptySet()).toList()
         set(value) {
             setDataSetSync(KEY_PINNED_PRESET_IDS, value.toSet())
+        }
+
+    // 搜索历史（最多20条）
+    var searchHistory: List<String>
+        get() = getDataSetSync(KEY_SEARCH_HISTORY, emptySet()).toList().take(20)
+        set(value) {
+            setDataSetSync(KEY_SEARCH_HISTORY, value.take(20).toSet())
         }
 
     // 手动修改的参数（PP-005）
@@ -832,7 +846,7 @@ class SettingsManager private constructor(private val context: Context) {
                 KEY_AI_API_ENDPOINT, KEY_PRESET_API_ENDPOINT, KEY_AUTH_API_ENDPOINT, KEY_API_VERSION,
                 KEY_APPLIED_SATURATION, KEY_APPLIED_CONTRAST, KEY_APPLIED_WARMTH,
                 KEY_APPLIED_SHARPNESS, KEY_APPLIED_CLARITY, KEY_APPLIED_BRIGHTNESS,
-                KEY_HAS_APPLIED_PRESET, KEY_MIGRATION_HANDLED
+                KEY_HAS_APPLIED_PRESET, KEY_MIGRATION_HANDLED, KEY_SEARCH_HISTORY, KEY_PRESET_SOURCES_JSON
             )
             
             context.dataStore.edit { prefs ->
@@ -928,6 +942,12 @@ class SettingsManager private constructor(private val context: Context) {
         private val KEY_HAS_APPLIED_CAMERA_PARAMS = booleanPreferencesKey("has_applied_camera_params")
 
         private val KEY_MIGRATION_HANDLED = booleanPreferencesKey("migration_handled")
+
+        // 搜索历史 Key
+        private val KEY_SEARCH_HISTORY = stringSetPreferencesKey("search_history")
+
+        // 预设源配置 JSON
+        private val KEY_PRESET_SOURCES_JSON = stringPreferencesKey("preset_sources_json")
 
         @Volatile
         private var instance: SettingsManager? = null
