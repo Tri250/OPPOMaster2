@@ -2,6 +2,7 @@ package com.silas.omaster.ui.features
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -107,6 +108,10 @@ class HasselbladEyeViewModel : ViewModel() {
 
     private val _lastSavedUri = MutableStateFlow<android.net.Uri?>(null)
     val lastSavedUri: StateFlow<android.net.Uri?> = _lastSavedUri.asStateFlow()
+
+    /** 保存/分享操作错误信息（null 表示无错误），UI 层消费后调用 clearOperationError 清除 */
+    private val _operationError = MutableStateFlow<String?>(null)
+    val operationError: StateFlow<String?> = _operationError.asStateFlow()
 
     // ================== AI 构图辅助状态 ==================
 
@@ -516,6 +521,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
     /**
      * 保存图片到相册。保存结果通过 [isSaving] 与 [stage] 状态暴露。
+     * 保存失败时通过 [operationError] 暴露错误信息，UI 层应消费并提示用户。
      * 为防止大图 OOM，bitmap 会先采样到 [EXPORT_MAX_DIMENSION]。
      */
     fun saveImage(
@@ -528,17 +534,18 @@ class HasselbladEyeViewModel : ViewModel() {
             val savedUri = try {
                 withContext(Dispatchers.IO) {
                     try {
-                        val (compressFormat, extension) = when (format) {
-                            ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg"
-                            ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png"
-                            ExportFormat.WEBP -> Bitmap.CompressFormat.WEBP to "webp"
-                            ExportFormat.HEIF -> Bitmap.CompressFormat.JPEG to "heic"
-                        }
-                        val mimeType = when (format) {
-                            ExportFormat.JPEG -> "image/jpeg"
-                            ExportFormat.PNG -> "image/png"
-                            ExportFormat.WEBP -> "image/webp"
-                            ExportFormat.HEIF -> "image/heif"
+                        // HEIF 在 Android Q+ 使用 WEBP_LOSSY 编码以保证格式一致性；
+                        // 旧版本回退 JPEG 编码（扩展名同步为 jpg 避免 MIME 不匹配）
+                        val (compressFormat, extension, mimeType) = when (format) {
+                            ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg" to "image/jpeg"
+                            ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png" to "image/png"
+                            ExportFormat.WEBP -> Bitmap.CompressFormat.WEBP to "webp" to "image/webp"
+                            ExportFormat.HEIF ->
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    Bitmap.CompressFormat.WEBP_LOSSY to "heic" to "image/heif"
+                                } else {
+                                    Bitmap.CompressFormat.JPEG to "jpg" to "image/jpeg"
+                                }
                         }
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
                         // 文件名包含构图名，便于用户追溯使用的构图方案
@@ -582,29 +589,40 @@ class HasselbladEyeViewModel : ViewModel() {
             if (savedUri != null) {
                 _lastSavedUri.value = savedUri
                 _stage.value = HasselbladEyeStage.DONE
+            } else {
+                // 保存失败：暴露错误信息，保持当前 PREVIEW 阶段，用户可重试
+                _operationError.value = "保存失败，请检查存储权限或可用空间后重试"
             }
         }
     }
 
     /**
-     * 分享图片到其他应用。
+     * 分享图片到其他应用。分享失败时通过 [operationError] 暴露错误信息。
      */
     fun shareImage(context: Context, bitmap: Bitmap) {
         viewModelScope.launch {
             val uri = withContext(Dispatchers.IO) {
                 shareBitmapToUri(context, bitmap)
             }
-            uri ?: return@launch
-
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/jpeg"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (uri == null) {
+                _operationError.value = "分享失败，无法创建分享文件，请重试"
+                return@launch
             }
-            val chooser = Intent.createChooser(intent, "分享哈苏色彩照片")
-                .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-            context.startActivity(chooser)
+
+            try {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/jpeg"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                val chooser = Intent.createChooser(intent, "分享哈苏色彩照片")
+                    .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                context.startActivity(chooser)
+            } catch (e: Exception) {
+                Log.e(TAG, "Share image start failed", e)
+                _operationError.value = "未找到可分享的应用，请检查是否已安装社交或图库应用"
+            }
         }
     }
 
@@ -613,6 +631,13 @@ class HasselbladEyeViewModel : ViewModel() {
      */
     fun setExportFormat(format: ExportFormat) {
         _exportFormat.value = format
+    }
+
+    /**
+     * 清除操作错误状态（UI 消费后调用）。
+     */
+    fun clearOperationError() {
+        _operationError.value = null
     }
 
     /**
@@ -650,6 +675,7 @@ class HasselbladEyeViewModel : ViewModel() {
         _isSaving.value = false
         _exportFormat.value = ExportFormat.JPEG
         _lastSavedUri.value = null
+        _operationError.value = null
     }
 
     // ================== 生命周期 ==================

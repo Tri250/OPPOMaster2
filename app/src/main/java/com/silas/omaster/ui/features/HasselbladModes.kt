@@ -81,7 +81,16 @@ val allColorModes: List<ColorMode> = listOf(
     ColorMode("film-cc", "CC 经典负片", "柯达 ColorPlus 200 风格，温暖怀旧色彩", 0xFFE4B060,
         mapOf("saturation" to 10, "contrast" to 12, "warmth" to 8, "tone" to 3, "vignette" to 6)),
     ColorMode("film-bw", "TX400 黑白", "Kodak Tri-X 400，高对比颗粒感黑白", 0xFF333333,
-        mapOf("saturation" to -30, "contrast" to 25, "clarity" to 18, "tone" to -5))
+        mapOf("saturation" to -30, "contrast" to 25, "clarity" to 18, "tone" to -5)),
+    // === 哈苏原厂胶片预设（对标 OPPO Find X9 哈苏大师） ===
+    ColorMode("hasselblad-x1d", "哈苏 X1D", "哈苏 X1D 中画幅色彩，浓郁深邃，肤色通透", 0xFF8B4513,
+        mapOf("saturation" to 8, "contrast" to 12, "warmth" to 5, "clarity" to 8, "tone" to 2, "highlights" to -5, "shadows" to 5)),
+    ColorMode("hasselblad-hcd", "哈苏 HCD", "哈苏 HCD 镜头风格，锐利通透，色彩还原精准", 0xFF2E86C1,
+        mapOf("saturation" to 5, "contrast" to 10, "warmth" to -3, "clarity" to 15, "tone" to 0, "sharpness" to 8)),
+    ColorMode("hasselblad-portra160", "哈苏 Portra 160", "哈苏人像胶片，柔和肤色，低对比自然过渡", 0xFFD4A574,
+        mapOf("saturation" to 6, "contrast" to 5, "warmth" to 8, "tone" to 5, "clarity" to 0, "softLight" to 1)),
+    ColorMode("hasselblad-tmax", "哈苏 T-MAX", "哈苏黑白胶片，细腻灰阶，专业级黑白质感", 0xFF4A4A4A,
+        mapOf("saturation" to -30, "contrast" to 18, "clarity" to 12, "tone" to -3, "shadows" to 8, "highlights" to -5))
 )
 
 /**

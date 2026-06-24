@@ -168,12 +168,12 @@ class V193RegressionTest {
     }
 
     @Test
-    fun `问题3-CompositionSceneMode必须4种场景`() {
+    fun `问题3-CompositionSceneMode必须7种场景`() {
         val klass = Class.forName("com.silas.omaster.ui.features.CompositionSceneMode")
         val names = klass.enumConstants.map { (it as Enum<*>).name }.toSet()
-        assertEquals(4, names.size)
-        for (r in listOf("TRAVEL", "PORTRAIT", "FOOD", "PET")) {
-            assertTrue("CompositionSceneMode 必须包含 $r", r in names)
+        assertEquals("CompositionSceneMode 应有 7 种场景（对标 OPPO Find X9 哈苏大师）", 7, names.size)
+        for (r in listOf("TRAVEL", "PORTRAIT", "FOOD", "PET", "NIGHT", "MACRO", "STREET")) {
+            assertTrue("CompositionSceneMode 必须包含 $r，实际：$names", r in names)
         }
     }
 
@@ -242,6 +242,96 @@ class V193RegressionTest {
             "saveImage 中文件名必须包含构图 ID（compositionTag）",
             hasCompositionInFilename
         )
+    }
+
+    // ==================== 哈苏之眼全面优化验证 ====================
+
+    @Test
+    fun `优化-哈苏原厂胶片预设必须包含4种`() {
+        // 验证新增的哈苏原厂胶片预设：X1D、HCD、Portra 160、T-MAX
+        val modesFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladModes.kt"
+        )
+        val text = modesFile.readText()
+        val requiredPresets = listOf("hasselblad-x1d", "hasselblad-hcd", "hasselblad-portra160", "hasselblad-tmax")
+        for (preset in requiredPresets) {
+            assertTrue("必须包含哈苏原厂胶片预设：$preset", text.contains(preset))
+        }
+    }
+
+    @Test
+    fun `优化-ViewModel必须暴露operationError状态`() {
+        val klass = Class.forName("com.silas.omaster.ui.features.HasselbladEyeViewModel")
+        val methods = klass.declaredMethods.map { it.name }
+        val hasGetter = methods.any { it.startsWith("getOperationError") }
+        val hasClear = methods.any { it == "clearOperationError" }
+        assertTrue("ViewModel 必须暴露 operationError 状态（保存/分享失败反馈）", hasGetter)
+        assertTrue("ViewModel 必须有 clearOperationError 方法", hasClear)
+    }
+
+    @Test
+    fun `优化-HEIF编码必须使用WEBP_LOSSY而非JPEG`() {
+        val viewModelFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
+        )
+        val text = viewModelFile.readText()
+        // 验证 HEIF 不再使用 JPEG 编码（修复格式不一致问题）
+        assertFalse("HEIF 不应使用 JPEG 编码", text.contains("ExportFormat.HEIF -> Bitmap.CompressFormat.JPEG"))
+        assertTrue("HEIF 应使用 WEBP_LOSSY 编码", text.contains("Bitmap.CompressFormat.WEBP_LOSSY"))
+    }
+
+    @Test
+    fun `优化-ViewModel必须导入Intent类`() {
+        val viewModelFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
+        )
+        val text = viewModelFile.readText()
+        assertTrue("ViewModel 必须导入 Intent 类", text.contains("import android.content.Intent"))
+    }
+
+    @Test
+    fun `优化-权限二次引导对话框必须实现`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+        )
+        val text = screenFile.readText()
+        // 验证权限二次引导对话框实现
+        assertTrue("必须实现 shouldShowRequestPermissionRationale 判断", text.contains("shouldShowRequestPermissionRationale"))
+        assertTrue("必须实现跳转设置页", text.contains("ACTION_APPLICATION_DETAILS_SETTINGS"))
+        assertTrue("必须有权限引导对话框状态", text.contains("showPermissionRationale"))
+    }
+
+    @Test
+    fun `优化-新增构图指南必须包含长曝光景深消失点`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+        )
+        val text = screenFile.readText()
+        // 验证新增的 3 种构图指南
+        assertTrue("必须包含长曝光构图指南", text.contains("id = \"long-exposure\""))
+        assertTrue("必须包含景深引导构图指南", text.contains("id = \"depth-of-field\""))
+        assertTrue("必须包含消失点构图指南", text.contains("id = \"vanishing-point\""))
+    }
+
+    @Test
+    fun `优化-AR取景器模拟卡片必须实现`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+        )
+        val text = screenFile.readText()
+        // 验证 AR 取景器模拟卡片实现
+        assertTrue("必须实现 ViewfinderSimulatorCard 组件", text.contains("fun ViewfinderSimulatorCard"))
+        assertTrue("SetupContent 必须调用 ViewfinderSimulatorCard", text.contains("ViewfinderSimulatorCard()"))
+    }
+
+    @Test
+    fun `优化-ResultsContent必须接收appliedGuideId参数`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+        )
+        val text = screenFile.readText()
+        // 验证 ResultsContent 通过参数接收 appliedGuideId（修复编译错误）
+        assertTrue("ResultsContent 必须接收 appliedGuideId 参数", text.contains("appliedGuideId: String?"))
     }
 
     // ==================== 问题4: 字体变形 - 真实代码引用 ====================

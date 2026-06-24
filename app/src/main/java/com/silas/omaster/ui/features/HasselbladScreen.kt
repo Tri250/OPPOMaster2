@@ -46,8 +46,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -180,14 +182,60 @@ fun HasselbladScreen(
     val analysisMessage by viewModel.analysisMessage.collectAsState()
     val analysisProgress by viewModel.analysisProgress.collectAsState()
 
+    // AI 构图引导状态
+    val appliedCompositionGuideId by viewModel.appliedCompositionGuideId.collectAsState()
+    val appliedARGuideType by viewModel.appliedARGuideType.collectAsState()
+    val isARGuideEnabled by viewModel.isARGuideEnabled.collectAsState()
+
+    // 操作错误状态：保存/分享失败时弹出 Toast 提示
+    val operationError by viewModel.operationError.collectAsState()
+    LaunchedEffect(operationError) {
+        operationError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            viewModel.clearOperationError()
+        }
+    }
+
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
     var recentShots by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    // 权限二次引导对话框状态：首次拒绝后展示说明，勾选"不再询问"后引导跳转设置
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    var shouldGoToSettings by remember { mutableStateOf(false) }
+    // 当前 Activity 引用，用于判断 shouldShowRequestPermissionRationale
+    val activity = context as? android.app.Activity
+
+    // 跳转系统应用详情设置页（用于权限被永久拒绝场景）
+    val appSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        // 从设置页返回后，若已授权则可直接继续，否则保持当前状态
+        val granted = ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.CAMERA
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            Toast.makeText(context, "相机权限已开启", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (!granted) {
-            Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
+            // 判断是否应该展示权限说明（用户未勾选"不再询问"）
+            val rationale = activity?.let {
+                androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                    it, android.Manifest.permission.CAMERA
+                )
+            } ?: false
+            if (rationale) {
+                // 可再次请求：展示说明对话框
+                showPermissionRationale = true
+                shouldGoToSettings = false
+            } else {
+                // 已被永久拒绝：引导跳转设置页
+                showPermissionRationale = true
+                shouldGoToSettings = true
+            }
         }
     }
 
@@ -411,6 +459,7 @@ fun HasselbladScreen(
                     originalBitmap = originalBitmap,
                     thumbnailPreview = thumbnailPreview,
                     result = analysisResult,
+                    appliedGuideId = appliedCompositionGuideId,
                     onSceneModeSelected = ::onSceneModeSelected,
                     onColorModeSelected = ::onColorModeSelected,
                     onParamChanged = ::onParamChanged,
@@ -427,6 +476,20 @@ fun HasselbladScreen(
                         if (isParamsLocked) {
                             Toast.makeText(context, "参数已锁定：仅切换参考模式，未覆盖当前参数", Toast.LENGTH_SHORT).show()
                         }
+                    },
+                    onGuideClick = { guide ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.applyCompositionGuide(guide)
+                        Toast.makeText(
+                            context,
+                            "已应用构图：${guide.name}，AR引导线已开启",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onClearComposition = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.clearAppliedComposition()
+                        Toast.makeText(context, "已清除当前构图", Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -468,6 +531,63 @@ fun HasselbladScreen(
                 )
             }
         }
+    }
+
+    // 权限二次引导对话框：首次拒绝展示说明，永久拒绝引导跳转设置
+    if (showPermissionRationale) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                showPermissionRationale = false
+            },
+            title = {
+                Text(
+                    text = "相机权限说明",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (shouldGoToSettings) {
+                        "哈苏之眼需要相机权限才能拍照分析。\n\n您已选择"不再询问"，请前往设置页手动开启相机权限后返回使用。"
+                    } else {
+                        "哈苏之眼需要相机权限才能拍照并进行场景分析、AI构图引导。\n\n开启后即可使用哈苏大师色彩科学与AR构图引导功能。"
+                    }
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionRationale = false
+                        if (shouldGoToSettings) {
+                            // 跳转应用详情设置页
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            ).apply {
+                                data = android.net.Uri.fromParts("package", context.packageName, null)
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            appSettingsLauncher.launch(intent)
+                        } else {
+                            // 重新请求权限
+                            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text(
+                        text = if (shouldGoToSettings) "去设置" else "重新授权",
+                        color = Color.White
+                    )
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showPermissionRationale = false }
+                ) {
+                    Text("暂不使用")
+                }
+            }
+        )
     }
 }
 
@@ -571,6 +691,11 @@ private fun SetupContent(
             )
         }
 
+        // AR 取景器模拟：拍照前预览构图引导线
+        item {
+            ViewfinderSimulatorCard()
+        }
+
         if (recentShots.isNotEmpty()) {
             item {
                 SectionTitle(title = "最近拍摄")
@@ -654,6 +779,111 @@ private fun HeroCard() {
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * AR 取景器模拟卡片
+ * 拍照前预览不同场景的 AR 构图引导线，模拟真实取景器叠加效果
+ * 用户可切换场景模式与引导线类型，提前了解构图方案
+ */
+@Composable
+private fun ViewfinderSimulatorCard() {
+    var selectedSceneMode by remember { mutableStateOf(CompositionSceneMode.TRAVEL) }
+    var selectedGuideType by remember { mutableStateOf(ARGuideType.THIRDS) }
+    // 根据场景模式自动推荐引导线
+    LaunchedEffect(selectedSceneMode) {
+        val recommendedGuideId = selectedSceneMode.recommendedGuides.firstOrNull()
+        val guide = compositionGuideLibrary.find { it.id == recommendedGuideId }
+        guide?.let { selectedGuideType = it.arGuideType }
+    }
+
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = null,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "AR 取景器模拟",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "拍照前预览构图引导线，选择场景与引导方式",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 场景模式选择
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(CompositionSceneMode.entries) { mode ->
+                    FilterChip(
+                        selected = selectedSceneMode == mode,
+                        onClick = { selectedSceneMode = mode },
+                        label = {
+                            Text(
+                                text = "${mode.icon} ${mode.displayName}",
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = HasselbladOrange.copy(alpha = 0.2f),
+                            selectedLabelColor = HasselbladOrange
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 引导线类型选择
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(ARGuideType.entries) { guideType ->
+                    FilterChip(
+                        selected = selectedGuideType == guideType,
+                        onClick = { selectedGuideType = guideType },
+                        label = {
+                            Text(
+                                text = guideType.displayName,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = HasselbladOrange.copy(alpha = 0.2f),
+                            selectedLabelColor = HasselbladOrange
+                        )
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // AR 引导线叠加预览（模拟取景器）
+            ARGuideOverlay(
+                guideType = selectedGuideType,
+                sceneMode = selectedSceneMode
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "💡 ${selectedSceneMode.arTip}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
     }
 }
@@ -1297,6 +1527,7 @@ private fun ResultsContent(
     originalBitmap: Bitmap?,
     thumbnailPreview: Bitmap?,
     result: AnalysisResult?,
+    appliedGuideId: String?,
     onSceneModeSelected: (SceneMode) -> Unit,
     onColorModeSelected: (ColorMode) -> Unit,
     onParamChanged: (String, Int) -> Unit,
@@ -1304,7 +1535,9 @@ private fun ResultsContent(
     onPreviewEffect: () -> Unit,
     onResetParams: () -> Unit,
     onFilmClick: (FilmPreset) -> Unit,
-    onFineGrainedSceneSelected: (SceneProfile) -> Unit
+    onFineGrainedSceneSelected: (SceneProfile) -> Unit,
+    onGuideClick: (CompositionGuide) -> Unit,
+    onClearComposition: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1349,22 +1582,9 @@ private fun ResultsContent(
             item {
                 CompositionGuideCard(
                     sceneCategory = result.sceneProfile.category,
-                    appliedGuideId = viewModel.appliedCompositionGuideId.collectAsState().value,
-                    onGuideClick = { guide ->
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        // 真正应用构图：写入 ViewModel 状态 + 自动开启AR引导 + 提示用户
-                        viewModel.applyCompositionGuide(guide)
-                        Toast.makeText(
-                            context,
-                            "已应用构图：${guide.name}，AR引导线已开启",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    },
-                    onClearComposition = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.clearAppliedComposition()
-                        Toast.makeText(context, "已清除当前构图", Toast.LENGTH_SHORT).show()
-                    }
+                    appliedGuideId = appliedGuideId,
+                    onGuideClick = onGuideClick,
+                    onClearComposition = onClearComposition
                 )
             }
 
@@ -2426,7 +2646,7 @@ enum class ARGuideType(
 
 /**
  * 构图场景模式
- * 对应4大核心应用场景
+ * 对应7大核心应用场景（对标OPPO Find X9哈苏大师）
  */
 enum class CompositionSceneMode(
     val displayName: String,
@@ -2462,6 +2682,27 @@ enum class CompositionSceneMode(
         description = "猫咪嬉戏、狗狗奔跑、互动瞬间",
         recommendedGuides = listOf("rule-of-thirds", "diagonal", "leading-lines", "negative-space"),
         arTip = "AR引导线稳定追踪动态主体，解决手抖或构图偏差"
+    ),
+    NIGHT(
+        displayName = "夜景星空",
+        icon = "🌃",
+        description = "城市夜景、星轨银河、车流光轨",
+        recommendedGuides = listOf("rule-of-thirds", "center-symmetry", "leading-lines", "frame-in-frame"),
+        arTip = "长曝光引导线辅助稳定构图，水平仪确保地平线水平"
+    ),
+    MACRO(
+        displayName = "微距世界",
+        icon = "🔍",
+        description = "花卉昆虫、水滴纹理、珠宝细节",
+        recommendedGuides = listOf("golden-ratio", "golden-spiral", "center-symmetry", "diagonal"),
+        arTip = "景深引导框提示对焦区域，黄金螺旋突出微观主体"
+    ),
+    STREET(
+        displayName = "城市街拍",
+        icon = "🏢",
+        description = "街头人文、建筑几何、城市光影",
+        recommendedGuides = listOf("leading-lines", "diagonal", "frame-in-frame", "rule-of-thirds"),
+        arTip = "引导线汇聚消失点，框架构图增强纵深感与故事性"
     )
 }
 
@@ -2629,6 +2870,54 @@ private val compositionGuideLibrary: List<CompositionGuide> = listOf(
         arGuideType = ARGuideType.THIRDS,
         sceneMode = CompositionSceneMode.PET,
         arOverlayDescription = "AR动态追踪框锁定主体，三分线实时调整保持构图"
+    ),
+    CompositionGuide(
+        id = "long-exposure",
+        name = "长曝光构图",
+        description = "稳定水平构图，适合夜景长曝光与光轨",
+        icon = "🌌",
+        tips = listOf(
+            "使用三脚架或稳定支撑，避免长曝光抖动",
+            "地平线严格水平，光轨沿引导线延伸",
+            "前景留出空间，营造夜景纵深感"
+        ),
+        applicableCategories = listOf(SceneCategory.NIGHT, SceneCategory.URBAN, SceneCategory.LANDSCAPE),
+        difficulty = "大师",
+        arGuideType = ARGuideType.HORIZON,
+        sceneMode = CompositionSceneMode.NIGHT,
+        arOverlayDescription = "叠加水平仪与三分线，水平偏移时红色警示"
+    ),
+    CompositionGuide(
+        id = "depth-of-field",
+        name = "景深引导构图",
+        description = "对焦区域框定主体，虚化背景突出细节",
+        icon = "🔬",
+        tips = listOf(
+            "对焦框对准微观主体，确保焦点锐利",
+            "背景远离主体以获得更柔和虚化",
+            "黄金螺旋中心放置最精细的纹理细节"
+        ),
+        applicableCategories = listOf(SceneCategory.MACRO, SceneCategory.STILL_LIFE),
+        difficulty = "大师",
+        arGuideType = ARGuideType.SPIRAL,
+        sceneMode = CompositionSceneMode.MACRO,
+        arOverlayDescription = "对焦区域高亮框 + 黄金螺旋引导微观主体位置"
+    ),
+    CompositionGuide(
+        id = "vanishing-point",
+        name = "消失点构图",
+        description = "引导线汇聚至消失点，营造强烈空间感",
+        icon = "📐",
+        tips = listOf(
+            "寻找街道、走廊、铁轨等天然汇聚线",
+            "消失点放置于三分线交叉点或黄金点",
+            "前景人物或物体增加故事性与比例参考"
+        ),
+        applicableCategories = listOf(SceneCategory.URBAN, SceneCategory.LANDSCAPE, SceneCategory.NIGHT),
+        difficulty = "进阶",
+        arGuideType = ARGuideType.DIAGONAL,
+        sceneMode = CompositionSceneMode.STREET,
+        arOverlayDescription = "检测引导线并标注消失点，对角线辅助构图"
     )
 )
 
