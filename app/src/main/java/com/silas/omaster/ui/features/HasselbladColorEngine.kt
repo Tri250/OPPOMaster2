@@ -262,6 +262,8 @@ object HasselbladColorEngine {
                 (source.height * scale).roundToInt(),
                 true
             )
+        } else if (source.config == Bitmap.Config.ARGB_8888 && source.isMutable) {
+            source
         } else {
             source.copy(Bitmap.Config.ARGB_8888, true)
         }
@@ -307,7 +309,11 @@ object HasselbladColorEngine {
     }
 
     private fun applyColorMatrix(source: Bitmap, matrix: ColorMatrix): Bitmap {
-        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        val output = if (source.config == Bitmap.Config.ARGB_8888 && source.isMutable) {
+            source
+        } else {
+            Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        }
         val canvas = Canvas(output)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = ColorMatrixColorFilter(matrix)
@@ -325,6 +331,7 @@ object HasselbladColorEngine {
         vibrance: Float
     ) {
         if (highlights == 0f && shadows == 0f && vibrance <= 0f) return
+        if (!bitmap.isMutable) return
 
         val width = bitmap.width
         val height = bitmap.height
@@ -381,7 +388,8 @@ object HasselbladColorEngine {
     // ==================== Unsharp Mask（清晰度 / 锐度） ====================
 
     private fun applyUnsharpMask(bitmap: Bitmap, radius: Int, amount: Float) {
-        if (amount <= 0.005f || radius <= 0) return
+        val clampedAmount = amount.coerceIn(0f, 5f)
+        if (clampedAmount <= 0.005f || radius <= 0) return
 
         val blurred = boxBlur(bitmap, radius)
         val width = bitmap.width
@@ -396,9 +404,9 @@ object HasselbladColorEngine {
         for (i in original.indices) {
             val o = original[i]
             val b = blurredPixels[i]
-            val r = (o.red + amount * (o.red - b.red)).roundToInt().coerceIn(0, 255)
-            val g = (o.green + amount * (o.green - b.green)).roundToInt().coerceIn(0, 255)
-            val bl = (o.blue + amount * (o.blue - b.blue)).roundToInt().coerceIn(0, 255)
+            val r = (o.red + clampedAmount * (o.red - b.red)).roundToInt().coerceIn(0, 255)
+            val g = (o.green + clampedAmount * (o.green - b.green)).roundToInt().coerceIn(0, 255)
+            val bl = (o.blue + clampedAmount * (o.blue - b.blue)).roundToInt().coerceIn(0, 255)
             original[i] = argb(o.alpha, r, g, bl)
         }
 
@@ -495,7 +503,7 @@ object HasselbladColorEngine {
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        val random = Random(System.currentTimeMillis())
+        val random = Random(System.nanoTime())
         val intensity = grainLevel * 64f
 
         for (i in pixels.indices) {
@@ -549,14 +557,14 @@ object HasselbladColorEngine {
 
         bitmap.getPixels(input, 0, width, 0, 0, width, height)
 
-        // 水平方向滑动窗口
+        // 水平方向滑动窗口（float 累加，避免整数除法精度损失）
         val windowSize = radius * 2 + 1
         for (y in 0 until height) {
             val rowStart = y * width
-            var sumA = 0
-            var sumR = 0
-            var sumG = 0
-            var sumB = 0
+            var sumA = 0f
+            var sumR = 0f
+            var sumG = 0f
+            var sumB = 0f
 
             for (dx in -radius..radius) {
                 val px = dx.coerceIn(0, width - 1)
@@ -566,7 +574,12 @@ object HasselbladColorEngine {
                 sumG += c.green
                 sumB += c.blue
             }
-            temp[rowStart] = argb(sumA / windowSize, sumR / windowSize, sumG / windowSize, sumB / windowSize)
+            temp[rowStart] = argb(
+                (sumA / windowSize).roundToInt(),
+                (sumR / windowSize).roundToInt(),
+                (sumG / windowSize).roundToInt(),
+                (sumB / windowSize).roundToInt()
+            )
 
             for (x in 1 until width) {
                 val leftX = (x - radius - 1).coerceIn(0, width - 1)
@@ -579,18 +592,23 @@ object HasselbladColorEngine {
                 sumG += rightC.green - leftC.green
                 sumB += rightC.blue - leftC.blue
 
-                temp[rowStart + x] = argb(sumA / windowSize, sumR / windowSize, sumG / windowSize, sumB / windowSize)
+                temp[rowStart + x] = argb(
+                    (sumA / windowSize).roundToInt(),
+                    (sumR / windowSize).roundToInt(),
+                    (sumG / windowSize).roundToInt(),
+                    (sumB / windowSize).roundToInt()
+                )
             }
         }
 
         val output = IntArray(width * height)
 
-        // 垂直方向滑动窗口
+        // 垂直方向滑动窗口（float 累加，避免整数除法精度损失）
         for (x in 0 until width) {
-            var sumA = 0
-            var sumR = 0
-            var sumG = 0
-            var sumB = 0
+            var sumA = 0f
+            var sumR = 0f
+            var sumG = 0f
+            var sumB = 0f
 
             for (dy in -radius..radius) {
                 val py = dy.coerceIn(0, height - 1)
@@ -600,7 +618,12 @@ object HasselbladColorEngine {
                 sumG += c.green
                 sumB += c.blue
             }
-            output[x] = argb(sumA / windowSize, sumR / windowSize, sumG / windowSize, sumB / windowSize)
+            output[x] = argb(
+                (sumA / windowSize).roundToInt(),
+                (sumR / windowSize).roundToInt(),
+                (sumG / windowSize).roundToInt(),
+                (sumB / windowSize).roundToInt()
+            )
 
             for (y in 1 until height) {
                 val topY = (y - radius - 1).coerceIn(0, height - 1)
@@ -613,7 +636,12 @@ object HasselbladColorEngine {
                 sumG += bottomC.green - topC.green
                 sumB += bottomC.blue - topC.blue
 
-                output[y * width + x] = argb(sumA / windowSize, sumR / windowSize, sumG / windowSize, sumB / windowSize)
+                output[y * width + x] = argb(
+                    (sumA / windowSize).roundToInt(),
+                    (sumR / windowSize).roundToInt(),
+                    (sumG / windowSize).roundToInt(),
+                    (sumB / windowSize).roundToInt()
+                )
             }
         }
 

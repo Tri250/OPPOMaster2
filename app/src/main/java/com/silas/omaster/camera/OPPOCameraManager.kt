@@ -3,6 +3,7 @@ package com.silas.omaster.camera
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -84,6 +85,23 @@ class OPPOCameraManager private constructor(private val context: Context) {
         // Find X 系列型号前缀
         private val FIND_X_MODEL_PREFIXES = listOf("CPH", "PFM", "PFT", "PDS", "RMX", "CPH3", "PFHM")
 
+        /**
+         * 参数白名单：允许校验的参数键名集合。
+         * 不在白名单中的键会记录警告日志，但不会作为校验错误处理。
+         */
+        private val ALLOWED_PARAM_KEYS: Set<String> = setOf(
+            "saturation", "contrast", "tone", "warmth", "sharpness", "clarity",
+            "iso", "whiteBalance", "exposureCompensation", "vignette", "cyanMagenta",
+            "brightness", "highlights", "shadows",
+            "softLight", "filter", "shutterSpeed"
+        )
+
+        /**
+         * 设备能力缓存 TTL（毫秒），默认 5 分钟。
+         * ContentProvider 可能在 OPPO 相机更新后出现或消失，因此需要定期刷新。
+         */
+        private const val DEVICE_CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000L
+
         @Volatile
         private var instance: OPPOCameraManager? = null
 
@@ -97,6 +115,11 @@ class OPPOCameraManager private constructor(private val context: Context) {
     // 缓存设备能力检测结果
     private var cachedDeviceCapability: DeviceCapability? = null
 
+    /**
+     * 缓存创建时间戳（毫秒），用于 TTL 过期检测。
+     */
+    private var cachedDeviceCapabilityTimestamp: Long = 0L
+
     // ==================== 公共 API ====================
 
     /**
@@ -105,10 +128,19 @@ class OPPOCameraManager private constructor(private val context: Context) {
      * 通过 Build.MANUFACTURER、Build.BRAND、Build.MODEL 判断设备类型，
      * 并尝试探测 OPPO 大师模式 ContentProvider 是否存在。
      *
+     * 结果会被缓存，但会在 [DEVICE_CAPABILITY_CACHE_TTL_MS] 后自动过期。
+     * ContentProvider 可能在 OPPO 相机更新后出现或消失，因此需要定期刷新。
+     *
      * @return 设备能力信息
      */
     fun detectDeviceCapability(): DeviceCapability {
-        cachedDeviceCapability?.let { return it }
+        val now = System.currentTimeMillis()
+        cachedDeviceCapability?.let { cached ->
+            if (now - cachedDeviceCapabilityTimestamp < DEVICE_CAPABILITY_CACHE_TTL_MS) {
+                return cached
+            }
+            Log.d(TAG, "设备能力缓存已过期（TTL=${DEVICE_CAPABILITY_CACHE_TTL_MS}ms），重新检测")
+        }
 
         val manufacturer = Build.MANUFACTURER.lowercase()
         val brand = Build.BRAND.lowercase()
@@ -150,6 +182,7 @@ class OPPOCameraManager private constructor(private val context: Context) {
                 "contentProvider=${capability.supportsContentProvider}")
 
         cachedDeviceCapability = capability
+        cachedDeviceCapabilityTimestamp = now
         return capability
     }
 
@@ -254,6 +287,7 @@ class OPPOCameraManager private constructor(private val context: Context) {
      */
     fun invalidateDeviceCache() {
         cachedDeviceCapability = null
+        cachedDeviceCapabilityTimestamp = 0L
         Log.d(TAG, "设备能力缓存已清除")
     }
 
@@ -417,9 +451,20 @@ class OPPOCameraManager private constructor(private val context: Context) {
      * OPPO 相机大师模式参数通过 oppo_camera_master_* 前缀的系统设置键存储。
      * 在非 OPPO 设备上此方法会因无法写入而返回 null。
      *
+     * 注意：Settings.System 写入需要 WRITE_SETTINGS 权限（Android 6.0+）。
+     * 如果权限未授予，将跳过此方式并返回 null。
+     *
      * @return 成功返回 CameraApplyResult，失败返回 null
      */
     private fun applyViaSystemSettings(params: Map<String, Any>): CameraApplyResult? {
+        // 检查是否有 WRITE_SETTINGS 权限（Android 6.0+）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(context)) {
+                Log.w(TAG, "Settings: 缺少 WRITE_SETTINGS 权限，跳过 System Settings 方式")
+                return null
+            }
+        }
+
         val appliedParams = mutableMapOf<String, Any>()
         val failedParams = mutableListOf<String>()
 
@@ -505,6 +550,14 @@ class OPPOCameraManager private constructor(private val context: Context) {
      * 使用 com.oppo.camera.action.MASTER_MODE action 启动相机，
      * 参数通过 Intent extras 传递。
      *
+     * **注意**：Intent extras 的传递有以下限制：
+     * - 如果相机应用已在后台运行，新的 Intent extras 可能不会被接收，
+     *   因为 onNewIntent 的实现取决于目标应用是否主动读取 extras。
+     * - 如果相机应用不在前台，extras 可能被忽略，参数可能无法生效。
+     * - 建议在启动 Intent 前确保相机应用未被后台运行，或使用 FLAG_ACTIVITY_CLEAR_TOP
+     *   和 FLAG_ACTIVITY_NEW_TASK 标志来增加参数被接收的可能性。
+     * - 如果此方式未能传递参数，将自动回退到 Clipboard 方式。
+     *
      * @return 成功返回 CameraApplyResult，失败返回 null
      */
     private fun applyViaCameraIntent(params: Map<String, Any>): CameraApplyResult? {
@@ -538,7 +591,8 @@ class OPPOCameraManager private constructor(private val context: Context) {
             }
 
             context.startActivity(intent)
-            Log.d(TAG, "Camera Intent: 成功启动 OPPO 相机大师模式")
+            Log.d(TAG, "Camera Intent: 成功启动 OPPO 相机大师模式" +
+                    "（注意：如果相机应用已在后台运行，extras 可能不会被接收）")
             CameraApplyResult.Success(ApplyMethod.CAMERA_INTENT, params)
 
         } catch (e: Exception) {
@@ -636,6 +690,9 @@ class OPPOCameraManager private constructor(private val context: Context) {
      * 格式: "OMaster 预设参数: 饱和度=+10, 对比度=-5, ..."
      * 同时显示 Toast 通知用户。
      *
+     * 注意：Android 12+（API 31+）系统会在剪贴板写入时自动显示 toast 提示，
+     * 因此跳过手动 Toast 以避免重复提示。
+     *
      * @return 始终返回 CameraApplyResult（Success 或 Failed）
      */
     private fun applyViaClipboard(params: Map<String, Any>): CameraApplyResult {
@@ -646,13 +703,14 @@ class OPPOCameraManager private constructor(private val context: Context) {
             val clip = android.content.ClipData.newPlainText("OMaster 预设参数", formattedString)
             clipboard.setPrimaryClip(clip)
 
-            // Android 13+ 系统自动显示剪贴板提示，无需手动 Toast
-            // 但为兼容旧版本，仍显示 Toast
-            Toast.makeText(
-                context,
-                "参数已复制到剪贴板，请在 OPPO 相机大师模式中手动输入",
-                Toast.LENGTH_LONG
-            ).show()
+            // Android 12+（API 31+）系统自动显示剪贴板 toast，跳过手动 Toast 以避免重复
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                Toast.makeText(
+                    context,
+                    "参数已复制到剪贴板，请在 OPPO 相机大师模式中手动输入",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
 
             Log.d(TAG, "Clipboard: 参数已复制到剪贴板")
             CameraApplyResult.Success(ApplyMethod.CLIPBOARD_FALLBACK, params)
@@ -834,6 +892,9 @@ class OPPOCameraManager private constructor(private val context: Context) {
     /**
      * 校验所有参数范围
      *
+     * 使用白名单机制：仅校验 [ALLOWED_PARAM_KEYS] 中定义的参数键。
+     * 不在白名单中的键会记录警告日志，但不会被视为校验错误。
+     *
      * 校验规则：
      * - 饱和度: -100 ~ 100
      * - 对比度/影调: -100 ~ 100
@@ -851,6 +912,12 @@ class OPPOCameraManager private constructor(private val context: Context) {
         val errors = mutableListOf<String>()
 
         for ((key, value) in params) {
+            // 白名单检查：只校验已知参数，未知参数仅记录警告
+            if (key !in ALLOWED_PARAM_KEYS) {
+                Log.w(TAG, "参数校验: 未知参数键 '$key'，不在白名单中，跳过范围校验")
+                continue
+            }
+
             val error = validateSingleParam(key, value)
             if (error != null) {
                 errors.add(error)
@@ -882,6 +949,8 @@ class OPPOCameraManager private constructor(private val context: Context) {
             // 字符串类型参数不做范围校验
             "softLight", "filter", "shutterSpeed" -> null
             else -> {
+                // 此分支理论上不会到达（因为 validateParams 已做白名单过滤），
+                // 但保留作为防御性编程
                 Log.w(TAG, "未知参数键: $key")
                 null
             }
@@ -940,6 +1009,11 @@ class OPPOCameraManager private constructor(private val context: Context) {
      *
      * 通过 PackageManager 检查 ContentProvider 对应的包是否存在，
      * 并尝试查询 ContentProvider 是否可访问。
+     *
+     * 区分预期异常和意外异常：
+     * - [PackageManager.NameNotFoundException]：预期异常，表示 OPPO 相机包未安装
+     * - [SecurityException]：预期异常，表示无权限访问 ContentProvider
+     * - 其他异常：记录为错误日志，可能是意外问题需要排查
      */
     private fun probeContentProvider(): Boolean {
         // 方法 1：通过 PackageManager 检查 OPPO 相机包是否包含对应 Provider
@@ -956,8 +1030,15 @@ class OPPOCameraManager private constructor(private val context: Context) {
                     return true
                 }
             }
+        } catch (e: PackageManager.NameNotFoundException) {
+            // 预期异常：OPPO 相机包未安装
+            Log.d(TAG, "ContentProvider 探测: OPPO 相机包未安装")
+        } catch (e: SecurityException) {
+            // 预期异常：无权限获取包信息
+            Log.d(TAG, "ContentProvider 探测: 无权限获取 OPPO 相机包信息")
         } catch (e: Exception) {
-            Log.d(TAG, "ContentProvider 探测: OPPO 相机包未安装或无法获取 Provider 信息")
+            // 意外异常：记录为错误以便排查
+            Log.e(TAG, "ContentProvider 探测: 获取 OPPO 相机包信息时发生意外异常: ${e.message}", e)
         }
 
         // 方法 2：尝试直接查询 ContentProvider
@@ -970,8 +1051,15 @@ class OPPOCameraManager private constructor(private val context: Context) {
             cursor?.close()
             Log.d(TAG, "ContentProvider 探测: 直接查询成功")
             return true
+        } catch (e: SecurityException) {
+            // 预期异常：无权限访问 ContentProvider
+            Log.d(TAG, "ContentProvider 探测: 无权限访问 ContentProvider: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            // 预期异常：URI 无效或 Provider 不存在
+            Log.d(TAG, "ContentProvider 探测: Provider 不存在或 URI 无效: ${e.message}")
         } catch (e: Exception) {
-            Log.d(TAG, "ContentProvider 探测: 直接查询失败: ${e.message}")
+            // 意外异常：记录为错误以便排查
+            Log.e(TAG, "ContentProvider 探测: 直接查询时发生意外异常: ${e.message}", e)
         }
 
         return false

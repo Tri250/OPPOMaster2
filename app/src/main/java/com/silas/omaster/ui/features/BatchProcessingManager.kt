@@ -10,9 +10,11 @@ import android.provider.MediaStore
 import android.util.Log
 import com.silas.omaster.model.HasselbladParams
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -44,6 +46,12 @@ class BatchProcessingManager(
     @Volatile
     private var isCancelled = false
 
+    // 协程 Job，用于取消正在执行的协程
+    private var processingJob: Job? = null
+
+    // 线程同步锁
+    private val lock = Any()
+
     /**
      * 批量处理图片
      * @param imageUris 待处理的图片 URI 列表
@@ -60,36 +68,55 @@ class BatchProcessingManager(
         onComplete: (results: List<BatchResult>) -> Unit = {}
     ) {
         if (imageUris.size > MAX_BATCH_SIZE) {
-            _batchState.value = _batchState.value.copy(
-                error = "批量处理最多支持 $MAX_BATCH_SIZE 张图片"
-            )
+            synchronized(lock) {
+                _batchState.value = _batchState.value.copy(
+                    error = "批量处理最多支持 $MAX_BATCH_SIZE 张图片"
+                )
+            }
             return
         }
 
-        isCancelled = false
-        _batchState.value = BatchState(
-            isProcessing = true,
-            totalCount = imageUris.size,
-            currentIndex = 0
-        )
+        synchronized(lock) {
+            isCancelled = false
+            _batchState.value = BatchState(
+                isProcessing = true,
+                totalCount = imageUris.size,
+                currentIndex = 0
+            )
+        }
 
         val results = mutableListOf<BatchResult>()
 
         withContext(Dispatchers.IO) {
+            // 捕获当前协程的 Job 以便外部取消
+            processingJob = coroutineContext[Job]
+
             for ((index, uri) in imageUris.withIndex()) {
-                if (isCancelled) {
-                    results.add(BatchResult(uri, null, "已取消"))
+                // 检查协程是否已被取消（通过 Job.cancel() 或外部取消）
+                if (!isActive) {
+                    synchronized(lock) {
+                        results.add(BatchResult(uri, null, "已取消"))
+                    }
                     break
                 }
 
-                _batchState.value = _batchState.value.copy(currentIndex = index)
+                // 检查 volatile 取消标志
+                synchronized(lock) {
+                    if (isCancelled) {
+                        results.add(BatchResult(uri, null, "已取消"))
+                        break
+                    }
+                    _batchState.value = _batchState.value.copy(currentIndex = index)
+                }
                 onProgress(index + 1, imageUris.size, uri)
 
                 try {
                     // 加载图片
                     val bitmap = loadBitmap(context, uri)
                     if (bitmap == null) {
-                        results.add(BatchResult(uri, null, "图片加载失败"))
+                        synchronized(lock) {
+                            results.add(BatchResult(uri, null, "图片加载失败"))
+                        }
                         continue
                     }
 
@@ -103,27 +130,42 @@ class BatchProcessingManager(
                         exportFormat
                     )
 
-                    if (savedUri != null) {
-                        results.add(BatchResult(uri, savedUri, null))
-                    } else {
-                        results.add(BatchResult(uri, null, "保存失败"))
+                    synchronized(lock) {
+                        if (savedUri != null) {
+                            results.add(BatchResult(uri, savedUri, null))
+                        } else {
+                            results.add(BatchResult(uri, null, "保存失败"))
+                        }
                     }
 
                     // 回收 Bitmap
-                    if (processedBitmap != bitmap) processedBitmap.recycle()
+                    if (processedBitmap !== bitmap) processedBitmap.recycle()
                     bitmap.recycle()
 
                 } catch (e: Exception) {
                     Log.e(TAG, "处理图片失败: ${e.message}", e)
-                    results.add(BatchResult(uri, null, e.message ?: "未知错误"))
+                    synchronized(lock) {
+                        results.add(BatchResult(uri, null, e.message ?: "未知错误"))
+                    }
+                }
+            }
+
+            // 如果中途取消，填充剩余结果
+            if (!isActive || isCancelled) {
+                synchronized(lock) {
+                    for (i in results.size until imageUris.size) {
+                        results.add(BatchResult(imageUris[i], null, "已取消"))
+                    }
                 }
             }
         }
 
-        _batchState.value = _batchState.value.copy(
-            isProcessing = false,
-            isComplete = true
-        )
+        synchronized(lock) {
+            _batchState.value = _batchState.value.copy(
+                isProcessing = false,
+                isComplete = true
+            )
+        }
         onComplete(results)
     }
 
@@ -131,29 +173,40 @@ class BatchProcessingManager(
      * 取消批量处理
      */
     fun cancel() {
-        isCancelled = true
-        _batchState.value = _batchState.value.copy(isCancelled = true)
+        synchronized(lock) {
+            isCancelled = true
+            _batchState.value = _batchState.value.copy(isCancelled = true)
+        }
+        // 同时取消协程，确保 isActive 检查能立即生效
+        processingJob?.cancel()
     }
 
     /**
      * 重置状态
      */
     fun reset() {
-        isCancelled = false
-        _batchState.value = BatchState()
+        synchronized(lock) {
+            isCancelled = false
+            _batchState.value = BatchState()
+        }
+        processingJob = null
     }
 
     /**
-     * 加载图片
+     * 加载图片 - 使用单一字节数组流避免重复打开资源
      */
     private fun loadBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
+            // 一次性读取全部字节，避免两次打开 InputStream
+            val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
+                stream.readBytes()
+            } ?: return null
+
+            // 第一次解码：仅获取尺寸信息
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
             }
-            BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream?.close()
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
 
             // 计算采样率
             options.inSampleSize = calculateSampleSize(
@@ -163,10 +216,8 @@ class BatchProcessingManager(
             options.inJustDecodeBounds = false
             options.inPreferredConfig = Bitmap.Config.RGB_565
 
-            val stream = context.contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(stream, null, options)
-            stream?.close()
-            bitmap
+            // 第二次解码：使用同一字节数组实际解码
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
         } catch (e: Exception) {
             Log.e(TAG, "加载图片失败: ${e.message}", e)
             null
@@ -177,7 +228,12 @@ class BatchProcessingManager(
      * 应用预设参数
      */
     private fun applyPreset(bitmap: Bitmap, params: HasselbladParams): Bitmap {
-        val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        // 如果源已经是 ARGB_8888 且可变，直接使用；否则才拷贝
+        val result = if (bitmap.config == Bitmap.Config.ARGB_8888 && bitmap.isMutable) {
+            bitmap
+        } else {
+            bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        }
         val canvas = android.graphics.Canvas(result)
         val paint = android.graphics.Paint()
 
@@ -187,7 +243,7 @@ class BatchProcessingManager(
             val cm = android.graphics.ColorMatrix()
             cm.setSaturation(saturation)
             paint.colorFilter = android.graphics.ColorMatrixColorFilter(cm)
-            canvas.drawBitmap(result, 0f, 0f, paint)
+            canvas.drawBitmap(bitmap, 0f, 0f, paint)
         }
 
         // 对比度
@@ -239,7 +295,10 @@ class BatchProcessingManager(
                 HasselbladEyeViewModel.ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg"
                 HasselbladEyeViewModel.ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png"
                 HasselbladEyeViewModel.ExportFormat.WEBP -> Bitmap.CompressFormat.WEBP to "webp"
-                HasselbladEyeViewModel.ExportFormat.HEIF -> Bitmap.CompressFormat.JPEG to "heic"
+                HasselbladEyeViewModel.ExportFormat.HEIF -> {
+                    Log.w(TAG, "HEIF 格式当前设备不支持，已回退为 JPEG 格式导出")
+                    Bitmap.CompressFormat.JPEG to "heic"
+                }
             }
             val mimeType = when (format) {
                 HasselbladEyeViewModel.ExportFormat.JPEG -> "image/jpeg"

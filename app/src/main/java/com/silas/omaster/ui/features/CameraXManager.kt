@@ -19,6 +19,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import com.silas.omaster.model.HasselbladParams
 import java.nio.ByteBuffer
@@ -45,6 +46,8 @@ class CameraXManager(
 ) : DefaultLifecycleObserver {
     companion object {
         private const val TAG = "CameraXManager"
+        /** 帧跳过间隔：每 N 帧处理一帧，减少 CPU 负载 */
+        private const val FRAME_SKIP_INTERVAL = 3
     }
 
     // 相机执行器
@@ -61,7 +64,15 @@ class CameraXManager(
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var flashMode = ImageCapture.FLASH_MODE_OFF
 
+    // 帧跳过计数器（线程安全：仅在 cameraExecutor 单线程中访问）
+    private var frameSkipCounter = 0
+
+    // 释放标记：防止 release 后仍有 pending 回调将 Bitmap 泄漏
+    @Volatile
+    private var isReleased = false
+
     // 实时分析帧回调（始终在主线程触发，方便 Compose state 直接更新）
+    // 回调方接收 Bitmap 所有权，使用完毕后必须调用 bitmap.recycle()
     private var onFrameAnalyzed: ((Bitmap) -> Unit)? = null
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -71,6 +82,9 @@ class CameraXManager(
 
     private val _currentLensFacing = MutableStateFlow(lensFacing)
     val currentLensFacing: StateFlow<Int> = _currentLensFacing.asStateFlow()
+
+    private val _flashMode = MutableStateFlow(flashMode)
+    val flashModeState: StateFlow<Int> = _flashMode.asStateFlow()
 
     // 当前应用的预设参数
     @Volatile
@@ -100,9 +114,22 @@ class CameraXManager(
 
     /**
      * 启动相机，绑定到 PreviewView
+     *
+     * 仅在 Lifecycle 处于 STARTED 或 RESUMED 状态时启动，
+     * 避免在后台或销毁状态下触发相机绑定导致崩溃。
      */
     fun startCamera(previewView: PreviewView) {
         savedPreviewView = previewView
+
+        val currentState = lifecycleOwner.lifecycle.currentState
+        if (!currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            Log.d(TAG, "Lifecycle 未处于 STARTED 状态（当前: $currentState），推迟相机启动")
+            return
+        }
+
+        isReleased = false
+        frameSkipCounter = 0
+
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
@@ -174,20 +201,40 @@ class CameraXManager(
 
     /**
      * 实时分析帧 - 应用预设参数
+     *
+     * 帧跳过策略：每 FRAME_SKIP_INTERVAL 帧仅处理一帧，降低 CPU 负载。
+     * Bitmap 所有权转移：processedBitmap 通过 mainHandler 投递给回调方，
+     * 回调方在使用完毕后必须调用 bitmap.recycle() 释放内存。
+     * 若已释放或无回调，则在此处立即回收 Bitmap。
      */
     private fun analyzeFrame(imageProxy: ImageProxy) {
         try {
+            // 帧跳过：每 N 帧处理一帧，减少 CPU 负载
+            frameSkipCounter++
+            if (frameSkipCounter % FRAME_SKIP_INTERVAL != 0) {
+                return
+            }
+
             val bitmap = imageProxyToBitmap(imageProxy)
             if (bitmap != null) {
                 // 应用预设参数到实时帧
                 val processedBitmap = applyPresetToFrame(bitmap, currentParams)
                 // 切到主线程再回调，避免在后台线程修改 Compose state
                 val callback = onFrameAnalyzed
-                if (callback != null) {
-                    mainHandler.post { callback(processedBitmap) }
+                if (callback != null && !isReleased) {
+                    // Bitmap 所有权转移给回调方，回调方负责 recycle
+                    mainHandler.post {
+                        if (isReleased) {
+                            // 在 post 排队期间被释放了，回收 Bitmap 防止泄漏
+                            if (processedBitmap !== bitmap && !processedBitmap.isRecycled) processedBitmap.recycle()
+                            if (!bitmap.isRecycled) bitmap.recycle()
+                        } else {
+                            callback(processedBitmap)
+                        }
+                    }
                 } else {
-                    // 没有订阅者时回收，避免内存泄漏
-                    if (processedBitmap !== bitmap) processedBitmap.recycle()
+                    // 没有订阅者或已释放，立即回收避免内存泄漏
+                    if (processedBitmap !== bitmap && !processedBitmap.isRecycled) processedBitmap.recycle()
                     if (!bitmap.isRecycled) bitmap.recycle()
                 }
             }
@@ -200,6 +247,9 @@ class CameraXManager(
 
     /**
      * 注册帧分析回调
+     *
+     * 回调方接收 Bitmap 所有权，使用完毕后必须调用 bitmap.recycle()。
+     * 传入 null 可取消回调。
      */
     fun setOnFrameAnalyzed(callback: ((Bitmap) -> Unit)?) {
         onFrameAnalyzed = callback
@@ -214,8 +264,15 @@ class CameraXManager(
 
     /**
      * 拍照
+     *
+     * 在相机未绑定或未就绪时通过 onError 回调通知调用方。
      */
     fun takePhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
+        if (!_isCameraReady.value) {
+            onError("相机未就绪")
+            return
+        }
+
         val imageCapture = imageCapture ?: run {
             onError("相机未就绪")
             return
@@ -260,7 +317,9 @@ class CameraXManager(
     }
 
     /**
-     * 切换闪光灯
+     * 切换闪光灯模式（OFF → ON → AUTO → OFF）
+     *
+     * 返回切换后的闪光灯模式，同时通过 [flashModeState] 暴露状态。
      */
     fun toggleFlash(): Int {
         flashMode = when (flashMode) {
@@ -268,6 +327,7 @@ class CameraXManager(
             ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
             else -> ImageCapture.FLASH_MODE_OFF
         }
+        _flashMode.value = flashMode
         return flashMode
     }
 
@@ -400,6 +460,8 @@ class CameraXManager(
      * 仅释放相机绑定（保留 executor，用于 onPause/onResume 切换）
      */
     private fun releaseCamera() {
+        isReleased = true
+        onFrameAnalyzed = null
         cameraProvider?.unbindAll()
         camera = null
         preview = null

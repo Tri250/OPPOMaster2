@@ -211,15 +211,31 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         bitmap: Bitmap, startX: Int, endX: Int, startY: Int, endY: Int,
         step: Int, weight: Float
     ): RegionSample {
+        val sx = startX.coerceAtLeast(0)
+        val ex = endX.coerceAtMost(bitmap.width)
+        val sy = startY.coerceAtLeast(0)
+        val ey = endY.coerceAtMost(bitmap.height)
+
+        val regionWidth = ex - sx
+        val regionHeight = ey - sy
+        if (regionWidth <= 0 || regionHeight <= 0) {
+            return RegionSample(0L, 0L, 0L, 0, 0, 0, 0, 0, 0, 1f, 0f)
+        }
+
+        // 批量读取所有像素
+        val pixels = IntArray(regionWidth * regionHeight)
+        bitmap.getPixels(pixels, 0, regionWidth, sx, sy, regionWidth, regionHeight)
+
         var totalR = 0L; var totalG = 0L; var totalB = 0L
         var warmPixels = 0; var coldPixels = 0
         var skinPixels = 0; var darkPixels = 0; var highlightPixels = 0
         var pixelCount = 0
         var blueSum = 0.0
 
-        for (y in startY.coerceAtLeast(0) until endY.coerceAtMost(bitmap.height) step step) {
-            for (x in startX.coerceAtLeast(0) until endX.coerceAtMost(bitmap.width) step step) {
-                val pixel = bitmap.getPixel(x, y)
+        for (y in sy until ey step step) {
+            val rowOffset = (y - sy) * regionWidth
+            for (x in sx until ex step step) {
+                val pixel = pixels[rowOffset + (x - sx)]
                 val r = Color.red(pixel)
                 val g = Color.green(pixel)
                 val b = Color.blue(pixel)
@@ -377,17 +393,22 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val centerStartX = (width - centerWidth) / 2
         val centerStartY = (height - centerHeight) / 2
 
+        // 追踪需要回收的临时 Bitmap，避免误回收原始 bitmap
+        val bitmapsToRecycle = mutableListOf<Bitmap>()
+
         // 提取中心区域并缩放到 200×200 进行精扫
         val centerBitmap = Bitmap.createBitmap(bitmap, centerStartX, centerStartY, centerWidth, centerHeight)
+        bitmapsToRecycle.add(centerBitmap)
+
         val fineBitmap = if (centerWidth > 200 || centerHeight > 200) {
-            Bitmap.createScaledBitmap(centerBitmap, 200, 200, true)
+            Bitmap.createScaledBitmap(centerBitmap, 200, 200, true).also { bitmapsToRecycle.add(it) }
         } else {
             centerBitmap
         }
 
         // 整体缩放到 100×100 进行粗扫
         val coarseBitmap = if (width > 100 || height > 100) {
-            Bitmap.createScaledBitmap(bitmap, 100, 100, true)
+            Bitmap.createScaledBitmap(bitmap, 100, 100, true).also { bitmapsToRecycle.add(it) }
         } else {
             bitmap
         }
@@ -398,10 +419,8 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 粗扫整体（权重 1.0）
         val coarseEdgeDensity = computeSobelEdgeDensity(coarseBitmap, threshold = 50)
 
-        // 回收临时 bitmap
-        if (centerBitmap !== bitmap) centerBitmap.recycle()
-        if (fineBitmap !== centerBitmap) fineBitmap.recycle()
-        if (coarseBitmap !== bitmap) coarseBitmap.recycle()
+        // 回收临时 bitmap（不会误回收原始 bitmap）
+        bitmapsToRecycle.forEach { it.recycle() }
 
         // 加权合并：精扫结果权重更高
         return (fineEdgeDensity * 2.0f + coarseEdgeDensity * 1.0f) / 3.0f
@@ -413,13 +432,26 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     private fun computeSobelEdgeDensity(bitmap: Bitmap, threshold: Int): Float {
         val w = bitmap.width
         val h = bitmap.height
+        if (w < 3 || h < 3) return 0f
+
+        // 批量读取所有像素
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        // 预计算亮度数组，避免重复 getPixel 调用
+        val luminance = FloatArray(w * h)
+        for (i in pixels.indices) {
+            luminance[i] = getLuminance(pixels[i])
+        }
+
         var edgeCount = 0
         var totalPixels = 0
 
         for (y in 1 until h - 1) {
             for (x in 1 until w - 1) {
-                val gx = sobelX(bitmap, x, y)
-                val gy = sobelY(bitmap, x, y)
+                val idx = y * w + x
+                val gx = sobelX(luminance, w, idx)
+                val gy = sobelY(luminance, w, idx)
                 val gradient = sqrt(gx * gx + gy * gy)
 
                 if (gradient > threshold) edgeCount++
@@ -433,40 +465,40 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     /**
      * Sobel X 方向算子
      */
-    private fun sobelX(bitmap: Bitmap, x: Int, y: Int): Float {
-        val p1 = getLuminance(bitmap.getPixel(x - 1, y - 1))
-        val p2 = getLuminance(bitmap.getPixel(x, y - 1))
-        val p3 = getLuminance(bitmap.getPixel(x + 1, y - 1))
-        val p4 = getLuminance(bitmap.getPixel(x - 1, y))
-        val p6 = getLuminance(bitmap.getPixel(x + 1, y))
-        val p7 = getLuminance(bitmap.getPixel(x - 1, y + 1))
-        val p8 = getLuminance(bitmap.getPixel(x, y + 1))
-        val p9 = getLuminance(bitmap.getPixel(x + 1, y + 1))
+    private fun sobelX(luminance: FloatArray, w: Int, idx: Int): Float {
+        val p1 = luminance[idx - w - 1]
+        val p2 = luminance[idx - w]
+        val p3 = luminance[idx - w + 1]
+        val p4 = luminance[idx - 1]
+        val p6 = luminance[idx + 1]
+        val p7 = luminance[idx + w - 1]
+        val p8 = luminance[idx + w]
+        val p9 = luminance[idx + w + 1]
 
-        return (-p1 + p3 - 2 * p4 + 2 * p6 - p7 + p9).toFloat()
+        return (-p1 + p3 - 2 * p4 + 2 * p6 - p7 + p9)
     }
 
     /**
      * Sobel Y 方向算子
      */
-    private fun sobelY(bitmap: Bitmap, x: Int, y: Int): Float {
-        val p1 = getLuminance(bitmap.getPixel(x - 1, y - 1))
-        val p2 = getLuminance(bitmap.getPixel(x, y - 1))
-        val p3 = getLuminance(bitmap.getPixel(x + 1, y - 1))
-        val p4 = getLuminance(bitmap.getPixel(x - 1, y))
-        val p6 = getLuminance(bitmap.getPixel(x + 1, y))
-        val p7 = getLuminance(bitmap.getPixel(x - 1, y + 1))
-        val p8 = getLuminance(bitmap.getPixel(x, y + 1))
-        val p9 = getLuminance(bitmap.getPixel(x + 1, y + 1))
+    private fun sobelY(luminance: FloatArray, w: Int, idx: Int): Float {
+        val p1 = luminance[idx - w - 1]
+        val p2 = luminance[idx - w]
+        val p3 = luminance[idx - w + 1]
+        val p4 = luminance[idx - 1]
+        val p6 = luminance[idx + 1]
+        val p7 = luminance[idx + w - 1]
+        val p8 = luminance[idx + w]
+        val p9 = luminance[idx + w + 1]
 
-        return (-p1 - 2 * p2 - p3 + p7 + 2 * p8 + p9).toFloat()
+        return (-p1 - 2 * p2 - p3 + p7 + 2 * p8 + p9)
     }
 
-    private fun getLuminance(pixel: Int): Int {
+    private fun getLuminance(pixel: Int): Float {
         val r = Color.red(pixel)
         val g = Color.green(pixel)
         val b = Color.blue(pixel)
-        return (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt()
+        return 0.2126f * r + 0.7152f * g + 0.0722f * b
     }
 
     // ==================== 投票机制 ====================
@@ -498,14 +530,14 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             votes.add(SceneCandidate("landscape-beach", score * 0.85f, "color"))
         }
 
-        // 暖色调 > 60% → 日落
-        if (cp.warmthRatio > 0.55f) {
+        // 暖色调 >= 55% → 日落（修复：与下方 35%-55% 区间互斥，>= 55% 归日落）
+        if (cp.warmthRatio >= 0.55f) {
             val score = 0.55f + cp.warmthRatio * 0.3f
             votes.add(SceneCandidate("landscape-sunset", score.coerceAtMost(0.95f), "color"))
         }
 
-        // 暖色调 35-55% → 美食
-        if (cp.warmthRatio in 0.35f..0.55f) {
+        // 暖色调 35%-55%（不含55%）→ 美食（修复：与上方区间互斥，避免重叠）
+        if (cp.warmthRatio >= 0.35f && cp.warmthRatio < 0.55f) {
             val score = 0.50f + cp.warmthRatio * 0.2f
             votes.add(SceneCandidate("food-restaurant", score, "color"))
             votes.add(SceneCandidate("food-dessert", score * 0.9f, "color"))
@@ -899,18 +931,28 @@ object FaceDetectorSingleton {
 
     private fun getDetector(): com.google.mlkit.vision.face.FaceDetector {
         if (faceDetector == null) {
-            val options = com.google.mlkit.vision.face.FaceDetectorOptions.Builder()
-                .setPerformanceMode(com.google.mlkit.vision.face.FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                .setLandmarkMode(com.google.mlkit.vision.face.FaceDetectorOptions.LANDMARK_MODE_NONE)
-                .setClassificationMode(com.google.mlkit.vision.face.FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
-                .build()
-            faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(options)
+            try {
+                val options = com.google.mlkit.vision.face.FaceDetectorOptions.Builder()
+                    .setPerformanceMode(com.google.mlkit.vision.face.FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                    .setLandmarkMode(com.google.mlkit.vision.face.FaceDetectorOptions.LANDMARK_MODE_NONE)
+                    .setClassificationMode(com.google.mlkit.vision.face.FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
+                    .build()
+                faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(options)
+            } catch (e: Exception) {
+                android.util.Log.w("FaceDetectorSingleton", "ML Kit 初始化失败: ${e.message}")
+                throw e
+            }
         }
         return faceDetector ?: throw IllegalStateException("FaceDetector 初始化失败，请检查 ML Kit 依赖")
     }
 
     suspend fun detect(inputImage: com.google.mlkit.vision.common.InputImage): List<com.google.mlkit.vision.face.Face> {
-        return getDetector().process(inputImage).await()
+        return try {
+            getDetector().process(inputImage).await()
+        } catch (e: Exception) {
+            android.util.Log.w("FaceDetectorSingleton", "Face detection 执行失败: ${e.message}")
+            emptyList()
+        }
     }
 
     /**

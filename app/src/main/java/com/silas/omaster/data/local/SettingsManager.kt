@@ -18,6 +18,7 @@ import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
 import kotlin.jvm.JvmName
 
 // DataStore 扩展属性
@@ -111,6 +113,14 @@ class SettingsManager private constructor(private val context: Context) {
     // 迁移标记
     @Volatile
     private var migrationCompleted: Boolean = false
+
+    // 缓存预加载完成标记：用于检测 getDataSync 在缓存未就绪时的回退行为
+    @Volatile
+    private var cachePreloaded: Boolean = false
+
+    // 销毁标记：防止 shutdown 后继续操作
+    @Volatile
+    private var isDestroyed: Boolean = false
     
     // 协程作用域用于异步迁移和 DataStore 写入
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -163,6 +173,8 @@ class SettingsManager private constructor(private val context: Context) {
             try {
                 migrateFromSharedPreferences()
                 preloadCache()
+                // 启动 DataStore 外部变更监听，解决多进程写入导致缓存过期的问题
+                startCacheObserver()
             } catch (e: Exception) {
                 android.util.Log.w("SettingsManager", "异步迁移失败", e)
             }
@@ -287,7 +299,8 @@ class SettingsManager private constructor(private val context: Context) {
                     settingsScope.launch {
                         SecurityCrypto.encrypt(plainKey)?.let { encryptedKey ->
                             try {
-                                context.dataStore.edit { prefs ->
+                                val ctx = context
+                                ctx.dataStore.edit { prefs ->
                                     prefs[KEY_CLOUD_API_KEY] = encryptedKey
                                 }
                             } catch (e: Exception) {
@@ -617,44 +630,64 @@ class SettingsManager private constructor(private val context: Context) {
      * - 真实值由 init{} / preloadCache() / setDataSync() 异步填充到缓存
      */
     private fun getDataSync(key: Preferences.Key<String>, defaultValue: String): String {
-        @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as String }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
+        }
         return defaultValue
     }
 
     private fun getDataSyncOrNull(key: Preferences.Key<String>): String? {
-        @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as String? }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回 null: ${key.name}")
+        }
         return null
     }
 
     private fun getDataSync(key: Preferences.Key<Boolean>, defaultValue: Boolean): Boolean {
-        @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Boolean }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
+        }
         return defaultValue
     }
 
     private fun getDataSync(key: Preferences.Key<Int>, defaultValue: Int): Int {
-        @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Int }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
+        }
         return defaultValue
     }
 
     private fun getDataSync(key: Preferences.Key<Long>, defaultValue: Long): Long {
-        @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Long }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
+        }
         return defaultValue
     }
 
     private fun getDataSync(key: Preferences.Key<Float>, defaultValue: Float): Float {
-        @Suppress("UNCHECKED_CAST")
         cache[key.name]?.let { return it as Float }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
+        }
         return defaultValue
     }
 
     private fun getDataSetSync(key: Preferences.Key<Set<String>>, defaultValue: Set<String>): Set<String> {
-        @Suppress("UNCHECKED_CAST")
-        cache[key.name]?.let { return it as Set<String> }
+        cache[key.name]?.let { cachedValue ->
+            // 类型安全检查：确保缓存的集合元素都是 String 类型
+            if (cachedValue is Set<*>) {
+                val safeSet = cachedValue.filterIsInstance<String>().toSet()
+                return safeSet
+            }
+        }
+        if (!cachePreloaded) {
+            android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
+        }
         return defaultValue
     }
     
@@ -663,11 +696,13 @@ class SettingsManager private constructor(private val context: Context) {
      * 写入操作使用协程异步执行，不阻塞调用线程
      */
     private fun setDataSync(key: Preferences.Key<String>, value: String) {
+        if (isDestroyed) return
         cache[key.name] = value
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs[key] = value }
+                    ctx.dataStore.edit { prefs -> prefs[key] = value }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "写入设置超时/失败: ${key.name}", e)
@@ -676,11 +711,13 @@ class SettingsManager private constructor(private val context: Context) {
     }
     
     private fun setDataSync(key: Preferences.Key<Boolean>, value: Boolean) {
+        if (isDestroyed) return
         cache[key.name] = value
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs[key] = value }
+                    ctx.dataStore.edit { prefs -> prefs[key] = value }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "写入设置超时/失败: ${key.name}", e)
@@ -689,11 +726,13 @@ class SettingsManager private constructor(private val context: Context) {
     }
     
     private fun setDataSync(key: Preferences.Key<Int>, value: Int) {
+        if (isDestroyed) return
         cache[key.name] = value
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs[key] = value }
+                    ctx.dataStore.edit { prefs -> prefs[key] = value }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "写入设置超时/失败: ${key.name}", e)
@@ -702,11 +741,13 @@ class SettingsManager private constructor(private val context: Context) {
     }
     
     private fun setDataSync(key: Preferences.Key<Long>, value: Long) {
+        if (isDestroyed) return
         cache[key.name] = value
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs[key] = value }
+                    ctx.dataStore.edit { prefs -> prefs[key] = value }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "写入设置超时/失败: ${key.name}", e)
@@ -715,11 +756,13 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     private fun setDataSync(key: Preferences.Key<Float>, value: Float) {
+        if (isDestroyed) return
         cache[key.name] = value
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs[key] = value }
+                    ctx.dataStore.edit { prefs -> prefs[key] = value }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "写入设置超时/失败: ${key.name}", e)
@@ -728,11 +771,13 @@ class SettingsManager private constructor(private val context: Context) {
     }
     
     private fun setDataSetSync(key: Preferences.Key<Set<String>>, value: Set<String>) {
+        if (isDestroyed) return
         cache[key.name] = value
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs[key] = value }
+                    ctx.dataStore.edit { prefs -> prefs[key] = value }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "写入设置超时/失败: ${key.name}", e)
@@ -745,11 +790,13 @@ class SettingsManager private constructor(private val context: Context) {
      */
     @JvmName("removeDataSyncString")
     private fun removeDataSync(key: Preferences.Key<String>) {
+        if (isDestroyed) return
         cache.remove(key.name)
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs.remove(key) }
+                    ctx.dataStore.edit { prefs -> prefs.remove(key) }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "删除设置超时/失败: ${key.name}", e)
@@ -759,11 +806,13 @@ class SettingsManager private constructor(private val context: Context) {
 
     @JvmName("removeDataSyncInt")
     private fun removeDataSync(key: Preferences.Key<Int>) {
+        if (isDestroyed) return
         cache.remove(key.name)
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs.remove(key) }
+                    ctx.dataStore.edit { prefs -> prefs.remove(key) }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "删除设置超时/失败: ${key.name}", e)
@@ -773,11 +822,13 @@ class SettingsManager private constructor(private val context: Context) {
 
     @JvmName("removeDataSyncBoolean")
     private fun removeDataSync(key: Preferences.Key<Boolean>) {
+        if (isDestroyed) return
         cache.remove(key.name)
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs.remove(key) }
+                    ctx.dataStore.edit { prefs -> prefs.remove(key) }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "删除设置超时/失败: ${key.name}", e)
@@ -787,11 +838,13 @@ class SettingsManager private constructor(private val context: Context) {
 
     @JvmName("removeDataSyncFloat")
     private fun removeDataSync(key: Preferences.Key<Float>) {
+        if (isDestroyed) return
         cache.remove(key.name)
+        val ctx = context
         settingsScope.launch {
             try {
                 withTimeout(DATASTORE_TIMEOUT_MS) {
-                    context.dataStore.edit { prefs -> prefs.remove(key) }
+                    ctx.dataStore.edit { prefs -> prefs.remove(key) }
                 }
             } catch (e: Throwable) {
                 android.util.Log.w("SettingsManager", "删除设置超时/失败: ${key.name}", e)
@@ -810,9 +863,40 @@ class SettingsManager private constructor(private val context: Context) {
                     cache[key.name] = value
                 }
             }
+            cachePreloaded = true
         } catch (e: Exception) {
             android.util.Log.w("SettingsManager", "预加载缓存失败，将在首次访问时逐项加载", e)
         }
+    }
+
+    /**
+     * 启动 DataStore 外部变更监听器
+     * 当其他进程（如 app upgrade 后的新进程）修改 DataStore 时，
+     * 自动同步缓存，避免缓存过期导致读取到旧值。
+     */
+    private fun startCacheObserver() {
+        val ctx = context
+        settingsScope.launch {
+            try {
+                ctx.dataStore.data.collect { prefs ->
+                    prefs.asMap().forEach { (key, value) ->
+                        cache[key.name] = value
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("SettingsManager", "DataStore 变更监听异常", e)
+            }
+        }
+    }
+
+    /**
+     * 销毁 SettingsManager，取消所有协程并清理资源。
+     * 应在 Application.onTerminate() 或进程退出前调用。
+     */
+    fun destroy() {
+        isDestroyed = true
+        settingsScope.cancel()
+        android.util.Log.i("SettingsManager", "SettingsManager 已销毁")
     }
 
     // ==================== SharedPreferences 迁移 ====================
@@ -822,6 +906,18 @@ class SettingsManager private constructor(private val context: Context) {
      * 仅在首次启动时执行一次
      */
     private suspend fun migrateFromSharedPreferences() {
+        // 检查 SharedPreferences 文件是否存在（首次安装时无此文件，无需迁移）
+        val prefsFile = File(context.applicationContext.filesDir.parent + "/shared_prefs/app_settings.xml")
+        if (!prefsFile.exists()) {
+            android.util.Log.i("SettingsManager", "SharedPreferences 文件不存在，跳过迁移（首次安装）")
+            val ctx = context
+            ctx.dataStore.edit { prefs ->
+                prefs[KEY_MIGRATION_COMPLETED] = true
+            }
+            migrationCompleted = true
+            return
+        }
+
         // 检查是否已迁移
         val alreadyMigrated = context.dataStore.data.map { prefs ->
             prefs[KEY_MIGRATION_COMPLETED] ?: false
@@ -849,7 +945,8 @@ class SettingsManager private constructor(private val context: Context) {
                 KEY_HAS_APPLIED_PRESET, KEY_MIGRATION_HANDLED, KEY_SEARCH_HISTORY, KEY_PRESET_SOURCES_JSON
             )
             
-            context.dataStore.edit { prefs ->
+            val ctx = context
+            ctx.dataStore.edit { prefs ->
                 // 迁移所有数据
                 legacyPrefs.all.forEach { (key, value) ->
                     when (value) {
@@ -858,8 +955,9 @@ class SettingsManager private constructor(private val context: Context) {
                         is Int -> prefs[intPreferencesKey(key)] = value
                         is Long -> prefs[longPreferencesKey(key)] = value
                         is Set<*> -> {
-                            @Suppress("UNCHECKED_CAST")
-                            prefs[stringSetPreferencesKey(key)] = value as Set<String>
+                            // 类型安全检查：确保 Set 元素都是 String 类型
+                            val safeSet = value.filterIsInstance<String>().toSet()
+                            prefs[stringSetPreferencesKey(key)] = safeSet
                         }
                     }
                 }
@@ -955,6 +1053,17 @@ class SettingsManager private constructor(private val context: Context) {
         fun getInstance(context: Context): SettingsManager {
             return instance ?: synchronized(this) {
                 instance ?: SettingsManager(context.applicationContext).also { instance = it }
+            }
+        }
+
+        /**
+         * 关闭 SettingsManager 实例，取消所有协程并清理资源。
+         * 应在 Application.onTerminate() 或进程退出前调用。
+         */
+        fun shutdown() {
+            synchronized(this) {
+                instance?.destroy()
+                instance = null
             }
         }
     }

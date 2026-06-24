@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.LinearGradient
 import androidx.compose.ui.graphics.toArgb
@@ -37,6 +38,8 @@ import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * 悬浮窗服务 - 高级美观版
@@ -106,6 +109,19 @@ class FloatingWindowService : Service() {
         // 广播 Action
         const val ACTION_SWITCH_PRESET = "com.silas.omaster.SWITCH_PRESET"
         const val EXTRA_SWITCH_DIRECTION = "switch_direction" // "prev" or "next"
+
+        // SharedPreferences 键 - 用于 START_STICKY 重启后恢复状态
+        private const val PREFS_NAME = "floating_window_state"
+        private const val KEY_LAST_NAME = "last_name"
+        private const val KEY_LAST_SECTIONS_JSON = "last_sections_json"
+        private const val KEY_LAST_PRESET_INDEX = "last_preset_index"
+        private const val KEY_LAST_PRESET_LIST_JSON = "last_preset_list_json"
+        private const val KEY_LAST_IS_EXPANDED = "last_is_expanded"
+        private const val KEY_LAST_POS_X = "last_pos_x"
+        private const val KEY_LAST_POS_Y = "last_pos_y"
+
+        // JSON 序列化器
+        private val stateJson = Json { ignoreUnknownKeys = true }
 
         // 服务实例（用于更新内容）
         @Volatile
@@ -194,8 +210,8 @@ class FloatingWindowService : Service() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
-        // Android 14+ 要求 specialUse 类型前台服务必须显式传递 FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        // 否则会抛出 ForegroundServiceTypeException 导致应用崩溃
+        // Android 14+ (API 34+) 要求 specialUse 类型前台服务必须显式传递 FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        // 包括 Android 14 / 15 / 16 (API 34-36)，否则会抛出 ForegroundServiceTypeException 导致应用崩溃
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
@@ -211,10 +227,16 @@ class FloatingWindowService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Android 16 (API 36) 要求前台服务通知渠道使用更高的优先级，确保用户可见
+            val importance = if (Build.VERSION.SDK_INT >= 36) {
+                NotificationManager.IMPORTANCE_DEFAULT
+            } else {
+                NotificationManager.IMPORTANCE_LOW
+            }
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "悬浮窗服务",
-                NotificationManager.IMPORTANCE_LOW
+                importance
             ).apply {
                 description = "用于在后台显示悬浮窗"
                 setSound(null, null)
@@ -258,11 +280,28 @@ class FloatingWindowService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 确保 instance 始终被设置（覆盖 onCreate 未调用的情况，如 START_STICKY 重启）
+        instance = this
+
         if (intent == null) {
+            // START_STICKY 重启：从 SharedPreferences 恢复上次状态
             if (floatingView == null) {
-                stopSelf()
+                val restored = restoreStateFromPrefs()
+                if (restored != null) {
+                    val (name, sections, presetIndex, presetList, expanded, posX, posY) = restored
+                    isExpanded = expanded
+                    if (isExpanded) {
+                        showExpandedWindow(name, sections, posX, posY, presetIndex, presetList.size)
+                    } else {
+                        showCollapsedWindow(name, sections, posX, posY)
+                    }
+                } else {
+                    // 无保存状态，停止服务
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
             }
-            return START_NOT_STICKY
+            return START_STICKY
         }
 
         val action = intent.getStringExtra(EXTRA_ACTION) ?: ACTION_SHOW
@@ -277,6 +316,9 @@ class FloatingWindowService : Service() {
         val currentIndex = intent.getIntExtra(EXTRA_PRESET_INDEX, 0)
         val presetList = intent.getStringArrayListExtra(EXTRA_PRESET_LIST) ?: arrayListOf()
         val totalCount = presetList.size
+
+        // 保存当前状态到 SharedPreferences，用于 START_STICKY 重启后恢复
+        saveStateToPrefs(name, sections, currentIndex, presetList, isExpanded, savedX, savedY)
 
         when (action) {
             ACTION_UPDATE -> {
@@ -303,6 +345,82 @@ class FloatingWindowService : Service() {
 
         return START_STICKY
     }
+
+    /**
+     * 保存当前状态到 SharedPreferences，用于服务被系统杀死后通过 START_STICKY 恢复
+     */
+    private fun saveStateToPrefs(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        presetIndex: Int,
+        presetList: ArrayList<String>,
+        isExpanded: Boolean,
+        posX: Int,
+        posY: Int
+    ) {
+        try {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val sectionsJson = stateJson.encodeToString(sections.toList())
+            val presetListJson = stateJson.encodeToString(presetList.toList())
+            prefs.edit()
+                .putString(KEY_LAST_NAME, name)
+                .putString(KEY_LAST_SECTIONS_JSON, sectionsJson)
+                .putInt(KEY_LAST_PRESET_INDEX, presetIndex)
+                .putString(KEY_LAST_PRESET_LIST_JSON, presetListJson)
+                .putBoolean(KEY_LAST_IS_EXPANDED, isExpanded)
+                .putInt(KEY_LAST_POS_X, posX)
+                .putInt(KEY_LAST_POS_Y, posY)
+                .apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save state to prefs", e)
+        }
+    }
+
+    /**
+     * 从 SharedPreferences 恢复上次保存的状态
+     * @return 恢复的数据元组，如果恢复失败则返回 null
+     */
+    private fun restoreStateFromPrefs(): StateData? {
+        return try {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val name = prefs.getString(KEY_LAST_NAME, null) ?: return null
+            val sectionsJson = prefs.getString(KEY_LAST_SECTIONS_JSON, null) ?: return null
+            val presetListJson = prefs.getString(KEY_LAST_PRESET_LIST_JSON, null) ?: return null
+            val presetIndex = prefs.getInt(KEY_LAST_PRESET_INDEX, 0)
+            val isExpanded = prefs.getBoolean(KEY_LAST_IS_EXPANDED, true)
+            val posX = prefs.getInt(KEY_LAST_POS_X, 50)
+            val posY = prefs.getInt(KEY_LAST_POS_Y, 300)
+
+            val sections: List<PresetSection> = stateJson.decodeFromString(sectionsJson)
+            val presetList: List<String> = stateJson.decodeFromString(presetListJson)
+
+            StateData(
+                name = name,
+                sections = ArrayList(sections),
+                presetIndex = presetIndex,
+                presetList = ArrayList(presetList),
+                isExpanded = isExpanded,
+                posX = posX,
+                posY = posY
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to restore state from prefs", e)
+            null
+        }
+    }
+
+    /**
+     * 恢复的状态数据
+     */
+    private data class StateData(
+        val name: String,
+        val sections: ArrayList<PresetSection>,
+        val presetIndex: Int,
+        val presetList: ArrayList<String>,
+        val isExpanded: Boolean,
+        val posX: Int,
+        val posY: Int
+    )
 
     // 保存视图引用，用于更新内容
     private var mainContainer: LinearLayout? = null
@@ -1059,7 +1177,7 @@ class FloatingWindowService : Service() {
         val viewWidth = view.width
 
         // 计算目标位置：左边(0)或右边(screenWidth - viewWidth)
-        // 如果是收起状态，可以进一步实现“半收纳”效果，即只露出一半图标
+        // 如果是收起状态，可以进一步实现"半收纳"效果，即只露出一半图标
         val targetX = if (p.x + viewWidth / 2 < screenWidth / 2) {
             if (!isExpanded) -viewWidth / 2 else 0
         } else {
@@ -1084,17 +1202,38 @@ class FloatingWindowService : Service() {
                 animator.cancel()
             }
         }
+        // 监听动画结束/取消，确保即使动画被取消，位置也保持到最后一个有效值
+        animator.addListener(object : android.animation.Animator.AnimatorListener {
+            override fun onAnimationStart(animation: android.animation.Animator) {}
+            override fun onAnimationEnd(animation: android.animation.Animator) {
+                // 动画正常结束，保存最终位置
+                val currentView = floatingView
+                if (currentView != null && currentView.isAttachedToWindow) {
+                    try {
+                        wm.updateViewLayout(currentView, p)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "snapToEdge onAnimationEnd updateViewLayout failed", e)
+                    }
+                }
+            }
+            override fun onAnimationCancel(animation: android.animation.Animator) {
+                // 动画被取消时，确保位置已更新到当前帧的值
+                // ValueAnimator 取消时 animatedValue 停留在被取消时的值，无需额外处理
+            }
+            override fun onAnimationRepeat(animation: android.animation.Animator) {}
+        })
         animator.start()
     }
 
     private fun removeWindow() {
+        val view = floatingView ?: return
         try {
-            floatingView?.let { view ->
-                windowManager?.removeView(view)
-            }
+            windowManager?.removeView(view)
         } catch (e: Exception) {
             Log.e(TAG, "removeWindow failed", e)
+        } finally {
+            // 无论如何都将引用置空，避免持有已失效的 View
+            floatingView = null
         }
-        floatingView = null
     }
 }

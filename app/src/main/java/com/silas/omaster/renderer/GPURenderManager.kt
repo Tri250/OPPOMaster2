@@ -34,6 +34,10 @@ class BitmapPool(private val maxPoolSize: Int = 8) {
 
     @Synchronized
     fun obtain(width: Int, height: Int, config: Bitmap.Config = Bitmap.Config.ARGB_8888): Bitmap {
+        // 防御性检查：如果池超出最大容量，清理多余条目
+        while (pool.size > maxPoolSize) {
+            pool.removeLast()?.let { if (!it.isRecycled) it.recycle() }
+        }
         val iterator = pool.iterator()
         while (iterator.hasNext()) {
             val bitmap = iterator.next()
@@ -76,12 +80,18 @@ object FrameTimingMetrics {
     private var lastFrameTime: Long = 0L
     private var frameCount: Long = 0L
 
+    // P95 缓存，避免每次调用都排序
+    private var p95Cache: Long = 0L
+    private var p95CacheValid: Boolean = false
+
     fun recordFrame(processingTimeMs: Long) {
         synchronized(frameTimes) {
             frameTimes.addLast(processingTimeMs)
             if (frameTimes.size > MAX_SAMPLES) {
                 frameTimes.removeFirst()
             }
+            // 新帧到来，使缓存失效
+            p95CacheValid = false
         }
         lastFrameTime = processingTimeMs
         frameCount++
@@ -97,9 +107,13 @@ object FrameTimingMetrics {
     fun getP95FrameTime(): Long {
         synchronized(frameTimes) {
             if (frameTimes.isEmpty()) return 0L
-            val sorted = frameTimes.sorted()
-            val index = (sorted.size * 0.95).toInt().coerceIn(0, sorted.size - 1)
-            return sorted[index]
+            if (!p95CacheValid) {
+                val sorted = frameTimes.sorted()
+                val index = (sorted.size * 0.95).toInt().coerceIn(0, sorted.size - 1)
+                p95Cache = sorted[index]
+                p95CacheValid = true
+            }
+            return p95Cache
         }
     }
 
@@ -123,6 +137,8 @@ object FrameTimingMetrics {
             frameTimes.clear()
             lastFrameTime = 0L
             frameCount = 0L
+            p95Cache = 0L
+            p95CacheValid = false
         }
     }
 }
@@ -219,7 +235,9 @@ class RenderQualityManager(private val context: Context) : ComponentCallbacks2 {
 
     private fun downgradeQuality(target: RenderQuality) {
         val targetQuality = if (target.ordinal < minQuality.ordinal) minQuality else target
-        if (currentQuality.ordinal < targetQuality.ordinal) {
+        // 修复：lower ordinal = higher quality，降级意味从低 ord 移向高 ord
+        // 只有当 currentQuality.ordinal > targetQuality.ordinal 时才需要降级
+        if (currentQuality.ordinal > targetQuality.ordinal) {
             currentQuality = targetQuality
             Log.w("RenderQualityManager", "质量降级: $currentQuality → $targetQuality")
         }
@@ -270,6 +288,9 @@ class GPURenderManager private constructor(private val context: Context) {
         
         // 最大重试次数
         private const val MAX_RETRY_COUNT = 3
+
+        // 渲染线程退出超时时间
+        private const val THREAD_QUIT_TIMEOUT_MS = 2000L
     }
     
     // 渲染线程
@@ -737,85 +758,148 @@ class GPURenderManager private constructor(private val context: Context) {
     }
     
     /**
+     * 在渲染线程上清理 EGL 资源
+     */
+    private fun cleanupEGLOnRenderThread() {
+        try {
+            imageRenderer?.release()
+            imageRenderer = null
+
+            val currentDisplay = eglDisplay
+            val currentContext = eglContext
+            val currentSurface = eglSurface
+
+            if (currentDisplay != null && currentContext != null) {
+                EGL14.eglMakeCurrent(
+                    currentDisplay,
+                    EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_CONTEXT
+                )
+                EGL14.eglDestroyContext(currentDisplay, currentContext)
+                eglContext = null
+            }
+
+            if (currentDisplay != null && currentSurface != null) {
+                EGL14.eglDestroySurface(currentDisplay, currentSurface)
+                eglSurface = null
+            }
+
+            if (currentDisplay != null) {
+                EGL14.eglTerminate(currentDisplay)
+                eglDisplay = null
+            }
+
+            Log.d(TAG, "EGL resources released on render thread")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing EGL resources on render thread", e)
+        }
+    }
+
+    /**
+     * 在当前线程清理 EGL 资源（超时兜底）
+     */
+    private fun cleanupEGLOnCurrentThread() {
+        try {
+            Log.w(TAG, "Cleaning up EGL resources on current thread (timeout fallback)")
+
+            imageRenderer?.release()
+            imageRenderer = null
+
+            val currentDisplay = eglDisplay
+            val currentContext = eglContext
+            val currentSurface = eglSurface
+
+            if (currentDisplay != null && currentContext != null) {
+                EGL14.eglMakeCurrent(
+                    currentDisplay,
+                    EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_CONTEXT
+                )
+                EGL14.eglDestroyContext(currentDisplay, currentContext)
+                eglContext = null
+            }
+
+            if (currentDisplay != null && currentSurface != null) {
+                EGL14.eglDestroySurface(currentDisplay, currentSurface)
+                eglSurface = null
+            }
+
+            if (currentDisplay != null) {
+                EGL14.eglTerminate(currentDisplay)
+                eglDisplay = null
+            }
+
+            Log.d(TAG, "EGL resources released on current thread (fallback)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing EGL resources on current thread", e)
+        }
+    }
+
+    /**
      * 释放资源
      * 修复 P0-5: 移除双重runBlocking，改为在渲染线程直接执行
      * 避免在已经取消的协程作用域中使用runBlocking导致死锁
+     *
+     * 修复 null safety: 先捕获 handler 引用，确保 EGL 清理在 quit 前投递
+     * 修复 EGL 清理: 加入超时兜底，若渲染线程超时未退出则在当前线程清理
+     * 修复 Channel 关闭: 先取消协程作用域再关闭 Channel
      */
     fun release() {
-        // 停止渲染协程
+        // 1. 先取消渲染协程作用域，确保 startRenderProcessor 的协程停止
         renderScope?.cancel()
         renderScope = null
-        
-        // 清空队列
+
+        // 2. 清空渲染队列
         clearQueue()
+
+        // 3. 关闭 Channel（协程已取消，不会再有新的生产/消费）
         renderChannel.close()
-        
-        // 清理 BitmapPool
+
+        // 4. 清理 BitmapPool
         bitmapPool.clear()
-        
-        // 注销质量管理器
+
+        // 5. 注销质量管理器
         qualityManager.unregister()
-        
-        // 在渲染线程直接执行释放（避免runBlocking嵌套）
-        renderHandler?.post {
-            try {
-                imageRenderer?.release()
-                imageRenderer = null
-                
-                // 销毁EGL上下文
-                val currentDisplay = eglDisplay
-                val currentContext = eglContext
-                val currentSurface = eglSurface
-                
-                if (currentDisplay != null && currentContext != null) {
-                    EGL14.eglMakeCurrent(
-                        currentDisplay,
-                        EGL14.EGL_NO_SURFACE,
-                        EGL14.EGL_NO_SURFACE,
-                        EGL14.EGL_NO_CONTEXT
-                    )
-                    EGL14.eglDestroyContext(currentDisplay, currentContext)
-                    eglContext = null
-                }
-                
-                // 销毁EGL表面
-                if (currentDisplay != null && currentSurface != null) {
-                    EGL14.eglDestroySurface(currentDisplay, currentSurface)
-                    eglSurface = null
-                }
-                
-                // 终止EGL显示
-                if (currentDisplay != null) {
-                    EGL14.eglTerminate(currentDisplay)
-                    eglDisplay = null
-                }
-                
-                Log.d(TAG, "EGL resources released on render thread")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error releasing EGL resources", e)
+
+        // 6. 捕获 handler 引用，避免在 quit 后被置 null 导致 EGL 泄漏
+        val handler = renderHandler
+
+        if (handler != null) {
+            // 在渲染线程上执行 EGL 清理（先投递，再 quit，quitSafely 会处理完挂起消息）
+            handler.post {
+                cleanupEGLOnRenderThread()
             }
+        } else {
+            // renderHandler 为 null，在当前线程直接清理 EGL
+            cleanupEGLOnCurrentThread()
         }
-        
-        // 等待渲染线程处理完释放任务（带超时）
+
+        // 7. 退出渲染线程（带超时兜底）
         renderThread?.let { thread ->
             try {
                 thread.quitSafely()
-                // 最多等待2秒
-                thread.join(2000)
+                thread.join(THREAD_QUIT_TIMEOUT_MS)
                 if (thread.isAlive) {
-                    Log.w(TAG, "Render thread did not terminate in time, forcing quit")
+                    Log.w(TAG, "Render thread did not terminate in ${THREAD_QUIT_TIMEOUT_MS}ms, cleaning up EGL on current thread")
+                    // 超时兜底：在当前线程清理 EGL 资源
+                    cleanupEGLOnCurrentThread()
                     thread.interrupt()
                 }
             } catch (e: InterruptedException) {
                 Log.e(TAG, "Interrupted while waiting for render thread", e)
+                // 被中断时也在当前线程清理
+                cleanupEGLOnCurrentThread()
+                thread.interrupt()
             }
         }
         renderThread = null
         renderHandler = null
-        
+
         _isInitialized.value = false
         _isGpuAvailable.value = false
-        
+
         Log.d(TAG, "GPURenderManager released")
     }
 }
