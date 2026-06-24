@@ -1642,6 +1642,17 @@ private fun ResultsContent(
                 )
             }
 
+            // 推荐滤镜（LUT）：基于场景推荐匹配的色彩滤镜
+            item {
+                SectionTitle(title = "推荐滤镜")
+            }
+            item {
+                RecommendedLUTCard(
+                    sceneCategory = result.sceneProfile.category,
+                    sceneId = result.sceneProfile.id
+                )
+            }
+
             item {
                 SectionTitle(title = "场景模式")
             }
@@ -1959,6 +1970,144 @@ private fun FilmCard(
                 text = "对比度：${film.contrastLevel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+/**
+ * 推荐滤镜（LUT）卡片
+ * 基于场景分类推荐匹配的色彩滤镜，对齐 OPPO Find X9 哈苏大师滤镜体系
+ */
+@Composable
+private fun RecommendedLUTCard(
+    sceneCategory: SceneCategory,
+    sceneId: String
+) {
+    val recommendedLUTs = remember(sceneCategory, sceneId) {
+        getRecommendedLUTs(sceneCategory, sceneId)
+    }
+
+    if (recommendedLUTs.isEmpty()) {
+        GlassCard {
+            Text(
+                text = "暂无推荐滤镜",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        return
+    }
+
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(recommendedLUTs) { lut ->
+            LUTRecommendCard(lut = lut)
+        }
+    }
+}
+
+/**
+ * 场景推荐滤镜数据
+ */
+data class LUTRecommend(
+    val name: String,
+    val description: String,
+    val colorStyle: String,
+    val matchReason: String
+)
+
+/**
+ * 根据场景推荐匹配的 LUT 滤镜
+ * 对齐 OPPO Find X9 哈苏大师色彩科学
+ */
+private fun getRecommendedLUTs(category: SceneCategory, sceneId: String): List<LUTRecommend> {
+    return when (category) {
+        SceneCategory.PORTRAIT -> listOf(
+            LUTRecommend("HNCS 肤肤色", "哈苏自然色彩肤色优化", "自然暖调", "人像肤色还原最佳选择"),
+            LUTRecommend("Portra 柔光", "Kodak Portra 柔和质感", "柔和低饱和", "逆光/侧光人像首选"),
+            LUTRecommend("CC 经典负片", "经典色彩负片风格", "浓郁胶片", "氛围感人像推荐")
+        )
+        SceneCategory.LANDSCAPE -> listOf(
+            LUTRecommend("Velvia 风景", "Fuji Velvia 鲜艳风格", "高饱和鲜艳", "风景色彩增强首选"),
+            LUTRecommend("HNCS 自然", "哈苏自然色彩科学", "真实自然", "还原真实风景色彩"),
+            LUTRecommend("Cinematic 宽银幕", "电影宽银幕色调", "青橙色调", "日出日落场景推荐")
+        )
+        SceneCategory.NIGHT -> listOf(
+            LUTRecommend("Cinematic 夜景", "电影级夜景色调", "青蓝冷调", "城市夜景氛围首选"),
+            LUTRecommend("800T 夜拍", "CineStill 800T 钨丝灯", "暖色光斑", "街灯霓虹场景推荐"),
+            LUTRecommend("HNCS 暗调", "哈苏暗调色彩科学", "深沉暗调", "星空银河场景推荐")
+        )
+        SceneCategory.FOOD -> listOf(
+            LUTRecommend("Portra 美食", "Kodak Portra 暖调", "暖色柔和", "食物色彩增强首选"),
+            LUTRecommend("Velvia 鲜艳", "Fuji Velvia 高饱和", "鲜艳生动", "色彩丰富菜品推荐"),
+            LUTRecommend("CC 浓郁", "经典负片浓郁风格", "浓郁胶片", "咖啡甜点场景推荐")
+        )
+        SceneCategory.URBAN -> listOf(
+            LUTRecommend("Cinematic 城市", "电影级城市色调", "青橙对比", "建筑街拍首选"),
+            LUTRecommend("Monochrome 黑白", "哈苏黑白大师", "纯黑白", "几何建筑推荐"),
+            LUTRecommend("HNCS 建筑", "哈苏建筑色彩科学", "中性真实", "现代建筑推荐")
+        )
+        else -> listOf(
+            LUTRecommend("HNCS 通用", "哈苏自然色彩科学", "自然真实", "通用场景首选"),
+            LUTRecommend("CC 经典", "经典负片风格", "浓郁胶片", "氛围感场景推荐")
+        )
+    }
+}
+
+@Composable
+private fun LUTRecommendCard(lut: LUTRecommend) {
+    Card(
+        modifier = Modifier.width(200.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = lut.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    color = HasselbladOrange.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = lut.colorStyle,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HasselbladOrange,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = lut.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "推荐理由：${lut.matchReason}",
+                style = MaterialTheme.typography.bodySmall,
+                color = HasselbladOrange.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -2650,12 +2799,26 @@ private fun createTempImageUri(context: android.content.Context): Uri? {
             val storageDir = File(externalDir, "Hasselblad").apply {
                 if (!exists()) mkdirs()
             }
-            File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
+            // 确保目录创建成功
+            if (!storageDir.exists() || !storageDir.canWrite()) {
+                // 外部目录不可写，回退到缓存目录
+                val cacheDir = File(context.cacheDir, "camera").apply {
+                    if (!exists()) mkdirs()
+                }
+                File.createTempFile("IMG_${timeStamp}_", ".jpg", cacheDir)
+            } else {
+                File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
+            }
         } else {
             val cacheDir = File(context.cacheDir, "camera").apply {
                 if (!exists()) mkdirs()
             }
             File.createTempFile("IMG_${timeStamp}_", ".jpg", cacheDir)
+        }
+        // 验证文件创建成功
+        if (!imageFile.exists()) {
+            android.util.Log.e("HasselbladScreen", "临时文件创建失败: ${imageFile.absolutePath}")
+            return null
         }
         FileProvider.getUriForFile(
             context,
@@ -2664,7 +2827,22 @@ private fun createTempImageUri(context: android.content.Context): Uri? {
         )
     } catch (e: Exception) {
         android.util.Log.e("HasselbladScreen", "创建相机临时文件失败", e)
-        null
+        // 二次尝试：使用纯缓存目录
+        try {
+            val cacheDir = File(context.cacheDir, "camera").apply {
+                if (!exists()) mkdirs()
+            }
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val fallbackFile = File.createTempFile("IMG_${timeStamp}_", ".jpg", cacheDir)
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                fallbackFile
+            )
+        } catch (e2: Exception) {
+            android.util.Log.e("HasselbladScreen", "二次创建临时文件也失败", e2)
+            null
+        }
     }
 }
 

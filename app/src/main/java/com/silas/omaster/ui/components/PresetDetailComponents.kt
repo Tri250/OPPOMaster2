@@ -469,25 +469,24 @@ fun ApplyPresetButton(
                 applied = false
             }
         },
-        modifier = modifier,
+        modifier = modifier.height(40.dp),
         colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
         shape = RoundedCornerShape(12.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
     ) {
         Icon(
             imageVector = if (applied) Icons.Default.CheckCircle else Icons.Default.AutoAwesome,
             contentDescription = "图标",
             tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = if (applied) "已应用哈苏配方" else "一键应用哈苏配方",
+            text = if (applied) "已应用" else "一键应用",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            maxLines = 1
         )
     }
 }

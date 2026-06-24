@@ -76,6 +76,11 @@ class CameraXManager(
     @Volatile
     private var currentParams: HasselbladParams = HasselbladParams()
 
+    // 帧处理节流：跳过过快的帧，避免UI线程积压
+    @Volatile
+    private var lastFrameTime = 0L
+    private val frameIntervalMs = 80L // 约12fps，平衡流畅度与性能
+
     // 保存的 PreviewView，用于生命周期恢复
     private var savedPreviewView: PreviewView? = null
 
@@ -174,9 +179,17 @@ class CameraXManager(
 
     /**
      * 实时分析帧 - 应用预设参数
+     * 帧节流：跳过处理间隔过短的帧，避免UI线程积压导致卡顿
      */
     private fun analyzeFrame(imageProxy: ImageProxy) {
         try {
+            // 帧节流：距离上次处理不足 frameIntervalMs 则跳过
+            val now = System.currentTimeMillis()
+            if (now - lastFrameTime < frameIntervalMs) {
+                return
+            }
+            lastFrameTime = now
+
             val bitmap = imageProxyToBitmap(imageProxy)
             if (bitmap != null) {
                 // 应用预设参数到实时帧

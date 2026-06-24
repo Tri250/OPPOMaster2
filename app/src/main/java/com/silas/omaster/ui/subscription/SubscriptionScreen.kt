@@ -92,6 +92,7 @@ fun SubscriptionScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .pullRefresh(pullRefreshState)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             OMasterTopAppBar(
@@ -99,7 +100,7 @@ fun SubscriptionScreen(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
             )
 
-            Box(modifier = Modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 if (subscriptions.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(text = stringResource(R.string.sub_empty), color = Color.Gray)
