@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -119,7 +121,7 @@ fun ParamAdjustScreen(
         PresetConfig("portrait", "人像", { Icon(Icons.Outlined.Person, null, modifier = Modifier.size(14.dp)) }, 200, 1f / 125f, 2.8f, 5500, FocusMode.AUTO, MeteringMode.CENTER),
         PresetConfig("landscape", "风景", { Icon(Icons.Outlined.Landscape, null, modifier = Modifier.size(14.dp)) }, 100, 1f / 60f, 8.0f, 5600, FocusMode.AUTO, MeteringMode.MATRIX),
         PresetConfig("night", "夜景", { Icon(Icons.Outlined.Nightlight, null, modifier = Modifier.size(14.dp)) }, 3200, 4f, 2.8f, 4000, FocusMode.MANUAL, MeteringMode.SPOT),
-        PresetConfig("sports", "运动", { Icon(Icons.Outlined.DirectionsRun, null, modifier = Modifier.size(14.dp)) }, 800, 1f / 500f, 4.0f, 5500, FocusMode.CONTINUOUS, MeteringMode.MATRIX),
+        PresetConfig("sports", "运动", { Icon(Icons.AutoMirrored.Outlined.DirectionsRun, null, modifier = Modifier.size(14.dp)) }, 800, 1f / 500f, 4.0f, 5500, FocusMode.CONTINUOUS, MeteringMode.MATRIX),
         PresetConfig("street", "街拍", { Icon(Icons.Outlined.CameraAlt, null, modifier = Modifier.size(14.dp)) }, 400, 1f / 250f, 5.6f, 5500, FocusMode.CONTINUOUS, MeteringMode.CENTER),
         PresetConfig("food", "美食", { Icon(Icons.Outlined.Restaurant, null, modifier = Modifier.size(14.dp)) }, 200, 1f / 60f, 2.8f, 5000, FocusMode.AUTO, MeteringMode.SPOT),
         PresetConfig("indoor", "室内", { Icon(Icons.Outlined.Home, null, modifier = Modifier.size(14.dp)) }, 800, 1f / 60f, 4.0f, 4000, FocusMode.AUTO, MeteringMode.CENTER),
@@ -210,7 +212,7 @@ fun ParamAdjustScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {

@@ -15,7 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
@@ -110,7 +110,7 @@ fun StyleLUTGeneratorScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -301,19 +301,20 @@ fun StyleLUTGeneratorScreen(
                 }
 
                 // 评估指标
-                val metrics = generationResult!!.metrics
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                generationResult?.metrics?.let { metrics ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                     ) {
-                        MetricItem("场景匹配", metrics.sceneMatch)
-                        MetricItem("色彩相似", metrics.colorSimilarity)
-                        MetricItem("亮度相似", metrics.brightnessSimilarity)
-                        MetricItem("导出精度", metrics.exportPrecision)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            MetricItem("场景匹配", metrics.sceneMatch)
+                            MetricItem("色彩相似", metrics.colorSimilarity)
+                            MetricItem("亮度相似", metrics.brightnessSimilarity)
+                            MetricItem("导出精度", metrics.exportPrecision)
+                        }
                     }
                 }
 

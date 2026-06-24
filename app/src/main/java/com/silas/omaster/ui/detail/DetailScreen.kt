@@ -602,7 +602,11 @@ private fun sharePreset(context: android.content.Context, preset: MasterPreset) 
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, shareText)
     }
-    context.startActivity(Intent.createChooser(intent, "分享预设"))
+    try {
+        context.startActivity(Intent.createChooser(intent, "分享预设"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "未找到可分享的应用", Toast.LENGTH_SHORT).show()
+    }
 }
 
 @Composable

@@ -45,6 +45,7 @@ import java.io.FileOutputStream
  * 管理哈苏之眼（HasselbladScreen）的完整工作流状态：
  * 工作流阶段、参数调节、AI 推荐、色彩模式、分析结果、预览生成、保存与分享。
  */
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 class HasselbladEyeViewModel : ViewModel() {
 
     /** 导出格式 - P2 HEIF支持 */
@@ -866,7 +867,7 @@ class HasselbladEyeViewModel : ViewModel() {
                         continue
                     }
 
-                    if (muxerStarted && outputBuffer != null) {
+                    if (muxerStarted) {
                         muxer.writeSampleData(trackIndex, outputBuffer, bufferInfo)
                     }
 

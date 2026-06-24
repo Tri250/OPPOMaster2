@@ -35,6 +35,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -191,15 +194,15 @@ fun AIFineTuneScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.undo() }, enabled = canUndo) {
-                        Icon(Icons.Default.Undo, contentDescription = "撤销", tint = if (canUndo) HasselbladOrange else Color.Gray)
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "撤销", tint = if (canUndo) HasselbladOrange else Color.Gray)
                     }
                     IconButton(onClick = { viewModel.redo() }, enabled = canRedo) {
-                        Icon(Icons.Default.Redo, contentDescription = "重做", tint = if (canRedo) HasselbladOrange else Color.Gray)
+                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "重做", tint = if (canRedo) HasselbladOrange else Color.Gray)
                     }
                     IconButton(onClick = { viewModel.reset() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "重置", tint = MaterialTheme.colorScheme.onBackground)
@@ -913,7 +916,7 @@ private fun BottomActionBar(
         tonalElevation = 4.dp
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Divider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -208,14 +208,16 @@ fun ImportExportScreen(
     }
 
     // Import result dialog
-    if (showImportResultDialog && importResult != null) {
-        ImportResultDialog(
-            result = importResult!!,
-            onDismiss = {
-                showImportResultDialog = false
-                importResult = null
-            }
-        )
+    importResult?.let { result ->
+        if (showImportResultDialog) {
+            ImportResultDialog(
+                result = result,
+                onDismiss = {
+                    showImportResultDialog = false
+                    importResult = null
+                }
+            )
+        }
     }
 
     // Export warning dialog
@@ -773,5 +775,9 @@ private fun shareExportFile(context: android.content.Context, file: File) {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(shareIntent, "分享预设文件"))
+    try {
+        context.startActivity(Intent.createChooser(shareIntent, "分享预设文件"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "未找到可分享的应用", Toast.LENGTH_SHORT).show()
+    }
 }

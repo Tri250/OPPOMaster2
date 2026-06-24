@@ -70,7 +70,7 @@ object LUT3DParser {
 
         var line: String?
         while (reader.readLine().also { line = it } != null) {
-            val trimmed = line!!.trim()
+            val trimmed = line?.trim() ?: continue
 
             // 跳过空行和注释
             if (trimmed.isEmpty() || trimmed.startsWith("#")) continue

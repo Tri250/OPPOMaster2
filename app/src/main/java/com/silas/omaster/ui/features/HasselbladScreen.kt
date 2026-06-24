@@ -46,7 +46,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cancel
@@ -410,7 +410,7 @@ fun HasselbladScreen(
                         }
                     }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -1280,14 +1280,14 @@ private fun RecentShotThumbnail(
         modifier = Modifier.size(72.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (thumbnail != null) {
+            thumbnail?.let { bitmap ->
                 Image(
-                    bitmap = thumbnail!!.asImageBitmap(),
+                    bitmap = bitmap.asImageBitmap(),
                     contentDescription = "最近拍摄",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-            } else {
+            } ?: run {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     color = HasselbladOrange,

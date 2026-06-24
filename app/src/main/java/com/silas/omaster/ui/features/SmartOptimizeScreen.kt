@@ -40,7 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Bolt
@@ -106,6 +106,7 @@ import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -180,7 +181,7 @@ fun SmartOptimizeScreen(
                     previewMode = "before"
                     analysisResult = null
                     // 自动触发 AI 场景识别
-                    analyzeImage(loadedBitmap, inferenceEngine) { result ->
+                    analyzeImage(scope, loadedBitmap, inferenceEngine) { result ->
                         analysisResult = result
                         // 根据场景自动推荐优化项
                         applyAutoRecommendations(result) { hdr, denoise, sharpen, exposure, color,
@@ -389,7 +390,7 @@ fun SmartOptimizeScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
@@ -411,7 +412,7 @@ fun SmartOptimizeScreen(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = analysisResult!!.name,
+                            text = analysisResult?.name ?: "",
                             fontSize = 11.sp,
                             color = HasselbladOrange,
                             maxLines = 1,
@@ -523,11 +524,13 @@ fun SmartOptimizeScreen(
                 .height(220.dp)
                 .background(Color(0xFF1A1A1A))
         ) {
-            if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
+            val beforeBitmap = originalBitmap
+            val afterBitmap = optimizedBitmap
+            if (previewMode == "compare" && beforeBitmap != null && afterBitmap != null) {
                 // 前后拖拽对比
                 BeforeAfterCompareView(
-                    beforeBitmap = originalBitmap!!,
-                    afterBitmap = optimizedBitmap!!,
+                    beforeBitmap = beforeBitmap,
+                    afterBitmap = afterBitmap,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -657,7 +660,7 @@ fun SmartOptimizeScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "AI 推荐：${analysisResult!!.name}",
+                                    text = "AI 推荐：${analysisResult?.name ?: ""}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = HasselbladOrange
@@ -927,11 +930,12 @@ private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int,
  * AI 场景识别：分析图片并返回结果
  */
 private fun analyzeImage(
+    scope: CoroutineScope,
     bitmap: Bitmap,
     engine: MasterInferenceEngine,
     onResult: (SceneProfile) -> Unit
 ) {
-    kotlinx.coroutines.GlobalScope.launch(Dispatchers.Default) {
+    scope.launch(Dispatchers.Default) {
         try {
             val result = engine.analyzeImage(bitmap)
             withContext(Dispatchers.Main) { onResult(result) }
