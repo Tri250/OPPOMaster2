@@ -1,9 +1,11 @@
 [versions]
 # ===== Android Gradle Plugin =====
+# AGP 8.7.3 与当前 Kotlin 2.0.21 + Compose Compiler 2.0.21 完全匹配
+# AGP 8.11+ 需要 Compose Compiler / K2 更高版本，暂不升级
 agp = "8.7.3"
 
 # ===== Kotlin =====
-# Gradle 8.14.4 兼容 Kotlin 2.0.21+；AGP 8.7.3 兼容 Kotlin 2.0.x
+# Gradle 8.14.4 兼容 Kotlin 2.0.21；更高 Kotlin 版本（2.1+）需要 Gradle 9.x + AGP 9.x
 kotlin = "2.0.21"
 
 # ===== AndroidX Core =====

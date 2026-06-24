@@ -774,7 +774,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
         // 配置 HEVC 编码器
         val mediaFormat = android.media.MediaFormat.createVideoFormat(
-            android.media.MediaFormat.MIMETYPE_HEVC,
+            android.media.MediaFormat.MIMETYPE_VIDEO_HEVC,
             width,
             height
         ).apply {
@@ -786,7 +786,7 @@ class HasselbladEyeViewModel : ViewModel() {
                 android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
         }
 
-        val encoder = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_HEVC)
+        val encoder = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_VIDEO_HEVC)
         encoder.configure(mediaFormat, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE)
         val inputSurface = encoder.createInputSurface()
         encoder.start()
