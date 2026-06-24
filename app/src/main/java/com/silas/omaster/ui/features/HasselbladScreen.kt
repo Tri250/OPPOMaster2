@@ -351,7 +351,7 @@ fun HasselbladScreen(
     fun onShareImage() {
         val bitmap = previewBitmap ?: return
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        viewModel.shareImage(context, bitmap)
+        viewModel.shareImage(context, bitmap, exportFormat)
     }
 
     fun onResetParams() {

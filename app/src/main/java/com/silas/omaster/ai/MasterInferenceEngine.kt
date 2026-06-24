@@ -102,7 +102,7 @@ class MasterInferenceEngine private constructor(context: Context) {
         // 更新扩展数据
         val profile = sceneProfile.copy(
             exifData = exifData,
-            histogramData = convertToHistogramData(analysisResult.colorProfile),
+            histogramData = computeRealHistogram(bitmap),
             faceData = faceData,
             confidence = analysisResult.confidence
         )
@@ -475,33 +475,70 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 将 ColorProfile 转换为 HistogramData
+     * 基于 Bitmap 像素的真实直方图计算
+     *
+     * 直接遍历像素数据，统计每个亮度/色阶的像素数量，
+     * 生成 256 级精度的 L/R/G/B 直方图。采样步长根据图片尺寸动态调整，
+     * 大图跳步采样保证性能，小图逐像素保证精度。
      */
-    private fun convertToHistogramData(colorProfile: HeuristicSceneAnalyzer.ColorProfile): HistogramData {
-        // 基于颜色画像生成简化的直方图数据
+    private fun computeRealHistogram(bitmap: Bitmap): HistogramData {
+        val width = bitmap.width
+        val height = bitmap.height
+
         val luminance = IntArray(256)
         val red = IntArray(256)
         val green = IntArray(256)
         val blue = IntArray(256)
 
-        // 根据平均颜色值填充直方图中心区域
-        val avgLuma = ((0.2126 * colorProfile.avgRed +
-                       0.7152 * colorProfile.avgGreen +
-                       0.0722 * colorProfile.avgBlue)).toInt().coerceIn(0, 255)
+        // 动态采样步长：大图稀疏采样，小图密集采样
+        val step = when {
+            width > 2000 || height > 2000 -> 6   // ~3M+ 像素，6倍下采样
+            width > 1000 || height > 1000 -> 4   // ~1M+ 像素，4倍下采样
+            width > 500 || height > 500 -> 2     // ~250K+ 像素，2倍下采样
+            else -> 1                             // 小图逐像素
+        }
 
-        luminance[avgLuma] = 1000
-        red[colorProfile.avgRed] = 1000
-        green[colorProfile.avgGreen] = 1000
-        blue[colorProfile.avgBlue] = 1000
+        var totalLuminance = 0L
+        var pixelCount = 0
+        var shadowCount = 0
+        var highlightCount = 0
+
+        // 逐像素统计直方图
+        for (y in 0 until height step step) {
+            for (x in 0 until width step step) {
+                val pixel = bitmap.getPixel(x, y)
+                val r = android.graphics.Color.red(pixel)
+                val g = android.graphics.Color.green(pixel)
+                val b = android.graphics.Color.blue(pixel)
+
+                // Rec.709 亮度
+                val luma = (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt().coerceIn(0, 255)
+
+                luminance[luma]++
+                red[r]++
+                green[g]++
+                blue[b]++
+
+                totalLuminance += luma
+                pixelCount++
+
+                if (luma < 50) shadowCount++
+                if (luma > 200) highlightCount++
+            }
+        }
+
+        val meanLuminance = if (pixelCount > 0) (totalLuminance / pixelCount).toFloat() else 0f
+        val shadowRatio = if (pixelCount > 0) shadowCount.toFloat() / pixelCount else 0f
+        val highlightRatio = if (pixelCount > 0) highlightCount.toFloat() / pixelCount else 0f
 
         return HistogramData(
             luminance = luminance,
             red = red,
             green = green,
             blue = blue,
-            meanLuminance = avgLuma.toFloat(),
-            shadowClipping = colorProfile.darkPixelRatio > 0.7f,
-            highlightClipping = colorProfile.highlightRatio > 0.3f
+            meanLuminance = meanLuminance,
+            shadowClipping = shadowRatio > 0.7f,
+            highlightClipping = highlightRatio > 0.3f
         )
     }
 

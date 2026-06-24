@@ -332,6 +332,12 @@ android {
 
     // 打包配置
     packaging {
+        // Android 16 (API 36) 要求支持 16KB 页对齐，避免运行时加载 .so 失败
+        // 参见：https://developer.android.com/guide/practices/page-sizes
+        jniLibs {
+            // 启用 16KB 页对齐（仅影响包含 .so 的 ABI 目录）
+            useLegacyPackaging = false
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "linuxMain/**"

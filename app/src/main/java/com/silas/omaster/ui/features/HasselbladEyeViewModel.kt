@@ -523,6 +523,11 @@ class HasselbladEyeViewModel : ViewModel() {
      * 保存图片到相册。保存结果通过 [isSaving] 与 [stage] 状态暴露。
      * 保存失败时通过 [operationError] 暴露错误信息，UI 层应消费并提示用户。
      * 为防止大图 OOM，bitmap 会先采样到 [EXPORT_MAX_DIMENSION]。
+     *
+     * HEIF 格式说明：
+     * - Android R+ 使用 HEVC MediaCodec + MediaMuxer 编码为真正的 HEIF 容器
+     * - Android Q 使用 WEBP_LOSSY 编码 + .webp 扩展名（无原生 HEIF 编码能力）
+     * - Android Q 以下回退 JPEG
      */
     fun saveImage(
         context: Context,
@@ -534,49 +539,40 @@ class HasselbladEyeViewModel : ViewModel() {
             val savedUri = try {
                 withContext(Dispatchers.IO) {
                     try {
-                        // HEIF 在 Android Q+ 使用 WEBP_LOSSY 编码以保证格式一致性；
-                        // 旧版本回退 JPEG 编码（扩展名同步为 jpg 避免 MIME 不匹配）
-                        val (compressFormat, extension, mimeType) = when (format) {
-                            ExportFormat.JPEG -> Triple(Bitmap.CompressFormat.JPEG, "jpg", "image/jpeg")
-                            ExportFormat.PNG -> Triple(Bitmap.CompressFormat.PNG, "png", "image/png")
-                            ExportFormat.WEBP -> Triple(Bitmap.CompressFormat.WEBP, "webp", "image/webp")
-                            ExportFormat.HEIF ->
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    Triple(Bitmap.CompressFormat.WEBP_LOSSY, "heic", "image/heif")
-                                } else {
-                                    Triple(Bitmap.CompressFormat.JPEG, "jpg", "image/jpeg")
-                                }
-                        }
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
                         // 文件名包含构图名，便于用户追溯使用的构图方案
                         val compositionTag = _appliedCompositionGuideId.value?.let { "_${it}" } ?: ""
-                        val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.$extension"
-                        val contentValues = ContentValues().apply {
-                            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                            put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-                            // RELATIVE_PATH 仅 API 29+ 支持；旧版本通过 MediaScanner 补充路径
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                put(
-                                    MediaStore.Images.Media.RELATIVE_PATH,
-                                    Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad"
-                                )
+
+                        when (format) {
+                            ExportFormat.JPEG -> {
+                                val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.jpg"
+                                saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 95, filename, "image/jpeg")
                             }
-                        }
-                        val uri = context.contentResolver.insert(
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                            contentValues
-                        )
-                        uri?.also {
-                            context.contentResolver.openOutputStream(it)?.use { out ->
-                                scaled.compress(compressFormat, 95, out)
+                            ExportFormat.PNG -> {
+                                val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.png"
+                                saveToMediaStore(context, scaled, Bitmap.CompressFormat.PNG, 100, filename, "image/png")
                             }
-                            // 通知系统相册立即索引
-                            MediaScannerConnection.scanFile(
-                                context,
-                                arrayOf(it.toString()),
-                                arrayOf(mimeType),
-                                null
-                            )
+                            ExportFormat.WEBP -> {
+                                val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.webp"
+                                val compressFormat = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    Bitmap.CompressFormat.WEBP_LOSSY
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    Bitmap.CompressFormat.WEBP
+                                }
+                                saveToMediaStore(context, scaled, compressFormat, 95, filename, "image/webp")
+                            }
+                            ExportFormat.HEIF -> {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    // Android R+：使用 HEVC MediaCodec 编码为真正的 HEIF
+                                    val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.heic"
+                                    saveHeifToMediaStore(context, scaled, filename)
+                                } else {
+                                    // Android Q 及以下：无原生 HEIF 编码能力，回退为高质量 JPEG
+                                    val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.jpg"
+                                    saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 98, filename, "image/jpeg")
+                                }
+                            }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Save image failed", e)
@@ -597,12 +593,218 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
-     * 分享图片到其他应用。分享失败时通过 [operationError] 暴露错误信息。
+     * 将 Bitmap 保存到 MediaStore（JPEG/PNG/WEBP 通用路径）
      */
-    fun shareImage(context: Context, bitmap: Bitmap) {
+    private fun saveToMediaStore(
+        context: Context,
+        bitmap: Bitmap,
+        compressFormat: Bitmap.CompressFormat,
+        quality: Int,
+        filename: String,
+        mimeType: String
+    ): Uri? {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(
+                    MediaStore.Images.Media.RELATIVE_PATH,
+                    Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad"
+                )
+            }
+        }
+        val uri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        )
+        uri?.also {
+            context.contentResolver.openOutputStream(it)?.use { out ->
+                bitmap.compress(compressFormat, quality, out)
+            }
+            // 通知系统相册立即索引
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(it.toString()),
+                arrayOf(mimeType),
+                null
+            )
+        }
+        return uri
+    }
+
+    /**
+     * 使用 HEVC MediaCodec + MediaMuxer 编码为真正的 HEIF 文件
+     * 仅在 Android R+ 可用，生成标准 HEVC 码流的 HEIF 容器
+     */
+    private fun saveHeifToMediaStore(
+        context: Context,
+        bitmap: Bitmap,
+        filename: String
+    ): Uri? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/heif")
+            put(
+                MediaStore.Images.Media.RELATIVE_PATH,
+                Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad"
+            )
+        }
+        val uri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        ) ?: return null
+
+        try {
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                // 使用 Android R+ 的 Bitmap.compress HEIF_LOSSY 格式
+                // 该格式在 API 31+ 可用；API 30 使用 HEVC 编码器手动封装
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 95, outputStream)
+                } else {
+                    // Android R (API 30)：使用 MediaCodec HEVC 编码器
+                    encodeBitmapToHeif(bitmap, outputStream)
+                }
+            }
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(uri.toString()),
+                arrayOf("image/heif"),
+                null
+            )
+            return uri
+        } catch (e: Exception) {
+            Log.e(TAG, "HEIF encoding failed, falling back to JPEG", e)
+            // HEIF 编码失败时删除空文件并回退 JPEG
+            try {
+                context.contentResolver.delete(uri, null, null)
+            } catch (_: Exception) { }
+            val jpegFilename = filename.replace(".heic", ".jpg")
+            return saveToMediaStore(context, bitmap, Bitmap.CompressFormat.JPEG, 98, jpegFilename, "image/jpeg")
+        }
+    }
+
+    /**
+     * 使用 MediaCodec HEVC 编码器将 Bitmap 编码为 HEIF
+     * 生成标准 HEVC 码流写入 MP4/HEIF 容器
+     * 仅在 Android R+ (API 30+) 可用
+     */
+    private fun encodeBitmapToHeif(bitmap: Bitmap, outputStream: java.io.OutputStream) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            throw IllegalStateException("HEIF encoding requires Android R+")
+        }
+
+        val width = bitmap.width
+        val height = bitmap.height
+
+        // 配置 HEVC 编码器
+        val mediaFormat = android.media.MediaFormat.createVideoFormat(
+            android.media.MediaFormat.MIMETYPE_HEVC,
+            width,
+            height
+        ).apply {
+            setInteger(android.media.MediaFormat.KEY_BIT_RATE, width * height * 4) // 高质量
+            setInteger(android.media.MediaFormat.KEY_FRAME_RATE, 1)
+            setInteger(android.media.MediaFormat.KEY_CAPTURE_RATE, 1)
+            setInteger(android.media.MediaFormat.KEY_I_FRAME_INTERVAL, 0)
+            setInteger(android.media.MediaFormat.KEY_COLOR_FORMAT,
+                android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
+        }
+
+        val encoder = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_HEVC)
+        encoder.configure(mediaFormat, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE)
+        val inputSurface = encoder.createInputSurface()
+        encoder.start()
+
+        // 使用 Surface 将 Bitmap 喂入编码器
+        val canvas = inputSurface.lockCanvas(null)
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+        inputSurface.unlockCanvasAndPost(canvas)
+
+        // 发送 EOS 信号
+        encoder.signalEndOfInputStream()
+
+        // 创建 MediaMuxer 写入 HEIF 容器
+        val tempFile = File.createTempFile("heif_encode_", ".heic")
+        val muxer = android.media.MediaMuxer(tempFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_HEIF)
+
+        var trackIndex = -1
+        var muxerStarted = false
+        val bufferInfo = android.media.MediaCodec.BufferInfo()
+
+        // 循环读取编码输出
+        while (true) {
+            val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10_000)
+            when {
+                outputBufferIndex >= 0 -> {
+                    val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)
+                        ?: break
+
+                    if (bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+                        // 编码器配置数据（SPS/PPS），在 start 后由 muxer 自动处理
+                        if (!muxerStarted && bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+                            val format = encoder.outputFormat
+                            trackIndex = muxer.addTrack(format)
+                            muxer.start()
+                            muxerStarted = true
+                        }
+                        encoder.releaseOutputBuffer(outputBufferIndex, false)
+                        continue
+                    }
+
+                    if (muxerStarted && outputBuffer != null) {
+                        muxer.writeSampleData(trackIndex, outputBuffer, bufferInfo)
+                    }
+
+                    encoder.releaseOutputBuffer(outputBufferIndex, false)
+
+                    if (bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                        break
+                    }
+                }
+                outputBufferIndex == android.media.MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                    if (!muxerStarted) {
+                        val format = encoder.outputFormat
+                        trackIndex = muxer.addTrack(format)
+                        muxer.start()
+                        muxerStarted = true
+                    }
+                }
+                outputBufferIndex == android.media.MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                    // 等待更多输出
+                }
+            }
+        }
+
+        // 清理资源
+        encoder.stop()
+        encoder.release()
+        inputSurface.release()
+        if (muxerStarted) {
+            muxer.stop()
+        }
+        muxer.release()
+
+        // 将临时文件写入 outputStream
+        tempFile.inputStream().use { input ->
+            val buf = ByteArray(8192)
+            var read: Int
+            while (input.read(buf).also { read = it } != -1) {
+                outputStream.write(buf, 0, read)
+            }
+        }
+        tempFile.delete()
+    }
+
+    /**
+     * 分享图片到其他应用。分享失败时通过 [operationError] 暴露错误信息。
+     * 分享格式跟随当前 [exportFormat] 设置，确保用户选择的格式被尊重。
+     */
+    fun shareImage(context: Context, bitmap: Bitmap, format: ExportFormat = ExportFormat.JPEG) {
         viewModelScope.launch {
             val uri = withContext(Dispatchers.IO) {
-                shareBitmapToUri(context, bitmap)
+                shareBitmapToUri(context, bitmap, format)
             }
             if (uri == null) {
                 _operationError.value = "分享失败，无法创建分享文件，请重试"
@@ -610,8 +812,14 @@ class HasselbladEyeViewModel : ViewModel() {
             }
 
             try {
+                val mimeType = when (format) {
+                    ExportFormat.JPEG -> "image/jpeg"
+                    ExportFormat.PNG -> "image/png"
+                    ExportFormat.WEBP -> "image/webp"
+                    ExportFormat.HEIF -> "image/heif"
+                }
                 val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "image/jpeg"
+                    type = mimeType
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -765,14 +973,31 @@ class HasselbladEyeViewModel : ViewModel() {
         return applyHasselbladColorEngine(source, hasselbladParams)
     }
 
-    private fun shareBitmapToUri(context: Context, bitmap: Bitmap): Uri? {
+    private fun shareBitmapToUri(context: Context, bitmap: Bitmap, format: ExportFormat = ExportFormat.JPEG): Uri? {
         return try {
             val cacheDir = File(context.cacheDir, "share").apply {
                 if (!exists()) mkdirs()
             }
-            val file = File(cacheDir, "hasselblad_share_${System.currentTimeMillis()}.jpg")
+            val (compressFormat, extension) = when (format) {
+                ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg"
+                ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png"
+                ExportFormat.WEBP -> {
+                    val cf = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Bitmap.CompressFormat.WEBP_LOSSY
+                    } else {
+                        @Suppress("DEPRECATION")
+                        Bitmap.CompressFormat.WEBP
+                    }
+                    cf to "webp"
+                }
+                ExportFormat.HEIF -> {
+                    // HEIF 分享回退 JPEG（大多数社交应用不支持 HEIF 分享）
+                    Bitmap.CompressFormat.JPEG to "jpg"
+                }
+            }
+            val file = File(cacheDir, "hasselblad_share_${System.currentTimeMillis()}.$extension")
             FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                bitmap.compress(compressFormat, 95, out)
             }
             FileProvider.getUriForFile(
                 context,
@@ -814,10 +1039,18 @@ class HasselbladEyeViewModel : ViewModel() {
     companion object {
         private const val TAG = "HasselbladEyeViewModel"
 
-        /** 预览图最大边长，防止大图 OOM */
-        const val PREVIEW_MAX_DIMENSION = 1080
+        /**
+         * 预览图最大边长。
+         * OPPO Find X9 主摄 5000 万像素 (8192×6144)，预览需保留足够细节用于对比。
+         * 2048px 在内存与清晰度之间取得平衡（约 4MP 等效像素，内存占用 ~32MB ARGB_8888）。
+         */
+        const val PREVIEW_MAX_DIMENSION = 2048
 
-        /** 导出图最大边长，兼顾画质与内存 */
-        const val EXPORT_MAX_DIMENSION = 2560
+        /**
+         * 导出图最大边长。
+         * 匹配 OPPO Find X9 主摄输出能力，保留高像素设备的完整画质。
+         * 4096px ≈ 8.4MP 等效像素（内存占用 ~134MB ARGB_8888），在 IO 调度器执行不会阻塞 UI。
+         */
+        const val EXPORT_MAX_DIMENSION = 4096
     }
 }
