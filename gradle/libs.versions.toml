@@ -3,7 +3,7 @@
 agp = "8.7.3"
 
 # ===== Kotlin =====
-# Gradle 8.14.4 兼容 Kotlin 2.0.21+；AGP 8.7.3 兼容 Kotlin 2.0.x
+# AGP 8.7.3 兼容 Kotlin 2.0.x；Kotlin 2.0.21 是 2.0 系列最新稳定版
 kotlin = "2.0.21"
 
 # ===== AndroidX Core =====
@@ -35,7 +35,6 @@ tensorflow-lite-gpu = "2.16.1"
 tensorflow-lite-support = "0.4.4"
 
 # ===== CameraX =====
-# 修复 P2-6: CameraX 当前未使用（使用 Camera2 替代），保留版本定义以备将来启用
 camerax = "1.4.0"
 
 # ===== Analytics =====

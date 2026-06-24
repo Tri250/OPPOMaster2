@@ -444,7 +444,7 @@
 
     <!-- 欢迎对话框 -->
     <string name="welcome_dialog_title">欢迎使用 OMaster</string>
-    <string name="welcome_version">OMaster v1.3.1</string>
+    <string name="welcome_version">OMaster v1.9.0</string>
     <string name="feature_1_title">专业参数</string>
     <string name="feature_1_desc">查看哈苏、徕卡、富士等品牌的大师调色参数</string>
     <string name="feature_2_title">多种风格</string>
