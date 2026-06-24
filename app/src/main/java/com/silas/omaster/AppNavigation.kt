@@ -68,6 +68,7 @@ import com.silas.omaster.ui.onboarding.OnboardingScreen
 import com.silas.omaster.ui.subscription.SubscriptionScreen
 import com.silas.omaster.ui.screens.SceneAnalysisReportScreen
 import com.silas.omaster.ui.settings.ApiConfigScreen
+import com.silas.omaster.ui.settings.ImportExportScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
 import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.settings.SettingsScreen
@@ -274,7 +275,8 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) },
                     onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) },
                     onNavigateToThemeSettings = { navController.navigate(Screen.ThemeSettings) },
-                    onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) }
+                    onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
+                    onNavigateToImportExport = { navController.navigate(Screen.ImportExport) }
                 )
             }
 
@@ -483,6 +485,12 @@ fun MainApp(navController: NavHostController) {
                         // 拍照后可以导航到 HasselbladScreen 进行分析
                         navController.popBackStack()
                     }
+                )
+            }
+
+            composable<Screen.ImportExport> {
+                ImportExportScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

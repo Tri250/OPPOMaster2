@@ -84,4 +84,7 @@ sealed class Screen {
 
     @Serializable
     data class CameraXViewfinder(val presetId: String? = null) : Screen()
+
+    @Serializable
+    data object ImportExport : Screen()
 }

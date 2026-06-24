@@ -131,6 +131,7 @@ import com.silas.omaster.ui.components.ApertureState
 import com.silas.omaster.ui.components.defaultAnalysisSteps
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.formatSigned
 import com.silas.omaster.util.hapticClickable
 import kotlinx.coroutines.Dispatchers
@@ -494,6 +495,31 @@ fun HasselbladScreen(
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.clearAppliedComposition()
                         Toast.makeText(context, "已清除当前构图", Toast.LENGTH_SHORT).show()
+                    },
+                    onSaveAsPreset = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val currentColorMode = allColorModes.find { it.id == selectedColorModeId }
+                        val currentSceneMode = allSceneModes.find { it.id == selectedSceneModeId }
+                        if (currentColorMode != null) {
+                            scope.launch {
+                                val repository = PresetRepository.getInstance(context)
+                                val result = repository.createPresetFromHasselbladMode(
+                                    colorMode = currentColorMode,
+                                    sceneMode = currentSceneMode
+                                )
+                                result.onSuccess {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "已保存为预设：${currentColorMode.name}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }.onFailure {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "保存失败：${it.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        } else {
+                            Toast.makeText(context, "请先选择一个色彩模式", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 )
 
@@ -1541,7 +1567,8 @@ private fun ResultsContent(
     onFilmClick: (FilmPreset) -> Unit,
     onFineGrainedSceneSelected: (SceneProfile) -> Unit,
     onGuideClick: (CompositionGuide) -> Unit,
-    onClearComposition: () -> Unit
+    onClearComposition: () -> Unit,
+    onSaveAsPreset: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1675,6 +1702,31 @@ private fun ResultsContent(
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
+                    )
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = onSaveAsPreset,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, HasselbladOrange),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = "保存为预设",
+                        tint = HasselbladOrange,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "保存为预设",
+                        color = HasselbladOrange,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
                     )
                 }
             }

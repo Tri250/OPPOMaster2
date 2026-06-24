@@ -96,7 +96,8 @@ fun SettingsScreen(
     onNavigateToUpdateChannel: (() -> Unit)? = null,
     onNavigateToApiConfig: (() -> Unit)? = null,
     onNavigateToThemeSettings: (() -> Unit)? = null,
-    onNavigateToSceneAnalysisReport: (() -> Unit)? = null
+    onNavigateToSceneAnalysisReport: (() -> Unit)? = null,
+    onNavigateToImportExport: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -503,6 +504,15 @@ fun SettingsScreen(
                         showClearCacheDialog = true
                     }
                 }
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Sync,
+                title = "导入/导出预设",
+                subtitle = "批量导入或导出预设文件",
+                onClick = { onNavigateToImportExport?.invoke() }
             )
         }
 
