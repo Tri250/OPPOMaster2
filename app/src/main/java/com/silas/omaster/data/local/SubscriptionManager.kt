@@ -5,6 +5,7 @@ import com.silas.omaster.model.Subscription
 import com.silas.omaster.model.SubscriptionList
 import com.silas.omaster.util.SecurityCrypto
 import com.silas.omaster.util.UpdateConfigManager
+import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,26 +41,46 @@ class SubscriptionManager private constructor(context: Context) {
                     }
                 }
                 _subscriptionsFlow.value = migratedSubscriptions
+                // 按版本号补充新默认订阅（仅执行一次）
+                if (ensureDefaultSubscriptions()) {
+                    updated = true
+                }
                 if (updated) {
                     saveSubscriptions()
-                    android.util.Log.d("SubscriptionManager", "Migrated official subscription to new URL")
+                    android.util.Log.d("SubscriptionManager", "Migrated/updated default subscriptions")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SubscriptionManager", "Failed to decode subscriptions", e)
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
-            // 首次使用，添加默认订阅
-            val defaultSub = Subscription(
-                url = UpdateConfigManager.DEFAULT_PRESET_URL,
-                name = "官方内置预设",
-                author = "@OMaster",
-                build = 1,
-                isEnabled = true
-            )
-            _subscriptionsFlow.value = listOf(defaultSub)
+            // 首次使用，添加默认订阅（OPPO/realme/vivo/荣耀，默认启用）
+            _subscriptionsFlow.value = DEFAULT_SUBSCRIPTIONS
+            prefs.edit().putInt(KEY_DEFAULT_SUBS_VERSION, CURRENT_DEFAULT_SUBS_VERSION).apply()
             saveSubscriptions()
         }
+    }
+
+    /**
+     * 确保当前默认订阅列表已包含最新预设源。
+     * 根据 [CURRENT_DEFAULT_SUBS_VERSION] 判断，仅在新版本首次启动时补充缺失的默认订阅。
+     * 返回是否发生过变更。
+     */
+    private fun ensureDefaultSubscriptions(): Boolean {
+        val currentVersion = prefs.getInt(KEY_DEFAULT_SUBS_VERSION, 0)
+        if (currentVersion >= CURRENT_DEFAULT_SUBS_VERSION) return false
+
+        val existingUrls = _subscriptionsFlow.value.map { it.url }.toSet()
+        val missing = DEFAULT_SUBSCRIPTIONS.filter { it.url !in existingUrls }
+        if (missing.isEmpty()) {
+            prefs.edit().putInt(KEY_DEFAULT_SUBS_VERSION, CURRENT_DEFAULT_SUBS_VERSION).apply()
+            return false
+        }
+
+        _subscriptionsFlow.value = _subscriptionsFlow.value + missing
+        prefs.edit().putInt(KEY_DEFAULT_SUBS_VERSION, CURRENT_DEFAULT_SUBS_VERSION).apply()
+        android.util.Log.d("SubscriptionManager", "Added default subscriptions: ${missing.map { it.name }}")
+        return true
     }
 
     private fun tryReadSecureSubscriptions(): String? {
@@ -174,6 +195,42 @@ class SubscriptionManager private constructor(context: Context) {
         private const val PREFS_NAME = "omaster_subscriptions"
         private const val KEY_SUBSCRIPTIONS = "subscriptions_list"
         private const val KEY_SUBSCRIPTIONS_ENC = "subscriptions_list_enc"
+        private const val KEY_DEFAULT_SUBS_VERSION = "default_subscriptions_version"
+
+        /** 默认订阅版本号；升级默认订阅时递增，用于向老用户补充新订阅 */
+        private const val CURRENT_DEFAULT_SUBS_VERSION = 2
+
+        /** 默认订阅列表：OPPO/一加、realme、vivo、荣耀，默认全部启用 */
+        val DEFAULT_SUBSCRIPTIONS: List<Subscription> = listOf(
+            Subscription(
+                url = UrlConstants.PRESET_OPPO,
+                name = "OPPO/一加大师模式官方预设",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            ),
+            Subscription(
+                url = UrlConstants.PRESET_REALME,
+                name = "realme GT 大师模式官方预设",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            ),
+            Subscription(
+                url = UrlConstants.PRESET_VIVO,
+                name = "vivo 蔡司自然色彩官方预设",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            ),
+            Subscription(
+                url = UrlConstants.PRESET_HONOR,
+                name = "荣耀 Magic 影像官方预设",
+                author = "@OMaster-Community",
+                build = 1,
+                isEnabled = true
+            )
+        )
 
         @Volatile
         private var INSTANCE: SubscriptionManager? = null
