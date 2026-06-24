@@ -132,6 +132,7 @@ import com.silas.omaster.ui.components.defaultAnalysisSteps
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.util.formatSigned
 import com.silas.omaster.util.hapticClickable
 import kotlinx.coroutines.Dispatchers
@@ -198,6 +199,18 @@ fun HasselbladScreen(
         operationError?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             viewModel.clearOperationError()
+        }
+    }
+
+    // 检查 LUTManager 中是否有待应用的活跃 LUT（来自风格 LUT 生成器等入口）
+    val lutManager = remember { LUTManager.getInstance(context) }
+    LaunchedEffect(Unit) {
+        val activeLUTId = lutManager.activeLUTId.value
+        if (activeLUTId != null) {
+            val strength = lutManager.lutStrength.value
+            viewModel.apply3DLUT(context, activeLUTId, strength)
+            // 应用后清除活跃 LUT，避免重复应用
+            lutManager.setActiveLUT(null)
         }
     }
 

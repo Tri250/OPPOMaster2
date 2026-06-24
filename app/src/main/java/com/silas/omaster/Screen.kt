@@ -50,6 +50,9 @@ sealed class Screen {
     data object LUTShare : Screen()
 
     @Serializable
+    data object StyleLUTGenerator : Screen()
+
+    @Serializable
     data object HasselbladColor : Screen()
 
     @Serializable

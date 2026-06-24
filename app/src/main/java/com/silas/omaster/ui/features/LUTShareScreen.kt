@@ -53,6 +53,7 @@ fun LUTShareScreen(
     onBack: () -> Unit,
     onDownload: (LUTResource) -> Unit = {},
     onApplyLUT: ((LUTResource) -> Unit)? = null,
+    onNavigateToStyleGenerator: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -125,6 +126,13 @@ fun LUTShareScreen(
                 }
             },
             actions = {
+                // 风格 LUT 生成器入口
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onNavigateToStyleGenerator()
+                }) {
+                    Icon(Icons.Default.AutoAwesome, "风格LUT生成器", tint = HasselbladOrange)
+                }
                 Text(
                     text = "${repo.RESOURCES.size} 个LUT",
                     style = MaterialTheme.typography.bodySmall,

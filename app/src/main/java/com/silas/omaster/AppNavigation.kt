@@ -62,6 +62,7 @@ import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
 import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
+import com.silas.omaster.ui.features.StyleLUTGeneratorScreen
 import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
 import com.silas.omaster.ui.onboarding.OnboardingScreen
@@ -404,7 +405,19 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() },
                     onDownload = { /* LUT download handled internally by LUTManager */ },
                     onApplyLUT = { lutResource ->
-                        // 应用 LUT 后导航到哈苏之眼进行调色
+                        navController.navigate(Screen.HasselbladColor)
+                    },
+                    onNavigateToStyleGenerator = {
+                        navController.navigate(Screen.StyleLUTGenerator)
+                    }
+                )
+            }
+
+            composable<Screen.StyleLUTGenerator> {
+                StyleLUTGeneratorScreen(
+                    onBack = { navController.popBackStack() },
+                    onApplyLUT = {
+                        // 应用生成的 LUT 后导航到哈苏之眼进行调色
                         navController.navigate(Screen.HasselbladColor)
                     }
                 )

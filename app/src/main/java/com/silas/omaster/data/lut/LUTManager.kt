@@ -221,6 +221,14 @@ class LUTManager private constructor(private val context: Context) {
     }
 
     /**
+     * 直接缓存 LUT3DData（用于风格 LUT 生成器等场景）
+     */
+    fun parseAndCache(lutId: String, lutData: LUT3DData): LUT3DData {
+        lutDataCache[lutId] = lutData
+        return lutData
+    }
+
+    /**
      * 获取缓存的 LUT 数据
      */
     fun getCachedLUTData(lutId: String): LUT3DData? {
