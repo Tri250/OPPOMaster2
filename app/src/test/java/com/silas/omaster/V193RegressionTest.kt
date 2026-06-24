@@ -17,7 +17,7 @@ import org.junit.Test
  * 2. 哈苏之眼拍照回调线程切换（IO 加载 bitmap / Main 更新 UI）
  * 3. AI 构图辅助模块（CompositionGuide / ARGuideType / 排序）
  * 4. 按钮字体变形修复（13sp + maxLines=1 + Ellipsis + contentPadding）
- * 5. LUT 资源库品牌更新（restore 分类 + 8 个品牌 LUT）
+ * 5. LUT 资源库品牌更新（restore 分类 + 17 品牌 54 个 LUT，采集自 cubelut.cn/restore.php）
  */
 class V193RegressionTest {
 
@@ -311,21 +311,37 @@ class V193RegressionTest {
     }
 
     @Test
-    fun `问题5-RESOURCES必须包含8个品牌LOG还原LUT`() {
+    fun `问题5-RESOURCES必须包含54个品牌LOG还原LUT`() {
         val restoreLuts = LUTResourceRepository.getResources("restore")
-        assertEquals("restore 分类下应恰好 8 个品牌 LUT，实际：${restoreLuts.size}", 8, restoreLuts.size)
+        assertEquals("restore 分类下应恰好 54 个品牌 LUT（采集自 cubelut.cn/restore.php 17 品牌），实际：${restoreLuts.size}", 54, restoreLuts.size)
     }
 
     @Test
-    fun `问题5-8个品牌LUT ID必须完整`() {
+    fun `问题5-17品牌LUT ID必须完整`() {
         val restoreLuts = LUTResourceRepository.getResources("restore")
         val ids = restoreLuts.map { it.id }.toSet()
-        val required = setOf(
+        // 原有 8 个品牌 LUT（向后兼容）
+        val legacyRequired = setOf(
             "oppo-rec709", "oppo-rec2020", "oppo-olog2-rec709",
             "vivo-vlog", "xiaomi-milog", "oneplus-olog",
             "fujifilm-flog", "fujifilm-flog2"
         )
-        for (r in required) {
+        // 新增 9 个品牌代表 LUT（cubelut.cn 采集）
+        val newBrandRequired = setOf(
+            "apple-log",           // Apple
+            "arri-logc3",          // ARRI
+            "canon-c-log",         // Canon
+            "dji-d-log",           // DJI
+            "gopro-fw200",         // GoPro
+            "huawei-h-log",        // 华为
+            "insta360-acepro2",    // Insta360
+            "nikon-n-log",         // Nikon
+            "panasonic-v-log",     // Panasonic
+            "red-log3g10",         // RED
+            "sony-s-log3",         // Sony
+            "samsung-galaxy-log"   // 三星
+        )
+        for (r in legacyRequired + newBrandRequired) {
             assertTrue("必须包含品牌 LUT: $r，实际：$ids", r in ids)
         }
     }
@@ -403,12 +419,17 @@ class V193RegressionTest {
     }
 
     @Test
-    fun `兼容性-getResources的restore子集一定含8个品牌`() {
+    fun `兼容性-getResources的restore子集一定含17个品牌`() {
         val restore = LUTResourceRepository.getResources("restore")
-        val brands = setOf("oppo", "vivo", "xiaomi", "oneplus", "fujifilm")
+        // 17 个品牌（采集自 cubelut.cn/restore.php）
+        val brands = setOf(
+            "apple", "arri", "canon", "dji", "fujifilm", "gopro",
+            "huawei", "insta360", "nikon", "oppo", "panasonic",
+            "red", "sony", "vivo", "xiaomi", "samsung", "oneplus"
+        )
         for (lut in restore) {
             val hasBrand = brands.any { lut.id.startsWith(it) || lut.tags.any { t -> t.lowercase().contains(it) } }
-            assertTrue("LUT ${lut.id} 必须属于已知品牌", hasBrand)
+            assertTrue("LUT ${lut.id} 必须属于已知 17 品牌之一", hasBrand)
         }
     }
 
