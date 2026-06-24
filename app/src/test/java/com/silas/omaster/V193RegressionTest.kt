@@ -551,4 +551,120 @@ class V193RegressionTest {
             )
         }
     }
+
+    // ==================== 智能优化功能全面优化验证 ====================
+
+    @Test
+    fun `智能优化-applyOptimization必须支持strength参数`() {
+        val engineFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
+        )
+        val text = engineFile.readText()
+        // 验证 applyOptimization 方法签名包含 strength 参数
+        assertTrue(
+            "applyOptimization 必须包含 strength 参数",
+            text.contains("fun applyOptimization(bitmap: Bitmap, optimizationId: String, strength: Float")
+        )
+    }
+
+    @Test
+    fun `智能优化-各算法必须根据strength缩放效果`() {
+        val engineFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
+        )
+        val text = engineFile.readText()
+        // 验证各算法函数接收 strength 参数
+        val algorithms = listOf("applyHdr", "applyDenoise", "applySharpen", "applyExposure", "applyColorCorrection")
+        for (algo in algorithms) {
+            assertTrue(
+                "$algo 必须接收 strength 参数",
+                text.contains("private fun $algo(bitmap: Bitmap, strength: Float)")
+            )
+        }
+    }
+
+    @Test
+    fun `智能优化-降噪必须使用boxBlur替代缩放模糊`() {
+        val engineFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
+        )
+        val text = engineFile.readText()
+        // 验证降噪使用 boxBlur
+        assertTrue("applyDenoise 必须使用 applyBoxBlur", text.contains("applyBoxBlur(bitmap, radius"))
+        // 验证不再使用 applyFastBlur
+        assertFalse("不应再使用 applyFastBlur（缩放模糊）", text.contains("private fun applyFastBlur"))
+    }
+
+    @Test
+    fun `智能优化-SmartOptimizeScreen必须包含保存功能`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        // 验证保存功能
+        assertTrue("必须包含 saveToGallery 函数", text.contains("fun saveToGallery()"))
+        assertTrue("必须包含 saveBitmapToGallery 辅助函数", text.contains("private fun saveBitmapToGallery"))
+        assertTrue("必须包含保存按钮图标", text.contains("Icons.Default.Save"))
+    }
+
+    @Test
+    fun `智能优化-SmartOptimizeScreen必须包含分享功能`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        assertTrue("必须包含 shareOptimizedImage 函数", text.contains("fun shareOptimizedImage()"))
+        assertTrue("必须包含分享按钮图标", text.contains("Icons.Default.Share"))
+        assertTrue("必须包含 ACTION_SEND Intent", text.contains("Intent.ACTION_SEND"))
+    }
+
+    @Test
+    fun `智能优化-必须接入AI场景识别`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        assertTrue("必须调用 analyzeImage", text.contains("analyzeImage("))
+        assertTrue("必须包含 AI 推荐提示卡片", text.contains("AI 推荐"))
+        assertTrue("必须包含 applyAutoRecommendations", text.contains("applyAutoRecommendations"))
+    }
+
+    @Test
+    fun `智能优化-必须使用降采样加载图片防OOM`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        assertTrue("必须使用 loadSampledBitmap 降采样加载", text.contains("loadSampledBitmap("))
+        assertTrue("必须实现 calculateInSampleSize", text.contains("calculateInSampleSize"))
+    }
+
+    @Test
+    fun `智能优化-必须包含前后拖拽对比`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        assertTrue("必须包含 BeforeAfterCompareView 组件", text.contains("fun BeforeAfterCompareView"))
+        assertTrue("必须支持 compare 预览模式", text.contains("\"compare\""))
+        assertTrue("必须使用 detectHorizontalDragGestures", text.contains("detectHorizontalDragGestures"))
+    }
+
+    @Test
+    fun `智能优化-优化失败必须Toast提示`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        assertTrue("优化失败必须 Toast 提示", text.contains("优化失败"))
+    }
+
+    @Test
+    fun `智能优化-中间Bitmap必须回收防泄漏`() {
+        val screenFile = java.io.File(
+            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+        )
+        val text = screenFile.readText()
+        assertTrue("必须回收中间 Bitmap", text.contains("prevBitmap.recycle()"))
+    }
 }

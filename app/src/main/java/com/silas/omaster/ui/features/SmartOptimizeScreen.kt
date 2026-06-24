@@ -1,14 +1,22 @@
 package com.silas.omaster.ui.features
 
+import android.content.ContentValues
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,6 +51,8 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
@@ -74,16 +85,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.model.AnalysisResult
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
@@ -96,12 +112,11 @@ import java.io.IOException
  * 智能优化页面
  *
  * 功能：
- * - HDR 增强
- * - 降噪处理
- * - 锐化优化
- * - 自动曝光调整
- * - 智能色彩校正
- * - 综合优化（一键全部 + 进度流程）
+ * - AI 场景识别自动推荐优化项
+ * - HDR 增强 / 降噪 / 锐化 / 曝光 / 色彩校正（强度可调）
+ * - 综合优化一键处理 + 进度流程
+ * - 前后拖拽对比预览
+ * - 保存到相册 / 分享
  *
  * 对齐 Web 端 SmartOptimizePage.tsx
  */
@@ -123,8 +138,12 @@ fun SmartOptimizeScreen(
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var optimizedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // 预览模式
+    // 预览模式："before"/"after"/"compare"
     var previewMode by remember { mutableStateOf("before") }
+
+    // AI 场景识别结果
+    var analysisResult by remember { mutableStateOf<AnalysisResult?>(null) }
+    var isAnalyzing by remember { mutableStateOf(false) }
 
     // 图片选择器（使用 PickVisualMedia 符合 Android 16 隐私最佳实践）
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -134,10 +153,33 @@ fun SmartOptimizeScreen(
         uri?.let {
             selectedImageUri = it
             try {
-                context.contentResolver.openInputStream(it)?.use { stream ->
-                    originalBitmap = BitmapFactory.decodeStream(stream)
+                // 降采样加载，防止大图 OOM（限制 2048px）
+                val loadedBitmap = loadSampledBitmap(context, it, 2048)
+                if (loadedBitmap != null) {
+                    originalBitmap = loadedBitmap
                     optimizedBitmap = null
                     previewMode = "before"
+                    analysisResult = null
+                    // 自动触发 AI 场景识别
+                    analyzeImage(loadedBitmap, inferenceEngine) { result ->
+                        analysisResult = result
+                        // 根据场景自动推荐优化项
+                        applyAutoRecommendations(result) { hdr, denoise, sharpen, exposure, color,
+                            hdrS, denoiseS, sharpenS, exposureS, colorS ->
+                            hdrEnabled = hdr
+                            noiseReductionEnabled = denoise
+                            sharpenEnabled = sharpen
+                            exposureAuto = exposure
+                            colorCorrectionEnabled = color
+                            hdrStrength = hdrS
+                            noiseReductionStrength = denoiseS
+                            sharpenStrength = sharpenS
+                            exposureAdjustment = exposureS
+                            colorCorrectionStrength = colorS
+                        }
+                    }
+                } else {
+                    Toast.makeText(context, "图片加载失败，请选择其他图片", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -169,6 +211,10 @@ fun SmartOptimizeScreen(
     var optimizationCurrentName by remember { mutableStateOf("") }
     var optimizedOptions = remember { mutableStateListOf<String>() }
 
+    // 保存/分享状态
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+
     // 从 assets 加载示例预览图
     LaunchedEffect(Unit) {
         try {
@@ -191,6 +237,15 @@ fun SmartOptimizeScreen(
         }
     }
 
+    // 强度映射：滑块值(0~100) → 算法强度(0.0~1.0)
+    val optimizeIdToStrength: Map<String, Float> = mapOf(
+        "hdr" to hdrStrength / 100f,
+        "denoise" to noiseReductionStrength / 100f,
+        "sharpen" to sharpenStrength / 100f,
+        "exposure" to (exposureAdjustment + 50f) / 100f, // -50~50 → 0~1
+        "color" to colorCorrectionStrength / 100f
+    )
+
     val optimizeIdToName = mapOf(
         "hdr" to "HDR增强",
         "denoise" to "智能降噪",
@@ -199,8 +254,15 @@ fun SmartOptimizeScreen(
         "color" to "色彩校正"
     )
 
+    // 保存错误 Toast
+    LaunchedEffect(saveError) {
+        saveError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            saveError = null
+        }
+    }
+
     // 顺序执行优化流程（对齐Web端handleOptimize + processStep）
-    // 使用 AI 推理引擎执行真实优化处理，并将结果回显到预览
     fun runOptimizeWorkflow() {
         if (selectedOptimizeIds.isEmpty()) return
         scope.launch {
@@ -216,15 +278,21 @@ fun SmartOptimizeScreen(
             }
 
             try {
-                var workingBitmap = source
+                var workingBitmap: Bitmap = source
                 for ((index, id) in selectedOptimizeIds.withIndex()) {
                     optimizationStep = index + 1
                     optimizationCurrentName = optimizeIdToName[id] ?: id
                     optimizationProgress = (index.toFloat()) / selectedOptimizeIds.size
 
-                    // 调用 AI 推理引擎执行真实优化处理
+                    // 调用 AI 推理引擎执行真实优化处理，传入强度参数
+                    val strength = optimizeIdToStrength[id] ?: 0.5f
+                    val prevBitmap = workingBitmap
                     workingBitmap = withContext(Dispatchers.Default) {
-                        inferenceEngine.applyOptimization(workingBitmap, id)
+                        inferenceEngine.applyOptimization(workingBitmap, id, strength)
+                    }
+                    // 回收中间 Bitmap（非原图），防止内存泄漏
+                    if (prevBitmap !== source && !prevBitmap.isRecycled) {
+                        prevBitmap.recycle()
                     }
 
                     optimizationProgress = (index + 1).toFloat() / selectedOptimizeIds.size
@@ -234,6 +302,7 @@ fun SmartOptimizeScreen(
                 previewMode = "after"
             } catch (e: Exception) {
                 android.util.Log.e("SmartOptimize", "Optimization failed", e)
+                Toast.makeText(context, "优化失败：${e.message}，请重试", Toast.LENGTH_LONG).show()
                 return@launch
             } finally {
                 isOptimizing = false
@@ -250,6 +319,57 @@ fun SmartOptimizeScreen(
                 colorCorrectionEnabled = colorCorrectionEnabled,
                 colorCorrectionStrength = colorCorrectionStrength
             ))
+        }
+    }
+
+    // 保存图片到相册
+    fun saveToGallery() {
+        val bitmap = optimizedBitmap ?: originalBitmap ?: return
+        scope.launch {
+            isSaving = true
+            try {
+                val uri = withContext(Dispatchers.IO) {
+                    saveBitmapToGallery(context, bitmap, "SmartOptimize")
+                }
+                if (uri != null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    saveError = "保存失败，请检查存储权限或可用空间"
+                }
+            } catch (e: Exception) {
+                saveError = "保存失败：${e.message}"
+            } finally {
+                isSaving = false
+            }
+        }
+    }
+
+    // 分享图片
+    fun shareOptimizedImage() {
+        val bitmap = optimizedBitmap ?: originalBitmap ?: return
+        scope.launch {
+            try {
+                val uri = withContext(Dispatchers.IO) {
+                    saveBitmapToCache(context, bitmap, "share_smart_optimize_${System.currentTimeMillis()}.jpg")
+                }
+                if (uri != null) {
+                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "image/jpeg"
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    val chooser = android.content.Intent.createChooser(shareIntent, "分享优化照片")
+                        .apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(chooser)
+                } else {
+                    saveError = "分享失败，无法创建分享文件"
+                }
+            } catch (e: Exception) {
+                saveError = "分享失败：${e.message}"
+            }
         }
     }
 
@@ -270,26 +390,70 @@ fun SmartOptimizeScreen(
                 }
             },
             actions = {
+                // AI 场景识别结果徽标
+                if (analysisResult != null) {
+                    Row(
+                        modifier = Modifier
+                            .background(
+                                HasselbladOrange.copy(alpha = 0.15f),
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.AutoAwesome, null,
+                            tint = HasselbladOrange,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = analysisResult!!.sceneProfile.name,
+                            fontSize = 11.sp,
+                            color = HasselbladOrange,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
                 // 预览切换
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    previewMode = if (previewMode == "before") "after" else "before"
+                    previewMode = when (previewMode) {
+                        "before" -> "after"
+                        "after" -> "compare"
+                        else -> "before"
+                    }
                 }) {
                     Icon(
-                        if (previewMode == "after") Icons.Default.Visibility else Icons.Default.Compare,
+                        when (previewMode) {
+                            "after" -> Icons.Default.Visibility
+                            "compare" -> Icons.Default.Compare
+                            else -> Icons.Default.Image
+                        },
                         "预览",
-                        tint = if (previewMode == "after") HasselbladOrange else MaterialTheme.colorScheme.onBackground
+                        tint = if (previewMode != "before") HasselbladOrange else MaterialTheme.colorScheme.onBackground
                     )
                 }
-                // 应用按钮
+                // 保存按钮
                 IconButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        runOptimizeWorkflow()
+                        saveToGallery()
                     },
-                    enabled = !isOptimizing
+                    enabled = !isSaving && (optimizedBitmap != null || originalBitmap != null)
                 ) {
-                    Icon(Icons.Default.Check, "应用", tint = HasselbladOrange)
+                    Icon(Icons.Default.Save, "保存", tint = if (isSaving) Color.Gray else HasselbladOrange)
+                }
+                // 分享按钮
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        shareOptimizedImage()
+                    },
+                    enabled = optimizedBitmap != null || originalBitmap != null
+                ) {
+                    Icon(Icons.Default.Share, "分享", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -298,7 +462,7 @@ fun SmartOptimizeScreen(
             )
         )
 
-        // 优化进度条（与Web端isOptimizing + processStep对齐）
+        // 优化进度条
         AnimatedVisibility(visible = isOptimizing) {
             Card(
                 modifier = Modifier
@@ -353,71 +517,108 @@ fun SmartOptimizeScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .height(220.dp)
+                .background(Color(0xFF1A1A1A))
         ) {
-            val displayBitmap = if (previewMode == "after") optimizedBitmap ?: originalBitmap else originalBitmap
-            displayBitmap?.let { bitmap ->
-                // 显示原图或真实处理后的图片
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = if (previewMode == "after") "优化后预览" else "原图预览",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
+                // 前后拖拽对比
+                BeforeAfterCompareView(
+                    beforeBitmap = originalBitmap!!,
+                    afterBitmap = optimizedBitmap!!,
+                    modifier = Modifier.fillMaxSize()
                 )
+            } else {
+                val displayBitmap = if (previewMode == "after") optimizedBitmap ?: originalBitmap else originalBitmap
+                displayBitmap?.let { bitmap ->
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = if (previewMode == "after") "优化后预览" else "原图预览",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } ?: run {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.Image, null,
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "选择图片开始优化",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
 
-                // 顶部状态徽标
+            // 顶部状态徽标
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .background(
+                        Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when {
+                        previewMode == "compare" -> "前后对比"
+                        previewMode == "after" && optimizedBitmap != null -> "优化后"
+                        else -> "原图"
+                    },
+                    color = if (previewMode != "before") HasselbladOrange else Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            // 选择图片按钮
+            IconButton(
+                onClick = { imagePickerLauncher.launch("image/*") },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddPhotoAlternate,
+                    contentDescription = "选择图片",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // AI 分析中指示器
+            if (isAnalyzing) {
                 Row(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.BottomStart)
                         .padding(8.dp)
                         .background(
-                            MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
+                            HasselbladOrange.copy(alpha = 0.2f),
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 1.5.dp,
+                        color = HasselbladOrange
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (previewMode == "after" && optimizedBitmap != null) "优化后" else "原图",
-                        color = if (previewMode == "after" && optimizedBitmap != null) HasselbladOrange else MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-
-                // 选择图片按钮
-                IconButton(
-                    onClick = { imagePickerLauncher.launch("image/*") },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(36.dp)
-                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AddPhotoAlternate,
-                        contentDescription = "选择图片",
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            } ?: run {
-                // 图片未加载时显示占位提示
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.Image,
-                        null,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "选择图片开始优化",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        text = "AI 场景识别中...",
+                        fontSize = 11.sp,
+                        color = HasselbladOrange
                     )
                 }
             }
@@ -431,7 +632,45 @@ fun SmartOptimizeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 已完成的优化项（与Web端optimizedOptions对齐）
+            // AI 推荐提示
+            if (analysisResult != null && !isOptimizing) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = HasselbladOrange.copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome, null,
+                                tint = HasselbladOrange,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "AI 推荐：${analysisResult!!.sceneProfile.name}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HasselbladOrange
+                                )
+                                Text(
+                                    text = "已根据场景自动推荐优化项与强度",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 已完成的优化项
             if (optimizedOptions.isNotEmpty() && !isOptimizing) {
                 item {
                     Card(
@@ -444,8 +683,7 @@ fun SmartOptimizeScreen(
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Default.CheckCircle,
-                                    null,
+                                    Icons.Default.CheckCircle, null,
                                     tint = SuccessGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -468,12 +706,11 @@ fun SmartOptimizeScreen(
                 }
             }
 
-            // 综合优化（对齐Web端'id: enhance'选项）
+            // 综合优化
             item {
                 CompositeOptimizeCard(
                     enabled = hdrEnabled && noiseReductionEnabled && sharpenEnabled && colorCorrectionEnabled,
                     onEnable = {
-                        // 一键启用所有选项
                         hdrEnabled = true
                         noiseReductionEnabled = true
                         sharpenEnabled = true
@@ -513,7 +750,7 @@ fun SmartOptimizeScreen(
             item {
                 OptimizeOptionCard(
                     title = "智能降噪",
-                    description = "AI识别并消除噪点",
+                    description = "AI识别并消除噪点，O(n) boxBlur算法",
                     icon = Icons.Default.FilterAlt,
                     enabled = noiseReductionEnabled,
                     onToggle = { noiseReductionEnabled = it },
@@ -529,7 +766,7 @@ fun SmartOptimizeScreen(
             item {
                 OptimizeOptionCard(
                     title = "锐化增强",
-                    description = "提升画面清晰度和质感",
+                    description = "Unsharp Mask 提升画面清晰度和质感",
                     icon = Icons.Default.Tune,
                     enabled = sharpenEnabled,
                     onToggle = { sharpenEnabled = it },
@@ -573,6 +810,8 @@ fun SmartOptimizeScreen(
                     isProcessing = isOptimizing && optimizationCurrentName == "色彩校正"
                 )
             }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
         }
 
         // 底部操作栏
@@ -580,25 +819,21 @@ fun SmartOptimizeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 重置按钮
             OutlinedButton(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    hdrEnabled = false
-                    hdrStrength = 50f
-                    noiseReductionEnabled = false
-                    noiseReductionStrength = 30f
-                    sharpenEnabled = true
-                    sharpenStrength = 25f
-                    exposureAuto = false
-                    exposureAdjustment = 0f
-                    colorCorrectionEnabled = true
-                    colorCorrectionStrength = 20f
+                    hdrEnabled = false; hdrStrength = 50f
+                    noiseReductionEnabled = false; noiseReductionStrength = 30f
+                    sharpenEnabled = true; sharpenStrength = 25f
+                    exposureAuto = false; exposureAdjustment = 0f
+                    colorCorrectionEnabled = true; colorCorrectionStrength = 20f
                     optimizedOptions.clear()
                     optimizedBitmap = null
                     previewMode = "before"
+                    analysisResult = null
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
@@ -609,7 +844,23 @@ fun SmartOptimizeScreen(
                 Text("重置")
             }
 
-            // 开始优化按钮（顺序处理所选项）
+            // 保存按钮
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    saveToGallery()
+                },
+                enabled = !isSaving && (optimizedBitmap != null || originalBitmap != null),
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
+            ) {
+                Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(if (isSaving) "保存中..." else "保存")
+            }
+
+            // 开始优化按钮
             Button(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -622,7 +873,209 @@ fun SmartOptimizeScreen(
             ) {
                 Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isOptimizing) "优化中..." else "开始智能优化")
+                Text(if (isOptimizing) "优化中..." else "智能优化")
+            }
+        }
+    }
+}
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 降采样加载图片，防止大图 OOM
+ * @param maxDimension 最大边长（像素）
+ */
+private fun loadSampledBitmap(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
+    return try {
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            // 第一步：仅解码尺寸
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(stream, null, options)
+            // 计算降采样倍数
+            val sampleSize = calculateInSampleSize(options, maxDimension, maxDimension)
+            // 第二步：降采样解码
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            context.contentResolver.openInputStream(uri)?.use { s2 ->
+                BitmapFactory.decodeStream(s2, null, decodeOptions)
+            }
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val (height, width) = options.outHeight to options.outWidth
+    var inSampleSize = 1
+    if (height > reqHeight || width > reqWidth) {
+        val halfHeight = height / 2
+        val halfWidth = width / 2
+        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+    return inSampleSize
+}
+
+/**
+ * AI 场景识别：分析图片并返回结果
+ */
+private fun analyzeImage(
+    bitmap: Bitmap,
+    engine: MasterInferenceEngine,
+    onResult: (AnalysisResult) -> Unit
+) {
+    kotlinx.coroutines.GlobalScope.launch(Dispatchers.Default) {
+        try {
+            val result = engine.analyzeImage(bitmap)
+            withContext(Dispatchers.Main) { onResult(result) }
+        } catch (e: Exception) {
+            android.util.Log.e("SmartOptimize", "AI analysis failed", e)
+        }
+    }
+}
+
+/**
+ * 根据 AI 场景识别结果自动推荐优化项与强度
+ */
+private fun applyAutoRecommendations(
+    result: AnalysisResult,
+    apply: (hdr: Boolean, denoise: Boolean, sharpen: Boolean, exposure: Boolean, color: Boolean,
+            hdrS: Float, denoiseS: Float, sharpenS: Float, exposureS: Float, colorS: Float) -> Unit
+) {
+    val category = result.sceneProfile.category
+    when (category) {
+        "portrait" -> apply(true, false, true, true, true, 30f, 0f, 20f, 10f, 40f)
+        "landscape" -> apply(true, false, true, false, true, 60f, 0f, 30f, 0f, 35f)
+        "night" -> apply(true, true, false, true, false, 40f, 50f, 0f, 30f, 0f)
+        "food" -> apply(false, false, true, true, true, 0f, 0f, 15f, 15f, 50f)
+        "urban" -> apply(true, false, true, false, true, 40f, 0f, 35f, 0f, 25f)
+        "still_life" -> apply(false, false, true, true, true, 0f, 0f, 25f, 10f, 30f)
+        "macro" -> apply(false, true, true, false, true, 0f, 20f, 40f, 0f, 20f)
+        "event" -> apply(true, false, true, true, true, 35f, 0f, 20f, 20f, 30f)
+        else -> apply(true, false, true, false, true, 50f, 0f, 25f, 0f, 20f)
+    }
+}
+
+/**
+ * 保存 Bitmap 到系统相册
+ */
+private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, tag: String): Uri? {
+    return try {
+        val filename = "${tag}_${System.currentTimeMillis()}.jpg"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(
+                    MediaStore.Images.Media.RELATIVE_PATH,
+                    Environment.DIRECTORY_PICTURES + "/OMaster/SmartOptimize"
+                )
+            }
+        }
+        val uri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues
+        )
+        uri?.also {
+            context.contentResolver.openOutputStream(it)?.use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            }
+            MediaScannerConnection.scanFile(context, arrayOf(it.toString()), arrayOf("image/jpeg"), null)
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("SmartOptimize", "Save to gallery failed", e)
+        null
+    }
+}
+
+/**
+ * 保存 Bitmap 到缓存目录（用于分享）
+ */
+private fun saveBitmapToCache(context: Context, bitmap: Bitmap, filename: String): Uri? {
+    return try {
+        val cacheDir = java.io.File(context.cacheDir, "share").apply { if (!exists()) mkdirs() }
+        val file = java.io.File(cacheDir, filename)
+        file.outputStream().use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+        }
+        androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+    } catch (e: Exception) {
+        android.util.Log.e("SmartOptimize", "Save to cache failed", e)
+        null
+    }
+}
+
+/**
+ * 前后拖拽对比视图
+ */
+@Composable
+private fun BeforeAfterCompareView(
+    beforeBitmap: Bitmap,
+    afterBitmap: Bitmap,
+    modifier: Modifier = Modifier
+) {
+    var dividerOffset by remember { mutableFloatStateOf(0.5f) }
+
+    Box(modifier = modifier) {
+        // 优化后（底层）
+        Image(
+            bitmap = afterBitmap.asImageBitmap(),
+            contentDescription = "优化后",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        // 原图（上层，通过 clip 裁剪）
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures { _, dragAmount ->
+                        val delta = dragAmount / size.width
+                        dividerOffset = (dividerOffset + delta).coerceIn(0f, 1f)
+                    }
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(dividerOffset)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(0.dp))
+            ) {
+                Image(
+                    bitmap = beforeBitmap.asImageBitmap(),
+                    contentDescription = "原图",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            // 分割线
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = (dividerOffset * 300).dp) // 近似偏移
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .background(Color.White)
+            )
+            // 标签
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("原图", color = Color.White, fontSize = 11.sp,
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
+                Text("优化后", color = HasselbladOrange, fontSize = 11.sp,
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
             }
         }
     }

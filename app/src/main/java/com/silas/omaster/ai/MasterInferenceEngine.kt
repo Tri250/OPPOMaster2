@@ -222,16 +222,18 @@ class MasterInferenceEngine private constructor(context: Context) {
      *
      * @param bitmap 待处理的图片
      * @param optimizationId 优化项ID（hdr/denoise/sharpen/exposure/color）
+     * @param strength 强度 0.0~1.0，默认 1.0（全效果）。各算法根据强度缩放参数
      * @return 处理后的图片（失败时返回原图）
      */
-    fun applyOptimization(bitmap: Bitmap, optimizationId: String): Bitmap {
+    fun applyOptimization(bitmap: Bitmap, optimizationId: String, strength: Float = 1.0f): Bitmap {
+        val clampedStrength = strength.coerceIn(0f, 1f)
         return try {
             when (optimizationId) {
-                "hdr" -> applyHdr(bitmap)
-                "denoise" -> applyDenoise(bitmap)
-                "sharpen" -> applySharpen(bitmap)
-                "exposure" -> applyExposure(bitmap)
-                "color" -> applyColorCorrection(bitmap)
+                "hdr" -> applyHdr(bitmap, clampedStrength)
+                "denoise" -> applyDenoise(bitmap, clampedStrength)
+                "sharpen" -> applySharpen(bitmap, clampedStrength)
+                "exposure" -> applyExposure(bitmap, clampedStrength)
+                "color" -> applyColorCorrection(bitmap, clampedStrength)
                 else -> bitmap
             }
         } catch (e: Exception) {
@@ -242,12 +244,13 @@ class MasterInferenceEngine private constructor(context: Context) {
 
     /**
      * HDR 增强：提升动态范围，显著提升亮部与暗部
+     * @param strength 0.0~1.0，控制对比度与亮度提升幅度
      */
-    private fun applyHdr(bitmap: Bitmap): Bitmap {
+    private fun applyHdr(bitmap: Bitmap, strength: Float): Bitmap {
+        // 基础参数：对比度 1.15，亮度 25（全强度时）
+        val contrast = 1.0f + 0.15f * strength
+        val brightness = 25f * strength
         val matrix = ColorMatrix().apply {
-            // 提升对比度与亮度，模拟 HDR 压缩
-            val contrast = 1.15f
-            val brightness = 25f
             set(
                 floatArrayOf(
                     contrast, 0f, 0f, 0f, brightness,
@@ -261,26 +264,26 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 智能降噪：使用轻量高斯模糊平滑高频噪点
+     * 智能降噪：使用 O(n) boxBlur 平滑高频噪点
+     * @param strength 0.0~1.0，控制模糊半径（1~8）
      */
-    private fun applyDenoise(bitmap: Bitmap): Bitmap {
-        return applyFastBlur(bitmap, radius = 3)
+    private fun applyDenoise(bitmap: Bitmap, strength: Float): Bitmap {
+        val radius = (1 + 7 * strength).toInt().coerceIn(1, 8)
+        return applyBoxBlur(bitmap, radius)
     }
 
     /**
      * 锐化增强：使用 Unsharp Mask 提升边缘清晰度。
-     * 公式：output = clamp(original + strength * (original - blurred), 0, 255)
-     * 通道级别混合，避免 PorterDuff 在锐化场景下的不可预期行为。
-     * 调用方负责回收返回的 Bitmap。
+     * @param strength 0.0~1.0，控制锐化强度（0.4~2.0）
      */
-    private fun applySharpen(bitmap: Bitmap): Bitmap {
+    private fun applySharpen(bitmap: Bitmap, strength: Float): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
-        val blurred = applyFastBlur(bitmap, radius = 4)
+        val blurred = applyBoxBlur(bitmap, radius = 4)
         val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val strength = 1.4f // 锐化强度：1.0 表示原图，越大越锐利
+        // 锐化强度：0.4（轻微）到 2.0（强烈），由 strength 线性映射
+        val sharpenStrength = 0.4f + 1.6f * strength
 
-        // 取出原图与模糊图的像素，逐通道做 unsharp mask
         val srcPixels = IntArray(width * height)
         val blurPixels = IntArray(width * height)
         val outPixels = IntArray(width * height)
@@ -299,10 +302,9 @@ class MasterInferenceEngine private constructor(context: Context) {
             val bg = (b shr 8) and 0xFF
             val bb = b and 0xFF
 
-            // unsharp mask：增强 (原图 - 模糊) 的高频分量
-            val or = (sr + strength * (sr - br)).toInt().coerceIn(0, 255)
-            val og = (sg + strength * (sg - bg)).toInt().coerceIn(0, 255)
-            val ob = (sb + strength * (sb - bb)).toInt().coerceIn(0, 255)
+            val or = (sr + sharpenStrength * (sr - br)).toInt().coerceIn(0, 255)
+            val og = (sg + sharpenStrength * (sg - bg)).toInt().coerceIn(0, 255)
+            val ob = (sb + sharpenStrength * (sb - bb)).toInt().coerceIn(0, 255)
 
             outPixels[i] = (sa shl 24) or (or shl 16) or (og shl 8) or ob
         }
@@ -314,15 +316,17 @@ class MasterInferenceEngine private constructor(context: Context) {
 
     /**
      * 自动曝光调整：根据直方图进行亮度补偿
+     * @param strength 0.0~1.0，控制曝光补偿幅度
      */
-    private fun applyExposure(bitmap: Bitmap): Bitmap {
+    private fun applyExposure(bitmap: Bitmap, strength: Float): Bitmap {
+        val scale = 1.0f + 0.10f * strength
+        val offset = 30f * strength
         val matrix = ColorMatrix().apply {
-            // 显著提亮，模拟自动曝光补偿
             set(
                 floatArrayOf(
-                    1.10f, 0f, 0f, 0f, 30f,
-                    0f, 1.10f, 0f, 0f, 30f,
-                    0f, 0f, 1.10f, 0f, 30f,
+                    scale, 0f, 0f, 0f, offset,
+                    0f, scale, 0f, 0f, offset,
+                    0f, 0f, scale, 0f, offset,
                     0f, 0f, 0f, 1f, 0f
                 )
             )
@@ -331,16 +335,16 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 智能色彩校正：显著增强暖调与自然饱和度
+     * 智能色彩校正：增强暖调与自然饱和度
+     * @param strength 0.0~1.0，控制色彩偏移幅度
      */
-    private fun applyColorCorrection(bitmap: Bitmap): Bitmap {
+    private fun applyColorCorrection(bitmap: Bitmap, strength: Float): Bitmap {
         val matrix = ColorMatrix().apply {
-            // 明显暖调 + 饱和度提升
             set(
                 floatArrayOf(
-                    1.12f, 0.08f, 0f, 0f, 15f,
-                    0f, 1.05f, 0f, 0f, 8f,
-                    0f, 0f, 0.95f, 0f, -5f,
+                    1.0f + 0.12f * strength, 0.08f * strength, 0f, 0f, 15f * strength,
+                    0f, 1.0f + 0.05f * strength, 0f, 0f, 8f * strength,
+                    0f, 0f, 1.0f - 0.05f * strength, 0f, -5f * strength,
                     0f, 0f, 0f, 1f, 0f
                 )
             )
@@ -363,23 +367,77 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 快速 box blur 实现，用于降噪/锐化辅助
+     * O(n) boxBlur 实现：水平+垂直滑动窗口盒式模糊
+     * 替代原 applyFastBlur（缩放模糊），保留更多细节
+     * @param radius 模糊半径（1~8）
      */
-    private fun applyFastBlur(bitmap: Bitmap, radius: Int): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        val paint = Paint().apply {
-            isFilterBitmap = true
-            // 通过缩放实现快速模糊
+    private fun applyBoxBlur(bitmap: Bitmap, radius: Int): Bitmap {
+        val w = bitmap.width
+        val h = bitmap.height
+        val srcPixels = IntArray(w * h)
+        val tempPixels = IntArray(w * h)
+        val outPixels = IntArray(w * h)
+        bitmap.getPixels(srcPixels, 0, w, 0, 0, w, h)
+
+        // 水平模糊
+        val diameter = 2 * radius + 1
+        for (y in 0 until h) {
+            var rSum = 0L; var gSum = 0L; var bSum = 0L; var aSum = 0L
+            // 初始化窗口
+            for (x in -radius..radius) {
+                val cx = x.coerceIn(0, w - 1)
+                val pixel = srcPixels[y * w + cx]
+                aSum += (pixel ushr 24) and 0xFF
+                rSum += (pixel shr 16) and 0xFF
+                gSum += (pixel shr 8) and 0xFF
+                bSum += pixel and 0xFF
+            }
+            for (x in 0 until w) {
+                tempPixels[y * w + x] = ((aSum / diameter) shl 24) or
+                        ((rSum / diameter) shl 16) or
+                        ((gSum / diameter) shl 8) or
+                        (bSum / diameter)
+                // 滑动窗口：移出左侧，移入右侧
+                val leftX = (x - radius - 1).coerceIn(0, w - 1)
+                val rightX = (x + radius + 1).coerceIn(0, w - 1)
+                val leftPixel = srcPixels[y * w + leftX]
+                val rightPixel = srcPixels[y * w + rightX]
+                aSum += ((rightPixel ushr 24) and 0xFF) - ((leftPixel ushr 24) and 0xFF)
+                rSum += ((rightPixel shr 16) and 0xFF) - ((leftPixel shr 16) and 0xFF)
+                gSum += ((rightPixel shr 8) and 0xFF) - ((leftPixel shr 8) and 0xFF)
+                bSum += (rightPixel and 0xFF) - (leftPixel and 0xFF)
+            }
         }
-        val scale = 1f / (radius.coerceAtLeast(1) + 1)
-        val scaledWidth = (width * scale).toInt().coerceAtLeast(1)
-        val scaledHeight = (height * scale).toInt().coerceAtLeast(1)
-        val scaled = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
-        canvas.drawBitmap(scaled, null, RectF(0f, 0f, width.toFloat(), height.toFloat()), paint)
-        scaled.recycle()
+
+        // 垂直模糊
+        for (x in 0 until w) {
+            var rSum = 0L; var gSum = 0L; var bSum = 0L; var aSum = 0L
+            for (y in -radius..radius) {
+                val cy = y.coerceIn(0, h - 1)
+                val pixel = tempPixels[cy * w + x]
+                aSum += (pixel ushr 24) and 0xFF
+                rSum += (pixel shr 16) and 0xFF
+                gSum += (pixel shr 8) and 0xFF
+                bSum += pixel and 0xFF
+            }
+            for (y in 0 until h) {
+                outPixels[y * w + x] = ((aSum / diameter) shl 24) or
+                        ((rSum / diameter) shl 16) or
+                        ((gSum / diameter) shl 8) or
+                        (bSum / diameter)
+                val topY = (y - radius - 1).coerceIn(0, h - 1)
+                val botY = (y + radius + 1).coerceIn(0, h - 1)
+                val topPixel = tempPixels[topY * w + x]
+                val botPixel = tempPixels[botY * w + x]
+                aSum += ((botPixel ushr 24) and 0xFF) - ((topPixel ushr 24) and 0xFF)
+                rSum += ((botPixel shr 16) and 0xFF) - ((topPixel shr 16) and 0xFF)
+                gSum += ((botPixel shr 8) and 0xFF) - ((topPixel shr 8) and 0xFF)
+                bSum += (botPixel and 0xFF) - (topPixel and 0xFF)
+            }
+        }
+
+        val output = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        output.setPixels(outPixels, 0, w, 0, 0, w, h)
         return output
     }
 
