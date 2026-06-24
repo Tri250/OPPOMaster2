@@ -196,24 +196,24 @@ fun PresetCard(
                 }
             }
 
-            // 收藏按钮（对齐Web端：右上角，触摸区域扩大到 48dp）
+            // 收藏按钮（对齐Web端：右上角，触摸区域扩大到 48dp，最小点击目标合规）
             if (showFavoriteButton) {
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(4.dp)
+                        .padding(2.dp)
                         .size(48.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .background(
                                 color = if (preset.isFavorite)
                                     Color.Red.copy(alpha = 0.2f)
                                 else
                                     MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(18.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -227,7 +227,7 @@ fun PresetCard(
                             else
                                 stringResource(R.string.preset_favorite),
                             tint = if (preset.isFavorite) Color.Red else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

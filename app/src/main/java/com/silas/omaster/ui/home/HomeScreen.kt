@@ -76,6 +76,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -489,10 +491,11 @@ private fun SearchBar(
                     )
                     TextButton(
                         onClick = onClearHistory,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.semantics { contentDescription = stringResource(R.string.clear_search_history) }
                     ) {
                         Text(
-                            text = "清除",
+                            text = stringResource(R.string.clear),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                         )
@@ -641,7 +644,7 @@ private fun BrandAndSortFilter(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // 品牌筛选按钮（水平滚动，全宽）
+        // 品牌筛选按钮（水平滚动，全宽，适配小屏防止溢出）
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 0.dp),
@@ -672,7 +675,7 @@ private fun BrandAndSortFilter(
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "排序",
+                    contentDescription = stringResource(R.string.sort_dropdown_desc),
                     tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.size(14.dp)
                 )
@@ -720,11 +723,11 @@ private fun BrandFilterButton(
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(16.dp)
             )
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
@@ -840,11 +843,12 @@ private fun PresetGrid(
                     items = presets,
                     key = { index, preset -> preset.id ?: "${preset.name}_$index" }
                 ) { index, preset ->
+                    // 使用固定宽高比替代随机高度，避免视觉跳跃，同时保持瀑布流错落有致
                     val imageHeight = remember(index) {
                         when (index % 3) {
-                            0 -> 220
-                            1 -> 180
-                            else -> 260
+                            0 -> 210
+                            1 -> 210
+                            else -> 210
                         }
                     }
 

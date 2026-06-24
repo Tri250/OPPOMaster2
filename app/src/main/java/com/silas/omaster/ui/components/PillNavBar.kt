@@ -89,8 +89,8 @@ fun PillNavBar(
                     .padding(bottom = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-        // 使用 fillMaxWidth(0.9f) 替代固定 maxWidth，适配不同屏幕
-        val navBarModifier = Modifier.fillMaxWidth(0.92f)
+        // 使用 fillMaxWidth(0.96f) 替代固定 maxWidth，大屏占比更高，小屏不溢出
+        val navBarModifier = Modifier.fillMaxWidth(0.96f)
         // 外层阴影效果
         Box(
             modifier = Modifier

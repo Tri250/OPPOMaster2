@@ -72,6 +72,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
@@ -286,7 +287,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "$floatingWindowOpacity%",
+                        text = "${String.format("%.1f", floatingWindowOpacity)}%",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -298,7 +299,7 @@ fun SettingsScreen(
                 Slider(
                     value = floatingWindowOpacity.toFloat(),
                     onValueChange = {
-                        val newValue = it.toInt()
+                        val newValue = (it * 10).roundToInt() / 10f
                         floatingWindowOpacity = newValue
                         settingsManager.floatingWindowOpacity = newValue
                         if (newValue != previousOpacity) {
@@ -307,7 +308,7 @@ fun SettingsScreen(
                         }
                     },
                     valueRange = 30f..70f,
-                    steps = 39,
+                    steps = 0,
                     colors = SliderDefaults.colors(
                         thumbColor = MaterialTheme.colorScheme.primary,
                         activeTrackColor = MaterialTheme.colorScheme.primary,
