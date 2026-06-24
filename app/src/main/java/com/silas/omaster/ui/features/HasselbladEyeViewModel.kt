@@ -13,6 +13,9 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.silas.omaster.data.lut.LUT3DData
+import com.silas.omaster.data.lut.LUT3DRenderer
+import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.model.HasselbladParams
@@ -99,6 +102,16 @@ class HasselbladEyeViewModel : ViewModel() {
 
     private val _thumbnailPreview = MutableStateFlow<Bitmap?>(null)
     val thumbnailPreview: StateFlow<Bitmap?> = _thumbnailPreview.asStateFlow()
+
+    // 3D LUT 集成状态
+    private val _active3DLUTId = MutableStateFlow<String?>(null)
+    val active3DLUTId: StateFlow<String?> = _active3DLUTId.asStateFlow()
+
+    private val _lut3DStrength = MutableStateFlow(1.0f)
+    val lut3DStrength: StateFlow<Float> = _lut3DStrength.asStateFlow()
+
+    private val _lut3DData = MutableStateFlow<LUT3DData?>(null)
+    val lut3DData: StateFlow<LUT3DData?> = _lut3DData.asStateFlow()
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
@@ -392,6 +405,63 @@ class HasselbladEyeViewModel : ViewModel() {
         _recommendedParams.value?.let { _params.value = it }
     }
 
+    // ================== 3D LUT 集成 ==================
+
+    /**
+     * 应用 3D LUT 到当前图片
+     *
+     * 从 LUTManager 获取已下载的 LUT 数据，通过 CPU 三线性插值
+     * 将 LUT 效果叠加到哈苏色彩引擎处理后的 Bitmap 上。
+     *
+     * @param context Android 上下文
+     * @param lutId LUT 资源 ID
+     * @param strength LUT 强度 [0, 1]
+     */
+    fun apply3DLUT(context: Context, lutId: String, strength: Float = 1.0f) {
+        val lutManager = LUTManager.getInstance(context)
+        val lutData = lutManager.getCachedLUTData(lutId)
+        if (lutData == null) {
+            Log.w(TAG, "LUT data not available for id=$lutId")
+            return
+        }
+
+        _active3DLUTId.value = lutId
+        _lut3DStrength.value = strength
+        _lut3DData.value = lutData
+
+        // 重新生成预览（LUT 叠加在色彩引擎结果之上）
+        triggerRealtimePreview()
+    }
+
+    /**
+     * 移除当前 3D LUT 效果
+     */
+    fun remove3DLUT() {
+        _active3DLUTId.value = null
+        _lut3DStrength.value = 1.0f
+        _lut3DData.value = null
+        triggerRealtimePreview()
+    }
+
+    /**
+     * 调整 3D LUT 强度
+     */
+    fun update3DLUTStrength(strength: Float) {
+        _lut3DStrength.value = strength.coerceIn(0f, 1f)
+        triggerRealtimePreview()
+    }
+
+    /**
+     * 将 3D LUT 应用到 Bitmap（CPU 三线性插值）
+     * 在色彩引擎处理之后叠加
+     */
+    private suspend fun apply3DLUTToBitmap(source: Bitmap): Bitmap {
+        val lutData = _lut3DData.value ?: return source
+        val strength = _lut3DStrength.value
+        if (strength < 0.01f) return source
+        return LUT3DRenderer.applyLUTCPU(source, lutData, strength)
+    }
+
     /**
      * 切换选中的场景模式。参数被锁定时仅更新模式 ID，不会应用模式参数。
      */
@@ -496,7 +566,9 @@ class HasselbladEyeViewModel : ViewModel() {
             val thumbnail = withContext(Dispatchers.Default) {
                 val scaled = createThumbnail(source, maxDimension = 512)
                 val targetParams = mergeParams(modeParams)
-                applyHasselbladColorScience(scaled, targetParams)
+                val colorApplied = applyHasselbladColorScience(scaled, targetParams)
+                // 3D LUT 叠加在色彩引擎结果之上
+                apply3DLUTToBitmap(colorApplied)
             }
             _thumbnailPreview.value = thumbnail
         }
@@ -512,7 +584,9 @@ class HasselbladEyeViewModel : ViewModel() {
             val result = withContext(Dispatchers.Default) {
                 val targetParams = mergeParams(modeParams)
                 val scaled = createThumbnail(source, maxDimension = PREVIEW_MAX_DIMENSION)
-                applyHasselbladColorScience(scaled, targetParams)
+                val colorApplied = applyHasselbladColorScience(scaled, targetParams)
+                // 3D LUT 叠加在色彩引擎结果之上
+                apply3DLUTToBitmap(colorApplied)
             }
             _previewBitmap.value = result
             _stage.value = HasselbladEyeStage.PREVIEW

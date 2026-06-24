@@ -69,6 +69,12 @@ uniform float uCurveRedLut[256];
 uniform float uCurveGreenLut[256];
 uniform float uCurveBlueLut[256];
 
+// 3D LUT 纹理（2D 编码）
+uniform sampler2D uLUT3DTexture;
+uniform float uLUT3DSize;       // LUT 尺寸（如 33）
+uniform float uLUT3DStrength;   // LUT 强度 [0, 1]，0 = 不应用
+uniform float uLUT3DEnabled;    // 是否启用 3D LUT（0 或 1）
+
 // ========== 辅助函数 ==========
 
 /**
@@ -551,6 +557,54 @@ vec3 applyCurves(vec3 color) {
 }
 
 /**
+ * 3D LUT 三线性插值采样（2D 编码纹理）
+ *
+ * 将 3D LUT 编码为 2D 纹理：
+ * - 宽度 = lutSize * lutSize
+ * - 高度 = lutSize
+ * - 每行是一个 Blue 切片（Red 水平排列，Green 垂直排列）
+ */
+vec3 sampleLUT3DTrilinear(vec3 color) {
+    float size = uLUT3DSize;
+    float maxIndex = size - 1.0;
+
+    vec3 coord = clamp(color, 0.0, 1.0) * maxIndex;
+    vec3 coord0 = floor(coord);
+    vec3 coord1 = min(coord0 + 1.0, maxIndex);
+    vec3 frac = coord - coord0;
+
+    // 8 个角的纹理坐标
+    vec2 uv000 = vec2((coord0.r + coord0.g * size + 0.5) / (size * size), (coord0.b + 0.5) / size);
+    vec2 uv100 = vec2((coord1.r + coord0.g * size + 0.5) / (size * size), (coord0.b + 0.5) / size);
+    vec2 uv010 = vec2((coord0.r + coord1.g * size + 0.5) / (size * size), (coord0.b + 0.5) / size);
+    vec2 uv110 = vec2((coord1.r + coord1.g * size + 0.5) / (size * size), (coord0.b + 0.5) / size);
+    vec2 uv001 = vec2((coord0.r + coord0.g * size + 0.5) / (size * size), (coord1.b + 0.5) / size);
+    vec2 uv101 = vec2((coord1.r + coord0.g * size + 0.5) / (size * size), (coord1.b + 0.5) / size);
+    vec2 uv011 = vec2((coord0.r + coord1.g * size + 0.5) / (size * size), (coord1.b + 0.5) / size);
+    vec2 uv111 = vec2((coord1.r + coord1.g * size + 0.5) / (size * size), (coord1.b + 0.5) / size);
+
+    vec3 c000 = texture(uLUT3DTexture, uv000).rgb;
+    vec3 c100 = texture(uLUT3DTexture, uv100).rgb;
+    vec3 c010 = texture(uLUT3DTexture, uv010).rgb;
+    vec3 c110 = texture(uLUT3DTexture, uv110).rgb;
+    vec3 c001 = texture(uLUT3DTexture, uv001).rgb;
+    vec3 c101 = texture(uLUT3DTexture, uv101).rgb;
+    vec3 c011 = texture(uLUT3DTexture, uv011).rgb;
+    vec3 c111 = texture(uLUT3DTexture, uv111).rgb;
+
+    // 三线性插值
+    vec3 c00 = mix(c000, c100, frac.r);
+    vec3 c10 = mix(c010, c110, frac.r);
+    vec3 c01 = mix(c001, c101, frac.r);
+    vec3 c11 = mix(c011, c111, frac.r);
+
+    vec3 c0 = mix(c00, c10, frac.g);
+    vec3 c1 = mix(c01, c11, frac.g);
+
+    return mix(c0, c1, frac.b);
+}
+
+/**
  * 主函数
  * 执行18参数 + HSL + 曲线全通道图像处理
  */
@@ -628,6 +682,14 @@ void main() {
 
     // 曲线映射
     color = applyCurves(color);
+
+    // ========== 4.5 3D LUT 色彩映射 ==========
+    // 在曲线之后、光影调整之前应用 3D LUT
+    // 3D LUT 实现完整的色彩空间映射（如胶片模拟、LOG还原）
+    if (uLUT3DEnabled > 0.5) {
+        vec3 lutColor = sampleLUT3DTrilinear(color);
+        color = mix(color, lutColor, uLUT3DStrength);
+    }
 
     // ========== 5. 光影调整 ==========
     

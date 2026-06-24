@@ -344,6 +344,26 @@ class ShaderProgram private constructor(
         setUniform1fv("uCurveGreenLut", params.curveGreenLut)
         setUniform1fv("uCurveBlueLut", params.curveBlueLut)
     }
+
+    /**
+     * 设置 3D LUT 着色器参数
+     *
+     * @param lutTextureId 2D 编码的 3D LUT 纹理 ID（0 表示禁用）
+     * @param lutSize LUT 尺寸（如 33）
+     * @param strength LUT 强度 [0, 1]
+     */
+    fun setLUT3DParams(lutTextureId: Int, lutSize: Int, strength: Float) {
+        if (lutTextureId > 0) {
+            GLES30.glActiveTexture(GLES30.GL_TEXTURE2)
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, lutTextureId)
+            setUniform1i("uLUT3DTexture", 2)
+            setUniform1f("uLUT3DSize", lutSize.toFloat())
+            setUniform1f("uLUT3DStrength", strength.coerceIn(0f, 1f))
+            setUniform1f("uLUT3DEnabled", 1.0f)
+        } else {
+            setUniform1f("uLUT3DEnabled", 0.0f)
+        }
+    }
     
     /**
      * 清除uniform缓存

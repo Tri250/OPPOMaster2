@@ -38,6 +38,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestionResult
+import com.silas.omaster.data.lut.LUT3DData
+import com.silas.omaster.data.lut.LUT3DRenderer
+import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.renderer.GPURenderManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.renderer.RenderQuality
@@ -748,6 +751,55 @@ class AIFineTuneViewModel(
         _sourceBitmap.value?.recycle()
         _previewBitmap.value?.recycle()
         gpuRenderManager?.release()
+    }
+
+    // ================== 3D LUT 集成 ==================
+
+    private val _active3DLUTId = MutableStateFlow<String?>(null)
+    val active3DLUTId: StateFlow<String?> = _active3DLUTId.asStateFlow()
+
+    private val _lut3DStrength = MutableStateFlow(1.0f)
+    val lut3DStrength: StateFlow<Float> = _lut3DStrength.asStateFlow()
+
+    /**
+     * 应用 3D LUT 到当前图片
+     * LUT 效果叠加在 GPU 渲染管线之后
+     */
+    fun apply3DLUT(context: Context, lutId: String, strength: Float = 1.0f) {
+        val lutManager = LUTManager.getInstance(context)
+        val lutData = lutManager.getCachedLUTData(lutId) ?: return
+
+        _active3DLUTId.value = lutId
+        _lut3DStrength.value = strength
+
+        viewModelScope.launch {
+            val currentPreview = _previewBitmap.value ?: return@launch
+            val result = withContext(Dispatchers.Default) {
+                LUT3DRenderer.applyLUTCPU(currentPreview, lutData, strength)
+            }
+            _previewBitmap.value = result
+        }
+    }
+
+    /**
+     * 移除 3D LUT 效果，恢复原始渲染结果
+     */
+    fun remove3DLUT(context: Context) {
+        _active3DLUTId.value = null
+        _lut3DStrength.value = 1.0f
+        viewModelScope.launch {
+            renderPreviewAsync(context)
+        }
+    }
+
+    /**
+     * 调整 3D LUT 强度
+     */
+    fun update3DLUTStrength(context: Context, strength: Float) {
+        _lut3DStrength.value = strength.coerceIn(0f, 1f)
+        viewModelScope.launch {
+            renderPreviewAsync(context)
+        }
     }
 
     companion object {

@@ -1,7 +1,7 @@
 package com.silas.omaster.ui.features
 
-import android.content.Context
-import android.os.Environment
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.layout.ContentScale
@@ -24,15 +25,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.silas.omaster.data.lut.LUTManager
+import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.model.LUTResource
 import com.silas.omaster.data.repository.LUTResourceRepository
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.net.URL
 import java.util.Locale
 
 /**
@@ -51,13 +51,15 @@ import java.util.Locale
 @Composable
 fun LUTShareScreen(
     onBack: () -> Unit,
-    onDownload: (LUTResource) -> Unit,
+    onDownload: (LUTResource) -> Unit = {},
+    onApplyLUT: ((LUTResource) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repo = LUTResourceRepository
+    val lutManager = remember { LUTManager.getInstance(context) }
 
     // 分类选择 - 对齐 Web 端 LUT_CATEGORIES
     var selectedCategory by remember { mutableStateOf("all") }
@@ -67,14 +69,17 @@ fun LUTShareScreen(
     var searchQuery by remember { mutableStateOf("") }
     // 排序
     var sortBy by remember { mutableStateOf(SortType.DOWNLOADS) }
-    // 喜欢/收藏
-    val likedIds = remember { mutableStateListOf<String>() }
-    // 已下载
-    val downloadedIds = remember { mutableStateListOf<String>() }
+    // 喜欢/收藏 — 从 LUTManager 持久化状态读取
+    val likedIds by lutManager.likedIds.collectAsState()
+    // 已下载 — 从 LUTManager 持久化状态读取
+    val downloadedIds by lutManager.downloadedIds.collectAsState()
     // 正在下载
     var downloadingId by remember { mutableStateOf<String?>(null) }
     // 详情弹窗
     var selectedLUT by remember { mutableStateOf<LUTResource?>(null) }
+    // LUT 预览 Bitmap
+    var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isGeneratingPreview by remember { mutableStateOf(false) }
 
     // LUT 数据 - 来自真实数据源
     val luts = remember { repo.RESOURCES }
@@ -230,7 +235,7 @@ fun LUTShareScreen(
                                     badge = "NEW",
                                     badgeColor = SuccessGreen,
                                     isLiked = likedIds.contains(lut.id),
-                                    onLike = { likedIds.toggle(lut.id) },
+                                    onLike = { lutManager.toggleLike(lut.id) },
                                     onClick = { selectedLUT = lut }
                                 )
                             }
@@ -255,7 +260,7 @@ fun LUTShareScreen(
                                     badge = "HOT",
                                     badgeColor = HasselbladOrange,
                                     isLiked = likedIds.contains(lut.id),
-                                    onLike = { likedIds.toggle(lut.id) },
+                                    onLike = { lutManager.toggleLike(lut.id) },
                                     onClick = { selectedLUT = lut }
                                 )
                             }
@@ -287,37 +292,20 @@ fun LUTShareScreen(
                             isLiked = likedIds.contains(lut.id),
                             isDownloaded = downloadedIds.contains(lut.id),
                             isDownloading = downloadingId == lut.id,
-                            onLike = { likedIds.toggle(lut.id) },
+                            onLike = { lutManager.toggleLike(lut.id) },
                             onClick = { selectedLUT = lut },
                             onDownload = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 downloadingId = lut.id
-                                scope.launch(Dispatchers.IO) {
-                                    try {
-                                        if (!lut.downloadUrl.startsWith("https://")) {
-                                            withContext(Dispatchers.Main) {
-                                                downloadingId = null
-                                                Toast.makeText(context, "下载地址无效", Toast.LENGTH_SHORT).show()
-                                            }
-                                            return@launch
-                                        }
-                                        val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
-                                        if (!dir.exists()) dir.mkdirs()
-                                        val file = File(dir, "${lut.nameEn}.${lut.format}")
-                                        URL(lut.downloadUrl).openStream().use { input ->
-                                            FileOutputStream(file).use { output ->
-                                                input.copyTo(output)
-                                            }
-                                        }
-                                        withContext(Dispatchers.Main) {
-                                            if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
-                                            downloadingId = null
+                                scope.launch {
+                                    val file = lutManager.downloadLUT(lut)
+                                    withContext(Dispatchers.Main) {
+                                        downloadingId = null
+                                        if (file != null) {
                                             Toast.makeText(context, "LUT 已下载: ${lut.name}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        withContext(Dispatchers.Main) {
-                                            downloadingId = null
-                                            Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            onDownload(lut)
+                                        } else {
+                                            Toast.makeText(context, "下载失败，请检查网络连接", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 }
@@ -360,50 +348,76 @@ fun LUTShareScreen(
             isLiked = likedIds.contains(lut.id),
             isDownloaded = downloadedIds.contains(lut.id),
             isDownloading = downloadingId == lut.id,
-            onLike = { likedIds.toggle(lut.id) },
+            previewBitmap = previewBitmap,
+            isGeneratingPreview = isGeneratingPreview,
+            onLike = { lutManager.toggleLike(lut.id) },
             onDownload = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 downloadingId = lut.id
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        if (!lut.downloadUrl.startsWith("https://")) {
-                            withContext(Dispatchers.Main) {
-                                downloadingId = null
-                                Toast.makeText(context, "下载地址无效", Toast.LENGTH_SHORT).show()
-                            }
-                            return@launch
-                        }
-                        val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
-                        if (!dir.exists()) dir.mkdirs()
-                        val file = File(dir, "${lut.nameEn}.${lut.format}")
-                        URL(lut.downloadUrl).openStream().use { input ->
-                            FileOutputStream(file).use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        withContext(Dispatchers.Main) {
-                            if (!downloadedIds.contains(lut.id)) downloadedIds.add(lut.id)
-                            downloadingId = null
+                scope.launch {
+                    val file = lutManager.downloadLUT(lut)
+                    withContext(Dispatchers.Main) {
+                        downloadingId = null
+                        if (file != null) {
                             Toast.makeText(context, "LUT 已下载: ${lut.name}", Toast.LENGTH_SHORT).show()
-                        }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            downloadingId = null
-                            Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                            onDownload(lut)
+                        } else {
+                            Toast.makeText(context, "下载失败，请检查网络连接", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             },
-            onDismiss = { selectedLUT = null }
+            onPreview = {
+                if (downloadedIds.contains(lut.id)) {
+                    isGeneratingPreview = true
+                    scope.launch {
+                        try {
+                            // 从预览图 URL 加载源图
+                            val sourceBitmap = withContext(Dispatchers.IO) {
+                                try {
+                                    val url = java.net.URL(lut.previewImage)
+                                    val connection = url.openConnection()
+                                    connection.connectTimeout = 10_000
+                                    connection.readTimeout = 10_000
+                                    android.graphics.BitmapFactory.decodeStream(connection.getInputStream())
+                                } catch (e: Exception) {
+                                    // URL 加载失败时使用纯色渐变作为源图
+                                    val bmp = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
+                                    val canvas = android.graphics.Canvas(bmp)
+                                    val paint = android.graphics.Paint()
+                                    val colors = intArrayOf(0xFF4A90D9.toInt(), 0xFFE8B84B.toInt(), 0xFF2ECC71.toInt())
+                                    val gradient = android.graphics.LinearGradient(0f, 0f, 200f, 200f, colors, null, android.graphics.Shader.TileMode.CLAMP)
+                                    paint.shader = gradient
+                                    canvas.drawRect(0f, 0f, 200f, 200f, paint)
+                                    bmp
+                                }
+                            }
+                            if (sourceBitmap != null) {
+                                val result = lutManager.applyLUTToBitmap(sourceBitmap, lut.id)
+                                withContext(Dispatchers.Main) {
+                                    previewBitmap = result
+                                    isGeneratingPreview = false
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    isGeneratingPreview = false
+                                }
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                isGeneratingPreview = false
+                            }
+                        }
+                    }
+                }
+            },
+            onApply = onApplyLUT?.let { callback -> { callback(lut) } },
+            onDismiss = { selectedLUT = null; previewBitmap = null }
         )
     }
 }
 
 private enum class SortType { DOWNLOADS, RATING, NEWEST }
-
-private fun MutableList<String>.toggle(id: String) {
-    if (contains(id)) remove(id) else add(id)
-}
 
 @Composable
 private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
@@ -742,8 +756,12 @@ private fun LUTDetailDialog(
     isLiked: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
+    previewBitmap: Bitmap?,
+    isGeneratingPreview: Boolean,
     onLike: () -> Unit,
     onDownload: () -> Unit,
+    onPreview: () -> Unit = {},
+    onApply: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -875,6 +893,56 @@ private fun LUTDetailDialog(
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+                // LUT 效果预览（已下载时显示）
+                if (isDownloaded && previewBitmap != null) {
+                    Text("LUT 效果预览", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            // 原图
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (lut.previewImage.isNotBlank()) {
+                                    val ctx = LocalContext.current
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(ctx).data(lut.previewImage).crossfade(true).build(),
+                                        contentDescription = "原图",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Text("原图", fontSize = 9.sp, color = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.padding(4.dp).align(Alignment.BottomStart))
+                            }
+                            // LUT 效果
+                            Box(modifier = Modifier.weight(1f)) {
+                                Image(
+                                    bitmap = previewBitmap.asImageBitmap(),
+                                    contentDescription = "LUT效果",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Text("LUT", fontSize = 9.sp, color = HasselbladOrange,
+                                    modifier = Modifier.padding(4.dp).align(Alignment.BottomStart))
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else if (isDownloaded && isGeneratingPreview) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = HasselbladOrange)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("生成预览中...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 // 操作按钮
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -894,6 +962,18 @@ private fun LUTDetailDialog(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(if (isLiked) "已收藏" else "收藏", fontSize = 12.sp)
+                    }
+                    // 应用 LUT 按钮（已下载时显示）
+                    if (isDownloaded && onApply != null) {
+                        Button(
+                            onClick = onApply,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                        ) {
+                            Icon(Icons.Default.AutoFixHigh, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("应用LUT", fontSize = 12.sp)
+                        }
                     }
                     Button(
                         onClick = onDownload,

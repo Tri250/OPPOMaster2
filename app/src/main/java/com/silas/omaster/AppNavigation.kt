@@ -402,7 +402,11 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.LUTShare> {
                 LUTShareScreen(
                     onBack = { navController.popBackStack() },
-                    onDownload = { /* LUT download handled internally */ }
+                    onDownload = { /* LUT download handled internally by LUTManager */ },
+                    onApplyLUT = { lutResource ->
+                        // 应用 LUT 后导航到哈苏之眼进行调色
+                        navController.navigate(Screen.HasselbladColor)
+                    }
                 )
             }
 
