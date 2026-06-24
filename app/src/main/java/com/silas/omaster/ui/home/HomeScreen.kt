@@ -223,6 +223,7 @@ fun HomeScreen(
                 selectedTab = selectedTab,
                 isLoading = isLoading && allPresets.isEmpty(),
                 onNavigateToDetail = onNavigateToDetail,
+                onNavigateToCreate = onNavigateToCreate,
                 onToggleFavorite = { viewModel.toggleFavorite(it) },
                 onDeletePreset = {
                     presetToDelete = it
@@ -642,6 +643,7 @@ private fun PresetGrid(
     selectedTab: Int,
     isLoading: Boolean = false,
     onNavigateToDetail: (MasterPreset) -> Unit,
+    onNavigateToCreate: () -> Unit = {},
     onToggleFavorite: (String) -> Unit,
     onDeletePreset: (String) -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {},

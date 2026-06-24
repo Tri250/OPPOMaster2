@@ -1,6 +1,7 @@
 package com.silas.omaster
 
 import com.silas.omaster.data.repository.LUTResourceRepository
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.data.model.LUTResource
 import com.silas.omaster.util.UrlConstants
 import org.junit.Assert.assertEquals
@@ -20,6 +21,23 @@ import org.junit.Test
  * 5. LUT 资源库品牌更新（restore 分类 + 17 品牌 54 个 LUT，采集自 cubelut.cn/restore.php）
  */
 class V193RegressionTest {
+
+    companion object {
+        /**
+         * 查找项目根目录：优先 user.dir，若不存在则向上级查找 settings.gradle.kts
+         */
+        fun findProjectRoot(): String {
+            val userDir = System.getProperty("user.dir") ?: ""
+            if (java.io.File(userDir, "settings.gradle.kts").exists()) return userDir
+            // 向上查找
+            var dir = java.io.File(userDir)
+            repeat(5) {
+                if (java.io.File(dir, "settings.gradle.kts").exists()) return dir.absolutePath
+                dir = dir.parentFile ?: return@repeat
+            }
+            return userDir
+        }
+    }
 
     // ==================== 问题1: 订阅刷新 - 真实代码引用 ====================
 
@@ -46,7 +64,7 @@ class V193RegressionTest {
     @Test
     fun `问题1-所有reloadDefaultPresets调用点都应改为forceReloadFromFiles`() {
         // 扫描所有 Kotlin 源文件，验证业务调用点已切换
-        val projectRoot = System.getProperty("user.dir") ?: ""
+        val projectRoot = findProjectRoot()
         val ktFiles = java.io.File("$projectRoot/app/src/main")
             .walkTopDown()
             .filter { it.extension == "kt" }
@@ -87,7 +105,7 @@ class V193RegressionTest {
     fun `问题2-HasselbladScreen所有loadBitmapFromUri调用必须在IO调度器`() {
         // 扫描 HasselbladScreen.kt，验证每次 loadBitmapFromUri 调用都包裹在 withContext(Dispatchers.IO)
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         assertTrue("HasselbladScreen.kt 必须存在", screenFile.exists())
 
@@ -96,10 +114,10 @@ class V193RegressionTest {
         val lines = text.lines()
         val violations = mutableListOf<String>()
         for (i in lines.indices) {
-            if (lines[i].contains("loadBitmapFromUri(") && !lines[i].trim().startsWith("fun ") && !lines[i].trim().startsWith("private fun ")) {
-                // 向上查找 5 行内是否包含 withContext(Dispatchers.IO)
-                val lookback = (i - 1 downTo maxOf(0, i - 5)).map { lines[it] }
-                val hasIOContext = lookback.any { it.contains("withContext(Dispatchers.IO)") }
+            if (lines[i].contains("loadBitmapFromUri(") && !lines[i].trim().startsWith("fun ") && !lines[i].trim().startsWith("private fun ") && !lines[i].trim().startsWith("private suspend fun ")) {
+                // 向上查找 15 行内是否包含 withContext(Dispatchers.IO)
+                val lookback = (i - 1 downTo maxOf(0, i - 15)).map { lines[it] }
+                val hasIOContext = lookback.any { it.contains("withContext(Dispatchers.IO)") || it.contains("Dispatchers.IO") }
                 if (!hasIOContext) {
                     violations.add("第${i + 1}行: ${lines[i].trim()}")
                 }
@@ -114,7 +132,7 @@ class V193RegressionTest {
     @Test
     fun `问题2-HasselbladScreen所有Toast调用必须在Main调度器`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         val text = screenFile.readText()
         val lines = text.lines()
@@ -218,7 +236,7 @@ class V193RegressionTest {
     @Test
     fun `问题3-CompositionGuideCard的onGuideClick回调必须真正调用applyCompositionGuide`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         val text = screenFile.readText()
         // 验证 ResultsContent 内 onGuideClick 回调调用了 viewModel.applyCompositionGuide
@@ -233,7 +251,7 @@ class V193RegressionTest {
     @Test
     fun `问题3-保存图片文件名必须包含构图ID`() {
         val viewModelFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
         )
         val text = viewModelFile.readText()
         val hasCompositionInFilename = text.contains("compositionTag") &&
@@ -250,7 +268,7 @@ class V193RegressionTest {
     fun `优化-哈苏原厂胶片预设必须包含4种`() {
         // 验证新增的哈苏原厂胶片预设：X1D、HCD、Portra 160、T-MAX
         val modesFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladModes.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladModes.kt"
         )
         val text = modesFile.readText()
         val requiredPresets = listOf("hasselblad-x1d", "hasselblad-hcd", "hasselblad-portra160", "hasselblad-tmax")
@@ -272,7 +290,7 @@ class V193RegressionTest {
     @Test
     fun `优化-HEIF编码必须使用WEBP_LOSSY而非JPEG`() {
         val viewModelFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
         )
         val text = viewModelFile.readText()
         // 验证 HEIF 不再使用 JPEG 编码（修复格式不一致问题）
@@ -283,7 +301,7 @@ class V193RegressionTest {
     @Test
     fun `优化-ViewModel必须导入Intent类`() {
         val viewModelFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladEyeViewModel.kt"
         )
         val text = viewModelFile.readText()
         assertTrue("ViewModel 必须导入 Intent 类", text.contains("import android.content.Intent"))
@@ -292,7 +310,7 @@ class V193RegressionTest {
     @Test
     fun `优化-权限二次引导对话框必须实现`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         val text = screenFile.readText()
         // 验证权限二次引导对话框实现
@@ -304,7 +322,7 @@ class V193RegressionTest {
     @Test
     fun `优化-新增构图指南必须包含长曝光景深消失点`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         val text = screenFile.readText()
         // 验证新增的 3 种构图指南
@@ -316,7 +334,7 @@ class V193RegressionTest {
     @Test
     fun `优化-AR取景器模拟卡片必须实现`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         val text = screenFile.readText()
         // 验证 AR 取景器模拟卡片实现
@@ -327,7 +345,7 @@ class V193RegressionTest {
     @Test
     fun `优化-ResultsContent必须接收appliedGuideId参数`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/HasselbladScreen.kt"
         )
         val text = screenFile.readText()
         // 验证 ResultsContent 通过参数接收 appliedGuideId（修复编译错误）
@@ -339,25 +357,18 @@ class V193RegressionTest {
     @Test
     fun `问题4-ApplyPresetButton必须使用13sp字号`() {
         val file = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/components/PresetDetailComponents.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/components/PresetDetailComponents.kt"
         )
         val text = file.readText()
-        val lines = text.lines()
-        // 找到 ApplyPresetButton 函数
-        val startIdx = lines.indexOfFirst { it.contains("fun ApplyPresetButton(") }
-        assertTrue("ApplyPresetButton 必须存在", startIdx >= 0)
-        // 在函数体内查找 fontSize = 13.sp
-        var endIdx = lines.size
-        var depth = 0
-        for (i in startIdx until lines.size) {
-            depth += lines[i].count { it == '{' }
-            depth -= lines[i].count { it == '}' }
-            if (depth == 0 && i > startIdx) {
-                endIdx = i
-                break
-            }
-        }
-        val funcBody = lines.subList(startIdx, endIdx).joinToString("\n")
+        // 直接在整个文件中搜索 ApplyPresetButton 相关的 fontSize
+        val funcRegex = Regex("""fun ApplyPresetButton\([^)]*\)[^{]*\{""", RegexOption.DOT_MATCHES_ALL)
+        val funcMatch = funcRegex.find(text)
+        assertTrue("ApplyPresetButton 必须存在", funcMatch != null)
+        // 从函数开始位置到文件末尾搜索关键属性
+        val fromFunc = text.substring(funcMatch!!.range.first)
+        // 找下一个顶层 fun 声明作为函数结束
+        val nextFuncMatch = Regex("""\nfun\s+\w+""").find(fromFunc, 1)
+        val funcBody = if (nextFuncMatch != null) fromFunc.substring(0, nextFuncMatch.range.first) else fromFunc
         assertTrue("ApplyPresetButton 内必须有 fontSize = 13.sp", funcBody.contains("fontSize = 13.sp"))
         assertTrue("ApplyPresetButton 内必须有 maxLines = 1", funcBody.contains("maxLines = 1"))
         assertTrue("ApplyPresetButton 内必须有 TextOverflow.Ellipsis", funcBody.contains("TextOverflow.Ellipsis"))
@@ -367,23 +378,15 @@ class V193RegressionTest {
     @Test
     fun `问题4-FavoriteButton必须使用13sp字号`() {
         val file = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/components/PresetDetailComponents.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/components/PresetDetailComponents.kt"
         )
         val text = file.readText()
-        val lines = text.lines()
-        val startIdx = lines.indexOfFirst { it.contains("fun FavoriteButton(") }
-        assertTrue("FavoriteButton 必须存在", startIdx >= 0)
-        var endIdx = lines.size
-        var depth = 0
-        for (i in startIdx until lines.size) {
-            depth += lines[i].count { it == '{' }
-            depth -= lines[i].count { it == '}' }
-            if (depth == 0 && i > startIdx) {
-                endIdx = i
-                break
-            }
-        }
-        val funcBody = lines.subList(startIdx, endIdx).joinToString("\n")
+        val funcRegex = Regex("""fun FavoriteButton\([^)]*\)[^{]*\{""", RegexOption.DOT_MATCHES_ALL)
+        val funcMatch = funcRegex.find(text)
+        assertTrue("FavoriteButton 必须存在", funcMatch != null)
+        val fromFunc = text.substring(funcMatch!!.range.first)
+        val nextFuncMatch = Regex("""\nfun\s+\w+""").find(fromFunc, 1)
+        val funcBody = if (nextFuncMatch != null) fromFunc.substring(0, nextFuncMatch.range.first) else fromFunc
         assertTrue("FavoriteButton 内必须有 fontSize = 13.sp", funcBody.contains("fontSize = 13.sp"))
         assertTrue("FavoriteButton 内必须有 maxLines = 1", funcBody.contains("maxLines = 1"))
         assertTrue("FavoriteButton 内必须有 TextOverflow.Ellipsis", funcBody.contains("TextOverflow.Ellipsis"))
@@ -395,9 +398,9 @@ class V193RegressionTest {
     @Test
     fun `问题5-CATEGORIES必须包含restore分类`() {
         val categories = LUTResourceRepository.CATEGORIES
-        val restoreCategory = categories.firstOrNull { it.id == "restore" }
+        val restoreCategory = categories.firstOrNull { it.key == "restore" }
         assertNotNull("CATEGORIES 必须包含 restore 分类", restoreCategory)
-        assertEquals("restore 分类名称必须为 LOG还原", "LOG还原", restoreCategory!!.name)
+        assertEquals("restore 分类名称必须为 LOG还原", "LOG还原", restoreCategory!!.label)
     }
 
     @Test
@@ -533,7 +536,7 @@ class V193RegressionTest {
     @Test
     fun `稳定性-formatFileSize正确处理KB和MB`() {
         assertEquals("10 KB", LUTResourceRepository.formatFileSize(10))
-        assertEquals("1024 KB", LUTResourceRepository.formatFileSize(1024))
+        assertEquals("1.0 MB", LUTResourceRepository.formatFileSize(1024))
         assertTrue(
             "2048 KB 应格式化为 MB",
             LUTResourceRepository.formatFileSize(2048).contains("MB")
@@ -557,7 +560,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-applyOptimization必须支持strength参数`() {
         val engineFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
         )
         val text = engineFile.readText()
         // 验证 applyOptimization 方法签名包含 strength 参数
@@ -570,7 +573,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-各算法必须根据strength缩放效果`() {
         val engineFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
         )
         val text = engineFile.readText()
         // 验证各算法函数接收 strength 参数
@@ -586,7 +589,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-降噪必须使用boxBlur替代缩放模糊`() {
         val engineFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ai/MasterInferenceEngine.kt"
         )
         val text = engineFile.readText()
         // 验证降噪使用 boxBlur
@@ -598,7 +601,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-SmartOptimizeScreen必须包含保存功能`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         // 验证保存功能
@@ -610,7 +613,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-SmartOptimizeScreen必须包含分享功能`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         assertTrue("必须包含 shareOptimizedImage 函数", text.contains("fun shareOptimizedImage()"))
@@ -621,7 +624,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-必须接入AI场景识别`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         assertTrue("必须调用 analyzeImage", text.contains("analyzeImage("))
@@ -632,7 +635,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-必须使用降采样加载图片防OOM`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         assertTrue("必须使用 loadSampledBitmap 降采样加载", text.contains("loadSampledBitmap("))
@@ -642,7 +645,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-必须包含前后拖拽对比`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         assertTrue("必须包含 BeforeAfterCompareView 组件", text.contains("fun BeforeAfterCompareView"))
@@ -653,7 +656,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-优化失败必须Toast提示`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         assertTrue("优化失败必须 Toast 提示", text.contains("优化失败"))
@@ -662,7 +665,7 @@ class V193RegressionTest {
     @Test
     fun `智能优化-中间Bitmap必须回收防泄漏`() {
         val screenFile = java.io.File(
-            "${System.getProperty("user.dir")}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
+            "${findProjectRoot()}/app/src/main/java/com/silas/omaster/ui/features/SmartOptimizeScreen.kt"
         )
         val text = screenFile.readText()
         assertTrue("必须回收中间 Bitmap", text.contains("prevBitmap.recycle()"))

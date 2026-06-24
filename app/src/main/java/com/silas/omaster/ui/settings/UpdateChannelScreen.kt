@@ -104,7 +104,28 @@ fun UpdateChannelScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 当前版本卡片
-            CurrentVersionCard()
+            CurrentVersionCard(
+                lastCheckTime = lastCheckTime,
+                isCheckingUpdate = isCheckingUpdate,
+                updateCheckResult = updateCheckResult,
+                onCheckForUpdate = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    scope.launch {
+                        isCheckingUpdate = true
+                        updateCheckResult = null
+                        try {
+                            val result = checkForUpdate(context, selectedChannelId)
+                            updateCheckResult = result
+                            lastCheckTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                                .format(java.util.Date())
+                        } catch (e: Exception) {
+                            updateCheckResult = "检查失败: ${e.message}"
+                        } finally {
+                            isCheckingUpdate = false
+                        }
+                    }
+                }
+            )
 
             // 更新渠道
             Card(
@@ -203,7 +224,12 @@ fun UpdateChannelScreen(
 }
 
 @Composable
-private fun CurrentVersionCard() {
+private fun CurrentVersionCard(
+    lastCheckTime: String?,
+    isCheckingUpdate: Boolean,
+    updateCheckResult: String?,
+    onCheckForUpdate: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -264,23 +290,7 @@ private fun CurrentVersionCard() {
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                        scope.launch {
-                            isCheckingUpdate = true
-                            updateCheckResult = null
-                            try {
-                                val result = checkForUpdate(context, selectedChannelId)
-                                updateCheckResult = result
-                                lastCheckTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                                    .format(java.util.Date())
-                            } catch (e: Exception) {
-                                updateCheckResult = "检查失败: ${e.message}"
-                            } finally {
-                                isCheckingUpdate = false
-                            }
-                        }
-                    },
+                    onClick = onCheckForUpdate,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isCheckingUpdate,
                     colors = ButtonDefaults.buttonColors(

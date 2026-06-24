@@ -90,7 +90,7 @@ class UtilExtTest {
         val md5 = java.security.MessageDigest.getInstance("MD5")
         val hash = md5.digest(input.toByteArray())
         
-        assertEquals("MD5哈希应该是16字节", 16, hash.length)
+        assertEquals("MD5哈希应该是16字节", 16, hash.size)
     }
 
     @Test
@@ -99,7 +99,7 @@ class UtilExtTest {
         val sha256 = java.security.MessageDigest.getInstance("SHA-256")
         val hash = sha256.digest(input.toByteArray())
         
-        assertEquals("SHA256哈希应该是32字节", 32, hash.length)
+        assertEquals("SHA256哈希应该是32字节", 32, hash.size)
     }
 
     // ===== JsonUtil 扩展测试 =====

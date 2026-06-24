@@ -537,14 +537,14 @@ class HasselbladEyeViewModel : ViewModel() {
                         // HEIF 在 Android Q+ 使用 WEBP_LOSSY 编码以保证格式一致性；
                         // 旧版本回退 JPEG 编码（扩展名同步为 jpg 避免 MIME 不匹配）
                         val (compressFormat, extension, mimeType) = when (format) {
-                            ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg" to "image/jpeg"
-                            ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png" to "image/png"
-                            ExportFormat.WEBP -> Bitmap.CompressFormat.WEBP to "webp" to "image/webp"
+                            ExportFormat.JPEG -> Triple(Bitmap.CompressFormat.JPEG, "jpg", "image/jpeg")
+                            ExportFormat.PNG -> Triple(Bitmap.CompressFormat.PNG, "png", "image/png")
+                            ExportFormat.WEBP -> Triple(Bitmap.CompressFormat.WEBP, "webp", "image/webp")
                             ExportFormat.HEIF ->
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    Bitmap.CompressFormat.WEBP_LOSSY to "heic" to "image/heif"
+                                    Triple(Bitmap.CompressFormat.WEBP_LOSSY, "heic", "image/heif")
                                 } else {
-                                    Bitmap.CompressFormat.JPEG to "jpg" to "image/jpeg"
+                                    Triple(Bitmap.CompressFormat.JPEG, "jpg", "image/jpeg")
                                 }
                         }
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)

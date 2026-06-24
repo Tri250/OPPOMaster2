@@ -13,6 +13,7 @@ import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -99,7 +101,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
-import com.silas.omaster.model.AnalysisResult
+import com.silas.omaster.model.SceneCategory
+import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
@@ -142,8 +145,24 @@ fun SmartOptimizeScreen(
     var previewMode by remember { mutableStateOf("before") }
 
     // AI 场景识别结果
-    var analysisResult by remember { mutableStateOf<AnalysisResult?>(null) }
+    var analysisResult by remember { mutableStateOf<SceneProfile?>(null) }
     var isAnalyzing by remember { mutableStateOf(false) }
+
+    // 优化参数状态（需在 imagePickerLauncher 之前声明）
+    var hdrEnabled by remember { mutableStateOf(false) }
+    var hdrStrength by remember { mutableFloatStateOf(50f) }
+
+    var noiseReductionEnabled by remember { mutableStateOf(false) }
+    var noiseReductionStrength by remember { mutableFloatStateOf(30f) }
+
+    var sharpenEnabled by remember { mutableStateOf(true) }
+    var sharpenStrength by remember { mutableFloatStateOf(25f) }
+
+    var exposureAuto by remember { mutableStateOf(false) }
+    var exposureAdjustment by remember { mutableFloatStateOf(0f) }
+
+    var colorCorrectionEnabled by remember { mutableStateOf(true) }
+    var colorCorrectionStrength by remember { mutableFloatStateOf(20f) }
 
     // 图片选择器（使用 PickVisualMedia 符合 Android 16 隐私最佳实践）
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -186,22 +205,6 @@ fun SmartOptimizeScreen(
             }
         }
     }
-
-    // 优化参数状态
-    var hdrEnabled by remember { mutableStateOf(false) }
-    var hdrStrength by remember { mutableFloatStateOf(50f) }
-
-    var noiseReductionEnabled by remember { mutableStateOf(false) }
-    var noiseReductionStrength by remember { mutableFloatStateOf(30f) }
-
-    var sharpenEnabled by remember { mutableStateOf(true) }
-    var sharpenStrength by remember { mutableFloatStateOf(25f) }
-
-    var exposureAuto by remember { mutableStateOf(false) }
-    var exposureAdjustment by remember { mutableFloatStateOf(0f) }
-
-    var colorCorrectionEnabled by remember { mutableStateOf(true) }
-    var colorCorrectionStrength by remember { mutableFloatStateOf(20f) }
 
     // 优化进度
     var isOptimizing by remember { mutableStateOf(false) }
@@ -408,7 +411,7 @@ fun SmartOptimizeScreen(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = analysisResult!!.sceneProfile.name,
+                            text = analysisResult!!.name,
                             fontSize = 11.sp,
                             color = HasselbladOrange,
                             maxLines = 1,
@@ -581,7 +584,7 @@ fun SmartOptimizeScreen(
 
             // 选择图片按钮
             IconButton(
-                onClick = { imagePickerLauncher.launch("image/*") },
+                onClick = { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
@@ -654,7 +657,7 @@ fun SmartOptimizeScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "AI 推荐：${analysisResult!!.sceneProfile.name}",
+                                    text = "AI 推荐：${analysisResult!!.name}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = HasselbladOrange
@@ -926,7 +929,7 @@ private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int,
 private fun analyzeImage(
     bitmap: Bitmap,
     engine: MasterInferenceEngine,
-    onResult: (AnalysisResult) -> Unit
+    onResult: (SceneProfile) -> Unit
 ) {
     kotlinx.coroutines.GlobalScope.launch(Dispatchers.Default) {
         try {
@@ -942,20 +945,20 @@ private fun analyzeImage(
  * 根据 AI 场景识别结果自动推荐优化项与强度
  */
 private fun applyAutoRecommendations(
-    result: AnalysisResult,
+    result: SceneProfile,
     apply: (hdr: Boolean, denoise: Boolean, sharpen: Boolean, exposure: Boolean, color: Boolean,
             hdrS: Float, denoiseS: Float, sharpenS: Float, exposureS: Float, colorS: Float) -> Unit
 ) {
-    val category = result.sceneProfile.category
+    val category = result.category
     when (category) {
-        "portrait" -> apply(true, false, true, true, true, 30f, 0f, 20f, 10f, 40f)
-        "landscape" -> apply(true, false, true, false, true, 60f, 0f, 30f, 0f, 35f)
-        "night" -> apply(true, true, false, true, false, 40f, 50f, 0f, 30f, 0f)
-        "food" -> apply(false, false, true, true, true, 0f, 0f, 15f, 15f, 50f)
-        "urban" -> apply(true, false, true, false, true, 40f, 0f, 35f, 0f, 25f)
-        "still_life" -> apply(false, false, true, true, true, 0f, 0f, 25f, 10f, 30f)
-        "macro" -> apply(false, true, true, false, true, 0f, 20f, 40f, 0f, 20f)
-        "event" -> apply(true, false, true, true, true, 35f, 0f, 20f, 20f, 30f)
+        SceneCategory.PORTRAIT -> apply(true, false, true, true, true, 30f, 0f, 20f, 10f, 40f)
+        SceneCategory.LANDSCAPE -> apply(true, false, true, false, true, 60f, 0f, 30f, 0f, 35f)
+        SceneCategory.NIGHT -> apply(true, true, false, true, false, 40f, 50f, 0f, 30f, 0f)
+        SceneCategory.FOOD -> apply(false, false, true, true, true, 0f, 0f, 15f, 15f, 50f)
+        SceneCategory.URBAN -> apply(true, false, true, false, true, 40f, 0f, 35f, 0f, 25f)
+        SceneCategory.STILL_LIFE -> apply(false, false, true, true, true, 0f, 0f, 25f, 10f, 30f)
+        SceneCategory.MACRO -> apply(false, true, true, false, true, 0f, 20f, 40f, 0f, 20f)
+        SceneCategory.EVENT -> apply(true, false, true, true, true, 35f, 0f, 20f, 20f, 30f)
         else -> apply(true, false, true, false, true, 50f, 0f, 25f, 0f, 20f)
     }
 }

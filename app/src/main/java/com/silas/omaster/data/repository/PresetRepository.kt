@@ -91,7 +91,6 @@ class PresetRepository private constructor(context: Context) {
                 maxConnectionsCount = 32
                 endpoint.maxConnectionsPerRoute = 8
                 endpoint.connectTimeout = NETWORK_TIMEOUT_MS
-                endpoint.requestTimeout = NETWORK_TIMEOUT_MS
                 endpoint.socketTimeout = NETWORK_TIMEOUT_MS
             }
             install(ContentNegotiation) {

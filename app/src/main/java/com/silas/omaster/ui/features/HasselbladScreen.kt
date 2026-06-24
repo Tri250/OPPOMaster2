@@ -7,6 +7,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -84,6 +85,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -107,6 +109,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -308,7 +312,7 @@ fun HasselbladScreen(
 
     fun onPickFromGallery() {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        galleryLauncher.launch("image/*")
+        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 
     fun onSceneModeSelected(sceneMode: SceneMode) {
@@ -548,7 +552,7 @@ fun HasselbladScreen(
             text = {
                 Text(
                     text = if (shouldGoToSettings) {
-                        "哈苏之眼需要相机权限才能拍照分析。\n\n您已选择"不再询问"，请前往设置页手动开启相机权限后返回使用。"
+                        "哈苏之眼需要相机权限才能拍照分析。\n\n您已选择\u201C不再询问\u201D，请前往设置页手动开启相机权限后返回使用。"
                     } else {
                         "哈苏之眼需要相机权限才能拍照并进行场景分析、AI构图引导。\n\n开启后即可使用哈苏大师色彩科学与AR构图引导功能。"
                     }
@@ -3352,7 +3356,7 @@ private fun ARGuideOverlay(
                     var cy = h * 0.382f
                     for (i in 0..steps) {
                         val t = i.toFloat() / steps * 3f * Math.PI.toFloat()
-                        val r = 8f * Math.pow(phi.toDouble(), t / (2f * Math.PI.toFloat())).toFloat()
+                        val r = 8f * Math.pow(phi.toDouble(), (t / (2f * Math.PI.toFloat())).toDouble()).toFloat()
                         val x = cx + r * cos(t)
                         val y = cy + r * sin(t)
                         if (x in 0f..w && y in 0f..h) {
@@ -3366,8 +3370,8 @@ private fun ARGuideOverlay(
                 }
                 ARGuideType.FRAME -> {
                     val inset = 0.2f
-                    drawRect(guideColor, topLeft = Offset(w * inset, h * inset), size = Size(w * (1 - 2 * inset), h * (1 - 2 * inset), ), strokeWidth = 2f)
-                    drawRect(guideColor.copy(alpha = 0.3f), strokeWidth = 1f)
+                    drawRect(guideColor, topLeft = Offset(w * inset, h * inset), size = Size(w * (1 - 2 * inset), h * (1 - 2 * inset)), style = Stroke(width = 2f))
+                    drawRect(guideColor.copy(alpha = 0.3f), style = Stroke(width = 1f))
                 }
                 ARGuideType.HORIZON -> {
                     drawLine(guideColor, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 2f)
