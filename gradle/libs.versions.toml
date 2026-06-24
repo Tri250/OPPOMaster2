@@ -1,10 +1,10 @@
 [versions]
 # ===== Android Gradle Plugin =====
-agp = "8.9.1"
+agp = "8.7.3"
 
 # ===== Kotlin =====
-# Gradle 8.14.4 需要 Kotlin 2.2.0+；AGP 8.9.1 兼容 Kotlin 2.2.0
-kotlin = "2.2.0"
+# Gradle 8.14.4 兼容 Kotlin 2.0.21+；AGP 8.7.3 兼容 Kotlin 2.0.x
+kotlin = "2.0.21"
 
 # ===== AndroidX Core =====
 coreKtx = "1.15.0"

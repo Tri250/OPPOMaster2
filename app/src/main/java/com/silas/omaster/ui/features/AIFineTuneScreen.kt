@@ -1,35 +1,61 @@
 package com.silas.omaster.ui.features
 
 import android.Manifest
-import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
-import android.media.MediaScannerConnection
-import android.os.Environment
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -39,107 +65,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.silas.omaster.ai.*
+import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.math.roundToInt
 
 /**
- * AI微调功能页面 - 与Web端AIFineTunePage.tsx完全对齐
- *
- * 功能用例实现：
- * - FT-001: 一键AI微调（真实AI推理）
- * - FT-002: 单参数采纳
- * - FT-003: 二次编辑
- * - FT-004: 无网络/服务异常降级
- * - FT-005: 参数锁定
- * - FT-006: AI微调权限与隐私
- *
- * 同步Web端功能（完整实现）：
- * 1. 5个Tab完整实现（基础/风格/智能/HSL/曲线）
- * 2. 18参数全通道调整（与Web端参数名一致）
- *    - 基础参数：曝光、亮度、对比度、饱和度、色温、自然饱和度
- *    - 专业参数：高光、阴影、白色色阶、黑色色阶、纹理、清晰度
- *    - 效果参数：锐度、去雾、降噪、颗粒、褪色、肤色平滑
- * 3. 12色彩风格预设（与Web端COLOR_STYLES对齐）
- *    - 自然、鲜艳、暖调、冷调、胶片、黑白、复古、电影、情绪、柔和、戏剧、HDR
- * 4. 10智能优化选项（与Web端SMART_OPTIMIZATIONS对齐）
- *    - HDR增强、智能降噪、智能锐化、去雾、肤色优化
- *    - 天空增强(PRO)、AI构图(PRO)、人像虚化(PRO)、色彩匹配(PRO)、智能补光(PRO)
- * 5. HSL 8通道调色（红/橙/黄/绿/青/蓝/紫/洋红）
- * 6. 曲线调整（RGB/R/G/B四通道 + 5曲线预设）
- *    - 线性、高对比、柔和、S曲线、反相
- * 7. 参数锁定功能
- * 8. 对比预览功能
- * 9. 一键AI微调按钮（真实推理）
- * 10. 进度显示和成功提示
+ * AI 微调功能页面
+ * 修复后：统一使用 AIFineTuneViewModel 管理状态，接入 GPU 实时预览，
+ * HSL/曲线/智能优化真实生效，导出与预览一致。
  */
-
-/**
- * 推理阶段
- */
-enum class InferenceStage {
-    IDLE,
-    ANALYZING,
-    DETECTING_SUBJECT,
-    ANALYZING_LIGHT,
-    COMPUTING_PARAMS,
-    APPLYING_AI,
-    COMPLETED,
-    ERROR
-}
-
-/**
- * HSL调整值
- */
-data class HSLValue(
-    val id: String,
-    val name: String,
-    val color: Color,
-    var hue: Int = 0,
-    var saturation: Int = 0,
-    var luminance: Int = 0
-)
-
-/**
- * 曲线控制点
- */
-data class CurvePoint(
-    val x: Float,
-    val y: Float
-)
-
-/**
- * 色彩风格预设（与Web端COLOR_STYLES对齐）
- */
-data class ColorStylePreset(
-    val id: String,
-    val name: String,
-    val icon: ImageVector,
-    val color: Color,
-    val params: RenderParameters,
-    val description: String
-)
-
-/**
- * 智能优化选项（与Web端SMART_OPTIMIZATIONS对齐）
- */
-data class SmartOptimization(
-    val id: String,
-    val name: String,
-    val icon: ImageVector,
-    val description: String,
-    val color: Color,
-    val isPro: Boolean = false
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIFineTuneScreen(
@@ -150,1455 +92,933 @@ fun AIFineTuneScreen(
 ) {
     val context = LocalContext.current
     val aiManager = remember { AIFineTuneManager.getInstance(context) }
+    val viewModel: AIFineTuneViewModel = viewModel(
+        factory = AIFineTuneViewModelFactory(aiManager)
+    )
+
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
-    // 图片选择相关
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var selectedBitmap by remember { mutableStateOf<Bitmap?>(bitmap) }
+    // 状态收集
+    val activeTab by viewModel.activeTab.collectAsState()
+    val currentParams by viewModel.currentParams.collectAsState()
+    val selectedImageUri by viewModel.selectedImageUri.collectAsState()
+    val sourceBitmap by viewModel.sourceBitmap.collectAsState()
+    val previewBitmap by viewModel.previewBitmap.collectAsState()
+    val isLoadingImage by viewModel.isLoadingImage.collectAsState()
+    val imageLoadError by viewModel.imageLoadError.collectAsState()
+    val lockedParams by viewModel.lockedParams.collectAsState()
+    val showCompare by viewModel.showCompare.collectAsState()
+    val isProcessing by viewModel.isProcessing.collectAsState()
+    val inferenceStage by viewModel.inferenceStage.collectAsState()
+    val inferenceProgress by viewModel.inferenceProgress.collectAsState()
+    val inferenceMessage by viewModel.inferenceMessage.collectAsState()
+    val showSuccess by viewModel.showSuccess.collectAsState()
+    val errorState by viewModel.errorState.collectAsState()
+    val selectedStyleId by viewModel.selectedStyleId.collectAsState()
+    val selectedOptimizations by viewModel.selectedOptimizations.collectAsState()
+    val hslValues by viewModel.hslValues.collectAsState()
+    val selectedHslId by viewModel.selectedHslId.collectAsState()
+    val curveChannel by viewModel.curveChannel.collectAsState()
+    val curvePoints by viewModel.curvePoints.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
+    val canRedo by viewModel.canRedo.collectAsState()
 
-    // 相册选择启动器（使用 PickVisualMedia 符合 Android 16 隐私最佳实践，仅限图片）
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+    // 初始化传入的 bitmap
+    LaunchedEffect(bitmap) {
+        bitmap?.let { viewModel.setBitmap(context, it) }
+    }
+
+    // 参数变化时刷新 GPU 预览
+    LaunchedEffect(currentParams) {
+        if (sourceBitmap != null) {
+            viewModel.refreshPreview(context)
+        }
+    }
+
+    // 图片选择器
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            selectedImageUri = it
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                selectedBitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
+        uri?.let { viewModel.loadImage(context, it) }
     }
 
-    // 相机拍照启动器
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    // 相机拍照
+    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success: Boolean ->
-        if (success && cameraImageUri != null) {
-            selectedImageUri = cameraImageUri
-            try {
-                val inputStream = context.contentResolver.openInputStream(cameraImageUri!!)
-                selectedBitmap = BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempPhotoUri?.let { viewModel.loadImage(context, it) }
         }
     }
 
-    // 存储权限请求启动器（Android 9 及以下导出图片需要）
-    var pendingExportAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val storagePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            pendingExportAction?.invoke()
-        } else {
-            Toast.makeText(context, "需要存储权限才能导出图片到相册", Toast.LENGTH_SHORT).show()
-        }
-        pendingExportAction = null
+    // 权限
+    val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) galleryLauncher.launch("image/*")
     }
 
-    // 状态
-    val isProcessing by aiManager.isProcessing.collectAsState()
-    val suggestedParams by aiManager.suggestedParams.collectAsState()
-    val errorState by aiManager.errorState.collectAsState()
-
-    // UI状态
-    var activeTab by remember { mutableStateOf("basic") }
-    var selectedStyleId by remember { mutableStateOf<String?>(null) }
-    val selectedOptimizations = remember { mutableStateListOf<String>() }
-    val lockedParams = remember { mutableStateListOf<String>() }
-    var showCompare by remember { mutableStateOf(false) }
-    var showSuccess by remember { mutableStateOf(false) }
-
-    // 推理进度
-    var inferenceStage by remember { mutableStateOf(InferenceStage.IDLE) }
-    var inferenceProgress by remember { mutableStateOf(0f) }
-    var inferenceMessage by remember { mutableStateOf("") }
-    var isOfflineResult by remember { mutableStateOf(false) }
-
-    // 成功提示自动隐藏
+    // Toast 提示
+    LaunchedEffect(imageLoadError) {
+        imageLoadError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
     LaunchedEffect(showSuccess) {
         if (showSuccess) {
-            kotlinx.coroutines.delay(2500)
-            showSuccess = false
+            Toast.makeText(context, "AI 微调完成", Toast.LENGTH_SHORT).show()
+            viewModel.clearSuccess()
         }
     }
 
-    // HSL和曲线
-    var hslValues: List<HSLValue> by remember { mutableStateOf(defaultHslValuesList()) }
-    var selectedHslId by remember { mutableStateOf("red") }
-    var curveChannel by remember { mutableStateOf("rgb") }
-
-    // 渲染参数
-    var renderParams by remember { mutableStateOf(RenderParameters()) }
-
-    // 色彩风格预设（与Web端COLOR_STYLES完全对齐 - 12项）
-    // 自然、鲜艳、暖调、冷调、胶片、黑白、复古、电影、情绪、柔和、戏剧、HDR
-    val colorStyles = remember {
-        listOf(
-            ColorStylePreset("natural", "自然", Icons.Default.WbSunny, SuccessGreen,
-                RenderParameters(saturation = 5f, contrast = 5f, vibrance = 5f), "自然真实色彩"),
-            ColorStylePreset("vivid", "鲜艳", Icons.Default.Palette, Color(0xFFFF5722),
-                RenderParameters(saturation = 25f, contrast = 15f, warmth = 5f, vibrance = 20f), "浓郁鲜艳色彩"),
-            ColorStylePreset("warm", "暖调", Icons.Default.WbSunny, Color(0xFFFF9800),
-                RenderParameters(saturation = 10f, contrast = 8f, warmth = 20f, vibrance = 10f), "温暖阳光感"),
-            ColorStylePreset("cool", "冷调", Icons.Default.AcUnit, Color(0xFF2196F3),
-                RenderParameters(saturation = 8f, contrast = 10f, warmth = -20f, vibrance = 8f), "清冷高级感"),
-            ColorStylePreset("film", "胶片", Icons.Default.CameraAlt, Color(0xFF795548),
-                RenderParameters(saturation = -10f, contrast = 15f, warmth = 5f, grain = 15f, fade = 10f), "经典胶片质感"),
-            ColorStylePreset("bw", "黑白", Icons.Default.Contrast, Color(0xFF9E9E9E),
-                RenderParameters(saturation = -100f, contrast = 20f, clarity = 15f), "经典黑白摄影"),
-            ColorStylePreset("vintage", "复古", Icons.Default.History, Color(0xFF8D6E63),
-                RenderParameters(saturation = -15f, contrast = 5f, warmth = 15f, fade = 20f, grain = 10f), "怀旧复古风格"),
-            ColorStylePreset("cinematic", "电影", Icons.Default.Movie, Color(0xFF607D8B),
-                RenderParameters(saturation = 5f, contrast = 25f, warmth = 10f), "电影大片感"),
-            ColorStylePreset("moody", "情绪", Icons.Default.DarkMode, Color(0xFF3F51B5),
-                RenderParameters(saturation = -5f, contrast = 30f, warmth = -10f, shadows = 20f, highlights = -15f), "情绪氛围感"),
-            ColorStylePreset("pastel", "柔和", Icons.Default.Brush, Color(0xFFE1BEE7),
-                RenderParameters(saturation = -10f, contrast = -10f, warmth = 5f, brightness = 10f, fade = 15f), "柔和粉彩风"),
-            ColorStylePreset("dramatic", "戏剧", Icons.Default.Bolt, Color(0xFFFF5722),
-                RenderParameters(saturation = 15f, contrast = 35f, warmth = 5f, clarity = 20f, highlights = -20f), "戏剧性光影"),
-            ColorStylePreset("hdr", "HDR", Icons.Default.TrendingUp, Color(0xFF00BCD4),
-                RenderParameters(saturation = 10f, contrast = 20f, highlights = -30f, shadows = 30f, clarity = 25f), "高动态范围")
-        )
-    }
-
-    // 智能优化选项（与Web端SMART_OPTIMIZATIONS完全对齐 - 10项）
-    val smartOptimizations = remember {
-        listOf(
-            SmartOptimization("hdr", "HDR 增强", Icons.Default.Bolt, "扩展动态范围，保留更多细节", Color(0xFFFF6B35)),
-            SmartOptimization("denoise", "智能降噪", Icons.Default.WaterDrop, "减少噪点，保持细节", SuccessGreen),
-            SmartOptimization("sharpen", "智能锐化", Icons.Default.Visibility, "增强边缘清晰度", Color(0xFF2196F3)),
-            SmartOptimization("dehaze", "去雾", Icons.Default.WbSunny, "去除雾气，提升通透感", Color(0xFF9C27B0)),
-            SmartOptimization("skin", "肤色优化", Icons.Default.Face, "智能美化肤色", Color(0xFFE91E63)),
-            SmartOptimization("sky", "天空增强", Icons.Default.Cloud, "增强天空色彩和细节", Color(0xFF00BCD4), true),
-            SmartOptimization("ai-composition", "AI构图", Icons.Default.Crop, "智能裁剪优化构图", Color(0xFFFF9800), true),
-            SmartOptimization("portrait-bokeh", "人像虚化", Icons.Default.Circle, "模拟大光圈虚化效果", Color(0xFF795548), true),
-            SmartOptimization("color-match", "色彩匹配", Icons.Default.Palette, "匹配参考图色彩风格", Color(0xFF607D8B), true),
-            SmartOptimization("smart-light", "智能补光", Icons.Default.Lightbulb, "AI分析并补光阴影区域", Color(0xFFFFEB3B), true)
-        )
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
-        // 标题栏
-        TopAppBar(
-            title = { Text("AI 微调", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground) },
-            navigationIcon = {
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onBack()
-                }) {
-                    Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
-                }
-            },
-            actions = {
-                IconButton(onClick = { showCompare = !showCompare }) {
-                    Icon(
-                        if (showCompare) Icons.Default.Compare else Icons.Default.CompareArrows,
-                        "对比",
-                        tint = if (showCompare) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "AI 微调",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onApply(renderParams)
-                }) {
-                    Icon(Icons.Default.Check, "应用", tint = HasselbladOrange)
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.onBackground
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onBackground)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.undo() }, enabled = canUndo) {
+                        Icon(Icons.Default.Undo, contentDescription = "撤销", tint = if (canUndo) HasselbladOrange else Color.Gray)
+                    }
+                    IconButton(onClick = { viewModel.redo() }, enabled = canRedo) {
+                        Icon(Icons.Default.Redo, contentDescription = "重做", tint = if (canRedo) HasselbladOrange else Color.Gray)
+                    }
+                    IconButton(onClick = { viewModel.reset() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "重置", tint = MaterialTheme.colorScheme.onBackground)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
-        )
-
-        // 图片预览区域 + 上传按钮
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        },
+        bottomBar = {
+            BottomActionBar(
+                onGallery = {
+                    if (ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED) {
+                        galleryLauncher.launch("image/*")
+                    } else {
+                        permissionLauncher.launch(storagePermission)
+                    }
+                },
+                onCamera = {
+                    val file = File(context.cacheDir, "ai_tune_${System.currentTimeMillis()}.jpg")
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    tempPhotoUri = uri
+                    cameraLauncher.launch(uri)
+                },
+                onAI = { viewModel.performAIInference(sourceBitmap) },
+                onExport = {
+                    scope.launch {
+                        val success = viewModel.exportImage(context)
+                        Toast.makeText(context, if (success) "已保存到相册" else "保存失败", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onApply = { onApply(viewModel.getFinalParams()) },
+                hasImage = sourceBitmap != null,
+                isProcessing = isProcessing
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
         ) {
+            // 预览区域
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                if (selectedImageUri != null) {
-                    // 显示已选图片作为实时预览（应用ColorMatrix滤镜）
-                    val colorMatrix = remember(renderParams) { renderParams.toColorMatrix() }
-                    AsyncImage(
-                        model = selectedImageUri,
-                        contentDescription = "预览图片",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.colorMatrix(colorMatrix)
+                if (sourceBitmap != null) {
+                    ImagePreview(
+                        sourceBitmap = sourceBitmap,
+                        previewBitmap = previewBitmap,
+                        showCompare = showCompare,
+                        onCompareToggle = { viewModel.toggleCompare() },
+                        modifier = Modifier.fillMaxSize()
                     )
-                    // 导出按钮
-                    IconButton(
-                        onClick = {
-                            val doExport = {
-                                scope.launch {
-                                    try {
-                                        val saved = saveImageToGallery(context, selectedBitmap, renderParams)
-                                        if (saved) {
-                                            Toast.makeText(context, "图片已导出到相册", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "导出失败", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
-
-                            // Android 9 及以下需要 WRITE_EXTERNAL_STORAGE 权限
-                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-                                ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                                ) != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                pendingExportAction = { doExport() }
-                                storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                } else {
+                    EmptyImagePlaceholder(
+                        onGallery = {
+                            if (ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED) {
+                                galleryLauncher.launch("image/*")
                             } else {
-                                doExport()
+                                permissionLauncher.launch(storagePermission)
                             }
                         },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f))
-                    ) {
-                        Icon(
-                            Icons.Default.SaveAlt,
-                            "导出",
-                            tint = HasselbladOrange,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    // 更换图片按钮
-                    IconButton(
-                        onClick = { imagePickerLauncher.launch("image/*") },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(8.dp)
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f))
-                    ) {
-                        Icon(
-                            Icons.Default.SwapHoriz,
-                            "更换",
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                } else {
-                    // 上传图片区域（支持相册选择和相机拍照）
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Icon(
-                            Icons.Default.AddPhotoAlternate,
-                            null,
-                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "选择图片开始微调",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                            fontSize = 14.sp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        // 相册选择和相机拍照按钮
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // 相册选择按钮
-                            Card(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable { imagePickerLauncher.launch("image/*") },
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.PhotoLibrary, null, tint = HasselbladOrange, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("相册选择", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f), fontSize = 13.sp)
-                                }
-                            }
-                            // 相机拍照按钮
-                            Card(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        // 创建应用私有缓存目录临时文件，并通过 FileProvider 共享给相机
-                                        val photoUri = createTempImageUri(context)
-                                        if (photoUri != Uri.EMPTY) {
-                                            cameraImageUri = photoUri
-                                            cameraLauncher.launch(photoUri)
-                                        } else {
-                                            Toast.makeText(context, "无法创建相机临时文件", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.CameraAlt, null, tint = HasselbladOrange, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("相机拍照", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f), fontSize = 13.sp)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "支持 JPG/PNG/WebP 格式",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                            fontSize = 12.sp
-                        )
-                    }
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                if (isProcessing || inferenceStage == InferenceStage.ERROR) {
+                    AIProgressOverlay(
+                        stage = inferenceStage,
+                        progress = inferenceProgress,
+                        message = inferenceMessage,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
-        }
 
-        // 推理进度条
-        if (isProcessing) {
-            LinearProgressIndicator(
-                progress = { inferenceProgress },
-                modifier = Modifier.fillMaxWidth(),
-                color = HasselbladOrange,
-                trackColor = HasselbladOrange.copy(alpha = 0.2f)
-            )
-            Text(
-                text = inferenceMessage,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-        }
+            // Tab 切换
+            TabRow(
+                selectedTabIndex = listOf("basic", "style", "smart", "hsl", "curve").indexOf(activeTab),
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = HasselbladOrange,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                listOf(
+                    "basic" to "基础",
+                    "style" to "风格",
+                    "smart" to "智能",
+                    "hsl" to "HSL",
+                    "curve" to "曲线"
+                ).forEach { (id, label) ->
+                    Tab(
+                        selected = activeTab == id,
+                        onClick = { viewModel.setTab(id) },
+                        text = { Text(label, fontSize = 13.sp) }
+                    )
+                }
+            }
 
-        // 成功提示（含离线模式标识）
-        AnimatedVisibility(
-            visible = showSuccess,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut() + slideOutVertically()
-        ) {
-            Card(
+            // 参数面板
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isOfflineResult) WarningYellow.copy(alpha = 0.2f) else SuccessGreen.copy(alpha = 0.2f)
-                )
+                    .heightIn(max = 360.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        if (isOfflineResult) Icons.Default.CloudOff else Icons.Default.CheckCircle,
-                        null,
-                        tint = if (isOfflineResult) WarningYellow else SuccessGreen
+                when (activeTab) {
+                    "basic" -> BasicParamsPanel(
+                        params = currentParams,
+                        locked = lockedParams,
+                        onParamChange = { key, value ->
+                            viewModel.updateParam(key, value)
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        },
+                        onLockToggle = { viewModel.toggleParamLock(it) }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            if (isOfflineResult) "离线模式完成" else "优化完成",
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Medium
-                        )
-                        if (isOfflineResult) {
-                            Text(
-                                "当前无有效云端密钥/网络，已使用本地AI推理",
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                fontSize = 12.sp
-                            )
+                    "style" -> StylePanel(
+                        styles = COLOR_STYLES,
+                        selectedId = selectedStyleId,
+                        onSelect = { viewModel.selectStyle(it) }
+                    )
+                    "smart" -> SmartPanel(
+                        optimizations = SMART_OPTIMIZATIONS,
+                        selected = selectedOptimizations,
+                        onToggle = { viewModel.toggleOptimization(it) }
+                    )
+                    "hsl" -> HSLPanel(
+                        hslValues = hslValues,
+                        selectedId = selectedHslId,
+                        onSelect = { viewModel.selectHsl(it) },
+                        onValueChange = { id, type, value ->
+                            viewModel.updateHSL(id, type, value)
                         }
-                    }
+                    )
+                    "curve" -> CurvePanel(
+                        channel = curveChannel,
+                        points = curvePoints[curveChannel] ?: emptyList(),
+                        onChannelChange = { viewModel.setCurveChannel(it) },
+                        onPointsChange = { viewModel.updateCurvePoints(curveChannel, it) },
+                        onPreset = { viewModel.applyCurvePreset(it) }
+                    )
                 }
             }
         }
+    }
+}
 
-        // Tab选择
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            TabChip("基础", "basic", activeTab == "basic") { activeTab = "basic" }
-            TabChip("风格", "color", activeTab == "color") { activeTab = "color" }
-            TabChip("智能", "smart", activeTab == "smart") { activeTab = "smart" }
-            TabChip("HSL", "hsl", activeTab == "hsl") { activeTab = "hsl" }
-            TabChip("曲线", "curve", activeTab == "curve") { activeTab = "curve" }
+// ==================== 预览区域 ====================
+
+@Composable
+private fun ImagePreview(
+    sourceBitmap: Bitmap?,
+    previewBitmap: Bitmap?,
+    showCompare: Boolean,
+    onCompareToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1A1A1A))
+    ) {
+        // 原图（作为底层）
+        sourceBitmap?.let { bitmap ->
+            AsyncImage(
+                model = bitmap,
+                contentDescription = "原图",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            when (activeTab) {
-                "basic" -> {
-                    // 快捷预设按钮（与Web端BASE_PRESETS对齐）
-                    item {
-                        QuickPresetsSection(
-                            isProcessing = isProcessing,
-                            onAutoTune = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                scope.launch {
-                                    inferenceStage = InferenceStage.ANALYZING
-                                    inferenceMessage = "分析图像特征..."
-                                    inferenceProgress = 0.1f
-
-                                    try {
-                                        // 优先使用用户从相册/相机选择的图片，否则使用传入的初始 bitmap
-                                        val activeBitmap = selectedBitmap ?: bitmap
-                                        val result = if (activeBitmap != null) {
-                                            aiManager.generateAISuggestion(
-                                                activeBitmap,
-                                                renderParams.toMap().mapValues { it.value.toInt() }
-                                            )
-                                        } else {
-                                            aiManager.generateAISuggestion("auto")
-                                        }
-
-                                        inferenceProgress = 0.5f
-                                        inferenceMessage = "计算最佳参数..."
-
-                                        if (result is AISuggestionResult.Success) {
-                                            inferenceProgress = 1f
-                                            inferenceMessage = "优化完成"
-                                            inferenceStage = InferenceStage.COMPLETED
-                                            isOfflineResult = result.isOfflineMode
-                                            showSuccess = true
-
-                                            // 离线模式提示
-                                            if (result.isOfflineMode) {
-                                                Toast.makeText(context, "当前处于离线模式，已使用本地AI推理", Toast.LENGTH_SHORT).show()
-                                            }
-
-                                            // 更新渲染参数
-                                            result.suggestion.suggestions.forEach { s ->
-                                                renderParams = updateRenderParam(renderParams, s.field, s.suggestedValue.toFloat())
-                                            }
-                                        } else if (result is AISuggestionResult.Error) {
-                                            inferenceStage = InferenceStage.ERROR
-                                            inferenceMessage = result.error.message
-                                            Toast.makeText(context, "优化失败: ${result.error.message}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("AIFineTune", "AI auto-tune failed", e)
-                                        inferenceStage = InferenceStage.ERROR
-                                        inferenceMessage = "优化失败: ${e.message}"
-                                        Toast.makeText(context, "优化失败: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            onPresetApply = { presetParams ->
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                renderParams = renderParams.merge(presetParams)
-                            }
-                        )
-                    }
-
-                    // 基础参数调整
-                    item {
-                        Text("参数调整", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    item {
-                        ParamSliderCard(
-                            params = renderParams,
-                            lockedParams = lockedParams,
-                            onParamChange = { key, value ->
-                                renderParams = updateRenderParam(renderParams, key, value)
-                            },
-                            onLockToggle = { key ->
-                                if (lockedParams.contains(key)) lockedParams.remove(key)
-                                else lockedParams.add(key)
-                            }
-                        )
-                    }
-                }
-
-                "color" -> {
-                    // 色彩风格
-                    item {
-                        Text("色彩风格", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    items(colorStyles.chunked(2)) { stylePair ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            stylePair.forEach { style ->
-                                ColorStyleCard(
-                                    style = style,
-                                    isSelected = selectedStyleId == style.id,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        selectedStyleId = style.id
-                                        renderParams = renderParams.merge(style.params)
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                "smart" -> {
-                    // 智能优化
-                    item {
-                        Text("智能优化", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    items(smartOptimizations.chunked(2)) { optPair ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            optPair.forEach { opt ->
-                                SmartOptimizationCard(
-                                    optimization = opt,
-                                    isSelected = selectedOptimizations.contains(opt.id),
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (selectedOptimizations.contains(opt.id)) {
-                                            selectedOptimizations.remove(opt.id)
-                                        } else {
-                                            selectedOptimizations.add(opt.id)
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                "hsl" -> {
-                    // HSL调整
-                    item {
-                        Text("HSL 调色", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    item {
-                        HSLSelectorCard(
-                            hslValues = hslValues,
-                            selectedId = selectedHslId,
-                            onSelect = { selectedHslId = it },
-                            onValueChange = { id, field, value ->
-                                hslValues = hslValues.map { hsl ->
-                                    if (hsl.id == id) {
-                                        when (field) {
-                                            "hue" -> hsl.copy(hue = value.toInt())
-                                            "saturation" -> hsl.copy(saturation = value.toInt())
-                                            "luminance" -> hsl.copy(luminance = value.toInt())
-                                            else -> hsl
-                                        }
-                                    } else hsl
-                                }
-                            }
-                        )
-                    }
-                }
-
-                "curve" -> {
-                    // 曲线调整
-                    item {
-                        Text("曲线调整", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    item {
-                        CurveAdjustCard(
-                            channel = curveChannel,
-                            onChannelChange = { curveChannel = it }
-                        )
-                    }
-                }
-            }
-
-            // 底部间距
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
-            }
+        // 效果预览（覆盖在原图上）
+        if (!showCompare && previewBitmap != null) {
+            AsyncImage(
+                model = previewBitmap,
+                contentDescription = "AI 微调预览",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
-        // 底部操作栏
+        // 对比按钮
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
-                .padding(vertical = 12.dp, horizontal = 16.dp)
+                .align(Alignment.BottomEnd)
+                .padding(12.dp)
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (showCompare) HasselbladOrange else Color.Black.copy(alpha = 0.6f))
+                .clickable { onCompareToggle() },
+            contentAlignment = Alignment.Center
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 重置
-                TextButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    renderParams = RenderParameters()
-                    selectedStyleId = null
-                    selectedOptimizations.clear()
-                    hslValues = defaultHslValuesList()
-                }) {
-                    Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("重置", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                }
-
-                // 应用
-                Button(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onApply(renderParams)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onBackground)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("应用参数", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
-                }
-            }
+            Icon(
+                imageVector = if (showCompare) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                contentDescription = "对比",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
         }
-    }
-}
 
-/**
- * Tab选择芯片
- */
-@Composable
-private fun TabChip(
-    label: String,
-    tabId: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Text(
-            text = label,
-            color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-        )
-    }
-}
-
-/**
- * 快捷预设区域（与Web端Quick Presets对齐）
- * 包含：一键AI微调 + 6个基础预设
- */
-@Composable
-private fun QuickPresetsSection(
-    isProcessing: Boolean,
-    onAutoTune: () -> Unit,
-    onPresetApply: (RenderParameters) -> Unit
-) {
-    // 基础预设（与Web端BASE_PRESETS对齐）
-    val basePresets = listOf(
-        Pair("人像优化", RenderParameters(saturation = 8f, contrast = 10f, warmth = 3f, sharpness = 18f, skinSmooth = 25f)),
-        Pair("风景增强", RenderParameters(saturation = 15f, contrast = 12f, warmth = 5f, sharpness = 22f, clarity = 15f, dehaze = 10f)),
-        Pair("夜景优化", RenderParameters(saturation = 5f, contrast = 20f, warmth = 10f, sharpness = 25f, denoise = 20f)),
-        Pair("美食鲜艳", RenderParameters(saturation = 25f, contrast = 8f, warmth = 12f, sharpness = 30f, brightness = 5f)),
-        Pair("街拍胶片", RenderParameters(saturation = 5f, contrast = 15f, warmth = 0f, sharpness = 20f, grain = 12f)),
-        Pair("柔和清新", RenderParameters(saturation = 10f, contrast = -5f, warmth = 8f, sharpness = 10f, fade = 5f))
-    )
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // 一键AI微调按钮（与Web端对齐）
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = CyanAccent.copy(alpha = 0.2f)),
-            border = BorderStroke(1.dp, CyanAccent.copy(alpha = 0.3f))
-        ) {
-            Row(
+        if (showCompare) {
+            Text(
+                text = "原图",
+                color = Color.White,
+                fontSize = 12.sp,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .clickable(enabled = !isProcessing) { onAutoTune() },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                if (isProcessing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = HasselbladOrange,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("正在分析...", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
-                } else {
-                    Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("一键 AI 微调", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // 基础预设按钮（横向滚动）
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(basePresets) { preset ->
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable(enabled = !isProcessing) { onPresetApply(preset.second) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-                ) {
-                    Text(
-                        text = preset.first,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    )
-                }
-            }
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
         }
     }
 }
 
-/**
- * 参数滑块卡片 - 与Web端参数分组对齐
- * 基础参数：曝光、亮度、对比度、饱和度、色温、自然饱和度
- * 专业参数：高光、阴影、白色色阶、黑色色阶、纹理、清晰度
- * 效果参数：锐度、去雾、降噪、颗粒、褪色、肤色平滑
- */
 @Composable
-private fun ParamSliderCard(
+private fun EmptyImagePlaceholder(
+    onGallery: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1A1A1A))
+            .clickable { onGallery() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = null,
+                tint = HasselbladOrange,
+                modifier = Modifier.size(56.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("点击选择图片", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
+            Text("支持相册与拍照", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+        }
+    }
+}
+
+// ==================== 基础参数面板 ====================
+
+@Composable
+private fun BasicParamsPanel(
     params: RenderParameters,
-    lockedParams: List<String>,
+    locked: Set<String>,
     onParamChange: (String, Float) -> Unit,
     onLockToggle: (String) -> Unit
 ) {
-    // 基础参数（与Web端basicParams对齐）
     val basicParams = listOf(
-        Triple("exposure", "曝光", params.exposure),
-        Triple("brightness", "亮度", params.brightness),
-        Triple("contrast", "对比度", params.contrast),
-        Triple("saturation", "饱和度", params.saturation),
-        Triple("warmth", "色温", params.warmth),
-        Triple("vibrance", "自然饱和度", params.vibrance)
+        Triple("exposure", "曝光", -100f..100f),
+        Triple("brightness", "亮度", -100f..100f),
+        Triple("contrast", "对比度", -100f..100f),
+        Triple("saturation", "饱和度", -100f..100f),
+        Triple("vibrance", "鲜艳度", -100f..100f),
+        Triple("warmth", "色温", -100f..100f),
+        Triple("highlights", "高光", -100f..100f),
+        Triple("shadows", "阴影", -100f..100f),
+        Triple("whites", "白色", -100f..100f),
+        Triple("blacks", "黑色", -100f..100f),
+        Triple("texture", "纹理", -100f..100f),
+        Triple("clarity", "清晰度", 0f..100f),
+        Triple("sharpness", "锐度", 0f..100f),
+        Triple("dehaze", "去霾", 0f..100f),
+        Triple("denoise", "降噪", 0f..100f),
+        Triple("grain", "颗粒", 0f..100f),
+        Triple("fade", "褪色", 0f..100f),
+        Triple("skinSmooth", "肤色平滑", 0f..100f)
     )
 
-    // 专业参数（与Web端proParams对齐）
-    val proParams = listOf(
-        Triple("highlights", "高光", params.highlights),
-        Triple("shadows", "阴影", params.shadows),
-        Triple("whites", "白色色阶", params.whites),
-        Triple("blacks", "黑色色阶", params.blacks),
-        Triple("texture", "纹理", params.texture),
-        Triple("clarity", "清晰度", params.clarity)
-    )
-
-    // 效果参数（与Web端effectParams对齐）
-    val effectParams = listOf(
-        Triple("sharpness", "锐度", params.sharpness),
-        Triple("dehaze", "去雾", params.dehaze),
-        Triple("denoise", "降噪", params.denoise),
-        Triple("grain", "颗粒", params.grain),
-        Triple("fade", "褪色", params.fade),
-        Triple("skinSmooth", "肤色平滑", params.skinSmooth)
-    )
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // 基础参数区域
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "基础参数",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                basicParams.forEach { (key, name, value) ->
-                    ParamSliderRow(key, name, value, lockedParams, onParamChange, onLockToggle)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        items(basicParams) { (key, name, range) ->
+            val value = when (key) {
+                "exposure" -> params.exposure
+                "brightness" -> params.brightness
+                "contrast" -> params.contrast
+                "saturation" -> params.saturation
+                "vibrance" -> params.vibrance
+                "warmth" -> params.warmth
+                "highlights" -> params.highlights
+                "shadows" -> params.shadows
+                "whites" -> params.whites
+                "blacks" -> params.blacks
+                "texture" -> params.texture
+                "clarity" -> params.clarity
+                "sharpness" -> params.sharpness
+                "dehaze" -> params.dehaze
+                "denoise" -> params.denoise
+                "grain" -> params.grain
+                "fade" -> params.fade
+                "skinSmooth" -> params.skinSmooth
+                else -> 0f
             }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 专业参数区域
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "专业参数",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                proParams.forEach { (key, name, value) ->
-                    ParamSliderRow(key, name, value, lockedParams, onParamChange, onLockToggle)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 效果参数区域
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "效果参数",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                effectParams.forEach { (key, name, value) ->
-                    ParamSliderRow(key, name, value, lockedParams, onParamChange, onLockToggle)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
+            ParamSliderRow(
+                key = key,
+                name = name,
+                value = value,
+                range = range,
+                locked = locked.contains(key),
+                onValueChange = onParamChange,
+                onLockToggle = onLockToggle
+            )
         }
     }
 }
 
-/**
- * 单个参数滑块行
- */
 @Composable
 private fun ParamSliderRow(
     key: String,
     name: String,
     value: Float,
-    lockedParams: List<String>,
-    onParamChange: (String, Float) -> Unit,
+    range: ClosedFloatingPointRange<Float>,
+    locked: Boolean,
+    onValueChange: (String, Float) -> Unit,
     onLockToggle: (String) -> Unit
 ) {
-    val isEffectParam = key in listOf("sharpness", "dehaze", "denoise", "grain", "fade", "skinSmooth")
-    
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = name,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.width(70.dp)
+            modifier = Modifier.width(64.dp)
         )
-
         Slider(
             value = value,
-            onValueChange = { onParamChange(key, it) },
-            valueRange = if (isEffectParam) 0f..100f else -100f..100f,
+            onValueChange = { onValueChange(key, it) },
+            valueRange = range,
             modifier = Modifier.weight(1f),
             colors = SliderDefaults.colors(
-                activeTrackColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange,
-                thumbColor = if (lockedParams.contains(key)) Color.Gray else HasselbladOrange
+                activeTrackColor = if (locked) Color.Gray else HasselbladOrange,
+                thumbColor = if (locked) Color.Gray else HasselbladOrange,
+                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
             ),
-            enabled = !lockedParams.contains(key)
+            enabled = !locked
         )
-
         Text(
-            text = if (value > 0 && !isEffectParam) "+${value.toInt()}" else value.toInt().toString(),
-            color = if (value != 0f) HasselbladOrange else Color.Gray,
+            text = "${value.roundToInt()}",
+            color = if (locked) Color.Gray else MaterialTheme.colorScheme.onBackground,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(36.dp),
+            textAlign = TextAlign.End
         )
-
-        // 锁定按钮
         IconButton(
             onClick = { onLockToggle(key) },
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(32.dp)
         ) {
             Icon(
-                if (lockedParams.contains(key)) Icons.Default.Lock else Icons.Default.LockOpen,
-                if (lockedParams.contains(key)) "解锁参数" else "锁定参数",
-                tint = if (lockedParams.contains(key)) HasselbladOrange else Color.Gray,
-                modifier = Modifier.size(16.dp)
+                imageVector = if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
+                contentDescription = if (locked) "已锁定" else "未锁定",
+                tint = if (locked) HasselbladOrange else Color.White.copy(alpha = 0.4f),
+                modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
-/**
- * 色彩风格卡片
- */
-@Composable
-private fun ColorStyleCard(
-    style: ColorStylePreset,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) style.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = BorderStroke(1.dp, if (isSelected) style.color else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(style.icon, null, tint = style.color, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = style.name,
-                color = if (isSelected) style.color else MaterialTheme.colorScheme.onBackground,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = style.description,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                fontSize = 10.sp
-            )
-        }
-    }
-}
+// ==================== 风格面板 ====================
 
-/**
- * 智能优化卡片
- */
 @Composable
-private fun SmartOptimizationCard(
-    optimization: SmartOptimization,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun StylePanel(
+    styles: List<ColorStylePreset>,
+    selectedId: String?,
+    onSelect: (String) -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) optimization.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = BorderStroke(1.dp, if (isSelected) optimization.color else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(vertical = 12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(optimization.icon, null, tint = optimization.color, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = optimization.name,
-                        color = if (isSelected) optimization.color else MaterialTheme.colorScheme.onBackground,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+        items(styles) { style ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .width(72.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (selectedId == style.id) style.color.copy(alpha = 0.2f) else Color.Transparent)
+                    .border(
+                        width = if (selectedId == style.id) 2.dp else 0.dp,
+                        color = if (selectedId == style.id) style.color else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
                     )
-                    if (optimization.isPro) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(Icons.Default.Star, null, tint = WarningYellow, modifier = Modifier.size(10.dp))
-                        Text("PRO", color = WarningYellow, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                    }
+                    .clickable { onSelect(style.id) }
+                    .padding(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(style.color.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(style.icon, contentDescription = null, tint = style.color, modifier = Modifier.size(24.dp))
                 }
-                Text(
-                    text = optimization.description,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    fontSize = 10.sp
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(style.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+// ==================== 智能优化面板 ====================
+
+@Composable
+private fun SmartPanel(
+    optimizations: List<SmartOptimization>,
+    selected: Set<String>,
+    onToggle: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        items(optimizations) { opt ->
+            val isSelected = selected.contains(opt.id)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isSelected) opt.color.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f))
+                    .border(
+                        width = if (isSelected) 1.dp else 0.dp,
+                        color = if (isSelected) opt.color else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { onToggle(opt.id) }
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Icon(opt.icon, contentDescription = null, tint = opt.color, modifier = Modifier.size(28.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(opt.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        if (opt.isPro) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("PRO", color = HasselbladOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Text(opt.description, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f), fontSize = 12.sp)
+                }
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onToggle(opt.id) },
+                    colors = CheckboxDefaults.colors(checkedColor = opt.color, uncheckedColor = Color.White.copy(alpha = 0.3f))
                 )
             }
         }
     }
 }
 
-/**
- * HSL选择器卡片
- */
+// ==================== HSL 面板 ====================
+
 @Composable
-private fun HSLSelectorCard(
+private fun HSLPanel(
     hslValues: List<HSLValue>,
     selectedId: String,
     onSelect: (String) -> Unit,
     onValueChange: (String, String, Int) -> Unit
 ) {
-    val selectedHsl = hslValues.find { it.id == selectedId } ?: hslValues.first()
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // 色块选择
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(hslValues) { hsl ->
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(hsl.color)
+                        .border(
+                            width = if (selectedId == hsl.id) 3.dp else 0.dp,
+                            color = Color.White,
+                            shape = CircleShape
+                        )
+                        .clickable { onSelect(hsl.id) }
+                )
+            }
+        }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        val selected = hslValues.find { it.id == selectedId } ?: return
+        Spacer(modifier = Modifier.height(8.dp))
+        HSLSliderRow(label = "色相", value = selected.hue.toFloat(), range = -180f..180f, onValueChange = {
+            onValueChange(selected.id, "hue", it.roundToInt())
+        })
+        HSLSliderRow(label = "饱和度", value = selected.saturation.toFloat(), range = -100f..100f, onValueChange = {
+            onValueChange(selected.id, "saturation", it.roundToInt())
+        })
+        HSLSliderRow(label = "明度", value = selected.luminance.toFloat(), range = -100f..100f, onValueChange = {
+            onValueChange(selected.id, "luminance", it.roundToInt())
+        })
+    }
+}
+
+@Composable
+private fun HSLSliderRow(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 6.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // 颜色选择
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                hslValues.forEach { hsl ->
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(hsl.color)
-                            .clickable { onSelect(hsl.id) }
-                            .then(
-                                if (selectedId == hsl.id) {
-                                    Modifier.border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
-                                } else Modifier
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (selectedId == hsl.id) {
-                            Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(16.dp))
-                        }
-                    }
+        Text(label, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.width(56.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = range,
+            modifier = Modifier.weight(1f),
+            colors = SliderDefaults.colors(activeTrackColor = HasselbladOrange, thumbColor = HasselbladOrange, inactiveTrackColor = Color.White.copy(alpha = 0.15f))
+        )
+        Text("${value.roundToInt()}", color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
+    }
+}
+
+// ==================== 曲线面板 ====================
+
+@Composable
+private fun CurvePanel(
+    channel: String,
+    points: List<CurvePoint>,
+    onChannelChange: (String) -> Unit,
+    onPointsChange: (List<CurvePoint>) -> Unit,
+    onPreset: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // 通道选择
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            listOf("rgb" to "RGB", "red" to "红", "green" to "绿", "blue" to "蓝").forEach { (id, label) ->
+                FilterChip(
+                    selected = channel == id,
+                    onClick = { onChannelChange(id) },
+                    label = { Text(label, fontSize = 13.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = HasselbladOrange,
+                        selectedLabelColor = Color.White
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 曲线画布
+        CurveEditor(
+            points = points,
+            channelColor = when (channel) {
+                "red" -> Color.Red
+                "green" -> Color.Green
+                "blue" -> Color.Blue
+                else -> Color.White
+            },
+            onPointsChange = onPointsChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 预设
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("linear" to "线性", "sCurve" to "S曲线", "highContrast" to "高对比", "soft" to "柔和", "invert" to "反相").forEach { (id, label) ->
+                OutlinedButton(
+                    onClick = { onPreset(id) },
+                    modifier = Modifier.height(36.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
+                ) {
+                    Text(label, fontSize = 12.sp)
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(selectedHsl.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 色相
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("色相", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
-                Slider(
-                    value = selectedHsl.hue.toFloat(),
-                    onValueChange = { onValueChange(selectedId, "hue", it.toInt()) },
-                    valueRange = -180f..180f,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(activeTrackColor = selectedHsl.color, thumbColor = selectedHsl.color)
-                )
-                Text("${selectedHsl.hue}°", color = selectedHsl.color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // 饱和度
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("饱和度", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
-                Slider(
-                    value = selectedHsl.saturation.toFloat(),
-                    onValueChange = { onValueChange(selectedId, "saturation", it.toInt()) },
-                    valueRange = -100f..100f,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(activeTrackColor = selectedHsl.color, thumbColor = selectedHsl.color)
-                )
-                Text("${selectedHsl.saturation}", color = selectedHsl.color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // 明度
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("明度", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.width(50.dp))
-                Slider(
-                    value = selectedHsl.luminance.toFloat(),
-                    onValueChange = { onValueChange(selectedId, "luminance", it.toInt()) },
-                    valueRange = -100f..100f,
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(activeTrackColor = selectedHsl.color, thumbColor = selectedHsl.color)
-                )
-                Text("${selectedHsl.luminance}", color = selectedHsl.color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-/**
- * 曲线预设（与Web端CURVE_PRESETS对齐）
- */
-data class CurvePreset(
-    val id: String,
-    val name: String,
-    val points: List<CurvePoint>
-)
-
-/**
- * 曲线调整卡片 - 与Web端对齐，添加曲线预设
- */
 @Composable
-private fun CurveAdjustCard(
-    channel: String,
-    onChannelChange: (String) -> Unit
+private fun CurveEditor(
+    points: List<CurvePoint>,
+    channelColor: Color,
+    onPointsChange: (List<CurvePoint>) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val channels = listOf("rgb", "red", "green", "blue")
-    val channelColors = listOf(MaterialTheme.colorScheme.onBackground, Color.Red, Color.Green, Color.Blue)
-    
-    // 曲线预设（与Web端CURVE_PRESETS对齐）
-    val curvePresets = remember {
-        listOf(
-            CurvePreset("linear", "线性", listOf(CurvePoint(0f, 255f), CurvePoint(255f, 0f))),
-            CurvePreset("contrast", "高对比", listOf(CurvePoint(0f, 255f), CurvePoint(64f, 223f), CurvePoint(192f, 32f), CurvePoint(255f, 0f))),
-            CurvePreset("soft", "柔和", listOf(CurvePoint(0f, 255f), CurvePoint(64f, 207f), CurvePoint(192f, 48f), CurvePoint(255f, 0f))),
-            CurvePreset("s-curve", "S曲线", listOf(CurvePoint(0f, 255f), CurvePoint(64f, 215f), CurvePoint(128f, 128f), CurvePoint(192f, 40f), CurvePoint(255f, 0f))),
-            CurvePreset("invert", "反相", listOf(CurvePoint(0f, 0f), CurvePoint(255f, 255f)))
-        )
-    }
-    
-    var selectedPreset by remember { mutableStateOf("linear") }
+    var controlPoints by remember(points) { mutableStateOf(points) }
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    val haptic = LocalHapticFeedback.current
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // 通道选择
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                channels.forEachIndexed { index, ch ->
-                    Card(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onChannelChange(ch) },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (channel == ch) channelColors[index].copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Text(
-                            text = if (ch == "rgb") "RGB" else ch.uppercase(),
-                            color = if (channel == ch) channelColors[index] else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+    Box(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            val size = this.size
+                            val x = (offset.x / size.width).coerceIn(0f, 1f)
+                            val y = 1f - (offset.y / size.height).coerceIn(0f, 1f)
+                            val index = findNearestPoint(controlPoints, x, y)
+                            if (index != null) {
+                                draggedIndex = index
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        },
+                        onDrag = { change, _ ->
+                            val size = this.size
+                            draggedIndex?.let { index ->
+                                val x = (change.position.x / size.width).coerceIn(0f, 1f)
+                                val y = 1f - (change.position.y / size.height).coerceIn(0f, 1f)
+                                val newPoints = controlPoints.toMutableList()
+                                newPoints[index] = CurvePoint(x, y)
+                                controlPoints = newPoints.sortedBy { it.x }
+                                onPointsChange(controlPoints)
+                            }
+                            change.consume()
+                        },
+                        onDragEnd = { draggedIndex = null }
+                    )
+                }
+        ) {
+            val w = size.width
+            val h = size.height
+
+            // 背景网格
+            val gridColor = Color.White.copy(alpha = 0.1f)
+            for (i in 1..3) {
+                val x = w * i / 4
+                drawLine(gridColor, start = Offset(x, 0f), end = Offset(x, h), strokeWidth = 1f)
+                val y = h * i / 4
+                drawLine(gridColor, start = Offset(0f, y), end = Offset(w, y), strokeWidth = 1f)
+            }
+            drawLine(Color.White.copy(alpha = 0.3f), start = Offset(0f, h), end = Offset(w, 0f), strokeWidth = 1.5f)
+
+            // 曲线
+            if (controlPoints.size >= 2) {
+                val path = Path().apply {
+                    val first = controlPoints.first()
+                    moveTo(first.x * w, h - first.y * h)
+                    for (i in 0 until controlPoints.size - 1) {
+                        val p0 = controlPoints[i]
+                        val p1 = controlPoints[i + 1]
+                        lineTo(p1.x * w, h - p1.y * h)
                     }
                 }
+                drawPath(path, channelColor, style = Stroke(width = 3f))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // 控制点
+            controlPoints.forEach { point ->
+                val cx = point.x * w
+                val cy = h - point.y * h
+                drawCircle(Color.White, radius = 8f, center = Offset(cx, cy))
+                drawCircle(channelColor, radius = 5f, center = Offset(cx, cy))
+            }
+        }
+    }
+}
 
-            // 曲线预览区域
-            Box(
+private fun findNearestPoint(points: List<CurvePoint>, x: Float, y: Float): Int? {
+    if (points.isEmpty()) return null
+    var bestIndex: Int? = null
+    var bestDist = Float.MAX_VALUE
+    points.forEachIndexed { index, point ->
+        val dx = point.x - x
+        val dy = point.y - y
+        val dist = dx * dx + dy * dy
+        if (dist < bestDist && dist < 0.02f) {
+            bestDist = dist
+            bestIndex = index
+        }
+    }
+    return bestIndex
+}
+
+// ==================== 底部操作栏 ====================
+
+@Composable
+private fun BottomActionBar(
+    onGallery: () -> Unit,
+    onCamera: () -> Unit,
+    onAI: () -> Unit,
+    onExport: () -> Unit,
+    onApply: () -> Unit,
+    hasImage: Boolean,
+    isProcessing: Boolean
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        tonalElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Divider(color = Color.White.copy(alpha = 0.1f), thickness = 0.5.dp)
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.ShowChart, null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
-                    Text("曲线调整", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f), fontSize = 12.sp)
-                    Text("拖动曲线点进行精确调整", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f), fontSize = 10.sp)
+                OutlinedIconButton(onClick = onGallery, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.PhotoLibrary, contentDescription = "相册", tint = MaterialTheme.colorScheme.onBackground)
+                }
+                OutlinedIconButton(onClick = onCamera, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = "拍照", tint = MaterialTheme.colorScheme.onBackground)
+                }
+
+                Button(
+                    onClick = onAI,
+                    enabled = hasImage && !isProcessing,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isProcessing) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("AI 微调", fontSize = 14.sp)
+                    }
+                }
+
+                Button(
+                    onClick = onExport,
+                    enabled = hasImage && !isProcessing,
+                    colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("导出", fontSize = 14.sp)
+                }
+
+                Button(
+                    onClick = onApply,
+                    enabled = hasImage && !isProcessing,
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("应用", fontSize = 14.sp)
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
+// ==================== AI 进度浮层 ====================
 
-            // 曲线预设选择（与Web端对齐）
-            Text(
-                text = "曲线预设",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+@Composable
+private fun AIProgressOverlay(
+    stage: InferenceStage,
+    progress: Float,
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = stage == InferenceStage.ANALYZING || stage == InferenceStage.DETECTING_SUBJECT ||
+                stage == InferenceStage.COMPUTING_PARAMS || stage == InferenceStage.APPLYING_AI ||
+                stage == InferenceStage.COMPLETED || stage == InferenceStage.ERROR,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
             ) {
-                curvePresets.forEach { preset ->
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { selectedPreset = preset.id },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectedPreset == preset.id) HasselbladOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        border = BorderStroke(1.dp, if (selectedPreset == preset.id) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                Icons.Default.TrendingUp,
-                                null,
-                                tint = if (selectedPreset == preset.id) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = preset.name,
-                                color = if (selectedPreset == preset.id) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (stage == InferenceStage.COMPLETED) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(48.dp))
+                    } else if (stage == InferenceStage.ERROR) {
+                        Icon(Icons.Default.Error, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(48.dp))
+                    } else {
+                        CircularProgressIndicator(color = HasselbladOrange, modifier = Modifier.size(48.dp))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(message, color = Color.White, fontSize = 14.sp)
+                    if (stage != InferenceStage.COMPLETED && stage != InferenceStage.ERROR) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth(0.7f),
+                            color = HasselbladOrange,
+                            trackColor = Color.White.copy(alpha = 0.15f)
+                        )
                     }
                 }
             }
         }
-    }
-}
-
-/**
- * 获取默认HSL值
- */
-private fun defaultHslValuesList(): List<HSLValue> {
-    return listOf(
-        HSLValue("red", "红色", Color.Red),
-        HSLValue("orange", "橙色", Color(0xFFFF8000)),
-        HSLValue("yellow", "黄色", Color.Yellow),
-        HSLValue("green", "绿色", Color.Green),
-        HSLValue("cyan", "青色", Color.Cyan),
-        HSLValue("blue", "蓝色", Color.Blue),
-        HSLValue("purple", "紫色", Color(0xFF8000FF)),
-        HSLValue("magenta", "洋红", Color.Magenta)
-    )
-}
-
-/**
- * 更新渲染参数
- */
-private fun updateRenderParam(params: RenderParameters, key: String, value: Float): RenderParameters {
-    return when (key) {
-        "saturation" -> params.copy(saturation = value)
-        "contrast" -> params.copy(contrast = value)
-        "brightness" -> params.copy(brightness = value)
-        "warmth" -> params.copy(warmth = value)
-        "exposure" -> params.copy(exposure = value)
-        "vibrance" -> params.copy(vibrance = value)
-        "highlights" -> params.copy(highlights = value)
-        "shadows" -> params.copy(shadows = value)
-        "whites" -> params.copy(whites = value)
-        "blacks" -> params.copy(blacks = value)
-        "clarity" -> params.copy(clarity = value)
-        "sharpness" -> params.copy(sharpness = value)
-        "texture" -> params.copy(texture = value)
-        "dehaze" -> params.copy(dehaze = value)
-        "denoise" -> params.copy(denoise = value)
-        "grain" -> params.copy(grain = value)
-        "fade" -> params.copy(fade = value)
-        "skinSmooth" -> params.copy(skinSmooth = value)
-        else -> params
-    }
-}
-
-/**
- * 根据渲染参数生成ColorMatrix（实时预览效果）
- * 将RenderParameters转换为Compose可用的ColorMatrix
- */
-private fun RenderParameters.toColorMatrix(): ColorMatrix {
-    // 归一化参数到 [-1, 1] 或 [0, 1] 范围
-    val sat = 1f + (saturation / 100f)  // 0.0 ~ 2.0
-    val con = 1f + (contrast / 100f)    // 0.0 ~ 2.0
-    val bri = brightness / 100f         // -1.0 ~ 1.0
-    val war = warmth / 100f             // -1.0 ~ 1.0
-
-    // 饱和度矩阵
-    val saturationMatrix = ColorMatrix().apply {
-        setToSaturation(sat.coerceIn(0f, 2f))
-    }
-
-    // 对比度矩阵
-    val contrastMatrix = ColorMatrix(
-        floatArrayOf(
-            con, 0f, 0f, 0f, (1f - con) * 128f,
-            0f, con, 0f, 0f, (1f - con) * 128f,
-            0f, 0f, con, 0f, (1f - con) * 128f,
-            0f, 0f, 0f, 1f, 0f
-        )
-    )
-
-    // 亮度矩阵
-    val brightnessMatrix = ColorMatrix(
-        floatArrayOf(
-            1f, 0f, 0f, 0f, bri * 255f,
-            0f, 1f, 0f, 0f, bri * 255f,
-            0f, 0f, 1f, 0f, bri * 255f,
-            0f, 0f, 0f, 1f, 0f
-        )
-    )
-
-    // 色温矩阵（暖色/冷色调整）
-    val warmthMatrix = ColorMatrix().apply {
-        if (war > 0) {
-            // 暖色调：增加红色，减少蓝色
-            val warmFactor = war * 0.3f
-            set(ColorMatrix(
-                floatArrayOf(
-                    1f + warmFactor, 0f, 0f, 0f, 0f,
-                    0f, 1f, 0f, 0f, 0f,
-                    0f, 0f, 1f - warmFactor, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-            ))
-        } else if (war < 0) {
-            // 冷色调：减少红色，增加蓝色
-            val coolFactor = -war * 0.3f
-            set(ColorMatrix(
-                floatArrayOf(
-                    1f - coolFactor, 0f, 0f, 0f, 0f,
-                    0f, 1f, 0f, 0f, 0f,
-                    0f, 0f, 1f + coolFactor, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-            ))
-        }
-    }
-
-    // 合并所有矩阵（按顺序应用）
-    val result = ColorMatrix()
-    result.set(saturationMatrix)
-    result.timesAssign(contrastMatrix)
-    result.timesAssign(brightnessMatrix)
-    result.timesAssign(warmthMatrix)
-
-    return result
-}
-
-/**
- * 保存图片到系统相册（应用滤镜效果后保存）
- */
-private suspend fun saveImageToGallery(
-    context: android.content.Context,
-    bitmap: Bitmap?,
-    renderParams: RenderParameters = RenderParameters()
-): Boolean {
-    if (bitmap == null) return false
-    return withContext(Dispatchers.IO) {
-        try {
-            // 应用ColorMatrix滤镜效果到bitmap
-            val filteredBitmap = applyColorMatrixToBitmap(bitmap, renderParams)
-
-            val filename = "omaster_ai_${System.currentTimeMillis()}.jpg"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster")
-                }
-                val uri = context.contentResolver.insert(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    contentValues
-                )
-                uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { out ->
-                        filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                    }
-                    true
-                } ?: false
-            } else {
-                // Android 9 及以下：使用应用外部私有目录，无需权限且卸载自动清理
-                val dir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-                val file = java.io.File(dir, "OMaster/$filename")
-                file.parentFile?.mkdirs()
-                file.outputStream().use { out ->
-                    filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                }
-                // 通知相册扫描
-                MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg"), null)
-                true
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("AIFineTune", "Save image failed", e)
-            false
-        }
-    }
-}
-
-/**
- * 将ColorMatrix滤镜效果应用到Bitmap上
- */
-private fun applyColorMatrixToBitmap(source: Bitmap, renderParams: RenderParameters): Bitmap {
-    val colorMatrix = renderParams.toColorMatrix()
-    val result = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(result)
-    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-
-    // 将Compose ColorMatrix转换为Android ColorMatrix
-    val values = FloatArray(20)
-    colorMatrix.values.forEachIndexed { index, value -> values[index] = value }
-    val androidColorMatrix = android.graphics.ColorMatrix(values)
-    paint.colorFilter = android.graphics.ColorMatrixColorFilter(androidColorMatrix)
-
-    canvas.drawBitmap(source, 0f, 0f, paint)
-    return result
-}
-
-/**
- * 创建临时图片Uri用于相机拍照保存
- * 使用应用私有缓存目录 + FileProvider，避免 MediaStore 提前创建文件导致的权限和兼容问题
- */
-private fun createTempImageUri(context: android.content.Context): Uri {
-    return try {
-        val cameraDir = java.io.File(context.cacheDir, "camera").apply {
-            if (!exists()) mkdirs()
-        }
-        val tempFile = java.io.File.createTempFile(
-            "omaster_camera_${System.currentTimeMillis()}",
-            ".jpg",
-            cameraDir
-        )
-        FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            tempFile
-        )
-    } catch (e: Exception) {
-        android.util.Log.e("AIFineTune", "创建相机临时文件失败", e)
-        Uri.EMPTY
     }
 }

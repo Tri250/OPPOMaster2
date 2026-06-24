@@ -310,7 +310,18 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.AIFineTune> {
-                AIFineTuneScreen(onBack = { navController.popBackStack() })
+                AIFineTuneScreen(
+                    onBack = { navController.popBackStack() },
+                    onApply = { params ->
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "已应用 ${params.nonZeroCount()} 项调整",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable<Screen.WatermarkEditor> { backStackEntry ->

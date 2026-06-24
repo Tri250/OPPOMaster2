@@ -63,7 +63,39 @@ data class RenderParameters(
     
     // 降噪与平滑参数
     val denoise: Float = 0f,          // 降噪 [0, 100]
-    val skinSmooth: Float = 0f        // 肤色平滑 [0, 100]
+    val skinSmooth: Float = 0f,       // 肤色平滑 [0, 100]
+
+    // HSL 8 通道调色（每个通道：色相/饱和度/明度）
+    val hslRedHue: Float = 0f,        // 红色色相 [-180, 180]
+    val hslRedSaturation: Float = 0f, // 红色饱和度 [-100, 100]
+    val hslRedLuminance: Float = 0f,  // 红色明度 [-100, 100]
+    val hslOrangeHue: Float = 0f,
+    val hslOrangeSaturation: Float = 0f,
+    val hslOrangeLuminance: Float = 0f,
+    val hslYellowHue: Float = 0f,
+    val hslYellowSaturation: Float = 0f,
+    val hslYellowLuminance: Float = 0f,
+    val hslGreenHue: Float = 0f,
+    val hslGreenSaturation: Float = 0f,
+    val hslGreenLuminance: Float = 0f,
+    val hslCyanHue: Float = 0f,
+    val hslCyanSaturation: Float = 0f,
+    val hslCyanLuminance: Float = 0f,
+    val hslBlueHue: Float = 0f,
+    val hslBlueSaturation: Float = 0f,
+    val hslBlueLuminance: Float = 0f,
+    val hslPurpleHue: Float = 0f,
+    val hslPurpleSaturation: Float = 0f,
+    val hslPurpleLuminance: Float = 0f,
+    val hslMagentaHue: Float = 0f,
+    val hslMagentaSaturation: Float = 0f,
+    val hslMagentaLuminance: Float = 0f,
+
+    // 曲线查找表（4 通道：rgb/r/g/b，每通道 256 个采样点）
+    val curveRgbLut: FloatArray = IDENTITY_CURVE.copyOf(),
+    val curveRedLut: FloatArray = IDENTITY_CURVE.copyOf(),
+    val curveGreenLut: FloatArray = IDENTITY_CURVE.copyOf(),
+    val curveBlueLut: FloatArray = IDENTITY_CURVE.copyOf()
 ) : Parcelable {
     
     companion object {
@@ -75,7 +107,10 @@ data class RenderParameters(
         
         // 默认参数（无调整）
         val DEFAULT = RenderParameters()
-        
+
+        // 恒等曲线查找表（256 采样，y = x）
+        val IDENTITY_CURVE = FloatArray(256) { it / 255f }
+
         // 参数元数据
         val PARAM_METADATA = listOf(
             ParamMetadata("saturation", "饱和度", RANGE_MIN, RANGE_MAX, "色彩饱和度调整"),
@@ -186,15 +221,34 @@ data class RenderParameters(
     }
     
     /**
-     * 检查是否有任何非零参数
+     * 检查是否有任何非零参数（含 HSL 与曲线）
      */
     fun hasAnyAdjustment(): Boolean {
-        return saturation != 0f || contrast != 0f || brightness != 0f ||
-               warmth != 0f || sharpness != 0f || clarity != 0f ||
-               vibrance != 0f || highlights != 0f || shadows != 0f ||
-               whites != 0f || blacks != 0f || grain != 0f ||
-               fade != 0f || dehaze != 0f || denoise != 0f ||
-               skinSmooth != 0f || exposure != 0f || texture != 0f
+        if (saturation != 0f || contrast != 0f || brightness != 0f ||
+            warmth != 0f || sharpness != 0f || clarity != 0f ||
+            vibrance != 0f || highlights != 0f || shadows != 0f ||
+            whites != 0f || blacks != 0f || grain != 0f ||
+            fade != 0f || dehaze != 0f || denoise != 0f ||
+            skinSmooth != 0f || exposure != 0f || texture != 0f
+        ) return true
+
+        // HSL
+        if (hslRedHue != 0f || hslRedSaturation != 0f || hslRedLuminance != 0f) return true
+        if (hslOrangeHue != 0f || hslOrangeSaturation != 0f || hslOrangeLuminance != 0f) return true
+        if (hslYellowHue != 0f || hslYellowSaturation != 0f || hslYellowLuminance != 0f) return true
+        if (hslGreenHue != 0f || hslGreenSaturation != 0f || hslGreenLuminance != 0f) return true
+        if (hslCyanHue != 0f || hslCyanSaturation != 0f || hslCyanLuminance != 0f) return true
+        if (hslBlueHue != 0f || hslBlueSaturation != 0f || hslBlueLuminance != 0f) return true
+        if (hslPurpleHue != 0f || hslPurpleSaturation != 0f || hslPurpleLuminance != 0f) return true
+        if (hslMagentaHue != 0f || hslMagentaSaturation != 0f || hslMagentaLuminance != 0f) return true
+
+        // 曲线（任一 LUT 非恒等映射即视为有调整）
+        if (!curveRgbLut.contentEquals(IDENTITY_CURVE)) return true
+        if (!curveRedLut.contentEquals(IDENTITY_CURVE)) return true
+        if (!curveGreenLut.contentEquals(IDENTITY_CURVE)) return true
+        if (!curveBlueLut.contentEquals(IDENTITY_CURVE)) return true
+
+        return false
     }
     
     /**
@@ -226,7 +280,35 @@ data class RenderParameters(
             denoise = if (denoise != 0f) denoise else other.denoise,
             skinSmooth = if (skinSmooth != 0f) skinSmooth else other.skinSmooth,
             exposure = if (exposure != 0f) exposure else other.exposure,
-            texture = if (texture != 0f) texture else other.texture
+            texture = if (texture != 0f) texture else other.texture,
+            hslRedHue = if (hslRedHue != 0f) hslRedHue else other.hslRedHue,
+            hslRedSaturation = if (hslRedSaturation != 0f) hslRedSaturation else other.hslRedSaturation,
+            hslRedLuminance = if (hslRedLuminance != 0f) hslRedLuminance else other.hslRedLuminance,
+            hslOrangeHue = if (hslOrangeHue != 0f) hslOrangeHue else other.hslOrangeHue,
+            hslOrangeSaturation = if (hslOrangeSaturation != 0f) hslOrangeSaturation else other.hslOrangeSaturation,
+            hslOrangeLuminance = if (hslOrangeLuminance != 0f) hslOrangeLuminance else other.hslOrangeLuminance,
+            hslYellowHue = if (hslYellowHue != 0f) hslYellowHue else other.hslYellowHue,
+            hslYellowSaturation = if (hslYellowSaturation != 0f) hslYellowSaturation else other.hslYellowSaturation,
+            hslYellowLuminance = if (hslYellowLuminance != 0f) hslYellowLuminance else other.hslYellowLuminance,
+            hslGreenHue = if (hslGreenHue != 0f) hslGreenHue else other.hslGreenHue,
+            hslGreenSaturation = if (hslGreenSaturation != 0f) hslGreenSaturation else other.hslGreenSaturation,
+            hslGreenLuminance = if (hslGreenLuminance != 0f) hslGreenLuminance else other.hslGreenLuminance,
+            hslCyanHue = if (hslCyanHue != 0f) hslCyanHue else other.hslCyanHue,
+            hslCyanSaturation = if (hslCyanSaturation != 0f) hslCyanSaturation else other.hslCyanSaturation,
+            hslCyanLuminance = if (hslCyanLuminance != 0f) hslCyanLuminance else other.hslCyanLuminance,
+            hslBlueHue = if (hslBlueHue != 0f) hslBlueHue else other.hslBlueHue,
+            hslBlueSaturation = if (hslBlueSaturation != 0f) hslBlueSaturation else other.hslBlueSaturation,
+            hslBlueLuminance = if (hslBlueLuminance != 0f) hslBlueLuminance else other.hslBlueLuminance,
+            hslPurpleHue = if (hslPurpleHue != 0f) hslPurpleHue else other.hslPurpleHue,
+            hslPurpleSaturation = if (hslPurpleSaturation != 0f) hslPurpleSaturation else other.hslPurpleSaturation,
+            hslPurpleLuminance = if (hslPurpleLuminance != 0f) hslPurpleLuminance else other.hslPurpleLuminance,
+            hslMagentaHue = if (hslMagentaHue != 0f) hslMagentaHue else other.hslMagentaHue,
+            hslMagentaSaturation = if (hslMagentaSaturation != 0f) hslMagentaSaturation else other.hslMagentaSaturation,
+            hslMagentaLuminance = if (hslMagentaLuminance != 0f) hslMagentaLuminance else other.hslMagentaLuminance,
+            curveRgbLut = if (!curveRgbLut.contentEquals(IDENTITY_CURVE)) curveRgbLut else other.curveRgbLut,
+            curveRedLut = if (!curveRedLut.contentEquals(IDENTITY_CURVE)) curveRedLut else other.curveRedLut,
+            curveGreenLut = if (!curveGreenLut.contentEquals(IDENTITY_CURVE)) curveGreenLut else other.curveGreenLut,
+            curveBlueLut = if (!curveBlueLut.contentEquals(IDENTITY_CURVE)) curveBlueLut else other.curveBlueLut
         )
     }
     
@@ -255,7 +337,35 @@ data class RenderParameters(
             denoise = denoise + (target.denoise - denoise) * clampedT,
             skinSmooth = skinSmooth + (target.skinSmooth - skinSmooth) * clampedT,
             exposure = exposure + (target.exposure - exposure) * clampedT,
-            texture = texture + (target.texture - texture) * clampedT
+            texture = texture + (target.texture - texture) * clampedT,
+            hslRedHue = hslRedHue + (target.hslRedHue - hslRedHue) * clampedT,
+            hslRedSaturation = hslRedSaturation + (target.hslRedSaturation - hslRedSaturation) * clampedT,
+            hslRedLuminance = hslRedLuminance + (target.hslRedLuminance - hslRedLuminance) * clampedT,
+            hslOrangeHue = hslOrangeHue + (target.hslOrangeHue - hslOrangeHue) * clampedT,
+            hslOrangeSaturation = hslOrangeSaturation + (target.hslOrangeSaturation - hslOrangeSaturation) * clampedT,
+            hslOrangeLuminance = hslOrangeLuminance + (target.hslOrangeLuminance - hslOrangeLuminance) * clampedT,
+            hslYellowHue = hslYellowHue + (target.hslYellowHue - hslYellowHue) * clampedT,
+            hslYellowSaturation = hslYellowSaturation + (target.hslYellowSaturation - hslYellowSaturation) * clampedT,
+            hslYellowLuminance = hslYellowLuminance + (target.hslYellowLuminance - hslYellowLuminance) * clampedT,
+            hslGreenHue = hslGreenHue + (target.hslGreenHue - hslGreenHue) * clampedT,
+            hslGreenSaturation = hslGreenSaturation + (target.hslGreenSaturation - hslGreenSaturation) * clampedT,
+            hslGreenLuminance = hslGreenLuminance + (target.hslGreenLuminance - hslGreenLuminance) * clampedT,
+            hslCyanHue = hslCyanHue + (target.hslCyanHue - hslCyanHue) * clampedT,
+            hslCyanSaturation = hslCyanSaturation + (target.hslCyanSaturation - hslCyanSaturation) * clampedT,
+            hslCyanLuminance = hslCyanLuminance + (target.hslCyanLuminance - hslCyanLuminance) * clampedT,
+            hslBlueHue = hslBlueHue + (target.hslBlueHue - hslBlueHue) * clampedT,
+            hslBlueSaturation = hslBlueSaturation + (target.hslBlueSaturation - hslBlueSaturation) * clampedT,
+            hslBlueLuminance = hslBlueLuminance + (target.hslBlueLuminance - hslBlueLuminance) * clampedT,
+            hslPurpleHue = hslPurpleHue + (target.hslPurpleHue - hslPurpleHue) * clampedT,
+            hslPurpleSaturation = hslPurpleSaturation + (target.hslPurpleSaturation - hslPurpleSaturation) * clampedT,
+            hslPurpleLuminance = hslPurpleLuminance + (target.hslPurpleLuminance - hslPurpleLuminance) * clampedT,
+            hslMagentaHue = hslMagentaHue + (target.hslMagentaHue - hslMagentaHue) * clampedT,
+            hslMagentaSaturation = hslMagentaSaturation + (target.hslMagentaSaturation - hslMagentaSaturation) * clampedT,
+            hslMagentaLuminance = hslMagentaLuminance + (target.hslMagentaLuminance - hslMagentaLuminance) * clampedT,
+            curveRgbLut = curveRgbLut,
+            curveRedLut = curveRedLut,
+            curveGreenLut = curveGreenLut,
+            curveBlueLut = curveBlueLut
         )
     }
 }

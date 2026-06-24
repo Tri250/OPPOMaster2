@@ -53,6 +53,22 @@ uniform float uDehaze;          // 去霾 [0, 1]
 uniform float uDenoise;         // 降噪 [0, 1]
 uniform float uSkinSmooth;      // 肤色平滑 [0, 1]
 
+// HSL 8 通道调色 uniform（[-1, 1]）
+uniform float uHSLRedHue;       uniform float uHSLRedSat;       uniform float uHSLRedLum;
+uniform float uHSLOrangeHue;    uniform float uHSLOrangeSat;    uniform float uHSLOrangeLum;
+uniform float uHSLYellowHue;    uniform float uHSLYellowSat;    uniform float uHSLYellowLum;
+uniform float uHSLGreenHue;     uniform float uHSLGreenSat;     uniform float uHSLGreenLum;
+uniform float uHSLCyanHue;      uniform float uHSLCyanSat;      uniform float uHSLCyanLum;
+uniform float uHSLBlueHue;      uniform float uHSLBlueSat;      uniform float uHSLBlueLum;
+uniform float uHSLPurpleHue;    uniform float uHSLPurpleSat;    uniform float uHSLPurpleLum;
+uniform float uHSLMagentaHue;   uniform float uHSLMagentaSat;   uniform float uHSLMagentaLum;
+
+// 曲线 LUT（256 采样）
+uniform float uCurveRgbLut[256];
+uniform float uCurveRedLut[256];
+uniform float uCurveGreenLut[256];
+uniform float uCurveBlueLut[256];
+
 // ========== 辅助函数 ==========
 
 /**
@@ -453,8 +469,90 @@ vec3 adjustVibrance(vec3 color, float strength) {
 }
 
 /**
+ * HSL 8 通道分区调整
+ * 根据色相落在哪个颜色区间，应用对应的 H/S/L 偏移
+ */
+vec3 adjustHSL(vec3 color) {
+    vec3 hsl = rgb2hsl(color);
+    float h = hsl.x;
+    float s = hsl.y;
+    float l = hsl.z;
+
+    // 计算每个通道的权重（基于色相距离中心的角度）
+    float weights[8];
+    weights[0] = max(0.0, 1.0 - abs(h - 0.0) / 0.06);          // 红（环绕 0/1）
+    weights[0] = max(weights[0], max(0.0, 1.0 - abs(h - 1.0) / 0.06));
+    weights[1] = max(0.0, 1.0 - abs(h - 0.125) / 0.045);        // 橙
+    weights[2] = max(0.0, 1.0 - abs(h - 0.21) / 0.04);          // 黄
+    weights[3] = max(0.0, 1.0 - abs(h - 0.335) / 0.085);        // 绿
+    weights[4] = max(0.0, 1.0 - abs(h - 0.46) / 0.04);          // 青
+    weights[5] = max(0.0, 1.0 - abs(h - 0.60) / 0.10);          // 蓝
+    weights[6] = max(0.0, 1.0 - abs(h - 0.76) / 0.06);          // 紫
+    weights[7] = max(0.0, 1.0 - abs(h - 0.88) / 0.06);          // 洋红
+
+    float hueShift = 0.0;
+    float satShift = 0.0;
+    float lumShift = 0.0;
+    float totalWeight = 0.0;
+
+    // 加权累加各通道调整
+    hueShift += weights[0] * uHSLRedHue;       satShift += weights[0] * uHSLRedSat;       lumShift += weights[0] * uHSLRedLum;
+    hueShift += weights[1] * uHSLOrangeHue;    satShift += weights[1] * uHSLOrangeSat;    lumShift += weights[1] * uHSLOrangeLum;
+    hueShift += weights[2] * uHSLYellowHue;    satShift += weights[2] * uHSLYellowSat;    lumShift += weights[2] * uHSLYellowLum;
+    hueShift += weights[3] * uHSLGreenHue;     satShift += weights[3] * uHSLGreenSat;     lumShift += weights[3] * uHSLGreenLum;
+    hueShift += weights[4] * uHSLCyanHue;      satShift += weights[4] * uHSLCyanSat;      lumShift += weights[4] * uHSLCyanLum;
+    hueShift += weights[5] * uHSLBlueHue;      satShift += weights[5] * uHSLBlueSat;      lumShift += weights[5] * uHSLBlueLum;
+    hueShift += weights[6] * uHSLPurpleHue;    satShift += weights[6] * uHSLPurpleSat;    lumShift += weights[6] * uHSLPurpleLum;
+    hueShift += weights[7] * uHSLMagentaHue;   satShift += weights[7] * uHSLMagentaSat;   lumShift += weights[7] * uHSLMagentaLum;
+
+    for (int i = 0; i < 8; i++) {
+        totalWeight += weights[i];
+    }
+    if (totalWeight > 0.0) {
+        hueShift /= totalWeight;
+        satShift /= totalWeight;
+        lumShift /= totalWeight;
+    }
+
+    // 应用调整
+    hsl.x = fract(hsl.x + hueShift * 0.5);      // hueShift 归一化到 [-1,1]，映射到 [-0.5,0.5]
+    hsl.y = clamp(s + satShift, 0.0, 1.0);
+    hsl.z = clamp(l + lumShift, 0.0, 1.0);
+
+    return hsl2rgb(hsl);
+}
+
+/**
+ * 曲线映射（单通道）
+ */
+float applyCurve(float value, float lut[256]) {
+    float idx = value * 255.0;
+    int i0 = int(floor(idx));
+    int i1 = int(ceil(idx));
+    i0 = clamp(i0, 0, 255);
+    i1 = clamp(i1, 0, 255);
+    float t = fract(idx);
+    return mix(lut[i0], lut[i1], t);
+}
+
+/**
+ * 曲线映射（RGB）
+ * RGB 曲线影响三个通道，R/G/B 曲线分别影响对应通道
+ */
+vec3 applyCurves(vec3 color) {
+    vec3 result = color;
+    result.r = applyCurve(result.r, uCurveRgbLut);
+    result.g = applyCurve(result.g, uCurveRgbLut);
+    result.b = applyCurve(result.b, uCurveRgbLut);
+    result.r = applyCurve(result.r, uCurveRedLut);
+    result.g = applyCurve(result.g, uCurveGreenLut);
+    result.b = applyCurve(result.b, uCurveBlueLut);
+    return result;
+}
+
+/**
  * 主函数
- * 执行18参数全通道图像处理
+ * 执行18参数 + HSL + 曲线全通道图像处理
  */
 void main() {
     // 获取原始像素颜色
@@ -511,7 +609,26 @@ void main() {
         color.r = color.r + uWarmth * 0.1;
         color.b = color.b - uWarmth * 0.1;
     }
-    
+
+    // HSL 8 通道调色
+    {
+        vec3 hslAdjusted = adjustHSL(color);
+        // 仅当任一 HSL 参数非零时才替换，避免无谓计算带来的浮点误差
+        if (abs(uHSLRedHue) + abs(uHSLRedSat) + abs(uHSLRedLum) +
+            abs(uHSLOrangeHue) + abs(uHSLOrangeSat) + abs(uHSLOrangeLum) +
+            abs(uHSLYellowHue) + abs(uHSLYellowSat) + abs(uHSLYellowLum) +
+            abs(uHSLGreenHue) + abs(uHSLGreenSat) + abs(uHSLGreenLum) +
+            abs(uHSLCyanHue) + abs(uHSLCyanSat) + abs(uHSLCyanLum) +
+            abs(uHSLBlueHue) + abs(uHSLBlueSat) + abs(uHSLBlueLum) +
+            abs(uHSLPurpleHue) + abs(uHSLPurpleSat) + abs(uHSLPurpleLum) +
+            abs(uHSLMagentaHue) + abs(uHSLMagentaSat) + abs(uHSLMagentaLum) > 0.01) {
+            color = hslAdjusted;
+        }
+    }
+
+    // 曲线映射
+    color = applyCurves(color);
+
     // ========== 5. 光影调整 ==========
     
     // 高光调整

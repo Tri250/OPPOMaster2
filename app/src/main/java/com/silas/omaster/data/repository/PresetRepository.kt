@@ -89,12 +89,10 @@ class PresetRepository private constructor(context: Context) {
         HttpClient(CIO) {
             engine {
                 maxConnectionsCount = 32
-                endpoint {
-                    maxConnectionsPerRoute = 8
-                    connectTimeout = NETWORK_TIMEOUT_MS
-                    requestTimeout = NETWORK_TIMEOUT_MS
-                    socketTimeout = NETWORK_TIMEOUT_MS
-                }
+                endpoint.maxConnectionsPerRoute = 8
+                endpoint.connectTimeout = NETWORK_TIMEOUT_MS
+                endpoint.requestTimeout = NETWORK_TIMEOUT_MS
+                endpoint.socketTimeout = NETWORK_TIMEOUT_MS
             }
             install(ContentNegotiation) {
                 json(Json {

@@ -289,10 +289,10 @@ class ShaderProgram private constructor(
     }
     
     /**
-     * 设置渲染参数到着色器
+     * 设置渲染参数到着色器（含 HSL 与曲线 LUT）
      */
     fun setRenderParameters(params: RenderParameters) {
-        // 设置各个参数
+        // 18 个基础参数
         setUniform1f("uSaturation", params.saturation / 100f)
         setUniform1f("uContrast", params.contrast / 100f)
         setUniform1f("uBrightness", params.brightness / 100f)
@@ -311,6 +311,38 @@ class ShaderProgram private constructor(
         setUniform1f("uSkinSmooth", params.skinSmooth / 100f)
         setUniform1f("uExposure", params.exposure / 100f)
         setUniform1f("uTextureStrength", params.texture / 100f)
+
+        // HSL 8 通道（归一化到 [-1, 1]）
+        setUniform1f("uHSLRedHue", params.hslRedHue / 180f)
+        setUniform1f("uHSLRedSat", params.hslRedSaturation / 100f)
+        setUniform1f("uHSLRedLum", params.hslRedLuminance / 100f)
+        setUniform1f("uHSLOrangeHue", params.hslOrangeHue / 180f)
+        setUniform1f("uHSLOrangeSat", params.hslOrangeSaturation / 100f)
+        setUniform1f("uHSLOrangeLum", params.hslOrangeLuminance / 100f)
+        setUniform1f("uHSLYellowHue", params.hslYellowHue / 180f)
+        setUniform1f("uHSLYellowSat", params.hslYellowSaturation / 100f)
+        setUniform1f("uHSLYellowLum", params.hslYellowLuminance / 100f)
+        setUniform1f("uHSLGreenHue", params.hslGreenHue / 180f)
+        setUniform1f("uHSLGreenSat", params.hslGreenSaturation / 100f)
+        setUniform1f("uHSLGreenLum", params.hslGreenLuminance / 100f)
+        setUniform1f("uHSLCyanHue", params.hslCyanHue / 180f)
+        setUniform1f("uHSLCyanSat", params.hslCyanSaturation / 100f)
+        setUniform1f("uHSLCyanLum", params.hslCyanLuminance / 100f)
+        setUniform1f("uHSLBlueHue", params.hslBlueHue / 180f)
+        setUniform1f("uHSLBlueSat", params.hslBlueSaturation / 100f)
+        setUniform1f("uHSLBlueLum", params.hslBlueLuminance / 100f)
+        setUniform1f("uHSLPurpleHue", params.hslPurpleHue / 180f)
+        setUniform1f("uHSLPurpleSat", params.hslPurpleSaturation / 100f)
+        setUniform1f("uHSLPurpleLum", params.hslPurpleLuminance / 100f)
+        setUniform1f("uHSLMagentaHue", params.hslMagentaHue / 180f)
+        setUniform1f("uHSLMagentaSat", params.hslMagentaSaturation / 100f)
+        setUniform1f("uHSLMagentaLum", params.hslMagentaLuminance / 100f)
+
+        // 曲线 LUT（256 采样）
+        setUniform1fv("uCurveRgbLut", params.curveRgbLut)
+        setUniform1fv("uCurveRedLut", params.curveRedLut)
+        setUniform1fv("uCurveGreenLut", params.curveGreenLut)
+        setUniform1fv("uCurveBlueLut", params.curveBlueLut)
     }
     
     /**

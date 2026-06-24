@@ -393,10 +393,10 @@ class MasterInferenceEngine private constructor(context: Context) {
                 bSum += pixel and 0xFF
             }
             for (x in 0 until w) {
-                tempPixels[y * w + x] = ((aSum / diameter) shl 24) or
-                        ((rSum / diameter) shl 16) or
-                        ((gSum / diameter) shl 8) or
-                        (bSum / diameter)
+                tempPixels[y * w + x] = ((aSum / diameter).toInt() shl 24) or
+                        ((rSum / diameter).toInt() shl 16) or
+                        ((gSum / diameter).toInt() shl 8) or
+                        (bSum / diameter).toInt()
                 // 滑动窗口：移出左侧，移入右侧
                 val leftX = (x - radius - 1).coerceIn(0, w - 1)
                 val rightX = (x + radius + 1).coerceIn(0, w - 1)
@@ -421,10 +421,10 @@ class MasterInferenceEngine private constructor(context: Context) {
                 bSum += pixel and 0xFF
             }
             for (y in 0 until h) {
-                outPixels[y * w + x] = ((aSum / diameter) shl 24) or
-                        ((rSum / diameter) shl 16) or
-                        ((gSum / diameter) shl 8) or
-                        (bSum / diameter)
+                outPixels[y * w + x] = ((aSum / diameter).toInt() shl 24) or
+                        ((rSum / diameter).toInt() shl 16) or
+                        ((gSum / diameter).toInt() shl 8) or
+                        (bSum / diameter).toInt()
                 val topY = (y - radius - 1).coerceIn(0, h - 1)
                 val botY = (y + radius + 1).coerceIn(0, h - 1)
                 val topPixel = tempPixels[topY * w + x]
