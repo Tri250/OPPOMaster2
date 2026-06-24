@@ -140,7 +140,9 @@ fun MainApp(navController: NavHostController) {
     LaunchedEffect(showOnboarding) {
         if (showOnboarding) {
             navController.navigate(Screen.Onboarding) {
-                popUpTo(Screen.Home) { inclusive = true }
+                // 保留 Home 在回退栈中，使引导页完成后可 popBackStack 回到首页
+                // 修复 V1.9.3: inclusive=true 会移除 Home，导致"开始体验"按钮无法进入下一步
+                popUpTo(Screen.Home) { inclusive = false }
             }
         }
     }

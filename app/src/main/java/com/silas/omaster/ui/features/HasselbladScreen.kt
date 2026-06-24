@@ -2354,10 +2354,20 @@ private suspend fun loadBitmapFromUri(
 private fun createTempImageUri(context: android.content.Context): Uri? {
     return try {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "Hasselblad").apply {
-            if (!exists()) mkdirs()
+        // 优先使用外部文件目录（已配置 FileProvider 路径 Pictures/Hasselblad/）
+        // 若外部目录不可用（getExternalFilesDir 返回 null），回退到缓存目录（已配置 camera/ 路径）
+        val externalDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        val imageFile = if (externalDir != null) {
+            val storageDir = File(externalDir, "Hasselblad").apply {
+                if (!exists()) mkdirs()
+            }
+            File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
+        } else {
+            val cacheDir = File(context.cacheDir, "camera").apply {
+                if (!exists()) mkdirs()
+            }
+            File.createTempFile("IMG_${timeStamp}_", ".jpg", cacheDir)
         }
-        val imageFile = File.createTempFile("IMG_${timeStamp}_", ".jpg", storageDir)
         FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
