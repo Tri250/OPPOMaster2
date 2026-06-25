@@ -399,8 +399,17 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.LUTShare> {
                 LUTShareScreen(
                     onBack = { navController.popBackStack() },
-                    onDownload = { },
+                    onDownload = { lutResource ->
+                        // 标记当前激活的 LUT，便于哈苏之眼引用
+                        com.silas.omaster.data.lut.LUTManager
+                            .getInstance(context.applicationContext)
+                            .setActiveLUT(lutResource.id)
+                    },
                     onApplyLUT = { lutResource ->
+                        // 应用 LUT 前先激活到 LUTManager，确保哈苏之眼能读取
+                        com.silas.omaster.data.lut.LUTManager
+                            .getInstance(context.applicationContext)
+                            .setActiveLUT(lutResource.id)
                         navController.navigate(Screen.HasselbladColor)
                     },
                     onNavigateToStyleGenerator = {
