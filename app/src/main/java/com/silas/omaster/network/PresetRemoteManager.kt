@@ -24,11 +24,26 @@ import kotlin.math.pow
 
 object PresetRemoteManager {
 
+    /**
+     * JSON 解析配置——与 PresetRepository 保持一致
+     *
+     * 修复：原实现使用 Json 伴生对象默认配置（ignoreUnknownKeys=false, coerceInputValues=false），
+     * 导致远程 JSON 包含未知字段或显式 null 时解析失败，而同一段 JSON 写入磁盘后
+     * PresetRepository 却能解析成功（因其配置了 ignoreUnknownKeys=true, coerceInputValues=true）。
+     * 此处统一配置消除"拉取阶段"与"缓存读取阶段"的行为不一致。
+     */
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        isLenient = true
+        coerceInputValues = true
+    }
+
     // 使用 lazy + Application 生命周期内复用
     private val client: HttpClient by lazy {
         HttpClient(CIO) {
             install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true })
+                json(json)
             }
 
             // ==================== 连接池配置 ====================
@@ -141,7 +156,7 @@ object PresetRemoteManager {
             // which prevents Ktor's content-negotiation from selecting the JSON transformer.
             // Read as text and decode explicitly to avoid NoTransformationFoundException.
             val text: String = response.body()
-            val presets = Json.decodeFromString(PresetList.serializer(), text)
+            val presets = json.decodeFromString(PresetList.serializer(), text)
             Log.d("PresetRemoteManager", "Fetched ${presets.presets.size} presets")
             presets
         } catch (e: Exception) {
@@ -243,7 +258,7 @@ object PresetRemoteManager {
 
             // 验证 JSON 是否有效
             val presetList = try {
-                Json.decodeFromString(PresetList.serializer(), text)
+                json.decodeFromString(PresetList.serializer(), text)
             } catch (e: Exception) {
                 Log.e("PresetRemoteManager", "Invalid JSON received", e)
                 return Result.failure(Exception("JSON 格式错误"))

@@ -90,8 +90,8 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 2. 亮度分析
         val brightnessLevel = computeBrightnessLevel(bitmap)
 
-        // 3. 人脸检测（使用 ML Kit Face Detection）
-        val faceCount = detectFaces(bitmap)
+        // 3. 人脸检测（使用 ML Kit Face Detection，传入已计算的 colorProfile 用于回退推断）
+        val faceCount = detectFaces(bitmap, colorProfile)
 
         // 4. 纹理分析（边缘密度）
         val edgeDensity = computeEdgeDensity(bitmap)
@@ -311,10 +311,14 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
     /**
      * 计算亮度等级
+     *
+     * 优化：使用 getPixels 批量读取整行像素，替代逐像素 getPixel 调用，
+     * 减少 JNI 开销。
      */
     private fun computeBrightnessLevel(bitmap: Bitmap): BrightnessLevel {
         val width = bitmap.width
         val height = bitmap.height
+        if (width <= 0 || height <= 0) return BrightnessLevel.NORMAL
         var totalLuminance = 0L
         var pixelCount = 0
 
@@ -324,12 +328,15 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             else -> 2
         }
 
+        // 按行批量读取像素
+        val rowPixels = IntArray(width)
         for (y in 0 until height step step) {
+            bitmap.getPixels(rowPixels, 0, width, 0, y, width, 1)
             for (x in 0 until width step step) {
-                val pixel = bitmap.getPixel(x, y)
-                val r = Color.red(pixel)
-                val g = Color.green(pixel)
-                val b = Color.blue(pixel)
+                val pixel = rowPixels[x]
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
                 // Rec. 709 亮度公式
                 val luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt()
                 totalLuminance += luminance
@@ -337,6 +344,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             }
         }
 
+        if (pixelCount == 0) return BrightnessLevel.NORMAL
         val avgLuminance = (totalLuminance / pixelCount).toInt()
 
         return when {
@@ -351,8 +359,10 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     /**
      * 人脸检测（使用 ML Kit Face Detection）
      * 使用单例 FaceDetector 避免反复创建销毁（性能优化）
+     *
+     * 优化：传入已计算的 colorProfile，避免回退时重复调用 sampleColorProfile
      */
-    private suspend fun detectFaces(bitmap: Bitmap): Int = withContext(Dispatchers.Default) {
+    private suspend fun detectFaces(bitmap: Bitmap, colorProfile: ColorProfile? = null): Int = withContext(Dispatchers.Default) {
         try {
             val inputImage = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
             // 使用单例 FaceDetector，避免每次创建销毁（节省 200-500ms）
@@ -361,15 +371,14 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         } catch (e: Exception) {
             // 检测失败时回退到肤色推断
             android.util.Log.w("HeuristicSceneAnalyzer", "ML Kit人脸检测失败，回退到肤色推断: ${e.message}")
-            inferFaceCountBySkinTone(bitmap)
+            inferFaceCountBySkinTone(colorProfile ?: sampleColorProfile(bitmap, sampleRatio = 0.6f))
         }
     }
 
     /**
      * 基于肤色占比推断人脸数量（备用方案）
      */
-    private fun inferFaceCountBySkinTone(bitmap: Bitmap): Int {
-        val colorProfile = sampleColorProfile(bitmap, sampleRatio = 0.6f)
+    private fun inferFaceCountBySkinTone(colorProfile: ColorProfile): Int {
         return when {
             colorProfile.skinToneRatio > 0.15 -> 2
             colorProfile.skinToneRatio > 0.08 -> 1

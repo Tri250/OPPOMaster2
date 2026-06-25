@@ -977,7 +977,14 @@ data class PresetItem(
     val sections: List<com.silas.omaster.model.PresetSection>? = null,  // 动态参数分组（保留原始展示数据）
     val filter: String? = null,  // 滤镜
     val softLight: String? = null,  // 柔光
-    val vignette: String? = null  // 暗角
+    val vignette: String? = null,  // 暗角
+    // 修复数据丢失：以下字符串型专业参数在 params(Map<String,Int>) 中无法存储，
+    // 新增专用字段确保 MasterPreset↔PresetItem 往返不丢失
+    val iso: String? = null,
+    val shutterSpeed: String? = null,
+    val exposureCompensation: String? = null,
+    val whiteBalance: String? = null,
+    val colorTone: String? = null
 ) {
     fun toExportModel() = ExportPresetModel(
         name = name,
@@ -1022,10 +1029,12 @@ data class PresetItem(
             cyanMagenta = params["cyan_magenta"],
             colorTemperature = params["color_temperature"],
             colorHue = params["color_hue"],
-            exposureCompensation = params["exposure_compensation"]?.toString(),
-            iso = params["iso"]?.toString(),
-            shutterSpeed = params["shutter_speed"]?.toString(),
-            whiteBalance = params["white_balance"]?.toString()
+            // 修复数据丢失：从专用字段读取字符串型专业参数，而非 params Map
+            exposureCompensation = exposureCompensation,
+            iso = iso,
+            shutterSpeed = shutterSpeed,
+            whiteBalance = whiteBalance,
+            colorTone = colorTone
         )
     }
 }
@@ -1143,7 +1152,13 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         sections = sections,  // 保留原始动态参数分组
         filter = filter,
         softLight = softLight,
-        vignette = vignette
+        vignette = vignette,
+        // 修复数据丢失：保存字符串型专业参数
+        iso = this.iso,
+        shutterSpeed = this.shutterSpeed,
+        exposureCompensation = this.exposureCompensation,
+        whiteBalance = this.whiteBalance,
+        colorTone = this.colorTone
     )
 }
 

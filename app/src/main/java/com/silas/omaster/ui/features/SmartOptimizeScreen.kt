@@ -281,9 +281,11 @@ fun SmartOptimizeScreen(
                 isOptimizing = false
                 return@launch
             }
+            // 确保源图可变（部分场景下解码的 bitmap 是 immutable，后续 Canvas 绘制需要 mutable）
+            val mutableSource = if (source.isMutable) source else source.copy(Bitmap.Config.ARGB_8888, true)
 
             try {
-                var workingBitmap: Bitmap = source
+                var workingBitmap: Bitmap = mutableSource
                 for ((index, id) in selectedOptimizeIds.withIndex()) {
                     optimizationStep = index + 1
                     optimizationCurrentName = optimizeIdToName[id] ?: id
@@ -296,7 +298,7 @@ fun SmartOptimizeScreen(
                         inferenceEngine.applyOptimization(workingBitmap, id, strength)
                     }
                     // 回收中间 Bitmap（非原图），防止内存泄漏
-                    if (prevBitmap !== source && !prevBitmap.isRecycled) {
+                    if (prevBitmap !== mutableSource && prevBitmap !== source && !prevBitmap.isRecycled) {
                         prevBitmap.recycle()
                     }
 
@@ -305,25 +307,22 @@ fun SmartOptimizeScreen(
                 }
                 optimizedBitmap = workingBitmap
                 previewMode = "after"
+                // 优化完成提示，不自动跳转——让用户查看结果、保存或手动应用参数
+                Toast.makeText(context, "优化完成，可保存图片或返回应用参数", Toast.LENGTH_SHORT).show()
+            } catch (e: OutOfMemoryError) {
+                android.util.Log.e("SmartOptimize", "Optimization OOM", e)
+                Toast.makeText(context, "内存不足，请选择较小图片或减少优化项", Toast.LENGTH_LONG).show()
+                // OOM 时清理中间 bitmap 引用，帮助 GC 回收
+                if (mutableSource !== source && !mutableSource.isRecycled) mutableSource.recycle()
+                optimizedOptions.clear()
             } catch (e: Exception) {
                 android.util.Log.e("SmartOptimize", "Optimization failed", e)
                 Toast.makeText(context, "优化失败：${e.message}，请重试", Toast.LENGTH_LONG).show()
-                return@launch
+                if (mutableSource !== source && !mutableSource.isRecycled) mutableSource.recycle()
+                optimizedOptions.clear()
             } finally {
                 isOptimizing = false
             }
-            // 完成 - 应用参数
-            onApply(OptimizeParams(
-                hdrEnabled = hdrEnabled,
-                hdrStrength = hdrStrength,
-                noiseReductionEnabled = noiseReductionEnabled,
-                noiseReductionStrength = noiseReductionStrength,
-                sharpenEnabled = sharpenEnabled,
-                sharpenStrength = sharpenStrength,
-                exposureAdjustment = exposureAdjustment,
-                colorCorrectionEnabled = colorCorrectionEnabled,
-                colorCorrectionStrength = colorCorrectionStrength
-            ))
         }
     }
 
@@ -389,7 +388,22 @@ fun SmartOptimizeScreen(
             navigationIcon = {
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onBack()
+                    // 如果已有优化结果，返回时自动将参数应用到设置
+                    if (optimizedBitmap != null) {
+                        onApply(OptimizeParams(
+                            hdrEnabled = hdrEnabled,
+                            hdrStrength = hdrStrength,
+                            noiseReductionEnabled = noiseReductionEnabled,
+                            noiseReductionStrength = noiseReductionStrength,
+                            sharpenEnabled = sharpenEnabled,
+                            sharpenStrength = sharpenStrength,
+                            exposureAdjustment = exposureAdjustment,
+                            colorCorrectionEnabled = colorCorrectionEnabled,
+                            colorCorrectionStrength = colorCorrectionStrength
+                        ))
+                    } else {
+                        onBack()
+                    }
                 }) {
                     Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
                 }
@@ -892,37 +906,83 @@ fun SmartOptimizeScreen(
  */
 private fun loadSampledBitmap(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
     return try {
+        // 第一步：仅解码尺寸
+        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(uri)?.use { stream ->
-            // 第一步：仅解码尺寸
-            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeStream(stream, null, options)
-            // 计算降采样倍数
-            val sampleSize = calculateInSampleSize(options, maxDimension, maxDimension)
-            // 第二步：降采样解码
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-            context.contentResolver.openInputStream(uri)?.use { s2 ->
-                BitmapFactory.decodeStream(s2, null, decodeOptions)
-            }
+            BitmapFactory.decodeStream(stream, null, boundsOptions)
         }
+        // 计算降采样倍数
+        val sampleSize = calculateInSampleSize(boundsOptions, maxDimension, maxDimension)
+        // 第二步：降采样解码
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val decoded = context.contentResolver.openInputStream(uri)?.use { s2 ->
+            BitmapFactory.decodeStream(s2, null, decodeOptions)
+        }
+        // 应用 EXIF 方向旋转，确保图片显示正确朝向
+        decoded?.let { applyExifOrientation(context, uri, it) }
     } catch (e: Exception) {
+        android.util.Log.e("SmartOptimize", "loadSampledBitmap failed", e)
+        null
+    } catch (e: OutOfMemoryError) {
+        android.util.Log.e("SmartOptimize", "loadSampledBitmap OOM", e)
         null
     }
 }
 
+/**
+ * 计算 BitmapFactory 降采样倍数
+ *
+ * 修复：原实现使用 halfHeight/halfWidth 与 reqHeight/reqWidth 比较，
+ * 导致当图片尺寸在 [reqDim, reqDim*2] 区间时 inSampleSize 仍为 1，
+ * 全分辨率图片被加载到内存，后续图像处理时引发 OOM 闪退。
+ *
+ * 正确逻辑：持续将 inSampleSize 翻倍，直到解码后尺寸不超过目标尺寸。
+ */
 private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
-    val (height, width) = options.outHeight to options.outWidth
+    val height = options.outHeight
+    val width = options.outWidth
     var inSampleSize = 1
-    if (height > reqHeight || width > reqWidth) {
-        val halfHeight = height / 2
-        val halfWidth = width / 2
-        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
-            inSampleSize *= 2
-        }
+    if (height <= 0 || width <= 0) return inSampleSize
+    while (height / (inSampleSize * 2) >= reqHeight && width / (inSampleSize * 2) >= reqWidth) {
+        inSampleSize *= 2
     }
     return inSampleSize
+}
+
+/**
+ * 根据 EXIF 方向标签旋转 Bitmap，确保图片朝向正确
+ */
+private fun applyExifOrientation(context: Context, uri: Uri, bitmap: Bitmap): Bitmap {
+    return try {
+        val exif = android.media.ExifInterface(context.contentResolver.openInputStream(uri)!!)
+        val orientation = exif.getAttributeInt(
+            android.media.ExifInterface.TAG_ORIENTATION,
+            android.media.ExifInterface.ORIENTATION_NORMAL
+        )
+        val matrix = Matrix()
+        when (orientation) {
+            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            android.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            android.media.ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            android.media.ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.postRotate(90f); matrix.postScale(-1f, 1f)
+            }
+            android.media.ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.postRotate(270f); matrix.postScale(-1f, 1f)
+            }
+            else -> return bitmap
+        }
+        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (rotated !== bitmap) bitmap.recycle()
+        rotated
+    } catch (e: Exception) {
+        bitmap
+    }
 }
 
 /**

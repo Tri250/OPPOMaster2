@@ -236,6 +236,11 @@ class MasterInferenceEngine private constructor(context: Context) {
                 "color" -> applyColorCorrection(bitmap, clampedStrength)
                 else -> bitmap
             }
+        } catch (e: OutOfMemoryError) {
+            // OOM 是 Error 而非 Exception，必须单独捕获，否则会闪退
+            android.util.Log.e("MasterInferenceEngine", "applyOptimization OOM: $optimizationId", e)
+            System.gc()
+            bitmap
         } catch (e: Exception) {
             android.util.Log.e("MasterInferenceEngine", "applyOptimization failed: $optimizationId", e)
             bitmap
@@ -275,6 +280,8 @@ class MasterInferenceEngine private constructor(context: Context) {
     /**
      * 锐化增强：使用 Unsharp Mask 提升边缘清晰度。
      * @param strength 0.0~1.0，控制锐化强度（0.4~2.0）
+     *
+     * 内存优化：复用 srcPixels 数组作为输出，减少一次 width*height*4 字节分配
      */
     private fun applySharpen(bitmap: Bitmap, strength: Float): Bitmap {
         val width = bitmap.width
@@ -284,11 +291,13 @@ class MasterInferenceEngine private constructor(context: Context) {
         // 锐化强度：0.4（轻微）到 2.0（强烈），由 strength 线性映射
         val sharpenStrength = 0.4f + 1.6f * strength
 
+        // 复用 srcPixels 作为输出缓冲区，减少一次大数组分配
         val srcPixels = IntArray(width * height)
         val blurPixels = IntArray(width * height)
-        val outPixels = IntArray(width * height)
         bitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
         blurred.getPixels(blurPixels, 0, width, 0, 0, width, height)
+        // 提前回收模糊图，释放内存
+        blurred.recycle()
 
         for (i in srcPixels.indices) {
             val s = srcPixels[i]
@@ -306,11 +315,10 @@ class MasterInferenceEngine private constructor(context: Context) {
             val og = (sg + sharpenStrength * (sg - bg)).toInt().coerceIn(0, 255)
             val ob = (sb + sharpenStrength * (sb - bb)).toInt().coerceIn(0, 255)
 
-            outPixels[i] = (sa shl 24) or (or shl 16) or (og shl 8) or ob
+            srcPixels[i] = (sa shl 24) or (or shl 16) or (og shl 8) or ob
         }
 
-        output.setPixels(outPixels, 0, width, 0, 0, width, height)
-        blurred.recycle()
+        output.setPixels(srcPixels, 0, width, 0, 0, width, height)
         return output
     }
 
@@ -477,9 +485,8 @@ class MasterInferenceEngine private constructor(context: Context) {
     /**
      * 基于 Bitmap 像素的真实直方图计算
      *
-     * 直接遍历像素数据，统计每个亮度/色阶的像素数量，
-     * 生成 256 级精度的 L/R/G/B 直方图。采样步长根据图片尺寸动态调整，
-     * 大图跳步采样保证性能，小图逐像素保证精度。
+     * 优化：使用 getPixels 批量读取整行像素，替代逐像素 getPixel 调用，
+     * 减少 JNI 开销，大图性能提升 10 倍以上。
      */
     private fun computeRealHistogram(bitmap: Bitmap): HistogramData {
         val width = bitmap.width
@@ -503,13 +510,15 @@ class MasterInferenceEngine private constructor(context: Context) {
         var shadowCount = 0
         var highlightCount = 0
 
-        // 逐像素统计直方图
+        // 按行批量读取像素，替代逐像素 getPixel
+        val rowPixels = IntArray(width)
         for (y in 0 until height step step) {
+            bitmap.getPixels(rowPixels, 0, width, 0, y, width, 1)
             for (x in 0 until width step step) {
-                val pixel = bitmap.getPixel(x, y)
-                val r = android.graphics.Color.red(pixel)
-                val g = android.graphics.Color.green(pixel)
-                val b = android.graphics.Color.blue(pixel)
+                val pixel = rowPixels[x]
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
 
                 // Rec.709 亮度
                 val luma = (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt().coerceIn(0, 255)

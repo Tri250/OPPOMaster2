@@ -174,8 +174,8 @@ class HomeViewModel(
         if (_searchQuery.value.isNotEmpty()) {
             val query = _searchQuery.value.lowercase()
             result = result.filter { preset ->
-                preset.name.lowercase().contains(query) ||
-                preset.author.lowercase().contains(query) ||
+                preset.name?.lowercase()?.contains(query) == true ||
+                preset.author?.lowercase()?.contains(query) == true ||
                 preset.tags?.any { it.lowercase().contains(query) } == true
             }
         }
