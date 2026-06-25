@@ -225,15 +225,35 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "FaceDetector预初始化失败", e)
                 }
 
-                // 预初始化云同步：首次启动时自动同步预设源
+                // 订阅动态加载：首次启动或本地缓存缺失时，拉取所有启用的订阅源
+                // 取代已删除的云同步功能，所有预设源统一由订阅管理驱动
                 try {
-                    val cloudSyncManager = com.silas.omaster.cloud.CloudSyncManager.getInstance(this@OMasterApplication)
-                    if (cloudSyncManager.shouldSync()) {
-                        cloudSyncManager.sync()
-                        StartupLogger.logStep("云同步初始同步", SystemClock.elapsedRealtime() - lazyStart)
+                    val subManager = com.silas.omaster.data.local.SubscriptionManager.getInstance(this@OMasterApplication)
+                    val enabledSubs = subManager.subscriptionsFlow.value.filter { it.isEnabled }
+                    var fetchedCount = 0
+                    for (sub in enabledSubs) {
+                        val cacheFile = java.io.File(this@OMasterApplication.filesDir, subManager.getFileNameForUrl(sub.url))
+                        // 仅在本地缓存缺失时拉取，避免每次启动都产生网络请求
+                        if (!cacheFile.exists()) {
+                            try {
+                                val result = com.silas.omaster.network.PresetRemoteManager.fetchAndSave(
+                                    this@OMasterApplication, sub.url, forceUpdate = false
+                                )
+                                if (result.isSuccess) {
+                                    fetchedCount++
+                                    Log.i("OMasterApplication", "订阅拉取成功: ${sub.name}")
+                                }
+                            } catch (e: Throwable) {
+                                Log.w("OMasterApplication", "订阅拉取失败: ${sub.name}", e)
+                            }
+                        }
+                    }
+                    if (fetchedCount > 0) {
+                        StartupLogger.logStep("订阅初始拉取($fetchedCount)", SystemClock.elapsedRealtime() - lazyStart)
+                        Log.i("OMasterApplication", "订阅初始拉取完成: $fetchedCount/$enabledSubs.size 个源")
                     }
                 } catch (e: Throwable) {
-                    Log.w("OMasterApplication", "云同步初始同步失败", e)
+                    Log.w("OMasterApplication", "订阅初始拉取失败", e)
                 }
 
             } catch (e: Throwable) {

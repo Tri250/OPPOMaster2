@@ -56,9 +56,6 @@ sealed class Screen {
     data object HasselbladColor : Screen()
 
     @Serializable
-    data object CloudSync : Screen()
-
-    @Serializable
     data object NotificationSettings : Screen()
 
     @Serializable
@@ -66,9 +63,6 @@ sealed class Screen {
 
     @Serializable
     data object PrivacyPolicy : Screen()
-
-    @Serializable
-    data object PresetSourceManager : Screen()
 
     @Serializable
     data object UpdateChannel : Screen()

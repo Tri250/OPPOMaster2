@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Delete
@@ -61,7 +60,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,14 +76,11 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
-import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
-import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
-import kotlinx.coroutines.launch
 import android.widget.Toast
 
 @Composable
@@ -117,12 +112,6 @@ fun SettingsScreen(
     // 新增设置项
     var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
     var showDarkModeDialog by remember { mutableStateOf(false) }
-    var cloudSyncEnabled by remember { mutableStateOf(settingsManager.isCloudSyncEnabled) }
-    var lastSyncTime by remember { mutableStateOf(settingsManager.lastSyncTime) }
-    var showDataSourceDialog by remember { mutableStateOf(false) }
-    var isSyncing by remember { mutableStateOf(false) }
-    val presetRepository = remember { PresetRepository.getInstance(context) }
-    val coroutineScope = rememberCoroutineScope()
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -173,10 +162,6 @@ fun SettingsScreen(
             },
             onDismiss = { showDarkModeDialog = false }
         )
-    }
-
-    if (showDataSourceDialog) {
-        DataSourceDetailsDialog(onDismiss = { showDataSourceDialog = false })
     }
 
     val scrollState = rememberScrollState()
@@ -330,80 +315,6 @@ fun SettingsScreen(
                         color = Color.Gray
                     )
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Cloud Sync Section
-        SettingsSectionCard {
-            SettingsSectionTitle(title = "云同步")
-
-            SettingsSwitchItem(
-                icon = Icons.Default.Sync,
-                title = "启用云同步",
-                subtitle = "从CDN同步最新预设数据",
-                checked = cloudSyncEnabled,
-                onCheckedChange = { enabled ->
-                    cloudSyncEnabled = enabled
-                    settingsManager.isCloudSyncEnabled = enabled
-                    if (enabled) {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                    } else {
-                        haptic.perform(HapticFeedbackType.LongPress)
-                    }
-                }
-            )
-
-            if (cloudSyncEnabled) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-
-                SettingsClickableItem(
-                    icon = Icons.Default.Cloud,
-                    title = "同步数据源",
-                    subtitle = "OPPO、realme、vivo、honor",
-                    onClick = {
-                        // 显示数据源详情对话框
-                        haptic.perform(HapticFeedbackType.TextHandleMove)
-                        showDataSourceDialog = true
-                    }
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-
-                val lastSyncText = if (lastSyncTime > 0) {
-                    val diff = System.currentTimeMillis() - lastSyncTime
-                    val hours = diff / (1000 * 60 * 60)
-                    when {
-                        hours < 1 -> "刚刚"
-                        hours < 24 -> "${hours}小时前"
-                        else -> "${hours / 24}天前"
-                    }
-                } else "从未同步"
-
-                SettingsClickableItem(
-                    icon = Icons.Default.Update,
-                    title = "上次同步",
-                    subtitle = lastSyncText,
-                    onClick = {
-                        // 手动触发同步
-                        if (!isSyncing) {
-                            haptic.perform(HapticFeedbackType.LongPress)
-                            isSyncing = true
-                            coroutineScope.launch {
-                                val result = presetRepository.syncFromCloud()
-                                isSyncing = false
-                                result.onSuccess {
-                                    lastSyncTime = System.currentTimeMillis()
-                                    settingsManager.lastSyncTime = lastSyncTime
-                                    Toast.makeText(context, "同步成功", Toast.LENGTH_SHORT).show()
-                                }.onFailure { e ->
-                                    Toast.makeText(context, "同步失败：${e.message ?: "未知错误"}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    }
-                )
             }
         }
 
@@ -770,61 +681,6 @@ fun ThemeSelectionDialog(
         textContentColor = MaterialTheme.colorScheme.onBackground
     )
 }
-
-/**
- * 同步数据源详情对话框
- */
-@Composable
-private fun DataSourceDetailsDialog(onDismiss: () -> Unit) {
-    val dataSources = listOf(
-        DataSourceInfo("OPPO", "一加/OPPO 大师模式官方预设", UrlConstants.PRESET_OPPO),
-        DataSourceInfo("realme", "realme GT 大师模式官方预设", UrlConstants.PRESET_REALME),
-        DataSourceInfo("vivo", "vivo 蔡司自然色彩官方预设", UrlConstants.PRESET_VIVO),
-        DataSourceInfo("honor", "荣耀 Magic 影像官方预设", UrlConstants.PRESET_HONOR)
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("同步数据源") },
-        text = {
-            LazyColumn {
-                items(dataSources) { source ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = source.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = source.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                        )
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("关闭")
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        textContentColor = MaterialTheme.colorScheme.onBackground
-    )
-}
-
-private data class DataSourceInfo(
-    val name: String,
-    val description: String,
-    val url: String
-)
 
 @Composable
 fun TabSelectionDialog(

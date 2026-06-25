@@ -5,6 +5,7 @@ import com.silas.omaster.model.Subscription
 import com.silas.omaster.model.SubscriptionList
 import com.silas.omaster.util.SecurityCrypto
 import com.silas.omaster.util.UpdateConfigManager
+import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,42 @@ class SubscriptionManager private constructor(context: Context) {
         loadSubscriptions()
     }
 
+    /**
+     * 默认订阅源定义（云同步JSON链接迁移而来）
+     * - 所有源均启用，由 PresetRemoteManager 在后台动态拉取并原子写入
+     * - JsonUtil.loadPresets() 会读取所有启用订阅的本地缓存文件
+     */
+    private val defaultSubscriptions: List<Subscription> = listOf(
+        Subscription(
+            url = UpdateConfigManager.DEFAULT_PRESET_URL,
+            name = "官方内置预设",
+            author = "@OMaster",
+            build = 1,
+            isEnabled = true
+        ),
+        Subscription(
+            url = UrlConstants.PRESET_REALME,
+            name = "realme GT 大师模式预设",
+            author = "@OMaster",
+            build = 1,
+            isEnabled = true
+        ),
+        Subscription(
+            url = UrlConstants.PRESET_VIVO,
+            name = "vivo 蔡司自然色彩预设",
+            author = "@OMaster",
+            build = 1,
+            isEnabled = true
+        ),
+        Subscription(
+            url = UrlConstants.PRESET_HONOR,
+            name = "荣耀 Magic 影像预设",
+            author = "@OMaster",
+            build = 1,
+            isEnabled = true
+        )
+    )
+
     private fun loadSubscriptions() {
         // 优先尝试解密读取，加密存储后无法迁移则回退明文
         val jsonStr = tryReadSecureSubscriptions() ?: prefs.getString(KEY_SUBSCRIPTIONS, null)
@@ -38,27 +75,34 @@ class SubscriptionManager private constructor(context: Context) {
                     } else {
                         sub
                     }
+                }.toMutableList()
+
+                // 迁移逻辑：补齐缺失的默认订阅源（从云同步迁移到订阅管理）
+                // 确保所有 4 个品牌预设源都存在，保留用户已有的自定义订阅
+                val existingUrls = migratedSubscriptions.map { it.url }.toSet()
+                for (defaultSub in defaultSubscriptions) {
+                    if (defaultSub.url !in existingUrls) {
+                        migratedSubscriptions.add(defaultSub)
+                        updated = true
+                        android.util.Log.d("SubscriptionManager", "Added missing default subscription: ${defaultSub.name}")
+                    }
                 }
+
                 _subscriptionsFlow.value = migratedSubscriptions
                 if (updated) {
                     saveSubscriptions()
-                    android.util.Log.d("SubscriptionManager", "Migrated official subscription to new URL")
+                    android.util.Log.d("SubscriptionManager", "Migrated subscriptions, total: ${migratedSubscriptions.size}")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SubscriptionManager", "Failed to decode subscriptions", e)
-                _subscriptionsFlow.value = emptyList()
+                _subscriptionsFlow.value = defaultSubscriptions
+                saveSubscriptions()
             }
         } else {
-            // 首次使用，添加默认订阅
-            val defaultSub = Subscription(
-                url = UpdateConfigManager.DEFAULT_PRESET_URL,
-                name = "官方内置预设",
-                author = "@OMaster",
-                build = 1,
-                isEnabled = true
-            )
-            _subscriptionsFlow.value = listOf(defaultSub)
+            // 首次使用，添加全部默认订阅（4个品牌预设源，默认启用动态加载）
+            _subscriptionsFlow.value = defaultSubscriptions
             saveSubscriptions()
+            android.util.Log.i("SubscriptionManager", "First launch, added ${defaultSubscriptions.size} default subscriptions")
         }
     }
 

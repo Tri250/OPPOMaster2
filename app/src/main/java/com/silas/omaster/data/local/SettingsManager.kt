@@ -69,16 +69,6 @@ enum class DarkMode {
 }
 
 /**
- * 云同步状态枚举
- */
-enum class CloudSyncStatus {
-    DISABLED,     // 未启用
-    SYNCING,      // 同步中
-    SYNCED,       // 已同步
-    ERROR         // 同步出错
-}
-
-/**
  * API配置数据类
  */
 @Serializable
@@ -249,32 +239,7 @@ class SettingsManager private constructor(private val context: Context) {
             }
         }
 
-    // 云同步开关（默认开启）
-    var isCloudSyncEnabled: Boolean
-        get() = getDataSync(KEY_CLOUD_SYNC_ENABLED, true)
-        set(value) {
-            setDataSync(KEY_CLOUD_SYNC_ENABLED, value)
-        }
-
-    // 云端预设数据源 URL
-    val cloudPresetUrls: Map<String, String>
-        get() = UrlConstants.PRESET_SOURCE_URLS
-
-    // 云同步状态（默认 SYNCED，与 isCloudSyncEnabled 默认 true 保持一致）
-    var cloudSyncStatus: CloudSyncStatus
-        get() = safeValueOf(getDataSync(KEY_CLOUD_SYNC_STATUS, CloudSyncStatus.SYNCED.name), CloudSyncStatus.SYNCED)
-        set(value) {
-            setDataSync(KEY_CLOUD_SYNC_STATUS, value.name)
-        }
-
-    // 最后同步时间
-    var lastSyncTime: Long
-        get() = getDataSync(KEY_LAST_SYNC_TIME, 0L)
-        set(value) {
-            setDataSync(KEY_LAST_SYNC_TIME, value)
-        }
-
-    // 用户ID（用于云同步）
+    // 用户ID（用于统计与分析上报）
     var userId: String?
         get() = getDataSyncOrNull(KEY_USER_ID)
         set(value) {
@@ -933,8 +898,7 @@ class SettingsManager private constructor(private val context: Context) {
             val legacyKeys = listOf(
                 KEY_VIBRATION_ENABLED, KEY_THEME_ID, KEY_FLOATING_WINDOW_OPACITY,
                 KEY_DEFAULT_START_TAB, KEY_UPDATE_CHANNEL, KEY_ANALYTICS_ENABLED,
-                KEY_DARK_MODE, KEY_CLOUD_SYNC_ENABLED, KEY_CLOUD_SYNC_STATUS,
-                KEY_LAST_SYNC_TIME, KEY_USER_ID, KEY_CLOUD_API_KEY, KEY_AI_SCENE_ENABLED,
+                KEY_DARK_MODE, KEY_USER_ID, KEY_CLOUD_API_KEY, KEY_AI_SCENE_ENABLED,
                 KEY_LAST_WATERMARK_TEMPLATE, KEY_AI_FINE_TUNE_ENABLED, KEY_SMART_OPTIMIZE_ENABLED,
                 KEY_WATERMARK_EDITOR_ENABLED, KEY_HASSELBLAD_COLOR_ENABLED, KEY_CUSTOM_DEVICE_MODEL,
                 KEY_PRESET_VERSION_MAP, KEY_FAVORITE_PRESET_IDS, KEY_PINNED_PRESET_IDS,
@@ -996,9 +960,6 @@ class SettingsManager private constructor(private val context: Context) {
 
         // 新增功能 Key
         private val KEY_DARK_MODE = stringPreferencesKey("dark_mode")
-        private val KEY_CLOUD_SYNC_ENABLED = booleanPreferencesKey("cloud_sync_enabled")
-        private val KEY_CLOUD_SYNC_STATUS = stringPreferencesKey("cloud_sync_status")
-        private val KEY_LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
         private val KEY_USER_ID = stringPreferencesKey("user_id")
         private val KEY_CLOUD_API_KEY = stringPreferencesKey("cloud_api_key")
         private val KEY_AI_SCENE_ENABLED = booleanPreferencesKey("ai_scene_enabled")
