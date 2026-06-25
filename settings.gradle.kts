@@ -6,7 +6,7 @@ pluginManagement {
     repositories {
         // 本地 Maven 仓库（CI 离线构建用，优先命中已缓存的 AGP/AndroidX 构件）
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
-        // Maven Central（Kotlin/Gradle 插件优先）
+        // Maven Central（Kotlin/Gradle 插件）
         maven { url = uri("https://repo1.maven.org/maven2") }
         // Google Maven（AGP 插件 marker 与插件本体）
         maven { url = uri("https://dl.google.com/dl/android/maven2") }
