@@ -74,6 +74,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -93,6 +95,7 @@ import com.silas.omaster.ui.animation.calculateStaggerDelay
 import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.components.ShimmerPresetGrid
 import com.silas.omaster.ui.service.FloatingWindowController
+import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.hapticClickable
@@ -834,7 +837,9 @@ private fun PresetGrid(
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalItemSpacing = 12.dp,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .semantics { contentDescription = "预设列表" }
             ) {
                 itemsIndexed(
                     items = presets,

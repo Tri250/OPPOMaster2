@@ -131,6 +131,10 @@ import com.silas.omaster.ui.components.ApertureState
 import com.silas.omaster.ui.components.defaultAnalysisSteps
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
+import com.silas.omaster.ui.theme.HasselbladGreen
+import com.silas.omaster.ui.theme.ColorOS16Palette
+import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.animation.adaptiveSpringSpec
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.util.formatSigned
@@ -459,8 +463,8 @@ fun HasselbladScreen(
         AnimatedContent(
             targetState = stage,
             transitionSpec = {
-                fadeIn(animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f)) togetherWith
-                    fadeOut(animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f))
+                fadeIn(animationSpec = adaptiveSpringSpec()) togetherWith
+                    fadeOut(animationSpec = adaptiveSpringSpec())
             },
             label = "hasselblad_stage",
             modifier = Modifier
@@ -691,7 +695,7 @@ private fun Modifier.colorOsEntrance(delayMillis: Int = 0): Modifier {
     )
     val offsetY by animateFloatAsState(
         targetValue = if (visible) 0f else 24f,
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = 350f),
+        animationSpec = adaptiveSpringSpec(),
         label = "entrance_offset"
     )
     return this.graphicsLayer {
@@ -759,7 +763,9 @@ private fun SetupContent(
     onRecentShotClick: (Uri) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = "哈苏之眼设置面板" },
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -893,7 +899,7 @@ private fun ViewfinderSimulatorCard() {
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
-                    contentDescription = null,
+                    contentDescription = "AR取景器",
                     tint = HasselbladOrange,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1334,7 +1340,7 @@ private fun ViewfinderEntryCard(onLaunchViewfinder: () -> Unit) {
             }
             Icon(
                 imageVector = Icons.Default.ArrowBack,
-                contentDescription = null,
+                contentDescription = "进入",
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier
                     .size(20.dp)
@@ -1523,7 +1529,7 @@ private fun AnalyzingContent(
                     .clip(RoundedCornerShape(4.dp))
                     .background(
                         Brush.horizontalGradient(
-                            listOf(HasselbladOrange, HasselbladOrangeLight, Color(0xFFFFB366))
+                            listOf(HasselbladOrange, HasselbladOrangeLight, HasselbladOrangeLight)
                         )
                     )
             )
@@ -1682,7 +1688,9 @@ private fun ResultsContent(
     onApplyToOPPO: () -> Unit = {}
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = "哈苏分析结果面板" },
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -2224,7 +2232,9 @@ private fun PreviewContent(
     onRetake: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = "哈苏预览面板" },
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -3265,7 +3275,7 @@ private fun CompositionGuideCard(
                 // 难度标签
                 Surface(
                     color = when (currentGuide.difficulty) {
-                        "入门" -> Color(0xFF4CAF50).copy(alpha = 0.15f)
+                        "入门" -> HasselbladGreen.copy(alpha = 0.15f)
                         "进阶" -> HasselbladOrange.copy(alpha = 0.15f)
                         else -> Color(0xFF9C27B0).copy(alpha = 0.15f)
                     },
@@ -3276,7 +3286,7 @@ private fun CompositionGuideCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = when (currentGuide.difficulty) {
-                            "入门" -> Color(0xFF4CAF50)
+                            "入门" -> HasselbladGreen
                             "进阶" -> HasselbladOrange
                             else -> Color(0xFF9C27B0)
                         },
@@ -3426,7 +3436,7 @@ private fun CompositionGuideCard(
                 }
                 // 应用构图按钮 - 根据 ViewModel 状态显示"应用构图"或"已应用"，颜色有过渡动画
                 val buttonColor by animateColorAsState(
-                    targetValue = if (isCurrentApplied) Color(0xFF4CAF50) else HasselbladOrange,
+                    targetValue = if (isCurrentApplied) HasselbladGreen else HasselbladOrange,
                     animationSpec = tween(durationMillis = 300),
                     label = "buttonColor"
                 )
@@ -3494,7 +3504,7 @@ private fun ARGuideOverlay(
             .fillMaxWidth()
             .height(180.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF1A1A1A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width

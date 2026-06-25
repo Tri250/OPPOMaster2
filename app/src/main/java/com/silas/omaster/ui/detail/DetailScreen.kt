@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,6 +81,8 @@ import com.silas.omaster.util.PresetI18n
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
+import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 @Composable
@@ -274,6 +278,7 @@ fun DetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(scrollState)
+                        .semantics { contentDescription = "预设详情页" }
                         .padding(16.dp)
                 ) {
                     // 图片画廊（支持自动轮播和手动切换）

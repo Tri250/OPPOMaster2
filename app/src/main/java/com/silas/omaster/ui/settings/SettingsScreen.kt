@@ -67,6 +67,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -77,7 +79,9 @@ import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.ui.components.OMasterTopAppBar
+import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
@@ -171,6 +175,7 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
+            .semantics { contentDescription = "设置列表" }
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.settings_title),
@@ -534,7 +539,7 @@ private fun SettingsSwitchItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = "图标",
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -586,7 +591,7 @@ private fun SettingsClickableItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = "图标",
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -594,7 +599,7 @@ private fun SettingsClickableItem(
         trailingContent = trailingContent ?: {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "图标",
+                contentDescription = "展开",
                 tint = Color.Gray
             )
         },

@@ -3,9 +3,11 @@ package com.silas.omaster
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.silas.omaster.ui.animation.AnimationSpecs
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.os.Build
@@ -156,7 +158,9 @@ fun MainApp(navController: NavHostController) {
         mainRouteList.indexOfFirst { route?.contains(it) == true }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .semantics { contentDescription = "OMaster 主应用" }) {
         NavHost(
             navController = navController,
             startDestination = if (initialShowOnboarding) Screen.Onboarding else Screen.Home,
@@ -657,8 +661,8 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.navEnterTransition
     forward: Boolean
 ): EnterTransition {
     val direction = computeSlideDirection(getNavIndex, forward)
-    return slideIntoContainer(towards = direction, animationSpec = tween(300)) +
-        fadeIn(animationSpec = tween(300))
+    return slideIntoContainer(towards = direction, animationSpec = AnimationSpecs.ColorOS16PageTransition) +
+        fadeIn(animationSpec = AnimationSpecs.ColorOS16ContentEnter)
 }
 
 /**
@@ -669,8 +673,8 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.navExitTransition(
     forward: Boolean
 ): ExitTransition {
     val direction = computeSlideDirection(getNavIndex, forward)
-    return slideOutOfContainer(towards = direction, animationSpec = tween(300)) +
-        fadeOut(animationSpec = tween(300))
+    return slideOutOfContainer(towards = direction, animationSpec = AnimationSpecs.ColorOS16PageTransition) +
+        fadeOut(animationSpec = AnimationSpecs.ColorOS16ContentExit)
 }
 
 /**

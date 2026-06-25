@@ -36,6 +36,10 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.ui.theme.ColorOS16Palette
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.theme.PureBlack
+import com.silas.omaster.ui.theme.OffWhite
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
 import kotlinx.serialization.encodeToString
@@ -74,16 +78,17 @@ class FloatingWindowService : Service() {
         return Color.rgb(r, g, b)
     }
 
-    private val cardBackground = Color.parseColor("#26FFFFFF")  // 卡片背景
-    private val textPrimary = Color.parseColor("#FFFFFF")       // 主文字
-    private val textSecondary = Color.parseColor("#B3FFFFFF")   // 次要文字
-    private val textMuted = Color.parseColor("#80FFFFFF")       // 弱化文字
+    private val cardBackground = ColorOS16Palette.GlassDarkSurface.toArgb()  // 液态玻璃深色表面
+    private val textPrimary = OffWhite.toArgb()       // 主文字 #F5F5F5
+    private val textSecondary = ColorOS16Palette.GlassBorder.toArgb()   // 液态玻璃边框色
+    private val textMuted = ColorOS16Palette.GlassDarkHighlight.toArgb()       // 弱化文字
 
     // 背景颜色根据设置动态计算
     private fun getBackgroundColor(context: Context): Int {
         val opacity = SettingsManager.getInstance(context).floatingWindowOpacity
         val alpha = (opacity * 255 / 100).coerceIn(30, 255)
-        return Color.argb(alpha, 26, 26, 26) // #1A1A1A with dynamic alpha
+        val baseColor = DarkGray.toArgb()
+        return Color.argb(alpha, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor))
     }
 
     companion object {

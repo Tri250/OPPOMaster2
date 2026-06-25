@@ -33,12 +33,15 @@ import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.*
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ui.theme.*
+import com.silas.omaster.ui.animation.AnimationSpecs
 import kotlinx.coroutines.*
 import java.io.*
 import kotlin.math.*
@@ -627,13 +630,13 @@ fun WatermarkEditorScreen(
                             .align(Alignment.BottomCenter)
                             .padding(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (showBeforeAfter) CyanAccent else Color(0xFF2A2A2A)
+                            containerColor = if (showBeforeAfter) CyanAccent else MaterialTheme.colorScheme.surfaceVariant
                         ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(
                             if (showBeforeAfter) Icons.Default.CompareArrows else Icons.Default.Compare,
-                            null,
+                            contentDescription = if (showBeforeAfter) "对比中" else "对比",
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -651,7 +654,7 @@ fun WatermarkEditorScreen(
                 ) {
                     Icon(
                         Icons.Default.Image,
-                        null,
+                        contentDescription = "选择图片",
                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         modifier = Modifier.size(48.dp)
                     )
@@ -673,7 +676,7 @@ fun WatermarkEditorScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                     ) {
-                        Icon(Icons.Default.Add, null)
+                        Icon(Icons.Default.Add, contentDescription = "添加")
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("选择图片")
                     }
@@ -688,6 +691,7 @@ fun WatermarkEditorScreen(
                 .weight(0.45f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp)
+                .semantics { contentDescription = "水印编辑器控制面板" }
         ) {
             // 分类横滑
             WatermarkCategoryTabs(
@@ -843,7 +847,7 @@ fun WatermarkEditorScreen(
                     ),
                     border = BorderStroke(1.dp, CyanAccent)
                 ) {
-                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = "重置默认", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("重置默认", style = MaterialTheme.typography.labelMedium)
                 }
@@ -862,7 +866,7 @@ fun WatermarkEditorScreen(
                     ),
                     border = BorderStroke(1.dp, CyanAccent)
                 ) {
-                    Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = "批量应用", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("批量应用", style = MaterialTheme.typography.labelMedium)
                 }
@@ -877,7 +881,7 @@ fun WatermarkEditorScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                 ) {
-                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Download, contentDescription = "保存图片", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("保存图片", style = MaterialTheme.typography.labelMedium)
                 }
@@ -904,7 +908,7 @@ private fun WatermarkCategoryTabs(
         items(WatermarkCategory.entries) { category ->
             val isSelected = category == selectedCategory
             val bgColor by animateColorAsState(
-                targetValue = if (isSelected) CyanAccent else Color(0xFF2A2A2A),
+                targetValue = if (isSelected) CyanAccent else MaterialTheme.colorScheme.surfaceVariant,
                 label = "bg"
             )
 
@@ -919,7 +923,7 @@ private fun WatermarkCategoryTabs(
             ) {
                 Icon(
                     category.icon,
-                    null,
+                    contentDescription = category.displayName,
                     modifier = Modifier.size(14.dp),
                     tint = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
@@ -954,7 +958,7 @@ private fun SearchBar(
     ) {
         Icon(
             Icons.Default.Search,
-            null,
+            contentDescription = "搜索",
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
             modifier = Modifier.size(16.dp)
         )
@@ -1042,7 +1046,7 @@ private fun WatermarkTemplateCard(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) CyanAccent.copy(alpha = 0.15f) else Color(0xFF2A2A2A))
+            .background(if (isSelected) CyanAccent.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
             .border(1.dp, borderColor, RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(8.dp),
@@ -1053,11 +1057,11 @@ private fun WatermarkTemplateCard(
             modifier = Modifier
                 .size(32.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (isSelected) CyanAccent.copy(alpha = 0.3f) else Color(0xFF3A3A3A))
+                .background(if (isSelected) CyanAccent.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Icon(
                 template.category.icon,
-                null,
+                contentDescription = template.name,
                 tint = if (isSelected) CyanAccent else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -1115,7 +1119,7 @@ private fun WatermarkPositionGrid(
                                     .weight(1f)
                                     .height(36.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(if (isSelected) CyanAccent else Color(0xFF2A2A2A))
+                                    .background(if (isSelected) CyanAccent else MaterialTheme.colorScheme.surfaceVariant)
                                     .border(
                                         1.dp,
                                         if (isSelected) CyanAccent else Color.Gray.copy(alpha = 0.3f),
@@ -1324,7 +1328,7 @@ private fun WatermarkElementRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2A2A2A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1397,7 +1401,7 @@ private fun WatermarkVignetteRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2A2A2A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -1469,7 +1473,7 @@ private fun WatermarkStyleSection(
         MaterialTheme.colorScheme.onBackground to "白色",
         MaterialTheme.colorScheme.scrim to "黑色",
         Color(0xFFFFD700) to "金色",
-        Color(0xFFFF6B35) to "橙色",
+        HasselbladOrange to "橙色",
         CyanAccent to "青色",
         Color(0xFFFF6B9D) to "粉色",
         SuccessGreen to "绿色",
@@ -1500,7 +1504,7 @@ private fun WatermarkStyleSection(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
+                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
                         .border(
                             1.dp,
                             if (isSelected) CyanAccent else Color.Transparent,
@@ -1537,7 +1541,7 @@ private fun WatermarkStyleSection(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
+                        .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
                         .border(
                             1.dp,
                             if (isSelected) CyanAccent else Color.Transparent,
@@ -1598,7 +1602,7 @@ private fun WatermarkStyleSection(
             ) {
                 Icon(
                     Icons.Default.Lightbulb,
-                    null,
+                    contentDescription = "智能推荐",
                     tint = CyanAccent,
                     modifier = Modifier.size(16.dp)
                 )

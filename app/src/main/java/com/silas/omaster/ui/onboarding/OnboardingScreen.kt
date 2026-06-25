@@ -37,11 +37,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
@@ -90,6 +94,7 @@ fun OnboardingScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .semantics { contentDescription = "引导页" }
     ) {
         // 跳过按钮
         Row(
@@ -109,7 +114,9 @@ fun OnboardingScreen(
         // 页面内容
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .semantics { contentDescription = "引导页" }
         ) { page ->
             OnboardingPageContent(
                 page = pages[page],
@@ -209,7 +216,7 @@ private fun OnboardingPageContent(
         ) {
             Icon(
                 imageVector = page.icon,
-                contentDescription = null,
+                contentDescription = page.title,
                 modifier = Modifier.size(56.dp),
                 tint = HasselbladOrange
             )

@@ -51,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -70,7 +72,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.ui.theme.CyanAccent
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
@@ -373,7 +378,7 @@ private fun ImagePreview(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1A1A1A))
+            .background(DarkGray)
     ) {
         // 原图（作为底层）
         sourceBitmap?.let { bitmap ->
@@ -437,14 +442,14 @@ private fun EmptyImagePlaceholder(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1A1A1A))
+            .background(DarkGray)
             .clickable { onGallery() },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 imageVector = Icons.Default.AddPhotoAlternate,
-                contentDescription = null,
+                contentDescription = "添加图片",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(56.dp)
             )
@@ -486,7 +491,9 @@ private fun BasicParamsPanel(
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = "基础参数列表" },
         contentPadding = PaddingValues(vertical = 8.dp)
     ) {
         items(basicParams) { (key, name, range) ->
@@ -589,7 +596,9 @@ private fun StylePanel(
     onSelect: (String) -> Unit
 ) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "风格选择" },
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(vertical = 12.dp)
     ) {
@@ -615,7 +624,7 @@ private fun StylePanel(
                         .background(style.color.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(style.icon, contentDescription = null, tint = style.color, modifier = Modifier.size(24.dp))
+                    Icon(style.icon, contentDescription = style.name, tint = style.color, modifier = Modifier.size(24.dp))
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(style.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp)
@@ -633,7 +642,9 @@ private fun SmartPanel(
     onToggle: (String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "智能优化选项" },
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 8.dp)
     ) {
@@ -653,7 +664,7 @@ private fun SmartPanel(
                     .clickable { onToggle(opt.id) }
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Icon(opt.icon, contentDescription = null, tint = opt.color, modifier = Modifier.size(28.dp))
+                Icon(opt.icon, contentDescription = opt.name, tint = opt.color, modifier = Modifier.size(28.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -689,7 +700,9 @@ private fun HSLPanel(
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "HSL色块选择" }
         ) {
             items(hslValues) { hsl ->
                 Box(
@@ -945,7 +958,7 @@ private fun BottomActionBar(
                     if (isProcessing) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "AI微调", modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("AI 微调", fontSize = 14.sp)
                     }
@@ -957,7 +970,7 @@ private fun BottomActionBar(
                     colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Save, contentDescription = "保存", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("导出", fontSize = 14.sp)
                 }
@@ -968,7 +981,7 @@ private fun BottomActionBar(
                     colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Check, contentDescription = "应用", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("应用", fontSize = 14.sp)
                 }
@@ -990,8 +1003,8 @@ private fun AIProgressOverlay(
         visible = stage == InferenceStage.ANALYZING || stage == InferenceStage.DETECTING_SUBJECT ||
                 stage == InferenceStage.COMPUTING_PARAMS || stage == InferenceStage.APPLYING_AI ||
                 stage == InferenceStage.COMPLETED || stage == InferenceStage.ERROR,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = fadeIn(animationSpec = AnimationSpecs.ColorOS16ContentEnter),
+        exit = fadeOut(animationSpec = AnimationSpecs.ColorOS16ContentExit)
     ) {
         Box(
             modifier = modifier
@@ -1001,16 +1014,16 @@ private fun AIProgressOverlay(
         ) {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                colors = CardDefaults.cardColors(containerColor = DarkGray)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (stage == InferenceStage.COMPLETED) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(48.dp))
+                        Icon(Icons.Default.CheckCircle, contentDescription = "完成", tint = SuccessGreen, modifier = Modifier.size(48.dp))
                     } else if (stage == InferenceStage.ERROR) {
-                        Icon(Icons.Default.Error, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(48.dp))
+                        Icon(Icons.Default.Error, contentDescription = "错误", tint = WarningYellow, modifier = Modifier.size(48.dp))
                     } else {
                         CircularProgressIndicator(color = HasselbladOrange, modifier = Modifier.size(48.dp))
                     }

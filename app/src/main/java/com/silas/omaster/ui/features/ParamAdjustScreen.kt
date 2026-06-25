@@ -6,6 +6,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.silas.omaster.ui.animation.adaptiveSpringSpec
+import com.silas.omaster.ui.animation.AnimationSpecs
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -116,14 +120,14 @@ fun ParamAdjustScreen(
     )
 
     val presets = listOf(
-        PresetConfig("portrait", "人像", { Icon(Icons.Outlined.Person, null, modifier = Modifier.size(14.dp)) }, 200, 1f / 125f, 2.8f, 5500, FocusMode.AUTO, MeteringMode.CENTER),
-        PresetConfig("landscape", "风景", { Icon(Icons.Outlined.Landscape, null, modifier = Modifier.size(14.dp)) }, 100, 1f / 60f, 8.0f, 5600, FocusMode.AUTO, MeteringMode.MATRIX),
-        PresetConfig("night", "夜景", { Icon(Icons.Outlined.Nightlight, null, modifier = Modifier.size(14.dp)) }, 3200, 4f, 2.8f, 4000, FocusMode.MANUAL, MeteringMode.SPOT),
-        PresetConfig("sports", "运动", { Icon(Icons.Outlined.DirectionsRun, null, modifier = Modifier.size(14.dp)) }, 800, 1f / 500f, 4.0f, 5500, FocusMode.CONTINUOUS, MeteringMode.MATRIX),
-        PresetConfig("street", "街拍", { Icon(Icons.Outlined.CameraAlt, null, modifier = Modifier.size(14.dp)) }, 400, 1f / 250f, 5.6f, 5500, FocusMode.CONTINUOUS, MeteringMode.CENTER),
-        PresetConfig("food", "美食", { Icon(Icons.Outlined.Restaurant, null, modifier = Modifier.size(14.dp)) }, 200, 1f / 60f, 2.8f, 5000, FocusMode.AUTO, MeteringMode.SPOT),
-        PresetConfig("indoor", "室内", { Icon(Icons.Outlined.Home, null, modifier = Modifier.size(14.dp)) }, 800, 1f / 60f, 4.0f, 4000, FocusMode.AUTO, MeteringMode.CENTER),
-        PresetConfig("backlight", "逆光", { Icon(Icons.Outlined.WbSunny, null, modifier = Modifier.size(14.dp)) }, 200, 1f / 125f, 2.8f, 6500, FocusMode.AUTO, MeteringMode.SPOT)
+        PresetConfig("portrait", "人像", { Icon(Icons.Outlined.Person, "人像", modifier = Modifier.size(14.dp)) }, 200, 1f / 125f, 2.8f, 5500, FocusMode.AUTO, MeteringMode.CENTER),
+        PresetConfig("landscape", "风景", { Icon(Icons.Outlined.Landscape, "风景", modifier = Modifier.size(14.dp)) }, 100, 1f / 60f, 8.0f, 5600, FocusMode.AUTO, MeteringMode.MATRIX),
+        PresetConfig("night", "夜景", { Icon(Icons.Outlined.Nightlight, "夜景", modifier = Modifier.size(14.dp)) }, 3200, 4f, 2.8f, 4000, FocusMode.MANUAL, MeteringMode.SPOT),
+        PresetConfig("sports", "运动", { Icon(Icons.Outlined.DirectionsRun, "运动", modifier = Modifier.size(14.dp)) }, 800, 1f / 500f, 4.0f, 5500, FocusMode.CONTINUOUS, MeteringMode.MATRIX),
+        PresetConfig("street", "街拍", { Icon(Icons.Outlined.CameraAlt, "街拍", modifier = Modifier.size(14.dp)) }, 400, 1f / 250f, 5.6f, 5500, FocusMode.CONTINUOUS, MeteringMode.CENTER),
+        PresetConfig("food", "美食", { Icon(Icons.Outlined.Restaurant, "美食", modifier = Modifier.size(14.dp)) }, 200, 1f / 60f, 2.8f, 5000, FocusMode.AUTO, MeteringMode.SPOT),
+        PresetConfig("indoor", "室内", { Icon(Icons.Outlined.Home, "室内", modifier = Modifier.size(14.dp)) }, 800, 1f / 60f, 4.0f, 4000, FocusMode.AUTO, MeteringMode.CENTER),
+        PresetConfig("backlight", "逆光", { Icon(Icons.Outlined.WbSunny, "逆光", modifier = Modifier.size(14.dp)) }, 200, 1f / 125f, 2.8f, 6500, FocusMode.AUTO, MeteringMode.SPOT)
     )
 
     // ========== 计算 EV 值 ==========
@@ -201,6 +205,7 @@ fun ParamAdjustScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
+            .semantics { contentDescription = "参数调节面板" }
     ) {
         // ========== TopAppBar ==========
         TopAppBar(
@@ -304,7 +309,8 @@ fun ParamAdjustScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .semantics { contentDescription = "参数调节列表" },
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ISO 离散调节
@@ -319,7 +325,7 @@ fun ParamAdjustScreen(
                         iso = newIso.toInt()
                         applyLinkage("iso")
                     },
-                    color = Color(0xFF9C27B0)
+                    color = ColorOS16Palette.Primary
                 )
             }
 
@@ -335,7 +341,7 @@ fun ParamAdjustScreen(
                         shutterSpeed = newShutter
                         applyLinkage("shutter")
                     },
-                    color = Color(0xFF2196F3)
+                    color = ColorOS16Palette.Info
                 )
             }
 
@@ -364,7 +370,7 @@ fun ParamAdjustScreen(
                     steps = wbSteps.map { "${it}K" to it.toFloat() },
                     currentValue = whiteBalance.toFloat(),
                     onValueChange = { whiteBalance = it.toInt() },
-                    color = Color(0xFFFFEB3B)
+                    color = ColorOS16Palette.Warning
                 )
             }
 
@@ -377,7 +383,7 @@ fun ParamAdjustScreen(
                     valueRange = 8f..400f,
                     valueLabel = "${focalLength}mm",
                     onValueChange = { focalLength = it.toInt() },
-                    color = Color(0xFFE91E63)
+                    color = ColorOS16Palette.Error
                 )
             }
 
@@ -390,7 +396,7 @@ fun ParamAdjustScreen(
                     valueRange = -3f..3f,
                     valueLabel = "${if (exposureCompensation >= 0) "+" else ""}${String.format("%.1f", exposureCompensation)} EV",
                     onValueChange = { exposureCompensation = it },
-                    color = Color(0xFF4CAF50)
+                    color = ColorOS16Palette.Success
                 )
             }
 
@@ -494,16 +500,13 @@ private fun ExposureHistogramSection(
 
                     // EV 指示器
                     val indicatorColor = when {
-                        currentEV > 14f -> Color(0xFFFF5722) // 过曝
-                        currentEV < 8f -> Color(0xFF2196F3)  // 欠曝
-                        else -> Color(0xFF4CAF50)             // 正常
+                        currentEV > 14f -> ColorOS16Palette.Error // 过曝
+                        currentEV < 8f -> ColorOS16Palette.Info  // 欠曝
+                        else -> ColorOS16Palette.Success             // 正常
                     }
                     val animatedFraction by animateFloatAsState(
                         targetValue = evNormalized,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        ),
+                        animationSpec = adaptiveSpringSpec(),
                         label = "evIndicator"
                     )
                     Box(
@@ -523,9 +526,9 @@ private fun ExposureHistogramSection(
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        currentEV > 14f -> Color(0xFFFF5722)
-                        currentEV < 8f -> Color(0xFF2196F3)
-                        else -> Color(0xFF4CAF50)
+                        currentEV > 14f -> ColorOS16Palette.Error
+                        currentEV < 8f -> ColorOS16Palette.Info
+                        else -> ColorOS16Palette.Success
                     }
                 )
             }
@@ -657,6 +660,7 @@ private fun DiscreteParamCard(
                         text = valueLabel,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = MonoFontFamily,
                         color = color,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
@@ -691,10 +695,7 @@ private fun DiscreteParamCard(
                     val isSelected = kotlin.math.abs(stepValue - currentValue) < 0.001f
                     val animatedScale by animateFloatAsState(
                         targetValue = if (isSelected) 1.05f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        ),
+                        animationSpec = adaptiveSpringSpec(),
                         label = "chipScale"
                     )
                     Box(
@@ -775,6 +776,7 @@ private fun ContinuousParamCard(
                         text = valueLabel,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = MonoFontFamily,
                         color = color,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
@@ -829,10 +831,7 @@ private fun FocusModeCard(
                     val isSelected = selectedMode == mode
                     val animatedWeight by animateFloatAsState(
                         targetValue = if (isSelected) 1.2f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        ),
+                        animationSpec = adaptiveSpringSpec(),
                         label = "focusWeight"
                     )
                     Surface(
@@ -905,10 +904,7 @@ private fun MeteringModeCard(
                     val isSelected = selectedMode == mode
                     val animatedWeight by animateFloatAsState(
                         targetValue = if (isSelected) 1.2f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        ),
+                        animationSpec = adaptiveSpringSpec(),
                         label = "meteringWeight"
                     )
                     Surface(
@@ -958,8 +954,8 @@ private fun ParamHintCard(hint: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFF9800).copy(alpha = 0.1f)),
-        border = BorderStroke(1.dp, Color(0xFFFF9800).copy(alpha = 0.3f))
+        colors = CardDefaults.cardColors(containerColor = ColorOS16Palette.Warning.copy(alpha = 0.1f)),
+        border = BorderStroke(1.dp, ColorOS16Palette.Warning.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -968,14 +964,14 @@ private fun ParamHintCard(hint: String) {
             Icon(
                 Icons.Outlined.Lightbulb,
                 contentDescription = "提示",
-                tint = Color(0xFFFF9800),
+                tint = ColorOS16Palette.Warning,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFFF9800)
+                color = ColorOS16Palette.Warning
             )
         }
     }
@@ -1008,10 +1004,7 @@ private fun PresetChip(
     )
     val animatedScale by animateFloatAsState(
         targetValue = if (selected) 1.05f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
+        animationSpec = adaptiveSpringSpec(),
         label = "chipScale"
     )
 
@@ -1079,9 +1072,9 @@ private fun ParamSummaryBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val evColor = when {
-                    currentEV > 14f -> Color(0xFFFF5722)
-                    currentEV < 8f -> Color(0xFF2196F3)
-                    else -> Color(0xFF4CAF50)
+                    currentEV > 14f -> ColorOS16Palette.Error
+                    currentEV < 8f -> ColorOS16Palette.Info
+                    else -> ColorOS16Palette.Success
                 }
                 val evLabel = when {
                     currentEV > 14f -> "过曝"
@@ -1136,6 +1129,7 @@ private fun ParamSummaryItem(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
+            fontFamily = MonoFontFamily,
             color = HasselbladOrange
         )
     }

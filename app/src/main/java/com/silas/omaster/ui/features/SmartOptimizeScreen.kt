@@ -101,12 +101,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.SceneCategory
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
+import com.silas.omaster.ui.theme.ColorOS16Palette
+import com.silas.omaster.ui.theme.DarkGray
+import com.silas.omaster.ui.animation.AnimationSpecs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -382,6 +387,7 @@ fun SmartOptimizeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
+            .semantics { contentDescription = "智能优化面板" }
     ) {
         TopAppBar(
             title = { Text("智能优化", fontWeight = FontWeight.Bold) },
@@ -421,7 +427,7 @@ fun SmartOptimizeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            Icons.Default.AutoAwesome, null,
+                            Icons.Default.AutoAwesome, "AI场景识别",
                             tint = HasselbladOrange,
                             modifier = Modifier.size(14.dp)
                         )
@@ -537,7 +543,7 @@ fun SmartOptimizeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .background(Color(0xFF1A1A1A))
+                .background(DarkGray)
         ) {
             if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
                 // 前后拖拽对比
@@ -561,7 +567,7 @@ fun SmartOptimizeScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            Icons.Default.Image, null,
+                            Icons.Default.Image, "选择图片",
                             tint = Color.White.copy(alpha = 0.5f),
                             modifier = Modifier.size(48.dp)
                         )
@@ -648,7 +654,8 @@ fun SmartOptimizeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .semantics { contentDescription = "优化选项列表" },
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // AI 推荐提示
@@ -702,7 +709,7 @@ fun SmartOptimizeScreen(
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Default.CheckCircle, null,
+                                    Icons.Default.CheckCircle, "已完成",
                                     tint = SuccessGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -759,7 +766,7 @@ fun SmartOptimizeScreen(
                     onToggle = { hdrEnabled = it },
                     strength = hdrStrength,
                     onStrengthChange = { hdrStrength = it },
-                    color = Color(0xFFFF9800),
+                    color = ColorOS16Palette.Warning,
                     isOptimized = optimizedOptions.contains("hdr"),
                     isProcessing = isOptimizing && optimizationCurrentName == "HDR增强"
                 )
@@ -775,7 +782,7 @@ fun SmartOptimizeScreen(
                     onToggle = { noiseReductionEnabled = it },
                     strength = noiseReductionStrength,
                     onStrengthChange = { noiseReductionStrength = it },
-                    color = Color(0xFF2196F3),
+                    color = ColorOS16Palette.Info,
                     isOptimized = optimizedOptions.contains("denoise"),
                     isProcessing = isOptimizing && optimizationCurrentName == "智能降噪"
                 )
@@ -791,7 +798,7 @@ fun SmartOptimizeScreen(
                     onToggle = { sharpenEnabled = it },
                     strength = sharpenStrength,
                     onStrengthChange = { sharpenStrength = it },
-                    color = Color(0xFF9C27B0),
+                    color = ColorOS16Palette.Primary,
                     isOptimized = optimizedOptions.contains("sharpen"),
                     isProcessing = isOptimizing && optimizationCurrentName == "锐化增强"
                 )
@@ -808,7 +815,7 @@ fun SmartOptimizeScreen(
                     strength = exposureAdjustment,
                     strengthRange = -50f..50f,
                     onStrengthChange = { exposureAdjustment = it },
-                    color = Color(0xFFFFEB3B),
+                    color = ColorOS16Palette.Warning,
                     isOptimized = optimizedOptions.contains("exposure"),
                     isProcessing = isOptimizing && optimizationCurrentName == "自动曝光"
                 )
@@ -858,7 +865,7 @@ fun SmartOptimizeScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
             ) {
-                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Refresh, "重置", modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("重置")
             }
@@ -874,7 +881,7 @@ fun SmartOptimizeScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
             ) {
-                Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Save, "保存", modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(if (isSaving) "保存中..." else "保存")
             }
@@ -890,7 +897,7 @@ fun SmartOptimizeScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
             ) {
-                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.AutoAwesome, "智能优化", modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(if (isOptimizing) "优化中..." else "智能优化")
             }
@@ -1186,7 +1193,7 @@ private fun CompositeOptimizeCard(
                 ) {
                     Icon(
                         Icons.Default.Bolt,
-                        null,
+                        "综合优化",
                         tint = if (enabled) SuccessGreen else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         modifier = Modifier.size(24.dp)
                     )
@@ -1231,7 +1238,7 @@ private fun CompositeOptimizeCard(
                         contentColor = SuccessGreen
                     )
                 ) {
-                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.PlayArrow, "一键处理", modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("一键顺序处理")
                 }
@@ -1279,7 +1286,7 @@ private fun OptimizeOptionCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         icon,
-                        null,
+                        title,
                         tint = if (enabled || isProcessing) color else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         modifier = Modifier.size(24.dp)
                     )
@@ -1303,7 +1310,7 @@ private fun OptimizeOptionCard(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     Icons.Default.CheckCircle,
-                                    null,
+                                    "已完成",
                                     tint = SuccessGreen,
                                     modifier = Modifier.size(14.dp)
                                 )
