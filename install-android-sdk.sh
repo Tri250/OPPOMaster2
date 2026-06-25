@@ -19,21 +19,32 @@ mkdir -p $ANDROID_SDK_DIR/cmdline-tools
 echo "下载Android SDK命令行工具..."
 CMDLINE_TOOLS_URL="https://mirrors.cloud.tencent.com/AndroidSDK/android-sdk-commandline-tools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip"
 
-# 备用镜像
-if [ ! -f "/tmp/cmdline-tools.zip" ]; then
+# 强制使用国内镜像，不依赖 /tmp 旧文件
+if [ -f "/tmp/cmdline-tools.zip" ]; then
+    echo "检测到旧缓存，删除重下..."
+    rm -f /tmp/cmdline-tools.zip
+fi
+
+mirror=1
+CMDLINE_TOOLS_URL="https://mirrors.cloud.tencent.com/AndroidSDK/android-sdk-commandline-tools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip"
+while [ $mirror -le 4 ]; do
     echo "尝试下载: $CMDLINE_TOOLS_URL"
-    wget -q --timeout=30 --tries=3 -O /tmp/cmdline-tools.zip "$CMDLINE_TOOLS_URL" || {
-        echo "腾讯云镜像下载失败，尝试阿里云镜像..."
-        CMDLINE_TOOLS_URL="https://mirrors.aliyun.com/android-sdk/android-sdk-commandline-tools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip"
-        wget -q --timeout=30 --tries=3 -O /tmp/cmdline-tools.zip "$CMDLINE_TOOLS_URL" || {
-            echo "阿里云镜像下载失败，尝试官方源..."
-            CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip"
-            wget -q --timeout=60 --tries=2 -O /tmp/cmdline-tools.zip "$CMDLINE_TOOLS_URL" || {
-                echo "下载失败，请检查网络连接"
-                exit 1
-            }
-        }
-    }
+    if wget -q --timeout=30 --tries=3 -O /tmp/cmdline-tools.zip "$CMDLINE_TOOLS_URL"; then
+        break
+    fi
+    echo "镜像 $mirror 下载失败"
+    rm -f /tmp/cmdline-tools.zip
+    case $mirror in
+        1) CMDLINE_TOOLS_URL="https://mirrors.aliyun.com/android-sdk/android-sdk-commandline-tools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip" ;;
+        2) CMDLINE_TOOLS_URL="https://mirrors.bfsu.edu.cn/android/repository/commandlinetools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip" ;;
+        3) CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS_VERSION}_latest.zip" ;;
+    esac
+    mirror=$((mirror + 1))
+done
+
+if [ ! -f "/tmp/cmdline-tools.zip" ]; then
+    echo "下载失败，请检查网络连接"
+    exit 1
 fi
 
 # 解压命令行工具
@@ -48,21 +59,24 @@ export PATH=$PATH:$ANDROID_SDK_DIR/cmdline-tools/latest/bin:$ANDROID_SDK_DIR/pla
 
 # 写入环境变量到profile（仅当前用户）
 echo "export ANDROID_HOME=$ANDROID_SDK_DIR" >> ~/.bashrc
+echo "export ANDROID_SDK_ROOT=$ANDROID_SDK_DIR" >> ~/.bashrc
 echo "export PATH=\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools" >> ~/.bashrc
 
 # 接受SDK许可
 echo "接受SDK许可..."
-yes | sdkmanager --licenses 2>/dev/null || true
+# 部分许可证默认通过，使用 --licenses 自动同意
+yes | sdkmanager --sdk_root="$ANDROID_SDK_DIR" --licenses
 
 # 安装必要组件（与项目 build.gradle.kts 匹配：compileSdk=36, minSdk=24, targetSdk=36, AGP=8.7.3）
 echo "安装必要SDK组件..."
-sdkmanager --install \
+sdkmanager --sdk_root="$ANDROID_SDK_DIR" \
     "platform-tools" \
     "platforms;android-36" \
     "build-tools;36.0.0" \
     "extras;android;m2repository" \
-    "extras;google;m2repository" 2>/dev/null || {
+    "extras;google;m2repository" || {
     echo "SDK组件安装失败，请手动安装"
+    exit 1
 }
 
 echo "======================================"
