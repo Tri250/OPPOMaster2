@@ -57,7 +57,6 @@ import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.CameraXViewfinderScreen
-import com.silas.omaster.ui.features.CloudSyncScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
@@ -72,7 +71,6 @@ import com.silas.omaster.ui.screens.SceneAnalysisReportScreen
 import com.silas.omaster.ui.settings.ApiConfigScreen
 import com.silas.omaster.ui.settings.ImportExportScreen
 import com.silas.omaster.ui.settings.NotificationSettingsScreen
-import com.silas.omaster.ui.settings.PresetSourceManagerScreen
 import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.ThemeSettingsScreen
@@ -183,7 +181,7 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
-                    onNavigateToPresetManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToHasselbladEye = { navController.navigate(Screen.HasselbladColor) },
                     onScrollStateChanged = { isScrollingUp ->
@@ -264,7 +262,7 @@ fun MainApp(navController: NavHostController) {
                 SettingsScreen(
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
-                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToPresetSourceManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) },
                     onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) },
                     onNavigateToThemeSettings = { navController.navigate(Screen.ThemeSettings) },
@@ -278,7 +276,7 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() },
                     onNavigateToSettings = { navController.navigate(Screen.Settings) },
                     onNavigateToNotificationSettings = { navController.navigate(Screen.NotificationSettings) },
-                    onNavigateToPresetSourceManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToPresetSourceManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToPrivacy = { navController.navigate(Screen.PrivacyPolicy) },
                     onNavigateToTerms = { navController.navigate(Screen.Terms) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp },
@@ -299,11 +297,10 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
-                    onNavigateToPresetManager = { navController.navigate(Screen.PresetSourceManager) },
+                    onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
-                    onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) },
                     onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
@@ -402,8 +399,17 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.LUTShare> {
                 LUTShareScreen(
                     onBack = { navController.popBackStack() },
-                    onDownload = { },
+                    onDownload = { lutResource ->
+                        // 标记当前激活的 LUT，便于哈苏之眼引用
+                        com.silas.omaster.data.lut.LUTManager
+                            .getInstance(context.applicationContext)
+                            .setActiveLUT(lutResource.id)
+                    },
                     onApplyLUT = { lutResource ->
+                        // 应用 LUT 前先激活到 LUTManager，确保哈苏之眼能读取
+                        com.silas.omaster.data.lut.LUTManager
+                            .getInstance(context.applicationContext)
+                            .setActiveLUT(lutResource.id)
                         navController.navigate(Screen.HasselbladColor)
                     },
                     onNavigateToStyleGenerator = {
@@ -431,10 +437,6 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            composable<Screen.CloudSync> {
-                CloudSyncScreen(onBack = { navController.popBackStack() })
-            }
-
             composable<Screen.NotificationSettings> {
                 NotificationSettingsScreen(onBack = { navController.popBackStack() })
             }
@@ -445,10 +447,6 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.PrivacyPolicy> {
                 PrivacyPolicyScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable<Screen.PresetSourceManager> {
-                PresetSourceManagerScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.UpdateChannel> {

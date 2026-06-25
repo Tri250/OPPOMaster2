@@ -6,14 +6,12 @@ import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
-import com.silas.omaster.util.UrlConstants
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -142,13 +140,8 @@ class PresetRepository private constructor(context: Context) {
                 }
             }
 
-            // 本地预设加载完成后，触发后台云同步以获取最新云端预设
-            try {
-                triggerBackgroundSync(brand = null)
-                Log.i(TAG, "初始云同步完成: ${_presets.value.size} 条预设")
-            } catch (e: Exception) {
-                Log.w(TAG, "初始云同步失败，使用本地缓存", e)
-            }
+            // 本地预设加载完成
+            Log.i(TAG, "PresetRepository 初始化完成: ${_presets.value.size} 条预设")
         }
     }
 
@@ -548,180 +541,6 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * PM-009: 预设数据导入（云端）
-     *
-     * 流程：尝试从 jsDelivr CDN 拉取所有启用品牌的预设 JSON
-     * - 任一品牌成功：合并入内存、写入本地缓存、返回成功
-     * - 全部失败：返回失败，并保留已有缓存
-     * - 内部带有重试与指数退避
-     */
-    suspend fun syncFromCloud(): Result<SyncResult> = withContext(Dispatchers.IO) {
-        var lastError: Throwable? = null
-        val maxRetries = 3
-
-        for (attempt in 1..maxRetries) {
-            try {
-                Log.d(TAG, "云同步第 ${attempt}/${maxRetries} 次尝试")
-                val result = fetchFromCDN()
-                if (result.isSuccess) {
-                    settingsManager.lastSyncTime = System.currentTimeMillis()
-                    settingsManager.cloudSyncStatus =
-                        com.silas.omaster.data.local.CloudSyncStatus.SYNCED
-                    return@withContext result
-                }
-                lastError = result.exceptionOrNull()
-                Log.w(TAG, "第 ${attempt} 次同步失败: ${lastError?.message}")
-            } catch (e: Exception) {
-                lastError = e
-                Log.e(TAG, "第 ${attempt} 次同步异常", e)
-            }
-            // 指数退避：1s, 2s, 4s
-            if (attempt < maxRetries) {
-                kotlinx.coroutines.delay(1000L * (1L shl (attempt - 1)))
-            }
-        }
-
-        settingsManager.cloudSyncStatus =
-            com.silas.omaster.data.local.CloudSyncStatus.ERROR
-        Result.failure(lastError ?: Exception("同步失败：达到最大重试次数"))
-    }
-
-    /**
-     * 从 jsDelivr CDN 拉取所有启用品牌的预设数据
-     */
-    private suspend fun fetchFromCDN(): Result<SyncResult> = withContext(Dispatchers.IO) {
-        val cloudUrls = settingsManager.cloudPresetUrls
-        if (cloudUrls.isEmpty()) {
-            Log.w(TAG, "未配置云端数据源 URL，跳过同步")
-            return@withContext Result.failure(IllegalStateException("未配置云端数据源 URL"))
-        }
-
-        val imported = mutableListOf<PresetItem>()
-        val conflicts = mutableListOf<PresetItem>()
-        val errors = mutableListOf<Throwable>()
-
-        // 已存在的预设索引（按 brand+name 查重）
-        val existingIndex = _presets.value.associateBy { "${it.brand}::${it.name}" }.toMutableMap()
-
-        for ((brand, url) in cloudUrls) {
-            try {
-                Log.d(TAG, "拉取品牌 [$brand] 的云端预设: $url")
-                val brandPresets = fetchBrandFromCDN(brand, url)
-                if (brandPresets.isNotEmpty()) {
-                    for (preset in brandPresets) {
-                        val key = "${preset.brand}::${preset.name}"
-                        if (existingIndex.containsKey(key)) {
-                            conflicts.add(preset)
-                        } else {
-                            imported.add(preset)
-                            existingIndex[key] = preset
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "拉取品牌 [$brand] 失败: $url", e)
-                errors.add(e)
-            }
-        }
-
-        if (imported.isEmpty() && errors.isNotEmpty()) {
-            // 全部失败：保留原数据，返回失败
-            return@withContext Result.failure(
-                Exception("所有云端数据源拉取失败: ${errors.joinToString { it.message ?: it.javaClass.simpleName }}")
-            )
-        }
-
-        if (imported.isNotEmpty()) {
-            // 合并新数据，写入缓存
-            val newList = (imported + _presets.value).distinctBy { "${it.brand}::${it.name}" }
-            _presets.value = newList
-            try {
-                saveToCache()
-                Log.d(TAG, "云同步成功，新增 ${imported.size} 条，冲突 ${conflicts.size} 条")
-            } catch (e: Exception) {
-                Log.e(TAG, "云同步结果写入本地缓存失败", e)
-            }
-        } else {
-            Log.d(TAG, "云端无新增数据（可能全部冲突或最新）")
-        }
-
-        Result.success(SyncResult(imported = imported.size, conflicts = conflicts))
-    }
-
-    /**
-     * 拉取单个品牌的云端预设 JSON
-     * - 读取远程 JSON 字符串后显式 decode，避免 Ktor 因 Content-Type 不匹配而抛 NoTransformationFoundException
-     * - 返回转换后的 PresetItem 列表
-     */
-    private suspend fun fetchBrandFromCDN(brand: String, url: String): List<PresetItem> {
-        // SSRF 防护：验证 URL 安全性
-        validateCloudUrl(url)?.let { errorMsg ->
-            throw SecurityException("[$brand] $errorMsg")
-        }
-
-        val response = httpClient.get(url)
-        val status = response.status
-        if (status.value !in 200..299) {
-            throw java.io.IOException("HTTP ${status.value} ${status.description} 来自 $url")
-        }
-        val body = response.bodyAsText()
-        if (body.isBlank()) {
-            Log.w(TAG, "品牌 [$brand] 返回空响应体: $url")
-            return emptyList()
-        }
-        val presetList = json.decodeFromString(PresetList.serializer(), body)
-        Log.d(TAG, "品牌 [$brand] 解析得到 ${presetList.presets.size} 条云端预设")
-
-        // 从预设源 URL 推算 CDN 基础路径（去掉 /presets/v2/xxx.json 部分）
-        val cdnBasePath = resolveCdnBasePath(url)
-
-        return presetList.presets.map { preset ->
-            preset.toRepositoryPreset(brand).let { item ->
-                // 将相对路径的 coverPath 和 galleryImages 转换为完整 CDN URL
-                item.copy(
-                    coverPath = resolveToFullUrl(cdnBasePath, item.coverPath),
-                    galleryImages = item.galleryImages?.mapNotNull { resolveToFullUrl(cdnBasePath, it) }
-                )
-            }
-        }
-    }
-
-    /**
-     * 从预设源 URL 推算 CDN 基础路径
-     * 例如: https://cdn.jsdelivr.net/gh/repo@main/presets/v2/oppo.json
-     *   -> https://cdn.jsdelivr.net/gh/repo@main
-     */
-    private fun resolveCdnBasePath(presetUrl: String): String {
-        // CDN_JSDELIVR = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main"
-        val cdnBase = UrlConstants.CDN_JSDELIVR
-        return if (presetUrl.startsWith(cdnBase)) {
-            cdnBase
-        } else {
-            // 通用回退：去掉最后一段路径
-            val lastSlash = presetUrl.lastIndexOf('/')
-            if (lastSlash > 0) {
-                // 尝试去掉 /presets/v2/ 部分
-                val path = presetUrl.substring(0, lastSlash)
-                val secondLastSlash = path.lastIndexOf('/')
-                if (secondLastSlash > 0) path.substring(0, secondLastSlash + 1) else "$path/"
-            } else {
-                presetUrl
-            }
-        }
-    }
-
-    /**
-     * 将相对路径解析为完整 URL
-     * 如果已经是完整 URL（http/https），直接返回
-     * 如果是相对路径（如 images/xxx.webp），拼接 CDN 基础路径
-     */
-    private fun resolveToFullUrl(cdnBasePath: String, path: String?): String? {
-        if (path.isNullOrBlank()) return path
-        if (path.startsWith("http://") || path.startsWith("https://")) return path
-        return "${cdnBasePath.trimEnd('/')}/${path.trimStart('/')}"
-    }
-
-    /**
      * PM-010: 本地存储损坏处理
      *
      * 处理策略：
@@ -924,13 +743,6 @@ class PresetRepository private constructor(context: Context) {
             readFromCache() ?: readFromAssets() ?: emptyList()
         }
 
-        // 启动后台同步任务，不阻塞当前返回
-        try {
-            triggerBackgroundSync(brand)
-        } catch (e: Exception) {
-            Log.w(TAG, "后台同步调度失败", e)
-        }
-
         // 按品牌过滤
         return@withContext if (brand.isNullOrBlank()) {
             localPresets
@@ -938,35 +750,6 @@ class PresetRepository private constructor(context: Context) {
             val filtered = localPresets.filter { it.brand.equals(brand, ignoreCase = true) }
             Log.d(TAG, "按品牌 [$brand] 过滤后剩余 ${filtered.size}/${localPresets.size} 条")
             filtered
-        }
-    }
-
-    /**
-     * 在后台尝试一次云同步，结果合并到 _presets 并写回缓存
-     * 失败时静默降级，不影响主流程
-     */
-    private suspend fun triggerBackgroundSync(brand: String?) {
-        if (!settingsManager.isCloudSyncEnabled) {
-            Log.d(TAG, "云同步开关未启用，跳过后台同步")
-            return
-        }
-        // 节流：距上次同步不足 5 分钟则跳过
-        val now = System.currentTimeMillis()
-        val lastSync = settingsManager.lastSyncTime
-        if (lastSync > 0 && now - lastSync < BACKGROUND_SYNC_INTERVAL_MS) {
-            Log.d(TAG, "距上次同步不足 ${BACKGROUND_SYNC_INTERVAL_MS / 1000}s，跳过")
-            return
-        }
-
-        try {
-            val result = fetchFromCDN()
-            result.onSuccess { syncResult ->
-                Log.i(TAG, "后台同步完成: 新增 ${syncResult.imported} 条")
-            }.onFailure { e ->
-                Log.w(TAG, "后台同步失败，已使用本地缓存: ${e.message}")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "后台同步异常，已使用本地缓存", e)
         }
     }
 
@@ -995,69 +778,6 @@ class PresetRepository private constructor(context: Context) {
 
     private fun savePinned(pinned: Set<String>) {
         settingsManager.pinnedPresetIds = pinned.toList()
-    }
-
-    /**
-     * SSRF 防护：验证云端 URL 安全性
-     * @param url 待验证的 URL
-     * @return 错误信息，如果验证通过返回 null
-     */
-    private fun validateCloudUrl(url: String): String? {
-        if (url.isBlank()) return "URL 不能为空"
-
-        // 使用 URI 标准化解析，避免手动字符串分割被绕过
-        val uri = try {
-            java.net.URI(url.trim())
-        } catch (e: Exception) {
-            return "URL 格式不合法"
-        }
-
-        // 协议检查
-        if (uri.scheme?.lowercase() != "https") return "仅支持 HTTPS 协议"
-
-        val host = uri.host ?: return "无法解析主机名"
-
-        // 禁止 @ 绕过（如 https://evil.com@cdn.jsdelivr.net/...）
-        val userInfo = uri.userInfo
-        if (!userInfo.isNullOrBlank()) return "URL 中不允许包含用户信息"
-
-        // 端口检查：只允许 443，禁止端口 0 和其他非标准端口
-        val port = uri.port
-        if (port != -1 && port != 443) {
-            return "仅允许标准 HTTPS 端口 (443)"
-        }
-
-        val lowerHost = host.lowercase()
-
-        // 禁止访问内网和本地地址（含 IPv4 和 IPv6）
-        val blockedPrefixes = listOf(
-            "localhost", "127.", "0.0.0.0", "::1",
-            "10.", "192.168.", "172.16.", "172.17.", "172.18.", "172.19.",
-            "172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
-            "172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
-            "172.30.", "172.31.", "169.254.", "fc00:", "fe80:", "ff00:", "ff02:"
-        )
-
-        if (blockedPrefixes.any { lowerHost.startsWith(it) || lowerHost == it.trimEnd('.') }) {
-            return "禁止访问内网或本地地址"
-        }
-
-        // IPv6 地址检测（含方括号形式如 [::1]）
-        if (lowerHost.startsWith("[") && lowerHost.endsWith("]")) {
-            return "禁止直接使用 IP 地址"
-        }
-
-        // 验证域名格式（防止 IPv4 地址绕过）
-        if (lowerHost.matches(Regex("^\\d+\\.\\d+\\.\\d+\\.\\d+$"))) {
-            return "禁止直接使用 IP 地址"
-        }
-
-        // 额外检查：确保 host 不是纯数字（某些 IPv6 缩写或畸形地址）
-        if (lowerHost.all { it.isDigit() || it == ':' || it == '.' }) {
-            return "禁止直接使用 IP 地址"
-        }
-
-        return null
     }
 
     /**
@@ -1106,67 +826,8 @@ class PresetRepository private constructor(context: Context) {
         forceReloadLock.withLock {
             _presets.value = emptyList()
             loadLocalPresets()
-            try {
-                triggerBackgroundSync(brand = null)
-            } catch (e: Exception) {
-                Log.w(TAG, "后台同步失败，已返回本地文件数据", e)
-            }
             _presets.value
         }
-    }
-
-    /**
-     * 合并云端预设到本地缓存并刷新 Flow
-     *
-     * 由 CloudSyncManager 在同步完成后调用，打通云同步页面与主界面的数据流：
-     * CloudSyncScreen "立即同步" → CloudSyncManager.sync() → mergeCloudPresets
-     * → _presets Flow 刷新 → HomeViewModel 预设列表更新
-     *
-     * 合并策略：
-     * - 按 "brand::name" 去重，云端预设覆盖本地同名预设
-     * - 已存在的同名预设保留本地 id，以维护收藏/置顶关系
-     * - 保留本地自定义预设
-     * - 合并后原子写入缓存文件并更新 Flow
-     *
-     * @param cloudPresets 云端拉取的预设列表
-     * @return 合并后写入的云端预设数量
-     */
-    suspend fun mergeCloudPresets(cloudPresets: List<MasterPreset>): Int = withContext(Dispatchers.IO) {
-        if (cloudPresets.isEmpty()) {
-            Log.d(TAG, "mergeCloudPresets: 云端预设列表为空，跳过合并")
-            return@withContext 0
-        }
-
-        // 以 "brand::name" 为键建立索引，保留本地已有预设
-        val existingIndex = _presets.value.associateBy { "${it.brand}::${it.name}" }.toMutableMap()
-        var mergedCount = 0
-
-        for (preset in cloudPresets) {
-            val brand = preset.brand?.takeIf { it.isNotBlank() } ?: "unknown"
-            val item = preset.toRepositoryPreset(brand)
-            val key = "${item.brand}::${item.name}"
-            // 已存在的同名预设保留本地 id，维护收藏/置顶关系；新项直接追加
-            val existing = existingIndex[key]
-            if (existing != null) {
-                existingIndex[key] = item.copy(id = existing.id)
-            } else {
-                existingIndex[key] = item
-            }
-            mergedCount++
-        }
-
-        // 合并结果写回 Flow 与缓存
-        val merged = existingIndex.values.toList()
-        _presets.value = merged
-
-        try {
-            saveToCache()
-            Log.i(TAG, "mergeCloudPresets: 合并完成，共 ${merged.size} 条预设（合并 $mergedCount 条云端预设）")
-        } catch (e: Exception) {
-            Log.e(TAG, "mergeCloudPresets: 写入本地缓存失败", e)
-        }
-
-        mergedCount
     }
 
     // ==================== HomeViewModel 需要的方法 ====================
@@ -1273,7 +934,6 @@ class PresetRepository private constructor(context: Context) {
         private const val ASSETS_PRESETS_FILE = "presets.json"
         private const val CACHE_VERSION = 1
         private const val NETWORK_TIMEOUT_MS = 10_000L
-        private const val BACKGROUND_SYNC_INTERVAL_MS = 5 * 60 * 1000L
 
         @Volatile
         private var instance: PresetRepository? = null
@@ -1555,14 +1215,6 @@ private fun parseNumericValue(value: String): Int? {
 data class ImportResult(
     val imported: Int,
     val skipped: Int,
-    val conflicts: List<PresetItem>
-)
-
-/**
- * 同步结果
- */
-data class SyncResult(
-    val imported: Int,
     val conflicts: List<PresetItem>
 )
 

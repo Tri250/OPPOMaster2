@@ -1156,6 +1156,76 @@ object LUTResourceRepository {
             createdAt = "2026-03-15"
         ),
 
+        // --- OPPO Find X9 哈苏大师专属 LUT ---
+        LUTResource(
+            id = "oppo-findx9-hasselblad-master",
+            name = "Find X9 哈苏大师色彩",
+            nameEn = "OPPO Find X9 Hasselblad Master",
+            description = "OPPO Find X9 哈苏大师模式专属色彩科学，1英寸大底 + 哈苏自然色彩解决方案 HNCS，专业人像与街拍大师直出",
+            category = "cinematic",
+            tags = listOf("OPPO", "Find X9", "哈苏", "大师", "HNCS", "1英寸", "人像", "街拍"),
+            downloadUrl = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/luts/2026/findx9_hasselblad_master_33.cube",
+            previewImage = UrlConstants.getSampleImageUrl("2026_findx9_hasselblad_sample.jpg"),
+            format = "cube", size = "33", fileSize = 14,
+            author = "OMaster Team",
+            authorUrl = "https://github.com/fengyec2",
+            downloads = 89500, likes = 7200, rating = 4.9f,
+            isFree = true, isHot = true, isNew = true,
+            suitableFor = listOf("Find X9", "哈苏大师", "人像", "街拍", "1英寸大底"),
+            createdAt = "2026-04-10"
+        ),
+        LUTResource(
+            id = "oppo-findx9-hasselblad-portrait",
+            name = "Find X9 哈苏人像大师",
+            nameEn = "OPPO Find X9 Hasselblad Portrait Master",
+            description = "Find X9 哈苏人像大师模式专属 LUT，柔和肤色过渡 + 哈苏胶片质感，适合 23mm/35mm/50mm/85mm 人像焦段",
+            category = "portrait",
+            tags = listOf("OPPO", "Find X9", "哈苏", "人像", "大师", "胶片质感", "肤色"),
+            downloadUrl = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/luts/2026/findx9_hasselblad_portrait_33.cube",
+            previewImage = UrlConstants.getSampleImageUrl("2026_findx9_portrait_sample.jpg"),
+            format = "cube", size = "33", fileSize = 13,
+            author = "OMaster Team",
+            authorUrl = "https://github.com/fengyec2",
+            downloads = 67800, likes = 5400, rating = 4.8f,
+            isFree = true, isHot = true, isNew = true,
+            suitableFor = listOf("Find X9", "哈苏人像", "大师人像", "胶片", "中长焦"),
+            createdAt = "2026-04-12"
+        ),
+        LUTResource(
+            id = "oppo-findx9-hasselblad-street",
+            name = "Find X9 哈苏街拍大师",
+            nameEn = "OPPO Find X9 Hasselblad Street Master",
+            description = "Find X9 哈苏街拍大师模式 LUT，高对比黑白 + 瞬时抓拍色彩，致敬哈苏 X1D 街拍质感",
+            category = "cinematic",
+            tags = listOf("OPPO", "Find X9", "哈苏", "街拍", "大师", "黑白", "高对比"),
+            downloadUrl = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/luts/2026/findx9_hasselblad_street_33.cube",
+            previewImage = UrlConstants.getSampleImageUrl("2026_findx9_street_sample.jpg"),
+            format = "cube", size = "33", fileSize = 12,
+            author = "OMaster Team",
+            authorUrl = "https://github.com/fengyec2",
+            downloads = 54300, likes = 4300, rating = 4.7f,
+            isFree = true, isHot = false, isNew = true,
+            suitableFor = listOf("Find X9", "哈苏街拍", "大师街拍", "黑白", "人文"),
+            createdAt = "2026-04-15"
+        ),
+        LUTResource(
+            id = "oppo-findx9-hasselblad-xpan",
+            name = "Find X9 哈苏 XPan 宽幅",
+            nameEn = "OPPO Find X9 Hasselblad XPan Mode",
+            description = "Find X9 哈苏 XPan 宽幅模式专属色彩，65:24 画幅 + 哈苏宽幅色彩科学，致敬哈苏 XPan 经典",
+            category = "cinematic",
+            tags = listOf("OPPO", "Find X9", "哈苏", "XPan", "宽幅", "65:24", "大师"),
+            downloadUrl = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/luts/2026/findx9_hasselblad_xpan_33.cube",
+            previewImage = UrlConstants.getSampleImageUrl("2026_findx9_xpan_sample.jpg"),
+            format = "cube", size = "33", fileSize = 13,
+            author = "OMaster Team",
+            authorUrl = "https://github.com/fengyec2",
+            downloads = 41200, likes = 3300, rating = 4.8f,
+            isFree = true, isHot = false, isNew = true,
+            suitableFor = listOf("Find X9", "XPan", "宽幅", "哈苏", "人文纪实"),
+            createdAt = "2026-04-18"
+        ),
+
         // --- 松下 Panasonic (2) ---
         LUTResource(
             id = "panasonic-v-log",

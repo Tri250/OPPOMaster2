@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -133,6 +134,13 @@ fun AIFineTuneScreen(
     LaunchedEffect(currentParams) {
         if (sourceBitmap != null) {
             viewModel.refreshPreview(context)
+        }
+    }
+
+    // 屏幕销毁时取消 AI 推理协程，防止闪退
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.cancelInference()
         }
     }
 

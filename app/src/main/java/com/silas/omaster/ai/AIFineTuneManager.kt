@@ -149,12 +149,11 @@ class AIFineTuneManager private constructor(context: Context) {
      * FT-006: 检查权限
      */
     fun checkPermission(): Boolean {
-        // AI微调不需要特殊权限，使用本地算法
-        // 如需网络访问，检查网络权限
+        // AI微调需要网络权限以访问云端AI推理API
         return ContextCompat.checkSelfPermission(
             appContext,
             android.Manifest.permission.INTERNET
-        ) == PackageManager.PERMISSION_GRANTED || !settingsManager.isCloudSyncEnabled
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     /**
@@ -165,12 +164,11 @@ class AIFineTuneManager private constructor(context: Context) {
     }
 
     /**
-     * 检查云端AI是否可用（网络正常、质量达标、云同步开启、API密钥有效）
+     * 检查云端AI是否可用（网络正常、质量达标、API密钥有效）
      */
     fun isCloudAIAvailable(): Boolean {
         return isNetworkAvailable()
                 && isNetworkQualityGood()
-                && settingsManager.isCloudSyncEnabled
                 && getApiKey() != null
     }
 

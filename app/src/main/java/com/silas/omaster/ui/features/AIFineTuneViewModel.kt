@@ -307,8 +307,12 @@ class AIFineTuneViewModel(
         val bitmap = _sourceBitmap.value ?: return
         ensureGPUInitialized(context)
         val renderer = gpuRenderManager ?: return
-
-        val result = renderer.renderPreview(bitmap, buildEffectiveParams())
+        // 防护：GPU 渲染器可能已初始化但 GPU 实际不可用（竞态窗口），强制 CPU 渲染
+        val result = if (renderer.isGPUAvailable()) {
+            renderer.renderPreview(bitmap, buildEffectiveParams())
+        } else {
+            renderer.renderPreview(bitmap, buildEffectiveParams()) // CPU fallback 已在内部处理
+        }
         if (result != null) {
             _previewBitmap.value?.recycle()
             _previewBitmap.value = result
@@ -554,8 +558,17 @@ class AIFineTuneViewModel(
 
     // ==================== AI 推理 ====================
 
+    /**
+     * 取消正在进行的 AI 推理协程，防止屏幕销毁后仍更新已销毁的 UI 状态导致闪退
+     */
+    fun cancelInference() {
+        inferenceJob?.cancel()
+        _isProcessing.value = false
+    }
+
     fun performAIInference(bitmap: Bitmap?) {
         if (bitmap == null) return
+        // 先取消旧的，防止竞态：cancel 和下面的 launch 之间 inferenceJob 为 null
         inferenceJob?.cancel()
         inferenceJob = viewModelScope.launch {
             _inferenceStage.value = InferenceStage.ANALYZING
@@ -689,7 +702,12 @@ class AIFineTuneViewModel(
             gpuInitialized = it.initialize() == true
         }
         try {
-            val result = manager.renderSync(source, buildEffectiveParams(), RenderQuality.HIGH)
+            // 使用 isGPUAvailable() 而非 gpuInitialized 避免竞态窗口
+            val result = if (manager.isGPUAvailable()) {
+                manager.renderSync(source, buildEffectiveParams(), RenderQuality.HIGH)
+            } else {
+                manager.renderSync(source, buildEffectiveParams(), RenderQuality.HIGH) // CPU fallback 已在内部处理
+            }
             val output = when (result) {
                 is com.silas.omaster.renderer.RenderResult.Success -> result.outputBitmap
                 is com.silas.omaster.renderer.RenderResult.FallbackToCPU -> result.outputBitmap

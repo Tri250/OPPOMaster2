@@ -103,13 +103,15 @@ class LUTManager private constructor(private val context: Context) {
      * @return 下载成功返回本地文件，失败返回 null
      */
     suspend fun downloadLUT(resource: LUTResource): File? = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        var inputStream: java.io.InputStream? = null
         try {
             val url = URL(resource.downloadUrl)
             if (!url.protocol.startsWith("https")) {
                 Log.w(TAG, "Non-HTTPS download URL: ${resource.downloadUrl}")
             }
 
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
             connection.setRequestProperty("Accept", "*/*")
@@ -122,7 +124,7 @@ class LUTManager private constructor(private val context: Context) {
             }
 
             val contentLength = connection.contentLengthLong
-            val inputStream = connection.inputStream
+            inputStream = connection.inputStream
 
             // 保存到公共 Download 目录
             val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -158,9 +160,6 @@ class LUTManager private constructor(private val context: Context) {
                 }
             }
 
-            inputStream.close()
-            connection.disconnect()
-
             // 更新下载状态
             val current = _downloadedIds.value.toMutableSet()
             current.add(resource.id)
@@ -183,6 +182,10 @@ class LUTManager private constructor(private val context: Context) {
             progress.remove(resource.id)
             _downloadProgress.value = progress
             null
+        } finally {
+            // 确保资源在任何路径下都被释放，避免连接泄漏
+            try { inputStream?.close() } catch (_: Exception) {}
+            try { connection?.disconnect() } catch (_: Exception) {}
         }
     }
 
