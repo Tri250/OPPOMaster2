@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * OMaster Typography 字体系统
- * 基于 Material3 设计规范 + ColorOS 16 字体标准，统一管理应用内所有字体样式
+ * 基于 Material3 设计规范 + ColorOS 16 字体标准 + OPPO Find X9 哈苏大师品牌调性
  *
  * ColorOS 16 字体规范：
  * - 大标题：28sp / 行高 36sp
@@ -21,16 +21,72 @@ import androidx.compose.ui.unit.sp
  * - 标签：11sp / 行高 16sp
  *
  * 品牌字体配置：
- * - 当前使用系统默认字体族（如需自定义字体，请将字体文件放入 app/src/main/res/font/ 后修改此处）
- * - 字体文件推荐：NotoSans-Regular.ttf, NotoSans-Bold.ttf 等
+ * - 正文使用系统默认字体（OPPO Sans/思源黑体）
+ * - 数字/参数使用等宽字体，增强专业仪器感
+ * - 品牌文案使用衬线字体，凸显哈苏高端调性
+ * - 如需自定义品牌字体，将 .ttf/.otf 放入 app/src/main/res/font/ 后修改下方引用
+ */
+
+/**
+ * 正文品牌字体族 — 系统默认（OPPO 设备自动使用 OPPO Sans）
  */
 val OMasterFontFamily = FontFamily.Default
 
 /**
- * 安全获取字体族：当前直接使用系统默认字体
+ * 等宽字体族 — 用于曝光参数、快门速度、ISO 等数字显示
+ * 在 OPPO 设备上使用系统等宽字体，保证数字对齐的专业感
+ */
+val MonoFontFamily = FontFamily.Monospace
+
+/**
+ * 衬线字体族 — 用于品牌文案（HNCS 标识、哈苏品牌名等）
+ * 有衬线字体时使用 serif，否则降级为系统默认
+ */
+val SerifFontFamily = FontFamily.Serif
+
+/**
+ * 安全获取正文字体族
  */
 private val safeFontFamily: FontFamily = OMasterFontFamily
 
+/**
+ * 安全获取等宽字体族
+ */
+private val safeMonoFontFamily: FontFamily = MonoFontFamily
+
+/**
+ * 安全获取衬线字体族
+ */
+private val safeSerifFontFamily: FontFamily = SerifFontFamily
+
+/**
+ * 参数数字专用样式 — 等宽字体 + 略大字号
+ * 用于 ISO 值、快门速度、光圈值、EV 值等专业参数显示
+ */
+val ParamNumberStyle = TextStyle(
+    fontFamily = safeMonoFontFamily,
+    fontWeight = FontWeight.Bold,
+    fontSize = 16.sp,
+    lineHeight = 24.sp,
+    letterSpacing = 0.sp
+)
+
+/**
+ * 品牌文案样式 — 衬线字体
+ * 用于 "HNCS"、"HASSELBLAD" 等品牌标识
+ */
+val BrandSerifStyle = TextStyle(
+    fontFamily = safeSerifFontFamily,
+    fontWeight = FontWeight.Bold,
+    fontSize = 12.sp,
+    lineHeight = 18.sp,
+    letterSpacing = 2.sp
+)
+
+/**
+ * Material3 Typography 全局字体配置
+ * 对齐 ColorOS 16 字体规范，14 级字号体系
+ */
 val Typography = Typography(
     // ========== Display 系列 - ColorOS 16 大标题 ==========
     

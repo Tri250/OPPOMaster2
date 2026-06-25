@@ -48,10 +48,12 @@ import com.silas.omaster.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.ui.animation.adaptiveSpringSpec
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.silas.omaster.ui.animation.AnimationSpecs.ColorOS16GentleSpring
+import com.silas.omaster.ui.theme.ColorOS16Palette
+import com.silas.omaster.ui.theme.HapticLevels
 import com.silas.omaster.util.perform
-
-private val NavBarBackground = Color(0xFF1A1A1A)
-private val NavBarBorder = Color(0xFF2A2A2A)
 
 data class NavItem(
     val route: String,
@@ -110,8 +112,8 @@ fun PillNavBar(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                NavBarBackground.copy(alpha = 0.85f),
-                                NavBarBackground.copy(alpha = 0.75f)
+                                ColorOS16Palette.GlassDarkSurface.copy(alpha = 0.85f),
+                                ColorOS16Palette.GlassDarkSurface.copy(alpha = 0.75f)
                             )
                         )
                     )
@@ -143,8 +145,8 @@ fun PillNavBar(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                NavBarBorder.copy(alpha = 0.5f),
-                                NavBarBorder.copy(alpha = 0.2f)
+                                ColorOS16Palette.GlassBorder.copy(alpha = 0.5f),
+                                ColorOS16Palette.GlassBorder.copy(alpha = 0.2f)
                             )
                         )
                     )
@@ -159,8 +161,8 @@ fun PillNavBar(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    NavBarBackground.copy(alpha = 0.9f),
-                                    NavBarBackground.copy(alpha = 0.8f)
+                                    ColorOS16Palette.GlassDarkSurface.copy(alpha = 0.9f),
+                                    ColorOS16Palette.GlassDarkSurface.copy(alpha = 0.8f)
                                 )
                             )
                         )
@@ -172,7 +174,8 @@ fun PillNavBar(
                 modifier = Modifier
                     .then(navBarModifier)
                     .height(64.dp)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .semantics { contentDescription = "Navigation bar" },
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -229,7 +232,7 @@ private fun NavItemButton(
 
     val indicatorAlpha by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = ColorOS16GentleSpring,
         label = "indicatorAlpha"
     )
 

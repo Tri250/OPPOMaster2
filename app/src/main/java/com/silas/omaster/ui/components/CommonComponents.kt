@@ -1,6 +1,7 @@
 package com.silas.omaster.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -46,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -58,6 +61,7 @@ import coil.request.CachePolicy
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.util.DownloadResult
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.ImageDownloadCallback
@@ -72,6 +76,7 @@ fun OMasterTopAppBar(
     title: String,
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
+    backContentDescription: String = stringResource(R.string.back),
     actions: @Composable RowScope.() -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -98,7 +103,7 @@ fun OMasterTopAppBar(
                 IconButton(onClick = it) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.back),
+                        contentDescription = backContentDescription,
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -110,6 +115,13 @@ fun OMasterTopAppBar(
             titleContentColor = MaterialTheme.colorScheme.onBackground
         ),
         modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(ColorOS16Palette.GlassDarkSurface)
+            .border(
+                width = 0.5.dp,
+                color = ColorOS16Palette.GlassBorder,
+                shape = RoundedCornerShape(16.dp)
+            )
     )
 }
 
@@ -229,12 +241,17 @@ fun HorizontalSpacer(width: Dp) = Spacer(modifier = Modifier.width(width))
 @Composable
 fun ModeBadge(
     tags: List<String>?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
 ) {
     if (tags.isNullOrEmpty()) return
 
     FlowRow(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (contentDescription != null) Modifier.semantics {
+                this.contentDescription = contentDescription
+            } else Modifier
+        ),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -266,7 +283,8 @@ fun PresetImage(
     preset: MasterPreset,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    showDownloadIndicator: Boolean = true
+    showDownloadIndicator: Boolean = true,
+    contentDescription: String = "预设样张"
 ) {
     val context = LocalContext.current
     var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
@@ -315,7 +333,7 @@ fun PresetImage(
                     .diskCachePolicy(CachePolicy.ENABLED)
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .build(),
-                contentDescription = preset.name,
+                contentDescription = contentDescription,
                 contentScale = contentScale,
                 modifier = Modifier.fillMaxSize(),
                 onError = {
@@ -394,14 +412,19 @@ private sealed class DownloadState {
 fun SectionTitle(
     title: String,
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary
+    color: Color = MaterialTheme.colorScheme.primary,
+    contentDescription: String? = null
 ) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         color = color,
-        modifier = modifier
+        modifier = modifier.then(
+            if (contentDescription != null) Modifier.semantics {
+                this.contentDescription = contentDescription
+            } else Modifier
+        )
     )
 }
 
@@ -412,7 +435,8 @@ fun SectionTitle(
 fun ParameterCard(
     label: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
 ) {
     Card(
         modifier = modifier,
@@ -441,7 +465,10 @@ fun ParameterCard(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = if (contentDescription != null) Modifier.semantics {
+                    this.contentDescription = contentDescription
+                } else Modifier
             )
         }
     }
@@ -469,10 +496,17 @@ fun ShootingTipsCard(
 fun DescriptionCard(
     title: String,
     content: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (contentDescription != null) Modifier.semantics {
+                    this.contentDescription = contentDescription
+                } else Modifier
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
@@ -528,7 +562,9 @@ fun DescriptionCard(
 fun ErrorRetryCard(
     message: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    errorIconContentDescription: String = "错误",
+    retryContentDescription: String = stringResource(R.string.retry)
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -539,13 +575,25 @@ fun ErrorRetryCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = Icons.Filled.CloudOff,
+                contentDescription = errorIconContentDescription,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = message,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = onRetry) {
+            TextButton(
+                onClick = onRetry,
+                modifier = Modifier.semantics {
+                    contentDescription = retryContentDescription
+                }
+            ) {
                 Text(stringResource(R.string.retry))
             }
         }

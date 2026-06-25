@@ -1,13 +1,18 @@
 package com.silas.omaster
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.service.FloatingWindowController
@@ -38,6 +44,8 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
  *  3. 加载主题（颜色/暗色模式）并应用 OMasterTheme
  *  4. 根据是否同意隐私政策，选择进入欢迎流程或主应用
  *  5. 在销毁时注销悬浮窗控制器
+ *  6. Android 14+ Predictive Back 手势支持
+ *  7. Android 13+ 通知权限请求
  *
  * 真正的 UI 结构已拆分到独立文件：
  *  - [AppNavigation.kt] - NavHost / 底部导航 / 全局 Snackbar
@@ -48,9 +56,30 @@ class MainActivity : ComponentActivity() {
 
     private var floatingWindowController: FloatingWindowController? = null
 
+    // Android 13+ 通知权限请求
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* 用户选择后无需额外处理，通知权限静默处理 */ }
+
+    // Android 14+ Predictive Back 回调
+    private val backCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            // 当导航栈为空时，由系统处理（返回桌面）
+            // Compose Navigation 的 BackHandler 会优先处理
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+            isEnabled = true
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Android 14+ Predictive Back 手势
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            onBackPressedDispatcher.addCallback(this, backCallback)
+        }
 
         // 初始化悬浮窗控制器（延迟注册，等待权限检查）
         floatingWindowController = FloatingWindowController.getInstance(this)
@@ -58,6 +87,9 @@ class MainActivity : ComponentActivity() {
         if (Settings.canDrawOverlays(this)) {
             floatingWindowController?.register()
         }
+
+        // Android 13+ 请求通知权限（如需推送通知）
+        requestNotificationPermissionIfNeeded()
 
         setContent {
             CompositionLocalProvider(LocalActivity provides this) {
@@ -96,6 +128,21 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Android 13+ 请求通知权限
+     * 悬浮窗服务需要通知权限来显示持久通知
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }

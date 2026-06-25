@@ -1,8 +1,6 @@
 package com.silas.omaster.ui.features
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +32,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhotoFilter
@@ -66,10 +63,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.ColorOS16Palette
+import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.HasselbladOrangeDark
+import com.silas.omaster.ui.theme.HasselbladOrangeLight
 import com.silas.omaster.util.perform
 
 /**
@@ -128,7 +132,7 @@ fun CoreFeaturesScreen(
                 title = "AI 微调",
                 subtitle = "一键智能微调，色彩风格精准控制",
                 icon = Icons.Default.ColorLens,
-                gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
+                gradientColors = listOf(ColorOS16Palette.PrimaryDark, ColorOS16Palette.Primary),
                 description = FeatureDescription(
                     desc = "一键智能微调，精准控制色彩风格",
                     tips = listOf("饱和度", "对比度", "亮度", "色温", "锐度")
@@ -139,7 +143,7 @@ fun CoreFeaturesScreen(
                 title = "智能优化",
                 subtitle = "一键HDR增强、降噪、锐化优化",
                 icon = Icons.Default.Memory,
-                gradientColors = listOf(Color(0xFF0D47A1), Color(0xFF1565C0)),
+                gradientColors = listOf(ColorOS16Palette.Primary, ColorOS16Palette.PrimaryLight),
                 description = FeatureDescription(
                     desc = "HDR增强、智能降噪、锐化增强",
                     tips = listOf("HDR增强", "智能降噪", "锐化")
@@ -150,7 +154,7 @@ fun CoreFeaturesScreen(
                 title = "水印编辑器",
                 subtitle = "14+专业水印模板，品牌认证水印",
                 icon = Icons.Default.WaterDrop,
-                gradientColors = listOf(Color(0xFF006064), Color(0xFF00838F)),
+                gradientColors = listOf(ColorOS16Palette.Info, ColorOS16Palette.PrimaryLight),
                 description = FeatureDescription(
                     desc = "14+专业水印模板，品牌认证水印",
                     tips = listOf("标准", "极简", "详细", "品牌")
@@ -162,7 +166,7 @@ fun CoreFeaturesScreen(
                 title = "参数精细调节",
                 subtitle = "ISO、快门、光圈、白平衡精确控制",
                 icon = Icons.Default.Tune,
-                gradientColors = listOf(Color(0xFF880E4F), Color(0xFFAD1457)),
+                gradientColors = listOf(ColorOS16Palette.Error, ColorOS16Palette.Warning),
                 description = FeatureDescription(
                     desc = "ISO、快门、光圈、白平衡精确控制",
                     tips = listOf("ISO 50-12800", "快门 1/1000s-30s", "光圈 f/1.4-f/22")
@@ -174,7 +178,7 @@ fun CoreFeaturesScreen(
                 title = "预设管理",
                 subtitle = "云端预设库，收藏、创建、分享",
                 icon = Icons.Default.PhotoFilter,
-                gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFF8C42)),
+                gradientColors = listOf(HasselbladOrange, HasselbladOrangeLight),
                 description = FeatureDescription(
                     desc = "云端预设库，收藏、创建、分享",
                     tips = listOf("云端同步", "本地管理", "批量操作")
@@ -187,7 +191,7 @@ fun CoreFeaturesScreen(
                 title = "LUT 资源分享",
                 subtitle = "20+专业 LUT 滤镜，一键下载使用",
                 icon = Icons.Default.Palette,
-                gradientColors = listOf(Color(0xFF6A1B9A), Color(0xFF8E24AA)),
+                gradientColors = listOf(ColorOS16Palette.Primary, ColorOS16Palette.PrimaryLight),
                 description = FeatureDescription(
                     desc = "20+专业 LUT 滤镜，一键下载使用",
                     tips = listOf("电影色调", "胶片风格", "日系清新", "欧美复古")
@@ -199,7 +203,7 @@ fun CoreFeaturesScreen(
                 title = "哈苏之眼",
                 subtitle = "OPPO Find X9 系列 · HNCS 3.0 哈苏大师体验",
                 icon = Icons.Default.CameraAlt,
-                gradientColors = listOf(Color(0xFFCC5500), Color(0xFFE86A17)),
+                gradientColors = listOf(HasselbladOrangeDark, HasselbladOrange),
                 description = FeatureDescription(
                     desc = "真实场景识别，哈苏大师参数推荐，HNCS 3.0 自然色彩",
                     tips = listOf("人像大师", "风景增强", "夜景星空", "美食胶片", "建筑几何")
@@ -210,7 +214,7 @@ fun CoreFeaturesScreen(
                 title = "大师洞察",
                 subtitle = "拍摄数据看板 · 胶片风格排行 · 大师建议",
                 icon = Icons.Default.Analytics,
-                gradientColors = listOf(Color(0xFF00695C), Color(0xFF00897B)),
+                gradientColors = listOf(ColorOS16Palette.Success, ColorOS16Palette.Primary),
                 description = FeatureDescription(
                     desc = "基于哈苏之眼配方历史，生成场景分布与拍摄习惯洞察",
                     tips = listOf("场景分布", "胶片排行", "连续拍摄", "大师建议")
@@ -245,7 +249,8 @@ fun CoreFeaturesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.statusBars),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .semantics { contentDescription = "核心功能列表" },
         state = listState,
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
     ) {
@@ -421,7 +426,7 @@ private fun SectionHeader(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = "功能图标",
+                contentDescription = title,
                 tint = HasselbladOrange,
                 modifier = Modifier.size(20.dp)
             )
@@ -476,10 +481,7 @@ private fun FeatureCard(
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = AnimationSpecs.CardSpring,
         label = "scale"
     )
 
@@ -504,8 +506,8 @@ private fun FeatureCard(
                 .background(
                     brush = Brush.linearGradient(
                         colors = if (isEnabled) feature.gradientColors else listOf(
-                            Color(0xFF2A2A2A),
-                            Color(0xFF1A1A1A)
+                            ColorOS16Palette.GlassDarkSurface,
+                            DarkGray
                         )
                     )
                 )
@@ -528,7 +530,7 @@ private fun FeatureCard(
                     ) {
                         Icon(
                             imageVector = feature.icon,
-                            contentDescription = "功能图标",
+                            contentDescription = feature.title,
                             tint = if (isEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             modifier = Modifier.size(28.dp)
                         )
@@ -542,8 +544,8 @@ private fun FeatureCard(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                                 checkedTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                                uncheckedThumbColor = Color.Gray,
-                                uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
+                                uncheckedThumbColor = ColorOS16Palette.TextSecondary,
+                                uncheckedTrackColor = ColorOS16Palette.TextSecondary.copy(alpha = 0.3f)
                             )
                         )
                     } else {
@@ -561,7 +563,7 @@ private fun FeatureCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "功能图标",
+                                contentDescription = "进入 ${feature.title}",
                                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                                 modifier = Modifier.size(18.dp)
                             )
