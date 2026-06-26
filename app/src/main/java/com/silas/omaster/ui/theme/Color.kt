@@ -24,6 +24,16 @@ val SonyOrange = Color(0xFFF15A24)
 val PhaseOneGrey = Color(0xFF5A5A5A)
 
 /**
+ * 手机厂商品牌主题色（与 ThemeSettingsScreen 一致，用于 BrandTheme 扩展）
+ * 对齐 OPPO Find X9 哈苏大师版的厂商品牌体系
+ */
+val OppoGreen = Color(0xFF1BA784)
+val VivoBlue = Color(0xFF415FFF)
+val RealmeGold = Color(0xFFFFC30D)
+val HonorBlue = Color(0xFF0091FF)
+val XiaomiOrange = Color(0xFFFF6900)
+
+/**
  * 纯黑背景系列（对齐 Web 端）
  * 用于深色模式的主背景
  */

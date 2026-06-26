@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- 应用主主题：仅作为 Compose 之前的承载主题，颜色由 OMasterTheme 在运行时接管 -->
     <style name="Theme.OMaster" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+        P2-3：Splash Screen 主题
+        - 继承 androidx.core:core-splashscreen 提供的 Theme.SplashScreen
+        - windowSplashScreenBackground：纯白底（与 Theme.OMaster 的 Light 基底一致，
+          避免冷启动时主题闪烁）
+        - windowSplashScreenAnimatedIcon：复用现有启动图标前景（系统会自动按
+          Android 12+ 的图标蒙版规范裁剪，Android 11 及以下直接展示）
+        - postSplashScreenTheme：闪屏退出后切换回 Theme.OMaster，由 Compose 接管主题
+    -->
+    <style name="Theme.OMaster.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.OMaster</item>
+    </style>
 </resources>

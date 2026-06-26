@@ -38,6 +38,7 @@ import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
+import com.silas.omaster.util.performHapticCompat
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -227,19 +228,17 @@ class FloatingWindowService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Android 16 (API 36) 要求前台服务通知渠道使用更高的优先级，确保用户可见
-            val importance = if (Build.VERSION.SDK_INT >= 36) {
-                NotificationManager.IMPORTANCE_DEFAULT
-            } else {
-                NotificationManager.IMPORTANCE_LOW
-            }
+            // P0-5 修复：悬浮窗为 ongoing 静默服务，Android 16 并不要求高优先级。
+            // 此前在 API 36+ 强制 IMPORTANCE_DEFAULT 会导致每次启动服务发出通知声，
+            // 与"静默悬浮窗"语义冲突。统一使用 IMPORTANCE_LOW，setSound(null) 双保险。
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "悬浮窗服务",
-                importance
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "用于在后台显示悬浮窗"
                 setSound(null, null)
+                setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
@@ -747,7 +746,11 @@ class FloatingWindowService : Service() {
             addView(button)
 
             // 整个容器可点击
-            setOnClickListener { onExpand() }
+            setOnClickListener {
+                // P2-6：悬浮窗气泡点击展开触感，与 Compose 端保持一致
+                performHapticCompat()
+                onExpand()
+            }
         }
     }
 
@@ -850,7 +853,11 @@ class FloatingWindowService : Service() {
                 cornerRadius = dpToPx(8).toFloat()
                 setColor(cardBackground)
             }
-            setOnClickListener { onClick() }
+            setOnClickListener {
+                // P2-6：图标按钮触感（统一覆盖上一个/下一个/收起/关闭）
+                performHapticCompat()
+                onClick()
+            }
             this.contentDescription = contentDescription
         }
     }

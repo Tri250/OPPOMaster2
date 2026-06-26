@@ -362,6 +362,8 @@ android {
 dependencies {
     // 核心依赖（已使用 catalog，保持不变）
     implementation(libs.androidx.core.ktx)
+    // P2-3：Splash Screen 兼容库（统一 Android 12 以下启动闪屏体验）
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)

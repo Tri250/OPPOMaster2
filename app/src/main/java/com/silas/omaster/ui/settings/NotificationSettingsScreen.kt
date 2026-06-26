@@ -29,8 +29,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.perform
+import com.silas.omaster.util.performToggle
 
 /**
  * 通知设置页面
@@ -94,6 +96,11 @@ fun NotificationSettingsScreen(
     var syncEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_SYNC)) }
     var systemAnnounceEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_GENERAL)) }
     var dailyTipEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_RECOMMENDATION)) }
+
+    // P2-5：dndEnabled 提升到顶层并持久化到 SettingsManager，
+    // 避免之前在 item {} 内局部声明导致退出页面即丢失
+    val settingsManager = remember { SettingsManager.getInstance(context) }
+    var dndEnabled by remember { mutableStateOf(settingsManager.isDndEnabled) }
 
     // 首次进入：若未授权，请求权限
     LaunchedEffect(Unit) {
@@ -189,7 +196,7 @@ fun NotificationSettingsScreen(
                         Switch(
                             checked = masterEnabled,
                             onCheckedChange = { enabled ->
-                                haptic.perform(HapticFeedbackType.LongPress)
+                                haptic.performToggle(enabled)
                                 if (enabled) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && notificationPermission != null) {
                                         if (hasNotificationPermission()) {
@@ -233,7 +240,7 @@ fun NotificationSettingsScreen(
                     description = "接收新功能和更新提醒",
                     isEnabled = enabled,
                     onToggle = { newValue ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performToggle(newValue)
                         if (!masterEnabled) {
                             openNotificationSettings()
                         } else {
@@ -251,7 +258,7 @@ fun NotificationSettingsScreen(
                     description = "接收个性化预设推荐",
                     isEnabled = recommendationEnabled,
                     onToggle = { newValue ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performToggle(newValue)
                         if (!masterEnabled) {
                             openNotificationSettings()
                         } else {
@@ -269,7 +276,7 @@ fun NotificationSettingsScreen(
                     description = "同步状态变更通知",
                     isEnabled = syncEnabled,
                     onToggle = { newValue ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performToggle(newValue)
                         if (!masterEnabled) {
                             openNotificationSettings()
                         } else {
@@ -286,7 +293,7 @@ fun NotificationSettingsScreen(
                     description = "重要系统公告通知",
                     isEnabled = systemAnnounceEnabled,
                     onToggle = { newValue ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performToggle(newValue)
                         if (!masterEnabled) {
                             openNotificationSettings()
                         } else {
@@ -304,7 +311,7 @@ fun NotificationSettingsScreen(
                     description = "摄影技巧每日提示",
                     isEnabled = dailyTipEnabled,
                     onToggle = { newValue ->
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        haptic.performToggle(newValue)
                         if (!masterEnabled) {
                             openNotificationSettings()
                         } else {
@@ -316,7 +323,7 @@ fun NotificationSettingsScreen(
                 )
             }
 
-            // 免打扰设置（UI 状态保留，实际调度需接入系统 DND 权限，暂不自动写入）
+            // 免打扰设置（P2-5：dndEnabled 状态已提升至顶层并持久化到 SettingsManager）
             item {
                 Text(
                     text = "免打扰设置",
@@ -327,11 +334,12 @@ fun NotificationSettingsScreen(
             }
 
             item {
-                var dndEnabled by remember { mutableStateOf(false) }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+                    // P2-5：原硬编码 Color(0xFF1A1A1A) 在浅色模式下造成深底+深文字低对比，
+                    // 改为 surfaceVariant，与 UpdateChannelScreen 等其他设置卡片保持一致
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -355,7 +363,11 @@ fun NotificationSettingsScreen(
                             }
                             Switch(
                                 checked = dndEnabled,
-                                onCheckedChange = { dndEnabled = it },
+                                onCheckedChange = {
+                                    haptic.performToggle(it)
+                                    dndEnabled = it
+                                    settingsManager.isDndEnabled = it
+                                },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = MaterialTheme.colorScheme.onBackground,
                                     checkedTrackColor = Color(0xFF9C27B0),
@@ -405,7 +417,8 @@ private fun NotificationSettingCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
+        // P2-5：原硬编码 Color(0xFF1A1A1A) 改为 surfaceVariant 适配深/浅模式
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier

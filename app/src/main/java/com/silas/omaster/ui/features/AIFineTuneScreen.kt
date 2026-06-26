@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -598,7 +599,8 @@ private fun ParamSliderRow(
         )
         IconButton(
             onClick = { onLockToggle(key) },
-            modifier = Modifier.size(32.dp)
+            // P2-2：保证触控目标 ≥ 48dp，视觉保持 32dp 不变
+            modifier = Modifier.size(32.dp).minimumInteractiveComponentSize()
         ) {
             Icon(
                 imageVector = if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
@@ -959,10 +961,17 @@ private fun BottomActionBar(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedIconButton(onClick = onGallery, modifier = Modifier.size(44.dp)) {
+                OutlinedIconButton(
+                    onClick = onGallery,
+                    // P2-2：保证触控目标 ≥ 48dp，视觉保持 44dp 不变
+                    modifier = Modifier.size(44.dp).minimumInteractiveComponentSize()
+                ) {
                     Icon(Icons.Default.PhotoLibrary, contentDescription = "相册", tint = MaterialTheme.colorScheme.onBackground)
                 }
-                OutlinedIconButton(onClick = onCamera, modifier = Modifier.size(44.dp)) {
+                OutlinedIconButton(
+                    onClick = onCamera,
+                    modifier = Modifier.size(44.dp).minimumInteractiveComponentSize()
+                ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = "拍照", tint = MaterialTheme.colorScheme.onBackground)
                 }
 

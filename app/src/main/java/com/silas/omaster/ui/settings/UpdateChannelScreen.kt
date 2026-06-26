@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.BuildConfig
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.UrlConstants
@@ -49,17 +50,26 @@ fun UpdateChannelScreen(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var selectedChannelId by remember { mutableStateOf("stable") }
+    // P2-4：注入 SettingsManager，让更新设置真正持久化
+    val settingsManager = remember { SettingsManager.getInstance(context) }
+    var selectedChannelId by remember { mutableStateOf(settingsManager.updateTrack) }
 
     // 更新检查状态
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateCheckResult by remember { mutableStateOf<String?>(null) }
-    var lastCheckTime by remember { mutableStateOf<String?>(null) }
+    // lastCheckTime 由 lastUpdateCheckTimeMs（持久化时间戳）派生为可读字符串
+    var lastCheckTime by remember {
+        mutableStateOf(
+            settingsManager.lastUpdateCheckTimeMs.takeIf { it > 0 }?.let { ts ->
+                java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(ts))
+            }
+        )
+    }
 
-    // 更新选项状态（对齐 Web 端 UPDATE_SETTINGS）
-    var autoCheckEnabled by remember { mutableStateOf(true) }
-    var wifiOnlyEnabled by remember { mutableStateOf(true) }
-    var autoInstallEnabled by remember { mutableStateOf(false) }
+    // 更新选项状态（P2-4：从 SettingsManager 读取，避免每次进入页面都重置为默认值）
+    var autoCheckEnabled by remember { mutableStateOf(settingsManager.isAutoCheckUpdateEnabled) }
+    var wifiOnlyEnabled by remember { mutableStateOf(settingsManager.isWifiOnlyUpdateEnabled) }
+    var autoInstallEnabled by remember { mutableStateOf(settingsManager.isAutoInstallUpdateEnabled) }
 
     val channels = listOf(
         UpdateChannelInfo("stable", "稳定版", "最稳定的版本，推荐日常使用", Icons.Default.Shield, Color(0xFF10B981)),
@@ -116,8 +126,11 @@ fun UpdateChannelScreen(
                         try {
                             val result = checkForUpdate(context, selectedChannelId)
                             updateCheckResult = result
+                            // P2-4：持久化检查时间戳，下次进入页面仍可显示
+                            val now = System.currentTimeMillis()
+                            settingsManager.lastUpdateCheckTimeMs = now
                             lastCheckTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                                .format(java.util.Date())
+                                .format(java.util.Date(now))
                         } catch (e: Exception) {
                             updateCheckResult = "检查失败: ${e.message}"
                         } finally {
@@ -148,6 +161,8 @@ fun UpdateChannelScreen(
                             onClick = {
                                 haptic.perform(HapticFeedbackType.LongPress)
                                 selectedChannelId = channel.id
+                                // P2-4：持久化所选更新轨道
+                                settingsManager.updateTrack = channel.id
                             }
                         )
                     }
@@ -174,6 +189,8 @@ fun UpdateChannelScreen(
                         onCheckedChange = {
                             haptic.perform(HapticFeedbackType.LongPress)
                             autoCheckEnabled = it
+                            // P2-4：持久化开关，避免退出页面即丢失
+                            settingsManager.isAutoCheckUpdateEnabled = it
                         }
                     )
                     Divider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
@@ -183,6 +200,8 @@ fun UpdateChannelScreen(
                         onCheckedChange = {
                             haptic.perform(HapticFeedbackType.LongPress)
                             wifiOnlyEnabled = it
+                            // P2-4：持久化开关
+                            settingsManager.isWifiOnlyUpdateEnabled = it
                         }
                     )
                     Divider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
@@ -192,6 +211,8 @@ fun UpdateChannelScreen(
                         onCheckedChange = {
                             haptic.perform(HapticFeedbackType.LongPress)
                             autoInstallEnabled = it
+                            // P2-4：持久化开关
+                            settingsManager.isAutoInstallUpdateEnabled = it
                         }
                     )
                 }

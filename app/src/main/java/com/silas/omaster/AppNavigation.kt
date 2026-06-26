@@ -12,8 +12,12 @@ import android.os.Build
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
@@ -44,6 +48,7 @@ import com.silas.omaster.data.local.DarkMode
 import com.silas.omaster.data.local.OnboardingManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.MasterPreset
@@ -161,12 +166,17 @@ fun MainApp(navController: NavHostController) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // P1-1：底部安全区交给 PillNavBar 自身处理（navigationBars insets），
+        // 内容区在无底部导航时也不留硬编码黑边，仅预留底部导航高度。
+        val bottomContentPadding = WindowInsets.navigationBars
+            .asPaddingValues()
+            .calculateBottomPadding()
         NavHost(
             navController = navController,
             startDestination = if (initialShowOnboarding) Screen.Onboarding else Screen.Home,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (showBottomNav) 80.dp else 0.dp),
+                .padding(bottom = if (showBottomNav) 80.dp + bottomContentPadding else 0.dp),
             enterTransition = { navEnterTransition(getNavIndex, forward = true) },
             exitTransition = { navExitTransition(getNavIndex, forward = true) },
             popEnterTransition = { navEnterTransition(getNavIndex, forward = false) },
@@ -270,7 +280,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToUpdateChannel = { navController.navigate(Screen.UpdateChannel) },
                     onNavigateToApiConfig = { navController.navigate(Screen.ApiConfig) },
                     onNavigateToThemeSettings = { navController.navigate(Screen.ThemeSettings) },
-                    onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onNavigateToImportExport = { navController.navigate(Screen.ImportExport) }
                 )
             }
@@ -471,7 +480,7 @@ fun MainApp(navController: NavHostController) {
                 ThemeSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onApply = { settings ->
-                        // 应用主题设置并持久化
+                        // 应用主题设置并持久化（P0-1：customColor 真正消费）
                         val manager = SettingsManager.getInstance(context)
                         manager.currentTheme = BrandTheme.fromId(settings.theme)
                         manager.darkMode = when (settings.darkMode) {
@@ -479,6 +488,7 @@ fun MainApp(navController: NavHostController) {
                             "dark" -> DarkMode.DARK
                             else -> DarkMode.SYSTEM
                         }
+                        manager.customColorArgb = settings.customColor.value.toInt()
                         navController.popBackStack()
                     }
                 )
@@ -580,7 +590,10 @@ fun MainApp(navController: NavHostController) {
                 onNavigate = { route ->
                     handleBottomNav(navController, route, currentRoute)
                 },
-                modifier = Modifier.align(Alignment.BottomCenter)
+                // P1-1：底部导航栏自身处理 navigationBars insets，避免被手势条遮挡
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
             )
         }
 
@@ -588,7 +601,8 @@ fun MainApp(navController: NavHostController) {
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp)
+                // P1-1：底部留出导航栏 + 系统手势条空间
+                .padding(bottom = if (showBottomNav) 80.dp + bottomContentPadding else bottomContentPadding)
         ) { data ->
             Snackbar(
                 snackbarData = data,
@@ -678,8 +692,9 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.navEnterTransition
     forward: Boolean
 ): EnterTransition {
     val direction = computeSlideDirection(getNavIndex, forward)
-    return slideIntoContainer(towards = direction, animationSpec = tween(300)) +
-        fadeIn(animationSpec = tween(300))
+    // P2-1：统一使用 AnimationSpecs.PageTransitionMillis（250ms），保持与 ImageGallery / 全局动画一致
+    return slideIntoContainer(towards = direction, animationSpec = tween(AnimationSpecs.PageTransitionMillis)) +
+        fadeIn(animationSpec = tween(AnimationSpecs.PageTransitionMillis))
 }
 
 /**
@@ -690,8 +705,8 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.navExitTransition(
     forward: Boolean
 ): ExitTransition {
     val direction = computeSlideDirection(getNavIndex, forward)
-    return slideOutOfContainer(towards = direction, animationSpec = tween(300)) +
-        fadeOut(animationSpec = tween(300))
+    return slideOutOfContainer(towards = direction, animationSpec = tween(AnimationSpecs.PageTransitionMillis)) +
+        fadeOut(animationSpec = tween(AnimationSpecs.PageTransitionMillis))
 }
 
 /**

@@ -9,9 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+// P2-3：Splash Screen（统一 Android 12 以下启动闪屏体验）
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -49,6 +52,10 @@ class MainActivity : ComponentActivity() {
     private var floatingWindowController: FloatingWindowController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // P2-3：必须在 super.onCreate() 之前调用 installSplashScreen()，
+        // 这样会在 Activity 启动时展示 Splash 主题（Android 12+ 由系统接管动画），
+        // 退出后自动切换到 postSplashScreenTheme（Theme.OMaster）
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -64,15 +71,22 @@ class MainActivity : ComponentActivity() {
                 val settingsManager = remember { SettingsManager.getInstance(applicationContext) }
                 val currentTheme by settingsManager.themeFlow.collectAsState()
                 val darkMode by settingsManager.darkModeFlow.collectAsState()
+                // P0-2：hasUserAgreed 直读 Application，进程被杀重建后仍反映真实同意状态
                 val hasUserAgreed = remember {
                     mutableStateOf(OMasterApplication.getInstance().hasUserAgreed())
                 }
                 var showWelcomeFlow by hasUserAgreed
                 val navController = rememberNavController()
 
+                // P0-2：进程重建后重新校验同意状态，避免回到欢迎页或跳过欢迎页
+                LaunchedEffect(Unit) {
+                    hasUserAgreed.value = OMasterApplication.getInstance().hasUserAgreed()
+                }
+
                 OMasterTheme(
                     darkMode = darkMode,
-                    brandTheme = currentTheme
+                    brandTheme = currentTheme,
+                    customColorOverride = remember { settingsManager.customColorFlow }.collectAsState().value
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

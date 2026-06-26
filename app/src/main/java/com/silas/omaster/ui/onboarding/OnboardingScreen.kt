@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.launch
 
@@ -85,6 +87,13 @@ fun OnboardingScreen(
     )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
+
+    // P0-3：引导页返回手势 — 非第一页回退到上一页，第一页放行让系统退出 App
+    BackHandler(enabled = pagerState.currentPage > 0) {
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(pagerState.currentPage - 1)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -133,12 +142,12 @@ fun OnboardingScreen(
                     val isSelected = pagerState.currentPage == index
                     val width by animateDpAsState(
                         targetValue = if (isSelected) 24.dp else 8.dp,
-                        animationSpec = tween(300),
+                        animationSpec = tween(AnimationSpecs.PageTransitionMillis),
                         label = "indicator_width"
                     )
                     val color by animateColorAsState(
                         targetValue = if (isSelected) HasselbladOrange else Color.Gray.copy(alpha = 0.3f),
-                        animationSpec = tween(300),
+                        animationSpec = tween(AnimationSpecs.PageTransitionMillis),
                         label = "indicator_color"
                     )
                     Box(

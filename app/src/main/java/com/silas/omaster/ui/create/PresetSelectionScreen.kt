@@ -87,19 +87,50 @@ fun PresetSelectionScreen(
             )
 
             // Option 2: Select from existing
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(presets) { preset ->
-                    PresetCard(
-                        preset = preset,
-                        onClick = { onPresetSelected(preset.id) },
-                        showFavoriteButton = false,
-                        showDetailInfo = false
-                    )
+            // P1-2：补三态 — 加载中显示骨架占位，空列表显示空态提示
+            if (presets.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.empty_no_presets),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            "可点击上方“从零开始”创建",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(presets) { preset ->
+                        PresetCard(
+                            preset = preset,
+                            onClick = { onPresetSelected(preset.id) },
+                            showFavoriteButton = false,
+                            showDetailInfo = false
+                        )
+                    }
                 }
             }
         }

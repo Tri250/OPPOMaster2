@@ -79,6 +79,11 @@
     <string name="color_nikon_yellow">尼康黄</string>
     <string name="color_sony_orange">索尼橙</string>
     <string name="color_phaseone_grey">飞思灰</string>
+    <string name="color_oppo_green">OPPO绿</string>
+    <string name="color_vivo_blue">vivo蓝</string>
+    <string name="color_realme_gold">真我金</string>
+    <string name="color_honor_blue">荣耀蓝</string>
+    <string name="color_xiaomi_orange">小米橙</string>
 
     <!-- 主页 Tab (对齐Web端) -->
     <string name="tab_discover">发现</string>

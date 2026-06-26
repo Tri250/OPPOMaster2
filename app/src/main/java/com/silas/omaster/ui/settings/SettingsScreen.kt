@@ -91,7 +91,8 @@ fun SettingsScreen(
     onNavigateToUpdateChannel: (() -> Unit)? = null,
     onNavigateToApiConfig: (() -> Unit)? = null,
     onNavigateToThemeSettings: (() -> Unit)? = null,
-    onNavigateToSceneAnalysisReport: (() -> Unit)? = null,
+    // P1-4：移除死参数 onNavigateToSceneAnalysisReport — 该入口无 UI 调用，
+    // 场景分析报告统一从 CoreFeaturesScreen 进入，避免误导调用方
     onNavigateToImportExport: (() -> Unit)? = null
 ) {
     val context = LocalContext.current

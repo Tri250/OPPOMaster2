@@ -79,6 +79,11 @@
     <string name="color_nikon_yellow">Nikon Yellow</string>
     <string name="color_sony_orange">Sony Orange</string>
     <string name="color_phaseone_grey">Phase One Grey</string>
+    <string name="color_oppo_green">OPPO Green</string>
+    <string name="color_vivo_blue">vivo Blue</string>
+    <string name="color_realme_gold">Realme Gold</string>
+    <string name="color_honor_blue">Honor Blue</string>
+    <string name="color_xiaomi_orange">Xiaomi Orange</string>
 
     <!-- Home Tabs (Aligned with Web) -->
     <string name="tab_discover">Discover</string>

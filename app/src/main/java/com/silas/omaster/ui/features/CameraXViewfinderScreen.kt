@@ -48,6 +48,8 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +60,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -70,6 +73,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,6 +91,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -96,6 +102,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.util.perform
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -160,12 +167,12 @@ fun CameraXViewfinderScreen(
     // 手势状态
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     val focusAnimatable = remember { Animatable(0f) }
-    var currentZoom by remember { mutableStateOf(1f) }
+    var currentZoom by rememberSaveable { mutableFloatStateOf(1f) }
     val coroutineScope = rememberCoroutineScope()
 
-    // 当前拍摄模式
+    // 当前拍摄模式（P0-2：selectedModeIndex 改 rememberSaveable，进程被杀重建后保持模式选择）
     val captureMode by cameraManager.captureMode.collectAsState()
-    var selectedModeIndex by remember { mutableIntStateOf(0) }
+    var selectedModeIndex by rememberSaveable { mutableIntStateOf(0) }
 
     // 夜景/光绘状态
     val nightState by cameraManager.nightModeState.collectAsState()
@@ -177,10 +184,39 @@ fun CameraXViewfinderScreen(
     // 专业模式参数
     val proParams by cameraManager.proModeParams.collectAsState()
 
-    // 构图评分
-    var showARGuide by remember { mutableStateOf(true) }
-    var showARTips by remember { mutableStateOf(true) }
-    var showProPanel by remember { mutableStateOf(false) }
+    // 构图评分（P0-2：开关状态改 rememberSaveable）
+    var showARGuide by rememberSaveable { mutableStateOf(true) }
+    var showARTips by rememberSaveable { mutableStateOf(true) }
+    var showProPanel by rememberSaveable { mutableStateOf(false) }
+
+    // P0-3：录制/拍摄中拦截返回手势，避免误触丢失夜景/光绘素材
+    var showExitConfirm by rememberSaveable { mutableStateOf(false) }
+    val isCapturing = nightState.isCapturing || lightPaintingState.isRecording
+    BackHandler(enabled = isCapturing) {
+        showExitConfirm = true
+    }
+    if (showExitConfirm) {
+        AlertDialog(
+            onDismissRequest = { showExitConfirm = false },
+            title = { Text("确认退出？") },
+            text = {
+                Text(
+                    if (lightPaintingState.isRecording) "光绘模式正在录制中，退出将丢失已累积的光轨素材。"
+                    else "夜景模式正在多帧合成中，退出将丢失已采集的素材。"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitConfirm = false
+                    cameraManager.release()
+                    onBack()
+                }) { Text("仍要退出") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitConfirm = false }) { Text("继续拍摄") }
+            }
+        )
+    }
 
     // ==================== 副作用 ====================
     DisposableEffect(cameraManager) {
@@ -1341,8 +1377,15 @@ private fun ShutterButton(
         else -> Color.White
     }
 
+    // P1-3：拍摄快门触感，模拟真机按下快门的物理反馈
+    // P2-6：原 HapticSettings.run { ... } 仅借用作用域，并未真正校验 enabled 开关，
+    //       改用 HapticFeedback.perform() 扩展以正确尊重全局震感设置
+    val haptic = LocalHapticFeedback.current
     Button(
-        onClick = onClick,
+        onClick = {
+            haptic.perform(HapticFeedbackType.LongPress)
+            onClick()
+        },
         enabled = enabled,
         modifier = modifier
             .border(4.dp, buttonColor, CircleShape),

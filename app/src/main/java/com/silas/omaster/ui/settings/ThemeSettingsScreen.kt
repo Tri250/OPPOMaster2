@@ -7,25 +7,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
+import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.*
 import com.silas.omaster.util.perform
 
 /**
  * 主题设置页面
- * 
- * 功能：
- * - 主题颜色选择
- * - 品牌风格切换
- * - 自定义主题配置
- * 
- * 对齐 Web 端 ThemeSettingsPage.tsx
+ *
+ * 修复说明（P0-1）：
+ * - 主题列表复用 BrandTheme 枚举，确保 ID 与枚举一一对应，不再静默回落 Hasselblad
+ * - 从 SettingsManager 实时读取当前主题/深色模式/自定义色作为初始值，所见即所设
+ * - customColor 真正消费：onApply 一并下发，由 AppNavigation 持久化并覆盖强调色
+ * - 状态改用 rememberSaveable，进程被杀重建后选择状态可恢复
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,24 +36,24 @@ fun ThemeSettingsScreen(
     onApply: (ThemeSettings) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    
-    // 主题选项
-    var selectedTheme by remember { mutableStateOf("hasselblad") }
-    val themes = listOf(
-        ThemeOption("hasselblad", "哈苏", HasselbladOrange, "专业哈苏品牌风格"),
-        ThemeOption("oppo", "OPPO", Color(0xFF1BA784), "OPPO 品牌绿色"),
-        ThemeOption("vivo", "vivo", Color(0xFF415FFF), "vivo 品牌蓝色"),
-        ThemeOption("realme", "realme", Color(0xFFFFC30D), "realme 品牌金色"),
-        ThemeOption("honor", "荣耀", Color(0xFF0091FF), "荣耀品牌蓝色"),
-        ThemeOption("xiaomi", "小米", Color(0xFFFF6900), "小米品牌橙色")
-    )
-    
-    // 自定义颜色
-    var customColor by remember { mutableStateOf(HasselbladOrange) }
-    var showCustomColorPicker by remember { mutableStateOf(false) }
-    
-    // 深色模式
-    var darkMode by remember { mutableStateOf("system") }
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager.getInstance(context) }
+
+    // 当前已保存的主题/深色模式/自定义色，作为初始值（所见即所设）
+    val savedTheme = remember { settingsManager.currentTheme }
+    val savedDarkMode = remember { settingsManager.darkMode }
+    val savedCustomArgb = remember { settingsManager.customColorArgb }
+
+    // 主题选项：直接复用 BrandTheme 枚举，避免 ID 不匹配
+    val themes = remember { BrandTheme.entries }
+
+    // 选中状态：进程被杀后可恢复（Color 用 ARGB Int 持久化）
+    var selectedThemeId by rememberSaveable(savedTheme.id) { mutableStateOf(savedTheme.id) }
+    var customColorArgb by rememberSaveable(savedCustomArgb) { mutableStateOf(savedCustomArgb) }
+    val customColor = Color(customColorArgb)
+    var darkMode by rememberSaveable(savedDarkMode.name.lowercase()) {
+        mutableStateOf(savedDarkMode.name.lowercase())
+    }
     val darkModeOptions = listOf("system", "light", "dark")
     
     Column(
@@ -75,12 +77,12 @@ fun ThemeSettingsScreen(
                 IconButton(onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     onApply(ThemeSettings(
-                        theme = selectedTheme,
+                        theme = selectedThemeId,
                         customColor = customColor,
                         darkMode = darkMode
                     ))
                 }) {
-                    Icon(Icons.Default.Check, "应用", tint = HasselbladOrange)
+                    Icon(Icons.Default.Check, "应用", tint = MaterialTheme.colorScheme.primary)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -104,15 +106,20 @@ fun ThemeSettingsScreen(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // 主题网格
+            // 主题网格：遍历 BrandTheme 枚举
             themes.forEach { theme ->
                 ThemeOptionCard(
-                    theme = theme,
-                    selected = selectedTheme == theme.id,
+                    theme = BrandThemeOption(
+                        id = theme.id,
+                        name = context.getString(theme.brandNameResId),
+                        color = theme.primaryColor,
+                        description = context.getString(theme.colorNameResId)
+                    ),
+                    selected = selectedThemeId == theme.id,
                     onClick = {
                         haptic.perform(HapticFeedbackType.TextHandleMove)
-                        selectedTheme = theme.id
-                        customColor = theme.color
+                        selectedThemeId = theme.id
+                        customColorArgb = theme.primaryColor.value.toInt()
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -236,7 +243,7 @@ fun ThemeSettingsScreen(
                             )
                             .clickable {
                                 haptic.perform(HapticFeedbackType.TextHandleMove)
-                                customColor = color
+                                customColorArgb = color.value.toInt()
                             }
                     )
                 }
@@ -287,7 +294,7 @@ fun ThemeSettingsScreen(
 
 @Composable
 private fun ThemeOptionCard(
-    theme: ThemeOption,
+    theme: BrandThemeOption,
     selected: Boolean,
     onClick: () -> Unit
 ) {
@@ -343,7 +350,7 @@ private fun ThemeOptionCard(
     }
 }
 
-data class ThemeOption(
+data class BrandThemeOption(
     val id: String,
     val name: String,
     val color: Color,

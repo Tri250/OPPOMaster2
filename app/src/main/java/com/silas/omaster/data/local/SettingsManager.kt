@@ -181,6 +181,9 @@ class SettingsManager private constructor(private val context: Context) {
         
         // 初始化震动设置
         _isVibrationEnabledFlow.value = getDataSync(KEY_VIBRATION_ENABLED, true)
+
+        // 初始化自定义强调色
+        _customColorFlow.value = getDataSync(KEY_CUSTOM_COLOR, com.silas.omaster.ui.theme.HasselbladOrange.value.toInt())
     }
 
     var currentTheme: BrandTheme
@@ -189,6 +192,19 @@ class SettingsManager private constructor(private val context: Context) {
             setDataSync(KEY_THEME_ID, value.id)
             _themeFlow.value = value
         }
+
+    // 自定义强调色 ARGB（与 BrandTheme 配合：当为 OPPO 等厂商主题时可进一步覆盖强调色）
+    var customColorArgb: Int
+        get() = getDataSync(KEY_CUSTOM_COLOR, com.silas.omaster.ui.theme.HasselbladOrange.value.toInt())
+        set(value) {
+            setDataSync(KEY_CUSTOM_COLOR, value)
+            _customColorFlow.value = value
+        }
+
+    private val _customColorFlow: MutableStateFlow<Int> = MutableStateFlow(
+        com.silas.omaster.ui.theme.HasselbladOrange.value.toInt()
+    )
+    val customColorFlow: StateFlow<Int> = _customColorFlow.asStateFlow()
 
     // 悬浮窗透明度 (30-70%，默认56%)
     var floatingWindowOpacity: Int
@@ -211,11 +227,56 @@ class SettingsManager private constructor(private val context: Context) {
             setDataSync(KEY_UPDATE_CHANNEL, value.name)
         }
 
+    // P2-4：更新设置持久化（之前 UpdateChannelScreen 全部仅存内存，退出页面即丢失）
+    /// 更新轨道：stable / beta / dev，对应「稳定版 / 测试版 / 开发版」
+    var updateTrack: String
+        get() = getDataSync(KEY_UPDATE_TRACK, "stable")
+        set(value) {
+            setDataSync(KEY_UPDATE_TRACK, value)
+        }
+
+    /// 自动检查更新（默认开启）
+    var isAutoCheckUpdateEnabled: Boolean
+        get() = getDataSync(KEY_AUTO_CHECK_UPDATE, true)
+        set(value) {
+            setDataSync(KEY_AUTO_CHECK_UPDATE, value)
+        }
+
+    /// 仅在 Wi-Fi 下下载更新（默认开启，避免消耗用户移动流量）
+    var isWifiOnlyUpdateEnabled: Boolean
+        get() = getDataSync(KEY_WIFI_ONLY_UPDATE, true)
+        set(value) {
+            setDataSync(KEY_WIFI_ONLY_UPDATE, value)
+        }
+
+    /// 夜间自动安装更新（默认关闭，需用户主动开启）
+    var isAutoInstallUpdateEnabled: Boolean
+        get() = getDataSync(KEY_AUTO_INSTALL_UPDATE, false)
+        set(value) {
+            setDataSync(KEY_AUTO_INSTALL_UPDATE, value)
+        }
+
+    /// 上次检查更新的时间戳（毫秒，0 表示尚未检查）
+    var lastUpdateCheckTimeMs: Long
+        get() = getDataSync(KEY_LAST_UPDATE_CHECK_TIME, 0L)
+        set(value) {
+            setDataSync(KEY_LAST_UPDATE_CHECK_TIME, value)
+        }
+
     // 友盟统计开关（默认开启，因为用户首次已同意隐私政策）
     var isAnalyticsEnabled: Boolean
         get() = getDataSync(KEY_ANALYTICS_ENABLED, true)
         set(value) {
             setDataSync(KEY_ANALYTICS_ENABLED, value)
+        }
+
+    // P2-5：免打扰开关（夜间 DND，默认关闭）
+    // 通知渠道本身已由 Android NotificationChannel 系统持久化，
+    // 此处仅持久化"免打扰总开关" UI 状态。
+    var isDndEnabled: Boolean
+        get() = getDataSync(KEY_DND_ENABLED, false)
+        set(value) {
+            setDataSync(KEY_DND_ENABLED, value)
         }
 
     // ==================== 新增功能 ====================
@@ -952,11 +1013,20 @@ class SettingsManager private constructor(private val context: Context) {
         // DataStore Preferences Keys
         private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         private val KEY_THEME_ID = stringPreferencesKey("theme_id")
+        private val KEY_CUSTOM_COLOR = intPreferencesKey("custom_color_argb")
         private val KEY_FLOATING_WINDOW_OPACITY = intPreferencesKey("floating_window_opacity")
         private val KEY_DEFAULT_START_TAB = intPreferencesKey("default_start_tab")
         private val KEY_UPDATE_CHANNEL = stringPreferencesKey("update_channel")
+        // P2-4：更新设置持久化（之前 UpdateChannelScreen 全部仅存内存）
+        private val KEY_UPDATE_TRACK = stringPreferencesKey("update_track")
+        private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
+        private val KEY_WIFI_ONLY_UPDATE = booleanPreferencesKey("wifi_only_update")
+        private val KEY_AUTO_INSTALL_UPDATE = booleanPreferencesKey("auto_install_update")
+        private val KEY_LAST_UPDATE_CHECK_TIME = longPreferencesKey("last_update_check_time")
         private val KEY_ANALYTICS_ENABLED = booleanPreferencesKey("analytics_enabled")
         private val KEY_MIGRATION_COMPLETED = booleanPreferencesKey("migration_completed")
+        // P2-5：免打扰开关持久化
+        private val KEY_DND_ENABLED = booleanPreferencesKey("dnd_enabled")
 
         // 新增功能 Key
         private val KEY_DARK_MODE = stringPreferencesKey("dark_mode")

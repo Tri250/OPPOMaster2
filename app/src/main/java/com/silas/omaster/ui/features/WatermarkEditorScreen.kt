@@ -822,7 +822,7 @@ fun WatermarkEditorScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val defaultTextColor = MaterialTheme.colorScheme.onBackground
-                // 重置默认
+                // 重置默认（P1-4：补全 showVignette / selectedFont 重置，避免残留）
                 OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -835,6 +835,8 @@ fun WatermarkEditorScreen(
                         letterSpacing = 0f
                         fontWeight = FontWeight.Normal
                         bgOpacity = 0f
+                        showVignette = false
+                        selectedFont = FontOption.DEFAULT
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -848,12 +850,12 @@ fun WatermarkEditorScreen(
                     Text("重置默认", style = MaterialTheme.typography.labelMedium)
                 }
 
-                // 批量应用
+                // 保存配置（P1-4：原"批量应用"为假批量，改为语义准确的"保存配置"，仅持久化当前水印配置供后续应用）
                 OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        Toast.makeText(context, "批量应用：当前水印配置已保存", Toast.LENGTH_SHORT).show()
                         onSave(watermarkConfig)
+                        Toast.makeText(context, "水印配置已保存", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -862,9 +864,9 @@ fun WatermarkEditorScreen(
                     ),
                     border = BorderStroke(1.dp, CyanAccent)
                 ) {
-                    Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("批量应用", style = MaterialTheme.typography.labelMedium)
+                    Text("保存配置", style = MaterialTheme.typography.labelMedium)
                 }
 
                 // 保存图片
@@ -1570,18 +1572,26 @@ private fun WatermarkStyleSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             colors.forEach { (color, _) ->
+                // P2-2：外层 Box 承担触控（≥48dp），内层仅做视觉（32dp 圆形），
+                // 既满足 Material 触控目标要求，又不破坏色彩样本的紧凑视觉布局
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .border(
-                            2.dp,
-                            if (color == selectedColor) CyanAccent else Color.Transparent,
-                            CircleShape
-                        )
-                        .clickable { onColorSelected(color) }
-                )
+                        .minimumInteractiveComponentSize()
+                        .clickable { onColorSelected(color) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(
+                                2.dp,
+                                if (color == selectedColor) CyanAccent else Color.Transparent,
+                                CircleShape
+                            )
+                    )
+                }
             }
         }
 

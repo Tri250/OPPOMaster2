@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -211,7 +212,9 @@ private fun GalleryNavigationButton(
         onClick = onClick,
         modifier = modifier
             .padding(8.dp)
-            .size(40.dp),
+            .size(40.dp)
+            // P2-2：保证触控目标 ≥ 48dp，视觉保持 40dp 不变
+            .minimumInteractiveComponentSize(),
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
             contentColor = MaterialTheme.colorScheme.onBackground

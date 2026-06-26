@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -76,6 +78,10 @@ fun ApiConfigScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
+            // P1-1：键盘弹起时上移内容，避免输入框被遮挡
+            .imePadding()
+            // 底部留出系统手势条空间
+            .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.api_config_title),

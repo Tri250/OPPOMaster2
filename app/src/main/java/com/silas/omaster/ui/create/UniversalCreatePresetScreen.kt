@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
@@ -52,11 +53,11 @@ fun UniversalCreatePresetScreen(
         viewModel.updateImageUri(uri)
     }
 
-    // Dialog states
-    var showAddSectionDialog by remember { mutableStateOf(false) }
-    var showAddItemDialog by remember { mutableStateOf(false) }
-    var currentSectionIndex by remember { mutableIntStateOf(-1) }
-    var currentItemIndex by remember { mutableIntStateOf(-1) }
+    // Dialog states（P0-2：改 rememberSaveable，进程被杀重建可恢复）
+    var showAddSectionDialog by rememberSaveable { mutableStateOf(false) }
+    var showAddItemDialog by rememberSaveable { mutableStateOf(false) }
+    var currentSectionIndex by rememberSaveable { mutableIntStateOf(-1) }
+    var currentItemIndex by rememberSaveable { mutableIntStateOf(-1) }
     
     // Edit item state
     var editingItem by remember { mutableStateOf<PresetItem?>(null) }
@@ -100,7 +101,9 @@ fun UniversalCreatePresetScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                // P1-1：编辑条目时键盘弹起上移，避免输入框被遮挡
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. 基本信息

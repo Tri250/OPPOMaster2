@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  per-app language 配置（Android 13+ LocaleManager）
+  P1-5：声明应用支持的语言，使系统 Settings → App Languages 中出现 OMaster 选项。
+  与 build.gradle.kts resourceConfigurations ["en", "zh", "zh-rCN", "zh-rTW"] 保持一致。
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="zh-CN" />
+    <locale android:name="zh-TW" />
+    <locale android:name="en" />
+</locale-config>

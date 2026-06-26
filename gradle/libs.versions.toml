@@ -10,6 +10,8 @@ kotlin = "2.0.21"
 coreKtx = "1.15.0"
 lifecycleRuntimeKtx = "2.8.7"
 lifecycleViewModelCompose = "2.8.7"
+# P2-3：Splash Screen 兼容库（Android 12 以下统一启动闪屏体验）
+coreSplashscreen = "1.0.1"
 
 # ===== Compose =====
 composeBom = "2025.01.01"
@@ -33,9 +35,9 @@ mlkit-face-detection = "16.1.7"
 mlkit-segmentation-selfie = "16.0.0-beta6"
 mlkit-object-detection = "17.0.2"
 mediapipe-tasks-vision = "0.10.20"
-tensorflow-lite = "2.16.1"
-tensorflow-lite-gpu = "2.16.1"
-tensorflow-lite-support = "0.4.4"
+tensorflow-lite = "2.17.0"
+tensorflow-lite-gpu = "2.17.0"
+tensorflow-lite-support = "0.4.5"
 
 # ===== CameraX =====
 # 修复 P2-6: CameraX 当前未使用（使用 Camera2 替代），保留版本定义以备将来启用
@@ -63,6 +65,8 @@ kotlinx-coroutines-test = "1.10.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+# P2-3：Splash Screen 兼容库
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

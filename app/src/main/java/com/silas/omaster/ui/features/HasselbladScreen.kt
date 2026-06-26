@@ -473,10 +473,13 @@ fun HasselbladScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        // P1-4：返回键语义修正 — 分级回退而非全部 onRetake 重置
+                        // DONE -> RESULTS, PREVIEW -> RESULTS, RESULTS -> SETUP(重拍) -> 退出页面
+                        // 符合用户"返回上一级"直觉，避免误触丢失全部分析结果
                         when (stage) {
-                            HasselbladEyeStage.RESULTS,
-                            HasselbladEyeStage.PREVIEW,
-                            HasselbladEyeStage.DONE -> onRetake()
+                            HasselbladEyeStage.DONE -> viewModel.setStage(HasselbladEyeStage.RESULTS)
+                            HasselbladEyeStage.PREVIEW -> viewModel.setStage(HasselbladEyeStage.RESULTS)
+                            HasselbladEyeStage.RESULTS -> onRetake()
                             else -> onBack()
                         }
                     }) {

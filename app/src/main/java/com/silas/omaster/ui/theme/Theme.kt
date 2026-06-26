@@ -89,6 +89,7 @@ fun OMasterTheme(
     darkMode: DarkMode = DarkMode.SYSTEM,
     dynamicColor: Boolean = false, // 禁用动态颜色，使用品牌色
     brandTheme: BrandTheme = BrandTheme.Hasselblad,
+    customColorOverride: Int? = null, // P0-1：自定义强调色 ARGB，覆盖品牌 primary
     content: @Composable () -> Unit
 ) {
     // 根据 darkMode 确定是否使用深色主题
@@ -99,13 +100,16 @@ fun OMasterTheme(
         DarkMode.DARK -> true
     }
 
+    // P0-1：customColorOverride 优先于 brandTheme.primaryColor，使"自定义强调色"真实生效
+    val effectivePrimary = if (customColorOverride != null) Color(customColorOverride) else brandTheme.primaryColor
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> generateDarkColorScheme(brandTheme.primaryColor)
-        else -> generateLightColorScheme(brandTheme.primaryColor)
+        darkTheme -> generateDarkColorScheme(effectivePrimary)
+        else -> generateLightColorScheme(effectivePrimary)
     }
 
     val view = LocalView.current
