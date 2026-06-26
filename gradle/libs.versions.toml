@@ -30,6 +30,9 @@ kotlinxSerialization = "1.8.0"
 
 # ===== ML & AI =====
 mlkit-face-detection = "16.1.7"
+mlkit-image-segmentation = "16.0.0"
+mlkit-object-detection = "17.0.2"
+mediapipe-tasks-vision = "0.10.20"
 tensorflow-lite = "2.16.1"
 tensorflow-lite-gpu = "2.16.1"
 tensorflow-lite-support = "0.4.4"
@@ -97,6 +100,12 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3",
 
 # ML Kit 人脸检测
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkit-face-detection" }
+mlkit-image-segmentation = { group = "com.google.mlkit", name = "image-segmentation", version.ref = "mlkit-image-segmentation" }
+mlkit-image-segmentation-selfie = { group = "com.google.mlkit", name = "image-segmentation-selfie", version.ref = "mlkit-image-segmentation" }
+mlkit-object-detection = { group = "com.google.mlkit", name = "object-detection", version.ref = "mlkit-object-detection" }
+
+# MediaPipe Tasks Vision (face landmark / pose detection)
+mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipe-tasks-vision" }
 
 # TensorFlow Lite
 tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflow-lite" }

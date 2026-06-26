@@ -36,6 +36,12 @@
     <!-- 相机权限（SceneRecognitionManager / SmartOptimize 使用） -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- 录制音频权限（部分 CameraX 高级模式需要） -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- 传感器权限（陀螺仪、加速度计用于防抖/水平仪/AR构图） -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+
     <!-- 唤醒锁（前台 Service 跑渲染时防止休眠） -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
