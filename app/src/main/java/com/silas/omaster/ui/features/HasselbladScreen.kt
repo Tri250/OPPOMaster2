@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.features
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -803,7 +805,7 @@ private fun GlassCard(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = BorderStroke(
             0.5.dp,
@@ -890,13 +892,13 @@ private fun SectionTitle(title: String) {
 private fun HeroCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)))
                 .background(
                     Brush.horizontalGradient(
                         listOf(HasselbladOrange, HasselbladOrangeLight)
@@ -910,7 +912,7 @@ private fun HeroCard() {
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                         .background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1237,7 +1239,7 @@ private fun ParamsPanel(
         OutlinedButton(
             onClick = onResetParams,
             enabled = !isParamsLocked,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
             modifier = Modifier.fillMaxWidth(),
             border = BorderStroke(1.dp, HasselbladOrange)
         ) {
@@ -1274,7 +1276,7 @@ private fun ParamSlider(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
             Surface(
-                shape = RoundedCornerShape(6.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)),
                 color = if (enabled) HasselbladOrange.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
@@ -1351,7 +1353,7 @@ private fun ShutterCard(
 
             OutlinedButton(
                 onClick = onPickFromGallery,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                 modifier = Modifier.fillMaxWidth(),
                 border = BorderStroke(1.dp, HasselbladOrange)
             ) {
@@ -1386,7 +1388,7 @@ private fun ViewfinderEntryCard(onLaunchViewfinder: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(HasselbladOrange.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -1450,7 +1452,7 @@ private fun RecentShotThumbnail(
 
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.size(72.dp)
     ) {
@@ -1591,14 +1593,14 @@ private fun AnalyzingContent(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                 .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progress / 100f)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                     .background(
                         Brush.horizontalGradient(
                             listOf(HasselbladOrange, HasselbladOrangeLight, Color(0xFFFFB366))
@@ -1641,7 +1643,7 @@ private fun AnalyzingContent(
 
         OutlinedButton(
             onClick = onCancel,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
         ) {
             Icon(
@@ -1874,7 +1876,7 @@ private fun ResultsContent(
                 Button(
                     onClick = onPreviewEffect,
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -1898,7 +1900,7 @@ private fun ResultsContent(
             item {
                 OutlinedButton(
                     onClick = onSaveAsPreset,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     border = BorderStroke(1.dp, HasselbladOrange),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1924,7 +1926,7 @@ private fun ResultsContent(
                 Button(
                     onClick = onApplyToOPPO,
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
@@ -1981,7 +1983,7 @@ private fun ResultPhotoCard(bitmap: Bitmap?, preview: Bitmap?) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.5f)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -2015,7 +2017,7 @@ private fun SceneRecognitionCard(profile: SceneProfile) {
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(HasselbladOrange.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -2110,7 +2112,7 @@ private fun FilmCard(
         modifier = Modifier
             .width(200.dp)
             .hapticClickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
@@ -2134,7 +2136,7 @@ private fun FilmCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Surface(
                     color = HasselbladOrange.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(6.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                 ) {
                     Text(
                         text = "${(film.matchScore * 100).toInt()}%",
@@ -2186,7 +2188,7 @@ private fun AlternativeSceneCard(
 ) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
@@ -2359,7 +2361,7 @@ private fun PreviewContent(
                 onClick = onSave,
                 enabled = !isSaving && previewBitmap != null,
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -2395,7 +2397,7 @@ private fun PreviewContent(
                 OutlinedButton(
                     onClick = onShare,
                     enabled = previewBitmap != null,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     modifier = Modifier.weight(1f),
                     border = BorderStroke(1.dp, HasselbladOrange)
                 ) {
@@ -2410,7 +2412,7 @@ private fun PreviewContent(
                 }
                 OutlinedButton(
                     onClick = onRetake,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     modifier = Modifier.weight(1f),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 ) {
@@ -2445,7 +2447,7 @@ private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.5f)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
             ) {
                 val maxW = constraints.maxWidth
                 val maxH = constraints.maxHeight
@@ -2530,7 +2532,7 @@ private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(8.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                             .background(Color.Black.copy(alpha = 0.6f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -2541,7 +2543,7 @@ private fun BeforeAfterCompareCard(original: Bitmap?, processed: Bitmap?) {
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                             .background(HasselbladOrange.copy(alpha = 0.9f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -2576,7 +2578,7 @@ private fun ParamsSummaryCard(params: HasselbladParams) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                                     .padding(horizontal = 10.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -2610,7 +2612,7 @@ private fun ParamsSummaryCard(params: HasselbladParams) {
                 )
                 Surface(
                     color = HasselbladOrange.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(6.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                 ) {
                     Text(
                         text = when (params.softLight) {
@@ -2675,7 +2677,7 @@ private fun LUTStrengthCard(
 ) {
     val haptic = LocalHapticFeedback.current
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ),
@@ -2805,7 +2807,7 @@ private fun DoneContent(
         Button(
             onClick = onShare,
             colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
@@ -2828,7 +2830,7 @@ private fun DoneContent(
         ) {
             OutlinedButton(
                 onClick = onViewImage,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
@@ -2846,7 +2848,7 @@ private fun DoneContent(
 
             OutlinedButton(
                 onClick = onEditAnother,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
@@ -2867,7 +2869,7 @@ private fun DoneContent(
 
         OutlinedButton(
             onClick = onRetake,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -2887,7 +2889,7 @@ private fun DoneContent(
 
         OutlinedButton(
             onClick = onBack,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -3456,7 +3458,7 @@ private fun CompositionGuideCard(
                         "进阶" -> HasselbladOrange.copy(alpha = 0.15f)
                         else -> Color(0xFF9C27B0).copy(alpha = 0.15f)
                     },
-                    shape = RoundedCornerShape(6.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                 ) {
                     Text(
                         text = currentGuide.difficulty,
@@ -3477,7 +3479,7 @@ private fun CompositionGuideCard(
             // AR引导线说明
             Surface(
                 color = HasselbladOrange.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
             ) {
                 Row(
                     modifier = Modifier
@@ -3591,7 +3593,7 @@ private fun CompositionGuideCard(
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         showARPreview = !showARPreview
                     },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     modifier = Modifier.weight(1f),
                     border = BorderStroke(1.dp, if (showARPreview) HasselbladOrange else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                 ) {
@@ -3628,7 +3630,7 @@ private fun CompositionGuideCard(
                             onGuideClick(currentGuide)
                         }
                     },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -3680,7 +3682,7 @@ private fun ARGuideOverlay(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(Color(0xFF1A1A1A))
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

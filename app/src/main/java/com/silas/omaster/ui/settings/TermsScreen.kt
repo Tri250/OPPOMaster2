@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.settings
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -79,7 +81,7 @@ fun TermsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Row(
@@ -106,7 +108,7 @@ fun TermsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     colors = CardDefaults.cardColors(containerColor = CyanAccent.copy(alpha = 0.15f))
                 ) {
                     Column(
@@ -184,7 +186,7 @@ fun TermsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -243,7 +245,7 @@ private fun KeyTermItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
     ) {
         Row(
@@ -253,7 +255,7 @@ private fun KeyTermItem(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                     .background(HasselbladOrange.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -288,7 +290,7 @@ private fun TermSection(
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(HasselbladOrange),
                 contentAlignment = Alignment.Center
             ) {

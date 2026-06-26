@@ -629,7 +629,7 @@ fun WatermarkEditorScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (showBeforeAfter) CyanAccent else Color(0xFF2A2A2A)
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     ) {
                         Icon(
                             if (showBeforeAfter) Icons.Default.CompareArrows else Icons.Default.Compare,
@@ -837,7 +837,7 @@ fun WatermarkEditorScreen(
                         bgOpacity = 0f
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = CyanAccent
                     ),
@@ -856,7 +856,7 @@ fun WatermarkEditorScreen(
                         onSave(watermarkConfig)
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = CyanAccent
                     ),
@@ -874,7 +874,7 @@ fun WatermarkEditorScreen(
                         previewBitmap?.let { onExport(it, watermarkConfig) }
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                 ) {
                     Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
@@ -910,7 +910,7 @@ private fun WatermarkCategoryTabs(
 
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)))
                     .background(bgColor)
                     .clickable { onCategorySelected(category) }
                     .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -946,9 +946,9 @@ private fun SearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -1041,9 +1041,9 @@ private fun WatermarkTemplateCard(
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(if (isSelected) CyanAccent.copy(alpha = 0.15f) else Color(0xFF2A2A2A))
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .clickable { onClick() }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1052,7 +1052,7 @@ private fun WatermarkTemplateCard(
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                 .background(if (isSelected) CyanAccent.copy(alpha = 0.3f) else Color(0xFF3A3A3A))
         ) {
             Icon(
@@ -1114,12 +1114,12 @@ private fun WatermarkPositionGrid(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(36.dp)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                                     .background(if (isSelected) CyanAccent else Color(0xFF2A2A2A))
                                     .border(
                                         1.dp,
                                         if (isSelected) CyanAccent else Color.Gray.copy(alpha = 0.3f),
-                                        RoundedCornerShape(4.dp)
+                                        RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                                     )
                                     .clickable { onPositionSelected(position) }
                             ) {
@@ -1175,9 +1175,9 @@ private fun CustomTextInput(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -1323,7 +1323,7 @@ private fun WatermarkElementRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(Color(0xFF2A2A2A))
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1341,7 +1341,7 @@ private fun WatermarkElementRow(
                 modifier = Modifier
                     .weight(1f)
                     .height(32.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart
@@ -1396,7 +1396,7 @@ private fun WatermarkVignetteRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(Color(0xFF2A2A2A))
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1499,12 +1499,12 @@ private fun WatermarkStyleSection(
                 val isSelected = font == selectedFont
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
                         .border(
                             1.dp,
                             if (isSelected) CyanAccent else Color.Transparent,
-                            RoundedCornerShape(8.dp)
+                            RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                         )
                         .clickable { onFontSelected(font) }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -1536,12 +1536,12 @@ private fun WatermarkStyleSection(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(if (isSelected) CyanAccent.copy(alpha = 0.2f) else Color(0xFF2A2A2A))
                         .border(
                             1.dp,
                             if (isSelected) CyanAccent else Color.Transparent,
-                            RoundedCornerShape(8.dp)
+                            RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                         )
                         .clickable { onFontWeightChange(weight) }
                         .padding(vertical = 8.dp),
@@ -1591,7 +1591,7 @@ private fun WatermarkStyleSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(CyanAccent.copy(alpha = 0.1f))
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically

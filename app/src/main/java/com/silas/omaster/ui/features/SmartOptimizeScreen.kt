@@ -99,12 +99,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.SceneCategory
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.SurfaceElevated
 import kotlinx.coroutines.CoroutineScope
@@ -415,7 +417,7 @@ fun SmartOptimizeScreen(
                         modifier = Modifier
                             .background(
                                 HasselbladOrange.copy(alpha = 0.15f),
-                                RoundedCornerShape(6.dp)
+                                RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                             )
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -487,7 +489,7 @@ fun SmartOptimizeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
@@ -584,7 +586,7 @@ fun SmartOptimizeScreen(
                     .padding(8.dp)
                     .background(
                         Color.Black.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -625,7 +627,7 @@ fun SmartOptimizeScreen(
                         .padding(8.dp)
                         .background(
                             HasselbladOrange.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -658,7 +660,7 @@ fun SmartOptimizeScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                         colors = CardDefaults.cardColors(
                             containerColor = HasselbladOrange.copy(alpha = 0.1f)
                         )
@@ -696,7 +698,7 @@ fun SmartOptimizeScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                         colors = CardDefaults.cardColors(
                             containerColor = SuccessGreen.copy(alpha = 0.1f)
                         )
@@ -857,7 +859,7 @@ fun SmartOptimizeScreen(
                     analysisResult = null
                 },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
             ) {
                 Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
@@ -873,7 +875,7 @@ fun SmartOptimizeScreen(
                 },
                 enabled = !isSaving && (optimizedBitmap != null || originalBitmap != null),
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
             ) {
                 Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
@@ -889,7 +891,7 @@ fun SmartOptimizeScreen(
                 },
                 enabled = !isOptimizing && selectedOptimizeIds.isNotEmpty(),
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
             ) {
                 Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
@@ -1143,9 +1145,9 @@ private fun BeforeAfterCompareView(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("原图", color = Color.White, fontSize = 11.sp,
-                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))).padding(4.dp))
                 Text("优化后", color = HasselbladOrange, fontSize = 11.sp,
-                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))).padding(4.dp))
             }
         }
     }
@@ -1167,7 +1169,7 @@ private fun CompositeOptimizeCard(
     val haptic = LocalHapticFeedback.current
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = if (enabled) SuccessGreen.copy(alpha = 0.15f) else SurfaceElevated
         )
@@ -1180,7 +1182,7 @@ private fun CompositeOptimizeCard(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(
                             if (enabled) SuccessGreen.copy(alpha = 0.3f)
                             else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
@@ -1229,7 +1231,7 @@ private fun CompositeOptimizeCard(
                     },
                     enabled = !isOptimizing,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = SuccessGreen
                     )
@@ -1261,7 +1263,7 @@ private fun OptimizeOptionCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isProcessing -> color.copy(alpha = 0.15f)

@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.onboarding
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -144,7 +146,7 @@ fun OnboardingScreen(
                     Box(
                         modifier = Modifier
                             .size(width = width, height = 8.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                             .background(color)
                     )
                 }

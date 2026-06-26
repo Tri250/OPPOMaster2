@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.features
 
+import androidx.compose.ui.unit.Dp
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -214,7 +215,7 @@ fun StyleLUTGeneratorScreen(
                 enabled = sourceBitmap != null && referenceBitmap != null && !isGenerating,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
             ) {
                 if (isGenerating) {
                     CircularProgressIndicator(
@@ -235,7 +236,7 @@ fun StyleLUTGeneratorScreen(
             if (isGenerating) {
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))),
                     color = HasselbladOrange,
                     trackColor = HasselbladOrange.copy(alpha = 0.2f)
                 )
@@ -253,7 +254,7 @@ fun StyleLUTGeneratorScreen(
                 // Before/After 对比预览
                 Card(
                     modifier = Modifier.fillMaxWidth().height(200.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                 ) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         // 原图
@@ -268,7 +269,7 @@ fun StyleLUTGeneratorScreen(
                             Surface(
                                 modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
                                 color = Color.Black.copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(4.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                             ) {
                                 Text("原图", color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
@@ -285,7 +286,7 @@ fun StyleLUTGeneratorScreen(
                             Surface(
                                 modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
                                 color = HasselbladOrange.copy(alpha = 0.8f),
-                                shape = RoundedCornerShape(4.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                             ) {
                                 Text("LUT", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
@@ -321,7 +322,7 @@ fun StyleLUTGeneratorScreen(
                             viewModel.regenerate()
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                     ) {
                         Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -337,7 +338,7 @@ fun StyleLUTGeneratorScreen(
                         enabled = !isExporting,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                     ) {
                         if (isExporting) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
@@ -359,7 +360,7 @@ fun StyleLUTGeneratorScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                     ) {
                         Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -388,10 +389,10 @@ private fun ImageUploadCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(140.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .clickable(onClick = onClick)
             .then(
-                if (bitmap == null) Modifier.border(1.dp, HasselbladOrange.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                if (bitmap == null) Modifier.border(1.dp, HasselbladOrange.copy(alpha = 0.3f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                 else Modifier
             ),
         colors = CardDefaults.cardColors(
@@ -416,7 +417,7 @@ private fun ImageUploadCard(
                 Surface(
                     modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
                     color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(4.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                 ) {
                     Text(label, color = Color.White, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                 }

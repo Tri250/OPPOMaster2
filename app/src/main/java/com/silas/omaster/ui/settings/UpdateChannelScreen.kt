@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.settings
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -130,7 +132,7 @@ fun UpdateChannelScreen(
             // 更新渠道
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -157,7 +159,7 @@ fun UpdateChannelScreen(
             // 更新选项
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -200,7 +202,7 @@ fun UpdateChannelScreen(
             // 发布说明
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -232,7 +234,7 @@ private fun CurrentVersionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         )
@@ -240,7 +242,7 @@ private fun CurrentVersionCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                 .background(
                     Brush.horizontalGradient(
                         listOf(HasselbladOrange, WarningYellow)
@@ -252,7 +254,7 @@ private fun CurrentVersionCard(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                             .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -297,7 +299,7 @@ private fun CurrentVersionCard(
                         containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                         contentColor = MaterialTheme.colorScheme.onBackground
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                 ) {
                     if (isCheckingUpdate) {
                         CircularProgressIndicator(
@@ -321,7 +323,7 @@ private fun CurrentVersionCard(
                                 HasselbladOrange.copy(alpha = 0.15f)
                             else MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     ) {
                         Text(
                             text = result,
@@ -345,7 +347,7 @@ private fun ChannelOptionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(
                 if (isSelected) HasselbladOrange.copy(alpha = 0.1f)
                 else Color.Transparent
@@ -357,7 +359,7 @@ private fun ChannelOptionRow(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                 .background(channel.color.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {

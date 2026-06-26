@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.settings
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -154,7 +156,7 @@ fun NotificationSettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.15f))
                 ) {
                     Row(
@@ -330,7 +332,7 @@ fun NotificationSettingsScreen(
                 var dndEnabled by remember { mutableStateOf(false) }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -404,7 +406,7 @@ private fun NotificationSettingCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
     ) {
         Row(

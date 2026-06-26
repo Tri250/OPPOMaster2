@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -91,12 +93,12 @@ fun PresetCard(
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
             )
             .semantics {
                 contentDescription = cardContentDescription
             },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -112,7 +114,7 @@ fun PresetCard(
                 preset = preset,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))),
                 contentScale = ContentScale.Crop,
                 showDownloadIndicator = true
             )
@@ -142,7 +144,7 @@ fun PresetCard(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(HasselbladOrange, WarningYellow)
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
@@ -173,7 +175,7 @@ fun PresetCard(
                         .padding(8.dp)
                         .background(
                             color = SuccessGreen,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
@@ -213,7 +215,7 @@ fun PresetCard(
                                     Color.Red.copy(alpha = 0.2f)
                                 else
                                     MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -247,7 +249,7 @@ fun PresetCard(
                             .size(32.dp)
                             .background(
                                 color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -340,9 +342,9 @@ fun PresetCardPlaceholder(
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -387,7 +389,7 @@ fun SwipeablePresetCard(
                     .height(imageHeight.dp)
                     .background(
                         color = Color.Red.copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
                     ),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically

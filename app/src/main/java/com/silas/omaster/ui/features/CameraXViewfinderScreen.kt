@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.features
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -174,6 +176,9 @@ fun CameraXViewfinderScreen(
     val nightState by cameraManager.nightModeState.collectAsState()
     val lightPaintingState by cameraManager.lightPaintingState.collectAsState()
 
+    // 相机错误信息（单次提示）
+    val cameraError by cameraManager.cameraError.collectAsState()
+
     // AR 构图结果
     val arResult by cameraManager.arCompositionResult.collectAsState()
 
@@ -209,6 +214,14 @@ fun CameraXViewfinderScreen(
 
     LaunchedEffect(captureMode) {
         selectedModeIndex = CaptureMode.entries.indexOf(captureMode).coerceAtLeast(0)
+    }
+
+    // 相机错误提示（单次消费）
+    LaunchedEffect(cameraError) {
+        cameraError?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            cameraManager.consumeCameraError()
+        }
     }
 
     // ==================== 权限提示 ====================
@@ -573,7 +586,7 @@ private fun ModeTabRow(
             val tabColor = if (selected) HasselbladOrange else Color.White.copy(alpha = 0.5f)
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                     .background(
                         if (selected) HasselbladOrange.copy(alpha = 0.15f)
                         else Color.Transparent
@@ -581,7 +594,7 @@ private fun ModeTabRow(
                     .border(
                         width = if (selected) 1.dp else 0.dp,
                         color = if (selected) HasselbladOrange else Color.Transparent,
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
                     )
                     .clickable { onModeSelected(index) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -713,7 +726,7 @@ private fun ARTipsOverlay(
 
     Row(
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)))
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -844,7 +857,7 @@ private fun NightCaptureOverlay(
 ) {
     Column(
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -897,7 +910,7 @@ private fun LightPaintingRecordingOverlay(
 
     Row(
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -971,7 +984,7 @@ private fun StatusChip(
         fontSize = 11.sp,
         fontWeight = FontWeight.SemiBold,
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     )
 }
@@ -1042,7 +1055,7 @@ private fun RightAuxPanel(
     Column(
         modifier = modifier
             .padding(end = 12.dp)
-            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .padding(vertical = 16.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1133,7 +1146,7 @@ private fun ProModePanel(
     Column(
         modifier = modifier
             .width(200.dp)
-            .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {

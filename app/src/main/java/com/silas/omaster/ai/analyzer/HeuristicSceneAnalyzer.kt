@@ -890,11 +890,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
         // 获取场景预设（安全处理空列表）
         if (topScenes.isEmpty()) {
-            val defaultScene = ScenePresets.allScenes.firstOrNull()
+            // 优化：无投票时 fallback 到通用风景场景，避免默认人像误判
+            val defaultScene = ScenePresets.getSceneById("landscape-standard")
+                ?: ScenePresets.allScenes.firstOrNull()
                 ?: SceneProfile(
                     id = "unknown",
                     name = "Unknown",
-                    category = SceneCategory.PORTRAIT,
+                    category = SceneCategory.LANDSCAPE,
                     description = "",
                     color = 0xFFFF6B35,
                     confidence = 0f,

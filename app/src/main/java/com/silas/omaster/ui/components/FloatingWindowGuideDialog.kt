@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -162,7 +164,7 @@ fun FloatingWindowGuideDialog(
                     // 操作步骤卡片
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         ),
@@ -314,7 +316,7 @@ private fun GuideStep(
         Box(
             modifier = Modifier
                 .size(26.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {

@@ -243,6 +243,7 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 模型标签 → 场景 ID 映射。
+     * 优化：增加常见场景标签映射，提高模型输出利用率
      */
     private fun mapModelLabelToSceneId(label: String): String? = when (label) {
         "food" -> "food-restaurant"
@@ -250,21 +251,27 @@ class SceneRecognitionManager private constructor(context: Context) {
         "portrait_group" -> "portrait-group"
         "pet" -> "pet-cat"
         "landscape" -> "landscape-standard"
+        "sky" -> "landscape-sky"
+        "beach" -> "landscape-beach"
+        "snow" -> "landscape-snow"
+        "sunset" -> "landscape-sunset"
+        "forest" -> "landscape-forest"
         "night_city" -> "night-city"
         "street" -> "urban-street"
+        "architecture" -> "urban-street"
         "macro" -> "macro-flower"
         "document" -> "still-document"
         "indoor" -> "indoor-living"
+        "cafe" -> "urban-cafe"
         else -> null
     }
 
     private fun mapModelLabelToCategory(label: String): SceneCategory? = when (label) {
         "food" -> SceneCategory.FOOD
-        "portrait", "portrait_group" -> SceneCategory.PORTRAIT
-        "pet" -> SceneCategory.PORTRAIT
-        "landscape" -> SceneCategory.LANDSCAPE
+        "portrait", "portrait_group", "pet" -> SceneCategory.PORTRAIT
+        "landscape", "sky", "beach", "snow", "sunset", "forest" -> SceneCategory.LANDSCAPE
         "night_city" -> SceneCategory.NIGHT
-        "street" -> SceneCategory.URBAN
+        "street", "architecture", "cafe" -> SceneCategory.URBAN
         "macro" -> SceneCategory.MACRO
         "document", "indoor" -> SceneCategory.STILL_LIFE
         else -> null
@@ -276,11 +283,18 @@ class SceneRecognitionManager private constructor(context: Context) {
         "portrait_group" -> "合影"
         "pet" -> "宠物"
         "landscape" -> "风景"
+        "sky" -> "天空"
+        "beach" -> "海滩"
+        "snow" -> "雪景"
+        "sunset" -> "日落"
+        "forest" -> "森林"
         "night_city" -> "夜景"
         "street" -> "街拍"
+        "architecture" -> "建筑街拍"
         "macro" -> "微距"
         "document" -> "文档"
         "indoor" -> "室内"
+        "cafe" -> "咖啡馆"
         else -> "日常"
     }
 

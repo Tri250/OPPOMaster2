@@ -157,7 +157,7 @@ fun LUTShareScreen(
             placeholder = { Text("搜索LUT名称、风格...", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
             leadingIcon = { Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)) },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                 unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
@@ -179,7 +179,7 @@ fun LUTShareScreen(
             items(categories) { category ->
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)))
                         .background(
                             if (category.key == selectedCategory) HasselbladOrange
                             else MaterialTheme.colorScheme.surfaceVariant
@@ -426,12 +426,12 @@ private enum class SortType { DOWNLOADS, RATING, NEWEST }
 private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(if (selected) HasselbladOrange.copy(alpha = 0.2f) else Color.Transparent)
             .border(
                 width = 1.dp,
                 color = if (selected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
             )
             .clickable { onClick() }
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -461,7 +461,7 @@ private fun LUTPosterCard(
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
@@ -496,7 +496,7 @@ private fun LUTPosterCard(
                 Box(
                     modifier = Modifier
                         .padding(6.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                         .background(badgeColor)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
@@ -554,7 +554,7 @@ private fun LUTGridCard(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
@@ -597,7 +597,7 @@ private fun LUTGridCard(
                     if (lut.isNew) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                 .background(SuccessGreen)
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
@@ -607,7 +607,7 @@ private fun LUTGridCard(
                     if (lut.isHot && !lut.isNew) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                 .background(HasselbladOrange)
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
@@ -620,7 +620,7 @@ private fun LUTGridCard(
                     modifier = Modifier
                         .padding(6.dp)
                         .align(Alignment.TopEnd)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                         .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f))
                         .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
@@ -724,7 +724,7 @@ private fun LUTGridCard(
                         containerColor = if (isDownloaded) SuccessGreen.copy(alpha = 0.2f) else HasselbladOrange.copy(alpha = 0.2f),
                         contentColor = if (isDownloaded) SuccessGreen else HasselbladOrange
                     ),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)),
                     contentPadding = PaddingValues(vertical = 6.dp)
                 ) {
                     if (isDownloaded) {
@@ -782,7 +782,7 @@ private fun LUTDetailDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(HasselbladOrange.copy(alpha = 0.2f))
                 ) {
                     if (lut.previewImage.isNotBlank()) {
@@ -829,7 +829,7 @@ private fun LUTDetailDialog(
                     }
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                             .background(HasselbladOrange.copy(alpha = 0.2f))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -854,7 +854,7 @@ private fun LUTDetailDialog(
                     lut.suitableFor.forEach { tag ->
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                                 .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
@@ -866,7 +866,7 @@ private fun LUTDetailDialog(
                 // 信息网格
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
@@ -887,7 +887,7 @@ private fun LUTDetailDialog(
                     lut.suitableFor.forEach { scene ->
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                 .background(HasselbladOrange.copy(alpha = 0.1f))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
@@ -904,7 +904,7 @@ private fun LUTDetailDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                     ) {
                         Row(modifier = Modifier.fillMaxSize()) {
                             // 原图

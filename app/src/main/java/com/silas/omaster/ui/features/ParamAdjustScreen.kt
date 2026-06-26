@@ -452,7 +452,7 @@ private fun ExposureHistogramSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -472,7 +472,7 @@ private fun ExposureHistogramSection(
                     modifier = Modifier
                         .weight(1f)
                         .height(24.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(MaterialTheme.colorScheme.surface)
                 ) {
                     val trackWidth = maxWidth
@@ -577,7 +577,7 @@ private fun ExposureHistogram(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(1.dp),
@@ -624,7 +624,7 @@ private fun DiscreteParamCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -650,7 +650,7 @@ private fun DiscreteParamCard(
 
                 // 当前值标签
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     color = color.copy(alpha = 0.15f)
                 ) {
                     Text(
@@ -700,7 +700,7 @@ private fun DiscreteParamCard(
                     Box(
                         modifier = Modifier
                             .scale(animatedScale)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                             .background(
                                 if (isSelected) color.copy(alpha = 0.2f)
                                 else MaterialTheme.colorScheme.surface
@@ -708,7 +708,7 @@ private fun DiscreteParamCard(
                             .border(
                                 width = if (isSelected) 1.dp else 0.dp,
                                 color = if (isSelected) color else Color.Transparent,
-                                shape = RoundedCornerShape(6.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                             )
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -745,7 +745,7 @@ private fun ContinuousParamCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -768,7 +768,7 @@ private fun ContinuousParamCard(
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                     color = color.copy(alpha = 0.15f)
                 ) {
                     Text(
@@ -810,7 +810,7 @@ private fun FocusModeCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -837,7 +837,7 @@ private fun FocusModeCard(
                     )
                     Surface(
                         modifier = Modifier.weight(animatedWeight),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                         color = if (isSelected) HasselbladOrange.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
                         border = if (isSelected) BorderStroke(1.dp, HasselbladOrange) else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     ) {
@@ -886,7 +886,7 @@ private fun MeteringModeCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -913,7 +913,7 @@ private fun MeteringModeCard(
                     )
                     Surface(
                         modifier = Modifier.weight(animatedWeight),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                         color = if (isSelected) HasselbladOrange.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
                         border = if (isSelected) BorderStroke(1.dp, HasselbladOrange) else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     ) {
@@ -957,7 +957,7 @@ private fun MeteringModeCard(
 private fun ParamHintCard(hint: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFF9800).copy(alpha = 0.1f)),
         border = BorderStroke(1.dp, Color(0xFFFF9800).copy(alpha = 0.3f))
     ) {
@@ -1017,7 +1017,7 @@ private fun PresetChip(
 
     Surface(
         modifier = Modifier.scale(animatedScale),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)),
         color = animatedBackgroundColor,
         shadowElevation = animatedElevation
     ) {

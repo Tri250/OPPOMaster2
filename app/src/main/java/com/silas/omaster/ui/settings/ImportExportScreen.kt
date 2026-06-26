@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.settings
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -312,7 +314,7 @@ fun ImportExportScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ),
@@ -357,7 +359,7 @@ fun ImportExportScreen(
                             OutlinedButton(
                                 onClick = selectAll,
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                             ) {
                                 Text("全选")
                             }
@@ -365,7 +367,7 @@ fun ImportExportScreen(
                             OutlinedButton(
                                 onClick = deselectAll,
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                             ) {
                                 Text("取消全选")
                             }
@@ -380,7 +382,7 @@ fun ImportExportScreen(
                             },
                             enabled = selectedPresetIds.isNotEmpty() && !isExporting,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = HasselbladOrange,
                                 contentColor = androidx.compose.ui.graphics.Color.White,
@@ -454,7 +456,7 @@ fun ImportExportScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ),
@@ -476,7 +478,7 @@ fun ImportExportScreen(
                             },
                             enabled = !isImporting,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = SuccessGreen,
                                 contentColor = androidx.compose.ui.graphics.Color.White,
@@ -588,7 +590,7 @@ private fun PresetCheckboxItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 HasselbladOrange.copy(alpha = 0.08f)

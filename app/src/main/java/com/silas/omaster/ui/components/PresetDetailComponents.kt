@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -67,7 +69,7 @@ fun PresetStatsCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
     ) {
         Row(
@@ -132,7 +134,7 @@ fun ShootingTipsDetailCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
@@ -227,7 +229,7 @@ fun UserCommentsCard(
     
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
     ) {
         Column(
@@ -377,7 +379,7 @@ private fun RelatedPresetItem(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         onClick = onClick
     ) {
@@ -388,7 +390,7 @@ private fun RelatedPresetItem(
             // 封面图（对齐用户规范：96dp = w-24，使用Coil加载真实图片）
             Card(
                 modifier = Modifier.size(96.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (preset.coverPath.isNotBlank()) {
@@ -471,7 +473,7 @@ fun ApplyPresetButton(
         },
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Icon(
@@ -509,7 +511,7 @@ fun FavoriteButton(
         onClick = onToggle,
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Icon(

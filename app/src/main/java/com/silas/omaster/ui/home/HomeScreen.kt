@@ -356,7 +356,7 @@ private fun HeaderSection(
                         brush = Brush.horizontalGradient(
                             colors = listOf(HasselbladOrange, WarningYellow)
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     )
                     .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
@@ -474,7 +474,7 @@ private fun SearchBar(
                     .fillMaxWidth()
                     .background(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
                     )
                     .padding(12.dp)
             ) {
@@ -509,7 +509,7 @@ private fun SearchBar(
                     searchHistory.take(5).forEach { historyQuery ->
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                                 .background(
                                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)
                                 )
@@ -592,7 +592,7 @@ private fun TabBar(
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                                         else
                                             MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                                     )
                                     .padding(horizontal = 6.dp, vertical = 1.dp)
                             ) {
@@ -721,7 +721,7 @@ private fun BrandFilterButton(
             .hapticClickable { onClick() }
             .background(
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
             )
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
@@ -841,7 +841,12 @@ private fun PresetGrid(
             ) {
                 itemsIndexed(
                     items = presets,
-                    key = { index, preset -> preset.id ?: "${preset.name}_$index" }
+                    key = { index, preset ->
+                        val baseKey = preset.id?.takeIf { it.isNotBlank() }
+                            ?: preset.name.takeIf { it.isNotBlank() }
+                            ?: "preset_$index"
+                        "${baseKey}_$index"
+                    }
                 ) { index, preset ->
                     val imageHeight = remember(index) {
                         when (index % 3) {
@@ -901,7 +906,9 @@ private fun PresetCardItem(
     modifier: Modifier = Modifier
 ) {
     // 使用安全的 key，确保每个预设有独立的动画状态
-    val animationKey = preset.id ?: preset.name
+    val animationKey = preset.id?.takeIf { it.isNotBlank() }
+        ?: preset.name.takeIf { it.isNotBlank() }
+        ?: "preset_$index"
     val animatedProgress = remember(animationKey) { Animatable(0f) }
     val haptic = LocalHapticFeedback.current
 
@@ -1147,7 +1154,7 @@ private fun QuickFeatureCard(
                 .size(44.dp)
                 .background(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                 ),
             contentAlignment = Alignment.Center
         ) {

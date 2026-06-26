@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.detail
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -294,7 +296,7 @@ fun DetailScreen(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .padding(8.dp),
-                                shape = RoundedCornerShape(20.dp)
+                                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius))
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Compare,
@@ -384,7 +386,7 @@ fun DetailScreen(
                                     modifier = Modifier
                                         .background(
                                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                                            shape = RoundedCornerShape(4.dp)
+                                            shape = RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius))
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 )

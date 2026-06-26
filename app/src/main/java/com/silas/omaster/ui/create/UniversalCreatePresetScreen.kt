@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.create
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -117,7 +119,7 @@ fun UniversalCreatePresetScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                             contentAlignment = Alignment.Center
@@ -154,7 +156,7 @@ fun UniversalCreatePresetScreen(
                                             .padding(8.dp)
                                             .background(
                                                 Color.Black.copy(alpha = 0.6f),
-                                                RoundedCornerShape(16.dp)
+                                                RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
                                             )
                                             .clickable { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -357,7 +359,7 @@ fun SectionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                         .clickable { onEditItem(index, item) }
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,

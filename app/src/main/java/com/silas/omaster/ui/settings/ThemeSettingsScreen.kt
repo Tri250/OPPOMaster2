@@ -147,7 +147,7 @@ fun ThemeSettingsScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                             .background(
                                 if (darkMode == mode) HasselbladOrange
                                 else MaterialTheme.colorScheme.surfaceVariant
@@ -248,7 +248,7 @@ fun ThemeSettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(
@@ -295,7 +295,7 @@ private fun ThemeOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) theme.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
         )

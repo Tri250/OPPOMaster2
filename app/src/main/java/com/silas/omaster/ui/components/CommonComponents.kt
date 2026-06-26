@@ -242,7 +242,7 @@ fun ModeBadge(
         tags.forEach { tag ->
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {

@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.detail
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -178,11 +180,11 @@ private fun AppInfoCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)),
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
     ) {
         Box(
             modifier = Modifier
@@ -207,7 +209,7 @@ private fun AppInfoCard(
                 Box(
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                         .background(
                             Brush.linearGradient(
                                 colors = listOf(
@@ -258,7 +260,7 @@ private fun AppInfoCard(
                 // Version Badge - 显示当前版本和构建类型
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                         .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -304,11 +306,11 @@ private fun QuickActionsCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)),
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             QuickActionItem(
@@ -369,7 +371,7 @@ private fun QuickActionItem(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {

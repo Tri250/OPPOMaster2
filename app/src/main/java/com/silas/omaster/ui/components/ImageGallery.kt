@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -105,7 +107,7 @@ fun ImageGallery(
     Card(
         modifier = modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = NearBlack
         )
@@ -237,7 +239,7 @@ private fun GalleryIndicators(
     Row(
         modifier = modifier
             .padding(bottom = 16.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically

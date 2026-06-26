@@ -136,4 +136,6 @@ object LiquidGlassConfig {
     const val CardCornerRadius = 16f
     /** 小圆角 (dp) - 标签、按钮等 */
     const val SmallCornerRadius = 12f
+    /** 极小圆角 (dp) - 徽标、芯片、小标签等 */
+    const val TinyCornerRadius = 8f
 }

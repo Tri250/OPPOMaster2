@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.screens
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -383,9 +384,9 @@ private fun TimeRangeChip(
 ) {
     Card(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
         )
@@ -454,7 +455,7 @@ private fun OverviewCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
     ) {
@@ -480,7 +481,7 @@ private fun OverviewCard(
 private fun ShootingPreferenceCard(habits: ShootingHabits) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
     ) {
@@ -527,7 +528,7 @@ private fun ShootingPreferenceCard(habits: ShootingHabits) {
 private fun SceneDistributionCard(stats: List<SceneDistribution>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
     ) {
@@ -557,14 +558,14 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
                             modifier = Modifier
                                 .weight(1f)
                                 .height(24.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                 .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(scene.percentage.toFloat() / 100f)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                     .background(scene.color)
                             )
 
@@ -595,7 +596,7 @@ private fun SceneDistributionCard(stats: List<SceneDistribution>) {
 private fun FilmUsageCard(films: List<FilmUsage>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
     ) {
@@ -632,14 +633,14 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
                             modifier = Modifier
                                 .weight(1f)
                                 .height(16.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                 .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f))
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(film.percentage.toFloat() / 100f)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.TinyCornerRadius)))
                                     .background(
                                         Brush.horizontalGradient(
                                             listOf(HasselbladOrange, Color(0xFFFF8A50))
@@ -668,7 +669,7 @@ private fun FilmUsageCard(films: List<FilmUsage>) {
 private fun MasterTipsCard(tips: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
     ) {
@@ -716,7 +717,7 @@ private fun DetailedDataCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
     ) {

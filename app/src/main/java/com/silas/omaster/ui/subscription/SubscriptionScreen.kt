@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.subscription
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -139,7 +141,7 @@ fun SubscriptionScreen(
             onClick = { showAddDialog = true },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onBackground,
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 24.dp, bottom = 100.dp)
@@ -259,15 +261,15 @@ fun SubscriptionItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
             .clickable { onClick() }
             .border(
                 width = 1.dp,
                 color = if (sub.isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else CardBorderLight,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
             ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -372,7 +374,7 @@ fun SubscriptionDetailBottomSheet(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     DetailRow(label = "名称", value = if (sub.name.isNotEmpty()) sub.name else "未命名")
@@ -400,7 +402,7 @@ fun SubscriptionDetailBottomSheet(
                     onClick = onEdit,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = "编辑", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -411,7 +413,7 @@ fun SubscriptionDetailBottomSheet(
                     onClick = { showDeleteConfirm = true },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))

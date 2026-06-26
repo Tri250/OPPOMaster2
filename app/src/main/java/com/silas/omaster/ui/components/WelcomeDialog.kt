@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.components
 
+import androidx.compose.ui.unit.Dp
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -206,7 +208,7 @@ fun WelcomeDialog(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onBackground
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     ) {
                         Text(
                             text = stringResource(R.string.disagree),
@@ -233,7 +235,7 @@ fun WelcomeDialog(
                             disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             disabledContentColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     ) {
                         Text(
                             text = stringResource(R.string.agree_and_start),

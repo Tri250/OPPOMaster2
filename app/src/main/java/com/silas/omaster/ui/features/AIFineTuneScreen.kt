@@ -73,8 +73,10 @@ import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
+import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.roundToInt
@@ -402,7 +404,7 @@ private fun ImagePreview(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
             .background(Color(0xFF1A1A1A))
     ) {
         // 原图（作为底层）
@@ -452,7 +454,7 @@ private fun ImagePreview(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(8.dp)
-                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
@@ -466,7 +468,7 @@ private fun EmptyImagePlaceholder(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
             .background(Color(0xFF1A1A1A))
             .clickable { onGallery() },
         contentAlignment = Alignment.Center
@@ -628,12 +630,12 @@ private fun StylePanel(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(72.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(if (selectedId == style.id) style.color.copy(alpha = 0.2f) else Color.Transparent)
                     .border(
                         width = if (selectedId == style.id) 2.dp else 0.dp,
                         color = if (selectedId == style.id) style.color else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     )
                     .clickable { onSelect(style.id) }
                     .padding(8.dp)
@@ -673,12 +675,12 @@ private fun SmartPanel(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                     .background(if (isSelected) opt.color.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f))
                     .border(
                         width = if (isSelected) 1.dp else 0.dp,
                         color = if (isSelected) opt.color else Color.Transparent,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius))
                     )
                     .clickable { onToggle(opt.id) }
                     .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -1030,7 +1032,7 @@ private fun AIProgressOverlay(
             contentAlignment = Alignment.Center
         ) {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A))
             ) {
                 Column(

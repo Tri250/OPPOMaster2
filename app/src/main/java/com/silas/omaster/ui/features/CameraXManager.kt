@@ -109,6 +109,10 @@ class CameraXManager(
     private val _isCameraReady = MutableStateFlow(false)
     val isCameraReady: StateFlow<Boolean> = _isCameraReady.asStateFlow()
 
+    // 相机错误信息事件流（单次消费）
+    private val _cameraError = MutableStateFlow<String?>(null)
+    val cameraError: StateFlow<String?> = _cameraError.asStateFlow()
+
     private val _currentLensFacing = MutableStateFlow(lensFacing)
     val currentLensFacing: StateFlow<Int> = _currentLensFacing.asStateFlow()
 
@@ -258,8 +262,17 @@ class CameraXManager(
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases(previewView)
+            try {
+                cameraProvider = cameraProviderFuture.get()
+                bindCameraUseCases(previewView)
+            } catch (e: Exception) {
+                Log.e(TAG, "CameraProvider 初始化失败: ${e.message}", e)
+                _isCameraReady.value = false
+                mainHandler.post {
+                    // 通过 LiveData/Event 通知 UI 层提示用户
+                    _cameraError.value = "相机初始化失败，请检查权限或重启应用"
+                }
+            }
         }, ContextCompat.getMainExecutor(context))
     }
 
@@ -1109,17 +1122,26 @@ class CameraXManager(
         onPhotoSaved: (Uri) -> Unit,
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
+        var photoFile: java.io.File? = null
         try {
-            val photoFile = java.io.File(
+            photoFile = java.io.File(
                 context.cacheDir,
                 "camerax_${System.currentTimeMillis()}.jpg"
             )
             photoFile.outputStream().use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
             }
+
+            // 协程取消时回收资源并删除临时文件
+            if (!isActive) {
+                if (!bitmap.isRecycled) bitmap.recycle()
+                photoFile.delete()
+                return@withContext
+            }
+
             bitmap.recycle()
 
-            // 修复：使用 FileProvider 生成 content:// URI，避免 FileUriExposedException
+            // 修复：使用 FileProvider 生成 content:// URI，避免 Android 7+ FileUriExposedException
             val savedUri = try {
                 androidx.core.content.FileProvider.getUriForFile(
                     context,
@@ -1147,23 +1169,44 @@ class CameraXManager(
         } catch (e: Exception) {
             Log.e(TAG, "保存照片失败: ${e.message}", e)
             if (!bitmap.isRecycled) bitmap.recycle()
+            photoFile?.delete()
             mainHandler.post { onError(e.message ?: "保存失败") }
         }
     }
 
     /**
      * 切换前后摄像头
+     * 修复：切换失败时自动回退原镜头，避免预览卡死或崩溃
      */
     fun switchCamera(previewView: PreviewView? = null) {
+        val previousLensFacing = lensFacing
         lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
             CameraSelector.LENS_FACING_FRONT
         } else {
             CameraSelector.LENS_FACING_BACK
         }
         _currentLensFacing.value = lensFacing
+
         val target = previewView ?: savedPreviewView
-        if (target != null) {
+        if (target == null) return
+
+        try {
             bindCameraUseCases(target)
+            // 如果绑定后相机仍不可用，说明目标镜头不可用，回退
+            if (!_isCameraReady.value) {
+                throw IllegalStateException("目标摄像头不可用")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "切换摄像头失败，回退原镜头: ${e.message}")
+            lensFacing = previousLensFacing
+            _currentLensFacing.value = lensFacing
+            // 尝试恢复原镜头绑定
+            try {
+                bindCameraUseCases(target)
+            } catch (restoreError: Exception) {
+                Log.e(TAG, "恢复摄像头也失败: ${restoreError.message}")
+                _isCameraReady.value = false
+            }
         }
     }
 
@@ -1343,6 +1386,13 @@ class CameraXManager(
         imageAnalysis = null
         _isCameraReady.value = false
         Log.d(TAG, "CameraX 相机已解绑")
+    }
+
+    /**
+     * 消费相机错误信息（单次消费）
+     */
+    fun consumeCameraError() {
+        _cameraError.value = null
     }
 
     /**
