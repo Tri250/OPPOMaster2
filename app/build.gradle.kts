@@ -126,11 +126,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v1.9.0
+        // 当前版本: v2.1.0
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 1.9.0 → 1*10000 + 9*100 + 0 = 10900
-        versionCode = 10900
-        versionName = "1.9.0"
+        // 2.1.0 → 2*10000 + 1*100 + 0 = 20100
+        versionCode = 20100
+        versionName = "2.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -403,11 +403,10 @@ dependencies {
     implementation(libs.umeng.common)
     implementation(libs.umeng.asms)
 
-    // ML Kit 人脸检测 / 图像分割 / 物体检测
+    // ML Kit 人脸检测 / 自拍分割 / 物体检测
     implementation(libs.mlkit.face.detection)
-    implementation(libs.mlkit.image.segmentation)
-    implementation(libs.mlkit.image.segmentation.selfie)
-    implementation(libs.mlkit.object.detection)
+    implementation(libs.mlkit.segmentation.selfie)
+    implementation(libs.mlkit.`object`.detection)
 
     // TensorFlow Lite - 场景识别/参数预测模型推理
     implementation(libs.tensorflow.lite)

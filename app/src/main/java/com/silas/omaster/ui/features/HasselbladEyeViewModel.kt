@@ -240,8 +240,8 @@ class HasselbladEyeViewModel : ViewModel() {
     private fun triggerRealtimePreview() {
         val source = _originalBitmap.value ?: return
         if (_stage.value != HasselbladEyeStage.RESULTS && _stage.value != HasselbladEyeStage.PREVIEW) return
-        // P3-8 修复：使用当前选中色彩模式参数而非空 map，确保格式切换后预览效果一致
-        val currentParams = _currentModeParams.value
+        // P3-8 修复：使用当前选中场景 + 色彩模式参数，确保格式切换后预览效果一致
+        val currentParams = _selectedSceneParams.value + _selectedColorParams.value
         updatePreviewAsync(source, currentParams)
     }
 
@@ -1007,7 +1007,7 @@ class HasselbladEyeViewModel : ViewModel() {
                     is CameraApplyResult.Success ->
                         _oppoApplyState.value = OPOApplyState.Success(result.method.name)
                     is CameraApplyResult.PartialSuccess ->
-                        _oppoApplyState.value = OPOApplyState.PartialSuccess(result.method.name, result.failedParams.keys.toList())
+                        _oppoApplyState.value = OPOApplyState.PartialSuccess(result.method.name, result.failedParams)
                     is CameraApplyResult.Failed ->
                         _oppoApplyState.value = OPOApplyState.Failed(result.reason)
                 }

@@ -539,15 +539,17 @@ fun SmartOptimizeScreen(
                 .height(220.dp)
                 .background(Color(0xFF1A1A1A))
         ) {
-            if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
+            val origBitmap = originalBitmap
+            val optBitmap = optimizedBitmap
+            if (previewMode == "compare" && origBitmap != null && optBitmap != null) {
                 // 前后拖拽对比
                 BeforeAfterCompareView(
-                    beforeBitmap = originalBitmap,
-                    afterBitmap = optimizedBitmap,
+                    beforeBitmap = origBitmap,
+                    afterBitmap = optBitmap,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                val displayBitmap = if (previewMode == "after") optimizedBitmap ?: originalBitmap else originalBitmap
+                val displayBitmap = if (previewMode == "after") optBitmap ?: origBitmap else origBitmap
                 displayBitmap?.let { bitmap ->
                     Image(
                         bitmap = bitmap.asImageBitmap(),

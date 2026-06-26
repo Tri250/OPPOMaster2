@@ -25,7 +25,13 @@ dependencyResolutionManagement {
         // 阿里云 Central 镜像
         maven { url = uri("https://maven.aliyun.com/repository/central") }
         // 友盟 SDK 仓库（umeng-common、umeng-asms）
-        maven { url = uri("https://developer.umeng.com/sdk/repo") }
+        maven {
+            url = uri("https://developer.umeng.com/sdk/repo")
+            content {
+                // 仅允许 umeng 相关 group，避免其他依赖误命中该仓库返回的 404 HTML
+                includeGroup("com.umeng.umsdk")
+            }
+        }
         // JitPack（社区库）
         maven { url = uri("https://jitpack.io") }
         // 本地 Maven 仓库（CI 离线构建用，置后作为兜底）

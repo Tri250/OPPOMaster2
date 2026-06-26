@@ -11,7 +11,8 @@ import android.util.Size
 import androidx.camera.core.Camera
 import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
-import androidx.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureRequest
+import kotlinx.coroutines.cancel
 import com.silas.omaster.renderer.BitmapPool
 import kotlin.math.max
 import kotlin.math.min
@@ -273,7 +274,7 @@ class LightPaintingManager(context: Context) {
 
         try {
             val camera2Control = Camera2CameraControl.from(cam.cameraControl)
-            val builder = androidx.hardware.camera2.params.CaptureRequestOptions.Builder()
+            val builder = CaptureRequestOptions.Builder()
             builder.setCaptureRequestOption(
                 CaptureRequest.CONTROL_AE_MODE,
                 android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF

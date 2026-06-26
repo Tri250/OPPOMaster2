@@ -26,6 +26,7 @@ import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.ai.scene.RealtimeSceneResult
 import com.silas.omaster.ai.scene.SceneRecognitionManager
 import com.silas.omaster.model.HasselbladParams
+import com.silas.omaster.model.HistogramData
 import com.silas.omaster.renderer.GPURenderManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.renderer.RenderQuality
@@ -507,7 +508,7 @@ class CameraXManager(
     /**
      * 将斑马纹与对焦峰值掩码叠加到原帧，返回新 Bitmap。
      */
-    private fun overlayZebraPeaking(
+    private suspend fun overlayZebraPeaking(
         source: Bitmap,
         zebraPeaking: ZebraPeakingResult
     ): Bitmap {
