@@ -299,7 +299,7 @@ class ProModeManager(context: Context) {
     @OptIn(ExperimentalCamera2Interop::class)
     private fun getCameraCharacteristics(camera: Camera): CameraCharacteristics? {
         return try {
-            Camera2CameraInfo.from(camera.cameraInfo).getCameraCharacteristics()
+            Camera2CameraInfo.extractCameraCharacteristics(camera.cameraInfo)
         } catch (e: Exception) {
             Log.w(TAG, "获取 CameraCharacteristics 失败", e)
             null

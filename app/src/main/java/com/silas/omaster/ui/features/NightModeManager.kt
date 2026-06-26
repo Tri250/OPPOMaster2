@@ -6,8 +6,9 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.Camera
 import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.CaptureRequestOptions
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
-import androidx.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureRequest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 import kotlin.math.exp
@@ -248,7 +249,7 @@ class NightModeManager(private val context: Context) {
         val cam = boundCamera ?: return
         try {
             val camera2Control = Camera2CameraControl.from(cam.cameraControl)
-            val builder = androidx.hardware.camera2.params.CaptureRequestOptions.Builder()
+            val builder = CaptureRequestOptions.Builder()
             builder.setCaptureRequestOption(
                 CaptureRequest.CONTROL_AE_MODE,
                 android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF
@@ -266,7 +267,7 @@ class NightModeManager(private val context: Context) {
         val cam = boundCamera ?: return
         try {
             val camera2Control = Camera2CameraControl.from(cam.cameraControl)
-            val builder = androidx.hardware.camera2.params.CaptureRequestOptions.Builder()
+            val builder = CaptureRequestOptions.Builder()
             builder.setCaptureRequestOption(
                 CaptureRequest.CONTROL_AE_MODE,
                 android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON

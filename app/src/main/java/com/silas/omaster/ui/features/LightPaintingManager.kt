@@ -10,6 +10,7 @@ import android.util.Log
 import android.util.Size
 import androidx.camera.core.Camera
 import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.CaptureRequestOptions
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import android.hardware.camera2.CaptureRequest
 import kotlinx.coroutines.cancel
