@@ -163,6 +163,7 @@ fun AIFineTuneScreen(
     }
 
     // 权限：Android 13+ PickVisualMedia 无需 READ_MEDIA_IMAGES；低版本仍需 READ_EXTERNAL_STORAGE
+    // Android 14+ (API 34+) 还需要 READ_MEDIA_VISUAL_USER_SELECTED 实现部分图片访问
     val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
     } else {
@@ -176,6 +177,19 @@ fun AIFineTuneScreen(
         )
     }
 
+    // Android 14+ 多权限请求（READ_MEDIA_IMAGES + READ_MEDIA_VISUAL_USER_SELECTED）
+    val multiPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val imagesGranted = permissions[Manifest.permission.READ_MEDIA_IMAGES] == true
+        val visualSelectedGranted = permissions[Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED] == true
+        if (imagesGranted || visualSelectedGranted) {
+            galleryLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        }
+    }
+
     fun launchGalleryPicker() {
         // Android 14+ (API 34+) 使用 Photo Picker 不需要存储权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -187,7 +201,17 @@ fun AIFineTuneScreen(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             )
         } else {
-            permissionLauncher.launch(storagePermission)
+            // Android 14+ 同时请求 READ_MEDIA_IMAGES 和 READ_MEDIA_VISUAL_USER_SELECTED
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                multiPermissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.READ_MEDIA_IMAGES,
+                        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+                    )
+                )
+            } else {
+                permissionLauncher.launch(storagePermission)
+            }
         }
     }
 

@@ -409,6 +409,11 @@ dependencies {
     implementation(libs.mlkit.image.segmentation.selfie)
     implementation(libs.mlkit.object.detection)
 
+    // TensorFlow Lite - 场景识别/参数预测模型推理
+    implementation(libs.tensorflow.lite)
+    implementation(libs.tensorflow.lite.gpu)
+    implementation(libs.tensorflow.lite.support)
+
     // MediaPipe Tasks Vision: 人脸关键点 / 姿势检测
     implementation(libs.mediapipe.tasks.vision)
 

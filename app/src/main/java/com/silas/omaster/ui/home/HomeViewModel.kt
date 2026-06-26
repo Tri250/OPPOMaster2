@@ -45,7 +45,7 @@ class HomeViewModel(
     private val _customPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
     val customPresets: StateFlow<List<MasterPreset>> = _customPresets.asStateFlow()
 
-    // 当前选中的 Tab（对齐Web端：0=发现, 1=收藏, 2=哈苏, 3=上新）
+    // 当前选中的 Tab（对齐Web端：0=发现, 1=收藏, 2=哈苏, 3=上新, 4=我的）
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
 
@@ -163,6 +163,7 @@ class HomeViewModel(
             1 -> result = result.filter { it.isFavorite } // 收藏
             2 -> result = result.filter { it.isHncs }     // 哈苏
             3 -> result = result.filter { it.isNew }      // 上新
+            4 -> result = _customPresets.value             // 我的（自定义预设）
         }
 
         // 品牌过滤
@@ -199,6 +200,7 @@ class HomeViewModel(
             1 -> _favorites.value.size       // 收藏
             2 -> _allPresets.value.filter { it.isHncs }.size  // 哈苏
             3 -> _allPresets.value.filter { it.isNew }.size   // 上新
+            4 -> _customPresets.value.size   // 我的
             else -> 0
         }
     }

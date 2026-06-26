@@ -6,14 +6,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- 设备信息权限（用于友盟统计，Android 10+ 需要运行时权限） -->
+    <!-- 设备信息权限（友盟统计设备标识，仅 Android 9 及以下使用，Android 10+ 已由 OAID 替代） -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE"
         android:maxSdkVersion="28" />
 
     <!-- 悬浮窗权限（用于悬浮窗功能） -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- 应用安装权限（用于应用内更新） -->
+    <!-- 应用安装权限（应用内更新功能，检查更新后安装 APK 所需） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- 通知权限（Android 13+ 必需） -->
@@ -36,13 +36,17 @@
     <!-- 相机权限（SceneRecognitionManager / SmartOptimize 使用） -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- 录制音频权限（部分 CameraX 高级模式需要） -->
+    <!-- 录制音频权限（CameraX 视频录制模式及语音快门所需） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- 定位权限（地标识别 / GPS 场景增强） -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- 传感器权限（陀螺仪、加速度计用于防抖/水平仪/AR构图） -->
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
 
-    <!-- 唤醒锁（前台 Service 跑渲染时防止休眠） -->
+    <!-- 唤醒锁（前台渲染防休眠，长曝光/光绘模式保持屏幕常亮） -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application

@@ -59,6 +59,7 @@ class HasselbladEyeViewModel : ViewModel() {
         object Idle : OPOApplyState()
         object Applying : OPOApplyState()
         data class Success(val method: String) : OPOApplyState()
+        data class PartialSuccess(val method: String, val failedParams: List<String>) : OPOApplyState()
         data class Failed(val reason: String) : OPOApplyState()
     }
 
@@ -954,7 +955,7 @@ class HasselbladEyeViewModel : ViewModel() {
                     is CameraApplyResult.Success ->
                         _oppoApplyState.value = OPOApplyState.Success(result.method.name)
                     is CameraApplyResult.PartialSuccess ->
-                        _oppoApplyState.value = OPOApplyState.Success(result.method.name)
+                        _oppoApplyState.value = OPOApplyState.PartialSuccess(result.method.name, result.failedParams.keys.toList())
                     is CameraApplyResult.Failed ->
                         _oppoApplyState.value = OPOApplyState.Failed(result.reason)
                 }

@@ -3,6 +3,7 @@ package com.silas.omaster.ui.features
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.PointF
+import android.os.SystemClock
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
@@ -160,7 +161,7 @@ class PortraitModeManager(context: Context) {
                         .build()
                     val options = PoseLandmarker.PoseLandmarkerOptions.builder()
                         .setBaseOptions(baseOptions)
-                        .setRunningMode(RunningMode.IMAGE)
+                        .setRunningMode(RunningMode.VIDEO)
                         .setNumPoses(1)
                         .setMinPoseDetectionConfidence(0.5f)
                         .setMinPosePresenceConfidence(0.5f)
@@ -328,13 +329,14 @@ class PortraitModeManager(context: Context) {
     }
 
     /**
-     * 姿势检测（协程 + MediaPipe）
+     * 姿势检测（协程 + MediaPipe VIDEO 模式）
      */
     private suspend fun detectPose(bitmap: Bitmap): PoseLandmarkerResult? = withContext(Dispatchers.Default) {
         val landmarker = getPoseLandmarker(appContext) ?: return@withContext null
         try {
             val mpImage = BitmapImageBuilder(bitmap).build()
-            landmarker.detect(mpImage)
+            val timestampMs = SystemClock.elapsedRealtime()
+            landmarker.detectForVideo(mpImage, timestampMs)
         } catch (e: Exception) {
             Log.w(TAG, "姿势检测失败: ${e.message}")
             null

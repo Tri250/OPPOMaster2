@@ -254,8 +254,8 @@ fun HomeScreen(
             )
         }
 
-        // 悬浮添加按钮（保留Android原生功能：只在收藏Tab显示）
-        if (selectedTab == 1) {
+        // 悬浮添加按钮（保留Android原生功能：在收藏Tab和我的Tab显示）
+        if (selectedTab == 1 || selectedTab == 4) {
             FloatingActionButton(
                 onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
@@ -542,7 +542,8 @@ private fun TabBar(
         stringResource(R.string.tab_discover),  // 发现
         stringResource(R.string.tab_favorites), // 收藏
         stringResource(R.string.tab_hncs),      // 哈苏
-        stringResource(R.string.tab_new)        // 上新
+        stringResource(R.string.tab_new),       // 上新
+        "我的"                                    // 我的（自定义预设）
     )
 
     ScrollableTabRow(
@@ -952,6 +953,7 @@ private fun EnhancedEmptyState(
         1 -> stringResource(R.string.empty_no_favorites)
         2 -> stringResource(R.string.empty_no_hncs_presets)
         3 -> stringResource(R.string.empty_no_new_presets)
+        4 -> "暂无自定义预设"
         else -> stringResource(R.string.empty_no_data)
     }
 
@@ -960,6 +962,7 @@ private fun EnhancedEmptyState(
         1 -> stringResource(R.string.empty_hint_favorite)
         2 -> stringResource(R.string.empty_hint_hncs_presets)
         3 -> stringResource(R.string.empty_hint_new_presets)
+        4 -> "点击右下角按钮创建您的专属预设"
         else -> ""
     }
 
@@ -968,6 +971,7 @@ private fun EnhancedEmptyState(
         1 -> Icons.Outlined.FavoriteBorder
         2 -> Icons.Default.ColorLens
         3 -> Icons.Default.Refresh
+        4 -> Icons.Default.Add
         else -> Icons.Default.Search
     }
 
@@ -976,6 +980,7 @@ private fun EnhancedEmptyState(
         1 -> "收藏图标"
         2 -> "色彩图标"
         3 -> "刷新图标"
+        4 -> "添加图标"
         else -> "空状态图标"
     }
 
@@ -1019,7 +1024,7 @@ private fun EnhancedEmptyState(
                         Text("刷新数据")
                     }
                 }
-                1 -> {
+                1, 4 -> {
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(onClick = { onNavigateToCreate?.invoke() }) {
                         Text("去添加预设")

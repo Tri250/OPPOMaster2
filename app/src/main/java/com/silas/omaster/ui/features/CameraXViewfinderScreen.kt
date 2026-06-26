@@ -319,29 +319,31 @@ fun CameraXViewfinderScreen(
                     androidx.compose.foundation.Image(
                         bitmap = frame.asImageBitmap(),
                         contentDescription = "实时处理效果",
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.FillBounds,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
 
             // ==================== AR 引导线覆盖层 ====================
-            if (showARGuide && arResult != null) {
-                ARGuideOverlay(
-                    result = arResult!!,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            arResult?.let { result ->
+                if (showARGuide) {
+                    ARGuideOverlay(
+                        result = result,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
 
-            // ==================== AR 构图提示 ====================
-            if (showARTips && !arResult?.tips.isNullOrEmpty()) {
-                ARTipsOverlay(
-                    tips = arResult!!.tips,
-                    score = arResult!!.compositionScore,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 12.dp)
-                )
+                // ==================== AR 构图提示 ====================
+                if (showARTips && result.tips.isNotEmpty()) {
+                    ARTipsOverlay(
+                        tips = result.tips,
+                        score = result.compositionScore,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 12.dp)
+                    )
+                }
             }
 
             // ==================== 模式专属状态指示 ====================
@@ -597,64 +599,22 @@ private fun ARGuideOverlay(
         else -> Color(0xFFFF5252) // 红色：需调整
     }
 
+    val density = LocalDensity.current.density
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
 
-        // 三分法线（垂直）
-        val thirdW = w / 3f
-        val guideAlpha = when {
-            result.compositionScore >= 80 -> 0.25f
-            result.compositionScore >= 60 -> 0.4f
-            else -> 0.6f
-        }
-
-        // 垂直三分线
-        for (i in 1..2) {
+        // 绘制动态引导线（来自 ARCompositionManager）
+        result.guideLines.forEach { line ->
+            val lineColor = Color(line.color.toLong()).copy(
+                alpha = (line.color ushr 24 and 0xFF) / 255f
+            )
             drawLine(
-                color = guideColor.copy(alpha = guideAlpha),
-                start = Offset(thirdW * i, 0f),
-                end = Offset(thirdW * i, h),
-                strokeWidth = if (result.compositionScore < 60) 1.5f else 1f,
-                pathEffect = if (result.compositionScore < 60)
-                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f)) else null
-            )
-        }
-
-        // 水平三分线
-        val thirdH = h / 3f
-        for (i in 1..2) {
-            drawLine(
-                color = guideColor.copy(alpha = guideAlpha),
-                start = Offset(0f, thirdH * i),
-                end = Offset(w, thirdH * i),
-                strokeWidth = if (result.compositionScore < 60) 1.5f else 1f,
-                pathEffect = if (result.compositionScore < 60)
-                    PathEffect.dashPathEffect(floatArrayOf(10f, 10f)) else null
-            )
-        }
-
-        // 黄金分割点（4个）
-        val phi = 1.618f
-        val goldenVW = w / (1f + phi)
-        val goldenVH = h / (1f + phi)
-        val goldenPoints = listOf(
-            Offset(goldenVW, goldenVH),
-            Offset(w - goldenVW, goldenVH),
-            Offset(goldenVW, h - goldenVH),
-            Offset(w - goldenVW, h - goldenVH)
-        )
-        goldenPoints.forEach { pt ->
-            drawCircle(
-                color = guideColor.copy(alpha = 0.35f),
-                radius = 6f,
-                center = pt
-            )
-            drawCircle(
-                color = guideColor.copy(alpha = 0.35f),
-                radius = 12f,
-                center = pt,
-                style = Stroke(width = 1f)
+                color = lineColor,
+                start = Offset(line.startX * w, line.startY * h),
+                end = Offset(line.endX * w, line.endY * h),
+                strokeWidth = line.strokeWidth * density
             )
         }
 

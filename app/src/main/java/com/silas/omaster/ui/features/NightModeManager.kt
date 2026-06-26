@@ -4,6 +4,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
+import androidx.camera.core.Camera
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import androidx.hardware.camera2.CaptureRequest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 import kotlin.math.exp
@@ -110,6 +114,9 @@ class NightModeManager(private val context: Context) {
     /** 采集状态 */
     @Volatile
     private var isCapturing = false
+
+    @Volatile
+    private var boundCamera: Camera? = null
 
     @Volatile
     private var captureCancelled = false
@@ -232,6 +239,44 @@ class NightModeManager(private val context: Context) {
         )
     }
 
+    fun bindCamera(camera: Camera) {
+        boundCamera = camera
+    }
+
+    @OptIn(ExperimentalCamera2Interop::class)
+    fun applyNightExposure() {
+        val cam = boundCamera ?: return
+        try {
+            val camera2Control = Camera2CameraControl.from(cam.cameraControl)
+            val builder = androidx.hardware.camera2.params.CaptureRequestOptions.Builder()
+            builder.setCaptureRequestOption(
+                CaptureRequest.CONTROL_AE_MODE,
+                android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF
+            )
+            builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, currentParams.maxIso.coerceIn(100, 12800))
+            builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, 50_000_000L) // 50ms
+            camera2Control.setCaptureRequestOptions(builder.build())
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "夜景曝光参数下发失败: ${e.message}")
+        }
+    }
+
+    @OptIn(ExperimentalCamera2Interop::class)
+    fun restoreAutoExposure() {
+        val cam = boundCamera ?: return
+        try {
+            val camera2Control = Camera2CameraControl.from(cam.cameraControl)
+            val builder = androidx.hardware.camera2.params.CaptureRequestOptions.Builder()
+            builder.setCaptureRequestOption(
+                CaptureRequest.CONTROL_AE_MODE,
+                android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON
+            )
+            camera2Control.setCaptureRequestOptions(builder.build())
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "恢复自动曝光失败: ${e.message}")
+        }
+    }
+
     /**
      * 释放夜景管理器资源。
      * 取消可能正在运行的任务并清空帧缓冲。
@@ -259,6 +304,9 @@ class NightModeManager(private val context: Context) {
         var resultBitmap: Bitmap? = null
 
         try {
+            // 下发夜景曝光参数
+            applyNightExposure()
+
             // 初始化采集状态
             val initialTotal = targetFrames.coerceIn(MIN_FRAMES, MAX_FRAMES)
             currentParams = currentParams.copy(targetFrames = initialTotal)
@@ -332,6 +380,7 @@ class NightModeManager(private val context: Context) {
             resultBitmap = null
         } finally {
             isCapturing = false
+            restoreAutoExposure()
             processingFrames.forEach { it.bitmap.recycle() }
             // 处理过程中如果 resultBitmap 为 null，确保没有残留缓冲
             if (resultBitmap == null) {

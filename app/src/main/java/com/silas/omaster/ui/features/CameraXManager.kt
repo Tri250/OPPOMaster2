@@ -66,8 +66,9 @@ class CameraXManager(
     companion object {
         private const val TAG = "CameraXManager"
 
-        /** 帧跳过间隔：每 N 帧处理一帧色彩/分析，减少 CPU 负载 */
-        private const val FRAME_SKIP_INTERVAL = 3
+        /** 帧跳过间隔：每 N 帧处理一帧色彩/分析，减少 CPU 负载（运行时按模式动态调整） */
+        @Volatile
+        private var FRAME_SKIP_INTERVAL = 3
 
         /** 场景识别间隔：每 N 帧做一次 AI 场景识别 */
         private const val SCENE_SCAN_INTERVAL = 5
@@ -117,6 +118,18 @@ class CameraXManager(
     @Volatile
     private var currentPresetParams: HasselbladParams = HasselbladParams()
 
+    // 参数锁定标记：锁定后忽略 AI 推荐参数覆盖
+    @Volatile
+    private var isParamsLocked: Boolean = false
+
+    fun setParamsLocked(locked: Boolean) {
+        isParamsLocked = locked
+    }
+
+    // 上次应用的参数，用于防抖（与上次相同则不重复应用）
+    @Volatile
+    private var lastAppliedParams: HasselbladParams? = null
+
     // AI 场景识别
     private val sceneRecognitionManager = SceneRecognitionManager.getInstance(context)
 
@@ -165,6 +178,10 @@ class CameraXManager(
     private val proModeManager by lazy { ProModeManager(context) }
     private val specializedModeManager by lazy { SpecializedModeManager(context) }
 
+    private val oppoCameraManager: com.silas.omaster.camera.OPPOCameraManager by lazy {
+        com.silas.omaster.camera.OPPOCameraManager.getInstance(context)
+    }
+
     // 实时 AR 构图结果
     private val _arCompositionResult = MutableStateFlow<ARCompositionResult?>(null)
     val arCompositionResult: StateFlow<ARCompositionResult?> = _arCompositionResult.asStateFlow()
@@ -186,6 +203,10 @@ class CameraXManager(
 
     // 光绘模式状态（暴露给 UI 层）
     val lightPaintingState: StateFlow<LightPaintingState> = lightPaintingManager.state
+
+    // 追焦提示结果（转发 specializedModeManager 的 trackingResult）
+    val trackingResult: StateFlow<SpecializedModeManager.TrackingResult?>
+        get() = specializedModeManager.trackingResult
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
@@ -270,7 +291,7 @@ class CameraXManager(
 
         // 构建 ImageAnalysis（实时分析）
         imageAnalysis = ImageAnalysis.Builder()
-            .setTargetResolution(Size(640, 480))
+            .setTargetResolution(Size(640, 360))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { analysis ->
@@ -565,9 +586,16 @@ class CameraXManager(
 
     /**
      * 应用 AI 推荐的参数。
-     * 后续会接入 ViewModel 的锁定机制，此处先直接应用到 CameraXManager。
+     * 参数锁定时忽略 AI 推荐；与上次相同则不重复应用（防抖）。
      */
     private fun applyRecommendedParams(params: HasselbladParams) {
+        if (isParamsLocked) {
+            Log.d(TAG, "参数已锁定，忽略 AI 推荐")
+            return
+        }
+        // 防抖：与上次相同则不重复应用
+        if (params == lastAppliedParams) return
+        lastAppliedParams = params
         currentPresetParams = params
     }
 
@@ -621,6 +649,10 @@ class CameraXManager(
             }
             CaptureMode.NIGHT -> {
                 currentPresetParams = SceneToHasselbladMapping.getParams("night-city")
+                camera?.let { nightModeManager.bindCamera(it) }
+            }
+            CaptureMode.LIGHT_PAINTING -> {
+                camera?.let { lightPaintingManager.bindCamera(it) }
             }
             CaptureMode.FOOD, CaptureMode.STREET, CaptureMode.PET -> {
                 currentPresetParams = specializedModeManager.getRecommendedParams(mode)
@@ -630,6 +662,21 @@ class CameraXManager(
             }
             else -> {
                 // AI_AUTO / LIGHT_PAINTING 使用当前或 AI 推荐参数
+            }
+        }
+
+        // 根据模式动态调整帧处理频率
+        when (mode) {
+            CaptureMode.NIGHT, CaptureMode.LIGHT_PAINTING -> {
+                // 夜景/光绘需要更多帧，降低跳帧
+                FRAME_SKIP_INTERVAL = 1
+            }
+            CaptureMode.PRO -> {
+                // 专业模式直方图需要较高帧率
+                FRAME_SKIP_INTERVAL = 2
+            }
+            else -> {
+                FRAME_SKIP_INTERVAL = 3
             }
         }
 
@@ -959,6 +1006,8 @@ class CameraXManager(
             return
         }
 
+        camera?.let { nightModeManager.bindCamera(it) }
+
         managerScope.launch {
             try {
                 val result = nightModeManager.captureAndProcess()
@@ -990,6 +1039,7 @@ class CameraXManager(
     private fun takeLightPaintingPhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
         val state = lightPaintingManager.state.value
         if (!state.isRecording) {
+            camera?.let { lightPaintingManager.bindCamera(it) }
             lightPaintingManager.startRecording()
             mainHandler.post {
                 Toast.makeText(context, "光绘录制已开始，再次点击快门结束", Toast.LENGTH_SHORT).show()
@@ -1068,6 +1118,17 @@ class CameraXManager(
             bitmap.recycle()
             val savedUri = Uri.fromFile(photoFile)
             Log.d(TAG, "照片已保存: $savedUri")
+
+            // OPPO 设备参数同步：拍照完成后尝试将哈苏参数同步到 OPPO 相机大师模式
+            try {
+                val capability = oppoCameraManager.detectDeviceCapability()
+                if (capability.isOppoDevice) {
+                    oppoCameraManager.applyHasselbladParams(currentPresetParams)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "OPPO 参数同步失败: ${e.message}")
+            }
+
             mainHandler.post { onPhotoSaved(savedUri) }
         } catch (e: Exception) {
             Log.e(TAG, "保存照片失败: ${e.message}", e)

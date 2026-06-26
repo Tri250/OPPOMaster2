@@ -91,6 +91,7 @@ class ARCompositionManager(context: Context) : SensorEventListener {
         val options = ObjectDetectorOptions.Builder()
             .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
             .enableMultipleObjects()
+            .enableClassification()
             .build()
         ObjectDetection.getClient(options)
     }

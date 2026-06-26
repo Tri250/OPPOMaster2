@@ -410,7 +410,7 @@ fun SmartOptimizeScreen(
             },
             actions = {
                 // AI 场景识别结果徽标
-                if (analysisResult != null) {
+                analysisResult?.let { result ->
                     Row(
                         modifier = Modifier
                             .background(
@@ -427,7 +427,7 @@ fun SmartOptimizeScreen(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = analysisResult!!.name,
+                            text = result.name,
                             fontSize = 11.sp,
                             color = HasselbladOrange,
                             maxLines = 1,
@@ -542,8 +542,8 @@ fun SmartOptimizeScreen(
             if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
                 // 前后拖拽对比
                 BeforeAfterCompareView(
-                    beforeBitmap = originalBitmap!!,
-                    afterBitmap = optimizedBitmap!!,
+                    beforeBitmap = originalBitmap,
+                    afterBitmap = optimizedBitmap,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -673,7 +673,7 @@ fun SmartOptimizeScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "AI 推荐：${analysisResult!!.name}",
+                                    text = "AI 推荐：${analysisResult?.name ?: ""}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = HasselbladOrange
@@ -957,7 +957,8 @@ private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int,
  */
 private fun applyExifOrientation(context: Context, uri: Uri, bitmap: Bitmap): Bitmap {
     return try {
-        val exif = android.media.ExifInterface(context.contentResolver.openInputStream(uri)!!)
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return bitmap
+        val exif = android.media.ExifInterface(inputStream)
         val orientation = exif.getAttributeInt(
             android.media.ExifInterface.TAG_ORIENTATION,
             android.media.ExifInterface.ORIENTATION_NORMAL

@@ -21,8 +21,11 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,6 +70,9 @@ class ProModeManager(context: Context) {
 
     /** 协程作用域：用于异步应用 Camera2 参数 */
     private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    /** Debounce Job：参数变化后延迟应用，避免频繁 Camera2Interop 调用 */
+    private var paramsDebounceJob: Job? = null
 
     /** 当前绑定的 Camera 实例 */
     @Volatile
@@ -176,12 +182,17 @@ class ProModeManager(context: Context) {
     }
 
     /**
-     * 更新参数状态并尝试立即应用到相机。
+     * 更新参数状态并 debounce 应用到相机（80ms）。
+     * 避免用户快速滑动 Slider 时频繁触发 Camera2Interop 请求。
      */
     private inline fun updateParams(transform: ProModeParams.() -> ProModeParams) {
         if (isReleased) return
         _params.value = _params.value.transform()
-        applyParamsToCamera()
+        paramsDebounceJob?.cancel()
+        paramsDebounceJob = managerScope.launch {
+            delay(80) // 80ms debounce
+            applyParamsToCamera()
+        }
     }
 
     /**

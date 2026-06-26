@@ -60,6 +60,12 @@ class SpecializedModeManager(context: Context) {
             "motorcycle", "scooter", "traffic light"
         )
 
+        /** 美食感兴趣关键词（食物 / 餐具等） */
+        private val FOOD_SUBJECT_KEYWORDS = listOf(
+            "food", "dish", "plate", "bowl", "cup", "glass", "bottle",
+            "pizza", "cake", "sushi", "bread", "fruit", "vegetable", "meat"
+        )
+
         // ===== ObjectDetector 单例与引用计数 =====
         @Volatile
         private var objectDetectorInstance: ObjectDetector? = null
@@ -270,7 +276,7 @@ class SpecializedModeManager(context: Context) {
         addToBuffer(entry)
 
         // 仅在需要追焦的特化模式下跑物体检测
-        if (activeMode == CaptureMode.PET || activeMode == CaptureMode.STREET) {
+        if (activeMode == CaptureMode.PET || activeMode == CaptureMode.STREET || activeMode == CaptureMode.FOOD) {
             detectObjectsAsync(entry)
         }
     }
@@ -422,6 +428,7 @@ class SpecializedModeManager(context: Context) {
                 if (pets.isNotEmpty()) pets else objects
             }
             CaptureMode.STREET -> objects.filter { isStreetSubject(it) }.ifEmpty { objects }
+            CaptureMode.FOOD -> objects.filter { isFoodObject(it) }.ifEmpty { objects }
             else -> objects
         }
 
@@ -429,6 +436,7 @@ class SpecializedModeManager(context: Context) {
         val hint = when (activeMode) {
             CaptureMode.PET -> if (isPetObject(best)) "已锁定宠物，保持追焦" else "已锁定主体，请准备抓拍"
             CaptureMode.STREET -> "已锁定街景主体，等待决定性瞬间"
+            CaptureMode.FOOD -> "已锁定美食主体，建议45°俯拍"
             else -> "主体已锁定"
         }
 
@@ -450,6 +458,12 @@ class SpecializedModeManager(context: Context) {
     private fun isStreetSubject(obj: DetectedObjectInfo): Boolean {
         return obj.labels.any { label ->
             STREET_SUBJECT_KEYWORDS.any { keyword -> label.contains(keyword, ignoreCase = true) }
+        }
+    }
+
+    private fun isFoodObject(obj: DetectedObjectInfo): Boolean {
+        return obj.labels.any { label ->
+            FOOD_SUBJECT_KEYWORDS.any { keyword -> label.contains(keyword, ignoreCase = true) }
         }
     }
 

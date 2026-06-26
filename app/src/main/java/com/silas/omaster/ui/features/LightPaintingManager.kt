@@ -8,6 +8,10 @@ import android.graphics.RectF
 import android.os.SystemClock
 import android.util.Log
 import android.util.Size
+import androidx.camera.core.Camera
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import androidx.hardware.camera2.CaptureRequest
 import com.silas.omaster.renderer.BitmapPool
 import kotlin.math.max
 import kotlin.math.min
@@ -129,6 +133,9 @@ class LightPaintingManager(context: Context) {
     @Volatile
     private var exposureParams: LightPaintingExposureParams = LightPaintingExposureParams()
 
+    @Volatile
+    private var boundCamera: Camera? = null
+
     private val _state = MutableStateFlow(LightPaintingState(false, 0L, null))
     val state: StateFlow<LightPaintingState> = _state.asStateFlow()
 
@@ -247,6 +254,41 @@ class LightPaintingManager(context: Context) {
         exposureCompensation: Int = 0
     ) {
         exposureParams = LightPaintingExposureParams(iso, shutterMs, exposureCompensation)
+        applyExposureToCamera()
+    }
+
+    fun bindCamera(camera: Camera) {
+        boundCamera = camera
+        applyExposureToCamera()
+    }
+
+    @OptIn(ExperimentalCamera2Interop::class)
+    private fun applyExposureToCamera() {
+        val cam = boundCamera ?: return
+        val params = exposureParams
+        val iso = params.iso
+        val shutterMs = params.shutterMs
+
+        if (iso == null && shutterMs == null) return
+
+        try {
+            val camera2Control = Camera2CameraControl.from(cam.cameraControl)
+            val builder = androidx.hardware.camera2.params.CaptureRequestOptions.Builder()
+            builder.setCaptureRequestOption(
+                CaptureRequest.CONTROL_AE_MODE,
+                android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF
+            )
+            iso?.let {
+                builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, it.coerceIn(100, 12800))
+            }
+            shutterMs?.let {
+                val shutterNs = (it * 1_000_000L).coerceIn(1_000L, 30_000_000_000L)
+                builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterNs)
+            }
+            camera2Control.setCaptureRequestOptions(builder.build())
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "光绘曝光参数下发失败: ${e.message}")
+        }
     }
 
     /**

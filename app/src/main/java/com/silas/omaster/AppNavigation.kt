@@ -533,7 +533,8 @@ fun MainApp(navController: NavHostController) {
                     presetName = presetName,
                     onBack = { navController.popBackStack() },
                     onPhotoCaptured = { uri ->
-                        // 拍照后返回上一页
+                        // 拍照成功，Toast 提示并返回上一页
+                        Toast.makeText(context, "照片已保存", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
                     }
                 )

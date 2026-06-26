@@ -72,6 +72,15 @@ object CameraFrameConverter {
         val vRowStride = vPlane.rowStride
         val vPixelStride = vPlane.pixelStride
 
+        // 检测 NV12 vs NV21：当 U/V plane pixelStride 均为 2 时为 semi-planar 布局
+        // NV21: planes[1]=V 在前，planes[2]=U 在后（VU 交错）
+        // NV12: planes[1]=U 在前，planes[2]=V 在后（UV 交错）
+        // 通过比较 U/V buffer 的基址偏移来判断：
+        // - 若 uPlane.buffer 基址 <= vPlane.buffer 基址，则为 NV12（U 在前）
+        // - 否则为 NV21（V 在前）
+        val isNV12 = (uvPixelStride == 2 && vPixelStride == 2) &&
+            (uBuffer.position() <= vBuffer.position())
+
         val argb = IntArray(width * height)
 
         var yp = 0
@@ -87,10 +96,17 @@ object CameraFrameConverter {
                 val u: Int
                 val v: Int
                 if (uvPixelStride == 2 && vPixelStride == 2) {
-                    // NV21 布局：V/U 交错，V 在前
+                    // Semi-planar 布局：UV 或 VU 交错
                     val uvIndex = uvRowStart + uvCol * 2
-                    v = (0xff and uBuffer[uvIndex].toInt()) - 128
-                    u = (0xff and uBuffer[uvIndex + 1].toInt()) - 128
+                    if (isNV12) {
+                        // NV12 布局：U/V 交错，U 在前
+                        u = (0xff and uBuffer[uvIndex].toInt()) - 128
+                        v = (0xff and uBuffer[uvIndex + 1].toInt()) - 128
+                    } else {
+                        // NV21 布局：V/U 交错，V 在前
+                        v = (0xff and uBuffer[uvIndex].toInt()) - 128
+                        u = (0xff and uBuffer[uvIndex + 1].toInt()) - 128
+                    }
                 } else {
                     // I420 布局：U、V 分平面
                     u = (0xff and uBuffer[uvRowStart + uvCol].toInt()) - 128

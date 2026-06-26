@@ -222,6 +222,11 @@ fun HasselbladScreen(
                 ).show()
                 viewModel.resetOPOApplyState()
             }
+            is HasselbladEyeViewModel.OPOApplyState.PartialSuccess -> {
+                val failedList = state.failedParams.joinToString("、")
+                Toast.makeText(context, "部分参数应用成功，以下参数失败：$failedList", Toast.LENGTH_LONG).show()
+                viewModel.resetOPOApplyState()
+            }
             is HasselbladEyeViewModel.OPOApplyState.Failed -> {
                 Toast.makeText(
                     context,
