@@ -46,14 +46,23 @@ class MasterInferenceEngine private constructor(context: Context) {
     private val sceneMapping = SceneToHasselbladMapping
 
     // ML Kit 人脸检测器（全局单例，使用 ACCURATE 模式以获得人脸详细分类）
-    private val faceDetector: FaceDetector by lazy {
-        val options = FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
-            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
-            .setMinFaceSize(0.15f)
-            .build()
-        FaceDetection.getClient(options)
+    // 防护：ML Kit 未安装或初始化失败时，faceDetector 为 null，人脸检测自动降级
+    private val faceDetector: FaceDetector? by lazy {
+        try {
+            val options = FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+                .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+                .setMinFaceSize(0.15f)
+                .build()
+            FaceDetection.getClient(options)
+        } catch (e: Exception) {
+            android.util.Log.e("MasterInferenceEngine", "ML Kit FaceDetector 初始化失败: ${e.message}", e)
+            null
+        } catch (e: NoClassDefFoundError) {
+            android.util.Log.e("MasterInferenceEngine", "ML Kit 依赖缺失，人脸检测不可用: ${e.message}", e)
+            null
+        }
     }
 
     /**
@@ -127,10 +136,15 @@ class MasterInferenceEngine private constructor(context: Context) {
      * 将 Google Play Services Task 桥接到 suspend 函数，
      * 把每个 ML Kit Face 转换为项目内的 FaceInfo。
      */
-    private suspend fun detectFaces(bitmap: Bitmap): FaceData =
-        suspendCancellableCoroutine { continuation ->
+    private suspend fun detectFaces(bitmap: Bitmap): FaceData {
+        val detector = faceDetector
+        if (detector == null) {
+            android.util.Log.w("MasterInferenceEngine", "FaceDetector 不可用，跳过人脸检测")
+            return FaceData(faces = emptyList())
+        }
+        return suspendCancellableCoroutine { continuation ->
             val inputImage = InputImage.fromBitmap(bitmap, 0)
-            val task = faceDetector.process(inputImage)
+            val task = detector.process(inputImage)
             task.addOnSuccessListener { faces: List<Face> ->
                 if (continuation.isActive) {
                     val faceInfos = faces.map { face -> face.toFaceInfo(bitmap) }
@@ -595,7 +609,7 @@ class MasterInferenceEngine private constructor(context: Context) {
      */
     fun release() {
         try {
-            faceDetector.close()
+            faceDetector?.close()
         } catch (_: Exception) {
             // 关闭异常忽略
         }

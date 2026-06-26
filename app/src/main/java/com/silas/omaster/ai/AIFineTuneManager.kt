@@ -46,7 +46,16 @@ class AIFineTuneManager private constructor(context: Context) {
     private val appContext = context.applicationContext
     
     // 大师推理引擎（真实AI推理）
-    private val inferenceEngine = MasterInferenceEngine.getInstance(context)
+    // 防护：ML Kit 或底层引擎初始化失败时不会导致整个 AIFineTuneManager 崩溃
+    private val inferenceEngine: MasterInferenceEngine? = try {
+        MasterInferenceEngine.getInstance(context)
+    } catch (e: Exception) {
+        Log.e(TAG, "MasterInferenceEngine 初始化失败，将降级为纯启发式推理: ${e.message}", e)
+        null
+    } catch (e: NoClassDefFoundError) {
+        Log.e(TAG, "ML Kit 依赖缺失，将降级为纯启发式推理: ${e.message}", e)
+        null
+    }
     
     // 启发式场景分析器（图像特征提取）
     private val sceneAnalyzer = HeuristicSceneAnalyzer.getInstance(context)
@@ -189,9 +198,11 @@ class AIFineTuneManager private constructor(context: Context) {
     
     /**
      * AI 场景分析（委托给推理引擎）
+     * 若推理引擎不可用，降级为启发式分析器
      */
     suspend fun analyzeImage(bitmap: Bitmap, imagePath: String? = null): SceneProfile {
-        return inferenceEngine.analyzeImage(bitmap, imagePath)
+        return inferenceEngine?.analyzeImage(bitmap, imagePath)
+            ?: sceneAnalyzer.analyze(bitmap).primaryScene
     }
 
     suspend fun generateAISuggestion(

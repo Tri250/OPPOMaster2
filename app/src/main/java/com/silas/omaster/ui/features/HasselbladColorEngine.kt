@@ -44,13 +44,24 @@ import kotlin.random.Random
  * @param colorModeParams 色彩模式增量参数（范围 -100 ~ +100），会与 [hasselbladParams] 叠加
  * @param exportQuality JPEG 导出质量 0-100，默认 95；也作为大图片处理尺寸的提示
  * @return 处理后的新 Bitmap
+ * @throws IllegalArgumentException 如果参数无效
+ * @throws IllegalStateException 如果 Bitmap 状态异常
  */
 fun applyHasselbladColorEngine(
     source: Bitmap,
     hasselbladParams: HasselbladParams,
     colorModeParams: Map<String, Int> = emptyMap(),
     exportQuality: Int = HasselbladColorEngine.DEFAULT_EXPORT_QUALITY
-): Bitmap = HasselbladColorEngine.apply(source, hasselbladParams, colorModeParams, exportQuality)
+): Bitmap {
+    // 输入校验
+    if (source.isRecycled) {
+        throw IllegalStateException("输入 Bitmap 已被回收，无法进行色彩处理")
+    }
+    if (source.width <= 0 || source.height <= 0) {
+        throw IllegalStateException("输入 Bitmap 尺寸无效 (${source.width}x${source.height})")
+    }
+    return HasselbladColorEngine.apply(source, hasselbladParams, colorModeParams, exportQuality)
+}
 
 /**
  * 在 [bitmap] 左下角添加 "HNCS 3.0 · Hasselblad Natural Color" 水印。

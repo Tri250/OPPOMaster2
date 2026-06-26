@@ -27,11 +27,26 @@ object CameraFrameConverter {
      * @return 转换后的 Bitmap（调用方负责回收），失败返回 null
      */
     fun toBitmap(imageProxy: ImageProxy): Bitmap? {
-        val image = imageProxy.image ?: return null
+        val image = imageProxy.image ?: run {
+            Log.w(TAG, "ImageProxy.image 为 null，无法转换")
+            return null
+        }
         return try {
+            // 检查图像尺寸有效性
+            if (image.width <= 0 || image.height <= 0) {
+                Log.w(TAG, "图像尺寸无效: ${image.width}x${image.height}")
+                image.close()
+                return null
+            }
+            // 检查 planes 数量
+            if (image.planes.size < 3) {
+                Log.w(TAG, "图像 planes 数量不足: ${image.planes.size}，需要至少 3 个 plane")
+                image.close()
+                return null
+            }
             val bitmap = yuv420ToBitmap(image)
             val rotation = imageProxy.imageInfo.rotationDegrees
-            if (rotation != 0) {
+            if (rotation != 0 && rotation % 90 == 0) {
                 val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
                 val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
                 bitmap.recycle()
@@ -40,7 +55,7 @@ object CameraFrameConverter {
                 bitmap
             }
         } catch (e: Exception) {
-            Log.e(TAG, "ImageProxy 转 Bitmap 失败", e)
+            Log.e(TAG, "ImageProxy 转 Bitmap 失败: ${e.message}", e)
             null
         }
     }

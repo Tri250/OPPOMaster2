@@ -233,6 +233,11 @@ class CameraXManager(
      *
      * 仅在 Lifecycle 处于 STARTED 或 RESUMED 状态时启动，
      * 避免在后台或销毁状态下触发相机绑定导致崩溃。
+     *
+     * Android 16 (API 36) 注意事项：
+     * 后台相机使用需要前台服务 (foregroundServiceType="camera")。
+     * 本应用通过 Lifecycle 绑定确保相机仅在前台活动时使用，
+     * 且 onPause 时自动释放，符合 Android 16 安全要求。
      */
     fun startCamera(previewView: PreviewView) {
         savedPreviewView = previewView
@@ -241,6 +246,18 @@ class CameraXManager(
         if (!currentState.isAtLeast(Lifecycle.State.STARTED)) {
             Log.d(TAG, "Lifecycle 未处于 STARTED 状态（当前: $currentState），推迟相机启动")
             return
+        }
+
+        // Android 16 (API 36) 兼容性检查
+        if (android.os.Build.VERSION.SDK_INT >= 36) {
+            Log.d(TAG, "Android 16+ 设备：确保相机仅在前台使用，onPause 时将自动释放相机")
+            // 检查相机权限（Android 16 可能需要额外的前台服务声明）
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "Android 16 设备：相机权限未授予")
+                _isCameraReady.value = false
+                return
+            }
         }
 
         isReleased = false
@@ -258,8 +275,16 @@ class CameraXManager(
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases(previewView)
+            try {
+                cameraProvider = cameraProviderFuture.get()
+                bindCameraUseCases(previewView)
+            } catch (e: java.util.concurrent.ExecutionException) {
+                Log.e(TAG, "获取 CameraProvider 失败（可能缺少相机权限或设备不支持）: ${e.message}", e)
+                _isCameraReady.value = false
+            } catch (e: Exception) {
+                Log.e(TAG, "获取 CameraProvider 异常: ${e.message}", e)
+                _isCameraReady.value = false
+            }
         }, ContextCompat.getMainExecutor(context))
     }
 
@@ -310,8 +335,17 @@ class CameraXManager(
                 imageAnalysis
             )
             _isCameraReady.value = true
+            Log.d(TAG, "相机绑定成功，镜头: $lensFacing")
             // 绑定到专业模式管理器，确保手动参数立即生效
             proModeManager.bindCamera(camera)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "绑定相机失败（参数无效）: ${e.message}", e)
+            _isCameraReady.value = false
+            proModeManager.bindCamera(null)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "绑定相机失败（权限不足，Android 16+ 可能需要前台服务声明）: ${e.message}", e)
+            _isCameraReady.value = false
+            proModeManager.bindCamera(null)
         } catch (e: Exception) {
             Log.e(TAG, "绑定相机失败: ${e.message}", e)
             _isCameraReady.value = false
@@ -873,23 +907,51 @@ class CameraXManager(
      * 所有耗时处理均放到独立协程，不占用 cameraExecutor。
      */
     fun takePhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
-        if (!_isCameraReady.value) {
-            onError("相机未就绪")
+        if (isReleased) {
+            Log.w(TAG, "拍照失败：相机管理器已释放")
+            onError("相机已关闭，请重新打开取景器")
             return
         }
 
-        when (_captureMode.value) {
-            CaptureMode.NIGHT -> takeNightPhoto(onPhotoSaved, onError)
-            CaptureMode.LIGHT_PAINTING -> takeLightPaintingPhoto(onPhotoSaved, onError)
-            CaptureMode.STREET, CaptureMode.PET -> takeZeroLagPhoto(onPhotoSaved, onError)
-            CaptureMode.PORTRAIT -> takePortraitPhoto(onPhotoSaved, onError)
-            CaptureMode.PRO -> takeStandardPhoto(onPhotoSaved, onError, preserveProParams = true)
-            else -> takeStandardPhoto(onPhotoSaved, onError)
+        if (!_isCameraReady.value) {
+            Log.w(TAG, "拍照失败：相机未就绪")
+            onError("相机正在启动中，请稍后再试")
+            return
+        }
+
+        if (imageCapture == null) {
+            Log.w(TAG, "拍照失败：ImageCapture 用例未绑定")
+            onError("相机未就绪，请稍后再试")
+            return
+        }
+
+        if (camera == null) {
+            Log.w(TAG, "拍照失败：Camera 实例为空")
+            onError("相机未就绪，请稍后再试")
+            return
+        }
+
+        Log.d(TAG, "开始拍照，当前模式: ${_captureMode.value}")
+
+        try {
+            when (_captureMode.value) {
+                CaptureMode.NIGHT -> takeNightPhoto(onPhotoSaved, onError)
+                CaptureMode.LIGHT_PAINTING -> takeLightPaintingPhoto(onPhotoSaved, onError)
+                CaptureMode.STREET, CaptureMode.PET -> takeZeroLagPhoto(onPhotoSaved, onError)
+                CaptureMode.PORTRAIT -> takePortraitPhoto(onPhotoSaved, onError)
+                CaptureMode.PRO -> takeStandardPhoto(onPhotoSaved, onError, preserveProParams = true)
+                else -> takeStandardPhoto(onPhotoSaved, onError)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "拍照调度异常: ${e.message}", e)
+            onError("拍照失败，请重试")
         }
     }
 
     /**
      * 标准拍照链路：CameraX -> 哈苏色彩 -> 保存。
+     *
+     * 如果哈苏色彩处理失败，会自动降级保存原始照片，确保用户不会丢失拍摄内容。
      */
     private fun takeStandardPhoto(
         onPhotoSaved: (Uri) -> Unit,
@@ -897,113 +959,259 @@ class CameraXManager(
         preserveProParams: Boolean = false
     ) {
         val imageCapture = imageCapture ?: run {
-            onError("相机未就绪")
+            Log.w(TAG, "标准拍照失败：ImageCapture 为 null")
+            onError("相机未就绪，请稍后再试")
             return
         }
 
-        imageCapture.takePicture(
-            cameraExecutor,
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                    val bitmap = imageProxyToBitmap(imageProxy)
-                    imageProxy.close()
-                    if (bitmap == null) {
-                        mainHandler.post { onError("图像解码失败") }
-                        return
-                    }
-
-                    managerScope.launch {
+        try {
+            imageCapture.takePicture(
+                cameraExecutor,
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
                         try {
-                            val params = if (preserveProParams) {
-                                currentPresetParams
-                            } else {
-                                currentPresetParams
+                            val bitmap = imageProxyToBitmap(imageProxy)
+                            imageProxy.close()
+
+                            // 检查 Bitmap 有效性
+                            if (bitmap == null) {
+                                Log.e(TAG, "标准拍照：图像解码失败，bitmap 为 null")
+                                mainHandler.post { onError("图像解码失败，请重试") }
+                                return
                             }
-                            val processedBitmap = applyHasselbladColorEngine(
-                                source = bitmap,
-                                hasselbladParams = params
-                            )
-                            if (processedBitmap !== bitmap && !bitmap.isRecycled) {
+                            if (bitmap.isRecycled) {
+                                Log.e(TAG, "标准拍照：图像解码后 Bitmap 已被回收")
+                                mainHandler.post { onError("图像解码失败，请重试") }
+                                return
+                            }
+                            if (bitmap.width <= 0 || bitmap.height <= 0) {
+                                Log.e(TAG, "标准拍照：图像尺寸无效 (${bitmap.width}x${bitmap.height})")
                                 bitmap.recycle()
+                                mainHandler.post { onError("图像数据异常，请重试") }
+                                return
                             }
-                            saveBitmapAndNotify(processedBitmap, onPhotoSaved, onError)
+
+                            Log.d(TAG, "标准拍照：图像捕获成功 (${bitmap.width}x${bitmap.height})，开始色彩处理")
+
+                            managerScope.launch {
+                                try {
+                                    val params = currentPresetParams
+                                    var processedBitmap: Bitmap
+                                    var colorEngineFailed = false
+
+                                    try {
+                                        processedBitmap = applyHasselbladColorEngine(
+                                            source = bitmap,
+                                            hasselbladParams = params
+                                        )
+                                        if (processedBitmap !== bitmap && !bitmap.isRecycled) {
+                                            bitmap.recycle()
+                                        }
+                                    } catch (ce: Exception) {
+                                        Log.e(TAG, "哈苏色彩处理失败，降级保存原始照片: ${ce.message}", ce)
+                                        colorEngineFailed = true
+                                        // 降级：使用原始照片
+                                        if (!bitmap.isRecycled) {
+                                            processedBitmap = bitmap
+                                        } else {
+                                            mainHandler.post { onError("色彩处理失败，且原始照片已损坏") }
+                                            return@launch
+                                        }
+                                    }
+
+                                    // 检查处理后的 Bitmap
+                                    if (processedBitmap.isRecycled) {
+                                        Log.e(TAG, "标准拍照：处理后的 Bitmap 已被回收")
+                                        mainHandler.post { onError("照片处理失败，请重试") }
+                                        return@launch
+                                    }
+                                    if (processedBitmap.width <= 0 || processedBitmap.height <= 0) {
+                                        Log.e(TAG, "标准拍照：处理后的图像尺寸无效 (${processedBitmap.width}x${processedBitmap.height})")
+                                        if (!processedBitmap.isRecycled) processedBitmap.recycle()
+                                        mainHandler.post { onError("照片处理失败，请重试") }
+                                        return@launch
+                                    }
+
+                                    saveBitmapAndNotify(
+                                        bitmap = processedBitmap,
+                                        onPhotoSaved = if (colorEngineFailed) { uri ->
+                                            Log.d(TAG, "降级保存成功（使用原始照片）: $uri")
+                                            onPhotoSaved(uri)
+                                        } else onPhotoSaved,
+                                        onError = onError
+                                    )
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "标准拍照处理流程异常: ${e.message}", e)
+                                    if (!bitmap.isRecycled) bitmap.recycle()
+                                    mainHandler.post { onError("拍照处理失败，请重试") }
+                                }
+                            }
                         } catch (e: Exception) {
-                            Log.e(TAG, "拍照处理失败: ${e.message}", e)
-                            if (!bitmap.isRecycled) bitmap.recycle()
-                            mainHandler.post { onError(e.message ?: "拍照失败") }
+                            Log.e(TAG, "标准拍照回调异常: ${e.message}", e)
+                            try { imageProxy.close() } catch (_: Exception) {}
+                            mainHandler.post { onError("拍照失败，请重试") }
                         }
                     }
-                }
 
-                override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "拍照失败: ${exception.message}", exception)
-                    mainHandler.post { onError(exception.message ?: "拍照失败") }
+                    override fun onError(exception: ImageCaptureException) {
+                        val errorMessage = when (exception.imageCaptureError) {
+                            ImageCapture.ERROR_UNKNOWN_CAMERA -> "相机不可用，请检查权限或重启应用"
+                            ImageCapture.ERROR_CAMERA_CLOSED -> "相机已关闭，请重新打开取景器"
+                            ImageCapture.ERROR_FILE_IO -> "存储空间不足或文件写入失败"
+                            ImageCapture.ERROR_INVALID_CAMERA -> "相机配置无效，请重启应用"
+                            else -> "拍照失败，请重试"
+                        }
+                        Log.e(
+                            TAG,
+                            "标准拍照 ImageCapture 错误 (code=${exception.imageCaptureError}): ${exception.message}",
+                            exception
+                        )
+                        mainHandler.post { onError(errorMessage) }
+                    }
                 }
-            }
-        )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "标准拍照调用异常: ${e.message}", e)
+            onError("相机调用失败，请重试")
+        }
     }
 
     /**
      * 人像模式拍照：常规拍照 -> 人像虚化 + 美颜 -> 哈苏色彩 -> 保存。
+     *
+     * 如果哈苏色彩处理失败，会自动降级保存人像处理后的照片，确保用户不会丢失拍摄内容。
      */
     private fun takePortraitPhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
         val imageCapture = imageCapture ?: run {
-            onError("相机未就绪")
+            Log.w(TAG, "人像拍照失败：ImageCapture 为 null")
+            onError("相机未就绪，请稍后再试")
             return
         }
 
-        imageCapture.takePicture(
-            cameraExecutor,
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                    val bitmap = imageProxyToBitmap(imageProxy)
-                    imageProxy.close()
-                    if (bitmap == null) {
-                        mainHandler.post { onError("图像解码失败") }
-                        return
-                    }
-
-                    managerScope.launch {
+        try {
+            imageCapture.takePicture(
+                cameraExecutor,
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
                         try {
-                            // 人像效果处理
-                            val portraitResult = portraitModeManager.processFrame(bitmap)
-                            val portraitBitmap = portraitResult.processedFrame ?: bitmap
-                            if (portraitBitmap !== bitmap && !bitmap.isRecycled) {
+                            val bitmap = imageProxyToBitmap(imageProxy)
+                            imageProxy.close()
+
+                            if (bitmap == null) {
+                                Log.e(TAG, "人像拍照：图像解码失败，bitmap 为 null")
+                                mainHandler.post { onError("图像解码失败，请重试") }
+                                return
+                            }
+                            if (bitmap.isRecycled) {
+                                Log.e(TAG, "人像拍照：图像解码后 Bitmap 已被回收")
+                                mainHandler.post { onError("图像解码失败，请重试") }
+                                return
+                            }
+                            if (bitmap.width <= 0 || bitmap.height <= 0) {
+                                Log.e(TAG, "人像拍照：图像尺寸无效 (${bitmap.width}x${bitmap.height})")
                                 bitmap.recycle()
+                                mainHandler.post { onError("图像数据异常，请重试") }
+                                return
                             }
 
-                            // 哈苏色彩
-                            val finalBitmap = applyHasselbladColorEngine(
-                                source = portraitBitmap,
-                                hasselbladParams = currentPresetParams
-                            )
-                            if (finalBitmap !== portraitBitmap && !portraitBitmap.isRecycled) {
-                                portraitBitmap.recycle()
-                            }
+                            Log.d(TAG, "人像拍照：图像捕获成功 (${bitmap.width}x${bitmap.height})，开始人像处理")
 
-                            saveBitmapAndNotify(finalBitmap, onPhotoSaved, onError)
+                            managerScope.launch {
+                                try {
+                                    // 人像效果处理
+                                    var portraitBitmap: Bitmap =
+                                        portraitModeManager.processFrame(bitmap).processedFrame ?: bitmap
+                                    if (portraitBitmap !== bitmap && !bitmap.isRecycled) {
+                                        bitmap.recycle()
+                                    }
+
+                                    if (portraitBitmap.isRecycled) {
+                                        Log.e(TAG, "人像拍照：人像处理后的 Bitmap 已被回收")
+                                        mainHandler.post { onError("人像处理失败，请重试") }
+                                        return@launch
+                                    }
+                                    if (portraitBitmap.width <= 0 || portraitBitmap.height <= 0) {
+                                        Log.e(TAG, "人像拍照：人像处理后图像尺寸无效")
+                                        if (!portraitBitmap.isRecycled) portraitBitmap.recycle()
+                                        mainHandler.post { onError("人像处理失败，请重试") }
+                                        return@launch
+                                    }
+
+                                    // 哈苏色彩
+                                    var finalBitmap: Bitmap
+                                    var colorEngineFailed = false
+                                    try {
+                                        finalBitmap = applyHasselbladColorEngine(
+                                            source = portraitBitmap,
+                                            hasselbladParams = currentPresetParams
+                                        )
+                                        if (finalBitmap !== portraitBitmap && !portraitBitmap.isRecycled) {
+                                            portraitBitmap.recycle()
+                                        }
+                                    } catch (ce: Exception) {
+                                        Log.e(TAG, "人像拍照：哈苏色彩处理失败，降级保存人像处理结果: ${ce.message}", ce)
+                                        colorEngineFailed = true
+                                        if (!portraitBitmap.isRecycled) {
+                                            finalBitmap = portraitBitmap
+                                        } else {
+                                            mainHandler.post { onError("色彩处理失败，且人像照片已损坏") }
+                                            return@launch
+                                        }
+                                    }
+
+                                    saveBitmapAndNotify(
+                                        bitmap = finalBitmap,
+                                        onPhotoSaved = if (colorEngineFailed) { uri ->
+                                            Log.d(TAG, "人像拍照降级保存成功（使用人像处理结果）: $uri")
+                                            onPhotoSaved(uri)
+                                        } else onPhotoSaved,
+                                        onError = onError
+                                    )
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "人像拍照处理流程异常: ${e.message}", e)
+                                    if (!bitmap.isRecycled) bitmap.recycle()
+                                    mainHandler.post { onError("人像拍照失败，请重试") }
+                                }
+                            }
                         } catch (e: Exception) {
-                            Log.e(TAG, "人像拍照处理失败: ${e.message}", e)
-                            if (!bitmap.isRecycled) bitmap.recycle()
-                            mainHandler.post { onError(e.message ?: "拍照失败") }
+                            Log.e(TAG, "人像拍照回调异常: ${e.message}", e)
+                            try { imageProxy.close() } catch (_: Exception) {}
+                            mainHandler.post { onError("拍照失败，请重试") }
                         }
                     }
-                }
 
-                override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "人像拍照失败: ${exception.message}", exception)
-                    mainHandler.post { onError(exception.message ?: "拍照失败") }
+                    override fun onError(exception: ImageCaptureException) {
+                        val errorMessage = when (exception.imageCaptureError) {
+                            ImageCapture.ERROR_UNKNOWN_CAMERA -> "相机不可用，请检查权限或重启应用"
+                            ImageCapture.ERROR_CAMERA_CLOSED -> "相机已关闭，请重新打开取景器"
+                            ImageCapture.ERROR_FILE_IO -> "存储空间不足或文件写入失败"
+                            ImageCapture.ERROR_INVALID_CAMERA -> "相机配置无效，请重启应用"
+                            else -> "拍照失败，请重试"
+                        }
+                        Log.e(
+                            TAG,
+                            "人像拍照 ImageCapture 错误 (code=${exception.imageCaptureError}): ${exception.message}",
+                            exception
+                        )
+                        mainHandler.post { onError(errorMessage) }
+                    }
                 }
-            }
-        )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "人像拍照调用异常: ${e.message}", e)
+            onError("相机调用失败，请重试")
+        }
     }
 
     /**
      * 夜景模式拍照：触发多帧合成降噪与长曝光增强。
+     *
+     * 如果哈苏色彩处理失败，会自动降级保存夜景合成结果。
      */
     private fun takeNightPhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
         if (nightModeManager.state.value.isCapturing) {
-            mainHandler.post { onError("夜景采集正在进行中") }
+            Log.w(TAG, "夜景拍照失败：采集正在进行中")
+            mainHandler.post { onError("夜景采集正在进行中，请稍后再试") }
             return
         }
 
@@ -1013,29 +1221,60 @@ class CameraXManager(
             try {
                 val result = nightModeManager.captureAndProcess()
                 if (result == null || result.isRecycled) {
-                    mainHandler.post { onError("夜景合成失败") }
+                    Log.e(TAG, "夜景拍照：合成结果为空或已回收")
+                    mainHandler.post { onError("夜景合成失败，请重试") }
+                    return@launch
+                }
+                if (result.width <= 0 || result.height <= 0) {
+                    Log.e(TAG, "夜景拍照：合成结果尺寸无效")
+                    if (!result.isRecycled) result.recycle()
+                    mainHandler.post { onError("夜景合成失败，请重试") }
                     return@launch
                 }
 
+                Log.d(TAG, "夜景拍照：合成成功 (${result.width}x${result.height})，开始色彩处理")
+
                 // 叠加哈苏夜景参数
-                val finalBitmap = applyHasselbladColorEngine(
-                    source = result,
-                    hasselbladParams = currentPresetParams
-                )
-                if (finalBitmap !== result && !result.isRecycled) {
-                    result.recycle()
+                var finalBitmap: Bitmap
+                var colorEngineFailed = false
+                try {
+                    finalBitmap = applyHasselbladColorEngine(
+                        source = result,
+                        hasselbladParams = currentPresetParams
+                    )
+                    if (finalBitmap !== result && !result.isRecycled) {
+                        result.recycle()
+                    }
+                } catch (ce: Exception) {
+                    Log.e(TAG, "夜景拍照：哈苏色彩处理失败，降级保存合成结果: ${ce.message}", ce)
+                    colorEngineFailed = true
+                    if (!result.isRecycled) {
+                        finalBitmap = result
+                    } else {
+                        mainHandler.post { onError("色彩处理失败，且合成照片已损坏") }
+                        return@launch
+                    }
                 }
 
-                saveBitmapAndNotify(finalBitmap, onPhotoSaved, onError)
+                saveBitmapAndNotify(
+                    bitmap = finalBitmap,
+                    onPhotoSaved = if (colorEngineFailed) { uri ->
+                        Log.d(TAG, "夜景拍照降级保存成功（使用合成结果）: $uri")
+                        onPhotoSaved(uri)
+                    } else onPhotoSaved,
+                    onError = onError
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "夜景拍照失败: ${e.message}", e)
-                mainHandler.post { onError(e.message ?: "夜景拍照失败") }
+                Log.e(TAG, "夜景拍照处理流程异常: ${e.message}", e)
+                mainHandler.post { onError("夜景拍照失败，请重试") }
             }
         }
     }
 
     /**
      * 光绘模式拍照：切换录制/停止，输出累积光轨帧。
+     *
+     * 如果哈苏色彩处理失败，会自动降级保存光绘录制结果。
      */
     private fun takeLightPaintingPhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
         val state = lightPaintingManager.state.value
@@ -1052,50 +1291,111 @@ class CameraXManager(
             try {
                 val result = lightPaintingManager.stopRecording()
                 if (result == null || result.isRecycled) {
-                    mainHandler.post { onError("光绘未采集到有效帧") }
+                    Log.e(TAG, "光绘拍照：录制结果为空或已回收")
+                    mainHandler.post { onError("光绘未采集到有效帧，请重试") }
+                    return@launch
+                }
+                if (result.width <= 0 || result.height <= 0) {
+                    Log.e(TAG, "光绘拍照：录制结果尺寸无效")
+                    if (!result.isRecycled) result.recycle()
+                    mainHandler.post { onError("光绘录制结果异常，请重试") }
                     return@launch
                 }
 
-                val finalBitmap = applyHasselbladColorEngine(
-                    source = result,
-                    hasselbladParams = currentPresetParams
-                )
-                if (finalBitmap !== result && !result.isRecycled) {
-                    result.recycle()
+                Log.d(TAG, "光绘拍照：录制完成 (${result.width}x${result.height})，开始色彩处理")
+
+                var finalBitmap: Bitmap
+                var colorEngineFailed = false
+                try {
+                    finalBitmap = applyHasselbladColorEngine(
+                        source = result,
+                        hasselbladParams = currentPresetParams
+                    )
+                    if (finalBitmap !== result && !result.isRecycled) {
+                        result.recycle()
+                    }
+                } catch (ce: Exception) {
+                    Log.e(TAG, "光绘拍照：哈苏色彩处理失败，降级保存录制结果: ${ce.message}", ce)
+                    colorEngineFailed = true
+                    if (!result.isRecycled) {
+                        finalBitmap = result
+                    } else {
+                        mainHandler.post { onError("色彩处理失败，且光绘照片已损坏") }
+                        return@launch
+                    }
                 }
 
-                saveBitmapAndNotify(finalBitmap, onPhotoSaved, onError)
+                saveBitmapAndNotify(
+                    bitmap = finalBitmap,
+                    onPhotoSaved = if (colorEngineFailed) { uri ->
+                        Log.d(TAG, "光绘拍照降级保存成功（使用录制结果）: $uri")
+                        onPhotoSaved(uri)
+                    } else onPhotoSaved,
+                    onError = onError
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "光绘拍照失败: ${e.message}", e)
-                mainHandler.post { onError(e.message ?: "光绘拍照失败") }
+                Log.e(TAG, "光绘拍照处理流程异常: ${e.message}", e)
+                mainHandler.post { onError("光绘拍照失败，请重试") }
             }
         }
     }
 
     /**
      * 0 延迟快门：街拍 / 宠物模式下从预缓存缓冲区取出最佳帧。
+     *
+     * 如果哈苏色彩处理失败，会自动降级保存原始帧。
      */
     private fun takeZeroLagPhoto(onPhotoSaved: (Uri) -> Unit, onError: (String) -> Unit) {
         val bitmap = specializedModeManager.captureZeroLag()
         if (bitmap == null || bitmap.isRecycled) {
+            Log.w(TAG, "0 延迟快门：缓存帧为空或已回收")
             mainHandler.post { onError("0 延迟快门未准备好，请稍后重试") }
             return
         }
+        if (bitmap.width <= 0 || bitmap.height <= 0) {
+            Log.e(TAG, "0 延迟快门：缓存帧尺寸无效")
+            if (!bitmap.isRecycled) bitmap.recycle()
+            mainHandler.post { onError("图像数据异常，请重试") }
+            return
+        }
+
+        Log.d(TAG, "0 延迟快门：获取缓存帧成功 (${bitmap.width}x${bitmap.height})，开始色彩处理")
 
         managerScope.launch {
             try {
-                val finalBitmap = applyHasselbladColorEngine(
-                    source = bitmap,
-                    hasselbladParams = currentPresetParams
-                )
-                if (finalBitmap !== bitmap && !bitmap.isRecycled) {
-                    bitmap.recycle()
+                var finalBitmap: Bitmap
+                var colorEngineFailed = false
+                try {
+                    finalBitmap = applyHasselbladColorEngine(
+                        source = bitmap,
+                        hasselbladParams = currentPresetParams
+                    )
+                    if (finalBitmap !== bitmap && !bitmap.isRecycled) {
+                        bitmap.recycle()
+                    }
+                } catch (ce: Exception) {
+                    Log.e(TAG, "0 延迟快门：哈苏色彩处理失败，降级保存原始帧: ${ce.message}", ce)
+                    colorEngineFailed = true
+                    if (!bitmap.isRecycled) {
+                        finalBitmap = bitmap
+                    } else {
+                        mainHandler.post { onError("色彩处理失败，且原始帧已损坏") }
+                        return@launch
+                    }
                 }
-                saveBitmapAndNotify(finalBitmap, onPhotoSaved, onError)
+
+                saveBitmapAndNotify(
+                    bitmap = finalBitmap,
+                    onPhotoSaved = if (colorEngineFailed) { uri ->
+                        Log.d(TAG, "0 延迟快门降级保存成功（使用原始帧）: $uri")
+                        onPhotoSaved(uri)
+                    } else onPhotoSaved,
+                    onError = onError
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "0 延迟快门处理失败: ${e.message}", e)
+                Log.e(TAG, "0 延迟快门处理流程异常: ${e.message}", e)
                 if (!bitmap.isRecycled) bitmap.recycle()
-                mainHandler.post { onError(e.message ?: "拍照失败") }
+                mainHandler.post { onError("拍照失败，请重试") }
             }
         }
     }
@@ -1109,16 +1409,34 @@ class CameraXManager(
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
+            if (bitmap.isRecycled) {
+                Log.e(TAG, "保存照片失败：Bitmap 已被回收")
+                mainHandler.post { onError("照片保存失败，请重试") }
+                return@withContext
+            }
+            if (bitmap.width <= 0 || bitmap.height <= 0) {
+                Log.e(TAG, "保存照片失败：Bitmap 尺寸无效")
+                bitmap.recycle()
+                mainHandler.post { onError("照片保存失败，请重试") }
+                return@withContext
+            }
+
             val photoFile = java.io.File(
                 context.cacheDir,
                 "camerax_${System.currentTimeMillis()}.jpg"
             )
             photoFile.outputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)) {
+                    Log.e(TAG, "保存照片失败：JPEG 压缩失败")
+                    bitmap.recycle()
+                    photoFile.delete()
+                    mainHandler.post { onError("照片保存失败，存储空间可能不足") }
+                    return@withContext
+                }
             }
             bitmap.recycle()
             val savedUri = Uri.fromFile(photoFile)
-            Log.d(TAG, "照片已保存: $savedUri")
+            Log.d(TAG, "照片已保存: $savedUri (${photoFile.length()} bytes)")
 
             // OPPO 设备参数同步：拍照完成后尝试将哈苏参数同步到 OPPO 相机大师模式
             try {
@@ -1131,10 +1449,14 @@ class CameraXManager(
             }
 
             mainHandler.post { onPhotoSaved(savedUri) }
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "保存照片 I/O 失败: ${e.message}", e)
+            if (!bitmap.isRecycled) bitmap.recycle()
+            mainHandler.post { onError("存储空间不足，请清理后重试") }
         } catch (e: Exception) {
             Log.e(TAG, "保存照片失败: ${e.message}", e)
             if (!bitmap.isRecycled) bitmap.recycle()
-            mainHandler.post { onError(e.message ?: "保存失败") }
+            mainHandler.post { onError("照片保存失败，请重试") }
         }
     }
 

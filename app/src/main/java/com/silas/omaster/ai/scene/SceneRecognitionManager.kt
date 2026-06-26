@@ -194,26 +194,51 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 将模型输出标签映射到项目内的 SceneProfile。
+     *
+     * 融合策略（改进版）：
+     * - 模型与启发式场景类别一致 → 保留启发式的更具体子场景，微调置信度
+     * - 模型置信度极高(>0.85)且启发式置信度低(<0.3) → 以模型为主
+     * - 模型置信度中等(0.6-0.85) → 混合：类别用模型，具体场景用启发式
+     * - 其他情况 → 启发式为主
      */
     private fun fusePredictions(heuristicProfile: SceneProfile, modelPrediction: ModelPrediction?): SceneProfile {
         if (modelPrediction == null) return heuristicProfile
 
-        // 模型置信度高时，以模型标签为主；否则以启发式为主
         val modelConfidence = modelPrediction.confidence
         val modelSceneId = mapModelLabelToSceneId(modelPrediction.label)
         val modelCategory = mapModelLabelToCategory(modelPrediction.label)
 
-        return if (modelConfidence > 0.75f && modelSceneId != null) {
-            // 高置信模型结果：复用启发式画像但覆盖关键字段
-            heuristicProfile.copy(
-                id = modelSceneId,
-                name = mapModelLabelToDisplayName(modelPrediction.label),
-                category = modelCategory ?: heuristicProfile.category,
-                confidence = modelConfidence
-            )
-        } else {
-            // 低置信或无法映射：启发式结果微调
-            heuristicProfile
+        if (modelSceneId == null) return heuristicProfile
+
+        return when {
+            // 情况1：模型和启发式类别一致 → 保留启发式的更具体子场景
+            modelCategory != null && modelCategory == heuristicProfile.category -> {
+                heuristicProfile.copy(
+                    confidence = (heuristicProfile.confidence * 0.5f + modelConfidence * 0.5f).coerceIn(0f, 1f)
+                )
+            }
+            // 情况2：模型极高置信度 + 启发式低置信度 → 以模型为主
+            modelConfidence > 0.85f && heuristicProfile.confidence < 0.30f -> {
+                heuristicProfile.copy(
+                    id = modelSceneId,
+                    name = mapModelLabelToDisplayName(modelPrediction.label),
+                    category = modelCategory ?: heuristicProfile.category,
+                    confidence = modelConfidence
+                )
+            }
+            // 情况3：模型高置信度 → 以模型为主
+            modelConfidence > 0.75f -> {
+                heuristicProfile.copy(
+                    id = modelSceneId,
+                    name = mapModelLabelToDisplayName(modelPrediction.label),
+                    category = modelCategory ?: heuristicProfile.category,
+                    confidence = (heuristicProfile.confidence * 0.3f + modelConfidence * 0.7f).coerceIn(0f, 1f)
+                )
+            }
+            // 情况4：默认 → 启发式为主，模型微调
+            else -> {
+                heuristicProfile
+            }
         }
     }
 

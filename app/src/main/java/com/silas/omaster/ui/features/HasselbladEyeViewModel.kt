@@ -377,7 +377,7 @@ class HasselbladEyeViewModel : ViewModel() {
                 }
                 _analysisResult.value = AnalysisResult(
                     sceneProfile = profile,
-                    alternativeScenes = analysisDetail.alternatives,
+                    alternativeScenes = analysisDetail.alternatives ?: emptyList(),
                     recommendedFilms = films,
                     masterTips = masterTips,
                     suggestedColorMode = suggestedColorMode,

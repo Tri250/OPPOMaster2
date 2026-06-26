@@ -1801,21 +1801,23 @@ private fun ResultsContent(
             }
             item {
                 CompositionGuideCard(
-                    sceneCategory = result.sceneProfile.category,
+                    sceneCategory = result.sceneProfile.category ?: SceneCategory.UNKNOWN,
                     appliedGuideId = appliedGuideId,
                     onGuideClick = onGuideClick,
                     onClearComposition = onClearComposition
                 )
             }
 
-            item {
-                SectionTitle(title = "推荐胶片")
-            }
-            item {
-                RecommendedFilmsRow(
-                    films = result.recommendedFilms,
-                    onFilmClick = onFilmClick
-                )
+            if (result.recommendedFilms.isNotEmpty()) {
+                item {
+                    SectionTitle(title = "推荐胶片")
+                }
+                item {
+                    RecommendedFilmsRow(
+                        films = result.recommendedFilms,
+                        onFilmClick = onFilmClick
+                    )
+                }
             }
 
             item {
@@ -2019,17 +2021,20 @@ private fun SceneRecognitionCard(profile: SceneProfile) {
                         .background(HasselbladOrange.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = profile.category.icon, fontSize = 24.sp)
+                    Text(
+                        text = profile.category?.icon ?: "📷",
+                        fontSize = 24.sp
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = profile.name,
+                        text = profile.name ?: "未知场景",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "识别置信度 ${(profile.confidence * 100).toInt()}%",
+                        text = "识别置信度 ${((profile.confidence ?: 0f) * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = HasselbladOrange
                     )
@@ -2037,7 +2042,7 @@ private fun SceneRecognitionCard(profile: SceneProfile) {
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = profile.description,
+                text = profile.description ?: "",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
@@ -2171,6 +2176,7 @@ private fun AlternativeScenesRow(
     alternatives: List<SceneProfile>,
     onSceneSelected: (SceneProfile) -> Unit
 ) {
+    if (alternatives.isEmpty()) return
     val top3 = alternatives.take(3)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(top3) { scene ->

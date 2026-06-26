@@ -191,12 +191,8 @@ fun HomeScreen(
                 }
             )
 
-            // 快捷功能入口（横向滚动卡片）
+            // 快捷功能入口（仅保留哈苏之眼）
             QuickFeaturesSection(
-                onNavigateToAIFineTune = onNavigateToAIFineTune,
-                onNavigateToSmartOptimize = onNavigateToSmartOptimize,
-                onNavigateToWatermarkEditor = onNavigateToWatermarkEditor,
-                onNavigateToParamAdjustment = onNavigateToParamAdjustment,
                 onNavigateToHasselbladEye = onNavigateToHasselbladEye,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
@@ -1100,69 +1096,24 @@ private fun LoadingMoreTip() {
  */
 @Composable
 private fun QuickFeaturesSection(
-    onNavigateToAIFineTune: () -> Unit,
-    onNavigateToSmartOptimize: () -> Unit,
-    onNavigateToWatermarkEditor: () -> Unit,
-    onNavigateToParamAdjustment: () -> Unit,
     onNavigateToHasselbladEye: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            QuickFeatureCard(
-                name = "AI微调",
-                icon = Icons.Default.AutoAwesome,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToAIFineTune()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "智能优化",
-                icon = Icons.Default.Tune,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToSmartOptimize()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "水印编辑",
-                icon = Icons.Default.Edit,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToWatermarkEditor()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "参数调节",
-                icon = Icons.Default.Adjust,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToParamAdjustment()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "哈苏之眼",
-                icon = Icons.Default.ColorLens,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToHasselbladEye()
-                }
-            )
-        }
+        QuickFeatureCard(
+            name = "哈苏之眼",
+            icon = Icons.Default.ColorLens,
+            onClick = {
+                haptic.perform(HapticFeedbackType.LongPress)
+                onNavigateToHasselbladEye()
+            }
+        )
     }
 }
 

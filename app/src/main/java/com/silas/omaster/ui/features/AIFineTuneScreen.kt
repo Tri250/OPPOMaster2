@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -47,6 +48,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +69,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.silas.omaster.ai.AIFineTuneManager
@@ -93,13 +98,32 @@ fun AIFineTuneScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val aiManager = remember { AIFineTuneManager.getInstance(context) }
+    val scope = rememberCoroutineScope()
+
+    // 防护：AIFineTuneManager 初始化可能因 ML Kit 缺失等原因失败
+    val aiManager = remember {
+        try {
+            AIFineTuneManager.getInstance(context)
+        } catch (e: Exception) {
+            Log.e("AIFineTuneScreen", "AIFineTuneManager 初始化失败: ${e.message}", e)
+            null
+        } catch (e: NoClassDefFoundError) {
+            Log.e("AIFineTuneScreen", "AIFineTuneManager 依赖缺失: ${e.message}", e)
+            null
+        }
+    }
+
+    // AIFineTuneManager 初始化失败时显示错误界面
+    if (aiManager == null) {
+        AIManagerErrorScreen(onBack = onBack)
+        return
+    }
+
     val viewModel: AIFineTuneViewModel = viewModel(
         factory = AIFineTuneViewModelFactory(aiManager)
     )
 
     val haptic = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
 
     // 状态收集
     val activeTab by viewModel.activeTab.collectAsState()
@@ -139,8 +163,20 @@ fun AIFineTuneScreen(
     }
 
     // 屏幕销毁时取消 AI 推理协程，防止闪退
-    DisposableEffect(Unit) {
+    // Android 16: 使用 Lifecycle 感知的清理机制，确保在 ON_STOP 时安全释放资源
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnBack by rememberUpdatedState(onBack)
+    val currentOnApply by rememberUpdatedState(onApply)
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.cancelInference()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             viewModel.cancelInference()
         }
     }
@@ -228,6 +264,15 @@ fun AIFineTuneScreen(
         }
     }
 
+    // bitmap 为空且没有加载任何图片时，显示提示界面
+    if (bitmap == null && sourceBitmap == null) {
+        NoImageHintScreen(
+            onGallery = { launchGalleryPicker() },
+            onBack = onBack
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -240,7 +285,7 @@ fun AIFineTuneScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = currentOnBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
@@ -276,7 +321,7 @@ fun AIFineTuneScreen(
                         Toast.makeText(context, if (success) "已保存到相册" else "保存失败", Toast.LENGTH_SHORT).show()
                     }
                 },
-                onApply = { onApply(viewModel.getFinalParams()) },
+                onApply = { currentOnApply(viewModel.getFinalParams()) },
                 hasImage = sourceBitmap != null,
                 isProcessing = isProcessing
             )
@@ -1016,10 +1061,15 @@ private fun AIProgressOverlay(
     message: String,
     modifier: Modifier = Modifier
 ) {
+    // 防护：确保 stage 和 message 有效
+    val safeStage = stage
+    val safeMessage = message.ifBlank { "处理中..." }
+    val safeProgress = progress.coerceIn(0f, 1f)
+
     AnimatedVisibility(
-        visible = stage == InferenceStage.ANALYZING || stage == InferenceStage.DETECTING_SUBJECT ||
-                stage == InferenceStage.COMPUTING_PARAMS || stage == InferenceStage.APPLYING_AI ||
-                stage == InferenceStage.COMPLETED || stage == InferenceStage.ERROR,
+        visible = safeStage == InferenceStage.ANALYZING || safeStage == InferenceStage.DETECTING_SUBJECT ||
+                safeStage == InferenceStage.COMPUTING_PARAMS || safeStage == InferenceStage.APPLYING_AI ||
+                safeStage == InferenceStage.COMPLETED || safeStage == InferenceStage.ERROR,
         enter = fadeIn(),
         exit = fadeOut()
     ) {
@@ -1037,24 +1087,200 @@ private fun AIProgressOverlay(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (stage == InferenceStage.COMPLETED) {
+                    if (safeStage == InferenceStage.COMPLETED) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(48.dp))
-                    } else if (stage == InferenceStage.ERROR) {
+                    } else if (safeStage == InferenceStage.ERROR) {
                         Icon(Icons.Default.Error, contentDescription = null, tint = WarningYellow, modifier = Modifier.size(48.dp))
                     } else {
                         CircularProgressIndicator(color = HasselbladOrange, modifier = Modifier.size(48.dp))
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(message, color = Color.White, fontSize = 14.sp)
-                    if (stage != InferenceStage.COMPLETED && stage != InferenceStage.ERROR) {
+                    Text(safeMessage, color = Color.White, fontSize = 14.sp)
+                    if (safeStage != InferenceStage.COMPLETED && safeStage != InferenceStage.ERROR) {
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
-                            progress = { progress },
+                            progress = { safeProgress },
                             modifier = Modifier.fillMaxWidth(0.7f),
                             color = HasselbladOrange,
                             trackColor = Color.White.copy(alpha = 0.15f)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// ==================== 无图片提示界面 ====================
+
+/**
+ * 当 bitmap 参数为空且没有加载任何图片时显示
+ * 提示用户先选择图片，提供返回按钮
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NoImageHintScreen(
+    onGallery: () -> Unit,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "AI 微调",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "返回",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddPhotoAlternate,
+                    contentDescription = null,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(72.dp)
+                )
+                Text(
+                    text = "请先选择图片",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "您需要先选择一张图片，才能使用 AI 微调功能",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onBack,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onBackground
+                        )
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("返回")
+                    }
+                    Button(
+                        onClick = onGallery,
+                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("选择图片")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== AI 管理器错误界面 ====================
+
+/**
+ * AIFineTuneManager 初始化失败时显示
+ * 提供友好的错误提示和返回按钮
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AIManagerErrorScreen(
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "AI 微调",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "返回",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = null,
+                    tint = WarningYellow,
+                    modifier = Modifier.size(72.dp)
+                )
+                Text(
+                    text = "AI 引擎初始化失败",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "AI 微调引擎暂时不可用，请检查设备是否支持 Google Play Services（ML Kit 依赖），或稍后重试",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                )
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("返回")
                 }
             }
         }
