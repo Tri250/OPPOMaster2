@@ -166,6 +166,16 @@ class ProModeManager(context: Context) {
     }
 
     /**
+     * 设置专业模式参数（来自 CameraXManager UI 控制面板）。
+     * 会立即应用到相机。
+     */
+    fun setParams(params: ProModeParams) {
+        if (isReleased) return
+        _params.value = params
+        applyParamsToCamera()
+    }
+
+    /**
      * 更新参数状态并尝试立即应用到相机。
      */
     private inline fun updateParams(transform: ProModeParams.() -> ProModeParams) {

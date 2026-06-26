@@ -181,6 +181,12 @@ class CameraXManager(
     private val _lightPaintingFrame = MutableStateFlow<Bitmap?>(null)
     val lightPaintingFrame: StateFlow<Bitmap?> = _lightPaintingFrame.asStateFlow()
 
+    // 夜景模式状态（暴露给 UI 层）
+    val nightModeState: StateFlow<NightModeState> = nightModeManager.state
+
+    // 光绘模式状态（暴露给 UI 层）
+    val lightPaintingState: StateFlow<LightPaintingState> = lightPaintingManager.state
+
     init {
         lifecycleOwner.lifecycle.addObserver(this)
     }
@@ -649,6 +655,44 @@ class CameraXManager(
         realtimeFilterEnabled = enabled
     }
 
+    // ===== 专业模式参数设置 =====
+
+    /**
+     * 设置专业模式 ISO 值
+     */
+    fun setProModeIso(iso: Int) {
+        val current = _proModeParams.value
+        _proModeParams.value = current.copy(iso = iso)
+        proModeManager.setParams(_proModeParams.value)
+    }
+
+    /**
+     * 设置专业模式快门速度（纳秒）
+     */
+    fun setProModeShutter(shutterSpeedNs: Long) {
+        val current = _proModeParams.value
+        _proModeParams.value = current.copy(shutterSpeedNs = shutterSpeedNs)
+        proModeManager.setParams(_proModeParams.value)
+    }
+
+    /**
+     * 设置专业模式对焦距离（0-1）
+     */
+    fun setProModeFocus(focusDistance: Float) {
+        val current = _proModeParams.value
+        _proModeParams.value = current.copy(focusDistance = focusDistance)
+        proModeManager.setParams(_proModeParams.value)
+    }
+
+    /**
+     * 设置专业模式白平衡色温（K）
+     */
+    fun setProModeWhiteBalance(kelvin: Int) {
+        val current = _proModeParams.value
+        _proModeParams.value = current.copy(whiteBalanceTemperature = kelvin)
+        proModeManager.setParams(_proModeParams.value)
+    }
+
     /**
      * 上传并启用 3D LUT 实时叠加。
      * 必须在 GPU 渲染管线初始化成功后调用；否则 LUT 不会生效。
@@ -1035,14 +1079,17 @@ class CameraXManager(
     /**
      * 切换前后摄像头
      */
-    fun switchCamera(previewView: PreviewView) {
+    fun switchCamera(previewView: PreviewView? = null) {
         lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
             CameraSelector.LENS_FACING_FRONT
         } else {
             CameraSelector.LENS_FACING_BACK
         }
         _currentLensFacing.value = lensFacing
-        bindCameraUseCases(previewView)
+        val target = previewView ?: savedPreviewView
+        if (target != null) {
+            bindCameraUseCases(target)
+        }
     }
 
     /**
