@@ -403,8 +403,14 @@ dependencies {
     implementation(libs.umeng.common)
     implementation(libs.umeng.asms)
 
-    // ML Kit 人脸检测
+    // ML Kit 人脸检测 / 图像分割 / 物体检测
     implementation(libs.mlkit.face.detection)
+    implementation(libs.mlkit.image.segmentation)
+    implementation(libs.mlkit.image.segmentation.selfie)
+    implementation(libs.mlkit.object.detection)
+
+    // MediaPipe Tasks Vision: 人脸关键点 / 姿势检测
+    implementation(libs.mediapipe.tasks.vision)
 
     // CameraX 实时相机预览 - P2 深度优化
     implementation(libs.camerax.core)
