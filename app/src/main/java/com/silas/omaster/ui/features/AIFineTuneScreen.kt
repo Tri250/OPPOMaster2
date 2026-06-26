@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -144,9 +145,9 @@ fun AIFineTuneScreen(
         }
     }
 
-    // 图片选择器
+    // 图片选择器：使用 PickVisualMedia 符合 Android 16 隐私最佳实践
     val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let { viewModel.loadImage(context, it) }
     }
@@ -161,7 +162,7 @@ fun AIFineTuneScreen(
         }
     }
 
-    // 权限
+    // 权限：Android 13+ PickVisualMedia 无需 READ_MEDIA_IMAGES；低版本仍需 READ_EXTERNAL_STORAGE
     val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
     } else {
@@ -170,7 +171,24 @@ fun AIFineTuneScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) galleryLauncher.launch("image/*")
+        if (granted) galleryLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    fun launchGalleryPicker() {
+        // Android 14+ (API 34+) 使用 Photo Picker 不需要存储权限
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            galleryLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } else if (ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED) {
+            galleryLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } else {
+            permissionLauncher.launch(storagePermission)
+        }
     }
 
     // Toast 提示
@@ -220,13 +238,7 @@ fun AIFineTuneScreen(
         },
         bottomBar = {
             BottomActionBar(
-                onGallery = {
-                    if (ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED) {
-                        galleryLauncher.launch("image/*")
-                    } else {
-                        permissionLauncher.launch(storagePermission)
-                    }
-                },
+                onGallery = { launchGalleryPicker() },
                 onCamera = {
                     val file = File(context.cacheDir, "ai_tune_${System.currentTimeMillis()}.jpg")
                     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -269,13 +281,7 @@ fun AIFineTuneScreen(
                     )
                 } else {
                     EmptyImagePlaceholder(
-                        onGallery = {
-                            if (ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED) {
-                                galleryLauncher.launch("image/*")
-                            } else {
-                                permissionLauncher.launch(storagePermission)
-                            }
-                        },
+                        onGallery = { launchGalleryPicker() },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
