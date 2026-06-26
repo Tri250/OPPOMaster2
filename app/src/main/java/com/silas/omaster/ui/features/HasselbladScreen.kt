@@ -164,6 +164,8 @@ data class AnalysisResult(
 fun HasselbladScreen(
     onBack: () -> Unit,
     onLaunchViewfinder: () -> Unit = {},
+    // P2-1 修复：将当前 ViewModel 状态变化通知给上层（用于通过 savedStateHandle 传递到 CameraXViewfinder）
+    onARGuideStateChanged: (guideType: String?, isEnabled: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -193,6 +195,13 @@ fun HasselbladScreen(
     val appliedCompositionGuideId by viewModel.appliedCompositionGuideId.collectAsState()
     val appliedARGuideType by viewModel.appliedARGuideType.collectAsState()
     val isARGuideEnabled by viewModel.isARGuideEnabled.collectAsState()
+
+    // P2-1 修复：将哈苏构图引导线状态同步给上层（AppNavigation），
+    // 用于跳转到 CameraXViewfinder 时通过 savedStateHandle 传递
+    LaunchedEffect(appliedARGuideType, isARGuideEnabled) {
+        val typeName = appliedARGuideType?.name
+        onARGuideStateChanged(typeName, isARGuideEnabled)
+    }
 
     // 操作错误状态：保存/分享失败时弹出 Toast 提示
     val operationError by viewModel.operationError.collectAsState()
@@ -252,10 +261,22 @@ fun HasselbladScreen(
     }
 
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
-    var recentShots by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    // P3-6 修复：最近拍摄从 SharedPreferences 加载（跨页面重启保留）
+    val recentShotsPrefs = remember { context.getSharedPreferences("hasselblad_eye", Context.MODE_PRIVATE) }
+    var recentShots by remember {
+        mutableStateOf<List<Uri>>(
+            recentShotsPrefs.getString("recent_shots", "")
+                ?.split("|")
+                ?.filter { it.isNotEmpty() }
+                ?.map { Uri.parse(it) }
+                ?: emptyList()
+        )
+    }
     // 权限二次引导对话框状态：首次拒绝后展示说明，勾选"不再询问"后引导跳转设置
     var showPermissionRationale by remember { mutableStateOf(false) }
     var shouldGoToSettings by remember { mutableStateOf(false) }
+    // P3-7 修复：构图清空确认对话框状态
+    var showClearCompositionDialog by remember { mutableStateOf(false) }
     // 当前 Activity 引用，用于判断 shouldShowRequestPermissionRationale
     val activity = context as? android.app.Activity
 
@@ -306,7 +327,13 @@ fun HasselbladScreen(
                     }
                     if (bitmap != null) {
                         withContext(Dispatchers.Main) {
-                            recentShots = (listOf(uri) + recentShots).take(3)
+                            // P3-6 修复：持久化最近 3 张
+                            val updated = (listOf(uri) + recentShots).take(3)
+                            recentShots = updated
+                            recentShotsPrefs.edit().putString(
+                                "recent_shots",
+                                updated.joinToString("|") { it.toString() }
+                            ).apply()
                         }
                         // startAnalysis 内部已用 viewModelScope.launch 启动协程，无需外层调度器
                         viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
@@ -330,7 +357,13 @@ fun HasselbladScreen(
                 }
                 if (bitmap != null) {
                     withContext(Dispatchers.Main) {
-                        recentShots = (listOf(it) + recentShots).take(3)
+                        // P3-6 修复：持久化最近 3 张
+                        val updated = (listOf(it) + recentShots).take(3)
+                        recentShots = updated
+                        recentShotsPrefs.edit().putString(
+                            "recent_shots",
+                            updated.joinToString("|") { it.toString() }
+                        ).apply()
                     }
                     viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
                 } else {
@@ -544,8 +577,8 @@ fun HasselbladScreen(
                     },
                     onClearComposition = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.clearAppliedComposition()
-                        Toast.makeText(context, "已清除当前构图", Toast.LENGTH_SHORT).show()
+                        // P3-7 修复：弹出确认对话框
+                        showClearCompositionDialog = true
                     },
                     onSaveAsPreset = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -574,7 +607,8 @@ fun HasselbladScreen(
                     },
                     onApplyToOPPO = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.applyToOPPOMaster(context)
+                        // P2-5 修复：应用参数 + 联动悬浮窗服务
+                        viewModel.applyToOPPOAndShowFloating(context)
                     }
                 )
 
@@ -584,6 +618,11 @@ fun HasselbladScreen(
                     params = params,
                     exportFormat = exportFormat,
                     isSaving = isSaving,
+                    // P2-4 修复：传递 LUT 状态
+                    activeLUTId = viewModel.active3DLUTId.collectAsState().value,
+                    lutStrength = viewModel.lut3DStrength.collectAsState().value,
+                    onLUTStrengthChange = { viewModel.update3DLUTStrength(it) },
+                    onLUTRemove = { viewModel.remove3DLUT() },
                     onExportFormatChanged = { viewModel.setExportFormat(it) },
                     onSave = ::onSaveImage,
                     onShare = ::onShareImage,
@@ -670,6 +709,39 @@ fun HasselbladScreen(
                     onClick = { showPermissionRationale = false }
                 ) {
                     Text("暂不使用")
+                }
+            }
+        )
+    }
+
+    // P3-7 修复：构图清空确认对话框
+    if (showClearCompositionDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showClearCompositionDialog = false },
+            title = {
+                Text(
+                    text = "清除当前构图？",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("清除后将丢失当前应用的构图引导方案与AR引导线设置。")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearCompositionDialog = false
+                        viewModel.clearAppliedComposition()
+                        Toast.makeText(context, "已清除当前构图", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("确认清除", color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showClearCompositionDialog = false }) {
+                    Text("取消")
                 }
             }
         )
@@ -2226,7 +2298,12 @@ private fun PreviewContent(
     onExportFormatChanged: (HasselbladEyeViewModel.ExportFormat) -> Unit,
     onSave: () -> Unit,
     onShare: () -> Unit,
-    onRetake: () -> Unit
+    onRetake: () -> Unit,
+    // P2-4 修复：3D LUT 控制回调
+    activeLUTId: String? = null,
+    lutStrength: Float = 1.0f,
+    onLUTStrengthChange: (Float) -> Unit = {},
+    onLUTRemove: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -2255,6 +2332,21 @@ private fun PreviewContent(
                 currentFormat = exportFormat,
                 onFormatChanged = onExportFormatChanged
             )
+        }
+
+        // P2-4 修复：3D LUT 强度滑块（仅在有活跃 LUT 时显示）
+        if (activeLUTId != null) {
+            item {
+                SectionTitle(title = "3D LUT 强度")
+            }
+            item {
+                LUTStrengthCard(
+                    lutId = activeLUTId,
+                    strength = lutStrength,
+                    onStrengthChange = onLUTStrengthChange,
+                    onRemove = onLUTRemove
+                )
+            }
         }
 
         item {
@@ -2564,6 +2656,95 @@ private fun ExportFormatSelector(
                     selected = currentFormat == format
                 )
             )
+        }
+    }
+}
+
+/**
+ * P2-4 修复：3D LUT 强度调节卡片
+ * 提供滑块 UI，让用户在 PREVIEW 阶段调节已应用的 LUT 强度（0-100%）。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LUTStrengthCard(
+    lutId: String,
+    strength: Float,
+    onStrengthChange: (Float) -> Unit,
+    onRemove: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "当前 LUT",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = lutId,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HasselbladOrange
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onRemove()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = "移除 LUT",
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "0%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+                Slider(
+                    value = strength,
+                    onValueChange = onStrengthChange,
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = HasselbladOrange,
+                        activeTrackColor = HasselbladOrange,
+                        inactiveTrackColor = HasselbladOrange.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "${(strength * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
         }
     }
 }

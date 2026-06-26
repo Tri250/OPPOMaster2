@@ -119,7 +119,11 @@ fun CameraXViewfinderScreen(
     presetParams: HasselbladParams = HasselbladParams(),
     presetName: String = "",
     onBack: () -> Unit,
-    onPhotoCaptured: (android.net.Uri) -> Unit = {}
+    onPhotoCaptured: (android.net.Uri) -> Unit = {},
+    // P2-1 修复：哈苏构图引导线类型（如 "THIRDS"），与 ARCompositionResult 引导线共存
+    hasselbladGuideType: String? = null,
+    // 是否启用哈苏构图引导线（与 HasselbladEyeViewModel.isARGuideEnabled 对应）
+    isARGuideEnabled: Boolean = false
 ) {
     val context = LocalContext.current
     val lifecycleOwner = remember {
@@ -344,6 +348,15 @@ fun CameraXViewfinderScreen(
                             .padding(top = 12.dp)
                     )
                 }
+            }
+
+            // ==================== 哈苏构图引导线覆盖层（P2-1 修复）====================
+            // 独立于 arResult 显示，与 ARCompositionResult 引导线叠加共存
+            if (isARGuideEnabled && hasselbladGuideType != null && showARGuide) {
+                HasselbladARGuideOverlay(
+                    guideType = hasselbladGuideType,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             // ==================== 模式专属状态指示 ====================
@@ -719,6 +732,100 @@ private fun ARTipsOverlay(
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(end = 8.dp)
         )
+    }
+}
+
+// ==================== 哈苏构图引导线覆盖层 ====================
+// P2-1 修复：在 CameraX 实时取景中叠加哈苏构图引导线
+// 与 ARCompositionResult 引导线互不冲突（独立于 arResult 存在）
+@Composable
+private fun HasselbladARGuideOverlay(
+    guideType: String,
+    modifier: Modifier = Modifier
+) {
+    val guideColor = HasselbladOrange.copy(alpha = 0.85f)
+    val pointColor = HasselbladOrange
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        when (guideType) {
+            "THIRDS" -> {
+                for (i in 1..2) {
+                    drawLine(guideColor, Offset(0f, h * i / 3), Offset(w, h * i / 3), strokeWidth = 1.5f)
+                    drawLine(guideColor, Offset(w * i / 3, 0f), Offset(w * i / 3, h), strokeWidth = 1.5f)
+                }
+                for (i in 1..2) for (j in 1..2) {
+                    drawCircle(pointColor, radius = 5f, center = Offset(w * i / 3, h * j / 3))
+                }
+            }
+            "GOLDEN_RATIO" -> {
+                val ratio = 0.618f
+                drawLine(guideColor, Offset(0f, h * ratio), Offset(w, h * ratio), strokeWidth = 1.5f)
+                drawLine(guideColor, Offset(0f, h * (1 - ratio)), Offset(w, h * (1 - ratio)), strokeWidth = 1.5f)
+                drawLine(guideColor, Offset(w * ratio, 0f), Offset(w * ratio, h), strokeWidth = 1.5f)
+                drawLine(guideColor, Offset(w * (1 - ratio), 0f), Offset(w * (1 - ratio), h), strokeWidth = 1.5f)
+                for (x in listOf(ratio, 1 - ratio)) for (y in listOf(ratio, 1 - ratio)) {
+                    drawCircle(pointColor, radius = 5f, center = Offset(w * x, h * y))
+                }
+            }
+            "DIAGONAL" -> {
+                drawLine(guideColor, Offset(0f, 0f), Offset(w, h), strokeWidth = 1.5f)
+                drawLine(guideColor, Offset(w, 0f), Offset(0f, h), strokeWidth = 1.5f)
+                drawCircle(pointColor, radius = 5f, center = Offset(w / 3, h / 3))
+                drawCircle(pointColor, radius = 5f, center = Offset(w * 2 / 3, h * 2 / 3))
+            }
+            "CENTER_CROSS" -> {
+                drawLine(guideColor, Offset(w / 2, 0f), Offset(w / 2, h), strokeWidth = 1.5f)
+                drawLine(guideColor, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 1.5f)
+                drawCircle(pointColor, radius = 5f, center = Offset(w / 2, h / 2))
+            }
+            "SPIRAL" -> {
+                val phi = 1.618f
+                val steps = 60
+                val spiralPoints = mutableListOf<Offset>()
+                var cx = w * 0.618f
+                var cy = h * 0.382f
+                for (i in 0..steps) {
+                    val t = i.toFloat() / steps * 3f * Math.PI.toFloat()
+                    val r = 8f * Math.pow(phi.toDouble(), (t / (2f * Math.PI.toFloat())).toDouble()).toFloat()
+                    val x = cx + r * kotlin.math.cos(t)
+                    val y = cy + r * kotlin.math.sin(t)
+                    if (x in 0f..w && y in 0f..h) {
+                        spiralPoints.add(Offset(x, y))
+                    }
+                }
+                for (i in 0 until spiralPoints.size - 1) {
+                    drawLine(guideColor, spiralPoints[i], spiralPoints[i + 1], strokeWidth = 1.5f)
+                }
+                drawCircle(pointColor, radius = 6f, center = Offset(cx, cy))
+            }
+            "FRAME" -> {
+                val inset = 0.2f
+                drawRect(
+                    color = guideColor,
+                    topLeft = Offset(w * inset, h * inset),
+                    size = androidx.compose.ui.geometry.Size(w * (1 - 2 * inset), h * (1 - 2 * inset)),
+                    style = Stroke(width = 2f)
+                )
+            }
+            "HORIZON" -> {
+                drawLine(guideColor, Offset(0f, h / 2), Offset(w, h / 2), strokeWidth = 2f)
+                drawLine(Color.Green.copy(alpha = 0.5f), Offset(w * 0.3f, h / 2), Offset(w * 0.7f, h / 2), strokeWidth = 3f)
+            }
+            "TRIANGLE" -> {
+                val p1 = Offset(w / 2, h * 0.15f)
+                val p2 = Offset(w * 0.15f, h * 0.85f)
+                val p3 = Offset(w * 0.85f, h * 0.85f)
+                drawLine(guideColor, p1, p2, strokeWidth = 1.5f)
+                drawLine(guideColor, p2, p3, strokeWidth = 1.5f)
+                drawLine(guideColor, p3, p1, strokeWidth = 1.5f)
+                drawCircle(pointColor, radius = 5f, center = p1)
+                drawCircle(pointColor, radius = 5f, center = p2)
+                drawCircle(pointColor, radius = 5f, center = p3)
+            }
+        }
     }
 }
 

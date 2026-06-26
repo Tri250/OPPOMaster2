@@ -133,6 +133,17 @@ class HasselbladEyeViewModel : ViewModel() {
     private val _exportFormat = MutableStateFlow(ExportFormat.JPEG)
     val exportFormat: StateFlow<ExportFormat> = _exportFormat.asStateFlow()
 
+    /** 当前预览图是基于哪个 exportFormat 生成的（用于检测格式切换后是否需要重生成）。 */
+    private val _previewBuiltForFormat = MutableStateFlow(ExportFormat.JPEG)
+    val previewBuiltForFormat: StateFlow<ExportFormat> = _previewBuiltForFormat.asStateFlow()
+
+    /**
+     * P3-6：最近拍摄持久化键名前缀
+     * 用于生成带场景模式标签的保存文件名（P2-3 修复）
+     */
+    private val _recentShotsTag = MutableStateFlow<String?>(null)
+    val recentShotsTag: StateFlow<String?> = _recentShotsTag.asStateFlow()
+
     private val _lastSavedUri = MutableStateFlow<android.net.Uri?>(null)
     val lastSavedUri: StateFlow<android.net.Uri?> = _lastSavedUri.asStateFlow()
 
@@ -224,11 +235,14 @@ class HasselbladEyeViewModel : ViewModel() {
 
     /**
      * 在合适的阶段触发低分辨率实时预览。
+     * 使用当前选中色彩模式参数（_currentModeParams）以确保与最终导出效果一致。
      */
     private fun triggerRealtimePreview() {
         val source = _originalBitmap.value ?: return
         if (_stage.value != HasselbladEyeStage.RESULTS && _stage.value != HasselbladEyeStage.PREVIEW) return
-        updatePreviewAsync(source, emptyMap())
+        // P3-8 修复：使用当前选中色彩模式参数而非空 map，确保格式切换后预览效果一致
+        val currentParams = _currentModeParams.value
+        updatePreviewAsync(source, currentParams)
     }
 
     // ================== 核心方法 ==================
@@ -463,6 +477,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
     /**
      * 调整 3D LUT 强度
+     * P2-4 修复：暴露为 UI 可调，并自动触发预览重生成
      */
     fun update3DLUTStrength(strength: Float) {
         _lut3DStrength.value = strength.coerceIn(0f, 1f)
@@ -607,6 +622,8 @@ class HasselbladEyeViewModel : ViewModel() {
                 apply3DLUTToBitmap(colorApplied)
             }
             _previewBitmap.value = result
+            // P3-8：标记当前预览是为哪个 exportFormat 生成的
+            _previewBuiltForFormat.value = _exportFormat.value
             _stage.value = HasselbladEyeStage.PREVIEW
         }
     }
@@ -632,20 +649,19 @@ class HasselbladEyeViewModel : ViewModel() {
                 withContext(Dispatchers.IO) {
                     try {
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
-                        // 文件名包含构图名，便于用户追溯使用的构图方案
-                        val compositionTag = _appliedCompositionGuideId.value?.let { "_${it}" } ?: ""
+                        // P2-3 修复：使用带场景模式 + 构图 + 时间戳的命名规范
 
                         when (format) {
                             ExportFormat.JPEG -> {
-                                val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.jpg"
+                                val filename = buildExportFilename(format)
                                 saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 95, filename, "image/jpeg")
                             }
                             ExportFormat.PNG -> {
-                                val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.png"
+                                val filename = buildExportFilename(format)
                                 saveToMediaStore(context, scaled, Bitmap.CompressFormat.PNG, 100, filename, "image/png")
                             }
                             ExportFormat.WEBP -> {
-                                val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.webp"
+                                val filename = buildExportFilename(format)
                                 val compressFormat = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                     Bitmap.CompressFormat.WEBP_LOSSY
                                 } else {
@@ -657,11 +673,11 @@ class HasselbladEyeViewModel : ViewModel() {
                             ExportFormat.HEIF -> {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                     // Android R+：使用 HEVC MediaCodec 编码为真正的 HEIF
-                                    val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.heic"
+                                    val filename = buildExportFilename(format)
                                     saveHeifToMediaStore(context, scaled, filename)
                                 } else {
                                     // Android Q 及以下：无原生 HEIF 编码能力，回退为高质量 JPEG
-                                    val filename = "Hasselblad${compositionTag}_${System.currentTimeMillis()}.jpg"
+                                    val filename = buildExportFilename(ExportFormat.JPEG)
                                     saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 98, filename, "image/jpeg")
                                 }
                             }
@@ -924,10 +940,32 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
+     * P2-3 修复：生成带场景模式 + 构图 + 时间戳的保存文件名
+     * 格式：Hasselblad_{sceneMode}_{compositionGuide}_{timestamp}.{ext}
+     * 例如：Hasselblad_scene-portrait_thirds_1734000000.jpg
+     */
+    private fun buildExportFilename(format: ExportFormat): String {
+        val ext = when (format) {
+            ExportFormat.JPEG -> "jpg"
+            ExportFormat.PNG -> "png"
+            ExportFormat.WEBP -> "webp"
+            ExportFormat.HEIF -> "heic"
+        }
+        val sceneTag = _selectedSceneModeId.value.takeIf { it.isNotEmpty() } ?: "natural"
+        val compositionTag = _appliedCompositionGuideId.value?.takeIf { it.isNotEmpty() }
+        val tags = listOfNotNull("Hasselblad", sceneTag, compositionTag).joinToString("_")
+        return "${tags}_${System.currentTimeMillis()}.${ext}"
+    }
+
+    /**
      * 设置导出格式。
+     * P3-8 修复：格式切换后自动触发预览重生成，确保用户看到的预览与最终导出格式一致。
      */
     fun setExportFormat(format: ExportFormat) {
+        if (_exportFormat.value == format) return
         _exportFormat.value = format
+        // 若当前已在 RESULTS/PREVIEW 阶段，立即重生成预览
+        triggerRealtimePreview()
     }
 
     /**
@@ -938,11 +976,15 @@ class HasselbladEyeViewModel : ViewModel() {
     }
 
     /**
-     * 将当前调好的哈苏参数应用到 OPPO 大师模式相机。
+     * 将当前调好的哈苏参数 + 当前构图方案应用到 OPPO 大师模式相机。
      *
-     * 调用 [OPPOCameraManager.applyHasselbladParams]，按 ContentProvider → System Settings
-     * → Camera Intent → Clipboard 的优先级尝试应用。应用结果通过 [oppoApplyState] 暴露，
-     * UI 层消费后应调用 [resetOPOApplyState] 重置回 Idle。
+     * P2-2 修复：在原 applyHasselbladParams 基础上，额外：
+     * 1. 若有活跃构图 (_appliedCompositionGuideId)，把构图 ID 写入 OPPO
+     * 2. 把当前场景模式 ID 写入 OPPO 便于 OPPO 大师模式相机适配
+     * 3. 把 LUT 强度（若活跃）写入 OPPO
+     *
+     * 应用优先级：ContentProvider → System Settings → Camera Intent → Clipboard
+     * 应用结果通过 [oppoApplyState] 暴露，UI 层消费后应调用 [resetOPOApplyState] 重置回 Idle。
      */
     fun applyToOPPOMaster(context: Context) {
         viewModelScope.launch {
@@ -950,7 +992,17 @@ class HasselbladEyeViewModel : ViewModel() {
             try {
                 val params = _params.value
                 val cameraManager = OPPOCameraManager.getInstance(context)
-                val result = cameraManager.applyHasselbladParams(params)
+                val compositionId = _appliedCompositionGuideId.value
+                val sceneModeId = _selectedSceneModeId.value
+                val lutId = _active3DLUTId.value
+                val lutStrength = _lut3DStrength.value
+                val result = cameraManager.applyHasselbladParams(
+                    params = params,
+                    compositionId = compositionId,
+                    sceneModeId = sceneModeId,
+                    lutId = lutId,
+                    lutStrength = lutStrength
+                )
                 when (result) {
                     is CameraApplyResult.Success ->
                         _oppoApplyState.value = OPOApplyState.Success(result.method.name)
@@ -971,6 +1023,38 @@ class HasselbladEyeViewModel : ViewModel() {
      */
     fun resetOPOApplyState() {
         _oppoApplyState.value = OPOApplyState.Idle
+    }
+
+    /**
+     * P2-5 修复：将当前哈苏参数应用到 OPPO 大师模式后，自动拉起悬浮窗，
+     * 便于用户在拍照时实时查看当前应用参数。
+     *
+     * 流程：先调用 applyToOPPOMaster，然后通过 FloatingWindowController 显示当前预设。
+     */
+    fun applyToOPPOAndShowFloating(context: Context) {
+        applyToOPPOMaster(context)
+        val colorMode = allColorModes.find { it.id == _selectedColorModeId.value }
+        val sceneMode = allSceneModes.find { it.id == _selectedSceneModeId.value }
+        if (colorMode != null) {
+            viewModelScope.launch {
+                // 构造临时 MasterPreset 用于悬浮窗展示
+                val livePreset = com.silas.omaster.model.MasterPreset(
+                    name = "${colorMode.name}${if (sceneMode != null) " · ${sceneMode.name}" else ""}",
+                    coverPath = "",
+                    author = "@哈苏之眼实时",
+                    mode = "hasselblad",
+                    isCustom = true,
+                    description = com.silas.omaster.model.PresetDescription(
+                        title = colorMode.name,
+                        content = colorMode.description
+                    ),
+                    tags = listOf("实时", "哈苏之眼"),
+                    params = colorMode.params.mapValues { it.value.toString() }
+                )
+                val controller = com.silas.omaster.ui.service.FloatingWindowController.getInstance(context)
+                controller.showFloatingWindow(livePreset, listOf(livePreset))
+            }
+        }
     }
 
     /**
@@ -1007,6 +1091,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
         _isSaving.value = false
         _exportFormat.value = ExportFormat.JPEG
+        _previewBuiltForFormat.value = ExportFormat.JPEG
         _lastSavedUri.value = null
         _operationError.value = null
         _oppoApplyState.value = OPOApplyState.Idle

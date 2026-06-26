@@ -80,6 +80,10 @@ import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+// P2-1 修复：savedStateHandle 键名常量（哈苏构图引导线状态传递）
+private const val KEY_HASSELBLAD_GUIDE_TYPE = "hasselblad_guide_type"
+private const val KEY_IS_AR_GUIDE_ENABLED = "hasselblad_ar_guide_enabled"
+
 /**
  * 主应用 NavHost 容器 + 底部导航栏 + 全局 Snackbar 宿主
  *
@@ -428,11 +432,17 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
-            composable<Screen.HasselbladColor> {
+            composable<Screen.HasselbladColor> { backStackEntry ->
                 HasselbladScreen(
                     onBack = { navController.popBackStack() },
                     onLaunchViewfinder = {
                         navController.navigate(Screen.CameraXViewfinder(presetId = null))
+                    },
+                    // P2-1 修复：同步哈苏构图引导线状态到 savedStateHandle，
+                    // CameraXViewfinder 启动时通过 previousBackStackEntry 读取
+                    onARGuideStateChanged = { guideType, isEnabled ->
+                        backStackEntry.savedStateHandle[KEY_HASSELBLAD_GUIDE_TYPE] = guideType
+                        backStackEntry.savedStateHandle[KEY_IS_AR_GUIDE_ENABLED] = isEnabled
                     }
                 )
             }
@@ -512,6 +522,14 @@ fun MainApp(navController: NavHostController) {
                 var presetParams by remember { mutableStateOf(HasselbladParams()) }
                 var presetName by remember { mutableStateOf("") }
 
+                // P2-1 修复：从上一个页面（HasselbladScreen）读取哈苏构图引导线状态
+                val hasselbladGuideType = remember {
+                    navController.previousBackStackEntry?.savedStateHandle?.get<String>(KEY_HASSELBLAD_GUIDE_TYPE)
+                }
+                val isARGuideEnabled = remember {
+                    navController.previousBackStackEntry?.savedStateHandle?.get<Boolean>(KEY_IS_AR_GUIDE_ENABLED) ?: false
+                }
+
                 LaunchedEffect(route.presetId) {
                     val pid = route.presetId ?: return@LaunchedEffect
                     val presetItem = repository.presets.value.find { it.id == pid }
@@ -532,6 +550,8 @@ fun MainApp(navController: NavHostController) {
                     presetParams = presetParams,
                     presetName = presetName,
                     onBack = { navController.popBackStack() },
+                    hasselbladGuideType = hasselbladGuideType,
+                    isARGuideEnabled = isARGuideEnabled,
                     onPhotoCaptured = { uri ->
                         // 拍照成功，Toast 提示并返回上一页
                         Toast.makeText(context, "照片已保存", Toast.LENGTH_SHORT).show()

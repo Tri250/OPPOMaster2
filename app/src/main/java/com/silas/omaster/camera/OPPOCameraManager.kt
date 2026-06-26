@@ -93,7 +93,9 @@ class OPPOCameraManager private constructor(private val context: Context) {
             "saturation", "contrast", "tone", "warmth", "sharpness", "clarity",
             "iso", "whiteBalance", "exposureCompensation", "vignette", "cyanMagenta",
             "brightness", "highlights", "shadows",
-            "softLight", "filter", "shutterSpeed"
+            "softLight", "filter", "shutterSpeed",
+            // P2-2 修复：新增构图/场景/LUT 联动键
+            "compositionId", "sceneModeId", "lutId", "lutStrength"
         )
 
         /**
@@ -204,11 +206,17 @@ class OPPOCameraManager private constructor(private val context: Context) {
     /**
      * 应用 HasselbladParams 参数到 OPPO 相机大师模式
      *
+     * P2-2 修复：扩展支持将构图方案、场景模式、活跃 LUT 联动写入 OPPO。
+     *
      * @param params 哈苏参数
      * @param iso ISO 值（可选）
      * @param shutterSpeed 快门速度字符串（可选，如 "1/125"）
      * @param whiteBalanceK 白平衡色温值（可选，2000-8000）
      * @param exposureCompensation 曝光补偿（可选，-3.0 ~ +3.0）
+     * @param compositionId 活跃构图 ID（可选，null 表示未应用构图）
+     * @param sceneModeId 场景模式 ID（可选，null 表示未选中）
+     * @param lutId 活跃 LUT ID（可选，null 表示未应用 LUT）
+     * @param lutStrength LUT 强度 0.0-1.0（可选）
      * @return 应用结果
      */
     fun applyHasselbladParams(
@@ -216,11 +224,19 @@ class OPPOCameraManager private constructor(private val context: Context) {
         iso: Int? = null,
         shutterSpeed: String? = null,
         whiteBalanceK: Int? = null,
-        exposureCompensation: Double? = null
+        exposureCompensation: Double? = null,
+        compositionId: String? = null,
+        sceneModeId: String? = null,
+        lutId: String? = null,
+        lutStrength: Float? = null
     ): CameraApplyResult {
         Log.d(TAG, "开始应用哈苏参数: tone=${params.tone}, saturation=${params.saturation}, " +
-                "contrast=${params.contrast}, colorTemp=${params.colorTemp}")
-        val paramMap = buildParamMapFromHasselblad(params, iso, shutterSpeed, whiteBalanceK, exposureCompensation)
+                "contrast=${params.contrast}, colorTemp=${params.colorTemp}, " +
+                "compositionId=$compositionId, sceneModeId=$sceneModeId, lutId=$lutId, lutStrength=$lutStrength")
+        val paramMap = buildParamMapFromHasselblad(
+            params, iso, shutterSpeed, whiteBalanceK, exposureCompensation,
+            compositionId, sceneModeId, lutId, lutStrength
+        )
         return applyParams(paramMap)
     }
 
@@ -844,7 +860,11 @@ class OPPOCameraManager private constructor(private val context: Context) {
         iso: Int?,
         shutterSpeed: String?,
         whiteBalanceK: Int?,
-        exposureCompensation: Double?
+        exposureCompensation: Double?,
+        compositionId: String? = null,
+        sceneModeId: String? = null,
+        lutId: String? = null,
+        lutStrength: Float? = null
     ): Map<String, Any> {
         val paramMap = mutableMapOf<String, Any>()
         val scale = 100.0 / 30.0  // -30~+30 → -100~+100
@@ -875,6 +895,12 @@ class OPPOCameraManager private constructor(private val context: Context) {
         shutterSpeed?.let { paramMap["shutterSpeed"] = it }
         whiteBalanceK?.let { paramMap["whiteBalance"] = it }
         exposureCompensation?.let { paramMap["exposureCompensation"] = it }
+
+        // P2-2 修复：联动写入构图/场景/LUT
+        compositionId?.takeIf { it.isNotEmpty() }?.let { paramMap["compositionId"] = it }
+        sceneModeId?.takeIf { it.isNotEmpty() }?.let { paramMap["sceneModeId"] = it }
+        lutId?.takeIf { it.isNotEmpty() }?.let { paramMap["lutId"] = it }
+        lutStrength?.let { paramMap["lutStrength"] = it.coerceIn(0f, 1f) }
 
         return paramMap
     }
