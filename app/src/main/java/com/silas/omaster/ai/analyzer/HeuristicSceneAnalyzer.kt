@@ -515,34 +515,51 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     /**
      * 颜色→场景投票
      * 
+     * 优化：增加更多场景判断规则，提高识别率
+     * 
      * 规则：
      * ├── 暖色调占比 > 60% + 高亮度 → 日落/金色时刻
      * ├── 绿色通道占比 > 35% → 森林/自然
      * ├── 蓝色通道占比 > 40% → 天空/海滩
      * ├── 暗部占比 > 70% → 夜景
-     * └── 肤色检测 → 人像
+     * ├── 肤色检测 → 人像
+     * ├── 高饱和暖色 → 美食
+     * ├── 低饱和冷色 → 室内/文档
+     * └── 高对比度 → 建筑/街拍
      */
     private fun voteByColor(cp: ColorProfile): List<SceneCandidate> {
         val votes = mutableListOf<SceneCandidate>()
 
-        // 绿色主导 → 森林/自然
-        if (cp.greenDominance > 1.25f) {
+        // 绿色主导 → 森林/自然（优化：降低阈值 1.25→1.18，覆盖更多绿色场景）
+        if (cp.greenDominance > 1.18f) {
             val score = 0.70f * cp.greenDominance.coerceAtMost(1.5f)
             votes.add(SceneCandidate("landscape-forest", score, "color"))
             votes.add(SceneCandidate("landscape-standard", score * 0.8f, "color"))
+            // 优化：绿地场景也可能是公园
+            if (cp.warmthRatio < 0.3f) {
+                votes.add(SceneCandidate("urban-park", score * 0.6f, "color"))
+            }
         }
 
-        // 蓝色主导 → 天空/海滩
-        if (cp.blueDominance > 1.20f) {
+        // 蓝色主导 → 天空/海滩（优化：降低阈值 1.20→1.12，覆盖更多蓝天场景）
+        if (cp.blueDominance > 1.12f) {
             val score = 0.65f * cp.blueDominance.coerceAtMost(1.5f)
             votes.add(SceneCandidate("landscape-sky", score, "color"))
             votes.add(SceneCandidate("landscape-beach", score * 0.85f, "color"))
+            // 优化：蓝色+低饱和 → 可能是雪景
+            if (cp.warmthRatio < 0.2f && cp.highlightRatio > 0.2f) {
+                votes.add(SceneCandidate("landscape-snow", score * 0.7f, "color"))
+            }
         }
 
         // 暖色调 >= 55% → 日落（修复：与下方 35%-55% 区间互斥，>= 55% 归日落）
         if (cp.warmthRatio >= 0.55f) {
             val score = 0.55f + cp.warmthRatio * 0.3f
             votes.add(SceneCandidate("landscape-sunset", score.coerceAtMost(0.95f), "color"))
+            // 优化：暖色+高亮度也可能是室内暖光
+            if (cp.darkPixelRatio > 0.3f) {
+                votes.add(SceneCandidate("indoor-living", score * 0.5f, "color"))
+            }
         }
 
         // 暖色调 35%-55%（不含55%）→ 美食（修复：与上方区间互斥，避免重叠）
@@ -550,6 +567,10 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             val score = 0.50f + cp.warmthRatio * 0.2f
             votes.add(SceneCandidate("food-restaurant", score, "color"))
             votes.add(SceneCandidate("food-dessert", score * 0.9f, "color"))
+            // 优化：暖色+低暗部 → 室内咖啡馆
+            if (cp.darkPixelRatio < 0.3f) {
+                votes.add(SceneCandidate("urban-cafe", score * 0.6f, "color"))
+            }
         }
 
         // 暗部占比 > 70% → 夜景
@@ -559,8 +580,19 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             votes.add(SceneCandidate("night-neon", score * 0.85f, "color"))
         }
 
-        // 肤色检测 → 人像
-        if (cp.skinToneRatio > 0.05f) {
+        // 优化：暗部占比 50%-70% → 可能是夜景/室内弱光
+        if (cp.darkPixelRatio > 0.50f && cp.darkPixelRatio <= 0.70f) {
+            val score = 0.45f + cp.darkPixelRatio * 0.15f
+            if (cp.warmthRatio > 0.3f) {
+                votes.add(SceneCandidate("night-candle", score, "color"))
+                votes.add(SceneCandidate("urban-cafe", score * 0.7f, "color"))
+            } else {
+                votes.add(SceneCandidate("night-city", score * 0.7f, "color"))
+            }
+        }
+
+        // 肤色检测 → 人像（优化：降低阈值 0.05→0.03，覆盖更多远景人像）
+        if (cp.skinToneRatio > 0.03f) {
             val score = 0.65f + cp.skinToneRatio * 0.3f
             votes.add(SceneCandidate("portrait-standard", score.coerceAtMost(0.95f), "color"))
             votes.add(SceneCandidate("portrait-backlit", score * 0.8f, "color"))
@@ -571,11 +603,18 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             votes.add(SceneCandidate("portrait-backlit", 0.55f + cp.highlightRatio * 0.2f, "color"))
         }
 
+        // 优化：低饱和冷色调 → 室内/文档场景
+        if (cp.warmthRatio < 0.15f && cp.darkPixelRatio < 0.3f && cp.skinToneRatio < 0.03f) {
+            votes.add(SceneCandidate("still-document", 0.45f, "color"))
+            votes.add(SceneCandidate("indoor-living", 0.40f, "color"))
+        }
+
         return votes
     }
 
     /**
      * 亮度→场景投票
+     * 优化：增加更多亮度区间的场景判断
      */
     private fun voteByBrightness(level: BrightnessLevel, cp: ColorProfile): List<SceneCandidate> {
         val votes = mutableListOf<SceneCandidate>()
@@ -585,6 +624,11 @@ class HeuristicSceneAnalyzer(private val context: Context) {
                 votes.add(SceneCandidate("night-city", 0.75f, "brightness"))
                 votes.add(SceneCandidate("night-starry", 0.70f, "brightness"))
                 votes.add(SceneCandidate("night-neon", 0.65f, "brightness"))
+                // 优化：极暗+暖色 → 烛光/室内弱光
+                if (cp.warmthRatio > 0.3f) {
+                    votes.add(SceneCandidate("night-candle", 0.70f, "brightness"))
+                    votes.add(SceneCandidate("indoor-living", 0.55f, "brightness"))
+                }
             }
             BrightnessLevel.DARK -> {
                 votes.add(SceneCandidate("night-candle", 0.60f, "brightness"))
@@ -592,9 +636,19 @@ class HeuristicSceneAnalyzer(private val context: Context) {
                 if (cp.warmthRatio > 0.4f) {
                     votes.add(SceneCandidate("night-candle", 0.70f, "brightness"))
                 }
+                // 优化：暗光+非暖色 → 可能是室内
+                if (cp.warmthRatio <= 0.4f) {
+                    votes.add(SceneCandidate("indoor-living", 0.50f, "brightness"))
+                }
             }
             BrightnessLevel.NORMAL -> {
-                // 正常亮度，不添加特定投票
+                // 优化：正常亮度增加场景判断
+                if (cp.greenDominance > 1.1f) {
+                    votes.add(SceneCandidate("landscape-standard", 0.45f, "brightness"))
+                }
+                if (cp.skinToneRatio > 0.03f) {
+                    votes.add(SceneCandidate("portrait-standard", 0.50f, "brightness"))
+                }
             }
             BrightnessLevel.BRIGHT -> {
                 if (cp.warmthRatio > 0.5f) {
@@ -603,12 +657,21 @@ class HeuristicSceneAnalyzer(private val context: Context) {
                 if (cp.blueDominance > 1.2f) {
                     votes.add(SceneCandidate("landscape-sky", 0.60f, "brightness"))
                 }
+                // 优化：明亮+低饱和 → 可能是建筑/街拍
+                if (cp.warmthRatio < 0.25f && cp.skinToneRatio < 0.03f) {
+                    votes.add(SceneCandidate("architecture-exterior", 0.45f, "brightness"))
+                    votes.add(SceneCandidate("urban-street", 0.40f, "brightness"))
+                }
             }
             BrightnessLevel.VERY_BRIGHT -> {
                 votes.add(SceneCandidate("landscape-beach", 0.65f, "brightness"))
                 votes.add(SceneCandidate("landscape-snow", 0.60f, "brightness"))
                 if (cp.warmthRatio > 0.6f) {
                     votes.add(SceneCandidate("landscape-sunset", 0.75f, "brightness"))
+                }
+                // 优化：极亮+低暖色 → 可能是雪景
+                if (cp.warmthRatio < 0.3f) {
+                    votes.add(SceneCandidate("landscape-snow", 0.70f, "brightness"))
                 }
             }
         }

@@ -117,18 +117,23 @@ object ColorOS16Palette {
 /**
  * 液态玻璃效果配置
  * 定义液态玻璃的模糊半径、透明度等参数
+ * 优化：增强玻璃质感，提升视觉效果
  */
 object LiquidGlassConfig {
-    /** 模糊半径 (dp) */
-    const val BlurRadius = 20f
-    /** 背景透明度 */
-    const val BackgroundAlpha = 0.7f
-    /** 边框透明度 */
-    const val BorderAlpha = 0.2f
-    /** 高光透明度 */
-    const val HighlightAlpha = 0.1f
+    /** 模糊半径 (dp) - 增大模糊半径提升玻璃质感 */
+    const val BlurRadius = 25f
+    /** 背景透明度 - 微调提升通透感 */
+    const val BackgroundAlpha = 0.65f
+    /** 边框透明度 - 增强边缘高光 */
+    const val BorderAlpha = 0.25f
+    /** 高光透明度 - 增强顶部高光效果 */
+    const val HighlightAlpha = 0.15f
     /** 边框宽度 (dp) */
     const val BorderWidth = 0.5f
-    /** 圆角半径 (dp) */
-    const val CornerRadius = 24f
+    /** 圆角半径 (dp) - 统一为 20dp，符合 ColorOS 16 规范 */
+    const val CornerRadius = 20f
+    /** 卡片圆角 (dp) - 统一为 16dp */
+    const val CardCornerRadius = 16f
+    /** 小圆角 (dp) - 标签、按钮等 */
+    const val SmallCornerRadius = 12f
 }

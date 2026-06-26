@@ -154,6 +154,9 @@ fun CameraXViewfinderScreen(
     val maxZoomRatio = remember(isCameraReady) { cameraManager.getMaxZoomRatio() }
     val exposureRange = remember(isCameraReady) { cameraManager.getExposureCompensationRange() }
 
+    // 保存 PreviewView 引用，用于切换前后摄像头
+    var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
+
     // 实时帧回调（覆盖在 PreviewView 上）
     var processedFrame by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -314,6 +317,7 @@ fun CameraXViewfinderScreen(
                 factory = { ctx ->
                     PreviewView(ctx).also { previewView ->
                         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        previewViewRef = previewView
                         cameraManager.startCamera(previewView)
                     }
                 },
@@ -496,7 +500,7 @@ fun CameraXViewfinderScreen(
                         )
                     },
                     onSwitchCamera = {
-                        cameraManager.switchCamera( /* 需要 PreviewView */ )
+                        cameraManager.switchCamera(previewViewRef)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

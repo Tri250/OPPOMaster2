@@ -78,6 +78,8 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.ui.theme.LiquidGlassConfig
+import androidx.compose.ui.unit.Dp
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.perform
@@ -486,7 +488,7 @@ private fun SettingsSectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),

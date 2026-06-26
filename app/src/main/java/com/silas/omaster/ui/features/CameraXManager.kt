@@ -1102,6 +1102,7 @@ class CameraXManager(
 
     /**
      * 将 Bitmap 保存为 JPEG 并回调 URI。
+     * 修复：使用 FileProvider 生成 content:// URI，避免 Android 7+ FileUriExposedException
      */
     private suspend fun saveBitmapAndNotify(
         bitmap: Bitmap,
@@ -1117,7 +1118,19 @@ class CameraXManager(
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
             }
             bitmap.recycle()
-            val savedUri = Uri.fromFile(photoFile)
+
+            // 修复：使用 FileProvider 生成 content:// URI，避免 FileUriExposedException
+            val savedUri = try {
+                androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    photoFile
+                )
+            } catch (e: Exception) {
+                // FileProvider 配置异常时回退到 file:// URI（仅用于内部回调）
+                Log.w(TAG, "FileProvider 不可用，回退 file:// URI: ${e.message}")
+                Uri.fromFile(photoFile)
+            }
             Log.d(TAG, "照片已保存: $savedUri")
 
             // OPPO 设备参数同步：拍照完成后尝试将哈苏参数同步到 OPPO 相机大师模式

@@ -79,6 +79,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -94,6 +95,7 @@ import com.silas.omaster.ui.components.PresetCard
 import com.silas.omaster.ui.components.ShimmerPresetGrid
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -263,7 +265,7 @@ fun HomeScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onBackground,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius)),
                 elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(
                     defaultElevation = 8.dp,
                     pressedElevation = 12.dp
@@ -412,7 +414,7 @@ private fun SearchBar(
                 .fillMaxWidth()
                 .background(
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius))
                 )
                 .border(
                     width = 1.dp,
@@ -420,7 +422,7 @@ private fun SearchBar(
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     else
                         MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(Dp(LiquidGlassConfig.CornerRadius))
                 )
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
@@ -1096,7 +1098,7 @@ private fun LoadingMoreTip() {
 
 /**
  * 快捷功能入口区域（横向滚动卡片）
- * 将首页未使用的导航回调接入实际入口
+ * 仅保留哈苏之眼入口，AI微调/智能优化/水印编辑/参数调节已移至核心功能页
  */
 @Composable
 private fun QuickFeaturesSection(
@@ -1113,46 +1115,6 @@ private fun QuickFeaturesSection(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            QuickFeatureCard(
-                name = "AI微调",
-                icon = Icons.Default.AutoAwesome,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToAIFineTune()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "智能优化",
-                icon = Icons.Default.Tune,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToSmartOptimize()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "水印编辑",
-                icon = Icons.Default.Edit,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToWatermarkEditor()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "参数调节",
-                icon = Icons.Default.Adjust,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToParamAdjustment()
-                }
-            )
-        }
         item {
             QuickFeatureCard(
                 name = "哈苏之眼",

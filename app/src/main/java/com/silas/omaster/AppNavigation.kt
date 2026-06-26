@@ -175,8 +175,12 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.Home> {
                 HomeScreen(
                     onNavigateToDetail = { preset: MasterPreset ->
-                        preset.id?.let { id ->
+                        val id = preset.id
+                        if (id != null && id.isNotEmpty()) {
                             navController.navigate(Screen.Detail(id))
+                        } else {
+                            // 修复闪退：预设 ID 为空时提示用户而非崩溃
+                            Toast.makeText(context, "预设数据异常，请稍后重试", Toast.LENGTH_SHORT).show()
                         }
                     },
                     onNavigateToCreate = {

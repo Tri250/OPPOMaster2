@@ -60,7 +60,14 @@ class DetailViewModel(
         loadJob = viewModelScope.launch {
             _isLoading.value = true
             try {
-                val presetData = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
+                // 优先从内存缓存查找，找不到时强制重新加载
+                var presetData = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
+                if (presetData == null) {
+                    // 修复闪退：内存缓存未命中时，从文件重新加载
+                    android.util.Log.d("DetailViewModel", "Preset not in cache, forcing reload: $presetId")
+                    repository.forceReloadFromFiles()
+                    presetData = repository.presets.value.find { it.id == presetId }?.toMasterPreset()
+                }
                 // 检查是否仍然是当前要加载的预设（可能被取消了）
                 if (presetId == currentPresetId) {
                     android.util.Log.d("DetailViewModel", "Loaded preset: ${presetData?.name}, id: ${presetData?.id}")

@@ -58,6 +58,7 @@ import coil.request.CachePolicy
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.ui.theme.LiquidGlassConfig
 import com.silas.omaster.util.DownloadResult
 import com.silas.omaster.util.ImageCacheManager
 import com.silas.omaster.util.ImageDownloadCallback
@@ -201,7 +202,7 @@ fun OMasterCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -416,7 +417,7 @@ fun ParameterCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -473,7 +474,7 @@ fun DescriptionCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
         )

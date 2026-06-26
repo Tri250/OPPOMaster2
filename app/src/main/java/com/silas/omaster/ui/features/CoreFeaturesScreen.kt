@@ -70,6 +70,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.LiquidGlassConfig
+import androidx.compose.ui.unit.Dp
 import com.silas.omaster.util.perform
 
 /**
@@ -415,7 +417,7 @@ private fun SectionHeader(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(Dp(LiquidGlassConfig.SmallCornerRadius)))
                 .background(HasselbladOrange.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
@@ -447,7 +449,7 @@ private fun SectionHeader(
         // 数量标签
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(50))
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
@@ -492,7 +494,7 @@ private fun FeatureCard(
                 indication = null,
                 onClick = onClick
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         ),
@@ -522,7 +524,7 @@ private fun FeatureCard(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(Dp(LiquidGlassConfig.CardCornerRadius)))
                             .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -613,7 +615,7 @@ private fun FeatureCard(
                             feature.description.tips.take(4).forEach { tip ->
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(50))
+                                        .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {

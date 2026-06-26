@@ -194,6 +194,8 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 将模型输出标签映射到项目内的 SceneProfile。
+     * 优化：降低模型置信度门槛（0.75→0.55），使模型在更多场景下发挥作用；
+     * 同时当模型与启发式结果一致时，即使置信度低于门槛也给予加分
      */
     private fun fusePredictions(heuristicProfile: SceneProfile, modelPrediction: ModelPrediction?): SceneProfile {
         if (modelPrediction == null) return heuristicProfile
@@ -203,7 +205,14 @@ class SceneRecognitionManager private constructor(context: Context) {
         val modelSceneId = mapModelLabelToSceneId(modelPrediction.label)
         val modelCategory = mapModelLabelToCategory(modelPrediction.label)
 
-        return if (modelConfidence > 0.75f && modelSceneId != null) {
+        // 优化：模型与启发式一致时降低门槛
+        val isConsistent = modelSceneId != null && (
+            heuristicProfile.id.startsWith(modelSceneId.substringBefore("-")) ||
+            heuristicProfile.category == modelCategory
+        )
+        val confidenceThreshold = if (isConsistent) 0.45f else 0.55f
+
+        return if (modelConfidence > confidenceThreshold && modelSceneId != null) {
             // 高置信模型结果：复用启发式画像但覆盖关键字段
             heuristicProfile.copy(
                 id = modelSceneId,
@@ -219,10 +228,14 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 融合置信度：模型存在时加权平均，否则完全信任启发式。
+     * 优化：降低模型置信度门槛，增加启发式权重，提高低置信度场景的识别率
      */
     private fun fuseConfidence(heuristic: Float, model: Float): Float {
         return if (model > 0.01f) {
-            (heuristic * 0.4f + model * 0.6f).coerceIn(0f, 1f)
+            // 优化：模型低置信度时增加启发式权重，避免模型误判覆盖正确启发式结果
+            val modelWeight = if (model > 0.5f) 0.6f else 0.35f
+            val heuristicWeight = 1f - modelWeight
+            (heuristic * heuristicWeight + model * modelWeight).coerceIn(0f, 1f)
         } else {
             heuristic.coerceIn(0f, 1f)
         }

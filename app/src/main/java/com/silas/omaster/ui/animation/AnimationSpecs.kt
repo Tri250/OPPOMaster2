@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -308,11 +309,13 @@ fun adaptiveSpringSpec(
 
 /**
  * ColorOS 16 液态玻璃效果 Modifier
- * 为 Composable 添加液态玻璃视觉效果（模糊 + 半透明 + 边框 + 高光）
+ * 为 Composable 添加液态玻璃视觉效果（模糊 + 半透明 + 边框 + 顶部高光渐变）
+ *
+ * 优化：增加顶部高光渐变效果，增强玻璃质感
  *
  * 注意：模糊效果需要 API 31+ (Android 12+)，低版本设备自动降级为半透明效果
  *
- * @param cornerRadius 圆角半径，默认 24.dp
+ * @param cornerRadius 圆角半径，默认使用 LiquidGlassConfig
  * @param backgroundColor 背景色，默认使用深色玻璃色
  * @param borderColor 边框色，默认使用玻璃边框色
  */
@@ -327,5 +330,17 @@ fun Modifier.liquidGlassEffect(
     .border(
         width = Dp(LiquidGlassConfig.BorderWidth),
         color = borderColor,
+        shape = RoundedCornerShape(cornerRadius)
+    )
+    // 优化：顶部高光渐变效果
+    .background(
+        brush = Brush.verticalGradient(
+            colors = listOf(
+                Color.White.copy(alpha = LiquidGlassConfig.HighlightAlpha),
+                Color.Transparent
+            ),
+            startY = 0f,
+            endY = 80f
+        ),
         shape = RoundedCornerShape(cornerRadius)
     )

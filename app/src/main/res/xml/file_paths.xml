@@ -10,6 +10,11 @@
         name="camera_cache"
         path="camera/" />
 
+    <!-- 缓存根目录 - 用于 CameraX 拍照临时文件（camerax_*.jpg） -->
+    <cache-path
+        name="cache_root"
+        path="." />
+
     <!-- 哈苏之眼拍照临时文件目录 - 修复 V1.9.3 无法创建相机临时文件问题 -->
     <external-files-path
         name="hasselblad_images"
