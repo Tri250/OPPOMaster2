@@ -190,9 +190,8 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToHasselbladEye = { navController.navigate(Screen.HasselbladColor) },
-                    onScrollStateChanged = { isScrollingUp ->
-                        isHomeScrollingUp = isScrollingUp
-                    },
+                    onNavigateToXingYingJi = { navController.navigate(Screen.XingYingJiHome) },
+                    onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp },
                     refreshTrigger = refreshTrigger
                 )
             }

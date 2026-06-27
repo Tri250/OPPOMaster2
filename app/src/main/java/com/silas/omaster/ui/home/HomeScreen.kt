@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
@@ -114,6 +115,7 @@ fun HomeScreen(
     onNavigateToPresetManager: () -> Unit = {},
     onNavigateToParamAdjustment: () -> Unit = {},
     onNavigateToHasselbladEye: () -> Unit = {},
+    onNavigateToXingYingJi: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0
@@ -196,6 +198,7 @@ fun HomeScreen(
                 onNavigateToSmartOptimize = onNavigateToSmartOptimize,
                 onNavigateToParamAdjustment = onNavigateToParamAdjustment,
                 onNavigateToHasselbladEye = onNavigateToHasselbladEye,
+                onNavigateToXingYingJi = onNavigateToXingYingJi,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
@@ -1102,6 +1105,7 @@ private fun QuickFeaturesSection(
     onNavigateToSmartOptimize: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToHasselbladEye: () -> Unit,
+    onNavigateToXingYingJi: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -1147,6 +1151,16 @@ private fun QuickFeaturesSection(
                 onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     onNavigateToHasselbladEye()
+                }
+            )
+        }
+        item {
+            QuickFeatureCard(
+                name = "行影集",
+                icon = Icons.Default.Collections,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToXingYingJi()
                 }
             )
         }
