@@ -228,17 +228,6 @@ class SettingsManager private constructor(private val context: Context) {
             _darkModeFlow.value = value
         }
 
-    // 上次使用的水印模板
-    var lastWatermarkTemplate: String?
-        get() = getDataSyncOrNull(KEY_LAST_WATERMARK_TEMPLATE)
-        set(value) {
-            if (value != null) {
-                setDataSync(KEY_LAST_WATERMARK_TEMPLATE, value)
-            } else {
-                removeDataSync(KEY_LAST_WATERMARK_TEMPLATE)
-            }
-        }
-
     // 用户ID（用于统计与分析上报）
     var userId: String?
         get() = getDataSyncOrNull(KEY_USER_ID)
@@ -307,13 +296,6 @@ class SettingsManager private constructor(private val context: Context) {
         get() = getDataSync(KEY_SMART_OPTIMIZE_ENABLED, true)
         set(value) {
             setDataSync(KEY_SMART_OPTIMIZE_ENABLED, value)
-        }
-
-    // 水印编辑器开关
-    var isWatermarkEditorEnabled: Boolean
-        get() = getDataSync(KEY_WATERMARK_EDITOR_ENABLED, true)
-        set(value) {
-            setDataSync(KEY_WATERMARK_EDITOR_ENABLED, value)
         }
 
     // 哈苏色彩科学开关
@@ -899,8 +881,8 @@ class SettingsManager private constructor(private val context: Context) {
                 KEY_VIBRATION_ENABLED, KEY_THEME_ID, KEY_FLOATING_WINDOW_OPACITY,
                 KEY_DEFAULT_START_TAB, KEY_UPDATE_CHANNEL, KEY_ANALYTICS_ENABLED,
                 KEY_DARK_MODE, KEY_USER_ID, KEY_CLOUD_API_KEY, KEY_AI_SCENE_ENABLED,
-                KEY_LAST_WATERMARK_TEMPLATE, KEY_AI_FINE_TUNE_ENABLED, KEY_SMART_OPTIMIZE_ENABLED,
-                KEY_WATERMARK_EDITOR_ENABLED, KEY_HASSELBLAD_COLOR_ENABLED, KEY_CUSTOM_DEVICE_MODEL,
+                KEY_AI_FINE_TUNE_ENABLED, KEY_SMART_OPTIMIZE_ENABLED,
+                KEY_HASSELBLAD_COLOR_ENABLED, KEY_CUSTOM_DEVICE_MODEL,
                 KEY_PRESET_VERSION_MAP, KEY_FAVORITE_PRESET_IDS, KEY_PINNED_PRESET_IDS,
                 KEY_MANUALLY_MODIFIED_PARAMS, KEY_CUSTOM_QUICK_PRESETS, KEY_API_CONFIG_LOADED,
                 KEY_AI_API_ENDPOINT, KEY_PRESET_API_ENDPOINT, KEY_AUTH_API_ENDPOINT, KEY_API_VERSION,
@@ -963,10 +945,8 @@ class SettingsManager private constructor(private val context: Context) {
         private val KEY_USER_ID = stringPreferencesKey("user_id")
         private val KEY_CLOUD_API_KEY = stringPreferencesKey("cloud_api_key")
         private val KEY_AI_SCENE_ENABLED = booleanPreferencesKey("ai_scene_enabled")
-        private val KEY_LAST_WATERMARK_TEMPLATE = stringPreferencesKey("last_watermark_template")
         private val KEY_AI_FINE_TUNE_ENABLED = booleanPreferencesKey("ai_fine_tune_enabled")
         private val KEY_SMART_OPTIMIZE_ENABLED = booleanPreferencesKey("smart_optimize_enabled")
-        private val KEY_WATERMARK_EDITOR_ENABLED = booleanPreferencesKey("watermark_editor_enabled")
         private val KEY_HASSELBLAD_COLOR_ENABLED = booleanPreferencesKey("hasselblad_color_enabled")
         private val KEY_CUSTOM_DEVICE_MODEL = stringPreferencesKey("custom_device_model")
         private val KEY_PRESET_VERSION_MAP = stringPreferencesKey("preset_version_map")

@@ -40,7 +40,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhotoFilter
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -100,13 +100,13 @@ data class FeatureData(
 @Composable
 fun CoreFeaturesScreen(
     onNavigateToAIFineTune: () -> Unit,
-    onNavigateToWatermarkEditor: () -> Unit,
     onNavigateToSmartOptimize: () -> Unit,
     onNavigateToPresetManager: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToLUTShare: () -> Unit,
     onNavigateToHasselbladColor: () -> Unit,
     onNavigateToSceneAnalysisReport: () -> Unit = {},
+    onNavigateToXingYingJi: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -116,13 +116,12 @@ fun CoreFeaturesScreen(
     // 功能开关状态
     var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
-    var watermarkEnabled by remember { mutableStateOf(settingsManager.isWatermarkEditorEnabled) }
     var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
 
     // 定义所有功能数据 - 同步Web端features数组
     val allFeatures = remember {
         listOf(
-            // AI智能功能 (3个：去掉原哈苏之眼)
+            // AI智能功能 (2个：去掉原哈苏之眼与水印编辑器)
             FeatureData(
                 id = "ai-fine-tune",
                 title = "AI 微调",
@@ -143,17 +142,6 @@ fun CoreFeaturesScreen(
                 description = FeatureDescription(
                     desc = "HDR增强、智能降噪、锐化增强",
                     tips = listOf("HDR增强", "智能降噪", "锐化")
-                )
-            ),
-            FeatureData(
-                id = "watermark",
-                title = "水印编辑器",
-                subtitle = "14+专业水印模板，品牌认证水印",
-                icon = Icons.Default.WaterDrop,
-                gradientColors = listOf(Color(0xFF006064), Color(0xFF00838F)),
-                description = FeatureDescription(
-                    desc = "14+专业水印模板，品牌认证水印",
-                    tips = listOf("标准", "极简", "详细", "品牌")
                 )
             ),
             // 专业工具 (2个)
@@ -216,14 +204,28 @@ fun CoreFeaturesScreen(
                     tips = listOf("场景分布", "胶片排行", "连续拍摄", "大师建议")
                 ),
                 showToggle = false
+            ),
+            // 记忆库（TrailSnap Android 原生版）
+            FeatureData(
+                id = "xingyingji",
+                title = "行影集",
+                subtitle = "TrailSnap · 照片回忆 · 票据 · 足迹",
+                icon = Icons.Default.Collections,
+                gradientColors = listOf(Color(0xFFFF6B35), Color(0xFFFFA726)),
+                description = FeatureDescription(
+                    desc = "把旅行从“拍过”变成“可回味、可分享、可沉淀”",
+                    tips = listOf("时间轴", "足迹地图", "行程票据", "年度报告")
+                ),
+                showToggle = false
             )
         )
     }
 
     // 功能分类 - 同步Web端
-    val aiFeatures = allFeatures.slice(0..2)
-    val toolFeatures = allFeatures.slice(3..4)
-    val brandFeatures = allFeatures.slice(5..7)
+    val aiFeatures = allFeatures.slice(0..1)
+    val toolFeatures = allFeatures.slice(2..3)
+    val brandFeatures = allFeatures.slice(4..6)
+    val memoryFeatures = allFeatures.slice(7..7)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -282,7 +284,6 @@ fun CoreFeaturesScreen(
                 val isEnabled = when (feature.id) {
                     "ai-fine-tune" -> aiFineTuneEnabled
                     "smart-optimize" -> smartOptimizeEnabled
-                    "watermark" -> watermarkEnabled
                     else -> true
                 }
 
@@ -300,17 +301,12 @@ fun CoreFeaturesScreen(
                                 smartOptimizeEnabled = enabled
                                 settingsManager.isSmartOptimizeEnabled = enabled
                             }
-                            "watermark" -> {
-                                watermarkEnabled = enabled
-                                settingsManager.isWatermarkEditorEnabled = enabled
-                            }
                         }
                     },
                     onClick = {
                         when (feature.id) {
                             "ai-fine-tune" -> onNavigateToAIFineTune()
                             "smart-optimize" -> onNavigateToSmartOptimize()
-                            "watermark" -> onNavigateToWatermarkEditor()
                         }
                     }
                 )
@@ -381,6 +377,33 @@ fun CoreFeaturesScreen(
                             "lut-share" -> onNavigateToLUTShare()
                             "hasselblad" -> onNavigateToHasselbladColor()
                             "scene-report" -> onNavigateToSceneAnalysisReport()
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+
+        // 记忆库区域（行影集）
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            SectionHeader(
+                title = "记忆库",
+                description = "照片回忆与旅行沉淀",
+                icon = Icons.Default.Collections,
+                count = memoryFeatures.size
+            )
+        }
+
+        memoryFeatures.forEach { feature ->
+            item {
+                FeatureCard(
+                    feature = feature,
+                    isEnabled = true,
+                    onToggle = {},
+                    onClick = {
+                        if (feature.id == "xingyingji") {
+                            onNavigateToXingYingJi()
                         }
                     }
                 )

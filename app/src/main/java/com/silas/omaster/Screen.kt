@@ -38,9 +38,6 @@ sealed class Screen {
     data object AIFineTune : Screen()
 
     @Serializable
-    data class WatermarkEditor(val imagePath: String? = null) : Screen()
-
-    @Serializable
     data object SmartOptimize : Screen()
 
     @Serializable
@@ -84,4 +81,29 @@ sealed class Screen {
 
     @Serializable
     data object ImportExport : Screen()
+
+    // 行影集（TrailSnap Android 原生版）
+    @Serializable
+    data object XingYingJiHome : Screen()
+
+    @Serializable
+    data object XingYingJiTimeline : Screen()
+
+    @Serializable
+    data object XingYingJiAlbums : Screen()
+
+    @Serializable
+    data object XingYingJiLocations : Screen()
+
+    @Serializable
+    data object XingYingJiPeople : Screen()
+
+    @Serializable
+    data object XingYingJiTickets : Screen()
+
+    @Serializable
+    data object XingYingJiToolbox : Screen()
+
+    @Serializable
+    data object XingYingJiAnnualReport : Screen()
 }

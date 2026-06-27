@@ -6,10 +6,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import android.content.ContentValues
-import android.graphics.Bitmap
-import android.os.Build
-import android.provider.MediaStore
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,7 +59,6 @@ import com.silas.omaster.ui.features.LUTShareScreen
 import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.StyleLUTGeneratorScreen
-import com.silas.omaster.ui.features.WatermarkEditorScreen
 import com.silas.omaster.ui.home.HomeScreen
 import com.silas.omaster.ui.onboarding.OnboardingScreen
 import com.silas.omaster.ui.subscription.SubscriptionScreen
@@ -75,6 +70,14 @@ import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.ThemeSettingsScreen
 import com.silas.omaster.ui.settings.UpdateChannelScreen
+import com.silas.omaster.trailsnap.ui.AlbumsScreen
+import com.silas.omaster.trailsnap.ui.AnnualReportScreen
+import com.silas.omaster.trailsnap.ui.LocationsScreen
+import com.silas.omaster.trailsnap.ui.PeopleScreen
+import com.silas.omaster.trailsnap.ui.TicketsScreen
+import com.silas.omaster.trailsnap.ui.TimelineScreen
+import com.silas.omaster.trailsnap.ui.ToolboxScreen
+import com.silas.omaster.trailsnap.ui.XingYingJiHomeScreen
 import com.silas.omaster.util.JsonUtil
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.CoroutineScope
@@ -183,7 +186,6 @@ fun MainApp(navController: NavHostController) {
                         navController.navigate(Screen.PresetSelection)
                     },
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
-                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
@@ -299,13 +301,13 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.CoreFeatures> {
                 CoreFeaturesScreen(
                     onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
-                    onNavigateToWatermarkEditor = { navController.navigate(Screen.WatermarkEditor()) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToLUTShare = { navController.navigate(Screen.LUTShare) },
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
                     onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
+                    onNavigateToXingYingJi = { navController.navigate(Screen.XingYingJiHome) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
             }
@@ -319,44 +321,6 @@ fun MainApp(navController: NavHostController) {
                                 message = "已应用 ${params.nonZeroCount()} 项调整",
                                 duration = SnackbarDuration.Short
                             )
-                        }
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable<Screen.WatermarkEditor> { backStackEntry ->
-                val route = backStackEntry.toRoute<Screen.WatermarkEditor>()
-                WatermarkEditorScreen(
-                    imagePath = route.imagePath,
-                    onBack = { navController.popBackStack() },
-                    onSave = { config ->
-                        // 保存水印配置到本地，供批量应用使用
-                        try {
-                            val prefs = context.getSharedPreferences("watermark_config", 0)
-                            prefs.edit().apply {
-                                putString("last_config", config.toString())
-                                putLong("last_save_time", System.currentTimeMillis())
-                                apply()
-                            }
-                            Toast.makeText(context, "水印配置已保存，可批量应用", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = "水印配置保存失败：${e.message}",
-                                    duration = SnackbarDuration.Long
-                                )
-                            }
-                        }
-                        navController.popBackStack()
-                    },
-                    onExport = { bitmap, _ ->
-                        // 保存水印图片到相册
-                        val saved = saveWatermarkToGallery(context, bitmap)
-                        if (saved) {
-                            Toast.makeText(context, "水印图片已保存到相册（PNG无损）", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "保存失败，请检查权限", Toast.LENGTH_SHORT).show()
                         }
                         navController.popBackStack()
                     }
@@ -565,6 +529,47 @@ fun MainApp(navController: NavHostController) {
                     onBack = { navController.popBackStack() }
                 )
             }
+
+            composable<Screen.XingYingJiHome> {
+                XingYingJiHomeScreen(
+                    onNavigateToTimeline = { navController.navigate(Screen.XingYingJiTimeline) },
+                    onNavigateToAlbums = { navController.navigate(Screen.XingYingJiAlbums) },
+                    onNavigateToLocations = { navController.navigate(Screen.XingYingJiLocations) },
+                    onNavigateToPeople = { navController.navigate(Screen.XingYingJiPeople) },
+                    onNavigateToTickets = { navController.navigate(Screen.XingYingJiTickets) },
+                    onNavigateToToolbox = { navController.navigate(Screen.XingYingJiToolbox) },
+                    onNavigateToAnnualReport = { navController.navigate(Screen.XingYingJiAnnualReport) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<Screen.XingYingJiTimeline> {
+                TimelineScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.XingYingJiAlbums> {
+                AlbumsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.XingYingJiLocations> {
+                LocationsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.XingYingJiPeople> {
+                PeopleScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.XingYingJiTickets> {
+                TicketsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.XingYingJiToolbox> {
+                ToolboxScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.XingYingJiAnnualReport> {
+                AnnualReportScreen(onBack = { navController.popBackStack() })
+            }
         }
 
         if (showBottomNav) {
@@ -716,30 +721,4 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.computeSlideDirect
     }
 }
 
-private fun saveWatermarkToGallery(context: android.content.Context, bitmap: Bitmap): Boolean {
-    return try {
-        val filename = "OMaster_Watermark_${System.currentTimeMillis()}.png"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/OMaster")
-                put(MediaStore.Images.Media.IS_PENDING, 1)
-            }
-        }
-        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        if (uri != null) {
-            context.contentResolver.openOutputStream(uri)?.use { stream ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                contentValues.clear()
-                contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-                context.contentResolver.update(uri, contentValues, null, null)
-            }
-            true
-        } else false
-    } catch (e: Exception) {
-        false
-    }
-}
+

@@ -110,7 +110,6 @@ fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit,
     onNavigateToAIFineTune: () -> Unit = {},
-    onNavigateToWatermarkEditor: () -> Unit = {},
     onNavigateToSmartOptimize: () -> Unit = {},
     onNavigateToPresetManager: () -> Unit = {},
     onNavigateToParamAdjustment: () -> Unit = {},
@@ -195,7 +194,6 @@ fun HomeScreen(
             QuickFeaturesSection(
                 onNavigateToAIFineTune = onNavigateToAIFineTune,
                 onNavigateToSmartOptimize = onNavigateToSmartOptimize,
-                onNavigateToWatermarkEditor = onNavigateToWatermarkEditor,
                 onNavigateToParamAdjustment = onNavigateToParamAdjustment,
                 onNavigateToHasselbladEye = onNavigateToHasselbladEye,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -1102,7 +1100,6 @@ private fun LoadingMoreTip() {
 private fun QuickFeaturesSection(
     onNavigateToAIFineTune: () -> Unit,
     onNavigateToSmartOptimize: () -> Unit,
-    onNavigateToWatermarkEditor: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToHasselbladEye: () -> Unit,
     modifier: Modifier = Modifier
@@ -1130,16 +1127,6 @@ private fun QuickFeaturesSection(
                 onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     onNavigateToSmartOptimize()
-                }
-            )
-        }
-        item {
-            QuickFeatureCard(
-                name = "水印编辑",
-                icon = Icons.Default.Edit,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToWatermarkEditor()
                 }
             )
         }
