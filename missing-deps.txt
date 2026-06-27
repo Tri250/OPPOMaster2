@@ -1,0 +1,10 @@
+com.sun.activation:all:1.2.1
+com.sun.istack:istack-commons-runtime:3.0.8
+com.sun.istack:istack-commons:3.0.8
+com.sun.xml.bind.mvn:jaxb-txw-parent:2.3.2
+com.sun.xml.fastinfoset:FastInfoset:1.2.16
+com.sun.xml.fastinfoset:fastinfoset-project:1.2.16
+jakarta.activation:jakarta.activation-api:1.2.1
+jakarta.xml.bind:jakarta.xml.bind-api-parent:2.3.2
+jakarta.xml.bind:jakarta.xml.bind-api:2.3.2
+org.glassfish.jaxb:txw2:2.3.2
