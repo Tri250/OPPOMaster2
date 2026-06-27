@@ -1,10 +1,18 @@
 package com.silas.omaster.ui.features
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Rect
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetector
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -23,8 +31,28 @@ import kotlin.math.pow
  *
  * 所有算法在 Dispatchers.Default 后台线程执行，
  * 支持协程取消和进度回调。
+ *
+ * @param context 用于初始化 ML Kit 人脸检测器；传 null 时面部美白退化为肤色检测
  */
-class PixelFruitEngine {
+class PixelFruitEngine(context: Context? = null) {
+
+    companion object {
+        // 人脸检测最大边长，控制 ML Kit 推理耗时
+        private const val FACE_DETECT_MAX_DIMENSION = 640
+    }
+
+    // 生产级 ML Kit 人脸检测器（高精度轮廓模式，用于生成面部美白蒙版）
+    private val faceDetector: FaceDetector? by lazy {
+        context?.let {
+            val options = FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+                .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+                .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
+                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
+                .build()
+            FaceDetection.getClient(options)
+        }
+    }
 
     /**
      * 主处理入口
@@ -64,10 +92,11 @@ class PixelFruitEngine {
             applyUnsharpMask(pixels, width, height, params.sharpness)
         }
 
-        // Step 4: 面部美白（对齐 Details.js，四重肤色检测）
+        // Step 4: 面部美白（优先使用 ML Kit Face Mesh 蒙版，无脸时回退到肤色检测）
         if (params.faceBrightening > 0) {
             checkActive { onProgress("面部美白", 0.7f) }
-            applyFaceBrightening(pixels, width, height, params.faceBrightening, params.faceSmoothness)
+            val faceMask = detectFaceMask(bitmap)
+            applyFaceBrightening(pixels, width, height, params.faceBrightening, params.faceSmoothness, faceMask)
         }
 
         // Step 5: LUT 应用（对齐 LutProcessor.js，三线性插值）
@@ -260,56 +289,160 @@ class PixelFruitEngine {
     // ==================== Details.js: applyNoiseReduction ====================
 
     /**
-     * 降噪：均值滤波 + 边缘感知细节保留
+     * 降噪：双边滤波（Bilateral Filter）
      *
-     * edgeFactor = |当前 - 均值| / 255
-     * detailFactor = min(1, edgeFactor × (detailPreservation / 50))
-     * effectiveStrength = (strength/100) × (1 - detailFactor)
+     * 在平滑噪声的同时保留边缘，效果优于 3×3 边缘感知均值滤波。
+     * 权重 = 空间高斯 × 颜色差异高斯；为控制耗时使用固定 5×5 窗口。
+     *
+     * @param spatialSigma 空间距离标准差（像素），越大越平滑
+     * @param rangeSigma   颜色差异标准差（0..255），越小越保护边缘
      */
     private fun applyNoiseReduction(
         pixels: IntArray,
         width: Int,
         height: Int,
         strength: Float,
-        detailPreservation: Float
+        detailPreservation: Float,
+        spatialSigma: Float = 2.0f,
+        rangeSigma: Float = 30f
     ) {
         if (strength <= 0f) return
         val temp = pixels.copyOf()
-        val effectiveStrength = strength / 100f
-        val detailFactor = detailPreservation / 50f
+        val effectiveStrength = (strength / 100f).coerceIn(0f, 1f)
+        // 细节保留系数：0..1，越大越保留边缘（rangeSigma 越大）
+        val preservation = (detailPreservation / 100f).coerceIn(0.1f, 1f)
+        val adjustedRangeSigma = rangeSigma * (1.5f - preservation * 0.5f)
 
-        for (y in 1 until height - 1) {
-            for (x in 1 until width - 1) {
+        val radius = 2
+        // 预计算空间高斯权重
+        val spatialWeights = FloatArray((2 * radius + 1) * (2 * radius + 1))
+        val twoSpatialSigma2 = 2f * spatialSigma * spatialSigma
+        val twoRangeSigma2 = 2f * adjustedRangeSigma * adjustedRangeSigma
+        var wi = 0
+        for (dy in -radius..radius) {
+            for (dx in -radius..radius) {
+                spatialWeights[wi++] = exp(-(dx * dx + dy * dy) / twoSpatialSigma2)
+            }
+        }
+
+        for (y in radius until height - radius) {
+            for (x in radius until width - radius) {
                 val i = y * width + x
                 val curR = Color.red(temp[i])
                 val curG = Color.green(temp[i])
                 val curB = Color.blue(temp[i])
 
-                var sumR = 0; var sumG = 0; var sumB = 0
-                for (dy in -1..1) {
-                    for (dx in -1..1) {
+                var weightSumR = 0f
+                var weightSumG = 0f
+                var weightSumB = 0f
+                var sumR = 0f
+                var sumG = 0f
+                var sumB = 0f
+                wi = 0
+                for (dy in -radius..radius) {
+                    for (dx in -radius..radius) {
                         val ni = (y + dy) * width + (x + dx)
-                        sumR += Color.red(temp[ni])
-                        sumG += Color.green(temp[ni])
-                        sumB += Color.blue(temp[ni])
+                        val nR = Color.red(temp[ni])
+                        val nG = Color.green(temp[ni])
+                        val nB = Color.blue(temp[ni])
+
+                        val dr = (curR - nR).toFloat()
+                        val dg = (curG - nG).toFloat()
+                        val db = (curB - nB).toFloat()
+                        val colorDistSq = dr * dr + dg * dg + db * db
+                        val rangeWeight = exp(-colorDistSq / twoRangeSigma2)
+                        val weight = spatialWeights[wi++] * rangeWeight
+
+                        weightSumR += weight
+                        weightSumG += weight
+                        weightSumB += weight
+                        sumR += nR * weight
+                        sumG += nG * weight
+                        sumB += nB * weight
                     }
                 }
-                val meanR = sumR / 9f
-                val meanG = sumG / 9f
-                val meanB = sumB / 9f
 
-                val edgeR = abs(curR - meanR) / 255f
-                val edgeG = abs(curG - meanG) / 255f
-                val edgeB = abs(curB - meanB) / 255f
-                val maxEdge = maxOf(edgeR, edgeG, edgeB)
-                val preserve = min(1f, maxEdge * detailFactor)
-                val blend = effectiveStrength * (1f - preserve)
+                val filteredR = if (weightSumR > 0.001f) sumR / weightSumR else curR.toFloat()
+                val filteredG = if (weightSumG > 0.001f) sumG / weightSumG else curG.toFloat()
+                val filteredB = if (weightSumB > 0.001f) sumB / weightSumB else curB.toFloat()
 
-                val r = (curR * (1f - blend) + meanR * blend).toInt().coerceIn(0, 255)
-                val g = (curG * (1f - blend) + meanG * blend).toInt().coerceIn(0, 255)
-                val b = (curB * (1f - blend) + meanB * blend).toInt().coerceIn(0, 255)
+                val blend = effectiveStrength
+                val r = (curR * (1f - blend) + filteredR * blend).toInt().coerceIn(0, 255)
+                val g = (curG * (1f - blend) + filteredG * blend).toInt().coerceIn(0, 255)
+                val b = (curB * (1f - blend) + filteredB * blend).toInt().coerceIn(0, 255)
                 pixels[i] = Color.argb(Color.alpha(temp[i]), r, g, b)
             }
+        }
+    }
+
+    // ==================== ML Kit 人脸蒙版 ====================
+
+    /**
+     * 使用 ML Kit 人脸检测生成面部蒙版。
+     * 为控制耗时，对超过 640px 的图像先缩放到 640px 进行检测，再映射回原图。
+     *
+     * @return 若检测到人脸返回 0..1 蒙版数组；否则返回 null，调用方回退到肤色检测
+     */
+    private suspend fun detectFaceMask(source: Bitmap): FloatArray? {
+        val detector = faceDetector ?: return null
+        return try {
+            val maxDim = maxOf(source.width, source.height)
+            val detectBitmap = if (maxDim <= FACE_DETECT_MAX_DIMENSION) {
+                source
+            } else {
+                val scale = FACE_DETECT_MAX_DIMENSION.toFloat() / maxDim
+                Bitmap.createScaledBitmap(
+                    source,
+                    (source.width * scale).toInt(),
+                    (source.height * scale).toInt(),
+                    true
+                )
+            }
+            val inputImage = InputImage.fromBitmap(detectBitmap, 0)
+            val faces = detector.process(inputImage).await()
+            if (faces.isEmpty()) return null
+
+            val srcWidth = source.width
+            val srcHeight = source.height
+            val scaleX = srcWidth.toFloat() / detectBitmap.width
+            val scaleY = srcHeight.toFloat() / detectBitmap.height
+            val mask = FloatArray(srcWidth * srcHeight)
+
+            for (face in faces) {
+                val bounds = face.boundingBox
+                // 映射到原图坐标
+                val left = (bounds.left * scaleX).toInt().coerceIn(0, srcWidth - 1)
+                val top = (bounds.top * scaleY).toInt().coerceIn(0, srcHeight - 1)
+                val right = (bounds.right * scaleX).toInt().coerceIn(0, srcWidth)
+                val bottom = (bounds.bottom * scaleY).toInt().coerceIn(0, srcHeight)
+
+                // 在面部矩形内部使用轮廓点生成更紧致的椭圆蒙版
+                val centerX = (left + right) / 2f
+                val centerY = (top + bottom) / 2f
+                val radiusX = (right - left) / 2f
+                val radiusY = (bottom - top) / 2f
+                val radiusXInv = if (radiusX > 0) 1f / radiusX else 0f
+                val radiusYInv = if (radiusY > 0) 1f / radiusY else 0f
+
+                for (y in top until bottom) {
+                    for (x in left until right) {
+                        val dx = (x - centerX) * radiusXInv
+                        val dy = (y - centerY) * radiusYInv
+                        val distSq = dx * dx + dy * dy
+                        // 椭圆内部为 1，边缘按距离衰减
+                        val value = if (distSq <= 1f) 1f - distSq.coerceIn(0f, 1f) * 0.3f else 0f
+                        if (value > 0f) {
+                            val idx = y * srcWidth + x
+                            mask[idx] = maxOf(mask[idx], value)
+                        }
+                    }
+                }
+            }
+
+            if (detectBitmap !== source) detectBitmap.recycle()
+            mask
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -317,7 +450,7 @@ class PixelFruitEngine {
 
     /**
      * 面部美白
-     * 1. 四重肤色检测 → 生成蒙版
+     * 1. 若提供 ML Kit 人脸蒙版则优先使用；否则四重肤色检测生成蒙版
      * 2. 蒙版平滑（均值滤波）
      * 3. 应用美白：亮度提升 + 减红 + 加蓝 + 降饱和
      */
@@ -326,18 +459,19 @@ class PixelFruitEngine {
         width: Int,
         height: Int,
         brightening: Float,
-        smoothness: Float
+        smoothness: Float,
+        faceMask: FloatArray? = null
     ) {
         if (brightening <= 0f) return
         val strength = brightening / 100f
-        val mask = FloatArray(pixels.size)
-
-        // Step 1: 肤色检测（四重检测加权评分）
-        for (i in pixels.indices) {
-            val r = Color.red(pixels[i])
-            val g = Color.green(pixels[i])
-            val b = Color.blue(pixels[i])
-            mask[i] = detectSkinTone(r, g, b)
+        val mask = faceMask ?: FloatArray(pixels.size).also { m ->
+            // Step 1: 肤色检测（四重检测加权评分）
+            for (i in pixels.indices) {
+                val r = Color.red(pixels[i])
+                val g = Color.green(pixels[i])
+                val b = Color.blue(pixels[i])
+                m[i] = detectSkinTone(r, g, b)
+            }
         }
 
         // Step 2: 蒙版平滑

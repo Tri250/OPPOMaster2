@@ -218,31 +218,16 @@ fun HasselbladScreen(
     LaunchedEffect(oppoApplyState) {
         when (val state = oppoApplyState) {
             is HasselbladEyeViewModel.OPOApplyState.Success -> {
-                val methodLabel = when (state.method) {
-                    "CONTENT_PROVIDER" -> "ContentProvider"
-                    "SYSTEM_SETTINGS" -> "系统设置"
-                    "CAMERA_INTENT" -> "相机 Intent"
-                    "CLIPBOARD_FALLBACK" -> "剪贴板"
-                    else -> state.method
-                }
-                Toast.makeText(
-                    context,
-                    "已应用到 OPPO 大师模式（$methodLabel）",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, state.userMessage, Toast.LENGTH_LONG).show()
                 viewModel.resetOPOApplyState()
             }
             is HasselbladEyeViewModel.OPOApplyState.PartialSuccess -> {
                 val failedList = state.failedParams.joinToString("、")
-                Toast.makeText(context, "部分参数应用成功，以下参数失败：$failedList", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "${state.userMessage}，未成功项：$failedList", Toast.LENGTH_LONG).show()
                 viewModel.resetOPOApplyState()
             }
             is HasselbladEyeViewModel.OPOApplyState.Failed -> {
-                Toast.makeText(
-                    context,
-                    "应用失败：${state.reason}",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, state.userMessage, Toast.LENGTH_LONG).show()
                 viewModel.resetOPOApplyState()
             }
             else -> Unit

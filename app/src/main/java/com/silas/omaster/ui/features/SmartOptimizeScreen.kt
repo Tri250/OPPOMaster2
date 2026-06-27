@@ -147,7 +147,7 @@ fun SmartOptimizeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
-    val pixelFruitEngine = remember { PixelFruitEngine() }
+    val pixelFruitEngine = remember(context) { PixelFruitEngine(context) }
     val histogramAnalyzer = remember { HistogramAnalyzer() }
 
     // 图片状态

@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * 职责：
  * 1. 实时分析相机取景器帧，识别当前拍摄场景（美食/人像/夜景/风景/宠物/街拍等）
- * 2. 双路融合：轻量 TFLite 图像分类模型 + HeuristicSceneAnalyzer 启发式分析
+ * 2. 双路融合：轻量 TFLite 图像分类模型（可选增强）+ HeuristicSceneAnalyzer 启发式分析（生产路径）
  * 3. 输出场景画像、置信度、推荐哈苏参数、推荐胶片、AR构图建议
- * 4. 模型不存在时自动降级到启发式分析，保证功能完整可用
+ * 4. 模型不存在时单独使用启发式分析，保证功能完整可用
  *
  * 性能目标：
  * - 输入 224x224，单次推理 < 30ms（GPU delegate）

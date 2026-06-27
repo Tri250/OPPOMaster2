@@ -99,6 +99,9 @@ class LUTManager private constructor(private val context: Context) {
      * 使用 HttpURLConnection 下载，支持进度回调。
      * 下载完成后自动更新下载状态并解析缓存。
      *
+     * 当 CDN 下载失败时，如果该 LUT 存在内置兜底资源，会自动将内置 LUT 复制到本地
+     * 并标记为已下载，实现无网络下的优雅降级（仅首次需要触发下载流程）。
+     *
      * @param resource LUT 资源
      * @return 下载成功返回本地文件，失败返回 null
      */
@@ -120,7 +123,7 @@ class LUTManager private constructor(private val context: Context) {
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 Log.e(TAG, "Download failed: HTTP $responseCode for ${resource.id}")
-                return@withContext null
+                return@withContext fallbackToBuiltInLUT(resource)
             }
 
             val contentLength = connection.contentLengthLong
@@ -177,15 +180,67 @@ class LUTManager private constructor(private val context: Context) {
             Log.d(TAG, "LUT downloaded: ${resource.name} → ${targetFile.absolutePath}")
             targetFile
         } catch (e: Exception) {
-            Log.e(TAG, "Download failed for ${resource.id}", e)
-            val progress = _downloadProgress.value.toMutableMap()
-            progress.remove(resource.id)
-            _downloadProgress.value = progress
-            null
+            Log.e(TAG, "Download failed for ${resource.id}, attempting built-in fallback", e)
+            fallbackToBuiltInLUT(resource)
         } finally {
             // 确保资源在任何路径下都被释放，避免连接泄漏
             try { inputStream?.close() } catch (_: Exception) {}
             try { connection?.disconnect() } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * CDN 下载失败时的内置 LUT 兜底。
+     *
+     * 将 assets 中预置的 .cube 文件复制到应用私有目录，并标记该资源为已下载，
+     * 使用户在离线或 CDN 故障时仍能正常使用核心 LUT 功能。
+     *
+     * @param resource LUT 资源
+     * @return 复制成功返回本地文件，失败返回 null
+     */
+    private suspend fun fallbackToBuiltInLUT(resource: LUTResource): File? = withContext(Dispatchers.IO) {
+        val assetPath = LUTResourceRepository.BUILT_IN_LUT_MAP[resource.id]
+            ?: LUTResourceRepository.BUILT_IN_DEFAULT_LUT_ASSET
+
+        try {
+            context.assets.open(assetPath).use { input ->
+                val fileName = "${resource.nameEn.replace(Regex("[^a-zA-Z0-9_-]"), "_")}.${resource.format}"
+                val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
+                if (!privateDir.exists()) privateDir.mkdirs()
+                val privateFile = File(privateDir, fileName)
+
+                FileOutputStream(privateFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                    }
+                }
+
+                // 更新下载状态，让 UI 认为该 LUT 已可用
+                val current = _downloadedIds.value.toMutableSet()
+                current.add(resource.id)
+                _downloadedIds.value = current
+                saveStringSet(KEY_DOWNLOADED_IDS, current)
+
+                // 预解析并缓存
+                parseAndCache(resource.id, privateFile)
+
+                // 清除下载进度
+                val progress = _downloadProgress.value.toMutableMap()
+                progress.remove(resource.id)
+                _downloadProgress.value = progress
+
+                Log.w(TAG, "LUT fallback to built-in: ${resource.name} → ${privateFile.absolutePath}")
+                privateFile
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Built-in LUT fallback failed for ${resource.id} (asset=$assetPath)", e)
+            // 清除下载进度，避免 UI 卡住
+            val progress = _downloadProgress.value.toMutableMap()
+            progress.remove(resource.id)
+            _downloadProgress.value = progress
+            null
         }
     }
 
@@ -224,6 +279,26 @@ class LUTManager private constructor(private val context: Context) {
     }
 
     /**
+     * 从 assets 解析 .cube 文件并缓存
+     */
+    private fun parseAndCacheFromAssets(lutId: String, assetPath: String): LUT3DData? {
+        if (lutDataCache.containsKey(lutId)) return lutDataCache[lutId]
+
+        return try {
+            context.assets.open(assetPath).use { input ->
+                val data = LUT3DParser.parse(input, assetPath)
+                if (data != null) {
+                    lutDataCache[lutId] = data
+                }
+                data
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse built-in LUT from assets: $assetPath", e)
+            null
+        }
+    }
+
+    /**
      * 直接缓存 LUT3DData（用于风格 LUT 生成器等场景）
      */
     fun parseAndCache(lutId: String, lutData: LUT3DData): LUT3DData {
@@ -233,15 +308,44 @@ class LUTManager private constructor(private val context: Context) {
 
     /**
      * 获取缓存的 LUT 数据
+     *
+     * 查找顺序：
+     * 1. 内存缓存
+     * 2. 本地已下载文件
+     * 3. assets 内置兜底 LUT（按资源 ID 映射）
+     * 4. 全局默认内置 LUT（恒等映射）
+     *
+     * @param lutId LUT 资源 ID
+     * @return LUT 数据，全部缺失时返回 null
      */
     fun getCachedLUTData(lutId: String): LUT3DData? {
-        // 如果缓存中没有，尝试从本地文件解析
-        if (!lutDataCache.containsKey(lutId)) {
-            val resource = LUTResourceRepository.RESOURCES.find { it.id == lutId } ?: return null
-            val file = getLocalFile(resource) ?: return null
-            parseAndCache(lutId, file)
+        // 1. 内存缓存
+        if (lutDataCache.containsKey(lutId)) return lutDataCache[lutId]
+
+        val resource = LUTResourceRepository.RESOURCES.find { it.id == lutId }
+
+        // 2. 本地已下载文件
+        val localFile = resource?.let { getLocalFile(it) }
+        if (localFile != null) {
+            return parseAndCache(lutId, localFile)
         }
-        return lutDataCache[lutId]
+
+        // 3. assets 内置兜底 LUT
+        val builtInAsset = resource?.let { LUTResourceRepository.BUILT_IN_LUT_MAP[it.id] }
+        if (builtInAsset != null) {
+            val data = parseAndCacheFromAssets(lutId, builtInAsset)
+            if (data != null) {
+                Log.d(TAG, "Loaded built-in LUT from assets: $lutId → $builtInAsset")
+                return data
+            }
+        }
+
+        // 4. 全局默认内置 LUT
+        val defaultData = parseAndCacheFromAssets(lutId, LUTResourceRepository.BUILT_IN_DEFAULT_LUT_ASSET)
+        if (defaultData != null) {
+            Log.d(TAG, "Loaded default built-in LUT for: $lutId")
+        }
+        return defaultData
     }
 
     /**

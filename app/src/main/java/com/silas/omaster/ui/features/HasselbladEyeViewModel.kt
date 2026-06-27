@@ -20,6 +20,7 @@ import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.camera.CameraApplyResult
 import com.silas.omaster.camera.OPPOCameraManager
+import com.silas.omaster.camera.toUserMessage
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
@@ -58,9 +59,9 @@ class HasselbladEyeViewModel : ViewModel() {
     sealed class OPOApplyState {
         object Idle : OPOApplyState()
         object Applying : OPOApplyState()
-        data class Success(val method: String) : OPOApplyState()
-        data class PartialSuccess(val method: String, val failedParams: List<String>) : OPOApplyState()
-        data class Failed(val reason: String) : OPOApplyState()
+        data class Success(val method: String, val userMessage: String) : OPOApplyState()
+        data class PartialSuccess(val method: String, val failedParams: List<String>, val userMessage: String) : OPOApplyState()
+        data class Failed(val reason: String, val userMessage: String) : OPOApplyState()
     }
 
     // ================== StateFlow 状态 ==================
@@ -1003,17 +1004,22 @@ class HasselbladEyeViewModel : ViewModel() {
                     lutId = lutId,
                     lutStrength = lutStrength
                 )
+                val capability = cameraManager.detectDeviceCapability()
+                val userMessage = result.toUserMessage(capability)
                 when (result) {
                     is CameraApplyResult.Success ->
-                        _oppoApplyState.value = OPOApplyState.Success(result.method.name)
+                        _oppoApplyState.value = OPOApplyState.Success(result.method.name, userMessage)
                     is CameraApplyResult.PartialSuccess ->
-                        _oppoApplyState.value = OPOApplyState.PartialSuccess(result.method.name, result.failedParams)
+                        _oppoApplyState.value = OPOApplyState.PartialSuccess(result.method.name, result.failedParams, userMessage)
                     is CameraApplyResult.Failed ->
-                        _oppoApplyState.value = OPOApplyState.Failed(result.reason)
+                        _oppoApplyState.value = OPOApplyState.Failed(result.reason, userMessage)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "applyToOPPOMaster failed", e)
-                _oppoApplyState.value = OPOApplyState.Failed(e.message ?: "未知错误")
+                _oppoApplyState.value = OPOApplyState.Failed(
+                    e.message ?: "未知错误",
+                    "应用失败：${e.message ?: "未知错误"}"
+                )
             }
         }
     }

@@ -3,7 +3,7 @@
   "$id": "https://omaster.app/schemas/model_spec.json",
   "version": "1.2.0",
   "lastUpdated": "2024-12-01",
-  "description": "OMaster TFLite 模型规格配置文件",
+  "description": "OMaster TFLite 可选增强模型规格配置文件。当模型文件存在时启用，不存在时由生产级启发式分析接管，功能保持完整。"
   "models": {
     "scene_classifier": {
       "fileName": "scene_classifier.tflite",
@@ -858,7 +858,7 @@
   },
   "download": {
     "baseUrl": "https://releases.omaster.app/models",
-    "note": "v1.8.5：模型文件尚未就绪，所有 checksum 留空，禁止 Release 构建下载占位模型。",
+    "note": "v1.8.5：TFLite 模型为可选增强能力，当前尚未发布。Release 构建不应下载占位模型，缺失时自动使用生产级启发式分析。"
     "versions": {
       "1.0.0": {
         "releaseDate": "2024-01-01",

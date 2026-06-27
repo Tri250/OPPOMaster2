@@ -76,6 +76,7 @@ data class ApiConfig(
     val aiApiEndpoint: String = "",
     val presetApiEndpoint: String = "",
     val authApiEndpoint: String = "",
+    val cloudSceneApiEndpoint: String = "",
     val apiVersion: String = "v1"
 )
 
@@ -128,11 +129,15 @@ class SettingsManager private constructor(private val context: Context) {
     // 用户认证API端点
     val authApiEndpoint: String
         get() = getDataSync(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT)
-    
+
+    // AI 场景分析（哈苏之眼 / AI 微调云端增强）端点
+    val cloudSceneApiEndpoint: String
+        get() = getDataSync(KEY_CLOUD_SCENE_API_ENDPOINT, DEFAULT_CLOUD_SCENE_API_ENDPOINT)
+
     // API版本
     val apiVersion: String
         get() = getDataSync(KEY_API_VERSION, "v1")
-    
+
     // 是否已加载API配置
     val isApiConfigLoaded: Boolean
         get() = getDataSync(KEY_API_CONFIG_LOADED, false)
@@ -487,9 +492,13 @@ class SettingsManager private constructor(private val context: Context) {
             setDataSync(KEY_AI_API_ENDPOINT, config.aiApiEndpoint)
             setDataSync(KEY_PRESET_API_ENDPOINT, config.presetApiEndpoint)
             setDataSync(KEY_AUTH_API_ENDPOINT, config.authApiEndpoint)
+            setDataSync(
+                KEY_CLOUD_SCENE_API_ENDPOINT,
+                config.cloudSceneApiEndpoint.ifBlank { DEFAULT_CLOUD_SCENE_API_ENDPOINT }
+            )
             setDataSync(KEY_API_VERSION, config.apiVersion)
             setDataSync(KEY_API_CONFIG_LOADED, true)
-            
+
             config
         } catch (e: Exception) {
             // 返回默认配置
@@ -497,6 +506,7 @@ class SettingsManager private constructor(private val context: Context) {
                 aiApiEndpoint = DEFAULT_AI_API_ENDPOINT,
                 presetApiEndpoint = DEFAULT_PRESET_API_ENDPOINT,
                 authApiEndpoint = DEFAULT_AUTH_API_ENDPOINT,
+                cloudSceneApiEndpoint = DEFAULT_CLOUD_SCENE_API_ENDPOINT,
                 apiVersion = "v1"
             )
         }
@@ -546,17 +556,29 @@ class SettingsManager private constructor(private val context: Context) {
      * @param aiEndpoint AI API端点
      * @param presetEndpoint 预设API端点
      * @param authEndpoint 认证API端点
+     * @param cloudSceneEndpoint AI 场景分析云端端点
      */
     fun setCustomApiEndpoints(
         aiEndpoint: String? = null,
         presetEndpoint: String? = null,
-        authEndpoint: String? = null
+        authEndpoint: String? = null,
+        cloudSceneEndpoint: String? = null
     ) {
         aiEndpoint?.let { setDataSync(KEY_AI_API_ENDPOINT, it) }
         presetEndpoint?.let { setDataSync(KEY_PRESET_API_ENDPOINT, it) }
         authEndpoint?.let { setDataSync(KEY_AUTH_API_ENDPOINT, it) }
+        cloudSceneEndpoint?.let { setDataSync(KEY_CLOUD_SCENE_API_ENDPOINT, it) }
     }
-    
+
+    /**
+     * 验证 URL 是否配置为真实服务端点（非示例占位域名）
+     */
+    fun isRealEndpoint(url: String): Boolean {
+        if (url.isBlank()) return false
+        val lower = url.lowercase()
+        return UrlConstants.PLACEHOLDER_DOMAINS.none { lower.contains(it) }
+    }
+
     /**
      * 重置 API 端点为默认值
      */
@@ -564,6 +586,7 @@ class SettingsManager private constructor(private val context: Context) {
         setDataSync(KEY_AI_API_ENDPOINT, DEFAULT_AI_API_ENDPOINT)
         setDataSync(KEY_PRESET_API_ENDPOINT, DEFAULT_PRESET_API_ENDPOINT)
         setDataSync(KEY_AUTH_API_ENDPOINT, DEFAULT_AUTH_API_ENDPOINT)
+        setDataSync(KEY_CLOUD_SCENE_API_ENDPOINT, DEFAULT_CLOUD_SCENE_API_ENDPOINT)
     }
 
     // ==================== DataStore 操作方法 ====================
@@ -930,7 +953,8 @@ class SettingsManager private constructor(private val context: Context) {
         private val DEFAULT_AI_API_ENDPOINT = UrlConstants.API_AI_ENDPOINT
         private val DEFAULT_PRESET_API_ENDPOINT = UrlConstants.API_PRESET_ENDPOINT
         private val DEFAULT_AUTH_API_ENDPOINT = UrlConstants.API_AUTH_ENDPOINT
-        
+        private val DEFAULT_CLOUD_SCENE_API_ENDPOINT = UrlConstants.API_CLOUD_SCENE_ANALYZE
+
         // DataStore Preferences Keys
         private val KEY_VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
         private val KEY_THEME_ID = stringPreferencesKey("theme_id")
@@ -960,6 +984,7 @@ class SettingsManager private constructor(private val context: Context) {
         private val KEY_AI_API_ENDPOINT = stringPreferencesKey("ai_api_endpoint")
         private val KEY_PRESET_API_ENDPOINT = stringPreferencesKey("preset_api_endpoint")
         private val KEY_AUTH_API_ENDPOINT = stringPreferencesKey("auth_api_endpoint")
+        private val KEY_CLOUD_SCENE_API_ENDPOINT = stringPreferencesKey("cloud_scene_api_endpoint")
         private val KEY_API_VERSION = stringPreferencesKey("api_version")
 
         // 应用预设参数 Key

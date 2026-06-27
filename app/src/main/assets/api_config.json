@@ -2,5 +2,6 @@
   "aiApiEndpoint": "https://api.omaster.app/ai",
   "presetApiEndpoint": "https://api.omaster.app/presets",
   "authApiEndpoint": "https://api.omaster.app/auth",
+  "cloudSceneApiEndpoint": "https://api.omaster.ai/v1/scene/analyze",
   "apiVersion": "v1"
 }

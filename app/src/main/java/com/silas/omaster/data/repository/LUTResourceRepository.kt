@@ -1421,6 +1421,32 @@ object LUTResourceRepository {
         ),
     )
 
+    /**
+     * 内置 LUT 兜底映射。
+     *
+     * Key 为 LUT 资源 ID，Value 为 assets 下 .cube 文件路径。
+     * 当 CDN 下载失败或本地缓存缺失时，[com.silas.omaster.data.lut.LUTManager]
+     * 会优先使用该映射加载内置资源作为优雅降级，确保核心 LUT 功能不依赖网络。
+     */
+    val BUILT_IN_LUT_MAP: Map<String, String> = mapOf(
+        // 胶片电影经典
+        "kodak-portra-400" to "luts/builtin/builtin_kodak_portra_400_33.cube",
+        // 2026 哈苏自然色彩
+        "2026-hasselblad" to "luts/builtin/builtin_hasselblad_natural_33.cube",
+        // 色彩风格：青橙电影
+        "teal-orange" to "luts/builtin/builtin_teal_orange_33.cube",
+        // OPPO Find X9 哈苏大师色彩兜底
+        "oppo-findx9-hasselblad-master" to "luts/builtin/builtin_hasselblad_natural_33.cube",
+        "oppo-findx9-hasselblad-portrait" to "luts/builtin/builtin_kodak_portra_400_33.cube",
+        "oppo-findx9-hasselblad-street" to "luts/builtin/builtin_teal_orange_33.cube",
+        "oppo-findx9-hasselblad-xpan" to "luts/builtin/builtin_hasselblad_natural_33.cube"
+    )
+
+    /**
+     * 全局默认内置 LUT（恒等映射），当没有任何资源匹配时作为最后兜底。
+     */
+    const val BUILT_IN_DEFAULT_LUT_ASSET = "luts/builtin/builtin_identity_33.cube"
+
     fun getResources(category: String? = null): List<LUTResource> {
         if (category == null || category == "all") return RESOURCES
         return RESOURCES.filter { it.category == category }

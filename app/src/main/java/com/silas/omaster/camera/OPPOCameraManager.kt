@@ -169,13 +169,21 @@ class OPPOCameraManager private constructor(private val context: Context) {
                 modelLower.contains("gt") // Realme GT 系列
                 )
 
+        val userFacingHint = when {
+            !isOppoDevice -> "当前设备非 OPPO/一加/realme，大师模式参数已复制到剪贴板，可手动在相机中设置。"
+            supportsContentProvider -> "已检测到 OPPO 大师模式接口，参数将直接写入相机。"
+            supportsMasterMode -> "已检测到 OPPO 大师模式，尝试通过系统设置/相机 Intent 应用参数。"
+            else -> "当前 OPPO 设备未识别到大师模式支持，参数已复制到剪贴板。"
+        }
+
         val capability = DeviceCapability(
             manufacturer = Build.MANUFACTURER,
             model = model,
             isOppoDevice = isOppoDevice,
             isFindXSeries = isFindXSeries,
             supportsMasterMode = supportsMasterMode,
-            supportsContentProvider = supportsContentProvider
+            supportsContentProvider = supportsContentProvider,
+            userFacingHint = userFacingHint
         )
 
         Log.d(TAG, "设备能力检测: manufacturer=${capability.manufacturer}, " +
@@ -256,7 +264,8 @@ class OPPOCameraManager private constructor(private val context: Context) {
             return CameraApplyResult.Failed(
                 reason = "参数校验失败: ${validationResult.errors.joinToString("; ")}",
                 suggestion = "请检查参数范围：饱和度/对比度/影调/冷暖/暗角/青品调 -100~100，" +
-                        "锐度/清晰度 0~100，ISO 100~12800，白平衡 2000K~8000K，曝光补偿 -3.0~+3.0"
+                        "锐度/清晰度 0~100，ISO 100~12800，白平衡 2000K~8000K，曝光补偿 -3.0~+3.0",
+                userMessage = "参数超出可写入相机的范围，请调整后重试"
             )
         }
 
@@ -729,12 +738,17 @@ class OPPOCameraManager private constructor(private val context: Context) {
             }
 
             Log.d(TAG, "Clipboard: 参数已复制到剪贴板")
-            CameraApplyResult.Success(ApplyMethod.CLIPBOARD_FALLBACK, params)
+            CameraApplyResult.Success(
+                ApplyMethod.CLIPBOARD_FALLBACK,
+                params,
+                userMessage = "当前设备/系统版本不支持直接写入相机，参数已复制到剪贴板，请进入相机大师模式手动粘贴设置"
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Clipboard: 复制失败: ${e.message}", e)
             CameraApplyResult.Failed(
                 reason = "剪贴板写入失败: ${e.message}",
-                suggestion = "请手动记录以下参数并在 OPPO 相机大师模式中输入"
+                suggestion = "请手动记录以下参数并在 OPPO 相机大师模式中输入",
+                userMessage = "参数复制失败，请手动记录参数"
             )
         }
     }

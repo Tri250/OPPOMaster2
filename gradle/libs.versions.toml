@@ -3,7 +3,7 @@
 agp = "8.7.3"
 
 # ===== Kotlin =====
-# Gradle 8.14.4 兼容 Kotlin 2.0.21+；AGP 8.7.3 兼容 Kotlin 2.0.x
+# Gradle 8.14 兼容 Kotlin 2.0.21+；AGP 8.7.3 兼容 Kotlin 2.0.x
 kotlin = "2.0.21"
 
 # ===== AndroidX Core =====

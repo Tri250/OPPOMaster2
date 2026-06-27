@@ -21,17 +21,27 @@ object UrlConstants {
     const val CDN_MODELS = "https://releases.omaster.app/models"
 
     // ===== API 端点 =====
-    /** AI 推理 API 默认端点 */
+    // 警告：以下默认 URL 为示例占位地址，未配置真实服务前不会实际连通。
+    // 运营方必须在 SettingsManager 中覆盖为真实服务端点，并配置有效 API Key。
+
+    /** AI 推理 API 默认端点（需配置覆盖） */
     const val API_AI_ENDPOINT = "https://api.omaster.app/ai"
 
-    /** 预设同步 API 默认端点 */
+    /** 预设同步 API 默认端点（需配置覆盖） */
     const val API_PRESET_ENDPOINT = "https://api.omaster.app/presets"
 
-    /** 用户认证 API 默认端点 */
+    /** 用户认证 API 默认端点（需配置覆盖） */
     const val API_AUTH_ENDPOINT = "https://api.omaster.app/auth"
 
-    /** AI 场景分析云端 API */
+    /** AI 场景分析云端 API（需配置覆盖） */
     const val API_CLOUD_SCENE_ANALYZE = "https://api.omaster.ai/v1/scene/analyze"
+
+    /** 占位域名集合：这些域名未部署真实服务，仅作为未配置的提示 */
+    val PLACEHOLDER_DOMAINS = setOf(
+        "api.omaster.app",
+        "api.omaster.ai",
+        "releases.omaster.app"
+    )
 
     // ===== 预设源 URL =====
     /** OPPO/一加 大师模式预设 */

@@ -56,24 +56,23 @@ class PixelFruitShader {
                 // 3. 亮度
                 color.rgb *= uBrightness;
 
-                // 4. 对比度（以0.5为中心）
+                // 4. 对比度（以0.5为中心，系数由 CPU 按 PixelFruitEngine 公式预计算）
                 color.rgb = (color.rgb - 0.5) * uContrast + 0.5;
 
                 // 5. 饱和度
                 float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                 color.rgb = mix(vec3(gray), color.rgb, uSaturation);
 
-                // 6. 阴影提升
-                float shadowBoost = uShadows;
+                // 6. 阴影提升：阈值 64/255 = 0.25，对齐 CPU
                 vec3 shadowMask = step(color.rgb, vec3(0.25));
-                color.rgb += shadowMask * (vec3(0.25) - color.rgb) * shadowBoost;
+                color.rgb += shadowMask * (vec3(0.25) - color.rgb) * uShadows;
 
-                // 7. 高光压缩
+                // 7. 高光压缩：阈值 192/255 = 0.75，对齐 CPU
                 vec3 over = max(vec3(0.0), color.rgb - vec3(0.75));
                 color.rgb -= over * uHighlights;
 
-                // 8. 白场调整（smoothstep 软蒙版）
-                vec3 whiteMask = smoothstep(vec3(0.9), vec3(1.0), color.rgb);
+                // 8. 白场调整：阈值 220/255 ≈ 0.86，对齐 CPU
+                vec3 whiteMask = smoothstep(vec3(0.86), vec3(1.0), color.rgb);
                 color.rgb = mix(color.rgb, color.rgb * uWhites, whiteMask);
 
                 gl_FragColor = clamp(color, 0.0, 1.0);
@@ -131,7 +130,11 @@ class PixelFruitShader {
         if (program == 0) return
         GLES20.glUseProgram(program)
         GLES20.glUniform1f(uBrightness, params.brightness)
-        GLES20.glUniform1f(uContrast, params.contrast + 1f) // 对比度传入时 +1
+        // 对齐 PixelFruitEngine.applyColorAdjustments 的对比度公式
+        val contrastFactor = if (params.contrast != 0f) {
+            (259f * (params.contrast + 255f)) / (255f * (259f - params.contrast))
+        } else 1f
+        GLES20.glUniform1f(uContrast, contrastFactor)
         GLES20.glUniform1f(uSaturation, params.saturation / 100f)
         GLES20.glUniform1f(uExposure, params.exposure)
         GLES20.glUniform1f(uShadows, params.shadows / 100f)

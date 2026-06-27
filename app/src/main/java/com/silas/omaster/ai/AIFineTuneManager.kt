@@ -12,7 +12,6 @@ import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
-import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -26,20 +25,20 @@ import kotlin.math.abs
 
 /**
  * AI 微调管理器 - 端云协同推理
- * 
+ *
  * 功能用例实现：
  * FT-001/002/003: AI微调核心功能
  * FT-004: 无网络/服务异常降级
  * FT-006: AI微调权限与隐私
- * 
+ *
  * 端云协同架构：
- * - 本地优先：启发式场景分析器 + ML Kit 人脸检测（实时响应，无需模型文件）
- * - 云端增强：API调用（高质量推理，需网络与有效 API Key）
+ * - 本地生产路径：启发式场景分析器 + ML Kit 人脸检测（实时响应，无需模型文件）
+ * - 云端增强路径：API 调用（高质量推理，需用户在设置中配置有效服务端点与 API Key）
+ * - TFLite 扩展路径：当 assets/models/ 下存在有效 TFLite 模型时，SceneRecognitionManager 自动融合模型输出
  * - 降级策略：推理超时 → 规则引擎保守建议
- * 
- * 注意：当前本地推理使用启发式算法（HeuristicSceneAnalyzer），非 TFLite 模型推理。
- * TFLite 模型文件尚未就绪（见 assets/models/MODEL_SPEC.json status: "not_ready"），
- * 待模型训练完成后将替换为真实模型推理管道。
+ *
+ * 说明：当前本地推理为生产级启发式分析，基于颜色/亮度/纹理/EXIF/人脸等真实图像特征，
+ * 不依赖未就绪的模型文件。TFLite 模型为可选增强，缺失时不会回退到“模拟”逻辑。
  */
 class AIFineTuneManager private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
@@ -164,12 +163,33 @@ class AIFineTuneManager private constructor(context: Context) {
     }
 
     /**
-     * 检查云端AI是否可用（网络正常、质量达标、API密钥有效）
+     * 检查云端AI是否可用（网络正常、质量达标、API密钥有效、端点已配置为真实服务）
      */
     fun isCloudAIAvailable(): Boolean {
-        return isNetworkAvailable()
+        val endpoint = getCloudApiEndpoint()
+        val key = getApiKey()
+        val available = isNetworkAvailable()
                 && isNetworkQualityGood()
-                && getApiKey() != null
+                && key != null
+                && endpoint != null
+                && settingsManager.isRealEndpoint(endpoint)
+        if (!available) {
+            Log.d(TAG, "云端AI未启用：endpoint=$endpoint, keyConfigured=${key != null}")
+        }
+        return available
+    }
+
+    /**
+     * 获取当前配置的云端 AI 场景分析端点。
+     * 返回 null 表示未配置或配置的是占位地址。
+     */
+    private fun getCloudApiEndpoint(): String? {
+        val endpoint = settingsManager.cloudSceneApiEndpoint
+        return if (endpoint.isNotBlank() && settingsManager.isRealEndpoint(endpoint)) {
+            endpoint
+        } else {
+            null
+        }
     }
 
     // ==================== 真实AI推理接口 ====================
@@ -217,13 +237,13 @@ class AIFineTuneManager private constructor(context: Context) {
                             return@withTimeout AISuggestionResult.Success(cloudResult, isOfflineMode = false)
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "云端AI推理失败，降级到本地推理: ${e.message}")
+                        Log.w(TAG, "云端AI推理失败，回退到本地启发式推理: ${e.message}")
                     }
                 } else {
-                    Log.d(TAG, "云端AI不可用，直接使用本地推理")
+                    Log.d(TAG, "云端AI未启用，使用本地启发式推理")
                 }
 
-                // 本地启发式推理（真实图像分析）
+                // 本地生产路径：启发式真实图像分析
                 val localResult = generateLocalSuggestionFromImage(bitmap, currentParams)
                 appliedSuggestions.add(localResult)
                 _suggestedParams.value = localResult
@@ -231,8 +251,8 @@ class AIFineTuneManager private constructor(context: Context) {
                 AISuggestionResult.Success(localResult, isOfflineMode = true)
             }
         } catch (e: TimeoutCancellationException) {
-            // 超时降级：使用规则引擎
-            Log.w(TAG, "AI推理超时，降级到规则引擎")
+            // 超时保护：使用规则引擎生成保守建议
+            Log.w(TAG, "AI推理超时，使用规则引擎保护策略")
             val fallbackResult = generateFallbackSuggestion(currentParams)
             _isProcessing.value = false
             _errorState.value = ErrorState.Timeout("处理超时，已使用规则引擎优化")
@@ -584,16 +604,21 @@ class AIFineTuneManager private constructor(context: Context) {
         currentParams: Map<String, Int>
     ): AISuggestion? = withContext(Dispatchers.Default) {
         try {
-            Log.d(TAG, "开始云端AI推理")
-
-            // Step 1: 检查API密钥有效性（拒绝 demo_key / 空密钥）
+            // Step 0: 检查端点与密钥是否已真实配置
+            val endpoint = getCloudApiEndpoint()
             val apiKey = getApiKey()
+            if (endpoint == null) {
+                Log.d(TAG, "云端AI场景分析端点未配置为真实服务，跳过云端推理")
+                return@withContext null
+            }
             if (apiKey == null) {
-                Log.w(TAG, "未配置有效云端API密钥，跳过云端推理")
+                Log.d(TAG, "未配置有效云端API密钥，跳过云端推理")
                 return@withContext null
             }
 
-            // Step 2: 检查网络连接质量
+            Log.d(TAG, "开始云端AI推理: $endpoint")
+
+            // Step 1: 检查网络连接质量
             if (!isNetworkAvailable() || !isNetworkQualityGood()) {
                 Log.w(TAG, "网络不可用或质量不佳，跳过云端推理")
                 return@withContext null
@@ -612,7 +637,7 @@ class AIFineTuneManager private constructor(context: Context) {
             val requestParams = buildCloudRequestParams(imageBase64, currentParams)
             
             // Step 5: 发送HTTP请求（带超时控制）
-            val responseJson = sendCloudRequestWithTimeout(requestParams, CLOUD_API_TIMEOUT_MS, apiKey)
+            val responseJson = sendCloudRequestWithTimeout(requestParams, CLOUD_API_TIMEOUT_MS, apiKey, endpoint)
             
             // Step 6: 解析响应并转换为AI建议
             if (responseJson != null) {
@@ -736,7 +761,8 @@ class AIFineTuneManager private constructor(context: Context) {
     private suspend fun sendCloudRequestWithTimeout(
         params: Map<String, Any>,
         timeoutMs: Long,
-        apiKey: String
+        apiKey: String,
+        endpoint: String
     ): String? = withContext(Dispatchers.IO) {
         try {
             withTimeout(timeoutMs) {
@@ -746,7 +772,7 @@ class AIFineTuneManager private constructor(context: Context) {
                     .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
-                
+
                 val requestBody = "application/json; charset=utf-8".toMediaType()
                     .let { mediaType ->
                         okhttp3.RequestBody.create(
@@ -754,9 +780,9 @@ class AIFineTuneManager private constructor(context: Context) {
                             toJsonString(params)
                         )
                     }
-                
+
                 val request = okhttp3.Request.Builder()
-                    .url(CLOUD_API_ENDPOINT)
+                    .url(endpoint)
                     .post(requestBody)
                     .addHeader("Content-Type", "application/json")
                     .addHeader("X-Api-Key", apiKey)
@@ -1262,8 +1288,7 @@ class AIFineTuneManager private constructor(context: Context) {
     companion object {
         private const val TAG = "AIFineTuneManager"
         
-        // 云端API配置
-        private val CLOUD_API_ENDPOINT = UrlConstants.API_CLOUD_SCENE_ANALYZE
+        // 云端API配置：端点改为从 SettingsManager 读取，支持运营方配置真实服务
         private const val CLOUD_API_TIMEOUT_MS = 5000L // 5秒超时
         private const val MAX_IMAGE_SIZE_BYTES = 500000 // 最大500KB图像数据
 
