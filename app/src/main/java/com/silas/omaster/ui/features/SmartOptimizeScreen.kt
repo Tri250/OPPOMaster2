@@ -87,7 +87,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateListOf
+
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -115,7 +115,6 @@ import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
-import com.silas.omaster.ui.theme.SurfaceElevated
 import com.silas.omaster.ui.theme.WarningYellow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -148,10 +147,13 @@ fun SmartOptimizeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
+    val pixelFruitEngine = remember { PixelFruitEngine() }
+    val histogramAnalyzer = remember { HistogramAnalyzer() }
 
     // 图片状态
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var optimizedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     // 预览模式
@@ -170,11 +172,14 @@ fun SmartOptimizeScreen(
 
     // 优化进度
     var isOptimizing by remember { mutableStateOf(false) }
-    var optimizationStep by remember { mutableStateOf(0) }
-    var optimizationTotalSteps by remember { mutableStateOf(0) }
     var optimizationProgress by remember { mutableFloatStateOf(0f) }
     var optimizationCurrentName by remember { mutableStateOf("") }
-    val optimizedOptions = remember { mutableStateListOf<String>() }
+    // 直方图
+    var histogram by remember { mutableStateOf<HistogramAnalyzer.HistogramResult?>(null) }
+    var showHistogram by remember { mutableStateOf(true) }
+
+    // 实时预览防抖
+    var previewJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     // 保存状态
     var isSaving by remember { mutableStateOf(false) }
@@ -191,8 +196,11 @@ fun SmartOptimizeScreen(
                 if (loadedBitmap != null) {
                     originalBitmap = loadedBitmap
                     optimizedBitmap = null
+                    previewBitmap = null
                     previewMode = "before"
                     analysisResult = null
+                    // 直方图分析
+                    histogram = histogramAnalyzer.analyze(loadedBitmap)
                     // 自动AI场景识别
                     analyzeImage(loadedBitmap, inferenceEngine, scope) { result ->
                         analysisResult = result
@@ -222,76 +230,51 @@ fun SmartOptimizeScreen(
         }
     }
 
-    // 参数ID映射
-    val paramIdToName = mapOf(
-        "brightness" to "亮度", "exposure" to "曝光", "saturation" to "饱和度",
-        "contrast" to "对比度", "highlights" to "高光", "shadows" to "阴影",
-        "whites" to "白场", "color" to "色调", "sharpness" to "锐化",
-        "denoise" to "降噪", "face" to "面部美化"
-    )
-
     // 执行优化工作流（对齐 PixelFruit applyAdjustmentsToCachedData 顺序）
     fun runOptimizeWorkflow() {
-        val activeParams = params
-        val selectedIds = buildList {
-            if (activeParams.brightness != 1.0f || activeParams.exposure != 0f ||
-                activeParams.saturation != 100f || activeParams.contrast != 0f ||
-                activeParams.highlights != 0f || activeParams.shadows != 0f ||
-                activeParams.whites != 100f || activeParams.redTint != 0f ||
-                activeParams.greenTint != 0f || activeParams.blueTint != 0f
-            ) add("color")
-            if (activeParams.noiseReduction > 0f) add("denoise")
-            if (activeParams.sharpness > 0f) add("sharpness")
-            if (activeParams.faceBrightening > 0f) add("face")
-        }
-        if (selectedIds.isEmpty()) return
+        if (params.changedParamCount() == 0) return
+        val source = originalBitmap ?: return
 
         scope.launch {
             isOptimizing = true
-            optimizedOptions.clear()
-            optimizationTotalSteps = selectedIds.size
-            optimizationStep = 0
             optimizationProgress = 0f
 
-            val source = originalBitmap ?: run { isOptimizing = false; return@launch }
-            val mutableSource = if (source.isMutable) source else source.copy(Bitmap.Config.ARGB_8888, true)
-
             try {
-                var workingBitmap: Bitmap = mutableSource
-                for ((index, id) in selectedIds.withIndex()) {
-                    optimizationStep = index + 1
-                    optimizationCurrentName = paramIdToName[id] ?: id
-                    optimizationProgress = index.toFloat() / selectedIds.size
-
-                    val strength = when (id) {
-                        "color" -> 1.0f
-                        "denoise" -> activeParams.noiseReduction / 100f
-                        "sharpness" -> activeParams.sharpness / 100f
-                        "face" -> activeParams.faceBrightening / 100f
-                        else -> 0.5f
+                val result = pixelFruitEngine.process(
+                    bitmap = source,
+                    params = params,
+                    onProgress = { step, progress ->
+                        optimizationCurrentName = step
+                        optimizationProgress = progress
                     }
-                    val prevBitmap = workingBitmap
-                    workingBitmap = withContext(Dispatchers.Default) {
-                        inferenceEngine.applyOptimization(workingBitmap, id, strength)
-                    }
-                    if (prevBitmap !== mutableSource && prevBitmap !== source && !prevBitmap.isRecycled) {
-                        prevBitmap.recycle()
-                    }
-                    optimizationProgress = (index + 1).toFloat() / selectedIds.size
-                    optimizedOptions.add(id)
-                }
-                optimizedBitmap = workingBitmap
+                )
+                optimizedBitmap = result
                 previewMode = "after"
-                Toast.makeText(context, "优化完成", Toast.LENGTH_SHORT).show()
+                // 更新处理后直方图
+                histogram = histogramAnalyzer.analyze(result)
+                Toast.makeText(context, "PixelFruit 优化完成", Toast.LENGTH_SHORT).show()
             } catch (e: OutOfMemoryError) {
                 Toast.makeText(context, "内存不足，请选择较小图片", Toast.LENGTH_LONG).show()
-                optimizedOptions.clear()
             } catch (e: Exception) {
                 Toast.makeText(context, "优化失败：${e.message}", Toast.LENGTH_LONG).show()
-                optimizedOptions.clear()
             } finally {
                 isOptimizing = false
             }
+        }
+    }
+
+    // 实时预览：参数变化时自动更新预览
+    fun updatePreview() {
+        val source = originalBitmap ?: return
+        previewJob?.cancel()
+        previewJob = scope.launch {
+            kotlinx.coroutines.delay(150) // 150ms 防抖
+            if (!isActive) return@launch
+            try {
+                val preview = pixelFruitEngine.processPreview(source, params)
+                previewBitmap = preview
+                if (previewMode == "before") previewMode = "preview"
+            } catch (_: Exception) { }
         }
     }
 
@@ -376,7 +359,7 @@ fun SmartOptimizeScreen(
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = HasselbladOrange)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("正在优化 $optimizationStep/$optimizationTotalSteps", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)
+                        Text("PixelFruit 处理中", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.weight(1f))
                         Text("${(optimizationProgress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
                     }
@@ -399,11 +382,21 @@ fun SmartOptimizeScreen(
         ImagePreviewArea(
             originalBitmap = originalBitmap,
             optimizedBitmap = optimizedBitmap,
+            previewBitmap = previewBitmap,
             previewMode = previewMode,
             isAnalyzing = isAnalyzing,
             onPickImage = { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             modifier = Modifier.fillMaxWidth().height(240.dp)
         )
+
+        // ===== 直方图 =====
+        if (showHistogram && histogram != null) {
+            HistogramView(
+                histogram = histogram,
+                mode = HistogramMode.RGB,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
 
         // ===== Tab 切换栏 =====
         TabRow(
@@ -462,12 +455,12 @@ fun SmartOptimizeScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             when (selectedTab) {
-                0 -> item { ColorAdjustPanel(params = params, onParamsChange = { params = it }) }
-                1 -> item { DetailPanel(params = params, onParamsChange = { params = it }) }
-                2 -> item { FilterPresetPanel(onApplyPreset = { params = it }) }
+                0 -> item { ColorAdjustPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
+                1 -> item { DetailPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
+                2 -> item { FilterPresetPanel(onApplyPreset = { params = it; updatePreview() }) }
                 3 -> item { AIPanel(
                     params = params,
-                    onParamsChange = { params = it },
+                    onParamsChange = { params = it; updatePreview() },
                     originalBitmap = originalBitmap,
                     inferenceEngine = inferenceEngine,
                     scope = scope,
@@ -486,10 +479,11 @@ fun SmartOptimizeScreen(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     params = PixelFruitParams()
-                    optimizedOptions.clear()
                     optimizedBitmap = null
+                    previewBitmap = null
                     previewMode = "before"
                     analysisResult = null
+                    previewJob?.cancel()
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(14.dp),
@@ -833,6 +827,7 @@ private fun SmartOptimizeTopBar(
 private fun ImagePreviewArea(
     originalBitmap: Bitmap?,
     optimizedBitmap: Bitmap?,
+    previewBitmap: Bitmap?,
     previewMode: String,
     isAnalyzing: Boolean,
     onPickImage: () -> Unit,
@@ -844,7 +839,11 @@ private fun ImagePreviewArea(
         if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
             BeforeAfterCompareView(beforeBitmap = originalBitmap, afterBitmap = optimizedBitmap, modifier = Modifier.fillMaxSize())
         } else {
-            val displayBitmap = if (previewMode == "after") optimizedBitmap ?: originalBitmap else originalBitmap
+            val displayBitmap = when (previewMode) {
+                "after" -> optimizedBitmap ?: originalBitmap
+                "preview" -> previewBitmap ?: originalBitmap
+                else -> originalBitmap
+            }
             displayBitmap?.let { bitmap ->
                 Image(bitmap = bitmap.asImageBitmap(), contentDescription = "预览", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } ?: run {
@@ -861,7 +860,12 @@ private fun ImagePreviewArea(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                when { previewMode == "compare" -> "前后对比"; previewMode == "after" && optimizedBitmap != null -> "优化后"; else -> "原图" },
+                when {
+                    previewMode == "compare" -> "前后对比"
+                    previewMode == "preview" -> "实时预览"
+                    previewMode == "after" && optimizedBitmap != null -> "优化后"
+                    else -> "原图"
+                },
                 color = if (previewMode != "before") HasselbladOrange else Color.White,
                 style = MaterialTheme.typography.labelSmall
             )
