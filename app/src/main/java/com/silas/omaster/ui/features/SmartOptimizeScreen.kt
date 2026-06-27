@@ -110,7 +110,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -118,9 +117,10 @@ import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
 /**
  * 智能优化页面 — 基于 PixelFruit 架构重构
@@ -179,7 +179,7 @@ fun SmartOptimizeScreen(
     var showHistogram by remember { mutableStateOf(true) }
 
     // 实时预览防抖
-    var previewJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var previewJob by remember { mutableStateOf<Job?>(null) }
 
     // 保存状态
     var isSaving by remember { mutableStateOf(false) }
@@ -814,7 +814,7 @@ private fun SmartOptimizeTopBar(
                 ) {
                     Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(2.dp))
-                    Text(it.name, fontSize = 11.sp, color = HasselbladOrange, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(it.name, style = MaterialTheme.typography.labelSmall, color = HasselbladOrange, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             IconButton(onClick = onPreviewToggle) {
@@ -900,7 +900,7 @@ private fun ImagePreviewArea(
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = HasselbladOrange)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("AI 场景识别中...", fontSize = 11.sp, color = HasselbladOrange)
+                Text("AI 场景识别中...", style = MaterialTheme.typography.labelSmall, color = HasselbladOrange)
             }
         }
     }
@@ -1003,8 +1003,8 @@ private fun BeforeAfterCompareView(beforeBitmap: Bitmap, afterBitmap: Bitmap, mo
             }
             Box(modifier = Modifier.align(Alignment.CenterStart).offset(x = (dividerOffset * screenWidthDp).dp).width(2.dp).fillMaxHeight().background(Color.White))
             Row(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("原图", color = Color.White, fontSize = 11.sp, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
-                Text("优化后", color = HasselbladOrange, fontSize = 11.sp, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
+                Text("原图", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
+                Text("优化后", color = HasselbladOrange, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
             }
         }
     }

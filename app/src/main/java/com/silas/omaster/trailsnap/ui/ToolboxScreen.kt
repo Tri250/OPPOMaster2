@@ -60,7 +60,6 @@ import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.trailsnap.model.ToolboxItem
 import com.silas.omaster.trailsnap.model.ToolboxTool
 import com.silas.omaster.ui.theme.HasselbladOrange
-import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun ToolboxScreen(
