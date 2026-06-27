@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.home
 
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.ExperimentalMaterialApi
@@ -122,7 +123,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     val viewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(repository)
+        factory = HomeViewModelFactory(repository, context.applicationContext)
     )
     val haptic = LocalHapticFeedback.current
 
@@ -187,7 +188,18 @@ fun HomeScreen(
             HeaderSection(
                 onRefresh = {
                     haptic.perform(HapticFeedbackType.LongPress)
-                    viewModel.refresh()
+                    viewModel.refreshWithSubscriptions(
+                        onResult = { success, upToDate, fail ->
+                            val message = when {
+                                success > 0 && upToDate > 0 ->
+                                    "成功更新 $success 个订阅，$upToDate 个已是最新"
+                                success > 0 -> "成功更新 $success 个订阅"
+                                upToDate > 0 -> "所有订阅均已是最新"
+                                else -> "更新失败，请检查网络"
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             )
 
@@ -250,7 +262,21 @@ fun HomeScreen(
                     showDeleteConfirm = true
                 },
                 onScrollStateChanged = onScrollStateChanged,
-                onRefresh = { onComplete -> viewModel.refresh(onComplete) }
+                onRefresh = { onComplete ->
+                    viewModel.refreshWithSubscriptions(
+                        onComplete = onComplete,
+                        onResult = { success, upToDate, fail ->
+                            val message = when {
+                                success > 0 && upToDate > 0 ->
+                                    "成功更新 $success 个订阅，$upToDate 个已是最新"
+                                success > 0 -> "成功更新 $success 个订阅"
+                                upToDate > 0 -> "所有订阅均已是最新"
+                                else -> "更新失败，请检查网络"
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
             )
         }
 

@@ -1,10 +1,14 @@
 package com.silas.omaster.ui.home
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.network.PresetRemoteManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +34,8 @@ enum class SortType {
  * 2. refresh() 现在会取消旧任务并重新收集
  */
 class HomeViewModel(
-    private val repository: PresetRepository
+    private val repository: PresetRepository,
+    private val appContext: Context
 ) : ViewModel() {
 
     // 所有预设
@@ -231,7 +236,8 @@ class HomeViewModel(
     }
 
     /**
-     * 刷新数据
+     * 刷新数据（仅本地，不拉取网络订阅）
+     * 用于预设创建/编辑保存后的本地数据刷新
      * 修复：使用 forceReloadFromFiles 强制从文件重新加载，避免内存缓存非空导致数据不更新
      */
     fun refresh(onComplete: () -> Unit = {}) {
@@ -240,6 +246,62 @@ class HomeViewModel(
             loadPresets()
             delay(500) // 给予足够时间让 Flow 发射新值并让 UI 感知
             onComplete()
+        }
+    }
+
+    /**
+     * 加载更新解析订阅管理链接
+     *
+     * 拉取所有启用的订阅源最新内容，解析后刷新本地内存预设。
+     * 用于首页 Header 刷新按钮和下拉刷新，使用户在首页即可触发订阅链接的加载、更新、解析。
+     *
+     * @param onComplete 刷新完成回调（无论成功失败均会调用）
+     * @param onResult 拉取结果回调 (successCount, upToDateCount, failCount)，供 UI 显示 Toast
+     */
+    fun refreshWithSubscriptions(
+        onComplete: () -> Unit = {},
+        onResult: (successCount: Int, upToDateCount: Int, failCount: Int) -> Unit = { _, _, _ -> }
+    ) {
+        viewModelScope.launch {
+            var successCount = 0
+            var upToDateCount = 0
+            var failCount = 0
+            try {
+                val subManager = SubscriptionManager.getInstance(appContext)
+                val enabledSubs = subManager.subscriptionsFlow.value.filter { it.isEnabled }
+                for (sub in enabledSubs) {
+                    try {
+                        val result = PresetRemoteManager.fetchAndSave(
+                            appContext, sub.url, forceUpdate = false
+                        )
+                        if (result.isSuccess) {
+                            successCount++
+                        } else if (result.exceptionOrNull()?.message == "无需更新") {
+                            upToDateCount++
+                        } else {
+                            failCount++
+                        }
+                    } catch (e: Exception) {
+                        Log.w("HomeViewModel", "订阅拉取失败: ${sub.name}", e)
+                        failCount++
+                    }
+                }
+                // 拉取完成后刷新内存预设
+                repository.forceReloadFromFiles()
+                loadPresets()
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "订阅刷新整体失败", e)
+                // 整体异常仍尝试刷新本地缓存
+                try {
+                    repository.forceReloadFromFiles()
+                    loadPresets()
+                } catch (_: Exception) {
+                }
+            } finally {
+                onResult(successCount, upToDateCount, failCount)
+                delay(300) // 给予 UI 感知时间
+                onComplete()
+            }
         }
     }
 
@@ -257,12 +319,13 @@ class HomeViewModel(
  * HomeViewModel 工厂
  */
 class HomeViewModelFactory(
-    private val repository: PresetRepository
+    private val repository: PresetRepository,
+    private val appContext: Context
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(repository) as T
+            return HomeViewModel(repository, appContext) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
