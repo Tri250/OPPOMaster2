@@ -36,18 +36,8 @@
     <!-- 相机权限（SceneRecognitionManager / SmartOptimize 使用） -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- 录制音频权限（CameraX 视频录制模式及语音快门所需） -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
-    <!-- 定位权限（地标识别 / GPS 场景增强） -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
     <!-- 传感器权限（陀螺仪、加速度计用于防抖/水平仪/AR构图） -->
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
-
-    <!-- 唤醒锁（前台渲染防休眠，长曝光/光绘模式保持屏幕常亮） -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".OMasterApplication"

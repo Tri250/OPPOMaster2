@@ -294,7 +294,8 @@ fun StyleLUTGeneratorScreen(
                 }
 
                 // 评估指标
-                val metrics = generationResult!!.metrics
+                // 修复：原代码 generationResult!!.metrics 在 metrics 字段为 null 时会触发 NPE
+                val metrics = generationResult?.metrics ?: return@Column
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))

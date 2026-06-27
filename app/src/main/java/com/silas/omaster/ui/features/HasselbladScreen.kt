@@ -1455,20 +1455,27 @@ private fun RecentShotThumbnail(
         modifier = Modifier.size(72.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (thumbnail != null) {
-                Image(
-                    bitmap = thumbnail!!.asImageBitmap(),
-                    contentDescription = "最近拍摄",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = HasselbladOrange,
-                    strokeWidth = 2.dp
-                )
-            }
+            thumbnail?.let { bmp ->
+                // 修复：消除 !! 操作符，使用 ?.let + isRecycled 防护
+                if (!bmp.isRecycled) {
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "最近拍摄",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = HasselbladOrange,
+                        strokeWidth = 2.dp
+                    )
+                }
+            } ?: CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = HasselbladOrange,
+                strokeWidth = 2.dp
+            )
         }
     }
 }
