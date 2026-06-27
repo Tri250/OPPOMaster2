@@ -496,7 +496,7 @@ fun CameraXViewfinderScreen(
                         )
                     },
                     onSwitchCamera = {
-                        cameraManager.switchCamera( /* 需要 PreviewView */ )
+                        cameraManager.switchCamera()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
