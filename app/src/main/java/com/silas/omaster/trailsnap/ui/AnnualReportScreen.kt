@@ -1,6 +1,14 @@
 package com.silas.omaster.trailsnap.ui
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,15 +40,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.trailsnap.model.AnnualReport
 import com.silas.omaster.trailsnap.model.CityStat
+import com.silas.omaster.trailsnap.model.MediaType
+import com.silas.omaster.trailsnap.model.TrailPhoto
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
 
@@ -88,7 +103,7 @@ fun AnnualReportScreen(
         item {
             SectionTitle(title = "高光时刻")
             Spacer(modifier = Modifier.height(8.dp))
-            HighlightGrid(count = report?.highlightPhotoIds?.size ?: 0)
+            HighlightGrid(report = report, repository = repository)
         }
     }
 }
@@ -316,35 +331,95 @@ private fun SeasonDistribution(stats: Map<String, Int>) {
 }
 
 @Composable
-private fun HighlightGrid(count: Int) {
-    val cells = (0 until count.coerceIn(3, 9)).toList()
+private fun HighlightGrid(report: AnnualReport?, repository: TrailSnapRepository) {
+    val highlightPhotos = remember(report?.highlightPhotoIds) {
+        report?.highlightPhotoIds
+            ?.mapNotNull { repository.getPhotoById(it) }
+            ?.take(9)
+            ?: emptyList()
+    }
+
+    if (highlightPhotos.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(96.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "今年还没有高光照片",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+            )
+        }
+        return
+    }
+
+    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        cells.chunked(3).forEach { row ->
+        highlightPhotos.chunked(3).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                row.forEach {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(96.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            tint = HasselbladOrange.copy(alpha = 0.6f),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                row.forEach { photo ->
+                    HighlightPhotoItem(photo = photo, onClick = { openPhotoViewer(context, photo) })
                 }
                 repeat(3 - row.size) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "highlight_photo_scale"
+    )
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(96.dp)
+            .scale(scale)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                }
+            )
+    ) {
+        AsyncImage(
+            model = photo.thumbnailUri ?: photo.uri,
+            contentDescription = photo.filename,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
+    val uri = photo.uri ?: return
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, if (photo.mediaType == MediaType.VIDEO) "video/*" else "image/*")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        Toast.makeText(context, "无法打开照片", Toast.LENGTH_SHORT).show()
     }
 }

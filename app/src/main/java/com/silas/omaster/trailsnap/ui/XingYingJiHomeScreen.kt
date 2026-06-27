@@ -1,5 +1,11 @@
 package com.silas.omaster.trailsnap.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,15 +34,24 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Train
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,9 +60,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
+import kotlinx.coroutines.launch
 
 @Composable
 fun XingYingJiHomeScreen(
@@ -65,9 +83,38 @@ fun XingYingJiHomeScreen(
     val repository = remember { TrailSnapRepository.getInstance(context) }
     val stats by repository.dashboardStats.collectAsState()
     val annual by repository.annualReport.collectAsState()
+    val scope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        repository.refresh()
+    val requiredPermissions = remember {
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+            else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+    var hasMediaPermission by remember {
+        mutableStateOf(
+            requiredPermissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+    var showRationale by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        hasMediaPermission = requiredPermissions.any { results[it] == true }
+        showRationale = !hasMediaPermission && requiredPermissions.any {
+            ActivityCompat.shouldShowRequestPermissionRationale(context as android.app.Activity, it)
+        }
+    }
+
+    LaunchedEffect(hasMediaPermission) {
+        if (hasMediaPermission) {
+            repository.refresh()
+        }
     }
 
     LazyColumn(
@@ -83,15 +130,40 @@ fun XingYingJiHomeScreen(
                 title = "行影集",
                 onBack = onBack,
                 actions = {
-                    IconButton(onClick = { /* refresh */ }) {
+                    IconButton(
+                        onClick = {
+                            if (!isRefreshing && hasMediaPermission) {
+                                isRefreshing = true
+                                scope.launch {
+                                    repository.refresh()
+                                    isRefreshing = false
+                                }
+                            }
+                        }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "刷新",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = if (isRefreshing) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
             )
+        }
+
+        if (!hasMediaPermission) {
+            item {
+                PermissionCard(
+                    onRequest = { permissionLauncher.launch(requiredPermissions) },
+                    onOpenSettings = {
+                        val intent = Settings.ACTION_APPLICATION_DETAILS_SETTINGS.let {
+                            android.content.Intent(it, android.net.Uri.parse("package:${context.packageName}"))
+                        }
+                        context.startActivity(intent)
+                    },
+                    showRationale = showRationale
+                )
+            }
         }
 
         item {
@@ -279,7 +351,7 @@ private fun StatsGrid(
             StatCard(
                 value = stats?.totalVideos?.toString() ?: "0",
                 label = "视频",
-                icon = Icons.Default.LocationOn,
+                icon = Icons.Default.Videocam,
                 modifier = Modifier.weight(1f),
                 gradient = listOf(Color(0xFF1565C0), Color(0xFF42A5F5))
             )
@@ -302,6 +374,62 @@ private fun StatsGrid(
                 modifier = Modifier.weight(1f),
                 gradient = listOf(Color(0xFF6A1B9A), Color(0xFFAB47BC))
             )
+        }
+    }
+}
+
+@Composable
+private fun PermissionCard(
+    onRequest: () -> Unit,
+    onOpenSettings: () -> Unit,
+    showRationale: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "需要存储权限",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "行影集需要访问您的照片和视频，才能生成时间轴、相册、足迹和人物聚类。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            if (showRationale) {
+                OutlinedButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("前往设置开启")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onRequest,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("重新申请")
+                }
+            } else {
+                Button(
+                    onClick = onRequest,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("授权访问")
+                }
+            }
         }
     }
 }

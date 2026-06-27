@@ -28,6 +28,7 @@ data class TrailPhoto(
     val uploadTime: LocalDateTime = LocalDateTime.now(),
     val width: Int = 0,
     val height: Int = 0,
+    val size: Long = 0L,
     val mediaType: MediaType = MediaType.IMAGE,
     val metadata: PhotoMetadata? = null,
     val thumbnailUri: Uri? = null,

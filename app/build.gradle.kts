@@ -403,8 +403,9 @@ dependencies {
     implementation(libs.umeng.common)
     implementation(libs.umeng.asms)
 
-    // ML Kit 人脸检测 / 自拍分割 / 物体检测
+    // ML Kit 人脸检测 / 文字识别 / 自拍分割 / 物体检测
     implementation(libs.mlkit.face.detection)
+    implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.segmentation.selfie)
     implementation(libs.mlkit.`object`.detection)
 

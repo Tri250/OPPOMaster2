@@ -1,6 +1,13 @@
 package com.silas.omaster.trailsnap.ui
 
+import android.content.Intent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,11 +33,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.trailsnap.model.FaceCluster
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -38,6 +49,7 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 @Composable
 fun PeopleScreen(
     onBack: () -> Unit,
+    onNavigateToPersonDetail: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -58,17 +70,36 @@ fun PeopleScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(faces) { face ->
-                FaceItem(face = face)
+                FaceItem(face = face, onClick = { onNavigateToPersonDetail(face.id) })
             }
         }
     }
 }
 
 @Composable
-private fun FaceItem(face: FaceCluster) {
+private fun FaceItem(face: FaceCluster, onClick: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "face_item_scale"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                }
+            )
     ) {
         Box(
             modifier = Modifier
@@ -77,12 +108,22 @@ private fun FaceItem(face: FaceCluster) {
                 .background(HasselbladOrange.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = face.name,
-                tint = HasselbladOrange,
-                modifier = Modifier.size(40.dp)
-            )
+            val avatarUri = face.avatarUri
+            if (avatarUri != null) {
+                AsyncImage(
+                    model = avatarUri,
+                    contentDescription = face.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = face.name,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.size(8.dp))
         Text(

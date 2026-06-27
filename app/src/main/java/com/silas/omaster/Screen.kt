@@ -93,16 +93,25 @@ sealed class Screen {
     data object XingYingJiAlbums : Screen()
 
     @Serializable
+    data class XingYingJiAlbumDetail(val albumId: String) : Screen()
+
+    @Serializable
     data object XingYingJiLocations : Screen()
 
     @Serializable
     data object XingYingJiPeople : Screen()
 
     @Serializable
+    data class XingYingJiPersonDetail(val faceId: String) : Screen()
+
+    @Serializable
     data object XingYingJiTickets : Screen()
 
     @Serializable
     data object XingYingJiToolbox : Screen()
+
+    @Serializable
+    data object XingYingJiRecycleBin : Screen()
 
     @Serializable
     data object XingYingJiAnnualReport : Screen()

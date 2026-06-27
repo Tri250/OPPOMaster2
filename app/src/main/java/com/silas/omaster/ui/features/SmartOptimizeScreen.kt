@@ -202,9 +202,17 @@ fun SmartOptimizeScreen(
                     // 直方图分析
                     histogram = histogramAnalyzer.analyze(loadedBitmap)
                     // 自动AI场景识别
-                    analyzeImage(loadedBitmap, inferenceEngine, scope) { result ->
-                        analysisResult = result
-                    }
+                    isAnalyzing = true
+                    analyzeImage(
+                        loadedBitmap,
+                        inferenceEngine,
+                        scope,
+                        onResult = { result ->
+                            analysisResult = result
+                            isAnalyzing = false
+                        },
+                        onError = { isAnalyzing = false }
+                    )
                 } else {
                     Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
                 }
@@ -212,15 +220,6 @@ fun SmartOptimizeScreen(
                 Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    // 从assets加载示例预览图
-    LaunchedEffect(Unit) {
-        try {
-            context.assets.open("images/placeholder.webp").use { stream ->
-                originalBitmap = BitmapFactory.decodeStream(stream)
-            }
-        } catch (_: IOException) { }
     }
 
     LaunchedEffect(saveError) {
@@ -464,7 +463,9 @@ fun SmartOptimizeScreen(
                     originalBitmap = originalBitmap,
                     inferenceEngine = inferenceEngine,
                     scope = scope,
-                    context = context
+                    context = context,
+                    onAnalysisResult = { analysisResult = it },
+                    setIsAnalyzing = { isAnalyzing = it }
                 ) }
             }
             item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -637,7 +638,9 @@ private fun AIPanel(
     originalBitmap: Bitmap?,
     inferenceEngine: MasterInferenceEngine,
     scope: CoroutineScope,
-    context: Context
+    context: Context,
+    onAnalysisResult: (com.silas.omaster.model.SceneProfile) -> Unit,
+    setIsAnalyzing: (Boolean) -> Unit
 ) {
     var isAILoading by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
@@ -657,19 +660,31 @@ private fun AIPanel(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     val bitmap = originalBitmap ?: return@clickable
                     isAILoading = true
-                    analyzeImage(bitmap, inferenceEngine, scope) { result ->
-                        // 根据AI场景推荐参数（对齐 PixelFruit applyAutoRecommendations）
-                        val recommended = when (result.category) {
-                            com.silas.omaster.model.SceneCategory.PORTRAIT -> PixelFruitParams(brightness = 1.1f, exposure = 0.3f, saturation = 120f, faceBrightening = 40f, faceSmoothness = 70f)
-                            com.silas.omaster.model.SceneCategory.LANDSCAPE -> PixelFruitParams(saturation = 125f, contrast = 10f, sharpness = 20f, shadows = 5f)
-                            com.silas.omaster.model.SceneCategory.NIGHT -> PixelFruitParams(exposure = 0.4f, noiseReduction = 35f, saturation = 85f, highlights = -15f)
-                            com.silas.omaster.model.SceneCategory.FOOD -> PixelFruitParams(brightness = 1.15f, saturation = 140f, contrast = 8f, sharpness = 15f)
-                            com.silas.omaster.model.SceneCategory.URBAN -> PixelFruitParams(contrast = 12f, saturation = 115f, sharpness = 25f, shadows = 3f)
-                            else -> PixelFruitParams(brightness = 1.05f, saturation = 110f, contrast = 5f)
+                    setIsAnalyzing(true)
+                    analyzeImage(
+                        bitmap,
+                        inferenceEngine,
+                        scope,
+                        onResult = { result ->
+                            onAnalysisResult(result)
+                            // 根据AI场景推荐参数（对齐 PixelFruit applyAutoRecommendations）
+                            val recommended = when (result.category) {
+                                com.silas.omaster.model.SceneCategory.PORTRAIT -> PixelFruitParams(brightness = 1.1f, exposure = 0.3f, saturation = 120f, faceBrightening = 40f, faceSmoothness = 70f)
+                                com.silas.omaster.model.SceneCategory.LANDSCAPE -> PixelFruitParams(saturation = 125f, contrast = 10f, sharpness = 20f, shadows = 5f)
+                                com.silas.omaster.model.SceneCategory.NIGHT -> PixelFruitParams(exposure = 0.4f, noiseReduction = 35f, saturation = 85f, highlights = -15f)
+                                com.silas.omaster.model.SceneCategory.FOOD -> PixelFruitParams(brightness = 1.15f, saturation = 140f, contrast = 8f, sharpness = 15f)
+                                com.silas.omaster.model.SceneCategory.URBAN -> PixelFruitParams(contrast = 12f, saturation = 115f, sharpness = 25f, shadows = 3f)
+                                else -> PixelFruitParams(brightness = 1.05f, saturation = 110f, contrast = 5f)
+                            }
+                            onParamsChange(recommended)
+                            isAILoading = false
+                            setIsAnalyzing(false)
+                        },
+                        onError = {
+                            isAILoading = false
+                            setIsAnalyzing(false)
                         }
-                        onParamsChange(recommended)
-                        isAILoading = false
-                    }
+                    )
                 }
                 .padding(20.dp)
         ) {
@@ -932,12 +947,20 @@ private fun applyExifOrientation(context: Context, uri: Uri, bitmap: Bitmap): Bi
     } catch (_: Exception) { bitmap }
 }
 
-private fun analyzeImage(bitmap: Bitmap, engine: MasterInferenceEngine, scope: CoroutineScope, onResult: (SceneProfile) -> Unit) {
+private fun analyzeImage(
+    bitmap: Bitmap,
+    engine: MasterInferenceEngine,
+    scope: CoroutineScope,
+    onResult: (SceneProfile) -> Unit,
+    onError: (() -> Unit)? = null
+) {
     scope.launch(Dispatchers.Default) {
         try {
             val result = engine.analyzeImage(bitmap)
             withContext(Dispatchers.Main) { onResult(result) }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+            withContext(Dispatchers.Main) { onError?.invoke() }
+        }
     }
 }
 

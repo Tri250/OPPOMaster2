@@ -70,10 +70,13 @@ import com.silas.omaster.ui.settings.SettingsScreen
 import com.silas.omaster.ui.settings.TermsScreen
 import com.silas.omaster.ui.settings.ThemeSettingsScreen
 import com.silas.omaster.ui.settings.UpdateChannelScreen
+import com.silas.omaster.trailsnap.ui.AlbumDetailScreen
 import com.silas.omaster.trailsnap.ui.AlbumsScreen
 import com.silas.omaster.trailsnap.ui.AnnualReportScreen
 import com.silas.omaster.trailsnap.ui.LocationsScreen
 import com.silas.omaster.trailsnap.ui.PeopleScreen
+import com.silas.omaster.trailsnap.ui.PersonDetailScreen
+import com.silas.omaster.trailsnap.ui.RecycleBinScreen
 import com.silas.omaster.trailsnap.ui.TicketsScreen
 import com.silas.omaster.trailsnap.ui.TimelineScreen
 import com.silas.omaster.trailsnap.ui.ToolboxScreen
@@ -547,7 +550,20 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.XingYingJiAlbums> {
-                AlbumsScreen(onBack = { navController.popBackStack() })
+                AlbumsScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToAlbumDetail = { albumId ->
+                        navController.navigate(Screen.XingYingJiAlbumDetail(albumId))
+                    }
+                )
+            }
+
+            composable<Screen.XingYingJiAlbumDetail> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.XingYingJiAlbumDetail>()
+                AlbumDetailScreen(
+                    albumId = route.albumId,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable<Screen.XingYingJiLocations> {
@@ -555,7 +571,20 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.XingYingJiPeople> {
-                PeopleScreen(onBack = { navController.popBackStack() })
+                PeopleScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPersonDetail = { faceId ->
+                        navController.navigate(Screen.XingYingJiPersonDetail(faceId))
+                    }
+                )
+            }
+
+            composable<Screen.XingYingJiPersonDetail> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.XingYingJiPersonDetail>()
+                PersonDetailScreen(
+                    faceId = route.faceId,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable<Screen.XingYingJiTickets> {
@@ -563,7 +592,14 @@ fun MainApp(navController: NavHostController) {
             }
 
             composable<Screen.XingYingJiToolbox> {
-                ToolboxScreen(onBack = { navController.popBackStack() })
+                ToolboxScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToRecycleBin = { navController.navigate(Screen.XingYingJiRecycleBin) }
+                )
+            }
+
+            composable<Screen.XingYingJiRecycleBin> {
+                RecycleBinScreen(onBack = { navController.popBackStack() })
             }
 
             composable<Screen.XingYingJiAnnualReport> {

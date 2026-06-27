@@ -213,3 +213,13 @@ fun SectionTitle(title: String, modifier: Modifier = Modifier) {
         modifier = modifier.padding(vertical = 8.dp)
     )
 }
+
+@Composable
+fun EmptyHint(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+        modifier = modifier
+    )
+}
