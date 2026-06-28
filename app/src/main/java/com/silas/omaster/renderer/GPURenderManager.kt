@@ -814,14 +814,38 @@ class GPURenderManager private constructor(private val context: Context) {
     
     /**
      * 在渲染线程执行阻塞操作（使用suspendCancellableCoroutine替代runBlocking）
+     *
+     * 修复：若 renderHandler 在检查非空后、post 前被 release 置为 null，
+     * 或 Handler 对应的 Looper 已 quit 导致 post 失败，
+     * 必须在当前线程立即执行 block，避免 continuation 永远挂起。
      */
     private suspend fun <T> runOnRenderThreadBlocking(block: () -> T): T {
-        if (renderThread == null || renderHandler == null) {
+        val handler = renderHandler
+        if (renderThread == null || handler == null) {
             return block()
         }
-        
+
         return suspendCancellableCoroutine { continuation ->
-            renderHandler?.post {
+            val posted = try {
+                handler.post {
+                    try {
+                        val result = block()
+                        if (continuation.isActive) {
+                            continuation.resume(result) {}
+                        }
+                    } catch (e: Exception) {
+                        if (continuation.isActive) {
+                            continuation.resumeWithException(e)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Handler post failed", e)
+                false
+            }
+
+            if (!posted) {
+                // Handler 已失效，立即在当前线程执行避免协程泄漏
                 try {
                     val result = block()
                     if (continuation.isActive) {
@@ -833,8 +857,7 @@ class GPURenderManager private constructor(private val context: Context) {
                     }
                 }
             }
-            
-            // 设置超时取消
+
             continuation.invokeOnCancellation {
                 Log.w(TAG, "Render thread operation cancelled")
             }

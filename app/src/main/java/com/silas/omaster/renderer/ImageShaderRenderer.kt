@@ -282,10 +282,14 @@ class ImageShaderRenderer(private val context: Context) {
     fun createOutputTexture(width: Int, height: Int): Int {
         val textureArray = IntArray(1)
         GLES30.glGenTextures(1, textureArray, 0)
+        if (textureArray[0] == 0) {
+            Log.e(TAG, "glGenTextures 失败，无法创建输出纹理")
+            return 0
+        }
         outputTextureId = textureArray[0]
-        
+
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, outputTextureId)
-        
+
         GLES30.glTexParameteri(
             GLES30.GL_TEXTURE_2D,
             GLES30.GL_TEXTURE_MIN_FILTER,
@@ -306,7 +310,7 @@ class ImageShaderRenderer(private val context: Context) {
             GLES30.GL_TEXTURE_WRAP_T,
             GLES30.GL_CLAMP_TO_EDGE
         )
-        
+
         // 分配纹理存储
         GLES30.glTexImage2D(
             GLES30.GL_TEXTURE_2D,
@@ -319,12 +323,20 @@ class ImageShaderRenderer(private val context: Context) {
             GLES30.GL_UNSIGNED_BYTE,
             null
         )
-        
+
+        val glError = GLES30.glGetError()
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+
+        if (glError != GLES30.GL_NO_ERROR) {
+            Log.e(TAG, "输出纹理创建 GL 错误: 0x${glError.toString(16)}")
+            GLES30.glDeleteTextures(1, intArrayOf(outputTextureId), 0)
+            outputTextureId = 0
+            return 0
+        }
 
         outputWidth = width
         outputHeight = height
-        
+
         return outputTextureId
     }
     
@@ -333,12 +345,21 @@ class ImageShaderRenderer(private val context: Context) {
      * @return FBO ID
      */
     fun createFramebuffer(): Int {
+        if (outputTextureId == 0) {
+            Log.e(TAG, "输出纹理未创建，无法创建 FBO")
+            return 0
+        }
+
         val fboArray = IntArray(1)
         GLES30.glGenFramebuffers(1, fboArray, 0)
+        if (fboArray[0] == 0) {
+            Log.e(TAG, "glGenFramebuffers 失败")
+            return 0
+        }
         framebufferId = fboArray[0]
-        
+
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, framebufferId)
-        
+
         // 附加输出纹理
         GLES30.glFramebufferTexture2D(
             GLES30.GL_FRAMEBUFFER,
@@ -347,15 +368,18 @@ class ImageShaderRenderer(private val context: Context) {
             outputTextureId,
             0
         )
-        
+
         // 检查FBO状态
         val status = GLES30.glCheckFramebufferStatus(GLES30.GL_FRAMEBUFFER)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+
         if (status != GLES30.GL_FRAMEBUFFER_COMPLETE) {
             Log.e(TAG, "Framebuffer is not complete: $status")
+            GLES30.glDeleteFramebuffers(1, intArrayOf(framebufferId), 0)
+            framebufferId = 0
+            return 0
         }
-        
-        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
-        
+
         return framebufferId
     }
     
@@ -390,10 +414,16 @@ class ImageShaderRenderer(private val context: Context) {
                     GLES30.glDeleteFramebuffers(1, intArrayOf(framebufferId), 0)
                     framebufferId = 0
                 }
-                createOutputTexture(imageWidth, imageHeight)
+                val texId = createOutputTexture(imageWidth, imageHeight)
+                if (texId == 0) {
+                    return RenderResult.Error("创建输出纹理失败")
+                }
             }
             if (framebufferId == 0) {
-                createFramebuffer()
+                val fboId = createFramebuffer()
+                if (fboId == 0) {
+                    return RenderResult.Error("创建 FBO 失败")
+                }
             }
 
             // 绑定FBO进行离屏渲染
@@ -405,9 +435,14 @@ class ImageShaderRenderer(private val context: Context) {
                 GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
                 Log.e(TAG, "FBO不完整: $fboStatus, 重建FBO")
                 // 销毁并重建FBO
-                GLES30.glDeleteFramebuffers(1, intArrayOf(framebufferId), 0)
-                framebufferId = 0
-                createFramebuffer()
+                if (framebufferId != 0) {
+                    GLES30.glDeleteFramebuffers(1, intArrayOf(framebufferId), 0)
+                    framebufferId = 0
+                }
+                val fboId = createFramebuffer()
+                if (fboId == 0) {
+                    return RenderResult.Error("重建 FBO 失败")
+                }
                 GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, framebufferId)
             }
 

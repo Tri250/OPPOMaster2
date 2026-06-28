@@ -1008,7 +1008,8 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
      */
     private fun encodeBitmapToHeif(bitmap: Bitmap, outputStream: java.io.OutputStream) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            throw IllegalStateException("HEIF encoding requires Android R+")
+            Log.e(TAG, "HEIF encoding requires Android R+")
+            return
         }
 
         val width = bitmap.width

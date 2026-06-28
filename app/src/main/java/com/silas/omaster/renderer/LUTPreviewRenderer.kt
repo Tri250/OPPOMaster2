@@ -132,82 +132,134 @@ class LUTPreviewRenderer(context: Context) {
     /**
      * 初始化 EGL + OpenGL 环境。
      * 必须在 Surface 可用后调用（如 TextureView.SurfaceTextureAvailable 回调中）。
+     * @return true 表示初始化成功，false 表示失败（调用方应降级到 CPU 预览路径）
      */
-    fun init(surface: Surface) {
+    fun init(surface: Surface): Boolean {
         if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
             Log.w(TAG, "Already initialized")
-            return
+            return true
         }
 
         this.surface = surface
 
-        // EGL 初始化
-        eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
-        if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
-            throw RuntimeException("eglGetDisplay failed")
-        }
-
-        val version = IntArray(2)
-        if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) {
-            throw RuntimeException("eglInitialize failed")
-        }
-
-        // 选择 EGLConfig（OpenGL ES 3.0）
-        val configAttribs = intArrayOf(
-            EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
-            EGL14.EGL_RED_SIZE, 8,
-            EGL14.EGL_GREEN_SIZE, 8,
-            EGL14.EGL_BLUE_SIZE, 8,
-            EGL14.EGL_ALPHA_SIZE, 8,
-            EGL14.EGL_NONE
-        )
-        val configs = arrayOfNulls<EGLConfig>(1)
-        val numConfigs = IntArray(1)
-        EGL14.eglChooseConfig(eglDisplay, configAttribs, 0, configs, 0, 1, numConfigs, 0)
-
-        // 创建 EGLContext（OpenGL ES 3.0）
-        val contextAttribs = intArrayOf(
-            EGL_CONTEXT_CLIENT_VERSION, 3,
-            EGL14.EGL_NONE
-        )
-        eglContext = EGL14.eglCreateContext(eglDisplay, configs[0], EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
-
-        // 创建 Window Surface
-        eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, configs[0], surface, intArrayOf(EGL14.EGL_NONE), 0)
-        if (eglSurface == EGL14.EGL_NO_SURFACE) {
-            throw RuntimeException("eglCreateWindowSurface failed")
-        }
-
-        EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
-
-        // 编译着色器
-        program = createProgram(vertexShaderCode, fragmentShaderCode)
-        GLES30.glUseProgram(program)
-
-        // 获取 uniform 位置
-        uCameraTextureLoc = GLES30.glGetUniformLocation(program, "uCameraTexture")
-        uLUTTextureLoc = GLES30.glGetUniformLocation(program, "uLUTTexture")
-        uLUTStrengthLoc = GLES30.glGetUniformLocation(program, "uLUTStrength")
-        uColorMatrixLoc = GLES30.glGetUniformLocation(program, "uColorMatrix")
-        uHasLUTLoc = GLES30.glGetUniformLocation(program, "uHasLUT")
-
-        // 创建顶点缓冲
-        vertexBuffer = ByteBuffer.allocateDirect(VERTICES.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .apply {
-                put(VERTICES)
-                position(0)
+        try {
+            // EGL 初始化
+            eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+            if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
+                Log.e(TAG, "eglGetDisplay failed")
+                releaseEGLPartial()
+                return false
             }
 
-        // 创建 Camera 纹理（External OES，供 SurfaceTexture 绑定）
-        cameraTextureId = createOESTexture()
-        lutTextureId = createTexture()
+            val version = IntArray(2)
+            if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) {
+                Log.e(TAG, "eglInitialize failed")
+                releaseEGLPartial()
+                return false
+            }
 
-        // 初始化 ColorMatrix 为单位矩阵
-        android.opengl.Matrix.setIdentityM(colorMatrix, 0)
+            // 选择 EGLConfig（OpenGL ES 3.0）
+            val configAttribs = intArrayOf(
+                EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+                EGL14.EGL_RED_SIZE, 8,
+                EGL14.EGL_GREEN_SIZE, 8,
+                EGL14.EGL_BLUE_SIZE, 8,
+                EGL14.EGL_ALPHA_SIZE, 8,
+                EGL14.EGL_NONE
+            )
+            val configs = arrayOfNulls<EGLConfig>(1)
+            val numConfigs = IntArray(1)
+            if (!EGL14.eglChooseConfig(eglDisplay, configAttribs, 0, configs, 0, 1, numConfigs, 0) || numConfigs[0] == 0) {
+                Log.e(TAG, "eglChooseConfig failed")
+                releaseEGLPartial()
+                return false
+            }
 
-        Log.i(TAG, "LUTPreviewRenderer initialized, program=$program")
+            // 创建 EGLContext（OpenGL ES 3.0）
+            val contextAttribs = intArrayOf(
+                EGL_CONTEXT_CLIENT_VERSION, 3,
+                EGL14.EGL_NONE
+            )
+            eglContext = EGL14.eglCreateContext(eglDisplay, configs[0], EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
+            if (eglContext == EGL14.EGL_NO_CONTEXT) {
+                Log.e(TAG, "eglCreateContext failed")
+                releaseEGLPartial()
+                return false
+            }
+
+            // 创建 Window Surface
+            eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, configs[0], surface, intArrayOf(EGL14.EGL_NONE), 0)
+            if (eglSurface == EGL14.EGL_NO_SURFACE) {
+                Log.e(TAG, "eglCreateWindowSurface failed")
+                releaseEGLPartial()
+                return false
+            }
+
+            if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
+                Log.e(TAG, "eglMakeCurrent failed")
+                releaseEGLPartial()
+                return false
+            }
+
+            // 编译着色器
+            program = createProgram(vertexShaderCode, fragmentShaderCode)
+            if (program == 0) {
+                Log.e(TAG, "Shader program creation failed")
+                releaseEGLPartial()
+                return false
+            }
+            GLES30.glUseProgram(program)
+
+            // 获取 uniform 位置
+            uCameraTextureLoc = GLES30.glGetUniformLocation(program, "uCameraTexture")
+            uLUTTextureLoc = GLES30.glGetUniformLocation(program, "uLUTTexture")
+            uLUTStrengthLoc = GLES30.glGetUniformLocation(program, "uLUTStrength")
+            uColorMatrixLoc = GLES30.glGetUniformLocation(program, "uColorMatrix")
+            uHasLUTLoc = GLES30.glGetUniformLocation(program, "uHasLUT")
+
+            // 创建顶点缓冲
+            vertexBuffer = ByteBuffer.allocateDirect(VERTICES.size * 4)
+                .order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+                .apply {
+                    put(VERTICES)
+                    position(0)
+                }
+
+            // 创建 Camera 纹理（External OES，供 SurfaceTexture 绑定）
+            cameraTextureId = createOESTexture()
+            lutTextureId = createTexture()
+
+            // 初始化 ColorMatrix 为单位矩阵
+            android.opengl.Matrix.setIdentityM(colorMatrix, 0)
+
+            Log.i(TAG, "LUTPreviewRenderer initialized, program=$program")
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "LUTPreviewRenderer init failed", e)
+            releaseEGLPartial()
+            return false
+        }
+    }
+
+    /**
+     * 初始化失败时的部分清理：仅释放已分配的 EGL 资源，不触碰 GL 纹理/程序。
+     */
+    private fun releaseEGLPartial() {
+        if (eglSurface != EGL14.EGL_NO_SURFACE) {
+            EGL14.eglDestroySurface(eglDisplay, eglSurface)
+            eglSurface = EGL14.EGL_NO_SURFACE
+        }
+        if (eglContext != EGL14.EGL_NO_CONTEXT) {
+            EGL14.eglDestroyContext(eglDisplay, eglContext)
+            eglContext = EGL14.EGL_NO_CONTEXT
+        }
+        if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
+            EGL14.eglTerminate(eglDisplay)
+            eglDisplay = EGL14.EGL_NO_DISPLAY
+        }
+        surface?.release()
+        surface = null
     }
 
     /**
@@ -288,7 +340,7 @@ class LUTPreviewRenderer(context: Context) {
      * 绘制一帧。
      */
     fun drawFrame() {
-        if (eglDisplay == EGL14.EGL_NO_DISPLAY) return
+        if (eglDisplay == EGL14.EGL_NO_DISPLAY || program == 0) return
 
         GLES30.glUseProgram(program)
 

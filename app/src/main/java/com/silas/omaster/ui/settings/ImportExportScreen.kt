@@ -134,7 +134,11 @@ fun ImportExportScreen(
                 importProgress = 0.2f
                 val tempFile = withContext(Dispatchers.IO) {
                     val inputStream = context.contentResolver.openInputStream(uri)
-                        ?: throw IllegalStateException("无法打开文件")
+                    if (inputStream == null) {
+                        importError = "无法打开文件，请检查文件是否已被删除或权限不足"
+                        isImporting = false
+                        return@withContext null
+                    }
                     val temp = File(context.cacheDir, "import_${System.currentTimeMillis()}.json")
                     inputStream.use { input ->
                         temp.outputStream().use { output ->
@@ -143,6 +147,7 @@ fun ImportExportScreen(
                     }
                     temp
                 }
+                if (tempFile == null) return@launch
 
                 importProgress = 0.5f
 

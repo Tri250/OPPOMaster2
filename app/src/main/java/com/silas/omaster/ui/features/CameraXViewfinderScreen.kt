@@ -230,6 +230,16 @@ fun CameraXViewfinderScreen(
         onDispose { cameraManager.release() }
     }
 
+    // Phase 2.2 修复：释放 LUTPreviewRenderer 实例，防止多次进入取景器后 EGL 资源累积
+    DisposableEffect(lutPreviewRenderer) {
+        onDispose {
+            if (isLUTPreviewEnabled) {
+                cameraManager.setLUTPreviewRenderer(null, null)
+            }
+            lutPreviewRenderer.release()
+        }
+    }
+
     // P2-4 修复：将传入的配方/预设参数应用到 CameraManager，确保取景器实时预览生效
     LaunchedEffect(presetParams) {
         cameraManager.updatePresetParams(presetParams)

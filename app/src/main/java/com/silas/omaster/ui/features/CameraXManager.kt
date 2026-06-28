@@ -384,7 +384,24 @@ class CameraXManager(
         lutPreviewRenderer = renderer
 
         if (renderer != null && outputSurface != null) {
-            renderer.init(outputSurface)
+            val initSuccess = try {
+                renderer.init(outputSurface)
+            } catch (e: Exception) {
+                Log.e(TAG, "LUT 预览渲染器初始化异常", e)
+                false
+            }
+            if (!initSuccess) {
+                Log.w(TAG, "LUT 预览初始化失败，降级到标准预览路径")
+                mainHandler.post {
+                    Toast.makeText(context, "实时 LUT 预览初始化失败，已切换为标准预览", Toast.LENGTH_SHORT).show()
+                }
+                // 清理本次尝试持有的资源
+                renderer.release()
+                lutPreviewRenderer = null
+                // 恢复标准预览路径
+                savedPreviewView?.let { startCamera(it) }
+                return
+            }
             val textureId = renderer.getCameraTextureId()
             val st = android.graphics.SurfaceTexture(textureId)
             lutInputSurfaceTexture = st
