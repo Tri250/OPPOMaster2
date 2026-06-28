@@ -144,6 +144,18 @@ class CameraXManager(
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
+    // Phase 2.2：亮度分布统计（供反模式检测使用）
+    data class BrightnessStats(
+        val upperBrightnessRatio: Float = 0f, // 上半部分亮度占比 0~1
+        val overallBrightness: Float = 0f     // 整体平均亮度 0~255
+    )
+    private val _brightnessStats = MutableStateFlow(BrightnessStats())
+    val brightnessStats: StateFlow<BrightnessStats> = _brightnessStats.asStateFlow()
+
+    // Phase 2.2：陀螺仪稳定性（供反模式检测使用）
+    private val _gyroscopeStable = MutableStateFlow(true)
+    val gyroscopeStable: StateFlow<Boolean> = _gyroscopeStable.asStateFlow()
+
     // 是否启用 AI 一键扫描（默认开启）
     @Volatile
     private var sceneScanEnabled = true
@@ -253,6 +265,7 @@ class CameraXManager(
         isReleased = false
         frameSkipCounter = 0
         sceneScanCounter = 0
+        registerGyroscope()
 
         // 异步初始化 GPU 渲染管线（不阻塞相机绑定）
         managerScope.launch {
@@ -407,9 +420,10 @@ class CameraXManager(
                 bitmap.copy(Bitmap.Config.ARGB_8888, false)
             } else null
 
-            // 场景识别
+            // 场景识别 + 亮度统计（同步计算，避免额外遍历）
             if (shouldScanScene) {
                 triggerSceneScan(bitmap)
+                _brightnessStats.value = computeBrightnessStats(bitmap)
             }
 
             // 模式分发：所有耗时操作均在协程中执行
@@ -1411,6 +1425,99 @@ class CameraXManager(
         if (!cameraExecutor.isShutdown) {
             cameraExecutor.shutdown()
         }
+        // 注销陀螺仪监听
+        unregisterGyroscope()
         Log.d(TAG, "CameraX 资源已完全释放")
+    }
+
+    // ==================== Phase 2.2：亮度统计与陀螺仪 ====================
+
+    /**
+     * 计算图像亮度分布统计。
+     * 采用中心采样策略（取中心 60% 区域），避免边缘黑边干扰。
+     * 上半部分亮度比例 = 上半部分平均亮度 / 整体平均亮度。
+     */
+    private fun computeBrightnessStats(bitmap: Bitmap): BrightnessStats {
+        val width = bitmap.width
+        val height = bitmap.height
+        val startX = (width * 0.2f).toInt()
+        val endX = (width * 0.8f).toInt()
+        val startY = (height * 0.2f).toInt()
+        val endY = (height * 0.8f).toInt()
+
+        var totalLuma = 0L
+        var upperLuma = 0L
+        var sampleCount = 0
+        val midY = (startY + endY) / 2
+
+        // 采样步长 4px，平衡精度与性能
+        val step = 4
+        for (y in startY until endY step step) {
+            for (x in startX until endX step step) {
+                val pixel = bitmap.getPixel(x, y)
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                val luma = (0.299f * r + 0.587f * g + 0.114f * b).toInt()
+                totalLuma += luma
+                if (y < midY) upperLuma += luma
+                sampleCount++
+            }
+        }
+
+        if (sampleCount == 0) return BrightnessStats()
+        val overall = totalLuma.toFloat() / sampleCount
+        val upperHalfSamples = ((midY - startY).toFloat() / (endY - startY) * sampleCount).toInt().coerceAtLeast(1)
+        val upperAvg = upperLuma.toFloat() / upperHalfSamples
+        val upperRatio = if (overall > 0f) (upperAvg / overall).coerceIn(0f, 1f) else 0f
+
+        return BrightnessStats(
+            upperBrightnessRatio = upperRatio,
+            overallBrightness = overall.coerceIn(0f, 255f)
+        )
+    }
+
+    // 陀螺仪传感器
+    private var sensorManager: android.hardware.SensorManager? = null
+    private var gyroscopeSensor: android.hardware.Sensor? = null
+    private val gyroscopeListener = object : android.hardware.SensorEventListener {
+        private val windowSize = 10
+        private val angularVelocities = FloatArray(windowSize)
+        private var index = 0
+
+        override fun onSensorChanged(event: android.hardware.SensorEvent) {
+            val vx = event.values[0]
+            val vy = event.values[1]
+            val vz = event.values[2]
+            val magnitude = kotlin.math.sqrt(vx * vx + vy * vy + vz * vz)
+            angularVelocities[index % windowSize] = magnitude
+            index++
+
+            // 计算最近 windowSize 个样本的标准差
+            val count = kotlin.math.min(index, windowSize)
+            if (count >= 5) {
+                val mean = angularVelocities.take(count).average().toFloat()
+                val variance = angularVelocities.take(count).map { (it - mean) * (it - mean) }.average().toFloat()
+                val stdDev = kotlin.math.sqrt(variance)
+                // 标准差 < 0.15 rad/s 认为稳定（手持轻微抖动阈值）
+                _gyroscopeStable.value = stdDev < 0.15f
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+    }
+
+    private fun registerGyroscope() {
+        if (sensorManager == null) {
+            sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+            gyroscopeSensor = sensorManager?.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE)
+        }
+        gyroscopeSensor?.let {
+            sensorManager?.registerListener(gyroscopeListener, it, android.hardware.SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    private fun unregisterGyroscope() {
+        sensorManager?.unregisterListener(gyroscopeListener)
     }
 }

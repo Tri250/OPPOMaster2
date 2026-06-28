@@ -8,6 +8,8 @@ import android.opengl.EGLConfig
 import android.opengl.EGLContext
 import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
+import android.opengl.GLES10
+import android.opengl.GLES11Ext
 import android.opengl.GLES30
 import android.opengl.GLUtils
 import android.os.Handler
@@ -88,10 +90,11 @@ class LUTPreviewRenderer(context: Context) {
 
     private val fragmentShaderCode = """
         #version 300 es
+        #extension GL_OES_EGL_image_external_essl3 : require
         precision highp float;
 
         in vec2 vTexCoord;
-        uniform sampler2D uCameraTexture;
+        uniform samplerExternalOES uCameraTexture;
         uniform sampler2D uLUTTexture;
         uniform float uLUTStrength;
         uniform mat4 uColorMatrix;
@@ -197,8 +200,8 @@ class LUTPreviewRenderer(context: Context) {
                 position(0)
             }
 
-        // 创建 Camera 纹理（External OES -> 本实现使用普通 2D texture，由外部传入）
-        cameraTextureId = createTexture()
+        // 创建 Camera 纹理（External OES，供 SurfaceTexture 绑定）
+        cameraTextureId = createOESTexture()
         lutTextureId = createTexture()
 
         // 初始化 ColorMatrix 为单位矩阵
@@ -301,9 +304,9 @@ class LUTPreviewRenderer(context: Context) {
         GLES30.glVertexAttribPointer(texLoc, 2, GLES30.GL_FLOAT, false, 16, vertexBuffer)
         GLES30.glEnableVertexAttribArray(texLoc)
 
-        // 绑定 Camera 纹理到 unit 0
+        // 绑定 Camera 纹理（External OES）到 unit 0
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, cameraTextureId)
+        GLES11Ext.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
         GLES30.glUniform1i(uCameraTextureLoc, 0)
 
         // 绑定 LUT 纹理到 unit 1
@@ -403,6 +406,18 @@ class LUTPreviewRenderer(context: Context) {
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        return id
+    }
+
+    private fun createOESTexture(): Int {
+        val textures = IntArray(1)
+        GLES11Ext.glGenTextures(1, textures, 0)
+        val id = textures[0]
+        GLES11Ext.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, id)
+        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_MIN_FILTER, GLES10.GL_LINEAR.toFloat())
+        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_MAG_FILTER, GLES10.GL_LINEAR.toFloat())
+        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_WRAP_S, GLES10.GL_CLAMP_TO_EDGE.toFloat())
+        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_WRAP_T, GLES10.GL_CLAMP_TO_EDGE.toFloat())
         return id
     }
 }

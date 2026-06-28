@@ -11,6 +11,13 @@
 - **国内镜像加速** - Gradle Wrapper 与 Maven 仓库默认使用阿里云镜像，提升依赖下载速度
 - **Android SDK 安装脚本** - 新增一键安装脚本 `install-android-sdk.sh`，自动配置国内镜像与必要组件
 
+#### 🐛 修复（正式版自检）
+- **反模式检测修复按钮** - 修复取景器反模式提示条的"一键修复"按钮为空实现（TODO）的问题，现在可实际执行变焦切换、曝光补偿调整、夜景模式启用、柔光模式启用、AR 引导线切换
+- **反馈 API 配置化** - 移除反馈上传地址的硬编码 TODO，改为从 `local.properties` 的 `feedback.api.endpoint` 读取，支持开发/测试/生产环境切换
+- **LUT 实时预览 OES 纹理** - 修复 LUTPreviewRenderer 的 camera 纹理使用普通 2D 纹理（`GL_TEXTURE_2D`）而非 OES 外部纹理（`GL_TEXTURE_EXTERNAL_OES`）的问题，着色器同步改为 `samplerExternalOES`
+- **亮度分布与陀螺仪真实数据** - 修复反模式检测使用硬编码 `upperBrightnessRatio=0f` 和 `gyroscopeStable=true` 的问题，新增基于图像像素采样的上半部分亮度比例计算与基于陀螺仪角速度方差的稳定性检测
+- **实时帧回收崩溃** - 修复 `CameraXViewfinderScreen` 中旧 `processedFrame` 在下一帧回调时被立即回收，导致 `Image` composable 渲染已回收 Bitmap 崩溃的问题
+
 ---
 
 ### v1.9.0 (2026-06-23)

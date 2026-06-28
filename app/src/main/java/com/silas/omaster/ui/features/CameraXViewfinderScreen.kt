@@ -181,10 +181,12 @@ fun CameraXViewfinderScreen(
     // 专业模式参数
     val proParams by cameraManager.proModeParams.collectAsState()
 
-    // Phase 2.2：反模式实时检测
+    // Phase 2.2：反模式实时检测（使用真实亮度统计与陀螺仪数据）
     val sceneResult by cameraManager.sceneResult.collectAsState()
+    val brightnessStats by cameraManager.brightnessStats.collectAsState()
+    val gyroscopeStable by cameraManager.gyroscopeStable.collectAsState()
     var antiPatternAlerts by remember { mutableStateOf<List<AntiPatternDetector.AntiPatternAlert>>(emptyList()) }
-    LaunchedEffect(sceneResult, currentZoom, proParams) {
+    LaunchedEffect(sceneResult, currentZoom, proParams, brightnessStats, gyroscopeStable) {
         val sr = sceneResult ?: return@LaunchedEffect
         val alerts = AntiPatternDetector.detectImportant(
             sceneResult = sr,
@@ -194,8 +196,8 @@ fun CameraXViewfinderScreen(
                 shutterSpeedNs = proParams.shutterSpeedNs,
                 exposureCompensation = proParams.exposureCompensation ?: 0f
             ),
-            gyroscopeStable = true, // 简化：默认稳定，后续可接入传感器
-            upperBrightnessRatio = 0f, // 简化：当前未实时计算亮度分布
+            gyroscopeStable = gyroscopeStable,
+            upperBrightnessRatio = brightnessStats.upperBrightnessRatio,
             faceRatio = sr.confidenceMap["face"] ?: 0f
         )
         antiPatternAlerts = alerts
@@ -214,9 +216,8 @@ fun CameraXViewfinderScreen(
     // ==================== 副作用 ====================
     DisposableEffect(cameraManager) {
         cameraManager.setOnFrameAnalyzed { bitmap ->
-            val old = processedFrame
+            // P2-2 修复：不立即回收旧帧，避免 Image composable 正在渲染时 Bitmap 被回收导致崩溃
             processedFrame = bitmap
-            old?.recycle()
         }
         onDispose {
             cameraManager.setOnFrameAnalyzed(null)
