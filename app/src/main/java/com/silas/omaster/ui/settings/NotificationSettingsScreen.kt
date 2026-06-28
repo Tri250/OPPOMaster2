@@ -109,9 +109,9 @@ fun NotificationSettingsScreen(
             }
         }
         // 确保各渠道已创建（默认开启）
-        createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", generalEnabled)
-        createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", recommendationEnabled)
-        createOrUpdateChannel(CHANNEL_SYNC, "云同步提醒", syncEnabled)
+        createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), generalEnabled)
+        createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), recommendationEnabled)
+        createOrUpdateChannel(CHANNEL_SYNC, stringRes(R.string.notification_category_sync), syncEnabled)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -133,7 +133,7 @@ fun NotificationSettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("通知设置", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.notification_settings_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = {
                         haptic.perform(HapticFeedbackType.LongPress)
@@ -180,13 +180,13 @@ fun NotificationSettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "接收推送通知",
+                                    text = stringResource(R.string.notification_receive_push),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    text = "开启后接收重要通知",
+                                    text = stringResource(R.string.notification_receive_push_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                 )
@@ -225,7 +225,7 @@ fun NotificationSettingsScreen(
             // 通知类型列表
             item {
                 Text(
-                    text = "通知类型",
+                    text = stringResource(R.string.notification_types),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -235,8 +235,8 @@ fun NotificationSettingsScreen(
             item {
                 val enabled = generalEnabled
                 NotificationSettingCard(
-                    title = "功能更新通知",
-                    description = "接收新功能和更新提醒",
+                    title = stringResource(R.string.notification_feature_update_title),
+                    description = stringResource(R.string.notification_feature_update_desc),
                     isEnabled = enabled,
                     onToggle = { newValue ->
                         haptic.perform(HapticFeedbackType.LongPress)
@@ -245,7 +245,7 @@ fun NotificationSettingsScreen(
                         } else {
                             generalEnabled = newValue
                             systemAnnounceEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", newValue)
+                            createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), newValue)
                         }
                     }
                 )
@@ -253,8 +253,8 @@ fun NotificationSettingsScreen(
 
             item {
                 NotificationSettingCard(
-                    title = "预设推荐",
-                    description = "接收个性化预设推荐",
+                    title = stringResource(R.string.notification_preset_recommendation_title),
+                    description = stringResource(R.string.notification_preset_recommendation_desc),
                     isEnabled = recommendationEnabled,
                     onToggle = { newValue ->
                         haptic.perform(HapticFeedbackType.LongPress)
@@ -263,7 +263,7 @@ fun NotificationSettingsScreen(
                         } else {
                             recommendationEnabled = newValue
                             dailyTipEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", newValue)
+                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), newValue)
                         }
                     }
                 )
@@ -271,8 +271,8 @@ fun NotificationSettingsScreen(
 
             item {
                 NotificationSettingCard(
-                    title = "云同步提醒",
-                    description = "同步状态变更通知",
+                    title = stringResource(R.string.notification_sync_reminder_title),
+                    description = stringResource(R.string.notification_sync_reminder_desc),
                     isEnabled = syncEnabled,
                     onToggle = { newValue ->
                         haptic.perform(HapticFeedbackType.LongPress)
@@ -280,7 +280,7 @@ fun NotificationSettingsScreen(
                             openNotificationSettings()
                         } else {
                             syncEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_SYNC, "云同步提醒", newValue)
+                            createOrUpdateChannel(CHANNEL_SYNC, stringRes(R.string.notification_category_sync), newValue)
                         }
                     }
                 )
@@ -288,8 +288,8 @@ fun NotificationSettingsScreen(
 
             item {
                 NotificationSettingCard(
-                    title = "系统公告",
-                    description = "重要系统公告通知",
+                    title = stringResource(R.string.notification_system_announcement_title),
+                    description = stringResource(R.string.notification_system_announcement_desc),
                     isEnabled = systemAnnounceEnabled,
                     onToggle = { newValue ->
                         haptic.perform(HapticFeedbackType.LongPress)
@@ -298,7 +298,7 @@ fun NotificationSettingsScreen(
                         } else {
                             systemAnnounceEnabled = newValue
                             generalEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_GENERAL, "通用通知", newValue)
+                            createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), newValue)
                         }
                     }
                 )
@@ -306,8 +306,8 @@ fun NotificationSettingsScreen(
 
             item {
                 NotificationSettingCard(
-                    title = "每日提示",
-                    description = "摄影技巧每日提示",
+                    title = stringResource(R.string.notification_daily_tip_title),
+                    description = stringResource(R.string.notification_daily_tip_desc),
                     isEnabled = dailyTipEnabled,
                     onToggle = { newValue ->
                         haptic.perform(HapticFeedbackType.LongPress)
@@ -316,7 +316,7 @@ fun NotificationSettingsScreen(
                         } else {
                             dailyTipEnabled = newValue
                             recommendationEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, "推荐与提示", newValue)
+                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), newValue)
                         }
                     }
                 )
@@ -325,7 +325,7 @@ fun NotificationSettingsScreen(
             // 免打扰设置（UI 状态保留，实际调度需接入系统 DND 权限，暂不自动写入）
             item {
                 Text(
-                    text = "免打扰设置",
+                    text = stringResource(R.string.notification_dnd_settings),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -354,7 +354,7 @@ fun NotificationSettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = "夜间免打扰",
+                                    text = stringResource(R.string.notification_dnd_title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
@@ -379,12 +379,12 @@ fun NotificationSettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "免打扰时段",
+                                text = stringResource(R.string.notification_dnd_time_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                             )
                             Text(
-                                text = "22:00 - 08:00",
+                                text = stringResource(R.string.notification_dnd_time_value),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onBackground
                             )

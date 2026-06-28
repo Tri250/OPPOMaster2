@@ -305,6 +305,23 @@ class HomeViewModel(
         refresh()
     }
 
+    // ===== 测试辅助方法（仅供单测访问，不参与生产路径） =====
+    internal fun setInternalPresets(list: List<MasterPreset>) {
+        _allPresets.value = list
+    }
+
+    internal fun setInternalFavorites(list: List<MasterPreset>) {
+        _favorites.value = list
+    }
+
+    internal fun setInternalCustomPresets(list: List<MasterPreset>) {
+        _customPresets.value = list
+    }
+
+    internal fun setInternalError(message: String?) {
+        _errorState.value = message
+    }
+
     override fun onCleared() {
         super.onCleared()
         // 清理时取消所有任务

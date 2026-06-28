@@ -270,7 +270,29 @@ android {
     //
     // 自动备份 mapping 文件（Release 构建后执行）
     afterEvaluate {
+        // Release 签名校验：禁止使用默认 android debug 密钥进行正式发布
         tasks.matching { it.name == "assembleRelease" }.configureEach {
+            doFirst {
+                val signing = android.signingConfigs.findByName("release")
+                if (signing != null) {
+                    val storeFile = signing.storeFile
+                    val storePassword = signing.storePassword
+                    if (storeFile != null && storeFile.exists() && !storePassword.isNullOrEmpty()) {
+                        val isDebug = storeFile.name.contains("debug", ignoreCase = true) ||
+                            storePassword == "android"
+                        val isCI = System.getenv("CI") == "true"
+                        if (isDebug && !isCI) {
+                            throw GradleException(
+                                "❌ Release 构建检测到 debug 签名（storeFile=${storeFile.name}），禁止用于生产发布。\n" +
+                                "请在 keystore-release.properties 配置真实签名后重试。"
+                            )
+                        }
+                        if (isDebug) {
+                            println("⚠️ CI 环境使用 debug 签名回退（仅用于构建验证，不可发布到生产）")
+                        }
+                    }
+                }
+            }
             doLast {
                 val mappingFile = file("${layout.buildDirectory.get()}/outputs/mapping/release/mapping.txt")
                 if (mappingFile.exists()) {
@@ -305,6 +327,9 @@ android {
         abortOnError = (gradle.startParameter.taskNames.any { it.contains("Release") })
         // release 构建时检查
         checkReleaseBuilds = true
+        // 全量检查模式（无 baseline 容忍）
+        checkAllWarnings = true
+        warningsAsErrors = false
         // 忽略警告（谨慎使用）
         disable.add("IconLauncherShape")
         disable.add("IconMissingDensityFolder")
@@ -317,6 +342,15 @@ android {
         warning.add("MissingTranslation")
         warning.add("UnusedResources")
         warning.add("IconDensities")
+        // 错误级检查：保持开启，确保安全/性能/兼容性缺陷零容忍
+        error.add("UnsafeProtectedBroadcastReceiver")
+        error.add("WorldReadableFiles")
+        error.add("WorldWriteableFiles")
+        error.add("ExportedReceiver")
+        error.add("ExportedService")
+        error.add("ExportedContentProvider")
+        // 国际化检查
+        error.add("ExtraTranslation")
     }
 
     // 测试选项配置

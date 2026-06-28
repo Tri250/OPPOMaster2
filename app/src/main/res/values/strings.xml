@@ -136,6 +136,16 @@
     <string name="empty_hint_hncs_presets">敬请期待更多哈苏色彩科学预设</string>
     <string name="empty_no_new_presets">暂无上新预设</string>
     <string name="empty_hint_new_presets">新预设正在路上，敬请期待</string>
+    <string name="empty_no_custom_presets">暂无自定义预设</string>
+    <string name="empty_hint_custom_presets">点击右下角按钮创建您的专属预设</string>
+    <string name="empty_icon_search_desc">搜索图标</string>
+    <string name="empty_icon_favorite_desc">收藏图标</string>
+    <string name="empty_icon_color_desc">色彩图标</string>
+    <string name="empty_icon_refresh_desc">刷新图标</string>
+    <string name="empty_icon_add_desc">添加图标</string>
+    <string name="empty_icon_default_desc">空状态图标</string>
+    <string name="cache_no_data_to_clear">暂无缓存需要清理</string>
+    <string name="cache_cleared">缓存已清理</string>
     <string name="filter_result_count">已筛选 %1$d 条</string>
     <string name="clear_filter">清空筛选</string>
     <string name="load_more_hint">持续更新 敬请期待</string>

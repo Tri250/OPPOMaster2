@@ -234,7 +234,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = "重试",
+                                text = stringResource(R.string.retry),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -1020,7 +1020,7 @@ private fun EnhancedEmptyState(
         1 -> stringResource(R.string.empty_no_favorites)
         2 -> stringResource(R.string.empty_no_hncs_presets)
         3 -> stringResource(R.string.empty_no_new_presets)
-        4 -> "暂无自定义预设"
+        4 -> stringResource(R.string.empty_no_custom_presets)
         else -> stringResource(R.string.empty_no_data)
     }
 
@@ -1029,7 +1029,7 @@ private fun EnhancedEmptyState(
         1 -> stringResource(R.string.empty_hint_favorite)
         2 -> stringResource(R.string.empty_hint_hncs_presets)
         3 -> stringResource(R.string.empty_hint_new_presets)
-        4 -> "点击右下角按钮创建您的专属预设"
+        4 -> stringResource(R.string.empty_hint_custom_presets)
         else -> ""
     }
 
@@ -1043,12 +1043,12 @@ private fun EnhancedEmptyState(
     }
 
     val contentDescription = when (tabIndex) {
-        0 -> "搜索图标"
-        1 -> "收藏图标"
-        2 -> "色彩图标"
-        3 -> "刷新图标"
-        4 -> "添加图标"
-        else -> "空状态图标"
+        0 -> stringResource(R.string.empty_icon_search_desc)
+        1 -> stringResource(R.string.empty_icon_favorite_desc)
+        2 -> stringResource(R.string.empty_icon_color_desc)
+        3 -> stringResource(R.string.empty_icon_refresh_desc)
+        4 -> stringResource(R.string.empty_icon_add_desc)
+        else -> stringResource(R.string.empty_icon_default_desc)
     }
 
     Box(

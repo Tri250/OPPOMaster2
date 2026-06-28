@@ -410,7 +410,7 @@ fun SettingsScreen(
                 },
                 onClick = {
                     if (cacheSize <= 0) {
-                        Toast.makeText(context, "暂无缓存需要清理", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.cache_no_data_to_clear), Toast.LENGTH_SHORT).show()
                     } else {
                         showClearCacheDialog = true
                     }
@@ -458,7 +458,7 @@ fun SettingsScreen(
                             cacheSize = 0.0
                             showClearCacheDialog = false
                             haptic.perform(HapticFeedbackType.LongPress)
-                            Toast.makeText(context, "缓存已清理", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.cache_cleared), Toast.LENGTH_SHORT).show()
                         }
                     ) {
                         Text("确定清理", color = MaterialTheme.colorScheme.error)

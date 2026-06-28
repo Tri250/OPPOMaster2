@@ -1235,12 +1235,28 @@ class CameraXManager(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues
                 )
                 uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { out ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    try {
+                        context.contentResolver.openOutputStream(it)?.use { out ->
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "写入图片流失败: ${e.message}", e)
+                        // 写入失败时清理 pending 记录，避免孤立条目
+                        try {
+                            context.contentResolver.delete(it, null, null)
+                        } catch (cleanup: Exception) {
+                            Log.w(TAG, "清理失败的媒体记录失败: ${cleanup.message}")
+                        }
+                        mainHandler.post { onError("保存失败：${e.message}") }
+                        return@withContext
                     }
                     contentValues.clear()
                     contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-                    context.contentResolver.update(it, contentValues, null, null)
+                    try {
+                        context.contentResolver.update(it, contentValues, null, null)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "更新 IS_PENDING 状态失败（不影响图片保存）: ${e.message}")
+                    }
                     it
                 }
             } else {

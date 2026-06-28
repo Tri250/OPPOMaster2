@@ -90,11 +90,33 @@
 }
 
 # ========================================
-# ML Kit 人脸检测相关规则（精简）
+# ML Kit 规则（精简）
 # ========================================
+# Face / Text / Object / Segmentation 等模块通过反射创建实例，保留入口
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_** { *; }
 -keep class com.google.mlkit.vision.face.FaceDetector { *; }
+-keep class com.google.mlkit.vision.text.TextRecognizer { *; }
+-keep class com.google.mlkit.vision.objects.ObjectDetector { *; }
+-keep class com.google.mlkit.vision.segmentation.Segmenter { *; }
+-keep class com.google.mlkit.common.sdkinternal.** { *; }
 -dontwarn com.google.mlkit.**
 -dontwarn com.google.android.gms.internal.**
+
+# MediaPipe Tasks（自定义算子）— 通过反射加载 native
+-keep class com.google.mediapipe.tasks.** { *; }
+-keepclassmembers class com.google.mediapipe.tasks.** { native <methods>; }
+-dontwarn com.google.mediapipe.tasks.**
+
+# ========================================
+# CameraX / Camera2
+# ========================================
+-keep class androidx.camera.** { *; }
+-keep interface androidx.camera.** { *; }
+-keepclassmembers class androidx.camera.** { native <methods>; }
+-dontwarn androidx.camera.**
+-dontwarn com.google.auto.value.**
+-keep class com.google.auto.value.** { *; }
 
 # ========================================
 # TensorFlow Lite 规则
