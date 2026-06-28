@@ -61,6 +61,27 @@ fun TicketsScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         TrailSnapTopBar(title = "行程票据", onBack = onBack)
+        if (tickets.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.ConfirmationNumber,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "还没有票根记录",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -72,6 +93,7 @@ fun TicketsScreen(
             items(tickets.sortedByDescending { it.departureTime }) { ticket ->
                 TicketCard(ticket = ticket)
             }
+        }
         }
     }
 }

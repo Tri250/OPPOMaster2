@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 
 /**
  * 排序类型枚举（对齐Web端）
@@ -65,6 +66,10 @@ class HomeViewModel(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    // 错误状态
+    private val _errorState = MutableStateFlow<String?>(null)
+    val errorState: StateFlow<String?> = _errorState.asStateFlow()
+
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
@@ -96,29 +101,56 @@ class HomeViewModel(
         allPresetsJob = viewModelScope.launch {
             try {
                 repository.getAllPresets().collect { presets ->
+                    ensureActive()
                     _allPresets.value = presets
                     _isLoading.value = false
+                    _errorState.value = null
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // 协程被取消时不更新状态
+                throw e
             } catch (e: Exception) {
                 _isLoading.value = false
+                _errorState.value = "加载失败: ${e.message}"
             }
         }
 
         favoritesJob = viewModelScope.launch {
-            repository.getFavoritePresets().collect { favorites ->
-                _favorites.value = favorites
+            try {
+                repository.getFavoritePresets().collect { favorites ->
+                    ensureActive()
+                    _favorites.value = favorites
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "加载收藏失败: ${e.message}"
             }
         }
 
         customPresetsJob = viewModelScope.launch {
-            repository.getCustomPresets().collect { custom ->
-                _customPresets.value = custom
+            try {
+                repository.getCustomPresets().collect { custom ->
+                    ensureActive()
+                    _customPresets.value = custom
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "加载自定义预设失败: ${e.message}"
             }
         }
 
         searchHistoryJob = viewModelScope.launch {
-            repository.searchHistory.collect { history ->
-                _searchHistory.value = history
+            try {
+                repository.searchHistory.collect { history ->
+                    ensureActive()
+                    _searchHistory.value = history
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 搜索历史加载失败不阻断主流程
             }
         }
     }
@@ -153,9 +185,10 @@ class HomeViewModel(
 
     /**
      * 获取过滤后的预设列表（对齐Web端）
+     * 修复：增加空安全检查，防止预设列表为null时崩溃
      */
     fun getFilteredPresets(): List<MasterPreset> {
-        val baseList = _allPresets.value
+        val baseList = _allPresets.value ?: emptyList()
         var result = baseList.toList()
 
         // Tab 过滤
@@ -163,17 +196,19 @@ class HomeViewModel(
             1 -> result = result.filter { it.isFavorite } // 收藏
             2 -> result = result.filter { it.isHncs }     // 哈苏
             3 -> result = result.filter { it.isNew }      // 上新
-            4 -> result = _customPresets.value             // 我的（自定义预设）
+            4 -> result = _customPresets.value ?: emptyList() // 我的（自定义预设）
         }
 
         // 品牌过滤
-        if (_selectedBrand.value != "all") {
-            result = result.filter { it.brand == _selectedBrand.value }
+        val currentBrand = _selectedBrand.value
+        if (currentBrand != null && currentBrand != "all") {
+            result = result.filter { it.brand == currentBrand }
         }
 
         // 搜索过滤
-        if (_searchQuery.value.isNotEmpty()) {
-            val query = _searchQuery.value.lowercase()
+        val currentQuery = _searchQuery.value
+        if (!currentQuery.isNullOrEmpty()) {
+            val query = currentQuery.lowercase()
             result = result.filter { preset ->
                 preset.name?.lowercase()?.contains(query) == true ||
                 preset.author?.lowercase()?.contains(query) == true ||
@@ -196,11 +231,11 @@ class HomeViewModel(
      */
     fun getTabCount(tabIndex: Int): Int {
         return when (tabIndex) {
-            0 -> _allPresets.value.size      // 发现
-            1 -> _favorites.value.size       // 收藏
-            2 -> _allPresets.value.filter { it.isHncs }.size  // 哈苏
-            3 -> _allPresets.value.filter { it.isNew }.size   // 上新
-            4 -> _customPresets.value.size   // 我的
+            0 -> _allPresets.value?.size ?: 0      // 发现
+            1 -> _favorites.value?.size ?: 0       // 收藏
+            2 -> _allPresets.value?.filter { it.isHncs }?.size ?: 0  // 哈苏
+            3 -> _allPresets.value?.filter { it.isNew }?.size ?: 0   // 上新
+            4 -> _customPresets.value?.size ?: 0   // 我的
             else -> 0
         }
     }
@@ -210,7 +245,13 @@ class HomeViewModel(
      */
     fun toggleFavorite(presetId: String) {
         viewModelScope.launch {
-            repository.toggleFavorite(presetId)
+            try {
+                repository.toggleFavorite(presetId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "操作失败: ${e.message}"
+            }
         }
     }
 
@@ -219,7 +260,13 @@ class HomeViewModel(
      */
     fun deleteCustomPreset(presetId: String) {
         viewModelScope.launch {
-            repository.deleteCustomPreset(presetId)
+            try {
+                repository.deleteCustomPreset(presetId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "删除失败: ${e.message}"
+            }
         }
     }
 
@@ -236,11 +283,27 @@ class HomeViewModel(
      */
     fun refresh(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            repository.forceReloadFromFiles()
-            loadPresets()
-            delay(500) // 给予足够时间让 Flow 发射新值并让 UI 感知
-            onComplete()
+            try {
+                repository.forceReloadFromFiles()
+                loadPresets()
+                delay(500) // 给予足够时间让 Flow 发射新值并让 UI 感知
+                _errorState.value = null
+                onComplete()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "刷新失败: ${e.message}"
+                onComplete()
+            }
         }
+    }
+
+    /**
+     * 重试加载
+     */
+    fun retry() {
+        _errorState.value = null
+        refresh()
     }
 
     override fun onCleared() {

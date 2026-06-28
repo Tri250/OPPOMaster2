@@ -62,6 +62,27 @@ fun PeopleScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         TrailSnapTopBar(title = "人物", onBack = onBack)
+        if (faces.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Text(
+                        text = "还没有识别到人脸",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier.fillMaxSize(),
@@ -72,6 +93,7 @@ fun PeopleScreen(
             items(faces) { face ->
                 FaceItem(face = face, onClick = { onNavigateToPersonDetail(face.id) })
             }
+        }
         }
     }
 }

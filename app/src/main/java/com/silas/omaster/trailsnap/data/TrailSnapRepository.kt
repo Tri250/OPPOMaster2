@@ -15,6 +15,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.core.graphics.drawable.toBitmap
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -54,6 +55,13 @@ import kotlin.math.abs
  */
 class TrailSnapRepository private constructor(context: Context) {
 
+    private companion object {
+        const val TAG = "TrailSnapRepository"
+        const val FACE_DETECTION_MAX_PER_SESSION = 100
+        const val SIMILAR_TIME_THRESHOLD_SECONDS = 5L
+        const val SIMILAR_SCORE_THRESHOLD = 0.6f
+    }
+
     private val appContext = context.applicationContext
     private val contentResolver: ContentResolver = appContext.contentResolver
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -84,6 +92,8 @@ class TrailSnapRepository private constructor(context: Context) {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val faceDetectionProcessed = mutableSetOf<String>()
 
     private val faceDetector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
@@ -224,51 +234,61 @@ class TrailSnapRepository private constructor(context: Context) {
      * 从 EXIF 提取元数据（优先通过 ContentUri 读取，兼容 Android 10+ 作用域存储）
      */
     private suspend fun extractMetadataFromExif(uri: Uri?, dataPath: String?): PhotoMetadata? {
-        return try {
-            val exif = when {
+        val filename = dataPath?.substringAfterLast('/') ?: uri?.toString() ?: "unknown"
+        val exif = try {
+            when {
                 uri != null -> {
-                    contentResolver.openInputStream(uri)?.use { ExifInterface(it) }
+                    val stream = try {
+                        contentResolver.openInputStream(uri)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to open input stream for $filename", e)
+                        null
+                    }
+                    stream?.use { ExifInterface(it) }
                 }
                 dataPath != null -> {
                     val file = File(dataPath)
                     if (file.exists()) ExifInterface(file) else null
                 }
                 else -> null
-            } ?: return null
-
-            val latLong = exif.latLong
-            val make = exif.getAttribute(ExifInterface.TAG_MAKE)
-            val model = exif.getAttribute(ExifInterface.TAG_MODEL)
-            val iso = exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY)?.toIntOrNull()
-            val focalLength = exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH)
-            val aperture = exif.getAttribute(ExifInterface.TAG_F_NUMBER)
-            val exposureTime = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)
-
-            val locationInfo = latLong?.let { resolveLocationName(it[0], it[1]) }
-
-            val scene = inferScene(exif)
-
-            PhotoMetadata(
-                longitude = latLong?.get(1),
-                latitude = latLong?.get(0),
-                city = locationInfo?.city,
-                district = locationInfo?.district,
-                province = locationInfo?.province,
-                country = locationInfo?.country,
-                address = locationInfo?.address,
-                make = make,
-                model = model,
-                shootingParams = ShootingParams(
-                    iso = iso,
-                    shutterSpeed = exposureTime?.let { formatExposureTime(it) },
-                    aperture = aperture?.let { "f/$it" },
-                    focalLength = focalLength?.let { "${it}mm" }
-                ),
-                scene = scene
-            )
-        } catch (_: Exception) {
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read EXIF for $filename", e)
             null
+        } ?: return null
+
+        val latLong = try { exif.latLong } catch (_: Exception) { null }
+        val make = try { exif.getAttribute(ExifInterface.TAG_MAKE) } catch (_: Exception) { null }
+        val model = try { exif.getAttribute(ExifInterface.TAG_MODEL) } catch (_: Exception) { null }
+        val iso = try { exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY)?.toIntOrNull() } catch (_: Exception) { null }
+        val focalLength = try { exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) } catch (_: Exception) { null }
+        val aperture = try { exif.getAttribute(ExifInterface.TAG_F_NUMBER) } catch (_: Exception) { null }
+        val exposureTime = try { exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME) } catch (_: Exception) { null }
+
+        val locationInfo = latLong?.let {
+            try { resolveLocationName(it[0], it[1]) } catch (_: Exception) { null }
         }
+
+        val scene = try { inferScene(exif) } catch (_: Exception) { null }
+
+        return PhotoMetadata(
+            longitude = latLong?.get(1),
+            latitude = latLong?.get(0),
+            city = locationInfo?.city,
+            district = locationInfo?.district,
+            province = locationInfo?.province,
+            country = locationInfo?.country,
+            address = locationInfo?.address,
+            make = make,
+            model = model,
+            shootingParams = ShootingParams(
+                iso = iso,
+                shutterSpeed = exposureTime?.let { formatExposureTime(it) },
+                aperture = aperture?.let { "f/$it" },
+                focalLength = focalLength?.let { "${it}mm" }
+            ),
+            scene = scene
+        )
     }
 
     private data class LocationInfo(
@@ -351,6 +371,9 @@ class TrailSnapRepository private constructor(context: Context) {
         val faceFeatures = mutableListOf<FaceFeature>()
 
         photos.filter { it.mediaType == MediaType.IMAGE }.take(300).forEach { photo ->
+            if (photo.id in faceDetectionProcessed) return@forEach
+            if (faceDetectionProcessed.size >= FACE_DETECTION_MAX_PER_SESSION) return@forEach
+            faceDetectionProcessed.add(photo.id)
             try {
                 val bitmap = loadBitmap(photo.uri ?: return@forEach) ?: return@forEach
                 val inputImage = InputImage.fromBitmap(bitmap, 0)
@@ -674,7 +697,16 @@ class TrailSnapRepository private constructor(context: Context) {
         val monthlyGroups = photos.groupBy {
             "${it.photoTime.year}年${it.photoTime.monthValue}月"
         }
-        monthlyGroups.forEach { (monthLabel, monthPhotos) ->
+        // 月份分组按时间倒序排列（最新优先）
+        monthlyGroups.toSortedMap(compareByDescending<String> { label ->
+            val regex = Regex("(\\d+)年(\\d+)月")
+            val match = regex.find(label)
+            if (match != null) {
+                val year = match.groupValues[1].toInt()
+                val month = match.groupValues[2].toInt()
+                year * 12 + month
+            } else 0
+        }).forEach { (monthLabel, monthPhotos) ->
             if (monthPhotos.size >= 3) {
                 albums.add(
                     TrailAlbum(
@@ -691,21 +723,26 @@ class TrailSnapRepository private constructor(context: Context) {
 
         val cityGroups = photos.filter { it.metadata?.city != null }
             .groupBy { it.metadata?.city }
-        cityGroups.forEach { (city, cityPhotos) ->
-            if (city != null && cityPhotos.size >= 3) {
-                albums.add(
-                    TrailAlbum(
-                        id = "album_city_$city",
-                        name = "$city",
-                        description = "${cityPhotos.size} 张照片",
-                        coverPhotoId = cityPhotos.firstOrNull()?.id,
-                        type = AlbumType.CONDITIONAL,
-                        condition = AlbumCondition(location = city),
-                        photoIds = cityPhotos.map { it.id }
+        // 城市分组按照片数倒序排列，并去除重复城市名
+        cityGroups.entries
+            .filter { it.key != null }
+            .distinctBy { it.key }
+            .sortedByDescending { it.value.size }
+            .forEach { (city, cityPhotos) ->
+                if (city != null && cityPhotos.size >= 3) {
+                    albums.add(
+                        TrailAlbum(
+                            id = "album_city_$city",
+                            name = "$city",
+                            description = "${cityPhotos.size} 张照片",
+                            coverPhotoId = cityPhotos.firstOrNull()?.id,
+                            type = AlbumType.CONDITIONAL,
+                            condition = AlbumCondition(location = city),
+                            photoIds = cityPhotos.map { it.id }
+                        )
                     )
-                )
+                }
             }
-        }
 
         albums.add(
             0, TrailAlbum(
@@ -882,25 +919,111 @@ class TrailSnapRepository private constructor(context: Context) {
     }
 
     /**
-     * 获取相似/重复照片分组（按文件大小+尺寸判定）
+     * 获取相似/重复照片分组（基于综合相似度评分）
+     *
+     * 评分维度：
+     * - 分辨率相似度（相同尺寸满分，按面积差异递减）
+     * - 拍摄时间接近度（5秒内为连拍，按时间差递减）
+     * - 文件名前缀相似度（相同前缀满分）
+     * - 文件大小相似度
      */
     fun getSimilarPhotoGroups(): List<List<TrailPhoto>> {
-        return _photos.value
-            .filter { !it.isDeleted }
-            .groupBy { Triple(it.size, it.width, it.height) }
-            .filter { it.value.size > 1 }
-            .map { entry -> entry.value.sortedByDescending { it.width * it.height } }
+        val candidates = _photos.value.filter { !it.isDeleted }
+        if (candidates.size < 2) return emptyList()
+
+        val visited = mutableSetOf<String>()
+        val groups = mutableListOf<List<TrailPhoto>>()
+
+        for (i in candidates.indices) {
+            val a = candidates[i]
+            if (a.id in visited) continue
+            val group = mutableListOf(a)
+
+            for (j in (i + 1) until candidates.size) {
+                val b = candidates[j]
+                if (b.id in visited) continue
+
+                val score = computeSimilarityScore(a, b)
+                if (score >= SIMILAR_SCORE_THRESHOLD) {
+                    group.add(b)
+                }
+            }
+
+            if (group.size > 1) {
+                visited.addAll(group.map { it.id })
+                groups.add(group.sortedByDescending { it.width * it.height })
+            }
+        }
+
+        return groups
     }
 
     /**
-     * 执行重复照片清理：按文件大小+尺寸识别重复项，保留最大的一张
+     * 计算两张照片的综合相似度评分（0.0~1.0）
+     */
+    private fun computeSimilarityScore(a: TrailPhoto, b: TrailPhoto): Float {
+        var score = 0f
+
+        // 1. 分辨率相似度（权重 0.3）
+        val sameDimensions = a.width == b.width && a.height == b.height
+        val areaA = a.width * a.height
+        val areaB = b.width * b.height
+        val resolutionScore = if (sameDimensions) 1.0f
+        else if (areaA > 0 && areaB > 0) {
+            val ratio = minOf(areaA, areaB).toFloat() / maxOf(areaA, areaB).toFloat()
+            if (ratio > 0.8f) ratio else 0f
+        } else 0f
+        score += resolutionScore * 0.3f
+
+        // 2. 拍摄时间接近度（权重 0.3）
+        val timeDiffSeconds = kotlin.math.abs(
+            Duration.between(a.photoTime, b.photoTime).seconds
+        )
+        val timeScore = when {
+            timeDiffSeconds <= SIMILAR_TIME_THRESHOLD_SECONDS -> 1.0f  // 连拍
+            timeDiffSeconds <= 30 -> 0.7f
+            timeDiffSeconds <= 300 -> 0.3f
+            timeDiffSeconds <= 3600 -> 0.1f
+            else -> 0f
+        }
+        score += timeScore * 0.3f
+
+        // 3. 文件名前缀相似度（权重 0.25）
+        val prefixA = extractFilenamePrefix(a.filename)
+        val prefixB = extractFilenamePrefix(b.filename)
+        val nameScore = when {
+            prefixA.isNotBlank() && prefixA == prefixB -> 1.0f
+            a.filename == b.filename -> 1.0f
+            else -> 0f
+        }
+        score += nameScore * 0.25f
+
+        // 4. 文件大小相似度（权重 0.15）
+        val sizeScore = if (a.size > 0 && b.size > 0) {
+            val ratio = minOf(a.size, b.size).toFloat() / maxOf(a.size, b.size).toFloat()
+            if (ratio > 0.9f) 1.0f else if (ratio > 0.7f) 0.5f else 0f
+        } else 0f
+        score += sizeScore * 0.15f
+
+        return score
+    }
+
+    /**
+     * 提取文件名前缀（如 IMG_20240101 从 IMG_20240101_123045.jpg 中）
+     */
+    private fun extractFilenamePrefix(filename: String): String {
+        val name = filename.substringBeforeLast('.')
+        val separator = name.indexOfFirst { it == '_' || it == '-' || it == ' ' }
+        return if (separator > 0) name.substring(0, separator + 9) else name.take(12)
+    }
+
+    /**
+     * 执行重复照片清理：基于综合相似度识别重复项，保留最大的一张
      */
     fun cleanupDuplicates(): Int {
-        val photos = _photos.value.filter { !it.isDeleted }
-        val duplicateGroups = photos.groupBy { Triple(it.size, it.width, it.height) }
-            .filter { it.value.size > 1 }
+        val duplicateGroups = getSimilarPhotoGroups()
         var removed = 0
-        duplicateGroups.forEach { (_, group) ->
+        duplicateGroups.forEach { group ->
             // 保留尺寸最大（或文件最大）的一张作为原图
             val keeper = group.maxWithOrNull(compareBy({ it.width * it.height }, { it.size })) ?: group.first()
             group.filter { it.id != keeper.id }.forEach { photo ->
@@ -914,35 +1037,49 @@ class TrailSnapRepository private constructor(context: Context) {
     /**
      * 批量按日期重命名照片
      */
-    fun batchRenameByDate(): Int {
+    fun batchRenameByDate(): BatchRenameResult {
         val preview = getBatchRenamePreview()
         return applyBatchRename(preview)
     }
 
     /**
      * 应用批量重命名：通过 MediaStore 更新 DISPLAY_NAME
+     * 单个文件失败不影响整个批次，返回详细结果
      */
-    fun applyBatchRename(preview: Map<String, String>): Int {
-        if (preview.isEmpty()) return 0
-        var success = 0
+    fun applyBatchRename(preview: Map<String, String>): BatchRenameResult {
+        if (preview.isEmpty()) return BatchRenameResult(0, emptyList())
+
+        var successCount = 0
+        val failures = mutableListOf<RenameFailure>()
         val updated = _photos.value.map { photo ->
             val newName = preview[photo.filename]
             if (newName != null && photo.uri != null) {
-                val values = android.content.ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, newName)
+                try {
+                    val values = android.content.ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, newName)
+                    }
+                    val rows = contentResolver.update(photo.uri, values, null, null)
+                    if (rows > 0) {
+                        successCount++
+                        photo.copy(filename = newName)
+                    } else {
+                        failures.add(RenameFailure(photo.filename, "MediaStore update returned 0 rows"))
+                        photo
+                    }
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Batch rename failed for ${photo.filename}: permission denied", e)
+                    failures.add(RenameFailure(photo.filename, "权限不足：${e.message}"))
+                    photo
+                } catch (e: Exception) {
+                    Log.e(TAG, "Batch rename failed for ${photo.filename}", e)
+                    failures.add(RenameFailure(photo.filename, e.message ?: "未知错误"))
+                    photo
                 }
-                val rows = try {
-                    contentResolver.update(photo.uri, values, null, null)
-                } catch (_: Exception) { 0 }
-                if (rows > 0) {
-                    success++
-                    photo.copy(filename = newName)
-                } else photo
             } else photo
         }
         _photos.value = updated
         rebuildDerivedData(updated)
-        return success
+        return BatchRenameResult(successCount, failures)
     }
 
     /**
@@ -966,7 +1103,7 @@ class TrailSnapRepository private constructor(context: Context) {
     }
 
     /**
-     * 彻底删除照片：先尝试从 MediaStore 删除，再从应用状态移除
+     * 彻底删除照片：先尝试从 MediaStore 删除，再从应用状态移除，并清理相关缓存
      */
     fun permanentlyDelete(id: String): Boolean {
         val photo = _photos.value.find { it.id == id } ?: return false
@@ -978,7 +1115,27 @@ class TrailSnapRepository private constructor(context: Context) {
                 false
             }
         } else false
+
+        // 从内存中移除照片
         _photos.value = _photos.value.filter { it.id != id }
+
+        // 清理人脸检测缓存
+        faceDetectionProcessed.remove(id)
+
+        // 清理引用该照片的 FaceCluster 条目
+        _faces.value = _faces.value.map { cluster ->
+            val updatedPhotoIds = cluster.photoIds.filter { it != id }
+            cluster.copy(photoIds = updatedPhotoIds)
+        }.filter { it.photoIds.isNotEmpty() }
+
+        // 删除关联的人脸头像缓存文件
+        val avatarDir = File(appContext.cacheDir, "face_avatars")
+        if (avatarDir.exists()) {
+            avatarDir.listFiles()?.filter { it.name.contains("face_${id}_") }?.forEach {
+                it.delete()
+            }
+        }
+
         rebuildDerivedData(_photos.value)
         return deletedFromSystem
     }
@@ -1039,6 +1196,19 @@ class TrailSnapRepository private constructor(context: Context) {
             .filter { !it.isDeleted }
             .groupBy { "${it.photoTime.year}年${it.photoTime.monthValue}月" }
             .toSortedMap(compareBy { it })
+    }
+
+    /**
+     * 执行按日期整理：确保按年月分组的相册存在并包含正确照片
+     * 返回已整理的照片数量
+     */
+    fun applyOrganizeByDate(plan: Map<String, List<TrailPhoto>>): Int {
+        if (plan.isEmpty()) return 0
+        val organizedCount = plan.values.sumOf { it.size }
+        // Albums are rebuilt in rebuildDerivedData which is called when photos change.
+        // The organize action triggers a refresh to ensure albums are up-to-date.
+        repositoryScope.launch { loadLocalMedia() }
+        return organizedCount
     }
 
     /**

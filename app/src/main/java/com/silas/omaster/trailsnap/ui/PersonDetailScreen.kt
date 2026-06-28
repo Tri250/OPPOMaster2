@@ -55,6 +55,22 @@ fun PersonDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (faceId.isBlank()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "人物不存在",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+        }
+        return
+    }
+
     val context = LocalContext.current
     val repository = remember { TrailSnapRepository.getInstance(context) }
     val faces by repository.faces.collectAsState()
@@ -118,7 +134,20 @@ fun PersonDetailScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                EmptyHint(text = "暂无照片")
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "暂无照片",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                }
             }
         } else {
             LazyVerticalGrid(

@@ -37,6 +37,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -273,27 +274,49 @@ private fun DuplicateCleanupDialog(
     val context = LocalContext.current
     var step by remember { mutableStateOf(DuplicateStep.Confirm) }
     var removed by remember { mutableStateOf(0) }
+    var isProcessing by remember { mutableStateOf(false) }
 
     when (step) {
         DuplicateStep.Confirm -> AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = if (isProcessing) { {} } else onDismiss,
             title = { Text("重复照片清理") },
             text = {
-                Text("将保留每组重复照片中的第一张，其余照片移入回收站。是否继续？")
+                if (isProcessing) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LinearProgressIndicator(
+                            color = HasselbladOrange,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("正在扫描并清理重复照片...")
+                    }
+                } else {
+                    Text("将保留每组重复照片中的第一张，其余照片移入回收站。是否继续？")
+                }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        removed = repository.cleanupDuplicates()
-                        step = DuplicateStep.Result
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
-                ) {
-                    Text("开始清理")
+                if (!isProcessing) {
+                    Button(
+                        onClick = {
+                            isProcessing = true
+                            removed = repository.cleanupDuplicates()
+                            isProcessing = false
+                            step = DuplicateStep.Result
+                            Toast.makeText(context, "已清理 $removed 张重复照片", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    ) {
+                        Text("确认清理")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text("取消") }
+                if (!isProcessing) {
+                    TextButton(onClick = onDismiss) { Text("取消") }
+                }
             }
         )
         DuplicateStep.Result -> AlertDialog(
@@ -358,13 +381,31 @@ private fun OrganizeByDateDialog(
     repository: TrailSnapRepository,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val plan = remember { repository.getOrganizeByDatePlan() }
+    var isProcessing by remember { mutableStateOf(false) }
+    var isDone by remember { mutableStateOf(false) }
+    var organizedCount by remember { mutableStateOf(0) }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = if (isProcessing) { {} } else onDismiss,
         title = { Text("按日期整理方案") },
         text = {
-            if (plan.isEmpty()) {
+            if (isProcessing) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LinearProgressIndicator(
+                        color = HasselbladOrange,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("正在按日期整理照片...")
+                }
+            } else if (isDone) {
+                Text("已按日期归档 $organizedCount 张照片。")
+            } else if (plan.isEmpty()) {
                 Text("暂无可整理照片")
             } else {
                 Column {
@@ -381,11 +422,34 @@ private fun OrganizeByDateDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
-            ) {
-                Text("关闭")
+            if (isProcessing) {
+                // No button while processing
+            } else if (isDone) {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("知道了")
+                }
+            } else {
+                Button(
+                    onClick = {
+                        isProcessing = true
+                        organizedCount = repository.applyOrganizeByDate(plan)
+                        isProcessing = false
+                        isDone = true
+                        Toast.makeText(context, "已整理 $organizedCount 张照片", Toast.LENGTH_SHORT).show()
+                    },
+                    enabled = plan.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("开始整理")
+                }
+            }
+        },
+        dismissButton = {
+            if (!isProcessing && !isDone) {
+                TextButton(onClick = onDismiss) { Text("取消") }
             }
         }
     )
@@ -400,13 +464,26 @@ private fun BatchRenameDialog(
     val preview = remember { repository.getBatchRenamePreview() }
     var step by remember { mutableStateOf(BatchRenameStep.Preview) }
     var renamed by remember { mutableStateOf(0) }
+    var isProcessing by remember { mutableStateOf(false) }
 
     when (step) {
         BatchRenameStep.Preview -> AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = if (isProcessing) { {} } else onDismiss,
             title = { Text("批量重命名预览") },
             text = {
-                if (preview.isEmpty()) {
+                if (isProcessing) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LinearProgressIndicator(
+                            color = HasselbladOrange,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("正在重命名照片...")
+                    }
+                } else if (preview.isEmpty()) {
                     Text("暂无可重命名照片")
                 } else {
                     Column {
@@ -430,19 +507,27 @@ private fun BatchRenameDialog(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        renamed = repository.applyBatchRename(preview)
-                        step = BatchRenameStep.Result
-                    },
-                    enabled = preview.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
-                ) {
-                    Text("应用重命名")
+                if (!isProcessing) {
+                    Button(
+                        onClick = {
+                            isProcessing = true
+                            val result = repository.applyBatchRename(preview)
+                            renamed = result.successCount
+                            isProcessing = false
+                            step = BatchRenameStep.Result
+                            Toast.makeText(context, "已重命名 ${result.successCount} 张照片", Toast.LENGTH_SHORT).show()
+                        },
+                        enabled = preview.isNotEmpty(),
+                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    ) {
+                        Text("确认重命名")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text("取消") }
+                if (!isProcessing) {
+                    TextButton(onClick = onDismiss) { Text("取消") }
+                }
             }
         )
         BatchRenameStep.Result -> AlertDialog(

@@ -157,3 +157,13 @@ data class ToolboxItem(
     val iconName: String,
     val badgeCount: Int = 0
 )
+
+data class BatchRenameResult(
+    val successCount: Int,
+    val failedEntries: List<RenameFailure>
+)
+
+data class RenameFailure(
+    val filename: String,
+    val reason: String
+)

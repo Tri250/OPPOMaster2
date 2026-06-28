@@ -73,7 +73,7 @@ fun TimelineScreen(
         ) {
             sections.forEach { section ->
                 item {
-                    TimelineDateHeader(date = section.date.format(DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE", Locale.CHINA)))
+                    TimelineDateHeader(date = section.date.format(DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE", Locale.CHINESE)))
                 }
                 items(section.photos.chunked(3)) { rowPhotos ->
                     TimelinePhotoRow(photos = rowPhotos)
@@ -129,8 +129,10 @@ private fun TimelinePhotoRow(photos: List<TrailPhoto>) {
                         interactionSource = interactionSource,
                         indication = null,
                         onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            openPhotoViewer(context, photo)
+                            if (photo.uri != null) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                openPhotoViewer(context, photo)
+                            }
                         }
                     ),
                 contentAlignment = Alignment.Center

@@ -23,8 +23,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PhotoAlbum
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,25 +55,73 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 fun AlbumsScreen(
     onBack: () -> Unit,
     onNavigateToAlbumDetail: (String) -> Unit,
+    onCreateAlbum: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val repository = remember { TrailSnapRepository.getInstance(context) }
     val albums by repository.albums.collectAsState()
+    val isLoading by repository.isLoading.collectAsState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        TrailSnapTopBar(title = "相册", onBack = onBack)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(albums) { album ->
-                AlbumCard(album = album, onClick = { onNavigateToAlbumDetail(album.id) })
+        TrailSnapTopBar(
+            title = "相册",
+            onBack = onBack,
+            actions = {
+                IconButton(onClick = onCreateAlbum) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "创建相册",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+        )
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (albums.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onCreateAlbum),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable(onClick = onCreateAlbum)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "还没有相册，点击右上角创建",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(albums) { album ->
+                    AlbumCard(album = album, onClick = { onNavigateToAlbumDetail(album.id) })
+                }
             }
         }
     }

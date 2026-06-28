@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,7 +48,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
@@ -62,8 +62,27 @@ fun RecycleBinScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { TrailSnapRepository.getInstance(context) }
-    var deletedPhotos by remember { mutableStateOf(repository.getDeletedPhotos()) }
-    var confirmClear by remember { mutableStateOf(false) }
+    var deletedPhotos by remember { mutableStateOf<List<TrailPhoto>?>(null) }
+    var loadError by remember { mutableStateOf(false) }
+    var showClearAllDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var photoToDelete by remember { mutableStateOf<TrailPhoto?>(null) }
+
+    // Load deleted photos with error handling
+    fun reloadDeletedPhotos() {
+        try {
+            deletedPhotos = repository.getDeletedPhotos()
+            loadError = false
+        } catch (_: Exception) {
+            deletedPhotos = null
+            loadError = true
+        }
+    }
+
+    // Initial load
+    if (deletedPhotos == null && !loadError) {
+        reloadDeletedPhotos()
+    }
 
     Column(
         modifier = modifier
@@ -74,8 +93,8 @@ fun RecycleBinScreen(
             title = "回收站",
             onBack = onBack,
             actions = {
-                if (deletedPhotos.isNotEmpty()) {
-                    TextButton(onClick = { confirmClear = true }) {
+                if (deletedPhotos != null && deletedPhotos.isNotEmpty()) {
+                    TextButton(onClick = { showClearAllDialog = true }) {
                         Text(
                             "清空",
                             color = HasselbladOrange,
@@ -86,7 +105,36 @@ fun RecycleBinScreen(
             }
         )
 
-        if (deletedPhotos.isEmpty()) {
+        if (loadError) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "加载失败",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    Button(
+                        onClick = { reloadDeletedPhotos() },
+                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    ) {
+                        Text("重试")
+                    }
+                }
+            }
+        } else if (deletedPhotos == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = HasselbladOrange)
+            }
+        } else if (deletedPhotos.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -106,17 +154,12 @@ fun RecycleBinScreen(
                         photo = photo,
                         onRestore = {
                             repository.restorePhoto(photo.id)
-                            deletedPhotos = repository.getDeletedPhotos()
+                            reloadDeletedPhotos()
                             Toast.makeText(context, "已恢复", Toast.LENGTH_SHORT).show()
                         },
                         onDelete = {
-                            val ok = repository.permanentlyDelete(photo.id)
-                            deletedPhotos = repository.getDeletedPhotos()
-                            Toast.makeText(
-                                context,
-                                if (ok) "已彻底删除" else "已从列表移除（系统文件可能保留）",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            photoToDelete = photo
+                            showDeleteDialog = true
                         }
                     )
                 }
@@ -124,26 +167,63 @@ fun RecycleBinScreen(
         }
     }
 
-    if (confirmClear) {
+    // Clear all confirmation dialog
+    if (showClearAllDialog) {
         AlertDialog(
-            onDismissRequest = { confirmClear = false },
+            onDismissRequest = { showClearAllDialog = false },
             title = { Text("清空回收站") },
-            text = { Text("将彻底删除 ${deletedPhotos.size} 张照片，此操作不可恢复。") },
+            text = { Text("确定要永久删除所有已删除的照片吗？此操作不可恢复！") },
             confirmButton = {
                 Button(
                     onClick = {
-                        deletedPhotos.forEach { repository.permanentlyDelete(it.id) }
-                        deletedPhotos = repository.getDeletedPhotos()
-                        confirmClear = false
+                        deletedPhotos?.forEach { repository.permanentlyDelete(it.id) }
+                        reloadDeletedPhotos()
+                        showClearAllDialog = false
                         Toast.makeText(context, "回收站已清空", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("彻底删除")
+                    Text("永久删除")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClear = false }) { Text("取消") }
+                TextButton(onClick = { showClearAllDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
+    // Single photo permanent delete confirmation dialog
+    if (showDeleteDialog && photoToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+                photoToDelete = null
+            },
+            title = { Text("永久删除") },
+            text = { Text("确定要永久删除这张照片吗？此操作不可恢复！") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val ok = repository.permanentlyDelete(photoToDelete!!.id)
+                        reloadDeletedPhotos()
+                        showDeleteDialog = false
+                        photoToDelete = null
+                        Toast.makeText(
+                            context,
+                            if (ok) "已彻底删除" else "已从列表移除（系统文件可能保留）",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    photoToDelete = null
+                }) { Text("取消") }
             }
         )
     }

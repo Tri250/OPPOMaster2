@@ -37,6 +37,22 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * 验证订阅URL是否合法
+ */
+fun isValidSubscriptionUrl(url: String): Boolean {
+    if (url.isBlank()) return false
+    val uri = try { java.net.URI(url) } catch (_: Exception) { return false }
+    val scheme = uri.scheme?.lowercase() ?: return false
+    if (scheme !in listOf("http", "https")) return false
+    val host = uri.host ?: return false
+    if (host.isBlank()) return false
+    // Must end with .json or .yaml or .yml
+    val path = uri.path?.lowercase() ?: return false
+    if (!path.endsWith(".json") && !path.endsWith(".yaml") && !path.endsWith(".yml")) return false
+    return true
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun SubscriptionScreen(
@@ -62,28 +78,33 @@ fun SubscriptionScreen(
         onRefresh = {
             scope.launch {
                 refreshing = true
-                var successCount = 0
-                var upToDateCount = 0
-                val enabledSubs = subscriptions.filter { it.isEnabled }
-                for (sub in enabledSubs) {
-                    val result = PresetRemoteManager.fetchAndSave(context, sub.url)
-                    if (result.isSuccess) {
-                        successCount++
-                    } else if (result.exceptionOrNull()?.message == "无需更新") {
-                        upToDateCount++
+                try {
+                    var successCount = 0
+                    var upToDateCount = 0
+                    val enabledSubs = subscriptions.filter { it.isEnabled }
+                    for (sub in enabledSubs) {
+                        val result = PresetRemoteManager.fetchAndSave(context, sub.url)
+                        if (result.isSuccess) {
+                            successCount++
+                        } else if (result.exceptionOrNull()?.message == "无需更新") {
+                            upToDateCount++
+                        }
                     }
-                }
-                if (enabledSubs.isNotEmpty()) {
-                    PresetRepository.getInstance(context).forceReloadFromFiles()
-                    val message = when {
-                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                        upToDateCount > 0 -> "所有订阅均已是最新"
-                        else -> "更新失败，请检查网络"
+                    if (enabledSubs.isNotEmpty()) {
+                        PresetRepository.getInstance(context).forceReloadFromFiles()
+                        val message = when {
+                            successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
+                            successCount > 0 -> "成功更新 ${successCount} 个订阅"
+                            upToDateCount > 0 -> "所有订阅均已是最新"
+                            else -> "更新失败，请检查网络"
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "刷新失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                } finally {
+                    refreshing = false
                 }
-                refreshing = false
             }
         }
     )
@@ -171,31 +192,45 @@ fun SubscriptionScreen(
             AddSubscriptionDialog(
                 onDismiss = { showAddDialog = false },
                 onConfirm = { url ->
+                    // URL 格式验证
+                    if (!isValidSubscriptionUrl(url)) {
+                        Toast.makeText(context, "无效的订阅链接，请输入正确的 JSON/YAML URL", Toast.LENGTH_SHORT).show()
+                        return@AddSubscriptionDialog
+                    }
+                    // 重复 URL 检查
+                    if (subscriptions.any { it.url == url }) {
+                        Toast.makeText(context, "该订阅已存在", Toast.LENGTH_SHORT).show()
+                        return@AddSubscriptionDialog
+                    }
                     showAddDialog = false
                     scope.launch {
-                        // 添加新订阅时强制更新 (forceUpdate = true)，以确保能正确导入并验证
-                        val result = PresetRemoteManager.fetchAndSave(context, url, forceUpdate = true)
-                        result.onSuccess { presetList ->
-                            subManager.addSubscription(
-                                url = url,
-                                name = presetList.name ?: "",
-                                author = presetList.author ?: "",
-                                build = presetList.build
-                            )
-                            // 再次更新状态，确保 presetCount 等信息正确（因为 fetchAndSave 时可能还没 add）
-                            subManager.updateSubscriptionStatus(
-                                url = url,
-                                presetCount = presetList.presets.size,
-                                lastUpdateTime = System.currentTimeMillis(),
-                                name = presetList.name,
-                                author = presetList.author,
-                                build = presetList.build
-                            )
-                            // 重新从文件加载预设，确保订阅添加后数据立即可用
-                            PresetRepository.getInstance(context).forceReloadFromFiles()
-                            Toast.makeText(context, "订阅添加成功", Toast.LENGTH_SHORT).show()
-                        }.onFailure { error ->
-                            errorMsg = error.message ?: "导入失败"
+                        try {
+                            // 添加新订阅时强制更新 (forceUpdate = true)，以确保能正确导入并验证
+                            val result = PresetRemoteManager.fetchAndSave(context, url, forceUpdate = true)
+                            result.onSuccess { presetList ->
+                                subManager.addSubscription(
+                                    url = url,
+                                    name = presetList.name ?: "",
+                                    author = presetList.author ?: "",
+                                    build = presetList.build
+                                )
+                                // 再次更新状态，确保 presetCount 等信息正确（因为 fetchAndSave 时可能还没 add）
+                                subManager.updateSubscriptionStatus(
+                                    url = url,
+                                    presetCount = presetList.presets.size,
+                                    lastUpdateTime = System.currentTimeMillis(),
+                                    name = presetList.name,
+                                    author = presetList.author,
+                                    build = presetList.build
+                                )
+                                // 重新从文件加载预设，确保订阅添加后数据立即可用
+                                PresetRepository.getInstance(context).forceReloadFromFiles()
+                                Toast.makeText(context, "订阅添加成功", Toast.LENGTH_SHORT).show()
+                            }.onFailure { error ->
+                                errorMsg = error.message ?: "导入失败"
+                            }
+                        } catch (e: Exception) {
+                            errorMsg = "网络请求失败: ${e.message}"
                         }
                     }
                 }
@@ -209,25 +244,39 @@ fun SubscriptionScreen(
                     sub = editSub,
                     onDismiss = { showEditDialog = null },
                     onConfirm = { oldUrl, newUrl ->
+                        // URL 格式验证
+                        if (!isValidSubscriptionUrl(newUrl)) {
+                            Toast.makeText(context, "无效的订阅链接，请输入正确的 JSON/YAML URL", Toast.LENGTH_SHORT).show()
+                            return@EditSubscriptionDialog
+                        }
+                        // 重复 URL 检查（排除自身）
+                        if (subscriptions.any { it.url == newUrl && it.url != oldUrl }) {
+                            Toast.makeText(context, "该订阅已存在", Toast.LENGTH_SHORT).show()
+                            return@EditSubscriptionDialog
+                        }
                         showEditDialog = null
                         scope.launch {
-                            subManager.updateSubscriptionUrl(oldUrl, newUrl)
-                            // 更新 URL 后需要重新拉取
-                            val result = PresetRemoteManager.fetchAndSave(context, newUrl, forceUpdate = true)
-                            result.onSuccess { presetList ->
-                                subManager.updateSubscriptionStatus(
-                                    url = newUrl,
-                                    presetCount = presetList.presets.size,
-                                    lastUpdateTime = System.currentTimeMillis(),
-                                    name = presetList.name,
-                                    author = presetList.author,
-                                    build = presetList.build
-                                )
-                                // 重新从文件加载预设，确保订阅更新后数据立即可用
-                                PresetRepository.getInstance(context).forceReloadFromFiles()
-                                Toast.makeText(context, "订阅更新成功", Toast.LENGTH_SHORT).show()
-                            }.onFailure { error ->
-                                errorMsg = error.message ?: "更新失败"
+                            try {
+                                subManager.updateSubscriptionUrl(oldUrl, newUrl)
+                                // 更新 URL 后需要重新拉取
+                                val result = PresetRemoteManager.fetchAndSave(context, newUrl, forceUpdate = true)
+                                result.onSuccess { presetList ->
+                                    subManager.updateSubscriptionStatus(
+                                        url = newUrl,
+                                        presetCount = presetList.presets.size,
+                                        lastUpdateTime = System.currentTimeMillis(),
+                                        name = presetList.name,
+                                        author = presetList.author,
+                                        build = presetList.build
+                                    )
+                                    // 重新从文件加载预设，确保订阅更新后数据立即可用
+                                    PresetRepository.getInstance(context).forceReloadFromFiles()
+                                    Toast.makeText(context, "订阅更新成功", Toast.LENGTH_SHORT).show()
+                                }.onFailure { error ->
+                                    errorMsg = error.message ?: "更新失败"
+                                }
+                            } catch (e: Exception) {
+                                errorMsg = "网络请求失败: ${e.message}"
                             }
                         }
                     }

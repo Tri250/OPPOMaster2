@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.data.local.SubscriptionManager
+import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
 import io.ktor.client.HttpClient
@@ -38,6 +40,7 @@ import kotlin.math.abs
  */
 class PresetRepository private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
+    private val subscriptionManager = SubscriptionManager.getInstance(context)
     private val appContext = context.applicationContext
 
     // 预设列表
@@ -55,6 +58,10 @@ class PresetRepository private constructor(context: Context) {
     // 搜索历史
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
+
+    // 重载错误状态（用于向 UI 层反馈 forceReloadFromFiles 的失败信息）
+    private val _reloadError = MutableStateFlow<String?>(null)
+    val reloadError: StateFlow<String?> = _reloadError.asStateFlow()
 
     /**
      * forceReloadFromFiles 专用锁，防止多线程并发调用导致数据竞态
@@ -89,8 +96,8 @@ class PresetRepository private constructor(context: Context) {
             engine {
                 maxConnectionsCount = 32
                 endpoint.maxConnectionsPerRoute = 8
-                endpoint.connectTimeout = NETWORK_TIMEOUT_MS
-                endpoint.socketTimeout = NETWORK_TIMEOUT_MS
+                endpoint.connectTimeout = NETWORK_CONNECT_TIMEOUT_MS
+                endpoint.socketTimeout = NETWORK_READ_TIMEOUT_MS
             }
             install(ContentNegotiation) {
                 json(Json {
@@ -99,9 +106,9 @@ class PresetRepository private constructor(context: Context) {
                 })
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = NETWORK_TIMEOUT_MS
-                connectTimeoutMillis = NETWORK_TIMEOUT_MS
-                socketTimeoutMillis = NETWORK_TIMEOUT_MS
+                requestTimeoutMillis = NETWORK_READ_TIMEOUT_MS
+                connectTimeoutMillis = NETWORK_CONNECT_TIMEOUT_MS
+                socketTimeoutMillis = NETWORK_READ_TIMEOUT_MS
             }
             install(HttpRequestRetry) {
                 retryOnServerErrors(maxRetries = 2)
@@ -154,13 +161,47 @@ class PresetRepository private constructor(context: Context) {
     suspend fun loadPresets(brand: String? = null): List<PresetItem> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
 
-        // 从CDN或本地缓存加载
-        val allPresets = loadFromCacheOrNetwork(brand)
+        val presets = mutableListOf<PresetItem>()
+
+        // 从 assets 加载（内置预设，最可靠的数据源）
+        try {
+            val assetsPresets = readFromAssets() ?: emptyList()
+            presets.addAll(assetsPresets)
+        } catch (e: Exception) {
+            Log.e(TAG, "加载 assets 预设失败", e)
+        }
+
+        // 从本地缓存加载
+        try {
+            val localPresets = readFromCache() ?: emptyList()
+            presets.addAll(localPresets)
+        } catch (e: Exception) {
+            Log.e(TAG, "加载本地缓存预设失败", e)
+        }
+
+        // 从网络加载（如果启用）
+        try {
+            val networkPresets = loadFromNetwork()
+            presets.addAll(networkPresets)
+        } catch (e: Exception) {
+            Log.e(TAG, "加载网络预设失败", e)
+        }
+
+        // 按品牌过滤
+        val filtered = if (brand.isNullOrBlank()) presets
+        else presets.filter { it.brand.equals(brand, ignoreCase = true) }
 
         // 应用置顶排序
-        val sortedPresets = applyPinningAndSorting(allPresets)
+        val sortedPresets = applyPinningAndSorting(filtered)
 
         _presets.value = sortedPresets
+
+        // 网络加载成功后保存到本地缓存
+        try {
+            saveToCache()
+        } catch (e: Exception) {
+            Log.e(TAG, "加载后保存缓存失败", e)
+        }
 
         val elapsed = System.currentTimeMillis() - startTime
         if (elapsed > 2000) {
@@ -472,6 +513,12 @@ class PresetRepository private constructor(context: Context) {
     suspend fun importPresets(file: File): Result<ImportResult> = withContext(Dispatchers.IO) {
         try {
             val content = file.readText()
+
+            // 文件大小检查（防止恶意大文件）
+            if (content.length > 5 * 1024 * 1024) {
+                return@withContext Result.failure(IllegalArgumentException("导入文件大小超过5MB限制"))
+            }
+
             val data = json.decodeFromString<ExportData>(content)
 
             // PM-007: 校验版本号
@@ -479,11 +526,68 @@ class PresetRepository private constructor(context: Context) {
                 return@withContext Result.failure(IllegalArgumentException("版本号不兼容"))
             }
 
+            // 校验预设数量
+            if (data.presets.size > 100) {
+                return@withContext Result.failure(IllegalArgumentException("单次导入预设不能超过100条"))
+            }
+
             var imported = 0
             var skipped = 0
             val conflicts = mutableListOf<PresetItem>()
+            val validationErrors = mutableListOf<String>()
 
-            for (exportModel in data.presets) {
+            for ((index, exportModel) in data.presets.withIndex()) {
+                // 严格验证：预设名称非空
+                if (exportModel.name.isBlank()) {
+                    validationErrors.add("第${index + 1}条预设：名称不能为空")
+                    skipped++
+                    continue
+                }
+
+                // 验证名称长度限制
+                if (exportModel.name.length > 50) {
+                    validationErrors.add("第${index + 1}条预设：名称长度超过50字限制")
+                    skipped++
+                    continue
+                }
+
+                // 验证描述长度限制
+                if (exportModel.description.length > 500) {
+                    validationErrors.add("第${index + 1}条预设「${exportModel.name}」：描述长度超过500字限制")
+                    skipped++
+                    continue
+                }
+
+                // 验证危险字符（防止注入/XSS）
+                val dangerousPattern = Regex("[<>\"'&\\\\]|(script)|(javascript)|(on\\w+=)", RegexOption.IGNORE_CASE)
+                if (dangerousPattern.containsMatchIn(exportModel.name)) {
+                    validationErrors.add("第${index + 1}条预设「${exportModel.name}」：名称包含非法字符")
+                    skipped++
+                    continue
+                }
+                if (dangerousPattern.containsMatchIn(exportModel.description)) {
+                    validationErrors.add("第${index + 1}条预设「${exportModel.name}」：描述包含非法字符")
+                    skipped++
+                    continue
+                }
+
+                // 验证 mode 值（如果提供）
+                exportModel.mode?.let { mode ->
+                    if (mode !in listOf("auto", "pro", null)) {
+                        validationErrors.add("第${index + 1}条预设「${exportModel.name}」：模式值无效($mode)")
+                        skipped++
+                        return@let
+                    }
+                }
+
+                // 验证 params 非空
+                if (exportModel.params.isEmpty()) {
+                    validationErrors.add("第${index + 1}条预设「${exportModel.name}」：参数不能为空")
+                    skipped++
+                    continue
+                }
+
+                // 检查与系统预设重名
                 val existing = _presets.value.find {
                     it.name == exportModel.name && it.isSystem
                 }
@@ -498,6 +602,10 @@ class PresetRepository private constructor(context: Context) {
                     _presets.value = current
                     imported++
                 }
+            }
+
+            if (validationErrors.isNotEmpty()) {
+                Log.w(TAG, "导入验证错误: ${validationErrors.joinToString("; ")}")
             }
 
             saveToCache()
@@ -729,28 +837,100 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * 从缓存或网络加载预设
-     * 策略：
-     * 1. 缓存命中且未过期：直接返回
-     * 2. 尝试拉取云端（异步在后台触发，不阻塞当前请求）
-     * 3. 网络拉取失败：返回现有缓存（保证 PM-001 < 2s 体验）
+     * 从本地存储加载预设（缓存 + assets）
      */
-    private suspend fun loadFromCacheOrNetwork(brand: String?): List<PresetItem> = withContext(Dispatchers.IO) {
-        val localPresets = if (_presets.value.isNotEmpty()) {
-            _presets.value
-        } else {
-            // 首次：尝试本地
-            readFromCache() ?: readFromAssets() ?: emptyList()
+    private fun loadFromLocal(): List<PresetItem> {
+        return readFromCache() ?: readFromAssets() ?: emptyList()
+    }
+
+    /**
+     * 从网络加载预设
+     * 遍历 SubscriptionManager 中所有已启用的订阅源，
+     * 通过 PresetRemoteManager 拉取远端 JSON 并转换为 PresetItem
+     */
+    private suspend fun loadFromNetwork(): List<PresetItem> = withContext(Dispatchers.IO) {
+        val enabledSubscriptions = subscriptionManager.subscriptionsFlow.value.filter { it.isEnabled }
+        if (enabledSubscriptions.isEmpty()) {
+            Log.d(TAG, "无已启用的订阅源，跳过网络加载")
+            return@withContext emptyList<PresetItem>()
         }
 
-        // 按品牌过滤
-        return@withContext if (brand.isNullOrBlank()) {
-            localPresets
-        } else {
-            val filtered = localPresets.filter { it.brand.equals(brand, ignoreCase = true) }
-            Log.d(TAG, "按品牌 [$brand] 过滤后剩余 ${filtered.size}/${localPresets.size} 条")
-            filtered
+        val remotePresets = mutableListOf<PresetItem>()
+        for (subscription in enabledSubscriptions) {
+            try {
+                val result = PresetRemoteManager.fetchAndSave(appContext, subscription.url)
+                if (result.isSuccess) {
+                    val presetList = result.getOrNull()
+                    if (presetList != null) {
+                        val brand = presetList.name?.lowercase() ?: "oppo"
+                        val items = presetList.presets.map { it.toRepositoryPreset(brand = brand) }
+                        remotePresets.addAll(items)
+                        Log.d(TAG, "从网络加载订阅 [${subscription.name}] 成功: ${items.size} 条")
+                    }
+                } else {
+                    Log.w(TAG, "从网络加载订阅 [${subscription.name}] 失败: ${result.exceptionOrNull()?.message}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "从网络加载订阅 [${subscription.name}] 异常", e)
+            }
         }
+        Log.d(TAG, "网络加载完成，共获取 ${remotePresets.size} 条预设")
+        remotePresets
+    }
+
+    /**
+     * 将下载的预设保存到本地缓存
+     */
+    private suspend fun saveToLocal(presets: List<PresetItem>) {
+        val current = _presets.value.toMutableList()
+        // 按名称+品牌去重，远程数据覆盖本地同名的
+        val remoteKeys = presets.map { "${it.name}_${it.brand}" }.toSet()
+        val merged = current.filter { "${it.name}_${it.brand}" !in remoteKeys } + presets
+        _presets.value = merged
+        saveToCache()
+    }
+
+    /**
+     * 从缓存或网络加载预设
+     * 策略：
+     * 1. 非强制刷新时，优先返回本地缓存
+     * 2. 尝试从网络拉取（使用 SubscriptionManager 的已启用订阅源）
+     * 3. 网络成功则更新本地缓存并返回
+     * 4. 网络失败则回退本地缓存
+     * 5. 保证 PM-001 < 2s 体验
+     */
+    private suspend fun loadFromCacheOrNetwork(brand: String?, forceRefresh: Boolean = false): List<PresetItem> = withContext(Dispatchers.IO) {
+        // 非强制刷新时，优先返回本地缓存
+        if (!forceRefresh) {
+            val cached = loadFromLocal()
+            if (cached.isNotEmpty()) {
+                val result = if (brand.isNullOrBlank()) cached
+                else cached.filter { it.brand.equals(brand, ignoreCase = true) }
+                Log.d(TAG, "使用本地缓存: ${result.size} 条, brand=$brand")
+                return@withContext result
+            }
+        }
+
+        // 尝试从网络加载
+        try {
+            val remote = loadFromNetwork()
+            if (remote.isNotEmpty()) {
+                saveToLocal(remote)
+                val result = if (brand.isNullOrBlank()) remote
+                else remote.filter { it.brand.equals(brand, ignoreCase = true) }
+                Log.d(TAG, "网络加载成功: ${result.size} 条, brand=$brand")
+                return@withContext result
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "网络加载失败，回退到本地缓存", e)
+        }
+
+        // 回退到本地
+        val local = loadFromLocal()
+        val result = if (brand.isNullOrBlank()) local
+        else local.filter { it.brand.equals(brand, ignoreCase = true) }
+        Log.d(TAG, "使用本地回退: ${result.size} 条, brand=$brand")
+        result
     }
 
     private fun applyPinningAndSorting(presets: List<PresetItem>): List<PresetItem> {
@@ -820,14 +1000,34 @@ class PresetRepository private constructor(context: Context) {
      * 用于订阅更新后刷新数据，解决 loadFromCacheOrNetwork 因内存缓存非空而跳过文件读取的问题
      *
      * 使用 Mutex 确保多线程并发调用时的数据一致性（避免 A 线程清空后被 B 线程覆盖）
-     * 同步失败不影响返回值的正确性（loadLocalPresets 已提供有效的本地数据）
+     * 失败时通过 reloadError StateFlow 向 UI 层反馈错误信息
      */
     suspend fun forceReloadFromFiles(): List<PresetItem> = withContext(Dispatchers.IO) {
         forceReloadLock.withLock {
-            _presets.value = emptyList()
-            loadLocalPresets()
-            _presets.value
+            try {
+                _reloadError.value = null
+                _presets.value = emptyList()
+                loadLocalPresets()
+                if (_presets.value.isEmpty()) {
+                    val errorMsg = "强制重载后预设列表为空，本地数据可能损坏"
+                    Log.e(TAG, errorMsg)
+                    _reloadError.value = errorMsg
+                }
+                _presets.value
+            } catch (e: Exception) {
+                val errorMsg = "强制重载预设失败: ${e.message}"
+                Log.e(TAG, errorMsg, e)
+                _reloadError.value = errorMsg
+                _presets.value
+            }
         }
+    }
+
+    /**
+     * 清除重载错误状态（UI 层消费后调用）
+     */
+    fun clearReloadError() {
+        _reloadError.value = null
     }
 
     // ==================== HomeViewModel 需要的方法 ====================
@@ -898,8 +1098,16 @@ class PresetRepository private constructor(context: Context) {
 
     /**
      * 切换收藏状态（用于 HomeViewModel）
+     * 切换前验证预设是否存在于本地列表，避免收藏不存在的预设
      */
     suspend fun toggleFavorite(presetId: String) {
+        // 验证预设是否存在
+        val exists = _presets.value.any { it.id == presetId }
+        if (!exists) {
+            Log.w(TAG, "toggleFavorite: 预设 $presetId 不存在，跳过收藏操作")
+            return
+        }
+
         val current = _favorites.value.toMutableSet()
         if (current.contains(presetId)) {
             current.remove(presetId)
@@ -933,7 +1141,8 @@ class PresetRepository private constructor(context: Context) {
         private const val CORRUPTED_BACKUP_FILE_NAME = "presets_cache.json.corrupted"
         private const val ASSETS_PRESETS_FILE = "presets.json"
         private const val CACHE_VERSION = 1
-        private const val NETWORK_TIMEOUT_MS = 10_000L
+        private const val NETWORK_CONNECT_TIMEOUT_MS = 10_000L
+        private const val NETWORK_READ_TIMEOUT_MS = 30_000L
 
         @Volatile
         private var instance: PresetRepository? = null
@@ -992,7 +1201,8 @@ data class PresetItem(
         scene = scene,
         params = params,
         description = description,
-        tags = tags
+        tags = tags,
+        mode = mode
     )
 
     /**
@@ -1068,7 +1278,8 @@ data class ExportPresetModel(
     val scene: String,
     val params: Map<String, Int>,
     val description: String = "",
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val mode: String? = null
 ) {
     fun toPresetItem() = PresetItem(
         id = "imported_${System.currentTimeMillis()}_${abs(name.hashCode())}",
@@ -1085,7 +1296,7 @@ data class ExportPresetModel(
         tags = tags,
         createdAt = System.currentTimeMillis(),
         updatedAt = System.currentTimeMillis(),
-        mode = null
+        mode = mode
     )
 }
 
