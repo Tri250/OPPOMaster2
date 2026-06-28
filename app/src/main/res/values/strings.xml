@@ -145,7 +145,6 @@
     <string name="empty_icon_add_desc">添加图标</string>
     <string name="empty_icon_default_desc">空状态图标</string>
     <string name="cache_no_data_to_clear">暂无缓存需要清理</string>
-    <string name="cache_cleared">缓存已清理</string>
     <string name="filter_result_count">已筛选 %1$d 条</string>
     <string name="clear_filter">清空筛选</string>
     <string name="load_more_hint">持续更新 敬请期待</string>
@@ -531,7 +530,6 @@
     <string name="view_annual_report">查看年度报告</string>
     <string name="permission_storage_title">需要存储权限</string>
     <string name="permission_storage_desc">行影集需要访问您的照片和视频，才能生成时间轴、相册、足迹和人物聚类。</string>
-    <string name="go_to_settings">前往设置开启</string>
     <string name="request_permission_again">重新申请</string>
     <string name="grant_permission">授权访问</string>
     <string name="memories_entry">回忆入口</string>
