@@ -127,10 +127,22 @@ fun AIFineTuneScreen(
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
 
+    // P0-2: AI 局部遮罩状态
+    val isGeneratingMask by viewModel.isGeneratingMask.collectAsState()
+    val activeMaskType by viewModel.activeMaskType.collectAsState()
+    val maskOpacity by viewModel.maskOpacity.collectAsState()
+
     // P0-1: 非破坏性配方恢复状态
     val hasPendingRecipe by viewModel.hasPendingRecipe.collectAsState()
     val pendingRecipeLabel by viewModel.pendingRecipeLabel.collectAsState()
     val recipeSaved by viewModel.recipeSaved.collectAsState()
+
+    // P0-4: 编辑历史时间轴
+    val showHistoryTimeline by viewModel.showHistoryTimeline.collectAsState()
+    val historyNodes = remember { viewModel.getHistoryNodes() }
+
+    // P1-2: Filmstrip 最近图片
+    val recentImageUris by viewModel.recentImageUris.collectAsState()
 
     // 初始化传入的 bitmap
     LaunchedEffect(bitmap) {
@@ -254,6 +266,16 @@ fun AIFineTuneScreen(
         )
     }
 
+    // P0-4: 编辑历史时间轴 BottomSheet
+    if (showHistoryTimeline) {
+        HistoryTimelineSheet(
+            nodes = historyNodes,
+            currentIndex = historyNodes.size - 1,
+            onNodeClick = { node -> viewModel.jumpToHistoryNode(context, node.index) },
+            onDismiss = { viewModel.dismissHistoryTimeline() }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -274,6 +296,26 @@ fun AIFineTuneScreen(
                     // P0-1: 保存配方按钮
                     IconButton(onClick = { viewModel.saveCurrentRecipe("AI微调") }) {
                         Icon(Icons.Default.Save, contentDescription = "保存配方", tint = HasselbladOrange)
+                    }
+                    // P1-1: 复制设置按钮
+                    IconButton(onClick = { viewModel.copySettings() }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "复制设置", tint = HasselbladOrange)
+                    }
+                    // P1-1: 粘贴设置按钮（仅当剪贴板有内容时可用）
+                    val hasClipboard by EditRecipeClipboard.hasClipboard.collectAsState()
+                    IconButton(
+                        onClick = { viewModel.pasteSettings(context) },
+                        enabled = hasClipboard
+                    ) {
+                        Icon(
+                            Icons.Default.ContentPaste,
+                            contentDescription = "粘贴设置",
+                            tint = if (hasClipboard) HasselbladOrange else Color.Gray
+                        )
+                    }
+                    // P0-4: 历史时间轴按钮
+                    IconButton(onClick = { viewModel.toggleHistoryTimeline() }) {
+                        Icon(Icons.Default.History, contentDescription = "历史记录", tint = HasselbladOrange)
                     }
                     IconButton(onClick = { viewModel.undo() }, enabled = canUndo) {
                         Icon(Icons.Default.Undo, contentDescription = "撤销", tint = if (canUndo) HasselbladOrange else Color.Gray)
@@ -348,11 +390,21 @@ fun AIFineTuneScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
+
+                // P1-2: Filmstrip 底部快切栏
+                if (recentImageUris.isNotEmpty()) {
+                    FilmstripBar(
+                        uris = recentImageUris,
+                        selectedUri = selectedImageUri,
+                        onSelect = { uri -> viewModel.loadImage(context, uri) },
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
             }
 
             // Tab 切换
             TabRow(
-                selectedTabIndex = listOf("basic", "style", "smart", "hsl", "curve").indexOf(activeTab),
+                selectedTabIndex = listOf("basic", "style", "smart", "hsl", "curve", "local").indexOf(activeTab),
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = HasselbladOrange,
                 modifier = Modifier.fillMaxWidth()
@@ -362,7 +414,8 @@ fun AIFineTuneScreen(
                     "style" to "风格",
                     "smart" to "智能",
                     "hsl" to "HSL",
-                    "curve" to "曲线"
+                    "curve" to "曲线",
+                    "local" to "局部"
                 ).forEach { (id, label) ->
                     Tab(
                         selected = activeTab == id,
@@ -413,6 +466,14 @@ fun AIFineTuneScreen(
                         onChannelChange = { viewModel.setCurveChannel(it) },
                         onPointsChange = { viewModel.updateCurvePoints(curveChannel, it) },
                         onPreset = { viewModel.applyCurvePreset(it) }
+                    )
+                    "local" -> LocalMaskPanel(
+                        isGeneratingMask = isGeneratingMask,
+                        activeMaskType = activeMaskType,
+                        maskOpacity = maskOpacity,
+                        onGenerateMask = { type -> viewModel.generateMask(context, type) },
+                        onClearMask = { viewModel.clearMask(context) },
+                        onOpacityChange = { viewModel.updateMaskOpacity(context, it) }
                     )
                 }
             }
@@ -539,6 +600,7 @@ private fun BasicParamsPanel(
         Triple("clarity", "清晰度", 0f..100f),
         Triple("sharpness", "锐度", 0f..100f),
         Triple("dehaze", "去霾", 0f..100f),
+        Triple("vignette", "暗角", 0f..100f),
         Triple("denoise", "降噪", 0f..100f),
         Triple("grain", "颗粒", 0f..100f),
         Triple("fade", "褪色", 0f..100f),
@@ -565,6 +627,7 @@ private fun BasicParamsPanel(
                 "clarity" -> params.clarity
                 "sharpness" -> params.sharpness
                 "dehaze" -> params.dehaze
+                "vignette" -> params.vignette
                 "denoise" -> params.denoise
                 "grain" -> params.grain
                 "fade" -> params.fade
@@ -1085,6 +1148,386 @@ private fun AIProgressOverlay(
                             trackColor = Color.White.copy(alpha = 0.15f)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// ==================== P0-2: AI 局部遮罩面板 ====================
+
+/**
+ * 局部遮罩面板 — 纯端侧 AI 分割，实现人像/背景/天空的局部调整
+ *
+ * 产品经理交互审查：
+ * - 用户心智："我只想提亮人脸""我只想调色天空"，不应需要手动抠图
+ * - 操作链路：点击「局部」Tab → 选择遮罩类型 → 系统自动分割 → 参数调整仅影响选中区域
+ * - 反馈设计：分割中显示进度指示，分割完成后预览实时更新，遮罩强度可滑动调节
+ */
+@Composable
+private fun LocalMaskPanel(
+    isGeneratingMask: Boolean,
+    activeMaskType: AIMaskManager.MaskType?,
+    maskOpacity: Float,
+    onGenerateMask: (AIMaskManager.MaskType) -> Unit,
+    onClearMask: () -> Unit,
+    onOpacityChange: (Float) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            "AI 局部调整",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            "选择要调整的区域，参数将仅影响选中范围",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+
+        // 遮罩类型选择
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MaskTypeButton(
+                label = "人像",
+                icon = Icons.Default.Face,
+                isSelected = activeMaskType == AIMaskManager.MaskType.SUBJECT,
+                isLoading = isGeneratingMask && activeMaskType == null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onGenerateMask(AIMaskManager.MaskType.SUBJECT)
+                },
+                modifier = Modifier.weight(1f)
+            )
+            MaskTypeButton(
+                label = "背景",
+                icon = Icons.Default.Landscape,
+                isSelected = activeMaskType == AIMaskManager.MaskType.BACKGROUND,
+                isLoading = isGeneratingMask && activeMaskType == null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onGenerateMask(AIMaskManager.MaskType.BACKGROUND)
+                },
+                modifier = Modifier.weight(1f)
+            )
+            MaskTypeButton(
+                label = "天空",
+                icon = Icons.Default.WbCloudy,
+                isSelected = activeMaskType == AIMaskManager.MaskType.SKY,
+                isLoading = isGeneratingMask && activeMaskType == null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onGenerateMask(AIMaskManager.MaskType.SKY)
+                },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // 分割中指示
+        if (isGeneratingMask) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = HasselbladOrange)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("AI 分割中...", style = MaterialTheme.typography.bodySmall, color = HasselbladOrange)
+            }
+        }
+
+        // 当前遮罩状态与清除
+        if (activeMaskType != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.1f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = when (activeMaskType) {
+                                AIMaskManager.MaskType.SUBJECT -> Icons.Default.Face
+                                AIMaskManager.MaskType.BACKGROUND -> Icons.Default.Landscape
+                                AIMaskManager.MaskType.SKY -> Icons.Default.WbCloudy
+                            },
+                            contentDescription = null,
+                            tint = HasselbladOrange,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            when (activeMaskType) {
+                                AIMaskManager.MaskType.SUBJECT -> "人像区域已选中"
+                                AIMaskManager.MaskType.BACKGROUND -> "背景区域已选中"
+                                AIMaskManager.MaskType.SKY -> "天空区域已选中"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = HasselbladOrange
+                        )
+                    }
+                    TextButton(onClick = onClearMask) {
+                        Text("清除", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 遮罩强度滑动条
+            Text("遮罩强度", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
+            Slider(
+                value = maskOpacity,
+                onValueChange = onOpacityChange,
+                valueRange = 0f..1f,
+                colors = SliderDefaults.colors(
+                    thumbColor = HasselbladOrange,
+                    activeTrackColor = HasselbladOrange
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun MaskTypeButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, HasselbladOrange) else null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = HasselbladOrange)
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isSelected) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+// ==================== P0-4: 编辑历史时间轴 BottomSheet ====================
+
+/**
+ * 历史时间轴 BottomSheet — 可视化编辑历史，支持任意节点回退
+ *
+ * 产品经理交互审查：
+ * - 用户心智：用户需要知道"我刚才做了什么"，并能一键回到某个状态
+ * - 操作链路：点击顶部「历史」图标 → 底部弹出时间轴 → 点击任意节点立即回退 → 预览实时更新
+ * - 视觉设计：当前状态高亮（哈苏橙），历史节点用时间线连接，操作标签清晰可读
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryTimelineSheet(
+    nodes: List<AIFineTuneViewModel.HistoryNode>,
+    currentIndex: Int,
+    onNodeClick: (AIFineTuneViewModel.HistoryNode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Text(
+                "编辑历史",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "点击任意节点可回退到该状态",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                items(nodes.size) { index ->
+                    val node = nodes[index]
+                    val isCurrent = index == currentIndex
+                    val isLast = index == nodes.size - 1
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNodeClick(node) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 时间线节点
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .background(
+                                        if (isCurrent) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                                        CircleShape
+                                    )
+                                    .border(
+                                        width = if (isCurrent) 2.dp else 0.dp,
+                                        color = if (isCurrent) HasselbladOrange else Color.Transparent,
+                                        shape = CircleShape
+                                    )
+                            )
+                            if (!isLast) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .width(2.dp)
+                                        .height(24.dp)
+                                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f))
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // 节点信息
+                        Column {
+                            Text(
+                                node.actionLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isCurrent) HasselbladOrange else MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                "步骤 ${node.index + 1}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (isCurrent) {
+                            Text(
+                                "当前",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HasselbladOrange,
+                                modifier = Modifier
+                                    .background(HasselbladOrange.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+            ) {
+                Text("关闭")
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+// ==================== P1-2: Filmstrip 底部快切栏 ====================
+
+/**
+ * Filmstrip 底部快切栏 — 连续修图工作流
+ *
+ * 产品经理交互审查：
+ * - 用户心智：专业用户一次选多张图连续修图，不应反复跳出选图
+ * - 操作链路：加载图片 → 底部出现缩略图栏 → 点击其他缩略图直接切换 → 保留当前参数可快速复用
+ * - 视觉设计：半透明背景悬浮于预览区底部，当前选中图高亮（哈苏橙边框），高度 56dp 不遮挡主体
+ */
+@Composable
+private fun FilmstripBar(
+    uris: List<Uri>,
+    selectedUri: Uri?,
+    onSelect: (Uri) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items(uris.size) { index ->
+                val uri = uris[index]
+                val isSelected = uri == selectedUri
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.DarkGray)
+                        .then(
+                            if (isSelected) Modifier.border(2.dp, HasselbladOrange, RoundedCornerShape(8.dp))
+                            else Modifier
+                        )
+                        .clickable { onSelect(uri) }
+                ) {
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = "缩略图",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
         }

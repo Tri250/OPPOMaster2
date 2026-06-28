@@ -37,6 +37,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.AIFineTuneManager
+import com.silas.omaster.ai.AIMaskManager
 import com.silas.omaster.ai.AISuggestionResult
 import com.silas.omaster.data.local.EditRecipe
 import com.silas.omaster.data.local.HSLRecipeValue
@@ -138,6 +139,79 @@ class AIFineTuneViewModel(
     private val _showSuccess = MutableStateFlow(false)
     val showSuccess: StateFlow<Boolean> = _showSuccess.asStateFlow()
 
+    // ==================== P0-2: AI 局部遮罩状态 ====================
+    private val _activeMaskType = MutableStateFlow<AIMaskManager.MaskType?>(null)
+    val activeMaskType: StateFlow<AIMaskManager.MaskType?> = _activeMaskType.asStateFlow()
+
+    private val _maskBitmap = MutableStateFlow<Bitmap?>(null)
+    val maskBitmap: StateFlow<Bitmap?> = _maskBitmap.asStateFlow()
+
+    private val _isGeneratingMask = MutableStateFlow(false)
+    val isGeneratingMask: StateFlow<Boolean> = _isGeneratingMask.asStateFlow()
+
+    private val _maskOpacity = MutableStateFlow(1.0f)
+    val maskOpacity: StateFlow<Float> = _maskOpacity.asStateFlow()
+
+    // ==================== P0-4: 编辑历史时间轴状态 ====================
+    private val _showHistoryTimeline = MutableStateFlow(false)
+    val showHistoryTimeline: StateFlow<Boolean> = _showHistoryTimeline.asStateFlow()
+
+    data class HistoryNode(
+        val index: Int,
+        val params: RenderParameters,
+        val timestamp: Long,
+        val actionLabel: String
+    )
+
+    /**
+     * 获取可视化历史节点列表（用于时间轴展示）
+     */
+    fun getHistoryNodes(): List<HistoryNode> {
+        return history.listHistory().mapIndexed { index, params ->
+            HistoryNode(
+                index = index,
+                params = params,
+                timestamp = System.currentTimeMillis() - (history.listHistory().size - index) * 1000L,
+                actionLabel = inferActionLabel(params, index)
+            )
+        }
+    }
+
+    private fun inferActionLabel(params: RenderParameters, index: Int): String {
+        if (index == 0) return "初始状态"
+        // 基于参数变化推断动作类型
+        return when {
+            params.dehaze > 0f -> "去雾调整"
+            params.grain > 0f -> "颗粒效果"
+            params.vignette > 0f -> "暗角效果"
+            params.clarity > 0f -> "清晰度"
+            params.sharpness > 0f -> "锐化"
+            else -> "参数调整"
+        }
+    }
+
+    fun toggleHistoryTimeline() {
+        _showHistoryTimeline.value = !_showHistoryTimeline.value
+    }
+
+    fun dismissHistoryTimeline() {
+        _showHistoryTimeline.value = false
+    }
+
+    /**
+     * 跳转到指定历史节点
+     */
+    fun jumpToHistoryNode(context: Context, nodeIndex: Int) {
+        viewModelScope.launch {
+            history.jumpTo(nodeIndex)
+            _currentParams.value = history.current() ?: return@launch
+            _canUndo.value = history.canUndo()
+            _canRedo.value = history.canRedo()
+            renderPreviewAsync(context)
+            _showHistoryTimeline.value = false
+        }
+    }
+
     // ==================== 非破坏性配方状态 ====================
     private var currentImageHash: String = ""
     private val _hasPendingRecipe = MutableStateFlow(false)
@@ -162,6 +236,10 @@ class AIFineTuneViewModel(
 
     private val _imageLoadError = MutableStateFlow<String?>(null)
     val imageLoadError: StateFlow<String?> = _imageLoadError.asStateFlow()
+
+    // P1-2: Filmstrip 最近图片列表
+    private val _recentImageUris = MutableStateFlow<List<Uri>>(emptyList())
+    val recentImageUris: StateFlow<List<Uri>> = _recentImageUris.asStateFlow()
 
     // ==================== 参数状态 ====================
     private val _currentParams = MutableStateFlow(RenderParameters())
@@ -240,6 +318,8 @@ class AIFineTuneViewModel(
                     _sourceBitmap.value = bitmap
                     _previewBitmap.value?.recycle()
                     _previewBitmap.value = null
+                    // P1-2: 维护最近图片列表
+                    _recentImageUris.value = (listOf(uri) + _recentImageUris.value.filter { it != uri }).take(10)
                     renderPreviewAsync(context)
                     pushHistory(force = true)
                     // P0-1: 加载图片后检查是否存在历史配方
@@ -947,7 +1027,130 @@ class AIFineTuneViewModel(
         inferenceJob?.cancel()
         _sourceBitmap.value?.recycle()
         _previewBitmap.value?.recycle()
+        _maskBitmap.value?.recycle()
         gpuRenderManager?.release()
+    }
+
+    // ================== P1-1: 跨图复制粘贴 ==================
+
+    /**
+     * 复制当前编辑设置到全局剪贴板
+     */
+    fun copySettings() {
+        val recipe = buildRecipeSnapshot("已复制")
+        EditRecipeClipboard.copy(recipe)
+    }
+
+    /**
+     * 从全局剪贴板粘贴编辑设置
+     */
+    fun pasteSettings(context: Context) {
+        viewModelScope.launch {
+            val recipe = EditRecipeClipboard.paste() ?: return@launch
+            applyRecipe(context, recipe)
+        }
+    }
+
+    // ================== P0-2: AI 局部遮罩操作 ==================
+
+    /**
+     * 生成并应用 AI 遮罩
+     * @param context Context
+     * @param type 遮罩类型（人像/背景/天空）
+     */
+    fun generateMask(context: Context, type: AIMaskManager.MaskType) {
+        viewModelScope.launch {
+            val source = _sourceBitmap.value ?: return@launch
+            _isGeneratingMask.value = true
+            try {
+                val maskManager = AIMaskManager.getInstance(context)
+                val result = when (type) {
+                    AIMaskManager.MaskType.SUBJECT,
+                    AIMaskManager.MaskType.BACKGROUND ->
+                        maskManager.generatePortraitMask(source, type)
+                    AIMaskManager.MaskType.SKY ->
+                        maskManager.generateSkyMask(source)
+                }
+                result?.let {
+                    _maskBitmap.value?.recycle()
+                    _maskBitmap.value = it.maskBitmap
+                    _activeMaskType.value = type
+                    // 重新渲染预览，应用遮罩
+                    renderPreviewWithMask(context)
+                }
+            } catch (e: Exception) {
+                Log.e("AIFineTuneVM", "遮罩生成失败", e)
+            } finally {
+                _isGeneratingMask.value = false
+            }
+        }
+    }
+
+    /**
+     * 清除当前遮罩
+     */
+    fun clearMask(context: Context) {
+        _maskBitmap.value?.recycle()
+        _maskBitmap.value = null
+        _activeMaskType.value = null
+        viewModelScope.launch {
+            renderPreviewAsync(context)
+        }
+    }
+
+    /**
+     * 更新遮罩不透明度
+     */
+    fun updateMaskOpacity(context: Context, opacity: Float) {
+        _maskOpacity.value = opacity.coerceIn(0f, 1f)
+        viewModelScope.launch {
+            renderPreviewWithMask(context)
+        }
+    }
+
+    /**
+     * 带遮罩的预览渲染
+     * 核心逻辑：先渲染全图效果，再用遮罩与原图混合
+     */
+    private suspend fun renderPreviewWithMask(context: Context) {
+        val source = _sourceBitmap.value ?: return
+        val mask = _maskBitmap.value ?: return
+        try {
+            // 1. 先渲染全图调整效果
+            val effective = buildEffectiveParams()
+            val fullEffect = renderWithGPU(source, effective, RenderQuality.PREVIEW)
+
+            // 2. 使用遮罩混合：mask白色区域显示调整效果，黑色区域显示原图
+            val blended = blendWithMask(source, fullEffect, mask, _maskOpacity.value)
+            _previewBitmap.value = blended
+        } catch (e: Exception) {
+            Log.e("AIFineTuneVM", "遮罩预览渲染失败", e)
+        }
+    }
+
+    /**
+     * 使用遮罩混合两张 Bitmap
+     * @param original 原图
+     * @param adjusted 调整后的图
+     * @param mask 灰度遮罩图（白色=调整后，黑色=原图）
+     * @param opacity 遮罩强度 0-1
+     */
+    private fun blendWithMask(original: Bitmap, adjusted: Bitmap, mask: Bitmap, opacity: Float): Bitmap {
+        val result = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(result)
+
+        // 先画原图
+        canvas.drawBitmap(original, 0f, 0f, null)
+
+        // 再根据遮罩绘制调整后的图
+        val paint = android.graphics.Paint().apply {
+            alpha = (255 * opacity).toInt()
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
+        }
+        canvas.drawBitmap(adjusted, 0f, 0f, null)
+        canvas.drawBitmap(mask, 0f, 0f, paint)
+
+        return result
     }
 
     // ================== 3D LUT 集成 ==================

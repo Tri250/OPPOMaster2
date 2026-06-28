@@ -60,7 +60,8 @@ data class RenderParameters(
     val grain: Float = 0f,            // 颗粒 [0, 100]
     val fade: Float = 0f,             // 褪色 [0, 100]
     val dehaze: Float = 0f,           // 去霾 [0, 100]
-    
+    val vignette: Float = 0f,         // 暗角 [0, 100]
+
     // 降噪与平滑参数
     val denoise: Float = 0f,          // 降噪 [0, 100]
     val skinSmooth: Float = 0f,       // 肤色平滑 [0, 100]
