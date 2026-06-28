@@ -117,6 +117,10 @@
     <string name="create_preset">新建预设</string>
     <string name="delete_preset_title">确认删除</string>
     <string name="delete_preset_message">确定要删除这个预设吗？此操作无法撤销。</string>
+    <string name="error_icon_desc">错误</string>
+    <string name="sort">排序</string>
+    <string name="refresh_data">刷新数据</string>
+    <string name="go_add_preset">去添加预设</string>
 
     <!-- 空状态 -->
     <string name="empty_no_presets">未找到匹配的预设</string>
@@ -351,6 +355,26 @@
     <string name="update_channel_gitee">稳定版</string>
     <string name="update_channel_github">GitHub</string>
     <string name="notification_settings_title">通知设置</string>
+    <string name="notification_receive_push">接收推送通知</string>
+    <string name="notification_receive_push_desc">开启后接收重要通知</string>
+    <string name="notification_category_general">通用通知</string>
+    <string name="notification_category_recommendation">推荐与提示</string>
+    <string name="notification_category_sync">云同步提醒</string>
+    <string name="notification_feature_update_title">功能更新通知</string>
+    <string name="notification_feature_update_desc">接收新功能和更新提醒</string>
+    <string name="notification_preset_recommendation_title">预设推荐</string>
+    <string name="notification_preset_recommendation_desc">接收个性化预设推荐</string>
+    <string name="notification_sync_reminder_title">云同步提醒</string>
+    <string name="notification_sync_reminder_desc">同步状态变更通知</string>
+    <string name="notification_system_announcement_title">系统公告</string>
+    <string name="notification_system_announcement_desc">重要系统公告通知</string>
+    <string name="notification_daily_tip_title">每日提示</string>
+    <string name="notification_daily_tip_desc">摄影技巧每日提示</string>
+    <string name="notification_dnd_title">夜间免打扰</string>
+    <string name="notification_dnd_time_title">免打扰时段</string>
+    <string name="notification_dnd_time_value">22:00 - 08:00</string>
+    <string name="notification_types">通知类型</string>
+    <string name="notification_dnd_settings">免打扰设置</string>
     <string name="preset_source_title">预设源管理</string>
     <string name="privacy_policy_title">隐私政策</string>
     <string name="user_agreement_title">用户协议</string>
@@ -489,5 +513,34 @@
     <string name="floating_sharpness_label">锐度</string>
     <string name="floating_vignette_icon">◍</string>
     <string name="floating_vignette_label">暗角</string>
+
+    <!-- 行影集 -->
+    <string name="xingyingji_title">行影集</string>
+    <string name="annual_report_title">%1$d 年度回忆录</string>
+    <string name="annual_report_subtitle">一帧一画，定格步履与温柔</string>
+    <string name="view_annual_report">查看年度报告</string>
+    <string name="permission_storage_title">需要存储权限</string>
+    <string name="permission_storage_desc">行影集需要访问您的照片和视频，才能生成时间轴、相册、足迹和人物聚类。</string>
+    <string name="go_to_settings">前往设置开启</string>
+    <string name="request_permission_again">重新申请</string>
+    <string name="grant_permission">授权访问</string>
+    <string name="memories_entry">回忆入口</string>
+    <string name="timeline">时间轴</string>
+    <string name="timeline_desc">按时间回顾所有照片与视频</string>
+    <string name="albums">相册</string>
+    <string name="albums_desc">普通相册、智能相册与条件相册</string>
+    <string name="locations_map">足迹地图</string>
+    <string name="locations_map_desc">点亮你去过的每一座城市</string>
+    <string name="people">人物</string>
+    <string name="people_desc">人脸识别聚类，找到每个人的身影</string>
+    <string name="tickets">行程票据</string>
+    <string name="tickets_desc">火车票、机票、景区门票自动识别</string>
+    <string name="toolbox">工具箱</string>
+    <string name="toolbox_desc">清理、整理、重命名与回收站</string>
+    <string name="travel_quote">把旅行从“拍过”变成“可回味、可分享、可沉淀”。</string>
+    <string name="stat_photos">照片</string>
+    <string name="stat_videos">视频</string>
+    <string name="stat_cities">城市</string>
+    <string name="stat_people">人物</string>
 
 </resources>

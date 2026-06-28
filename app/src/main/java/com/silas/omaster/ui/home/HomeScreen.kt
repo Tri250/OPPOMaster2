@@ -216,7 +216,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
-                            contentDescription = "错误",
+                            contentDescription = stringResource(R.string.error_icon_desc),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
@@ -740,7 +740,7 @@ private fun BrandAndSortFilter(
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "排序",
+                    contentDescription = stringResource(R.string.sort),
                     tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.size(14.dp)
                 )
@@ -1088,13 +1088,13 @@ private fun EnhancedEmptyState(
                 0 -> {
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(onClick = { onRefresh?.invoke() }) {
-                        Text("刷新数据")
+                        Text(stringResource(R.string.refresh_data))
                     }
                 }
                 1, 4 -> {
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(onClick = { onNavigateToCreate?.invoke() }) {
-                        Text("去添加预设")
+                        Text(stringResource(R.string.go_add_preset))
                     }
                 }
             }

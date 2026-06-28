@@ -207,7 +207,7 @@ object JsonUtil {
      * @param index 索引（用于处理重复名称）
      * @return 生成的 ID
      */
-    private fun generatePresetId(name: String, index: Int): String {
+    internal fun generatePresetId(name: String, index: Int): String {
         // 1. 移除音调符号（拼音化）
         val normalized = Normalizer.normalize(name, Normalizer.Form.NFD)
             .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")

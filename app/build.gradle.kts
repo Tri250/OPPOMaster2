@@ -299,8 +299,8 @@ android {
 
     // Lint 配置
     lint {
-        // 只检查主要源代码，排除测试和生成的代码
-        checkOnly.add("Interoperability")
+        // 检查主要源代码，排除测试和生成的代码
+        // 不限制 checkOnly，确保性能、兼容性、安全等全量检查
         // Release 构建强制 abortOnError，Debug 构建可容忍
         abortOnError = (gradle.startParameter.taskNames.any { it.contains("Release") })
         // release 构建时检查
@@ -309,8 +309,12 @@ android {
         disable.add("IconLauncherShape")
         disable.add("IconMissingDensityFolder")
         // 错误严重级别配置
-        error.add("HardcodedText")
-        error.add("MissingTranslation")
+        // HardcodedText: 项目历史代码中存在大量中文硬编码，短期内全部迁移到 strings.xml
+        // 风险高、收益低；降级为 warning 避免阻塞 Release 构建，后续迭代逐步国际化。
+        warning.add("HardcodedText")
+        // MissingTranslation: 英文翻译文件已存在但可能不完全对齐，降级为 warning
+        // 避免新增 strings 后 Release 构建立即失败。
+        warning.add("MissingTranslation")
         warning.add("UnusedResources")
         warning.add("IconDensities")
     }

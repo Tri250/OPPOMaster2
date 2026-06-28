@@ -103,7 +103,11 @@ class StyleLUTGeneratorViewModel : ViewModel() {
                 // 自动检测色彩空间
                 if (_colorSpace.value == StyleLUTGenerator.ColorSpace.AUTO && bitmap != null) {
                     val scaled = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
-                    _detectedColorSpace.value = StyleLUTGenerator.detectColorSpace(scaled)
+                    try {
+                        _detectedColorSpace.value = StyleLUTGenerator.detectColorSpace(scaled)
+                    } finally {
+                        scaled.recycle()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load source image", e)
@@ -265,9 +269,14 @@ class StyleLUTGeneratorViewModel : ViewModel() {
         val lutManager = LUTManager.getInstance(context)
         // 将生成的 LUT 缓存到 LUTManager 并设为激活
         val tempId = "generated_${System.currentTimeMillis()}"
-        lutManager.parseAndCache(tempId, result.lutData)
-        lutManager.setActiveLUT(tempId)
-        lutManager.setLUTStrength(_strength.value)
+        try {
+            lutManager.parseAndCache(tempId, result.lutData)
+            lutManager.setActiveLUT(tempId)
+            lutManager.setLUTStrength(_strength.value)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply generated LUT", e)
+            _error.value = "应用 LUT 失败：${e.message}"
+        }
     }
 
     /**

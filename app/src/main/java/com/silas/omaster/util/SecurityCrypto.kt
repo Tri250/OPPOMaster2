@@ -27,8 +27,8 @@ object SecurityCrypto {
     private const val KEYSTORE_PROVIDER = "AndroidKeyStore"
     private const val KEY_ALIAS = "omaster_secure_key"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
-    private const val GCM_IV_LENGTH = 12
-    private const val GCM_TAG_LENGTH = 128
+    internal const val GCM_IV_LENGTH = 12
+    internal const val GCM_TAG_LENGTH = 128
 
     // 密文格式版本（用于未来算法升级时兼容旧数据）
     private const val CIPHER_VERSION = 1.toByte()

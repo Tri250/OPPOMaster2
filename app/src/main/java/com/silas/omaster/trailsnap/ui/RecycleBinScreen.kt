@@ -204,15 +204,18 @@ fun RecycleBinScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val ok = repository.permanentlyDelete(photoToDelete!!.id)
-                        reloadDeletedPhotos()
-                        showDeleteDialog = false
-                        photoToDelete = null
-                        Toast.makeText(
-                            context,
-                            if (ok) "已彻底删除" else "已从列表移除（系统文件可能保留）",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val currentPhoto = photoToDelete
+                        if (currentPhoto != null) {
+                            val ok = repository.permanentlyDelete(currentPhoto.id)
+                            reloadDeletedPhotos()
+                            showDeleteDialog = false
+                            photoToDelete = null
+                            Toast.makeText(
+                                context,
+                                if (ok) "已彻底删除" else "已从列表移除（系统文件可能保留）",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -311,5 +314,8 @@ private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto)
     }
     try {
         context.startActivity(intent)
-    } catch (_: Exception) { }
+    } catch (e: Exception) {
+        android.util.Log.w("RecycleBinScreen", "无法打开系统照片查看器", e)
+        Toast.makeText(context, "未找到可查看此照片的应用", Toast.LENGTH_SHORT).show()
+    }
 }

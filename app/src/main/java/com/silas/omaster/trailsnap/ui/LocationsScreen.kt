@@ -160,7 +160,9 @@ private fun LocationCard(location: LocationPin) {
                     val intent = Intent(Intent.ACTION_VIEW, uri).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                     try {
                         context.startActivity(intent)
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) {
+                        android.util.Log.w("LocationsScreen", "无法打开地图应用", e)
+                    }
                 }
             )
             .padding(14.dp),

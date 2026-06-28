@@ -273,7 +273,9 @@ fun SmartOptimizeScreen(
                 val preview = pixelFruitEngine.processPreview(source, params)
                 previewBitmap = preview
                 if (previewMode == "before") previewMode = "preview"
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                android.util.Log.w("SmartOptimizeScreen", "实时预览更新失败", e)
+            }
         }
     }
 

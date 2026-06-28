@@ -159,28 +159,30 @@ class TrailSnapRepository private constructor(context: Context) {
                 selectionArgs,
                 sortOrder
             )?.use { cursor ->
-                val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
-                val widthCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.WIDTH)
-                val heightCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.HEIGHT)
-                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
-                val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
-                val dataCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
-                val bucketNameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
+                val idCol = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                val nameCol = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                val dateCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATE_TAKEN)
+                val widthCol = cursor.getColumnIndex(MediaStore.MediaColumns.WIDTH)
+                val heightCol = cursor.getColumnIndex(MediaStore.MediaColumns.HEIGHT)
+                val sizeCol = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
+                val mimeCol = cursor.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE)
+                // DATA 列在 Android 10+ 已废弃且可能为空，使用 getColumnIndex 兜底
+                val dataCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                val bucketNameCol = cursor.getColumnIndex(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
 
                 var index = 0
                 while (cursor.moveToNext() && index < 2000) {
+                    if (idCol < 0) continue
                     val id = cursor.getLong(idCol)
                     val contentUri = ContentUris.withAppendedId(collection, id)
-                    val name = cursor.getString(nameCol) ?: "IMG_$id.jpg"
-                    val dateTaken = cursor.getLong(dateCol)
-                    val width = cursor.getInt(widthCol)
-                    val height = cursor.getInt(heightCol)
-                    val size = cursor.getLong(sizeCol)
-                    val mimeType = cursor.getString(mimeCol) ?: "image/jpeg"
-                    val dataPath = cursor.getString(dataCol)
-                    val bucketName = cursor.getString(bucketNameCol) ?: "Camera"
+                    val name = if (nameCol >= 0) cursor.getString(nameCol) ?: "IMG_$id.jpg" else "IMG_$id.jpg"
+                    val dateTaken = if (dateCol >= 0) cursor.getLong(dateCol) else 0L
+                    val width = if (widthCol >= 0) cursor.getInt(widthCol) else 0
+                    val height = if (heightCol >= 0) cursor.getInt(heightCol) else 0
+                    val size = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L
+                    val mimeType = if (mimeCol >= 0) cursor.getString(mimeCol) ?: "image/jpeg" else "image/jpeg"
+                    val dataPath = if (dataCol >= 0) cursor.getString(dataCol) else null
+                    val bucketName = if (bucketNameCol >= 0) cursor.getString(bucketNameCol) ?: "Camera" else "Camera"
 
                     val mediaType = when {
                         mimeType.startsWith("video/") -> MediaType.VIDEO
@@ -374,8 +376,9 @@ class TrailSnapRepository private constructor(context: Context) {
             if (photo.id in faceDetectionProcessed) return@forEach
             if (faceDetectionProcessed.size >= FACE_DETECTION_MAX_PER_SESSION) return@forEach
             faceDetectionProcessed.add(photo.id)
+            var bitmap: Bitmap? = null
             try {
-                val bitmap = loadBitmap(photo.uri ?: return@forEach) ?: return@forEach
+                bitmap = loadBitmap(photo.uri ?: return@forEach) ?: return@forEach
                 val inputImage = InputImage.fromBitmap(bitmap, 0)
                 val faces = faceDetector.process(inputImage).await()
 
@@ -393,6 +396,9 @@ class TrailSnapRepository private constructor(context: Context) {
                 }
             } catch (_: Exception) {
                 // 单张图片检测失败不影响整体流程
+            } finally {
+                // 及时回收 Bitmap，避免大图批量检测导致 OOM
+                bitmap?.recycle()
             }
         }
 
@@ -1225,6 +1231,20 @@ class TrailSnapRepository private constructor(context: Context) {
             }
         }
         return preview
+    }
+
+    /**
+     * 释放仓库资源：取消所有协程、关闭 ML Kit 检测器。
+     * 应在 Application.onTerminate() 或进程退出前调用。
+     */
+    fun close() {
+        try {
+            repositoryScope.cancel()
+            faceDetector.close()
+            textRecognizer.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "关闭 TrailSnapRepository 资源异常", e)
+        }
     }
 
     companion object {

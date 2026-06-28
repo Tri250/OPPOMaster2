@@ -439,4 +439,39 @@
     <string name="floating_vignette_icon">◍</string>
     <string name="floating_vignette_label">Vignette</string>
 
+    <!-- Home Actions (missing translations) -->
+    <string name="error_icon_desc">Error</string>
+    <string name="sort">Sort</string>
+    <string name="refresh_data">Refresh data</string>
+    <string name="go_add_preset">Add preset</string>
+
+    <!-- XingYingJi -->
+    <string name="xingyingji_title">Travel Gallery</string>
+    <string name="annual_report_title">%1$d Year in Review</string>
+    <string name="annual_report_subtitle">Every frame captures footsteps and tenderness</string>
+    <string name="view_annual_report">View annual report</string>
+    <string name="permission_storage_title">Storage permission required</string>
+    <string name="permission_storage_desc">Travel Gallery needs access to your photos and videos to build timeline, albums, locations and people clusters.</string>
+    <string name="go_to_settings">Open settings</string>
+    <string name="request_permission_again">Request again</string>
+    <string name="grant_permission">Grant access</string>
+    <string name="memories_entry">Memory entrances</string>
+    <string name="timeline">Timeline</string>
+    <string name="timeline_desc">Review all photos and videos by time</string>
+    <string name="albums">Albums</string>
+    <string name="albums_desc">Normal, smart and conditional albums</string>
+    <string name="locations_map">Footprint map</string>
+    <string name="locations_map_desc">Light up every city you have visited</string>
+    <string name="people">People</string>
+    <string name="people_desc">Face recognition clustering for everyone</string>
+    <string name="tickets">Tickets</string>
+    <string name="tickets_desc">Auto-recognize train, flight and scenic tickets</string>
+    <string name="toolbox">Toolbox</string>
+    <string name="toolbox_desc">Cleanup, organize, batch rename and recycle bin</string>
+    <string name="travel_quote">Turn travel from “taken” into “memorable, shareable, lasting”.</string>
+    <string name="stat_photos">Photos</string>
+    <string name="stat_videos">Videos</string>
+    <string name="stat_cities">Cities</string>
+    <string name="stat_people">People</string>
+
 </resources>

@@ -49,7 +49,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -322,9 +321,14 @@ class CameraXManager(
                     // Phase 2.1：LUT 实时预览路径
                     // 将相机预览输出到 LUTPreviewRenderer 的输入 Surface
                     pv.setSurfaceProvider { request ->
-                        val surface = lutInputSurface!!
-                        request.provideSurface(surface, ContextCompat.getMainExecutor(context)) { result ->
-                            Log.d(TAG, "LUT preview surface result: ${result.resultCode}")
+                        val surface = lutInputSurface
+                        if (surface != null) {
+                            request.provideSurface(surface, ContextCompat.getMainExecutor(context)) { result ->
+                                Log.d(TAG, "LUT preview surface result: ${result.resultCode}")
+                            }
+                        } else {
+                            request.willNotProvideSurface()
+                            Log.w(TAG, "LUT input surface is null, falling back")
                         }
                     }
                 } else {

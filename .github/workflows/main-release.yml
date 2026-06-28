@@ -100,8 +100,12 @@ jobs:
             # 更新 build.gradle.kts 中的 versionName
             sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
             
-            # 提取 versionCode
-            VERSION_CODE=$(grep -o 'versionCode = [0-9]*' app/build.gradle.kts | grep -o '[0-9]*')
+            # 根据 versionName 计算 versionCode: 主*10000 + 次*100 + 修订
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+            # 提取 patch 中的数字部分（兼容 0-rc1 等预发布格式）
+            PATCH_NUM=$(echo "$PATCH" | grep -o '^[0-9]*')
+            VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH_NUM))
+            sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/" app/build.gradle.kts
             
             echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
             echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT

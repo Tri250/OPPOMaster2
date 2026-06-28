@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -58,10 +59,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.silas.omaster.R
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
@@ -83,11 +86,26 @@ fun XingYingJiHomeScreen(
     val repository = remember { TrailSnapRepository.getInstance(context) }
     val stats by repository.dashboardStats.collectAsState()
     val annual by repository.annualReport.collectAsState()
+    val isLoading by repository.isLoading.collectAsState()
+    val loadError by repository.error.collectAsState()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
 
+    // 加载错误时以 Snackbar/Toast 形式反馈给用户
+    LaunchedEffect(loadError) {
+        loadError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        }
+    }
+
     val requiredPermissions = remember {
         when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+                )
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
                 arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
             else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -106,9 +124,9 @@ fun XingYingJiHomeScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         hasMediaPermission = requiredPermissions.any { results[it] == true }
-        showRationale = !hasMediaPermission && requiredPermissions.any {
-            ActivityCompat.shouldShowRequestPermissionRationale(context as android.app.Activity, it)
-        }
+        showRationale = !hasMediaPermission && (context as? android.app.Activity)?.let { activity ->
+            requiredPermissions.any { ActivityCompat.shouldShowRequestPermissionRationale(activity, it) }
+        } == true
     }
 
     LaunchedEffect(hasMediaPermission) {
@@ -127,7 +145,7 @@ fun XingYingJiHomeScreen(
     ) {
         item {
             TrailSnapTopBar(
-                title = "行影集",
+                title = stringResource(R.string.xingyingji_title),
                 onBack = onBack,
                 actions = {
                     IconButton(
@@ -143,7 +161,7 @@ fun XingYingJiHomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = stringResource(R.string.refresh),
                             tint = if (isRefreshing) HasselbladOrange else MaterialTheme.colorScheme.onBackground
                         )
                     }
@@ -179,13 +197,13 @@ fun XingYingJiHomeScreen(
         }
 
         item {
-            SectionTitle(title = "回忆入口")
+            SectionTitle(title = stringResource(R.string.memories_entry))
         }
 
         item {
             QuickEntryCard(
-                title = "时间轴",
-                subtitle = "按时间回顾所有照片与视频",
+                title = stringResource(R.string.timeline),
+                subtitle = stringResource(R.string.timeline_desc),
                 icon = Icons.Default.AccessTime,
                 onClick = onNavigateToTimeline,
                 badge = stats?.totalPhotos?.let { "${it + (stats?.totalVideos ?: 0)}" }
@@ -194,8 +212,8 @@ fun XingYingJiHomeScreen(
 
         item {
             QuickEntryCard(
-                title = "相册",
-                subtitle = "普通相册、智能相册与条件相册",
+                title = stringResource(R.string.albums),
+                subtitle = stringResource(R.string.albums_desc),
                 icon = Icons.Default.PhotoAlbum,
                 onClick = onNavigateToAlbums,
                 badge = stats?.totalAlbums?.toString()
@@ -204,8 +222,8 @@ fun XingYingJiHomeScreen(
 
         item {
             QuickEntryCard(
-                title = "足迹地图",
-                subtitle = "点亮你去过的每一座城市",
+                title = stringResource(R.string.locations_map),
+                subtitle = stringResource(R.string.locations_map_desc),
                 icon = Icons.Default.Map,
                 onClick = onNavigateToLocations,
                 badge = stats?.locationCount?.toString()
@@ -214,8 +232,8 @@ fun XingYingJiHomeScreen(
 
         item {
             QuickEntryCard(
-                title = "人物",
-                subtitle = "人脸识别聚类，找到每个人的身影",
+                title = stringResource(R.string.people),
+                subtitle = stringResource(R.string.people_desc),
                 icon = Icons.Default.Group,
                 onClick = onNavigateToPeople,
                 badge = stats?.peopleCount?.toString()
@@ -224,8 +242,8 @@ fun XingYingJiHomeScreen(
 
         item {
             QuickEntryCard(
-                title = "行程票据",
-                subtitle = "火车票、机票、景区门票自动识别",
+                title = stringResource(R.string.tickets),
+                subtitle = stringResource(R.string.tickets_desc),
                 icon = Icons.Default.Train,
                 onClick = onNavigateToTickets,
                 badge = stats?.ticketCount?.toString()
@@ -234,8 +252,8 @@ fun XingYingJiHomeScreen(
 
         item {
             QuickEntryCard(
-                title = "工具箱",
-                subtitle = "清理、整理、重命名与回收站",
+                title = stringResource(R.string.toolbox),
+                subtitle = stringResource(R.string.toolbox_desc),
                 icon = Icons.Default.Construction,
                 onClick = onNavigateToToolbox
             )
@@ -244,7 +262,7 @@ fun XingYingJiHomeScreen(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "把旅行从“拍过”变成“可回味、可分享、可沉淀”。",
+                text = stringResource(R.string.travel_quote),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -298,13 +316,13 @@ private fun AnnualReportBanner(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "$year 年度回忆录",
+                            text = stringResource(R.string.annual_report_title, year),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = "一帧一画，定格步履与温柔",
+                            text = stringResource(R.string.annual_report_subtitle),
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.9f)
                         )
@@ -320,7 +338,7 @@ private fun AnnualReportBanner(
             ) {
                 Icon(
                     imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "查看年度报告",
+                    contentDescription = stringResource(R.string.view_annual_report),
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
                 )
@@ -344,13 +362,13 @@ private fun StatsGrid(
         ) {
             StatCard(
                 value = stats?.totalPhotos?.toString() ?: "0",
-                label = "照片",
+                label = stringResource(R.string.stat_photos),
                 icon = Icons.Default.CameraAlt,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 value = stats?.totalVideos?.toString() ?: "0",
-                label = "视频",
+                label = stringResource(R.string.stat_videos),
                 icon = Icons.Default.Videocam,
                 modifier = Modifier.weight(1f),
                 gradient = listOf(Color(0xFF1565C0), Color(0xFF42A5F5))
@@ -362,14 +380,14 @@ private fun StatsGrid(
         ) {
             StatCard(
                 value = stats?.locationCount?.toString() ?: "0",
-                label = "城市",
+                label = stringResource(R.string.stat_cities),
                 icon = Icons.Default.Map,
                 modifier = Modifier.weight(1f),
                 gradient = listOf(Color(0xFF2E7D32), Color(0xFF66BB6A))
             )
             StatCard(
                 value = stats?.peopleCount?.toString() ?: "0",
-                label = "人物",
+                label = stringResource(R.string.stat_people),
                 icon = Icons.Default.Group,
                 modifier = Modifier.weight(1f),
                 gradient = listOf(Color(0xFF6A1B9A), Color(0xFFAB47BC))
@@ -391,14 +409,14 @@ private fun PermissionCard(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "需要存储权限",
+                text = stringResource(R.string.permission_storage_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "行影集需要访问您的照片和视频，才能生成时间轴、相册、足迹和人物聚类。",
+                text = stringResource(R.string.permission_storage_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )
@@ -409,7 +427,7 @@ private fun PermissionCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("前往设置开启")
+                    Text(stringResource(R.string.go_to_settings))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -418,7 +436,7 @@ private fun PermissionCard(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                 ) {
-                    Text("重新申请")
+                    Text(stringResource(R.string.request_permission_again))
                 }
             } else {
                 Button(
@@ -427,7 +445,7 @@ private fun PermissionCard(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
                 ) {
-                    Text("授权访问")
+                    Text(stringResource(R.string.grant_permission))
                 }
             }
         }

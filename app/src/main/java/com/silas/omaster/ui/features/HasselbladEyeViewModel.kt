@@ -995,7 +995,9 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
             // HEIF 编码失败时删除空文件并回退 JPEG
             try {
                 context.contentResolver.delete(uri, null, null)
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                Log.w(TAG, "删除失败 HEIF 占位文件失败", e)
+            }
             val jpegFilename = filename.replace(".heic", ".jpg")
             return saveToMediaStore(context, bitmap, Bitmap.CompressFormat.JPEG, 98, jpegFilename, "image/jpeg")
         }

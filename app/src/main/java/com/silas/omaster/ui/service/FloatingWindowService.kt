@@ -228,7 +228,7 @@ class FloatingWindowService : Service() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Android 16 (API 36) 要求前台服务通知渠道使用更高的优先级，确保用户可见
-            val importance = if (Build.VERSION.SDK_INT >= 36) {
+            val importance = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
                 NotificationManager.IMPORTANCE_DEFAULT
             } else {
                 NotificationManager.IMPORTANCE_LOW

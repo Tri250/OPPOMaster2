@@ -1,224 +1,175 @@
 package com.silas.omaster.util
 
+import com.silas.omaster.data.lut.LUT3DData
 import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Util 扩展测试 - 补充覆盖更多工具类
+ * Util 扩展测试 - 补充覆盖更多工具类的边界场景与纯计算逻辑
+ *
+ * 注意：本文件仅测试不依赖 Android 运行时/Keystore/SharedPreferences 的逻辑，
+ * 依赖 Android 上下文的逻辑请使用 Android 仪器测试或 Robolectric 覆盖。
  */
 class UtilExtTest {
 
-    // ===== FormatUtils 扩展测试 =====
+    // ===== FormatUtils 边界测试 =====
 
     @Test
-    fun `FormatUtils - 版本号格式化`() {
-        val versionCode = 10
-        val versionName = "1.3.1"
-        
-        assertTrue("版本号应该大于0", versionCode > 0)
-        assertTrue("版本名应该有3部分", versionName.split(".").size == 3)
+    fun `formatSigned - 大整数应正确格式化`() {
+        assertEquals("+99999", 99999.formatSigned())
+        assertEquals("-99999", (-99999).formatSigned())
     }
 
     @Test
-    fun `FormatUtils - 日期格式化`() {
-        val timestamp = System.currentTimeMillis()
-        val formatted = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-            .format(java.util.Date(timestamp))
-        
-        assertTrue("日期格式应该包含年", formatted.contains("-"))
+    fun `formatPercent - 边界值应正确格式化`() {
+        assertEquals("0%", 0.0f.formatPercent())
+        assertEquals("100%", 1.0f.formatPercent())
+        assertEquals("50%", 0.5f.formatPercent())
+        assertEquals("33%", (1.0f / 3.0f).formatPercent())
     }
 
     @Test
-    fun `FormatUtils - 文件大小格式化`() {
-        val sizes = listOf(
-            1024L to "1.00 KB",
-            1024 * 1024L to "1.00 MB",
-            1024 * 1024 * 1024L to "1.00 GB"
-        )
-        
-        for ((bytes, expected) in sizes) {
-            val result = when {
-                bytes >= 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024 * 1024)} GB"
-                bytes >= 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
-                bytes >= 1024 -> "${bytes / 1024} KB"
-                else -> "$bytes B"
+    fun `formatFilterWithIntensity - 标准滤镜无论强度都返回原名称`() {
+        assertEquals("标准", formatFilterWithIntensity("标准", 0))
+        assertEquals("标准", formatFilterWithIntensity("标准", 100))
+        assertEquals("标准", formatFilterWithIntensity("标准", 50))
+    }
+
+    @Test
+    fun `formatFilterWithIntensity - 非标准滤镜应附带强度`() {
+        assertEquals("胶片 100%", formatFilterWithIntensity("胶片", 100))
+        assertEquals("黑白 0%", formatFilterWithIntensity("黑白", 0))
+    }
+
+    // ===== VersionInfo 预发布版本测试 =====
+
+    @Test
+    fun `parseVersionCode - 预发布版本应解析为负数`() {
+        val beta = VersionInfo.parseVersionCode("1.0.0-beta1")
+        val release = VersionInfo.parseVersionCode("1.0.0")
+        assertTrue("正式版应大于预发布版", release > beta)
+        assertTrue("预发布版应为负数", beta < 0)
+    }
+
+    @Test
+    fun `parseVersionCode - 不同预发布阶段应正确排序`() {
+        val alpha = VersionInfo.parseVersionCode("1.0.0-alpha1")
+        val beta = VersionInfo.parseVersionCode("1.0.0-beta1")
+        val rc = VersionInfo.parseVersionCode("1.0.0-rc1")
+        assertTrue("alpha < beta", alpha < beta)
+        assertTrue("beta < rc", beta < rc)
+    }
+
+    @Test
+    fun `parseVersionCode - 应处理build元数据`() {
+        val result = VersionInfo.parseVersionCode("1.2.3+build123")
+        assertEquals(10203, result)
+    }
+
+    @Test
+    fun `parseVersionCode - 应处理带v前缀的版本号`() {
+        assertEquals(20100, VersionInfo.parseVersionCode("v2.1.0"))
+    }
+
+    // ===== LUT3DData 纯数学测试 =====
+
+    @Test
+    fun `LUT3DData - 2尺寸LUT应正确采样角点`() {
+        // 2x2x2 LUT: 0,0,0 -> (0,0,0); 1,1,1 -> (1,1,1)
+        val data = FloatArray(2 * 2 * 2 * 3) { i ->
+            when (i % 3) {
+                0 -> ((i / 3) and 1).toFloat()
+                1 -> (((i / 3) shr 1) and 1).toFloat()
+                else -> (((i / 3) shr 2) and 1).toFloat()
             }
-            assertTrue("文件大小格式应该有效", result.isNotEmpty())
+        }
+        val lut = LUT3DData("test", 2, data)
+
+        val black = lut.get(0, 0, 0)
+        assertEquals(0.0f, black[0], 0.0001f)
+        assertEquals(0.0f, black[1], 0.0001f)
+        assertEquals(0.0f, black[2], 0.0001f)
+
+        val white = lut.get(1, 1, 1)
+        assertEquals(1.0f, white[0], 0.0001f)
+        assertEquals(1.0f, white[1], 0.0001f)
+        assertEquals(1.0f, white[2], 0.0001f)
+    }
+
+    @Test
+    fun `LUT3DData - 三线性插值在角点应返回角点值`() {
+        val data = FloatArray(2 * 2 * 2 * 3) { i ->
+            when (i % 3) {
+                0 -> ((i / 3) and 1).toFloat()
+                1 -> (((i / 3) shr 1) and 1).toFloat()
+                else -> (((i / 3) shr 2) and 1).toFloat()
+            }
+        }
+        val lut = LUT3DData("test", 2, data)
+
+        val black = lut.sampleTrilinear(0f, 0f, 0f)
+        assertEquals(0.0f, black[0], 0.001f)
+        assertEquals(0.0f, black[1], 0.001f)
+        assertEquals(0.0f, black[2], 0.001f)
+
+        val white = lut.sampleTrilinear(1f, 1f, 1f)
+        assertEquals(1.0f, white[0], 0.001f)
+        assertEquals(1.0f, white[1], 0.001f)
+        assertEquals(1.0f, white[2], 0.001f)
+    }
+
+    @Test
+    fun `LUT3DData - 三线性插值在边界外应被钳制`() {
+        val data = FloatArray(2 * 2 * 2 * 3) { 0.5f }
+        val lut = LUT3DData("test", 2, data)
+
+        val result = lut.sampleTrilinear(-0.5f, 1.5f, 0.5f)
+        assertEquals(0.5f, result[0], 0.001f)
+        assertEquals(0.5f, result[1], 0.001f)
+        assertEquals(0.5f, result[2], 0.001f)
+    }
+
+    @Test
+    fun `LUT3DData - 相等性应比较内容`() {
+        val data1 = FloatArray(2 * 2 * 2 * 3) { 0.5f }
+        val data2 = data1.copyOf()
+        val lut1 = LUT3DData("same", 2, data1)
+        val lut2 = LUT3DData("same", 2, data2)
+        assertEquals(lut1, lut2)
+        assertEquals(lut1.hashCode(), lut2.hashCode())
+    }
+
+    // ===== UrlConstants 边界测试 =====
+
+    @Test
+    fun `UrlConstants - LUT下载URL不应包含路径多余斜杠`() {
+        val url = UrlConstants.getLUTDownloadUrl("film", "classic.cube")
+        // LUT_BASE_PATH 本身以 https:// 开头，路径部分（去掉 scheme 后）不应有连续斜杠
+        val pathPart = url.removePrefix("https://")
+        assertFalse("路径部分不应包含多余斜杠: $url", pathPart.contains("//"))
+        assertTrue("URL必须以https://开头", url.startsWith("https://"))
+    }
+
+    @Test
+    fun `UrlConstants - 所有预设URL必须在已知域名下`() {
+        val urls = UrlConstants.PRESET_SOURCE_URLS.values
+        for (url in urls) {
+            assertTrue("$url 应使用 jsDelivr CDN", url.contains("cdn.jsdelivr.net"))
         }
     }
 
-    // ===== VersionInfo 扩展测试 =====
+    // ===== PresetI18n 边界测试 =====
 
     @Test
-    fun `VersionInfo - 版本比较`() {
-        val v1 = "1.3.0"
-        val v2 = "1.3.1"
-        
-        val parts1 = v1.split(".").map { it.toInt() }
-        val parts2 = v2.split(".").map { it.toInt() }
-        
-        val compare = (parts1[0] * 10000 + parts1[1] * 100 + parts1[2]) -
-                      (parts2[0] * 10000 + parts2[1] * 100 + parts2[2])
-        
-        assertTrue("v1应该小于v2", compare < 0)
+    fun `PresetI18n - 大小写不敏感的模式查找`() {
+        assertNotNull(PresetI18n.getModeResId("AUTO"))
+        assertNotNull(PresetI18n.getModeResId("auto"))
+        assertNotNull(PresetI18n.getModeResId("Auto"))
     }
 
     @Test
-    fun `VersionInfo - 版本解析`() {
-        val version = "2.1.0"
-        val parts = version.split(".")
-        
-        assertEquals("主版本应该是2", 2, parts[0].toInt())
-        assertEquals("次版本应该是1", 1, parts[1].toInt())
-        assertEquals("修订版本应该是0", 0, parts[2].toInt())
-    }
-
-    // ===== SecurityCrypto 扩展测试 =====
-
-    @Test
-    fun `SecurityCrypto - Base64编码解码`() {
-        val original = "test_data_123"
-        val encoded = java.util.Base64.getEncoder().encodeToString(original.toByteArray())
-        val decoded = java.util.Base64.getDecoder().decode(encoded).decodeToString()
-        
-        assertEquals("Base64编码解码应该一致", original, decoded)
-    }
-
-    @Test
-    fun `SecurityCrypto - MD5哈希长度`() {
-        val input = "test"
-        val md5 = java.security.MessageDigest.getInstance("MD5")
-        val hash = md5.digest(input.toByteArray())
-        
-        assertEquals("MD5哈希应该是16字节", 16, hash.size)
-    }
-
-    @Test
-    fun `SecurityCrypto - SHA256哈希长度`() {
-        val input = "test"
-        val sha256 = java.security.MessageDigest.getInstance("SHA-256")
-        val hash = sha256.digest(input.toByteArray())
-        
-        assertEquals("SHA256哈希应该是32字节", 32, hash.size)
-    }
-
-    // ===== JsonUtil 扩展测试 =====
-
-    @Test
-    fun `JsonUtil - JSON解析`() {
-        val json = "{\"name\":\"test\",\"value\":123}"
-        val obj = org.json.JSONObject(json)
-        
-        assertEquals("name应该是test", "test", obj.getString("name"))
-        assertEquals("value应该是123", 123, obj.getInt("value"))
-    }
-
-    @Test
-    fun `JsonUtil - JSON数组解析`() {
-        val json = "[1, 2, 3, 4, 5]"
-        val arr = org.json.JSONArray(json)
-        
-        assertEquals("数组长度应该是5", 5, arr.length())
-        assertEquals("第一个元素应该是1", 1, arr.getInt(0))
-    }
-
-    @Test
-    fun `JsonUtil - JSON构建`() {
-        val obj = org.json.JSONObject()
-        obj.put("key", "value")
-        obj.put("number", 42)
-        
-        assertTrue("JSON应该包含key", obj.has("key"))
-        assertTrue("JSON应该包含number", obj.has("number"))
-    }
-
-    // ===== CrashHandler 扩展测试 =====
-
-    @Test
-    fun `CrashHandler - 异常堆栈解析`() {
-        val exception = RuntimeException("Test crash")
-        val stackTrace = exception.stackTrace
-        
-        assertTrue("堆栈应该有内容", stackTrace.isNotEmpty())
-    }
-
-    @Test
-    fun `CrashHandler - 异常消息提取`() {
-        val exception = NullPointerException("Null reference")
-        val message = exception.message
-        
-        assertEquals("异常消息应该正确", "Null reference", message)
-    }
-
-    // ===== UpdateConfigManager 扩展测试 =====
-
-    @Test
-    fun `UpdateConfigManager - 配置解析`() {
-        val config = mapOf(
-            "version" to 15,
-            "versionName" to "1.4.0",
-            "downloadUrl" to "https://example.com/app.apk"
-        )
-        
-        assertTrue("配置应该包含version", config.containsKey("version"))
-        assertTrue("配置应该包含versionName", config.containsKey("versionName"))
-        assertTrue("配置应该包含downloadUrl", config.containsKey("downloadUrl"))
-    }
-
-    // ===== ImageCacheManager 扩展测试 =====
-
-    @Test
-    fun `ImageCacheManager - 缓存键生成`() {
-        val url = "https://example.com/image.jpg"
-        val cacheKey = url.hashCode().toString()
-        
-        assertTrue("缓存键应该有效", cacheKey.isNotEmpty())
-    }
-
-    @Test
-    fun `ImageCacheManager - 缓存大小计算`() {
-        val cacheSize = 50 * 1024 * 1024L // 50MB
-        val maxSize = 100 * 1024 * 1024L // 100MB
-        
-        assertTrue("缓存大小应该在限制内", cacheSize <= maxSize)
-    }
-
-    // ===== PresetI18n 扩展测试 =====
-
-    @Test
-    fun `PresetI18n - 多语言支持`() {
-        val languages = listOf("zh", "zh-CN", "zh-TW", "en")
-        
-        for (lang in languages) {
-            assertTrue("语言代码应该有效: $lang", lang.isNotEmpty())
-        }
-    }
-
-    @Test
-    fun `PresetI18n - 名称翻译`() {
-        val presetName = "人像美颜"
-        val englishName = "Portrait Beauty"
-        
-        assertTrue("中文名称应该有效", presetName.isNotEmpty())
-        assertTrue("英文名称应该有效", englishName.isNotEmpty())
-    }
-
-    // ===== HapticExt 扩展测试 =====
-
-    @Test
-    fun `HapticExt - 触觉反馈类型`() {
-        val hapticTypes = listOf("CLICK", "TICK", "HEAVY_CLICK", "LONG_PRESS")
-        
-        for (type in hapticTypes) {
-            assertTrue("触觉反馈类型应该有效: $type", type.isNotEmpty())
-        }
-    }
-
-    @Test
-    fun `HapticExt - 触觉强度范围`() {
-        val intensity = 0.5f
-        val validRange = 0f..1f
-        
-        assertTrue("触觉强度应该在有效范围内", intensity in validRange)
+    fun `PresetI18n - 空字符串应返回null`() {
+        assertNull(PresetI18n.getFilterResId(""))
+        assertNull(PresetI18n.getPresetNameResId(""))
     }
 }

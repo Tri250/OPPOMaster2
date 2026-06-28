@@ -9,6 +9,7 @@ import android.util.Log
 import com.silas.omaster.ai.analyzer.FaceDetectorSingleton
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.umeng.commonsdk.UMConfigure
@@ -355,6 +356,22 @@ class OMasterApplication : Application() {
             android.util.Log.i("OMasterApplication", "PresetRepository HttpClient 已关闭")
         } catch (e: Exception) {
             android.util.Log.e("OMasterApplication", "关闭 PresetRepository HttpClient 失败", e)
+        }
+
+        // 关闭 TrailSnapRepository 协程作用域与 ML Kit 检测器
+        try {
+            TrailSnapRepository.getInstance(this).close()
+            android.util.Log.i("OMasterApplication", "TrailSnapRepository 已关闭")
+        } catch (e: Exception) {
+            android.util.Log.e("OMasterApplication", "关闭 TrailSnapRepository 失败", e)
+        }
+
+        // 关闭 SettingsManager 协程作用域
+        try {
+            SettingsManager.shutdown()
+            android.util.Log.i("OMasterApplication", "SettingsManager 已关闭")
+        } catch (e: Exception) {
+            android.util.Log.e("OMasterApplication", "关闭 SettingsManager 失败", e)
         }
 
         // 注意：GPURenderManager 由具体页面通过 acquire/release 管理引用计数，

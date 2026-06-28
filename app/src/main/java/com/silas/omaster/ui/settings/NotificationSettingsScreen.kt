@@ -25,10 +25,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.annotation.StringRes
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.silas.omaster.R
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.util.perform
 
@@ -86,6 +89,9 @@ fun NotificationSettingsScreen(
             notificationManager.createNotificationChannel(channel)
         }
     }
+
+    @Composable
+    private fun stringRes(@StringRes id: Int): String = stringResource(id)
 
     var masterEnabled by remember { mutableStateOf(notificationManagerCompat.areNotificationsEnabled()) }
 

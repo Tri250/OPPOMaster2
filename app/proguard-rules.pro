@@ -97,6 +97,19 @@
 -dontwarn com.google.android.gms.internal.**
 
 # ========================================
+# TensorFlow Lite 规则
+# ========================================
+# Interpreter 与 Support 库通过 JNI 加载，保留类名与 native 方法
+-keep class org.tensorflow.lite.Interpreter { *; }
+-keep class org.tensorflow.lite.Interpreter$Options { *; }
+-keep class org.tensorflow.lite.gpu.GpuDelegate { *; }
+-keep class org.tensorflow.lite.support.image.TensorImage { *; }
+-keep class org.tensorflow.lite.support.image.ImageProcessor { *; }
+-keep class org.tensorflow.lite.support.common.ops.** { *; }
+-keepclassmembers class org.tensorflow.lite.** { native <methods>; }
+-dontwarn org.tensorflow.lite.**
+
+# ========================================
 # Ktor 客户端相关规则（精简优化版）
 # ========================================
 # 只保留必要的序列化/反射入口，大幅减小APK体积

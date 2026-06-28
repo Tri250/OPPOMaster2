@@ -211,5 +211,7 @@ private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto)
     }
     try {
         context.startActivity(intent)
-    } catch (_: Exception) { }
+    } catch (e: Exception) {
+        android.util.Log.w("PersonDetailScreen", "无法打开照片查看器", e)
+    }
 }

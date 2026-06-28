@@ -69,7 +69,7 @@ class ProModeManager(context: Context) {
     private val mainExecutor: Executor = ContextCompat.getMainExecutor(appContext)
 
     /** 协程作用域：用于异步应用 Camera2 参数 */
-    private val managerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val managerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /** Debounce Job：参数变化后延迟应用，避免频繁 Camera2Interop 调用 */
     private var paramsDebounceJob: Job? = null

@@ -1126,11 +1126,13 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
-     * 释放 Ktor 资源
+     * 释放 Ktor 资源与协程作用域
      * 真实使用中通常不需要调用，因为 HttpClient 是 lazy 单例
      * 保留入口以便测试或显式生命周期管理
      */
     fun close() {
+        runCatching { repositoryScope.cancel() }
+            .onFailure { Log.w(TAG, "取消 repositoryScope 时发生异常", it) }
         runCatching { httpClient.close() }
             .onFailure { Log.w(TAG, "关闭 HttpClient 时发生异常", it) }
     }
