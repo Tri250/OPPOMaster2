@@ -298,7 +298,7 @@ class AIFineTuneViewModel(
 
     private suspend fun ensureGPUInitialized(context: Context) {
         if (!gpuInitialized) {
-            gpuRenderManager = GPURenderManager.getInstance(context)
+            gpuRenderManager = GPURenderManager.acquire(context)
             gpuInitialized = gpuRenderManager?.initialize() == true
         }
     }
@@ -697,7 +697,7 @@ class AIFineTuneViewModel(
      */
     suspend fun exportImage(context: Context): Boolean = withContext(Dispatchers.IO) {
         val source = _sourceBitmap.value ?: return@withContext false
-        val manager = gpuRenderManager ?: GPURenderManager.getInstance(context).also {
+        val manager = gpuRenderManager ?: GPURenderManager.acquire(context).also {
             gpuRenderManager = it
             gpuInitialized = it.initialize() == true
         }

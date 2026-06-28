@@ -275,17 +275,32 @@ class GPURenderManager private constructor(private val context: Context) {
     
     companion object {
         private const val TAG = "GPURenderManager"
-        
+
         @Volatile
         private var instance: GPURenderManager? = null
-        
+
+        private val refCount = java.util.concurrent.atomic.AtomicInteger(0)
+
         /**
-         * 获取单例实例
+         * 获取单例实例（不增加引用计数）。
+         * 若需要持有并在生命周期结束时释放，请使用 [acquire]。
          */
         fun getInstance(context: Context): GPURenderManager {
             return instance ?: synchronized(this) {
                 instance ?: GPURenderManager(context.applicationContext).also { instance = it }
             }
+        }
+
+        /**
+         * 获取单例实例并增加引用计数。
+         * 调用者必须在生命周期结束时调用 [GPURenderManager.release] 配对释放，
+         * 当引用计数归零时才会真正销毁底层 EGL/线程资源。
+         */
+        fun acquire(context: Context): GPURenderManager {
+            val manager = getInstance(context)
+            val count = refCount.incrementAndGet()
+            Log.d(TAG, "acquire refCount=$count")
+            return manager
         }
         
         // 渲染超时时间
@@ -949,7 +964,8 @@ class GPURenderManager private constructor(private val context: Context) {
     }
 
     /**
-     * 释放资源
+     * 释放资源（引用计数版）。
+     * 仅当引用计数归零时才会真正销毁底层 EGL/线程资源。
      * 修复 P0-5: 移除双重runBlocking，改为在渲染线程直接执行
      * 避免在已经取消的协程作用域中使用runBlocking导致死锁
      *
@@ -958,6 +974,17 @@ class GPURenderManager private constructor(private val context: Context) {
      * 修复 Channel 关闭: 先取消协程作用域再关闭 Channel
      */
     fun release() {
+        val count = refCount.decrementAndGet()
+        Log.d(TAG, "release refCount=$count")
+        if (count > 0) {
+            // 仍有其他持有者，不销毁资源
+            return
+        }
+        if (count < 0) {
+            Log.w(TAG, "release called more times than acquire, resetting refCount")
+            refCount.set(0)
+        }
+
         // 1. 先取消渲染协程作用域，确保 startRenderProcessor 的协程停止
         renderScope?.cancel()
         renderScope = null
@@ -1011,7 +1038,12 @@ class GPURenderManager private constructor(private val context: Context) {
         _isInitialized.value = false
         _isGpuAvailable.value = false
 
-        Log.d(TAG, "GPURenderManager released")
+        // 真正销毁单例引用，下次 acquire 会重新创建
+        synchronized(GPURenderManager::class.java) {
+            instance = null
+        }
+
+        Log.d(TAG, "GPURenderManager fully released")
     }
 }
 
@@ -1529,15 +1561,19 @@ class CPURenderer {
     }
 
     /**
-     * 简化肤色检测（基于 RGB 范围，避免 LAB 转换开销）
+     * YCbCr 肤色检测（BT.601），覆盖更广人种（深肤色、偏黄/偏红肤色）。
+     *
+     * 相比简化 RGB 范围，YCbCr 将亮度与色度分离，对光照变化更鲁棒，
+     * 能更准确地识别不同人种肤色，确保 GPU 降级路径下的磨皮效果真实生效。
      */
     private fun isSkinColor(r: Float, g: Float, b: Float): Boolean {
-        val maxC = maxOf(r, g, b)
-        val minC = minOf(r, g, b)
-        val lum = 0.299f * r + 0.587f * g + 0.114f * b
-        return lum > 0.2f && lum < 0.95f &&
-                r > 0.25f && r > g && g > b &&
-                (maxC - minC) > 0.05f
+        val y = 0.299f * r + 0.587f * g + 0.114f * b
+        val cb = 0.564f * (b - y)
+        val cr = 0.713f * (r - y)
+        return y in 0.18f..0.95f &&
+                cb in -0.18f..0.10f &&
+                cr in 0.02f..0.28f &&
+                cr > cb + 0.015f
     }
 
     /** RGB→HSL（与着色器 rgb2hsl 一致），返回 [h, s, l] 均在 [0, 1] */

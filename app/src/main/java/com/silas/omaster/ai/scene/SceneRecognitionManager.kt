@@ -63,10 +63,23 @@ class SceneRecognitionManager private constructor(context: Context) {
         @Volatile
         private var instance: SceneRecognitionManager? = null
 
+        private val refCount = java.util.concurrent.atomic.AtomicInteger(0)
+
         fun getInstance(context: Context): SceneRecognitionManager {
             return instance ?: synchronized(this) {
                 instance ?: SceneRecognitionManager(context.applicationContext).also { instance = it }
             }
+        }
+
+        /**
+         * 获取单例实例并增加引用计数。
+         * 调用者必须在生命周期结束时调用 [SceneRecognitionManager.release] 配对释放。
+         */
+        fun acquire(context: Context): SceneRecognitionManager {
+            val manager = getInstance(context)
+            val count = refCount.incrementAndGet()
+            android.util.Log.d("SceneRecognitionManager", "acquire refCount=$count")
+            return manager
         }
     }
 
@@ -275,12 +288,24 @@ class SceneRecognitionManager private constructor(context: Context) {
      * 释放 TFLite 资源。
      */
     fun release() {
+        val count = refCount.decrementAndGet()
+        Log.d(TAG, "release refCount=$count")
+        if (count > 0) {
+            return
+        }
+        if (count < 0) {
+            Log.w(TAG, "release called more times than acquire, resetting refCount")
+            refCount.set(0)
+        }
         try {
             tfliteInterpreter?.close()
             tfliteInterpreter = null
             gpuDelegate?.close()
             gpuDelegate = null
-            Log.d(TAG, "SceneRecognitionManager 已释放")
+            synchronized(SceneRecognitionManager::class.java) {
+                instance = null
+            }
+            Log.d(TAG, "SceneRecognitionManager fully released")
         } catch (e: Exception) {
             Log.e(TAG, "释放失败", e)
         }

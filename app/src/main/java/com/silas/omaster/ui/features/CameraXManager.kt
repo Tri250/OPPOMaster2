@@ -1,13 +1,20 @@
 package com.silas.omaster.ui.features
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
+import java.io.File
+import java.io.FileOutputStream
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
@@ -133,10 +140,10 @@ class CameraXManager(
     private var lastAppliedParams: HasselbladParams? = null
 
     // AI 场景识别
-    private val sceneRecognitionManager = SceneRecognitionManager.getInstance(context)
+    private val sceneRecognitionManager = SceneRecognitionManager.acquire(context)
 
     // GPU 渲染管理器（用于实时滤镜/ LUT 预览）
-    private val gpuRenderManager = GPURenderManager.getInstance(context)
+    private val gpuRenderManager = GPURenderManager.acquire(context)
 
     private val _sceneResult = MutableStateFlow<RealtimeSceneResult?>(null)
     val sceneResult: StateFlow<RealtimeSceneResult?> = _sceneResult.asStateFlow()
@@ -1173,7 +1180,9 @@ class CameraXManager(
     }
 
     /**
-     * 将 Bitmap 保存为 JPEG 并回调 URI。
+     * 将 Bitmap 保存为 JPEG 到系统相册（MediaStore），并回调 URI。
+     * 修复：原实现保存到 cacheDir，照片不会出现在系统图库中；
+     * 现改为写入 MediaStore，确保用户可在相册中查看拍摄结果。
      */
     private suspend fun saveBitmapAndNotify(
         bitmap: Bitmap,
@@ -1181,28 +1190,59 @@ class CameraXManager(
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
-            val photoFile = java.io.File(
-                context.cacheDir,
-                "camerax_${System.currentTimeMillis()}.jpg"
-            )
-            photoFile.outputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-            }
-            bitmap.recycle()
-            val savedUri = Uri.fromFile(photoFile)
-            Log.d(TAG, "照片已保存: $savedUri")
+            val filename = "camerax_${System.currentTimeMillis()}.jpg"
+            val mimeType = "image/jpeg"
+            val relativePath = Environment.DIRECTORY_PICTURES + "/OMaster/CameraX"
 
-            // OPPO 设备参数同步：拍照完成后尝试将哈苏参数同步到 OPPO 相机大师模式
-            try {
-                val capability = oppoCameraManager.detectDeviceCapability()
-                if (capability.isOppoDevice) {
-                    oppoCameraManager.applyHasselbladParams(currentPresetParams)
+            val savedUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                    put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "OPPO 参数同步失败: ${e.message}")
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues
+                )
+                uri?.let {
+                    context.contentResolver.openOutputStream(it)?.use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    }
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    context.contentResolver.update(it, contentValues, null, null)
+                    it
+                }
+            } else {
+                val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "OMaster/CameraX")
+                dir.mkdirs()
+                val file = File(dir, filename)
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf(mimeType), null)
+                Uri.fromFile(file)
             }
 
-            mainHandler.post { onPhotoSaved(savedUri) }
+            bitmap.recycle()
+
+            if (savedUri != null) {
+                Log.d(TAG, "照片已保存到相册: $savedUri")
+
+                // OPPO 设备参数同步：拍照完成后尝试将哈苏参数同步到 OPPO 相机大师模式
+                try {
+                    val capability = oppoCameraManager.detectDeviceCapability()
+                    if (capability.isOppoDevice) {
+                        oppoCameraManager.applyHasselbladParams(currentPresetParams)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "OPPO 参数同步失败: ${e.message}")
+                }
+
+                mainHandler.post { onPhotoSaved(savedUri) }
+            } else {
+                mainHandler.post { onError("保存失败，无法创建媒体文件") }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "保存照片失败: ${e.message}", e)
             if (!bitmap.isRecycled) bitmap.recycle()

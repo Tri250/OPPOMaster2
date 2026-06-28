@@ -55,6 +55,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
 
     private val recipeRepository = RecipeRepository(application.applicationContext)
     private val feedbackManager = FeedbackManager(application.applicationContext)
+    private var gpuRenderManager: GPURenderManager? = null
 
     /** 导出格式 - P2 HEIF支持 */
     enum class ExportFormat {
@@ -672,8 +673,14 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
      * Phase 1 核心：GPU 渲染主路径 + CPU 降级路径。
      * 将 HasselbladParams 映射到 RenderParameters，通过 GPURenderManager 执行 GPU 着色器渲染。
      * 失败时自动降级到 HasselbladColorEngine CPU 路径。
+     *
+     * P2-5 修复：函数签名改为 Bitmap?，避免 GPURenderManager.render 返回 null 时传递空引用
+     * 导致 applyVignetteIfNeeded 违反非空约束。
      */
-    private suspend fun renderWithGPUFallback(source: Bitmap, params: HasselbladParams): Bitmap {
+    private suspend fun renderWithGPUFallback(source: Bitmap, params: HasselbladParams): Bitmap? {
+        val manager = gpuRenderManager ?: GPURenderManager.acquire(getApplication()).also {
+            gpuRenderManager = it
+        }
         return try {
             val renderParams = HasselbladParamMapper.map(
                 hasselbladParams = params,
@@ -681,10 +688,15 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 active3DLUTId = _active3DLUTId.value,
                 lut3DStrength = _lut3DStrength.value
             )
-            val gpuResult = GPURenderManager.getInstance(getApplication())
-                .render(source, renderParams)
-            // 暗角在 GPU 着色器外单独处理（着色器未含 vignette）
-            applyVignetteIfNeeded(gpuResult, params.vignette)
+            val gpuResult = manager.render(source, renderParams)
+            if (gpuResult == null) {
+                Log.w(TAG, "GPU 渲染返回 null，降级到 CPU 路径")
+                val colorApplied = applyHasselbladColorScience(source, params)
+                apply3DLUTToBitmap(colorApplied)
+            } else {
+                // 暗角在 GPU 着色器外单独处理（着色器未含 vignette）
+                applyVignetteIfNeeded(gpuResult, params.vignette)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "GPU 渲染失败，降级到 CPU 路径", e)
             val colorApplied = applyHasselbladColorScience(source, params)
@@ -694,9 +706,10 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
 
     /**
      * 暗角后处理（GPU 着色器暂不支持径向暗角，单独处理）。
+     * P2-5 修复：接收 Bitmap? 并在 null 时直接返回 null，避免空指针。
      */
-    private fun applyVignetteIfNeeded(bitmap: Bitmap, vignette: Int): Bitmap {
-        if (vignette <= 0) return bitmap
+    private fun applyVignetteIfNeeded(bitmap: Bitmap?, vignette: Int): Bitmap? {
+        if (bitmap == null || vignette <= 0) return bitmap
         // 复用 HasselbladColorEngine 的暗角实现（轻量操作）
         return applyHasselbladColorEngineVignette(bitmap, vignette)
     }
@@ -1308,6 +1321,11 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         _previewBitmap.value = null
         _thumbnailPreview.value?.recycle()
         _thumbnailPreview.value = null
+        // 释放反馈管理器后台上传工作器
+        feedbackManager.release()
+        // 释放 GPU 渲染器引用计数
+        gpuRenderManager?.release()
+        gpuRenderManager = null
     }
 
     // ================== 私有辅助方法 ==================
