@@ -171,7 +171,8 @@ data class AnalysisResult(
 @Composable
 fun HasselbladScreen(
     onBack: () -> Unit,
-    onLaunchViewfinder: () -> Unit = {},
+    // P2-4 修复：支持将当前配方参数传递给出境器，确保配方链路完整
+    onLaunchViewfinder: (HasselbladParams, String?) -> Unit = { _, _ -> },
     // P2-1 修复：将当前 ViewModel 状态变化通知给上层（用于通过 savedStateHandle 传递到 CameraXViewfinder）
     onARGuideStateChanged: (guideType: String?, isEnabled: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
@@ -892,7 +893,12 @@ private fun SetupContent(
 
         // 实时取景拍摄入口：直接进入 CameraX 取景器进行实时预览与拍摄
         item {
-            ViewfinderEntryCard(onLaunchViewfinder = onLaunchViewfinder)
+            ViewfinderEntryCard(
+                onLaunchViewfinder = {
+                    // P2-4 修复：将当前配方参数与名称传递给出境器，确保拍摄时自动应用配方
+                    onLaunchViewfinder(currentParams, recipeMatchResult?.recipe?.name)
+                }
+            )
         }
 
         // AR 取景器模拟：拍照前预览构图引导线

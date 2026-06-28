@@ -90,6 +90,9 @@ import kotlinx.coroutines.launch
 // P2-1 修复：savedStateHandle 键名常量（哈苏构图引导线状态传递）
 private const val KEY_HASSELBLAD_GUIDE_TYPE = "hasselblad_guide_type"
 private const val KEY_IS_AR_GUIDE_ENABLED = "hasselblad_ar_guide_enabled"
+// P2-4 修复：savedStateHandle 键名常量（配方参数传递给出境器）
+private const val KEY_VIEWFINDER_PARAMS = "viewfinder_params"
+private const val KEY_VIEWFINDER_RECIPE_NAME = "viewfinder_recipe_name"
 
 /**
  * 主应用 NavHost 容器 + 底部导航栏 + 全局 Snackbar 宿主
@@ -402,7 +405,10 @@ fun MainApp(navController: NavHostController) {
             composable<Screen.HasselbladColor> { backStackEntry ->
                 HasselbladScreen(
                     onBack = { navController.popBackStack() },
-                    onLaunchViewfinder = {
+                    // P2-4 修复：将当前配方参数保存到 savedStateHandle，CameraXViewfinder 启动时自动应用
+                    onLaunchViewfinder = { params, recipeName ->
+                        backStackEntry.savedStateHandle[KEY_VIEWFINDER_PARAMS] = params
+                        backStackEntry.savedStateHandle[KEY_VIEWFINDER_RECIPE_NAME] = recipeName
                         navController.navigate(Screen.CameraXViewfinder(presetId = null))
                     },
                     // P2-1 修复：同步哈苏构图引导线状态到 savedStateHandle，
@@ -498,19 +504,32 @@ fun MainApp(navController: NavHostController) {
                     navController.previousBackStackEntry?.savedStateHandle?.get<Boolean>(KEY_IS_AR_GUIDE_ENABLED) ?: false
                 }
 
-                LaunchedEffect(route.presetId) {
-                    val pid = route.presetId ?: return@LaunchedEffect
-                    val presetItem = repository.presets.value.find { it.id == pid }
-                        ?: repository.loadPresets().find { it.id == pid }
-                    val preset = presetItem?.toMasterPreset()
-                    if (preset != null) {
-                        presetName = preset.name
-                        presetParams = HasselbladParams(
-                            tone = preset.tone ?: 0,
-                            saturation = preset.saturation ?: 0,
-                            colorTemp = preset.warmCool ?: 0,
-                            sharpness = preset.sharpness ?: 0
-                        )
+                // P2-4 修复：从上一个页面读取配方参数与名称，自动应用配方到取景器
+                val recipeParams = remember {
+                    navController.previousBackStackEntry?.savedStateHandle?.get<HasselbladParams>(KEY_VIEWFINDER_PARAMS)
+                }
+                val recipeNameFromPrev = remember {
+                    navController.previousBackStackEntry?.savedStateHandle?.get<String>(KEY_VIEWFINDER_RECIPE_NAME)
+                }
+
+                LaunchedEffect(route.presetId, recipeParams, recipeNameFromPrev) {
+                    if (recipeParams != null) {
+                        presetParams = recipeParams
+                        presetName = recipeNameFromPrev ?: ""
+                    } else {
+                        val pid = route.presetId ?: return@LaunchedEffect
+                        val presetItem = repository.presets.value.find { it.id == pid }
+                            ?: repository.loadPresets().find { it.id == pid }
+                        val preset = presetItem?.toMasterPreset()
+                        if (preset != null) {
+                            presetName = preset.name
+                            presetParams = HasselbladParams(
+                                tone = preset.tone ?: 0,
+                                saturation = preset.saturation ?: 0,
+                                colorTemp = preset.warmCool ?: 0,
+                                sharpness = preset.sharpness ?: 0
+                            )
+                        }
                     }
                 }
 

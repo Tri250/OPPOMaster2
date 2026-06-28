@@ -167,7 +167,7 @@ fun StyleLUTGeneratorScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     referencePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
-                onClear = {}
+                onClear = { viewModel.clearReferenceImage() }
             )
 
             // ========== 参数设置 ==========

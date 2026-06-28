@@ -581,10 +581,12 @@ class CameraXManager(
         source: Bitmap,
         zebraPeaking: ZebraPeakingResult
     ): Bitmap {
-        val base = applyPresetToFrame(source.copy(Bitmap.Config.ARGB_8888, false) ?: source, currentPresetParams)
+        val copied = source.copy(Bitmap.Config.ARGB_8888, false) ?: source
+        val base = applyPresetToFrame(copied, currentPresetParams)
         val zebra = zebraPeaking.zebraBitmap
         val peaking = zebraPeaking.peakingBitmap
         if ((zebra == null || zebra.isRecycled) && (peaking == null || peaking.isRecycled)) {
+            if (base !== copied && !copied.isRecycled) copied.recycle()
             return base
         }
 
@@ -601,7 +603,8 @@ class CameraXManager(
         zebra?.takeIf { !it.isRecycled }?.let { canvas.drawBitmap(it, 0f, 0f, paint) }
         peaking?.takeIf { !it.isRecycled }?.let { canvas.drawBitmap(it, 0f, 0f, paint) }
 
-        if (base !== source && !base.isRecycled) base.recycle()
+        if (base !== copied && !base.isRecycled) base.recycle()
+        if (copied !== source && !copied.isRecycled) copied.recycle()
         return output
     }
 

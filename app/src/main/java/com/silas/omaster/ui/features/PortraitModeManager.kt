@@ -1184,15 +1184,19 @@ class PortraitModeManager(context: Context) {
     }
 
     /**
-     * 简化肤色检测（与 CPURenderer 保持一致，基于 RGB 范围）。
+     * YCbCr 肤色检测（BT.601），覆盖更广人种（深肤色、偏黄/偏红肤色）。
+     *
+     * 相比简化 RGB 范围，YCbCr 将亮度与色度分离，对光照变化更鲁棒，
+     * 能更准确地识别不同人种肤色，确保磨皮、美白、红润效果真实生效。
      */
     private fun isSkinColor(r: Float, g: Float, b: Float): Boolean {
-        val maxC = maxOf(r, g, b)
-        val minC = minOf(r, g, b)
-        val lum = 0.299f * r + 0.587f * g + 0.114f * b
-        return lum > 0.22f && lum < 0.95f &&
-                r > 0.28f && r > g && g > b &&
-                (maxC - minC) > 0.05f
+        val y = 0.299f * r + 0.587f * g + 0.114f * b
+        val cb = 0.564f * (b - y)
+        val cr = 0.713f * (r - y)
+        return y in 0.18f..0.95f &&
+                cb in -0.18f..0.10f &&
+                cr in 0.02f..0.28f &&
+                cr > cb + 0.015f
     }
 
     /**

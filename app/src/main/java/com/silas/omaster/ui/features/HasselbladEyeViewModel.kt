@@ -843,38 +843,42 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 withContext(Dispatchers.IO) {
                     try {
                         val scaled = createThumbnail(bitmap, maxDimension = EXPORT_MAX_DIMENSION)
-                        // P2-3 修复：使用带场景模式 + 构图 + 时间戳的命名规范
+                        try {
+                            // P2-3 修复：使用带场景模式 + 构图 + 时间戳的命名规范
 
-                        when (format) {
-                            ExportFormat.JPEG -> {
-                                val filename = buildExportFilename(format)
-                                saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 95, filename, "image/jpeg")
-                            }
-                            ExportFormat.PNG -> {
-                                val filename = buildExportFilename(format)
-                                saveToMediaStore(context, scaled, Bitmap.CompressFormat.PNG, 100, filename, "image/png")
-                            }
-                            ExportFormat.WEBP -> {
-                                val filename = buildExportFilename(format)
-                                val compressFormat = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    Bitmap.CompressFormat.WEBP_LOSSY
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    Bitmap.CompressFormat.WEBP
-                                }
-                                saveToMediaStore(context, scaled, compressFormat, 95, filename, "image/webp")
-                            }
-                            ExportFormat.HEIF -> {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    // Android R+：使用 HEVC MediaCodec 编码为真正的 HEIF
+                            when (format) {
+                                ExportFormat.JPEG -> {
                                     val filename = buildExportFilename(format)
-                                    saveHeifToMediaStore(context, scaled, filename)
-                                } else {
-                                    // Android Q 及以下：无原生 HEIF 编码能力，回退为高质量 JPEG
-                                    val filename = buildExportFilename(ExportFormat.JPEG)
-                                    saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 98, filename, "image/jpeg")
+                                    saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 95, filename, "image/jpeg")
+                                }
+                                ExportFormat.PNG -> {
+                                    val filename = buildExportFilename(format)
+                                    saveToMediaStore(context, scaled, Bitmap.CompressFormat.PNG, 100, filename, "image/png")
+                                }
+                                ExportFormat.WEBP -> {
+                                    val filename = buildExportFilename(format)
+                                    val compressFormat = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        Bitmap.CompressFormat.WEBP_LOSSY
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        Bitmap.CompressFormat.WEBP
+                                    }
+                                    saveToMediaStore(context, scaled, compressFormat, 95, filename, "image/webp")
+                                }
+                                ExportFormat.HEIF -> {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        // Android R+：使用 HEVC MediaCodec 编码为真正的 HEIF
+                                        val filename = buildExportFilename(format)
+                                        saveHeifToMediaStore(context, scaled, filename)
+                                    } else {
+                                        // Android Q 及以下：无原生 HEIF 编码能力，回退为高质量 JPEG
+                                        val filename = buildExportFilename(ExportFormat.JPEG)
+                                        saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 98, filename, "image/jpeg")
+                                    }
                                 }
                             }
+                        } finally {
+                            if (scaled !== bitmap && !scaled.isRecycled) scaled.recycle()
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Save image failed", e)

@@ -230,6 +230,11 @@ fun CameraXViewfinderScreen(
         onDispose { cameraManager.release() }
     }
 
+    // P2-4 修复：将传入的配方/预设参数应用到 CameraManager，确保取景器实时预览生效
+    LaunchedEffect(presetParams) {
+        cameraManager.updatePresetParams(presetParams)
+    }
+
     LaunchedEffect(isCameraReady) {
         if (isCameraReady) currentZoom = cameraManager.getCurrentZoomRatio()
     }
@@ -357,9 +362,11 @@ fun CameraXViewfinderScreen(
                 .padding(padding)
         ) {
             // ==================== 相机预览 ====================
+            var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
             AndroidView(
                 factory = { ctx ->
                     PreviewView(ctx).also { previewView ->
+                        previewViewRef = previewView
                         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                         cameraManager.startCamera(previewView)
                     }
@@ -612,7 +619,7 @@ fun CameraXViewfinderScreen(
                         )
                     },
                     onSwitchCamera = {
-                        cameraManager.switchCamera( /* 需要 PreviewView */ )
+                        previewViewRef?.let { cameraManager.switchCamera(it) }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

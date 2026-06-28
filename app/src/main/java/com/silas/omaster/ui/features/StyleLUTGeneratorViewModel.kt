@@ -278,6 +278,17 @@ class StyleLUTGeneratorViewModel : ViewModel() {
     }
 
     /**
+     * 清除参考风格图（单独清除，不影响原图与其他状态）
+     */
+    fun clearReferenceImage() {
+        _referenceBitmap.value?.recycle()
+        _referenceBitmap.value = null
+        _generationResult.value = null
+        _previewBitmap.value?.recycle()
+        _previewBitmap.value = null
+    }
+
+    /**
      * 重置所有状态
      */
     fun reset() {

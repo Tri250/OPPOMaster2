@@ -17,6 +17,14 @@
 - **LUT 实时预览 OES 纹理** - 修复 LUTPreviewRenderer 的 camera 纹理使用普通 2D 纹理（`GL_TEXTURE_2D`）而非 OES 外部纹理（`GL_TEXTURE_EXTERNAL_OES`）的问题，着色器同步改为 `samplerExternalOES`
 - **亮度分布与陀螺仪真实数据** - 修复反模式检测使用硬编码 `upperBrightnessRatio=0f` 和 `gyroscopeStable=true` 的问题，新增基于图像像素采样的上半部分亮度比例计算与基于陀螺仪角速度方差的稳定性检测
 - **实时帧回收崩溃** - 修复 `CameraXViewfinderScreen` 中旧 `processedFrame` 在下一帧回调时被立即回收，导致 `Image` composable 渲染已回收 Bitmap 崩溃的问题
+- **配方参数传递链路** - 修复从 `HasselbladScreen` 选择配方后进入 `CameraXViewfinderScreen` 时配方参数未传递、未应用的问题，现在通过 `savedStateHandle` 完整传递并在取景器实时生效
+- **反馈后台上传耗电** - 为 `FeedbackManager.startUploadWorker` 添加网络可用性检查（`ConnectivityManager`），无网络时跳过上传轮询，避免持续耗电
+- **人像肤色检测** - 升级 `PortraitModeManager.isSkinColor` 从简化 RGB 范围到 YCbCr（BT.601），覆盖更广人种（深肤色、偏黄/偏红肤色），确保磨皮/美白/红润效果真实生效
+- **StyleLUT 参考图清除** - 修复 `StyleLUTGeneratorScreen` 中参考风格图的"清除"按钮为空实现的问题，新增 `StyleLUTGeneratorViewModel.clearReferenceImage()` 方法
+- **并发重复上传** - 为 `FeedbackManager.attemptUpload` 添加 `uploadingIds` 并发保护，防止 `retryAll` 与后台工作器同时上传同一条反馈
+- **ZebraPeaking Bitmap 泄漏** - 修复 `CameraXManager.overlayZebraPeaking` 中 `source.copy()` 创建的中间 Bitmap 在 GPU 路径和直出路径下未被回收的内存泄漏
+- **保存图片缩放泄漏** - 修复 `HasselbladEyeViewModel.saveImage` 中 `createThumbnail` 产生的大 Bitmap 在保存后未立即回收的问题
+- **取景器切换摄像头** - 修复 `CameraXViewfinderScreen` 中 `ShutterBar.onSwitchCamera` 未传递 `PreviewView` 引用的问题，消除依赖默认参数的歧义
 
 ---
 

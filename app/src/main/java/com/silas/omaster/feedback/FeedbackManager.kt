@@ -3,6 +3,8 @@ package com.silas.omaster.feedback
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.util.Log
 import com.google.gson.Gson
@@ -38,6 +40,8 @@ class FeedbackManager(context: Context) {
         private const val SCREENSHOT_DIR = "feedback/screenshots"
         private const val RETRY_DELAY_MS = 30_000L
         private const val MAX_RETRY_COUNT = 3
+        private const val MAX_PENDING_COUNT = 100
+        private const val MAX_SCREENSHOT_DIMENSION = 1080
     }
 
     private val appContext = context.applicationContext
@@ -58,6 +62,9 @@ class FeedbackManager(context: Context) {
     private val _pendingCount = MutableStateFlow(0)
     val pendingCount: StateFlow<Int> = _pendingCount.asStateFlow()
 
+    // 防止并发重复上传：正在上传的反馈 ID 集合
+    private val uploadingIds = java.util.Collections.newSetFromMap<String>(java.util.concurrent.ConcurrentHashMap())
+
     init {
         refreshPendingCount()
         startUploadWorker()
@@ -66,6 +73,7 @@ class FeedbackManager(context: Context) {
     /**
      * 提交一条新反馈。
      * 截图会被保存到本地，反馈 JSON 写入 pending 队列，然后触发上传尝试。
+     * 当 pending 队列超过 [MAX_PENDING_COUNT] 时，自动删除最旧的条目。
      */
     fun submitFeedback(
         rating: Int,
@@ -77,6 +85,8 @@ class FeedbackManager(context: Context) {
         params: HasselbladParams? = null
     ) {
         managerScope.launch {
+            enforcePendingLimit()
+
             val id = UUID.randomUUID().toString()
             val screenshotPath = screenshot?.let { saveScreenshot(it, id) }
 
@@ -102,6 +112,23 @@ class FeedbackManager(context: Context) {
     }
 
     /**
+     * 限制 pending 队列大小，超出时删除最旧的条目。
+     */
+    private fun enforcePendingLimit() {
+        val files = pendingDir.listFiles { _, name -> name.endsWith(".json") } ?: return
+        if (files.size >= MAX_PENDING_COUNT) {
+            files.sortBy { it.lastModified() }
+            val toDelete = files.take(files.size - MAX_PENDING_COUNT + 1)
+            toDelete.forEach { file ->
+                val id = file.nameWithoutExtension
+                File(screenshotDir, "feedback_$id.jpg").delete()
+                file.delete()
+                Log.w(TAG, "Pending limit reached, removed oldest feedback: $id")
+            }
+        }
+    }
+
+    /**
      * 手动触发重试所有待上传反馈。
      */
     fun retryAll() {
@@ -113,41 +140,65 @@ class FeedbackManager(context: Context) {
 
     /**
      * 尝试上传单条反馈，失败则保留在 pending 目录。
+     * 使用 [uploadingIds] 防止并发重复上传同一条目。
      */
     private suspend fun attemptUpload(entry: FeedbackEntry) {
-        _uploadStatus.value = UploadStatus.Uploading(entry.id)
-
-        val success = uploader.upload(entry)
-
-        if (success) {
-            moveToUploaded(entry.id)
-            _uploadStatus.value = UploadStatus.Success(entry.id)
-        } else {
-            val retryFile = File(pendingDir, "${entry.id}.retry")
-            val currentRetry = try { retryFile.readText().toInt() } catch (_: Exception) { 0 }
-            if (currentRetry < MAX_RETRY_COUNT) {
-                retryFile.writeText((currentRetry + 1).toString())
-                Log.w(TAG, "Feedback ${entry.id} upload failed, retry ${currentRetry + 1}/$MAX_RETRY_COUNT")
-                _uploadStatus.value = UploadStatus.RetryScheduled(entry.id, currentRetry + 1)
-            } else {
-                Log.e(TAG, "Feedback ${entry.id} reached max retries, kept in pending")
-                _uploadStatus.value = UploadStatus.Failed(entry.id)
-            }
+        if (!uploadingIds.add(entry.id)) {
+            // 已有其他协程正在上传该条目，跳过
+            return
         }
-        refreshPendingCount()
+        try {
+            _uploadStatus.value = UploadStatus.Uploading(entry.id)
+
+            val success = uploader.upload(entry)
+
+            if (success) {
+                moveToUploaded(entry.id)
+                _uploadStatus.value = UploadStatus.Success(entry.id)
+            } else {
+                val retryFile = File(pendingDir, "${entry.id}.retry")
+                val currentRetry = try { retryFile.readText().toInt() } catch (_: Exception) { 0 }
+                if (currentRetry < MAX_RETRY_COUNT) {
+                    retryFile.writeText((currentRetry + 1).toString())
+                    Log.w(TAG, "Feedback ${entry.id} upload failed, retry ${currentRetry + 1}/$MAX_RETRY_COUNT")
+                    _uploadStatus.value = UploadStatus.RetryScheduled(entry.id, currentRetry + 1)
+                } else {
+                    Log.e(TAG, "Feedback ${entry.id} reached max retries, kept in pending")
+                    _uploadStatus.value = UploadStatus.Failed(entry.id)
+                }
+            }
+            refreshPendingCount()
+        } finally {
+            uploadingIds.remove(entry.id)
+        }
     }
 
     /**
      * 后台上传工作器：定期扫描 pending 队列并上传。
+     * 仅在网络可用时尝试上传，避免无网络环境下持续耗电。
      */
     private fun startUploadWorker() {
         managerScope.launch {
             while (true) {
                 delay(RETRY_DELAY_MS)
+                if (!isNetworkAvailable()) {
+                    Log.d(TAG, "Network unavailable, skipping upload check")
+                    continue
+                }
                 val files = pendingDir.listFiles { _, name -> name.endsWith(".json") } ?: continue
                 files.mapNotNull { readEntry(it) }.forEach { attemptUpload(it) }
             }
         }
+    }
+
+    /**
+     * 检查当前设备是否有可用的网络连接（且网络已验证）。
+     */
+    private fun isNetworkAvailable(): Boolean {
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun moveToUploaded(id: String) {
@@ -173,11 +224,25 @@ class FeedbackManager(context: Context) {
     }
 
     private fun saveScreenshot(bitmap: Bitmap, id: String): String {
+        val scaled = scaleBitmapIfNeeded(bitmap)
         val file = File(screenshotDir, "feedback_$id.jpg")
         FileOutputStream(file).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            scaled.compress(Bitmap.CompressFormat.JPEG, 85, out)
         }
+        if (scaled !== bitmap) scaled.recycle()
         return file.absolutePath
+    }
+
+    /**
+     * 若截图任一维度超过 [MAX_SCREENSHOT_DIMENSION]，按比例缩放至限制内。
+     */
+    private fun scaleBitmapIfNeeded(bitmap: Bitmap): Bitmap {
+        val maxDim = MAX_SCREENSHOT_DIMENSION
+        if (bitmap.width <= maxDim && bitmap.height <= maxDim) return bitmap
+        val ratio = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
+        val newWidth = (bitmap.width * ratio).toInt()
+        val newHeight = (bitmap.height * ratio).toInt()
+        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
     private fun buildDeviceInfo(): DeviceInfo {
@@ -196,6 +261,7 @@ class FeedbackManager(context: Context) {
     }
 
     fun release() {
+        managerScope.cancel()
         uploader.release()
     }
 
