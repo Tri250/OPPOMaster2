@@ -294,7 +294,7 @@ fun StyleLUTGeneratorScreen(
                 }
 
                 // 评估指标
-                val metrics = generationResult!!.metrics
+                val metrics = generationResult.metrics
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))

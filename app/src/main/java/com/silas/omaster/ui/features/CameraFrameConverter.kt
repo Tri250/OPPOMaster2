@@ -29,7 +29,7 @@ object CameraFrameConverter {
     fun toBitmap(imageProxy: ImageProxy): Bitmap? {
         val image = imageProxy.image ?: return null
         return try {
-            val bitmap = yuv420ToBitmap(image)
+            val bitmap = yuv420ToBitmap(image) ?: return null
             val rotation = imageProxy.imageInfo.rotationDegrees
             if (rotation != 0) {
                 val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
@@ -42,6 +42,8 @@ object CameraFrameConverter {
         } catch (e: Exception) {
             Log.e(TAG, "ImageProxy 转 Bitmap 失败", e)
             null
+        } finally {
+            imageProxy.close()
         }
     }
 
@@ -51,9 +53,10 @@ object CameraFrameConverter {
      * 兼容 NV21（semi-planar）与 I420（planar）两种常见 YUV_420_888 布局，
      * 通过读取各平面的 pixelStride / rowStride 自动判断并转换。
      */
-    fun yuv420ToBitmap(image: Image): Bitmap {
-        require(image.format == ImageFormat.YUV_420_888) {
-            "仅支持 YUV_420_888 格式，当前格式: ${image.format}"
+    fun yuv420ToBitmap(image: Image): Bitmap? {
+        if (image.format != ImageFormat.YUV_420_888) {
+            android.util.Log.e(TAG, "不支持的图像格式: ${image.format}，无法转换为 Bitmap")
+            return null
         }
 
         val width = image.width

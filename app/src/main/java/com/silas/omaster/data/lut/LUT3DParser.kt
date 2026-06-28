@@ -71,6 +71,7 @@ object LUT3DParser {
         var line: String?
         while (reader.readLine().also { line = it } != null) {
             val trimmed = line!!.trim()
+            // 注意：readLine() 返回 null 时循环已终止，此处 line 必为非 null
 
             // 跳过空行和注释
             if (trimmed.isEmpty() || trimmed.startsWith("#")) continue

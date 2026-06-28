@@ -1701,7 +1701,7 @@ private fun RecentShotThumbnail(
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (thumbnail != null) {
                 Image(
-                    bitmap = thumbnail!!.asImageBitmap(),
+                    bitmap = thumbnail.asImageBitmap(),
                     contentDescription = "最近拍摄",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

@@ -210,7 +210,7 @@ fun ImportExportScreen(
     // Import result dialog
     if (showImportResultDialog && importResult != null) {
         ImportResultDialog(
-            result = importResult!!,
+            result = importResult,
             onDismiss = {
                 showImportResultDialog = false
                 importResult = null

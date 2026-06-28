@@ -577,7 +577,7 @@ class SettingsManager private constructor(private val context: Context) {
      * - 真实值由 init{} / preloadCache() / setDataSync() 异步填充到缓存
      */
     private fun getDataSync(key: Preferences.Key<String>, defaultValue: String): String {
-        cache[key.name]?.let { return it as String }
+        (cache[key.name] as? String)?.let { return it }
         if (!cachePreloaded) {
             android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
         }
@@ -585,7 +585,7 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     private fun getDataSyncOrNull(key: Preferences.Key<String>): String? {
-        cache[key.name]?.let { return it as String? }
+        (cache[key.name] as? String)?.let { return it }
         if (!cachePreloaded) {
             android.util.Log.w("SettingsManager", "缓存未就绪，返回 null: ${key.name}")
         }
@@ -593,7 +593,7 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     private fun getDataSync(key: Preferences.Key<Boolean>, defaultValue: Boolean): Boolean {
-        cache[key.name]?.let { return it as Boolean }
+        (cache[key.name] as? Boolean)?.let { return it }
         if (!cachePreloaded) {
             android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
         }
@@ -601,7 +601,7 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     private fun getDataSync(key: Preferences.Key<Int>, defaultValue: Int): Int {
-        cache[key.name]?.let { return it as Int }
+        (cache[key.name] as? Int)?.let { return it }
         if (!cachePreloaded) {
             android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
         }
@@ -609,7 +609,7 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     private fun getDataSync(key: Preferences.Key<Long>, defaultValue: Long): Long {
-        cache[key.name]?.let { return it as Long }
+        (cache[key.name] as? Long)?.let { return it }
         if (!cachePreloaded) {
             android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
         }
@@ -617,7 +617,7 @@ class SettingsManager private constructor(private val context: Context) {
     }
 
     private fun getDataSync(key: Preferences.Key<Float>, defaultValue: Float): Float {
-        cache[key.name]?.let { return it as Float }
+        (cache[key.name] as? Float)?.let { return it }
         if (!cachePreloaded) {
             android.util.Log.w("SettingsManager", "缓存未就绪，返回默认值: ${key.name}=$defaultValue")
         }
