@@ -128,7 +128,9 @@ fun CameraXViewfinderScreen(
     // P2-1 修复：哈苏构图引导线类型（如 "THIRDS"），与 ARCompositionResult 引导线共存
     hasselbladGuideType: String? = null,
     // 是否启用哈苏构图引导线（与 HasselbladEyeViewModel.isARGuideEnabled 对应）
-    isARGuideEnabled: Boolean = false
+    isARGuideEnabled: Boolean = false,
+    // Phase 2.2 修复：反模式检测修复动作回调
+    onFixActionRequested: (AntiPatternDetector.FixAction) -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = remember {
@@ -440,6 +442,34 @@ fun CameraXViewfinderScreen(
             if (antiPatternAlerts.isNotEmpty()) {
                 AntiPatternFloatingBar(
                     alerts = antiPatternAlerts,
+                    onFixAction = { action ->
+                        when (action.actionType) {
+                            "switch_zoom" -> {
+                                val ratio = action.actionValue.toFloatOrNull() ?: 1.0f
+                                cameraManager.setZoomRatio(ratio)
+                            }
+                            "adjust_param" -> {
+                                when {
+                                    action.actionValue.startsWith("exposure_compensation:") -> {
+                                        val ev = action.actionValue
+                                            .removePrefix("exposure_compensation:")
+                                            .toFloatOrNull() ?: 0f
+                                        // CameraX EV index ≈ EV / step，通常 step 为 1/3
+                                        val step = 1f / 3f
+                                        val index = (ev / step).roundToInt()
+                                        cameraManager.setExposureCompensation(index)
+                                    }
+                                }
+                            }
+                            "enable_mode" -> {
+                                when (action.actionValue) {
+                                    "night_mode" -> cameraManager.setCaptureMode(CaptureMode.NIGHT)
+                                    else -> onFixActionRequested(action)
+                                }
+                            }
+                            else -> onFixActionRequested(action)
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 60.dp)
@@ -1475,6 +1505,7 @@ private fun ShutterButton(
 @Composable
 private fun AntiPatternFloatingBar(
     alerts: List<AntiPatternDetector.AntiPatternAlert>,
+    onFixAction: (AntiPatternDetector.FixAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -1525,7 +1556,7 @@ private fun AntiPatternFloatingBar(
             // 如果有修复动作，显示按钮
             alert.fixAction?.let { action ->
                 Button(
-                    onClick = { /* TODO: 根据 actionType/actionValue 执行修复 */ },
+                    onClick = { onFixAction(action) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White.copy(alpha = 0.2f)
                     ),

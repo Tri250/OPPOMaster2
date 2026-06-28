@@ -54,6 +54,7 @@ import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
 import com.silas.omaster.ui.features.CameraXViewfinderScreen
 import com.silas.omaster.ui.features.CoreFeaturesScreen
+import com.silas.omaster.ui.features.HasselbladEyeViewModel
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
 import com.silas.omaster.ui.features.ParamAdjustScreen
@@ -487,6 +488,7 @@ fun MainApp(navController: NavHostController) {
                 val route = backStackEntry.toRoute<Screen.CameraXViewfinder>()
                 var presetParams by remember { mutableStateOf(HasselbladParams()) }
                 var presetName by remember { mutableStateOf("") }
+                val hasselbladViewModel: HasselbladEyeViewModel = viewModel()
 
                 // P2-1 修复：从上一个页面（HasselbladScreen）读取哈苏构图引导线状态
                 val hasselbladGuideType = remember {
@@ -522,6 +524,27 @@ fun MainApp(navController: NavHostController) {
                         // 拍照成功，Toast 提示并返回上一页
                         Toast.makeText(context, "照片已保存", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
+                    },
+                    onFixActionRequested = { action ->
+                        when (action.actionValue) {
+                            "soft_light" -> {
+                                // 启用柔光模式（作用于拍摄后色彩处理）
+                                hasselbladViewModel.updateParam(
+                                    "softLight",
+                                    com.silas.omaster.model.SoftLightMode.SOFT.ordinal
+                                )
+                                Toast.makeText(context, "已启用柔光模式", Toast.LENGTH_SHORT).show()
+                            }
+                            "ar_guide:diagonal" -> {
+                                // 切换 AR 引导线
+                                hasselbladViewModel.toggleARGuide()
+                                Toast.makeText(context, "已切换 AR 构图引导", Toast.LENGTH_SHORT).show()
+                            }
+                            else -> {
+                                // 其他模式暂无法直接自动修复，提示用户
+                                Toast.makeText(context, "请手动调整：${action.label}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 )
             }

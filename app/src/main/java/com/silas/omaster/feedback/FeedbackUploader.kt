@@ -25,15 +25,17 @@ import java.io.File
  * 反馈上传器
  * 使用 Ktor CIO 引擎将反馈（JSON + 可选截图）上传到后端。
  *
- * 注意：FEEDBACK_API_ENDPOINT 为占位符，实际部署时替换为真实接口地址。
+ * 上传地址由 [FeedbackConfig] 从 local.properties 的 `feedback.api.endpoint` 读取，
+ * 未配置时使用默认生产域名，避免在代码中硬编码真实接口地址。
  */
 class FeedbackUploader(context: Context) {
 
     companion object {
         private const val TAG = "FeedbackUploader"
-        // TODO: 替换为真实反馈接口地址
-        private const val FEEDBACK_API_ENDPOINT = "https://api.omaster.silas/feedback/v1/submit"
     }
+
+    private val appContext = context.applicationContext
+    private val feedbackEndpoint = FeedbackConfig.getEndpoint(appContext)
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -63,7 +65,7 @@ class FeedbackUploader(context: Context) {
             val metadataJson = json.encodeToString(entry)
             val screenshotFile = entry.screenshotPath?.let { File(it) }?.takeIf { it.exists() }
 
-            val response = client.post(FEEDBACK_API_ENDPOINT) {
+            val response = client.post(feedbackEndpoint) {
                 header(HttpHeaders.Authorization, "Bearer anonymous") // 匿名上传
                 setBody(
                     MultiPartFormDataContent(
