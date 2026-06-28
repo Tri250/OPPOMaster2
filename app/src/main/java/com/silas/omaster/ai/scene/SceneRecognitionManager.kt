@@ -296,6 +296,7 @@ class SceneRecognitionManager private constructor(context: Context) {
         if (count < 0) {
             Log.w(TAG, "release called more times than acquire, resetting refCount")
             refCount.set(0)
+            return
         }
         try {
             tfliteInterpreter?.close()

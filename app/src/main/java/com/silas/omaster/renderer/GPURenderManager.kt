@@ -983,6 +983,7 @@ class GPURenderManager private constructor(private val context: Context) {
         if (count < 0) {
             Log.w(TAG, "release called more times than acquire, resetting refCount")
             refCount.set(0)
+            return
         }
 
         // 1. 先取消渲染协程作用域，确保 startRenderProcessor 的协程停止

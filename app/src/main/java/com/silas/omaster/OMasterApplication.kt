@@ -357,12 +357,8 @@ class OMasterApplication : Application() {
             android.util.Log.e("OMasterApplication", "关闭 PresetRepository HttpClient 失败", e)
         }
 
-        // 释放 GPU 渲染管理器
-        try {
-            com.silas.omaster.renderer.GPURenderManager.getInstance(this).release()
-            android.util.Log.i("OMasterApplication", "GPURenderManager 已释放")
-        } catch (e: Exception) {
-            android.util.Log.e("OMasterApplication", "释放 GPURenderManager 失败", e)
-        }
+        // 注意：GPURenderManager 由具体页面通过 acquire/release 管理引用计数，
+        // 此处不再直接释放，避免负引用计数导致单例被意外销毁。
+        // 进程终止时系统会自动回收 EGL/GPU 资源。
     }
 }
