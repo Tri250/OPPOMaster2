@@ -1,0 +1,372 @@
+[
+  {
+    "id": "POR-001",
+    "name": "梦幻大光圈头像",
+    "category": "portrait",
+    "intentKeywords": ["梦幻", "柔光", "人像特写", "虚化", "portrait", "dreamy", "bokeh"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R5",
+      "lens": "RF 85mm f/1.2L",
+      "focalLength": "85mm",
+      "aperture": "f/1.2"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": -0.3
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": 8,
+      "contrast": -15,
+      "colorTemp": 8,
+      "sharpness": -15,
+      "vignette": 12,
+      "cyanMagenta": -3,
+      "softLight": "DREAMY",
+      "highlights": -8,
+      "shadows": 10,
+      "clarity": 8
+    },
+    "lutRecommendation": { "id": "portra_400", "strength": 0.7 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "主体置于三分线交点，留白朝向视线方向，对焦在眼睛",
+    "lightingTip": "逆光或侧逆光，金色时段（日出后/日落前30分钟）最佳",
+    "avoidTips": ["正午硬光", "广角近距变形", "顶光眼窝阴影"]
+  },
+  {
+    "id": "POR-002",
+    "name": "锐利商业肖像",
+    "category": "portrait",
+    "intentKeywords": ["商业", "锐利", "棚拍", "高清", "commercial", "sharp", "studio"],
+    "equivalentEquipment": {
+      "camera": "Sony A7R V",
+      "lens": "FE 85mm f/1.4 GM II",
+      "focalLength": "85mm",
+      "aperture": "f/1.8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "200",
+      "shutter": "auto",
+      "whiteBalance": "auto",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 0,
+      "contrast": 15,
+      "colorTemp": 0,
+      "sharpness": 0,
+      "vignette": 0,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 0,
+      "clarity": 15
+    },
+    "lutRecommendation": { "id": "cc_classic", "strength": 0.5 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "面部居中，背景简洁均匀，保留一定头顶空间",
+    "lightingTip": "三点布光：主光+补光+轮廓光，背景光独立控制",
+    "avoidTips": ["柔光过度", "过曝高光", "背景杂乱"]
+  },
+  {
+    "id": "POR-003",
+    "name": "中画幅质感肖像",
+    "category": "portrait",
+    "intentKeywords": ["中画幅", "质感", "自然", "柔和", "medium format", "natural", "HNCS"],
+    "equivalentEquipment": {
+      "camera": "Hasselblad X2D 100C",
+      "lens": "XCD 90mm f/2.5",
+      "focalLength": "90mm",
+      "aperture": "f/2.5"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 3,
+      "saturation": -5,
+      "contrast": 5,
+      "colorTemp": 0,
+      "sharpness": -10,
+      "vignette": 8,
+      "cyanMagenta": 0,
+      "softLight": "SOFT",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 3
+    },
+    "lutRecommendation": { "id": "nc_natural", "strength": 0.6 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "利用中画幅的压缩感，背景不过度虚化，保留环境氛围",
+    "lightingTip": "大窗光或漫反射柔光，光比控制在2:1以内",
+    "avoidTips": ["高锐度", "高饱和", "暗角过强"]
+  },
+  {
+    "id": "POR-004",
+    "name": "德味街拍肖像",
+    "category": "portrait",
+    "intentKeywords": ["德味", "街拍", "高对比", "人文", "leica", "street", "bokeh"],
+    "equivalentEquipment": {
+      "camera": "Leica M11",
+      "lens": "Summilux-M 50mm f/1.4",
+      "focalLength": "50mm",
+      "aperture": "f/1.4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "auto",
+      "exposureCompensation": -0.3
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 5,
+      "contrast": 18,
+      "colorTemp": 0,
+      "sharpness": 22,
+      "vignette": 10,
+      "cyanMagenta": -5,
+      "softLight": "NONE",
+      "highlights": -10,
+      "shadows": 5,
+      "clarity": 8
+    },
+    "lutRecommendation": { "id": "tx400", "strength": 0.8 },
+    "arGuideLine": "DIAGONAL",
+    "compositionTip": "利用对角线构图引导视线，背景保留环境信息",
+    "lightingTip": "自然光，侧光或逆光勾勒轮廓，利用阴影增加层次",
+    "avoidTips": ["过柔", "暖调过重", "中心对称构图"]
+  },
+  {
+    "id": "POR-005",
+    "name": "日系清新人像",
+    "category": "portrait",
+    "intentKeywords": ["日系", "清新", "低饱和", "窗边光", "fresh", "japanese", "window"],
+    "equivalentEquipment": {
+      "camera": "Fujifilm GFX 100S",
+      "lens": "GF 80mm f/1.7",
+      "focalLength": "80mm",
+      "aperture": "f/1.7"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.5,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.5
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": -8,
+      "contrast": -10,
+      "colorTemp": 5,
+      "sharpness": -15,
+      "vignette": 0,
+      "cyanMagenta": 3,
+      "softLight": "SOFT",
+      "highlights": 5,
+      "shadows": 10,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "nc_natural", "strength": 0.5 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "窗边光从侧方或斜后方入射，人物面部略微向光",
+    "lightingTip": "大窗柔光，ISO可适当提高以保留阴影细节",
+    "avoidTips": ["高饱和", "高对比", "暖调过重"]
+  },
+  {
+    "id": "POR-006",
+    "name": "Portra 胶片肖像",
+    "category": "portrait",
+    "intentKeywords": ["胶片", "Portra", "暖调", "颗粒", "film", "portra", "grain"],
+    "equivalentEquipment": {
+      "camera": "Mamiya 645 Pro",
+      "lens": "80mm f/2.8",
+      "focalLength": "80mm",
+      "aperture": "f/2.8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 10,
+      "contrast": -12,
+      "colorTemp": -5,
+      "sharpness": -15,
+      "vignette": 15,
+      "cyanMagenta": 0,
+      "softLight": "DREAMY",
+      "highlights": -8,
+      "shadows": 5,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "portra_400", "strength": 1.0 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "自然放松的姿态，避免刻意摆拍，保留自然纹理",
+    "lightingTip": "侧光或漫反射，避免正面平光，保留立体感",
+    "avoidTips": ["硬光", "顶光", "高锐度"]
+  },
+  {
+    "id": "POR-007",
+    "name": "低调硬光肖像",
+    "category": "portrait",
+    "intentKeywords": ["低调", "硬光", "情绪", "黑白", "low key", "dramatic", "chiaroscuro"],
+    "equivalentEquipment": {
+      "camera": "Phase One IQ4",
+      "lens": "Schneider 80mm LS f/2.8",
+      "focalLength": "80mm",
+      "aperture": "f/2.8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.0,
+      "iso": "200",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": -0.7
+    },
+    "hasselbladPreset": {
+      "tone": -10,
+      "saturation": 0,
+      "contrast": 25,
+      "colorTemp": 0,
+      "sharpness": 20,
+      "vignette": 15,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -15,
+      "shadows": -10,
+      "clarity": 15
+    },
+    "lutRecommendation": { "id": "tx400", "strength": 0.9 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "大面积暗背景，人物面部集中高光，形成明暗对比",
+    "lightingTip": "单一硬光侧向入射，背景距离光源较远保持暗调",
+    "avoidTips": ["柔光", "过曝", "高饱和"]
+  },
+  {
+    "id": "POR-008",
+    "name": "温柔家庭纪实",
+    "category": "portrait",
+    "intentKeywords": ["家庭", "纪实", "温暖", "自然光", "family", "documentary", "warm"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R6 Mark II",
+      "lens": "RF 50mm f/1.2L",
+      "focalLength": "50mm",
+      "aperture": "f/1.2"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": 12,
+      "contrast": -8,
+      "colorTemp": 5,
+      "sharpness": -5,
+      "vignette": 10,
+      "cyanMagenta": 3,
+      "softLight": "DREAMY",
+      "highlights": -5,
+      "shadows": 10,
+      "clarity": 3
+    },
+    "lutRecommendation": { "id": "portra_400", "strength": 0.6 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "记录互动瞬间而非刻意摆拍，捕捉自然表情",
+    "lightingTip": "大窗光或户外阴影区柔光，ISO可适度提高",
+    "avoidTips": ["硬光", "杂乱背景", "顶光"]
+  },
+  {
+    "id": "POR-009",
+    "name": "美妆特写",
+    "category": "portrait",
+    "intentKeywords": ["美妆", "特写", "眼妆", "细节", "beauty", "makeup", "detail"],
+    "equivalentEquipment": {
+      "camera": "Sony A7R V",
+      "lens": "FE 90mm f/2.8 Macro",
+      "focalLength": "90mm",
+      "aperture": "f/4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "auto",
+      "exposureCompensation": 0.3
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 5,
+      "contrast": 8,
+      "colorTemp": 0,
+      "sharpness": 15,
+      "vignette": -5,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": 5,
+      "shadows": 3,
+      "clarity": 8
+    },
+    "lutRecommendation": { "id": "rdp3", "strength": 0.4 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "眼睛位于画面上三分之一处，保留额头空间",
+    "lightingTip": "环形灯或柔光箱正面补光，避免单侧阴影",
+    "avoidTips": ["柔光过强", "色温偏暖", "低锐度"]
+  },
+  {
+    "id": "POR-010",
+    "name": "运动肖像",
+    "category": "portrait",
+    "intentKeywords": ["运动", "肌肉", "汗水", "力量", "sports", "athlete", "action"],
+    "equivalentEquipment": {
+      "camera": "Nikon Z9",
+      "lens": "NIKKOR Z 85mm f/1.2 S",
+      "focalLength": "85mm",
+      "aperture": "f/1.4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "400",
+      "shutter": "1/500",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 10,
+      "contrast": 15,
+      "colorTemp": 0,
+      "sharpness": 20,
+      "vignette": 0,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 15
+    },
+    "lutRecommendation": { "id": "cc_classic", "strength": 0.5 },
+    "arGuideLine": "DIAGONAL",
+    "compositionTip": "动态线条构图，利用肌肉线条引导视线",
+    "lightingTip": "侧光勾勒肌肉轮廓，高光在关节凸起处",
+    "avoidTips": ["慢快门", "低锐度", "柔光"]
+  }
+]

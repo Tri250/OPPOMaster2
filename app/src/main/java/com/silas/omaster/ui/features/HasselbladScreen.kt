@@ -79,6 +79,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -121,6 +126,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ai.recipe.RecipeMatchResult
+import com.silas.omaster.ai.recipe.PhotographyRecipe
 import com.silas.omaster.model.FilmPreset
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneCategory
@@ -196,6 +203,11 @@ fun HasselbladScreen(
     val appliedCompositionGuideId by viewModel.appliedCompositionGuideId.collectAsState()
     val appliedARGuideType by viewModel.appliedARGuideType.collectAsState()
     val isARGuideEnabled by viewModel.isARGuideEnabled.collectAsState()
+
+    // Phase 1：配方与反模式状态
+    val recipeMatchResult by viewModel.recipeMatchResult.collectAsState()
+    val avoidTips by viewModel.avoidTips.collectAsState()
+    val intentQuery by viewModel.intentQuery.collectAsState()
 
     // P2-1 修复：将哈苏构图引导线状态同步给上层（AppNavigation），
     // 用于跳转到 CameraXViewfinder 时通过 savedStateHandle 传递
@@ -508,25 +520,32 @@ fun HasselbladScreen(
         ) { currentStage: HasselbladEyeStage ->
             when (currentStage) {
                 HasselbladEyeStage.SETUP -> SetupContent(
-                recentShots = recentShots,
-                onLaunchCamera = ::launchCamera,
-                onPickFromGallery = ::onPickFromGallery,
-                onLaunchViewfinder = onLaunchViewfinder,
-                onRecentShotClick = { uri ->
-                    scope.launch {
-                        val bitmap = withContext(Dispatchers.IO) {
-                            loadBitmapFromUri(context, uri)
-                        }
-                        if (bitmap != null) {
-                            viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                    recentShots = recentShots,
+                    intentQuery = intentQuery,
+                    onIntentQueryChange = { viewModel.setIntentQuery(it) },
+                    onSearchRecipes = { viewModel.searchRecipesByIntent(it) },
+                    onApplyRecipe = { match ->
+                        viewModel.applyRecipe(match)
+                        Toast.makeText(context, "已选择配方：${match.recipe.name}", Toast.LENGTH_SHORT).show()
+                    },
+                    onLaunchCamera = ::launchCamera,
+                    onPickFromGallery = ::onPickFromGallery,
+                    onLaunchViewfinder = onLaunchViewfinder,
+                    onRecentShotClick = { uri ->
+                        scope.launch {
+                            val bitmap = withContext(Dispatchers.IO) {
+                                loadBitmapFromUri(context, uri)
+                            }
+                            if (bitmap != null) {
+                                viewModel.startAnalysis(bitmap, inferenceEngine, allColorModes)
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
-                }
-            )
+                )
 
                 HasselbladEyeStage.ANALYZING -> AnalyzingContent(
                     apertureState = apertureState,
@@ -550,6 +569,8 @@ fun HasselbladScreen(
                     thumbnailPreview = thumbnailPreview,
                     result = analysisResult,
                     appliedGuideId = appliedCompositionGuideId,
+                    recipeMatchResult = recipeMatchResult,
+                    avoidTips = avoidTips,
                     onSceneModeSelected = ::onSceneModeSelected,
                     onColorModeSelected = ::onColorModeSelected,
                     onParamChanged = ::onParamChanged,
@@ -652,7 +673,12 @@ fun HasselbladScreen(
                         viewModel.clear()
                     },
                     onRetake = ::onRetake,
-                    onBack = onBack
+                    onBack = onBack,
+                    onSubmitFeedback = { rating, tags, comment, screenshot ->
+                        viewModel.submitFeedback(rating, tags, comment, screenshot)
+                    },
+                    uploadStatus = feedbackUploadStatus,
+                    pendingCount = feedbackPendingCount
                 )
             }
         }
@@ -831,6 +857,10 @@ private fun GlassCard(
 @Composable
 private fun SetupContent(
     recentShots: List<Uri>,
+    intentQuery: String,
+    onIntentQueryChange: (String) -> Unit,
+    onSearchRecipes: (String) -> List<RecipeMatchResult>,
+    onApplyRecipe: (RecipeMatchResult) -> Unit,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
     onLaunchViewfinder: () -> Unit,
@@ -842,6 +872,16 @@ private fun SetupContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { HeroCard() }
+
+        // Phase 1：意图驱动配方选择面板
+        item {
+            IntentRecipePanel(
+                intentQuery = intentQuery,
+                onIntentQueryChange = onIntentQueryChange,
+                onSearchRecipes = onSearchRecipes,
+                onApplyRecipe = onApplyRecipe
+            )
+        }
 
         item {
             ShutterCard(
@@ -873,6 +913,204 @@ private fun SetupContent(
         }
 
         item { Spacer(modifier = Modifier.height(32.dp)) }
+    }
+}
+
+// ---------------- 意图选择面板 ----------------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IntentRecipePanel(
+    intentQuery: String,
+    onIntentQueryChange: (String) -> Unit,
+    onSearchRecipes: (String) -> List<RecipeMatchResult>,
+    onApplyRecipe: (RecipeMatchResult) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    var searchResults by remember { mutableStateOf<List<RecipeMatchResult>>(emptyList()) }
+    var hasSearched by remember { mutableStateOf(false) }
+
+    // 6 大分类快速选择
+    val categories = listOf(
+        "人像" to "portrait",
+        "环境" to "environment",
+        "电影感" to "cinematic",
+        "特殊光学" to "special_optic",
+        "产品" to "product",
+        "通用" to "general"
+    )
+
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "拍摄意图",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "描述你的拍摄意图，获取大师配方推荐",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 自然语言输入框
+            OutlinedTextField(
+                value = intentQuery,
+                onValueChange = {
+                    onIntentQueryChange(it)
+                    if (it.isBlank()) {
+                        searchResults = emptyList()
+                        hasSearched = false
+                    }
+                },
+                placeholder = {
+                    Text("例如：逆光人像、城市夜景、胶片电影感...", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    searchResults = onSearchRecipes(intentQuery)
+                    hasSearched = true
+                }),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    focusedIndicatorColor = HasselbladOrange,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 分类快捷 Chips
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(categories) { (label, catId) ->
+                    FilterChip(
+                        selected = intentQuery.contains(label),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val newQuery = label
+                            onIntentQueryChange(newQuery)
+                            searchResults = onSearchRecipes(newQuery)
+                            hasSearched = true
+                        },
+                        label = { Text(label, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = HasselbladOrange.copy(alpha = 0.2f),
+                            selectedLabelColor = HasselbladOrange
+                        )
+                    )
+                }
+            }
+
+            // 搜索结果展示
+            if (hasSearched && searchResults.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "推荐配方",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                searchResults.forEach { match ->
+                    RecipeMatchRow(match = match, onClick = { onApplyRecipe(match) })
+                    if (match != searchResults.last()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            } else if (hasSearched) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "未找到匹配配方，分析时将自动推荐",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipeMatchRow(match: RecipeMatchResult, onClick: () -> Unit) {
+    val recipe = match.recipe
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        ),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(HasselbladOrange.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (recipe.category) {
+                        "portrait" -> "\uD83D\uDC64"
+                        "environment" -> "\uD83C\uDFD9"
+                        "cinematic" -> "\uD83C\uDFAC"
+                        "special_optic" -> "\uD83D\uDD2E"
+                        "product" -> "\uD83D\uDDBC"
+                        else -> "\uD83D\uDCF8"
+                    },
+                    fontSize = 18.sp
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = recipe.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "${recipe.equivalentEquipment.camera} · ${recipe.equivalentEquipment.lens}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = HasselbladOrange.copy(alpha = 0.12f)
+            ) {
+                Text(
+                    text = "${match.matchScore}分",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = HasselbladOrange,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
     }
 }
 
@@ -1746,6 +1984,8 @@ private fun ResultsContent(
     thumbnailPreview: Bitmap?,
     result: AnalysisResult?,
     appliedGuideId: String?,
+    recipeMatchResult: RecipeMatchResult?,
+    avoidTips: List<String>,
     onSceneModeSelected: (SceneMode) -> Unit,
     onColorModeSelected: (ColorMode) -> Unit,
     onParamChanged: (String, Int) -> Unit,
@@ -1806,6 +2046,23 @@ private fun ResultsContent(
                     onGuideClick = onGuideClick,
                     onClearComposition = onClearComposition
                 )
+            }
+
+            // Phase 1：大师器材推荐卡（配方匹配结果）
+            if (recipeMatchResult != null) {
+                item {
+                    SectionTitle(title = "大师器材推荐")
+                }
+                item {
+                    EquipmentRecommendationCard(recipe = recipeMatchResult.recipe)
+                }
+            }
+
+            // Phase 1：反模式提示条
+            if (avoidTips.isNotEmpty()) {
+                item {
+                    AvoidTipsCard(tips = avoidTips)
+                }
             }
 
             item {
@@ -2287,6 +2544,136 @@ private fun SubSceneModesPanel(
     }
 }
 
+// ---------------- 器材推荐卡 ----------------
+
+@Composable
+private fun EquipmentRecommendationCard(recipe: PhotographyRecipe) {
+    val equip = recipe.equivalentEquipment
+    val guide = recipe.phoneShootingGuide
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = recipe.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+            // 等效器材
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                EquipmentItem(label = "相机", value = equip.camera)
+                EquipmentItem(label = "镜头", value = equip.lens)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                EquipmentItem(label = "焦段", value = equip.focalLength)
+                EquipmentItem(label = "光圈", value = equip.aperture)
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+            // 手机拍摄指南
+            Text(
+                text = "OPPO 拍摄建议",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = HasselbladOrange
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                PhoneGuideItem(label = "变焦", value = "${guide.zoomRatio}x")
+                PhoneGuideItem(label = "ISO", value = guide.iso)
+                PhoneGuideItem(label = "快门", value = guide.shutter)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                PhoneGuideItem(label = "白平衡", value = guide.whiteBalance)
+                PhoneGuideItem(label = "曝光补偿", value = "${if (guide.exposureCompensation >= 0) "+" else ""}${guide.exposureCompensation}EV")
+            }
+        }
+    }
+}
+
+@Composable
+private fun EquipmentItem(label: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+        )
+    }
+}
+
+@Composable
+private fun PhoneGuideItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(4.dp)) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+        )
+    }
+}
+
+// ---------------- 反模式提示条 ----------------
+
+@Composable
+private fun AvoidTipsCard(tips: List<String>) {
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = null,
+                    tint = Color(0xFFE57373),
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "拍摄避坑指南",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFE57373)
+                )
+            }
+            tips.forEach { tip ->
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(
+                        text = "\u2022",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFE57373),
+                        modifier = Modifier.padding(end = 6.dp, top = 1.dp)
+                    )
+                    Text(
+                        text = tip,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ==================== PREVIEW 阶段 ====================
 
 @Composable
@@ -2758,7 +3145,10 @@ private fun DoneContent(
     onViewImage: () -> Unit,
     onEditAnother: () -> Unit,
     onRetake: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSubmitFeedback: (Int, List<String>, String, android.graphics.Bitmap?) -> Unit,
+    uploadStatus: com.silas.omaster.feedback.FeedbackManager.UploadStatus,
+    pendingCount: Int
 ) {
     Column(
         modifier = Modifier
@@ -2896,7 +3286,16 @@ private fun DoneContent(
             Text(text = "返回")
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Phase 3.1：用户反馈卡片
+        FeedbackCard(
+            onSubmit = onSubmitFeedback,
+            uploadStatus = uploadStatus,
+            pendingCount = pendingCount
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -3791,5 +4190,161 @@ private fun ARGuideOverlay(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 8.dp, start = 12.dp, end = 12.dp)
         )
+    }
+}
+
+// ==================== Phase 3.1 反馈卡片 ====================
+
+@Composable
+private fun FeedbackCard(
+    onSubmit: (Int, List<String>, String, android.graphics.Bitmap?) -> Unit,
+    uploadStatus: com.silas.omaster.feedback.FeedbackManager.UploadStatus,
+    pendingCount: Int
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var rating by remember { mutableIntStateOf(0) }
+    var selectedTags by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var comment by remember { mutableStateOf("") }
+    var isSubmitted by remember { mutableStateOf(false) }
+
+    val haptic = LocalHapticFeedback.current
+
+    GlassCard {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (!isSubmitted) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "对结果满意吗？",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    if (pendingCount > 0) {
+                        Surface(shape = RoundedCornerShape(8.dp), color = HasselbladOrange.copy(alpha = 0.15f)) {
+                            Text(
+                                text = "$pendingCount 条待上传",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HasselbladOrange,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 星级评分
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    (1..5).forEach { star ->
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                rating = star
+                                isExpanded = true
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "$star 星",
+                                tint = if (star <= rating) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f)
+                            )
+                        }
+                    }
+                }
+
+                if (isExpanded) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 标签选择
+                    Text(
+                        text = "问题标签（多选）",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(com.silas.omaster.feedback.FeedbackTags.ALL.size) { index ->
+                            val tag = com.silas.omaster.feedback.FeedbackTags.ALL[index]
+                            val selected = selectedTags.contains(tag)
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    selectedTags = if (selected) selectedTags - tag else selectedTags + tag
+                                },
+                                label = { Text(tag, fontSize = 12.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = HasselbladOrange.copy(alpha = 0.2f),
+                                    selectedLabelColor = HasselbladOrange
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 文本输入
+                    OutlinedTextField(
+                        value = comment,
+                        onValueChange = { comment = it },
+                        placeholder = { Text("详细描述你的体验...", fontSize = 13.sp) },
+                        minLines = 2,
+                        maxLines = 4,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            focusedIndicatorColor = HasselbladOrange,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = {
+                            onSubmit(rating, selectedTags.toList(), comment, null)
+                            isSubmitted = true
+                        },
+                        enabled = rating > 0,
+                        colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("提交反馈", fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = HasselbladOrange
+                    )
+                    Text(
+                        text = when (uploadStatus) {
+                            is com.silas.omaster.feedback.FeedbackManager.UploadStatus.Uploading -> "上传中..."
+                            is com.silas.omaster.feedback.FeedbackManager.UploadStatus.Success -> "感谢您的反馈！"
+                            else -> "反馈已保存，网络可用时自动上传"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+        }
     }
 }

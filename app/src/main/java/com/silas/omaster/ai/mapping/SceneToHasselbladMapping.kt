@@ -281,6 +281,112 @@ object SceneToHasselbladMapping {
             cyanMagenta = -5, softLight = SoftLightMode.NONE
         )
 
+        // ─── 电影感系列（Phase 1 新增）───
+        "cinematic-arri" -> HasselbladParams(
+            tone = 0, saturation = 5, contrast = 10,
+            colorTemp = 5, sharpness = -5, vignette = 5,
+            cyanMagenta = 0, softLight = SoftLightMode.SOFT
+        )
+        "cinematic-cooke" -> HasselbladParams(
+            tone = -5, saturation = 8, contrast = 5,
+            colorTemp = 15, sharpness = -10, vignette = 10,
+            cyanMagenta = 0, softLight = SoftLightMode.DREAMY
+        )
+        "cinematic-red" -> HasselbladParams(
+            tone = 0, saturation = -5, contrast = 20,
+            colorTemp = -10, sharpness = 15, vignette = 0,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "cinematic-indie-night" -> HasselbladParams(
+            tone = -15, saturation = 5, contrast = 15,
+            colorTemp = -5, sharpness = 10, vignette = 20,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "cinematic-16mm" -> HasselbladParams(
+            tone = -5, saturation = 0, contrast = 15,
+            colorTemp = 0, sharpness = 5, vignette = 10,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "cinematic-35mm" -> HasselbladParams(
+            tone = 0, saturation = 10, contrast = 8,
+            colorTemp = 0, sharpness = 0, vignette = 5,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "cinematic-polaroid" -> HasselbladParams(
+            tone = 10, saturation = -10, contrast = -5,
+            colorTemp = 10, sharpness = -15, vignette = 20,
+            cyanMagenta = 0, softLight = SoftLightMode.DREAMY
+        )
+        "cinematic-vhs" -> HasselbladParams(
+            tone = -5, saturation = 15, contrast = 10,
+            colorTemp = -10, sharpness = -10, vignette = 15,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+
+        // ─── 特殊光学系列（Phase 1 新增）───
+        "optic-helios" -> HasselbladParams(
+            tone = 0, saturation = 8, contrast = 5,
+            colorTemp = 5, sharpness = 5, vignette = 15,
+            cyanMagenta = 0, softLight = SoftLightMode.DREAMY
+        )
+        "optic-petzval" -> HasselbladParams(
+            tone = -5, saturation = 10, contrast = 10,
+            colorTemp = 0, sharpness = 0, vignette = 20,
+            cyanMagenta = 0, softLight = SoftLightMode.DREAMY
+        )
+        "optic-tele-compress" -> HasselbladParams(
+            tone = 0, saturation = 5, contrast = 15,
+            colorTemp = 0, sharpness = 20, vignette = 0,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "optic-tilt-shift" -> HasselbladParams(
+            tone = 5, saturation = 10, contrast = 10,
+            colorTemp = 0, sharpness = 25, vignette = -10,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "optic-infrared" -> HasselbladParams(
+            tone = 10, saturation = -15, contrast = 20,
+            colorTemp = -20, sharpness = 15, vignette = 10,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "optic-extreme-macro" -> HasselbladParams(
+            tone = 0, saturation = 0, contrast = 20,
+            colorTemp = 0, sharpness = 30, vignette = -5,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "optic-star-burst" -> HasselbladParams(
+            tone = 5, saturation = 10, contrast = 15,
+            colorTemp = -10, sharpness = 8, vignette = 15,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+
+        // ─── 产品/静物细分（Phase 1 新增）───
+        "product-jewelry" -> HasselbladParams(
+            tone = 0, saturation = 5, contrast = 10,
+            colorTemp = 0, sharpness = 25, vignette = -5,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "product-food-ad" -> HasselbladParams(
+            tone = -5, saturation = 15, contrast = 8,
+            colorTemp = 10, sharpness = 20, vignette = -10,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "product-luxury" -> HasselbladParams(
+            tone = 0, saturation = 5, contrast = 12,
+            colorTemp = 0, sharpness = 18, vignette = -5,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "product-watch" -> HasselbladParams(
+            tone = 0, saturation = 0, contrast = 15,
+            colorTemp = 0, sharpness = 25, vignette = 0,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+        "product-tech" -> HasselbladParams(
+            tone = 0, saturation = -5, contrast = 15,
+            colorTemp = -10, sharpness = 20, vignette = 0,
+            cyanMagenta = 0, softLight = SoftLightMode.NONE
+        )
+
         // 默认中性参数
         else -> HasselbladParams()
     }
@@ -651,5 +757,69 @@ object SceneToHasselbladMapping {
             delta < 0 -> "建议降低 ${displayName} ${abs(delta)} 点"
             else -> "${displayName} 已达到推荐值"
         }
+    }
+
+    // ==================== 场景 → 反模式提示（Phase 1 新增）====================
+
+    /**
+     * 根据场景 ID 获取拍摄反模式提示（避免项）。
+     * 将 photodesign-skill 案例中的 "避免项" 映射为实时检测文案。
+     */
+    fun getAvoidTips(sceneId: String): List<String> = when {
+        // 人像
+        sceneId.startsWith("portrait") -> listOf(
+            "避免正午硬光（眼窝阴影深）",
+            "避免广角近距拍摄（面部畸变）",
+            "避免顶光（眼窝黑洞效应）"
+        )
+        // 风景
+        sceneId.startsWith("landscape") -> listOf(
+            "避免正午拍摄（光线太平无层次）",
+            "避免地平线倾斜",
+            "避免天空过曝（高光细节丢失）"
+        )
+        // 夜景
+        sceneId.startsWith("night") -> listOf(
+            "避免 ISO 超过 3200（噪点严重）",
+            "避免手持慢于 1/30s（画面模糊）",
+            "避免过曝高光（霓虹灯溢出）"
+        )
+        // 美食
+        sceneId.startsWith("food") -> listOf(
+            "避免正侧光（阴影死板）",
+            "避免大顶光（反光过强）",
+            "避免冷色温（降低食欲）"
+        )
+        // 城市/街拍
+        sceneId.startsWith("urban") || sceneId == "street" -> listOf(
+            "避免中心对称构图（缺乏动感）",
+            "避免柔光滤镜（削弱街头质感）",
+            "避免低对比（失去德味）"
+        )
+        // 电影感
+        sceneId.startsWith("cinematic") -> listOf(
+            "避免高锐度（破坏电影感）",
+            "避免硬光（Cooke风格偏好柔光）",
+            "避免中心构图（电影多用三分法）"
+        )
+        // 特殊光学
+        sceneId.startsWith("optic") -> listOf(
+            "避免对焦失误（特殊光学容错率低）",
+            "避免过曝（旋焦/漩涡效果依赖对比）",
+            "避免手持（微距/长焦对稳定要求极高）"
+        )
+        // 产品
+        sceneId.startsWith("product") || sceneId.startsWith("still") -> listOf(
+            "避免杂乱背景（分散注意力）",
+            "避免柔光过度（丢失材质细节）",
+            "避免色温偏暖/偏冷（产品颜色失真）"
+        )
+        // 微距
+        sceneId.startsWith("macro") -> listOf(
+            "避免风天拍摄（主体抖动）",
+            "避免手持（景深极浅易失焦）",
+            "避免最大光圈（景深过浅）"
+        )
+        else -> emptyList()
     }
 }

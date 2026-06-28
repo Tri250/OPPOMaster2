@@ -95,6 +95,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.silas.omaster.model.HasselbladParams
+import com.silas.omaster.renderer.LUTPreviewRenderer
+import com.silas.omaster.ai.antipattern.AntiPatternDetector
 import com.silas.omaster.ui.theme.HasselbladOrange
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -177,10 +179,35 @@ fun CameraXViewfinderScreen(
     // 专业模式参数
     val proParams by cameraManager.proModeParams.collectAsState()
 
+    // Phase 2.2：反模式实时检测
+    val sceneResult by cameraManager.sceneResult.collectAsState()
+    var antiPatternAlerts by remember { mutableStateOf<List<AntiPatternDetector.AntiPatternAlert>>(emptyList()) }
+    LaunchedEffect(sceneResult, currentZoom, proParams) {
+        val sr = sceneResult ?: return@LaunchedEffect
+        val alerts = AntiPatternDetector.detectImportant(
+            sceneResult = sr,
+            shootingParams = AntiPatternDetector.ShootingParams(
+                zoomRatio = currentZoom,
+                iso = proParams.iso,
+                shutterSpeedNs = proParams.shutterSpeedNs,
+                exposureCompensation = proParams.exposureCompensation ?: 0f
+            ),
+            gyroscopeStable = true, // 简化：默认稳定，后续可接入传感器
+            upperBrightnessRatio = 0f, // 简化：当前未实时计算亮度分布
+            faceRatio = sr.confidenceMap["face"] ?: 0f
+        )
+        antiPatternAlerts = alerts
+    }
+
     // 构图评分
     var showARGuide by remember { mutableStateOf(true) }
     var showARTips by remember { mutableStateOf(true) }
     var showProPanel by remember { mutableStateOf(false) }
+
+    // Phase 2.1：LUT 实时预览状态
+    var isLUTPreviewEnabled by remember { mutableStateOf(false) }
+    var lutTextureView by remember { mutableStateOf<android.view.TextureView?>(null) }
+    val lutPreviewRenderer = remember(context) { LUTPreviewRenderer(context) }
 
     // ==================== 副作用 ====================
     DisposableEffect(cameraManager) {
@@ -281,6 +308,23 @@ fun CameraXViewfinderScreen(
                             }
                         }
                     }
+                    // Phase 2.1：LUT 实时预览开关
+                    IconButton(onClick = {
+                        isLUTPreviewEnabled = !isLUTPreviewEnabled
+                        if (isLUTPreviewEnabled) {
+                            lutTextureView?.surfaceTexture?.let { st ->
+                                cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(st))
+                            }
+                        } else {
+                            cameraManager.setLUTPreviewRenderer(null, null)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (isLUTPreviewEnabled) Icons.Default.PhotoCamera else Icons.Default.PhotoCamera,
+                            contentDescription = "LUT预览",
+                            tint = if (isLUTPreviewEnabled) HasselbladOrange else Color.White
+                        )
+                    }
                     // 闪光灯
                     val flashState by cameraManager.flashModeState.collectAsState()
                     IconButton(onClick = { cameraManager.toggleFlash() }) {
@@ -320,15 +364,45 @@ fun CameraXViewfinderScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // ==================== 实时处理帧叠加 ====================
-            processedFrame?.let { frame ->
-                if (!frame.isRecycled) {
-                    androidx.compose.foundation.Image(
-                        bitmap = frame.asImageBitmap(),
-                        contentDescription = "实时处理效果",
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.fillMaxSize()
-                    )
+            // Phase 2.1：LUT 实时预览层（TextureView）
+            AndroidView(
+                factory = { ctx ->
+                    android.view.TextureView(ctx).apply {
+                        lutTextureView = this
+                        surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                                if (isLUTPreviewEnabled) {
+                                    cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(surface))
+                                }
+                            }
+                            override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+                            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                                if (isLUTPreviewEnabled) {
+                                    cameraManager.setLUTPreviewRenderer(null, null)
+                                }
+                                lutTextureView = null
+                                return true
+                            }
+                            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (isLUTPreviewEnabled) 1f else 0f)
+            )
+
+            // ==================== 实时处理帧叠加（LUT 关闭时生效）====================
+            if (!isLUTPreviewEnabled) {
+                processedFrame?.let { frame ->
+                    if (!frame.isRecycled) {
+                        androidx.compose.foundation.Image(
+                            bitmap = frame.asImageBitmap(),
+                            contentDescription = "实时处理效果",
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -359,6 +433,17 @@ fun CameraXViewfinderScreen(
                 HasselbladARGuideOverlay(
                     guideType = hasselbladGuideType,
                     modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Phase 2.2：反模式浮动提示条
+            if (antiPatternAlerts.isNotEmpty()) {
+                AntiPatternFloatingBar(
+                    alerts = antiPatternAlerts,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 60.dp)
+                        .fillMaxWidth(0.9f)
                 )
             }
 
@@ -1381,6 +1466,83 @@ private fun ShutterButton(
                     .size(52.dp)
                     .background(buttonColor, CircleShape)
             )
+        }
+    }
+}
+
+// ==================== 反模式浮动提示条 ====================
+
+@Composable
+private fun AntiPatternFloatingBar(
+    alerts: List<AntiPatternDetector.AntiPatternAlert>,
+    modifier: Modifier = Modifier
+) {
+    var currentIndex by remember { mutableIntStateOf(0) }
+    val alert = alerts.getOrNull(currentIndex) ?: return
+
+    val bgColor = when (alert.level) {
+        AntiPatternDetector.AlertLevel.RED -> Color(0xFFB71C1C).copy(alpha = 0.92f)
+        AntiPatternDetector.AlertLevel.ORANGE -> Color(0xFFE65100).copy(alpha = 0.9f)
+        AntiPatternDetector.AlertLevel.GREEN -> Color(0xFF1B5E20).copy(alpha = 0.85f)
+    }
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = when (alert.level) {
+                    AntiPatternDetector.AlertLevel.RED -> Icons.Default.Cancel
+                    AntiPatternDetector.AlertLevel.ORANGE -> Icons.Default.Settings
+                    AntiPatternDetector.AlertLevel.GREEN -> Icons.Default.CheckCircle
+                },
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = alert.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = alert.description,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
+            // 如果有修复动作，显示按钮
+            alert.fixAction?.let { action ->
+                Button(
+                    onClick = { /* TODO: 根据 actionType/actionValue 执行修复 */ },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(text = action.label, color = Color.White, fontSize = 11.sp)
+                }
+            }
+        }
+    }
+
+    // 自动轮播（多个提示时 4 秒切换）
+    if (alerts.size > 1) {
+        LaunchedEffect(currentIndex) {
+            kotlinx.coroutines.delay(4000)
+            currentIndex = (currentIndex + 1) % alerts.size
         }
     }
 }
