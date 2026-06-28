@@ -1,0 +1,298 @@
+[
+  {
+    "id": "CIN-001",
+    "name": "ARRI 叙事肖像",
+    "category": "cinematic",
+    "intentKeywords": ["电影", "叙事", "ARRI", "cinematic", "narrative", "ARRI"],
+    "equivalentEquipment": {
+      "camera": "ARRI ALEXA 35",
+      "lens": "Cooke S7/i 50mm T2.0",
+      "focalLength": "50mm",
+      "aperture": "T2.0"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "3200K",
+      "exposureCompensation": -0.3
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 5,
+      "contrast": 10,
+      "colorTemp": 5,
+      "sharpness": -5,
+      "vignette": 5,
+      "cyanMagenta": 0,
+      "softLight": "SOFT",
+      "highlights": -8,
+      "shadows": 8,
+      "clarity": 3
+    },
+    "lutRecommendation": { "id": "portra_400", "strength": 0.6 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "人物面部占画面 1/3，留出叙事空间",
+    "lightingTip": "侧光或逆光，利用环境光营造氛围",
+    "avoidTips": ["高锐度", "高饱和", "硬光"]
+  },
+  {
+    "id": "CIN-002",
+    "name": "Cooke 暖调内景",
+    "category": "cinematic",
+    "intentKeywords": ["暖调", "内景", "Cooke", "cinematic", "warm", "interior"],
+    "equivalentEquipment": {
+      "camera": "ARRI ALEXA Mini LF",
+      "lens": "Cooke S4/i 35mm T2.0",
+      "focalLength": "35mm",
+      "aperture": "T2.0"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "3200K",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 8,
+      "contrast": 5,
+      "colorTemp": 15,
+      "sharpness": -10,
+      "vignette": 10,
+      "cyanMagenta": 0,
+      "softLight": "DREAMY",
+      "highlights": -10,
+      "shadows": 5,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "warm_ccd", "strength": 0.7 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "暖调灯光营造氛围，利用前景增加层次",
+    "lightingTip": "钨丝灯或蜡烛光为主，色温偏暖",
+    "avoidTips": ["冷调", "高锐度", "硬光"]
+  },
+  {
+    "id": "CIN-003",
+    "name": "RED 科幻冷调",
+    "category": "cinematic",
+    "intentKeywords": ["科幻", "冷调", "RED", "cinematic", "sci-fi", "cold"],
+    "equivalentEquipment": {
+      "camera": "RED V-RAPTOR XL",
+      "lens": "Canon CN-E 35mm T1.5",
+      "focalLength": "35mm",
+      "aperture": "T1.5"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "5600K",
+      "exposureCompensation": -0.5
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": -5,
+      "contrast": 20,
+      "colorTemp": -10,
+      "sharpness": 15,
+      "vignette": 0,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -15,
+      "shadows": -5,
+      "clarity": 12
+    },
+    "lutRecommendation": { "id": "cool_ccd", "strength": 0.8 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "冷色调为主，几何线条强化科技感",
+    "lightingTip": "冷白光为主，局部点缀暖光增加对比",
+    "avoidTips": ["暖调", "柔光", "低对比"]
+  },
+  {
+    "id": "CIN-004",
+    "name": "独立电影夜景",
+    "category": "cinematic",
+    "intentKeywords": ["独立", "夜景", "电影", "cinematic", "indie", "night"],
+    "equivalentEquipment": {
+      "camera": "Blackmagic URSA Mini Pro",
+      "lens": "Sigma Cine 18-35mm T2.0",
+      "focalLength": "24mm",
+      "aperture": "T2.0"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.6,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "3200K",
+      "exposureCompensation": -0.7
+    },
+    "hasselbladPreset": {
+      "tone": -15,
+      "saturation": 5,
+      "contrast": 15,
+      "colorTemp": -5,
+      "sharpness": 10,
+      "vignette": 20,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -20,
+      "shadows": -10,
+      "clarity": 8
+    },
+    "lutRecommendation": { "id": "800t", "strength": 0.9 },
+    "arGuideLine": "FRAME",
+    "compositionTip": "利用环境光营造氛围，保留暗部细节",
+    "lightingTip": "环境光为主，避免人工光源过亮破坏氛围",
+    "avoidTips": ["过曝高光", "暖调", "柔光"]
+  },
+  {
+    "id": "CIN-005",
+    "name": "16mm 粗颗粒纪实",
+    "category": "cinematic",
+    "intentKeywords": ["16mm", "颗粒", "纪实", "cinematic", "grain", "documentary"],
+    "equivalentEquipment": {
+      "camera": "Bolex H16",
+      "lens": "Kern Switar 25mm f/1.4",
+      "focalLength": "25mm",
+      "aperture": "f/1.4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 0,
+      "contrast": 15,
+      "colorTemp": 0,
+      "sharpness": 5,
+      "vignette": 10,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -10,
+      "shadows": -5,
+      "clarity": 3
+    },
+    "lutRecommendation": { "id": "tx400", "strength": 0.8 },
+    "arGuideLine": "DIAGONAL",
+    "compositionTip": "自然抓拍，避免刻意构图",
+    "lightingTip": "自然光为主，避免补光破坏纪实感",
+    "avoidTips": ["高锐度", "高饱和", "柔光"]
+  },
+  {
+    "id": "CIN-006",
+    "name": "35mm 胶片剧照",
+    "category": "cinematic",
+    "intentKeywords": ["35mm", "胶片", "剧照", "cinematic", "film", "still"],
+    "equivalentEquipment": {
+      "camera": "Panavision Millennium XL2",
+      "lens": "Primo 50mm T1.9",
+      "focalLength": "50mm",
+      "aperture": "T1.9"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "3200K",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 10,
+      "contrast": 8,
+      "colorTemp": 0,
+      "sharpness": 0,
+      "vignette": 5,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -8,
+      "shadows": 5,
+      "clarity": 3
+    },
+    "lutRecommendation": { "id": "portra_400", "strength": 0.7 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "电影感构图，人物与环境的关系",
+    "lightingTip": "自然光或柔光，避免硬光",
+    "avoidTips": ["高锐度", "冷调", "硬光"]
+  },
+  {
+    "id": "CIN-007",
+    "name": "宝丽来即时影像",
+    "category": "cinematic",
+    "intentKeywords": ["宝丽来", "即时", "复古", "cinematic", "polaroid", "vintage"],
+    "equivalentEquipment": {
+      "camera": "Polaroid SX-70",
+      "lens": "Fixed 116mm f/8",
+      "focalLength": "116mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.5
+    },
+    "hasselbladPreset": {
+      "tone": 10,
+      "saturation": -10,
+      "contrast": -5,
+      "colorTemp": 10,
+      "sharpness": -15,
+      "vignette": 20,
+      "cyanMagenta": 0,
+      "softLight": "DREAMY",
+      "highlights": 5,
+      "shadows": 10,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "warm_ccd", "strength": 0.5 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "居中构图，保留大量留白",
+    "lightingTip": "自然光，避免过曝",
+    "avoidTips": ["高锐度", "高饱和", "冷调"]
+  },
+  {
+    "id": "CIN-008",
+    "name": "低保真录像感",
+    "category": "cinematic",
+    "intentKeywords": ["低保真", "录像", "VHS", "cinematic", "lo-fi", "VHS"],
+    "equivalentEquipment": {
+      "camera": "Sony Handycam",
+      "lens": "Fixed Zoom",
+      "focalLength": "35mm",
+      "aperture": "f/2.0"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "auto",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 15,
+      "contrast": 10,
+      "colorTemp": -10,
+      "sharpness": -10,
+      "vignette": 15,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "cool_ccd", "strength": 0.6 },
+    "arGuideLine": "FRAME",
+    "compositionTip": "随意构图，保留瑕疵感",
+    "lightingTip": "任何光线均可，保留噪点",
+    "avoidTips": ["高锐度", "暖调", "柔光"]
+  }
+]

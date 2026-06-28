@@ -1,5 +1,6 @@
 package com.silas.omaster.ui.features
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -11,18 +12,24 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.content.FileProvider
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
+import com.silas.omaster.ai.recipe.RecipeMatchResult
+import com.silas.omaster.ai.recipe.RecipeRepository
 import com.silas.omaster.camera.CameraApplyResult
+import com.silas.omaster.feedback.FeedbackManager
 import com.silas.omaster.camera.OPPOCameraManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
+import com.silas.omaster.renderer.GPURenderManager
+import com.silas.omaster.renderer.HasselbladParamMapper
+import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
 import com.silas.omaster.ui.components.ApertureState
@@ -44,7 +51,10 @@ import java.io.FileOutputStream
  * 管理哈苏之眼（HasselbladScreen）的完整工作流状态：
  * 工作流阶段、参数调节、AI 推荐、色彩模式、分析结果、预览生成、保存与分享。
  */
-class HasselbladEyeViewModel : ViewModel() {
+class HasselbladEyeViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val recipeRepository = RecipeRepository(application.applicationContext)
+    private val feedbackManager = FeedbackManager(application.applicationContext)
 
     /** 导出格式 - P2 HEIF支持 */
     enum class ExportFormat {
@@ -73,6 +83,20 @@ class HasselbladEyeViewModel : ViewModel() {
 
     private val _recommendedParams = MutableStateFlow<HasselbladParams?>(null)
     val recommendedParams: StateFlow<HasselbladParams?> = _recommendedParams.asStateFlow()
+
+    // ===== 配方系统状态（Phase 1 新增）=====
+    private val _recipeParams = MutableStateFlow<HasselbladParams?>(null)
+    val recipeParams: StateFlow<HasselbladParams?> = _recipeParams.asStateFlow()
+
+    private val _recipeMatchResult = MutableStateFlow<RecipeMatchResult?>(null)
+    val recipeMatchResult: StateFlow<RecipeMatchResult?> = _recipeMatchResult.asStateFlow()
+
+    private val _avoidTips = MutableStateFlow<List<String>>(emptyList())
+    val avoidTips: StateFlow<List<String>> = _avoidTips.asStateFlow()
+
+    // 用户拍摄意图（SETUP 阶段输入，分析时用于配方匹配）
+    private val _intentQuery = MutableStateFlow<String>("")
+    val intentQuery: StateFlow<String> = _intentQuery.asStateFlow()
 
     private val _isParamsLocked = MutableStateFlow(false)
     val isParamsLocked: StateFlow<Boolean> = _isParamsLocked.asStateFlow()
@@ -225,6 +249,10 @@ class HasselbladEyeViewModel : ViewModel() {
     private var previewJob: Job? = null
 
     init {
+        // 加载配方索引
+        viewModelScope.launch {
+            recipeRepository.load()
+        }
         // 参数变化 250ms 后自动触发低分辨率实时预览
         viewModelScope.launch {
             _params.debounce(250).collect {
@@ -383,6 +411,20 @@ class HasselbladEyeViewModel : ViewModel() {
                     suggestedColorMode = suggestedColorMode,
                     paramAdjustments = paramAdjustments
                 )
+
+                // Phase 1：自动配方匹配（意图 + 场景）
+                val intent = _intentQuery.value
+                val matchedRecipes = when {
+                    intent.isNotBlank() -> recipeRepository.matchByIntent(intent, limit = 1)
+                    else -> recipeRepository.findBySceneId(profile.id).take(1)
+                }
+                matchedRecipes.firstOrNull()?.let { match ->
+                    applyRecipe(match)
+                } ?: run {
+                    // 无配方匹配时，按场景加载默认反模式提示
+                    _avoidTips.value = com.silas.omaster.ai.mapping.getAvoidTips(profile.id)
+                }
+
                 _stage.value = HasselbladEyeStage.RESULTS
             } catch (e: kotlinx.coroutines.CancellationException) {
                 Log.d(TAG, "Analysis cancelled")
@@ -592,6 +634,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
     /**
      * 在 Default 调度器生成低分辨率缩略图预览。
+     * Phase 1 优化：优先走 GPU 管线（GPURenderManager），GPU 失败降级到 CPU（HasselbladColorEngine）。
      */
     fun updatePreviewAsync(source: Bitmap, modeParams: Map<String, Int>) {
         previewJob?.cancel()
@@ -599,9 +642,7 @@ class HasselbladEyeViewModel : ViewModel() {
             val thumbnail = withContext(Dispatchers.Default) {
                 val scaled = createThumbnail(source, maxDimension = 512)
                 val targetParams = mergeParams(modeParams)
-                val colorApplied = applyHasselbladColorScience(scaled, targetParams)
-                // 3D LUT 叠加在色彩引擎结果之上
-                apply3DLUTToBitmap(colorApplied)
+                renderWithGPUFallback(scaled, targetParams)
             }
             _thumbnailPreview.value = thumbnail
         }
@@ -609,6 +650,7 @@ class HasselbladEyeViewModel : ViewModel() {
 
     /**
      * 生成预览效果图，并进入 PREVIEW 阶段。
+     * Phase 1 优化：优先走 GPU 管线，GPU 失败降级到 CPU。
      * 为防止大图 OOM，source 会先采样到 [PREVIEW_MAX_DIMENSION]。
      */
     fun generateFullPreview(source: Bitmap, modeParams: Map<String, Int>) {
@@ -617,15 +659,167 @@ class HasselbladEyeViewModel : ViewModel() {
             val result = withContext(Dispatchers.Default) {
                 val targetParams = mergeParams(modeParams)
                 val scaled = createThumbnail(source, maxDimension = PREVIEW_MAX_DIMENSION)
-                val colorApplied = applyHasselbladColorScience(scaled, targetParams)
-                // 3D LUT 叠加在色彩引擎结果之上
-                apply3DLUTToBitmap(colorApplied)
+                renderWithGPUFallback(scaled, targetParams)
             }
             _previewBitmap.value = result
             // P3-8：标记当前预览是为哪个 exportFormat 生成的
             _previewBuiltForFormat.value = _exportFormat.value
             _stage.value = HasselbladEyeStage.PREVIEW
         }
+    }
+
+    /**
+     * Phase 1 核心：GPU 渲染主路径 + CPU 降级路径。
+     * 将 HasselbladParams 映射到 RenderParameters，通过 GPURenderManager 执行 GPU 着色器渲染。
+     * 失败时自动降级到 HasselbladColorEngine CPU 路径。
+     */
+    private suspend fun renderWithGPUFallback(source: Bitmap, params: HasselbladParams): Bitmap {
+        return try {
+            val renderParams = HasselbladParamMapper.map(
+                hasselbladParams = params,
+                colorModeParams = _selectedColorParams.value + _selectedSceneParams.value,
+                active3DLUTId = _active3DLUTId.value,
+                lut3DStrength = _lut3DStrength.value
+            )
+            val gpuResult = GPURenderManager.getInstance(getApplication())
+                .render(source, renderParams)
+            // 暗角在 GPU 着色器外单独处理（着色器未含 vignette）
+            applyVignetteIfNeeded(gpuResult, params.vignette)
+        } catch (e: Exception) {
+            Log.w(TAG, "GPU 渲染失败，降级到 CPU 路径", e)
+            val colorApplied = applyHasselbladColorScience(source, params)
+            apply3DLUTToBitmap(colorApplied)
+        }
+    }
+
+    /**
+     * 暗角后处理（GPU 着色器暂不支持径向暗角，单独处理）。
+     */
+    private fun applyVignetteIfNeeded(bitmap: Bitmap, vignette: Int): Bitmap {
+        if (vignette <= 0) return bitmap
+        // 复用 HasselbladColorEngine 的暗角实现（轻量操作）
+        return applyHasselbladColorEngineVignette(bitmap, vignette)
+    }
+
+    // ===== 配方系统方法（Phase 1 新增）=====
+
+    /**
+     * 应用指定配方到当前参数。
+     * 配方参数与 AI 推荐参数融合：配方权重 0.6 + AI 权重 0.4
+     */
+    fun applyRecipe(recipeMatch: RecipeMatchResult) {
+        val recipe = recipeMatch.recipe
+        _recipeMatchResult.value = recipeMatch
+        _avoidTips.value = recipe.avoidTips
+        _recipeParams.value = recipe.toHasselbladParams()
+
+        // 配方参数与 AI 推荐参数融合
+        val aiParams = _recommendedParams.value
+        if (aiParams != null) {
+            val fused = fuseParams(aiParams, recipe.toHasselbladParams(), recipeWeight = 0.6f)
+            if (!_isParamsLocked.value) {
+                _params.value = fused
+            }
+        } else {
+            if (!_isParamsLocked.value) {
+                _params.value = recipe.toHasselbladParams()
+            }
+        }
+
+        // 自动应用配方推荐的 LUT（加载数据到内存）
+        recipe.lutRecommendation?.let { lut ->
+            apply3DLUT(getApplication(), lut.id, lut.strength.toFloat())
+        }
+
+        // 自动应用配方推荐的 AR 构图线
+        try {
+            val guideType = ARGuideType.valueOf(recipe.arGuideLine)
+            _appliedARGuideType.value = guideType
+            _isARGuideEnabled.value = true
+        } catch (_: IllegalArgumentException) {
+            // 忽略不支持的构图线
+        }
+
+        Log.i(TAG, "Applied recipe: ${recipe.id} ${recipe.name}, matchScore=${recipeMatch.matchScore}")
+    }
+
+    /**
+     * 清除当前配方，恢复到 AI 推荐参数。
+     */
+    fun clearRecipe() {
+        _recipeMatchResult.value = null
+        _recipeParams.value = null
+        _avoidTips.value = emptyList()
+        _recommendedParams.value?.let {
+            if (!_isParamsLocked.value) _params.value = it
+        }
+    }
+
+    // ---------------- Phase 3.1：用户反馈闭环 ----------------
+
+    /**
+     * 提交用户反馈。
+     */
+    fun submitFeedback(
+        rating: Int,
+        tags: List<String>,
+        comment: String,
+        screenshot: android.graphics.Bitmap? = null
+    ) {
+        feedbackManager.submitFeedback(
+            rating = rating,
+            tags = tags,
+            comment = comment,
+            screenshot = screenshot,
+            sceneId = _analysisResult.value?.sceneProfile?.id,
+            recipeId = _recipeMatchResult.value?.recipe?.id,
+            params = _params.value
+        )
+    }
+
+    val feedbackPendingCount = feedbackManager.pendingCount
+    val feedbackUploadStatus = feedbackManager.uploadStatus
+
+    /**
+     * 双参数融合：基于权重混合两个 HasselbladParams。
+     */
+    private fun fuseParams(
+        aiParams: HasselbladParams,
+        recipeParams: HasselbladParams,
+        recipeWeight: Float = 0.6f
+    ): HasselbladParams {
+        val w = recipeWeight.coerceIn(0f, 1f)
+        val aw = 1f - w
+        fun blend(ai: Int, rp: Int): Int = ((ai * aw + rp * w).toInt()).coerceIn(-30, 30)
+        fun blendClarity(ai: Int, rp: Int): Int = ((ai * aw + rp * w).toInt()).coerceIn(0, 30)
+
+        return HasselbladParams(
+            tone = blend(aiParams.tone, recipeParams.tone),
+            saturation = blend(aiParams.saturation, recipeParams.saturation),
+            contrast = blend(aiParams.contrast, recipeParams.contrast),
+            colorTemp = blend(aiParams.colorTemp, recipeParams.colorTemp),
+            sharpness = blend(aiParams.sharpness, recipeParams.sharpness),
+            vignette = blend(aiParams.vignette, recipeParams.vignette),
+            cyanMagenta = blend(aiParams.cyanMagenta, recipeParams.cyanMagenta),
+            softLight = if (w >= 0.5f) recipeParams.softLight else aiParams.softLight,
+            highlights = blend(aiParams.highlights, recipeParams.highlights),
+            shadows = blend(aiParams.shadows, recipeParams.shadows),
+            clarity = blendClarity(aiParams.clarity, recipeParams.clarity)
+        )
+    }
+
+    /**
+     * 设置用户拍摄意图查询词（SETUP 阶段使用）。
+     */
+    fun setIntentQuery(query: String) {
+        _intentQuery.value = query.trim()
+    }
+
+    /**
+     * 根据意图关键词搜索配方（SETUP 阶段实时搜索）。
+     */
+    fun searchRecipesByIntent(query: String): List<RecipeMatchResult> {
+        return recipeRepository.matchByIntent(query, limit = 5)
     }
 
     /**

@@ -200,6 +200,34 @@
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkPosition { *; }
 
 # ========================================
+# Phase 1 新增模块 ProGuard 规则
+# ========================================
+# 摄影配方数据模型：Gson 反序列化需要保留无参构造函数和字段
+-keepclassmembers class com.silas.omaster.ai.recipe.** {
+    <init>(...);
+    <fields>;
+}
+-keep class com.silas.omaster.ai.recipe.EquivalentEquipment { *; }
+-keep class com.silas.omaster.ai.recipe.PhoneShootingGuide { *; }
+-keep class com.silas.omaster.ai.recipe.HasselbladPresetJson { *; }
+-keep class com.silas.omaster.ai.recipe.LUTRecommendation { *; }
+-keep class com.silas.omaster.ai.recipe.PhotographyRecipe { *; }
+
+# 用户反馈数据模型：kotlinx.serialization
+-keep class com.silas.omaster.feedback.**$$serializer { *; }
+-keepclassmembers class com.silas.omaster.feedback.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.silas.omaster.feedback.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep class com.silas.omaster.feedback.FeedbackEntry { *; }
+-keep class com.silas.omaster.feedback.DeviceInfo { *; }
+
+# 反模式检测器：其 AlertLevel 枚举按名称使用
+-keepclassmembers enum com.silas.omaster.ai.antipattern.AntiPatternDetector$AlertLevel { *; }
+
+# ========================================
 # 优化配置（修复 P2-12: 降低激进程度，避免 NPE 风险）
 # ========================================
 # 优化轮次降低，减少内联和重排导致的运行时问题

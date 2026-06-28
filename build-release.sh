@@ -18,6 +18,21 @@ echo "======================================"
 echo "OMaster Android Release 构建"
 echo "======================================"
 
+# 检查 Android SDK
+if [ -z "$ANDROID_HOME" ]; then
+    echo "⚠️ ANDROID_HOME 未设置，尝试使用默认路径 /root/android-sdk"
+    export ANDROID_HOME="/root/android-sdk"
+    export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+fi
+
+if [ ! -d "$ANDROID_HOME" ]; then
+    echo "❌ Android SDK 未找到: $ANDROID_HOME"
+    echo "请先运行 install-android-sdk.sh 安装 SDK"
+    exit 1
+fi
+
+echo "✅ ANDROID_HOME: $ANDROID_HOME"
+
 # 检查环境
 echo "检查Gradle环境..."
 gradle --version

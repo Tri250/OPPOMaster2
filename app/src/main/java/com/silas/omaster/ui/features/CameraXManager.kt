@@ -28,6 +28,7 @@ import com.silas.omaster.ai.scene.SceneRecognitionManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.HistogramData
 import com.silas.omaster.renderer.GPURenderManager
+import com.silas.omaster.renderer.LUTPreviewRenderer
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.renderer.RenderQuality
 import java.nio.ByteBuffer
@@ -161,6 +162,12 @@ class CameraXManager(
     @Volatile
     private var lutEnabled: Boolean = false
 
+    // LUT 实时预览渲染器（Phase 2.1）
+    @Volatile
+    private var lutPreviewRenderer: LUTPreviewRenderer? = null
+    private var lutInputSurfaceTexture: android.graphics.SurfaceTexture? = null
+    private var lutInputSurface: android.view.Surface? = null
+
     // 保存的 PreviewView，用于生命周期恢复
     private var savedPreviewView: PreviewView? = null
 
@@ -281,7 +288,21 @@ class CameraXManager(
         preview = Preview.Builder()
             .setTargetResolution(Size(1920, 1080))
             .build()
-            .also { it.setSurfaceProvider(previewView.surfaceProvider) }
+            .also { pv ->
+                val lutRenderer = lutPreviewRenderer
+                if (lutRenderer != null && lutInputSurface != null) {
+                    // Phase 2.1：LUT 实时预览路径
+                    // 将相机预览输出到 LUTPreviewRenderer 的输入 Surface
+                    pv.setSurfaceProvider { request ->
+                        val surface = lutInputSurface!!
+                        request.provideSurface(surface, ContextCompat.getMainExecutor(context)) { result ->
+                            Log.d(TAG, "LUT preview surface result: ${result.resultCode}")
+                        }
+                    }
+                } else {
+                    pv.setSurfaceProvider(previewView.surfaceProvider)
+                }
+            }
 
         // 构建 ImageCapture
         imageCapture = ImageCapture.Builder()
@@ -316,6 +337,40 @@ class CameraXManager(
             Log.e(TAG, "绑定相机失败: ${e.message}", e)
             _isCameraReady.value = false
             proModeManager.bindCamera(null)
+        }
+    }
+
+    /**
+     * Phase 2.1：设置 LUT 实时预览渲染器。
+     * 传入非 null 的 renderer 和 outputSurface 时，相机会重新绑定到 LUT 预览路径。
+     * UI 层应在 TextureView/SurfaceView 可用后调用本方法。
+     */
+    fun setLUTPreviewRenderer(renderer: LUTPreviewRenderer?, outputSurface: android.view.Surface?) {
+        // 清理旧资源
+        lutInputSurfaceTexture?.release()
+        lutInputSurfaceTexture = null
+        lutInputSurface?.release()
+        lutInputSurface = null
+        lutPreviewRenderer?.release()
+
+        lutPreviewRenderer = renderer
+
+        if (renderer != null && outputSurface != null) {
+            renderer.init(outputSurface)
+            val textureId = renderer.getCameraTextureId()
+            val st = android.graphics.SurfaceTexture(textureId)
+            lutInputSurfaceTexture = st
+            lutInputSurface = android.view.Surface(st)
+
+            st.setOnFrameAvailableListener {
+                renderer.drawFrame()
+            }
+
+            // 重新绑定相机以切换预览路径
+            savedPreviewView?.let { startCamera(it) }
+        } else {
+            // 关闭 LUT 预览，恢复 PreviewView 路径
+            savedPreviewView?.let { startCamera(it) }
         }
     }
 
@@ -1347,6 +1402,12 @@ class CameraXManager(
         lightPaintingManager.release()
         proModeManager.release()
         specializedModeManager.release()
+        lutPreviewRenderer?.release()
+        lutPreviewRenderer = null
+        lutInputSurfaceTexture?.release()
+        lutInputSurfaceTexture = null
+        lutInputSurface?.release()
+        lutInputSurface = null
         if (!cameraExecutor.isShutdown) {
             cameraExecutor.shutdown()
         }
