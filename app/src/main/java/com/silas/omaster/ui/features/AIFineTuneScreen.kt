@@ -94,8 +94,9 @@ fun AIFineTuneScreen(
 ) {
     val context = LocalContext.current
     val aiManager = remember { AIFineTuneManager.getInstance(context) }
+    val recipeManager = remember { NonDestructiveRecipeManager.getInstance(context) }
     val viewModel: AIFineTuneViewModel = viewModel(
-        factory = AIFineTuneViewModelFactory(aiManager)
+        factory = AIFineTuneViewModelFactory(aiManager, recipeManager)
     )
 
     val haptic = LocalHapticFeedback.current
@@ -125,6 +126,11 @@ fun AIFineTuneScreen(
     val curvePoints by viewModel.curvePoints.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
+
+    // P0-1: 非破坏性配方恢复状态
+    val hasPendingRecipe by viewModel.hasPendingRecipe.collectAsState()
+    val pendingRecipeLabel by viewModel.pendingRecipeLabel.collectAsState()
+    val recipeSaved by viewModel.recipeSaved.collectAsState()
 
     // 初始化传入的 bitmap
     LaunchedEffect(bitmap) {
@@ -227,6 +233,26 @@ fun AIFineTuneScreen(
             viewModel.clearSuccess()
         }
     }
+    LaunchedEffect(recipeSaved) {
+        if (recipeSaved) {
+            Toast.makeText(context, "配方已保存", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // P0-1: 配方恢复对话框
+    if (hasPendingRecipe) {
+        RecipeRestoreDialog(
+            recipeLabel = pendingRecipeLabel ?: "上次编辑",
+            onRestore = {
+                scope.launch {
+                    val hash = viewModel.activeRecipes.value.keys.firstOrNull() ?: return@launch
+                    val recipe = recipeManager.loadLatestRecipe(hash)
+                    recipe?.let { viewModel.applyRecipe(context, it) }
+                }
+            },
+            onDismiss = { viewModel.dismissPendingRecipe() }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -245,6 +271,10 @@ fun AIFineTuneScreen(
                     }
                 },
                 actions = {
+                    // P0-1: 保存配方按钮
+                    IconButton(onClick = { viewModel.saveCurrentRecipe("AI微调") }) {
+                        Icon(Icons.Default.Save, contentDescription = "保存配方", tint = HasselbladOrange)
+                    }
                     IconButton(onClick = { viewModel.undo() }, enabled = canUndo) {
                         Icon(Icons.Default.Undo, contentDescription = "撤销", tint = if (canUndo) HasselbladOrange else Color.Gray)
                     }
@@ -272,8 +302,8 @@ fun AIFineTuneScreen(
                 onAI = { viewModel.performAIInference(sourceBitmap) },
                 onExport = {
                     scope.launch {
-                        val success = viewModel.exportImage(context)
-                        Toast.makeText(context, if (success) "已保存到相册" else "保存失败", Toast.LENGTH_SHORT).show()
+                        // P0-1: 使用非破坏性渲染导出
+                        viewModel.exportRenderedImage(context)
                     }
                 },
                 onApply = { onApply(viewModel.getFinalParams()) },

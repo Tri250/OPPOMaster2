@@ -38,6 +38,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestionResult
+import com.silas.omaster.data.local.EditRecipe
+import com.silas.omaster.data.local.HSLRecipeValue
+import com.silas.omaster.data.local.NonDestructiveRecipeManager
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
@@ -112,7 +115,8 @@ data class SmartOptimization(
  * 统一管理：图片、参数、HSL、曲线、智能优化、历史记录、导出
  */
 class AIFineTuneViewModel(
-    private val aiManager: AIFineTuneManager
+    private val aiManager: AIFineTuneManager,
+    private val recipeManager: NonDestructiveRecipeManager
 ) : ViewModel() {
 
     // ==================== UI 状态 ====================
@@ -133,6 +137,15 @@ class AIFineTuneViewModel(
 
     private val _showSuccess = MutableStateFlow(false)
     val showSuccess: StateFlow<Boolean> = _showSuccess.asStateFlow()
+
+    // ==================== 非破坏性配方状态 ====================
+    private var currentImageHash: String = ""
+    private val _hasPendingRecipe = MutableStateFlow(false)
+    val hasPendingRecipe: StateFlow<Boolean> = _hasPendingRecipe.asStateFlow()
+    private val _pendingRecipeLabel = MutableStateFlow<String?>(null)
+    val pendingRecipeLabel: StateFlow<String?> = _pendingRecipeLabel.asStateFlow()
+    private val _recipeSaved = MutableStateFlow(false)
+    val recipeSaved: StateFlow<Boolean> = _recipeSaved.asStateFlow()
 
     // ==================== 图片状态 ====================
     private val _selectedImageUri = MutableStateFlow<Uri?>(null)
@@ -229,6 +242,8 @@ class AIFineTuneViewModel(
                     _previewBitmap.value = null
                     renderPreviewAsync(context)
                     pushHistory(force = true)
+                    // P0-1: 加载图片后检查是否存在历史配方
+                    checkPendingRecipe(uri, bitmap)
                 } else {
                     _imageLoadError.value = "无法解码图片"
                 }
@@ -253,6 +268,8 @@ class AIFineTuneViewModel(
             _selectedImageUri.value = null
             renderPreviewAsync(context)
             pushHistory(force = true)
+            // P0-1: 检查是否有历史配方
+            checkPendingRecipe(null, bitmap)
         }
     }
 
@@ -778,8 +795,155 @@ class AIFineTuneViewModel(
         }
     }
 
+    // ==================== 非破坏性配方操作 ====================
+
+    /**
+     * 检查是否存在待恢复的历史配方（进入编辑器时调用）
+     */
+    private fun checkPendingRecipe(uri: Uri?, bitmap: Bitmap) {
+        viewModelScope.launch {
+            val hash = uri?.let { recipeManager.computeImageHash(it) }
+                ?: recipeManager.computeBitmapHash(bitmap)
+            currentImageHash = hash
+            val latest = recipeManager.loadLatestRecipe(hash)
+            if (latest != null && latest.hasAdjustments()) {
+                _hasPendingRecipe.value = true
+                _pendingRecipeLabel.value = latest.label.takeIf { it.isNotBlank() } ?: "上次编辑"
+                recipeManager.setActiveRecipe(hash, latest)
+            } else {
+                _hasPendingRecipe.value = false
+                _pendingRecipeLabel.value = null
+            }
+        }
+    }
+
+    /**
+     * 应用已有配方到当前编辑器状态
+     */
+    fun applyRecipe(context: Context, recipe: EditRecipe) {
+        viewModelScope.launch {
+            // 应用 AIFineTune 参数
+            _currentParams.value = recipe.renderParams
+            _hslValues.value = recipe.hslValues.map { rv ->
+                val color = when (rv.id) {
+                    "red" -> Color(0xFFFF0000.toInt())
+                    "orange" -> HasselbladOrange
+                    "yellow" -> WarningYellow
+                    "green" -> SuccessGreen
+                    "cyan" -> CyanAccent
+                    "blue" -> Color(0xFF0000FF.toInt())
+                    "purple" -> Color(0xFF800080.toInt())
+                    "magenta" -> Color(0xFFFF00FF.toInt())
+                    else -> Color.Gray
+                }
+                HSLValue(rv.id, rv.name, color).apply {
+                    hue = rv.hue
+                    saturation = rv.saturation
+                    luminance = rv.luminance
+                }
+            }
+            _selectedCurveType.value = recipe.curvePoints.keys.firstOrNull() ?: "rgb"
+            _curvePoints.value = recipe.curvePoints.toMutableMap()
+            _selectedStyle.value = COLOR_STYLES.find { it.id == recipe.selectedStyleId }
+            _selectedOptimizations.value = recipe.selectedOptimizations
+
+            // 应用 LUT
+            if (recipe.lutId != null) {
+                _active3DLUTId.value = recipe.lutId
+                _lut3DStrength.value = recipe.lutStrength
+            }
+
+            renderPreviewAsync(context)
+            pushHistory(force = true)
+            _hasPendingRecipe.value = false
+        }
+    }
+
+    /**
+     * 忽略待恢复配方，以原图全新开始
+     */
+    fun dismissPendingRecipe() {
+        _hasPendingRecipe.value = false
+        _pendingRecipeLabel.value = null
+    }
+
+    /**
+     * 保存当前编辑状态为配方（非破坏性）
+     * @param label 用户自定义标签，如"旅行风""V1"
+     */
+    fun saveCurrentRecipe(label: String = "") {
+        viewModelScope.launch {
+            val recipe = buildRecipeSnapshot(label)
+            recipeManager.saveRecipe(currentImageHash, _selectedImageUri.value, recipe)
+            _recipeSaved.value = true
+            // 短暂显示保存成功提示后重置
+            kotlinx.coroutines.delay(2000)
+            _recipeSaved.value = false
+        }
+    }
+
+    /**
+     * 自动保存当前状态（静默，用于退出保护）
+     */
+    fun autoSaveRecipe() {
+        viewModelScope.launch {
+            if (currentImageHash.isBlank()) return@launch
+            val recipe = buildRecipeSnapshot("自动保存")
+            recipeManager.autoSave(currentImageHash, _selectedImageUri.value, recipe)
+        }
+    }
+
+    /**
+     * 根据原图 + 当前配方导出最终图片到相册
+     * 这是非破坏性工作流的"渲染导出"步骤
+     */
+    fun exportRenderedImage(context: Context, quality: RenderQuality = RenderQuality.HIGH) {
+        viewModelScope.launch {
+            _isExporting.value = true
+            val source = _sourceBitmap.value ?: return@launch
+            try {
+                // 先保存当前配方
+                autoSaveRecipe()
+                // 使用 GPU 管线渲染最终输出
+                val effective = buildEffectiveParams()
+                val result = withContext(Dispatchers.Default) {
+                    renderWithGPU(source, effective, quality)
+                }
+                val success = saveBitmapToGallery(context, result)
+                if (success) {
+                    _showSuccess.value = true
+                }
+            } catch (e: Exception) {
+                Log.e("AIFineTuneVM", "导出失败", e)
+            } finally {
+                _isExporting.value = false
+            }
+        }
+    }
+
+    /**
+     * 构建当前状态的配方快照
+     */
+    private fun buildRecipeSnapshot(label: String = ""): EditRecipe {
+        return EditRecipe(
+            imageHash = currentImageHash,
+            label = label,
+            renderParams = _currentParams.value,
+            hslValues = _hslValues.value.map {
+                HSLRecipeValue(it.id, it.name, it.hue, it.saturation, it.luminance)
+            },
+            curvePoints = _curvePoints.value.toMap(),
+            selectedStyleId = _selectedStyle.value?.id,
+            selectedOptimizations = _selectedOptimizations.value.toSet(),
+            lutId = _active3DLUTId.value,
+            lutStrength = _lut3DStrength.value
+        )
+    }
+
     override fun onCleared() {
         super.onCleared()
+        // 退出时自动保存
+        autoSaveRecipe()
         inferenceJob?.cancel()
         _sourceBitmap.value?.recycle()
         _previewBitmap.value?.recycle()
@@ -866,12 +1030,13 @@ class AIFineTuneViewModel(
  * ViewModel 工厂
  */
 class AIFineTuneViewModelFactory(
-    private val aiManager: AIFineTuneManager
+    private val aiManager: AIFineTuneManager,
+    private val recipeManager: NonDestructiveRecipeManager
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AIFineTuneViewModel::class.java)) {
-            return AIFineTuneViewModel(aiManager) as T
+            return AIFineTuneViewModel(aiManager, recipeManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

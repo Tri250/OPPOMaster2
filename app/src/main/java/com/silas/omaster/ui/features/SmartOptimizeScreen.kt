@@ -74,8 +74,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -111,6 +115,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.data.local.EditRecipe
+import com.silas.omaster.data.local.NonDestructiveRecipeManager
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -149,6 +155,7 @@ fun SmartOptimizeScreen(
     val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
     val pixelFruitEngine = remember { PixelFruitEngine() }
     val histogramAnalyzer = remember { HistogramAnalyzer() }
+    val recipeManager = remember(context) { NonDestructiveRecipeManager.getInstance(context) }
 
     // 图片状态
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -185,6 +192,14 @@ fun SmartOptimizeScreen(
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
+    // P0-1: 非破坏性配方状态
+    var currentImageHash by remember { mutableStateOf("") }
+    var hasPendingRecipe by remember { mutableStateOf(false) }
+    var pendingRecipeLabel by remember { mutableStateOf<String?>(null) }
+    var showRecipeRestoreDialog by remember { mutableStateOf(false) }
+    var showExportOptions by remember { mutableStateOf(false) }
+    var pendingRecipeToApply by remember { mutableStateOf<EditRecipe?>(null) }
+
     // 图片选择器
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -201,6 +216,18 @@ fun SmartOptimizeScreen(
                     analysisResult = null
                     // 直方图分析
                     histogram = histogramAnalyzer.analyze(loadedBitmap)
+                    // P0-1: 检查历史配方
+                    scope.launch {
+                        val hash = recipeManager.computeImageHash(it)
+                        currentImageHash = hash
+                        val latest = recipeManager.loadLatestRecipe(hash)
+                        if (latest != null && latest.hasAdjustments()) {
+                            hasPendingRecipe = true
+                            pendingRecipeLabel = latest.label.takeIf { l -> l.isNotBlank() } ?: "上次编辑"
+                            pendingRecipeToApply = latest
+                            showRecipeRestoreDialog = true
+                        }
+                    }
                     // 自动AI场景识别
                     isAnalyzing = true
                     analyzeImage(
@@ -227,6 +254,66 @@ fun SmartOptimizeScreen(
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             saveError = null
         }
+    }
+
+    // P0-1: 配方恢复对话框
+    if (showRecipeRestoreDialog && pendingRecipeToApply != null) {
+        RecipeRestoreDialog(
+            recipeLabel = pendingRecipeLabel ?: "上次编辑",
+            onRestore = {
+                pendingRecipeToApply?.let { recipe ->
+                    // 恢复配方参数
+                    params = recipe.pixelFruitParams
+                    scope.launch {
+                        val source = originalBitmap ?: return@launch
+                        isOptimizing = true
+                        try {
+                            val result = pixelFruitEngine.process(source, params)
+                            optimizedBitmap = result
+                            previewMode = "after"
+                            histogram = histogramAnalyzer.analyze(result)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "配方恢复失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isOptimizing = false
+                        }
+                    }
+                }
+                showRecipeRestoreDialog = false
+            },
+            onDismiss = {
+                showRecipeRestoreDialog = false
+                hasPendingRecipe = false
+            }
+        )
+    }
+
+    // P0-1: 导出选项面板
+    if (showExportOptions && (optimizedBitmap != null || originalBitmap != null)) {
+        ExportOptionsPanel(
+            onDismiss = { showExportOptions = false },
+            onExport = { qualityLevel ->
+                showExportOptions = false
+                scope.launch {
+                    isSaving = true
+                    try {
+                        // 1. 先保存配方
+                        val recipe = EditRecipe(
+                            imageHash = currentImageHash,
+                            pixelFruitParams = params,
+                            label = "PixelFruit 导出"
+                        )
+                        recipeManager.saveRecipe(currentImageHash, selectedImageUri, recipe)
+                        // 2. 再导出图片
+                        val bitmap = optimizedBitmap ?: originalBitmap ?: return@launch
+                        val uri = withContext(Dispatchers.IO) { saveBitmapToGallery(context, bitmap, "PixelFruit") }
+                        if (uri != null) Toast.makeText(context, "已导出到相册", Toast.LENGTH_SHORT).show()
+                        else saveError = "导出失败"
+                    } catch (e: Exception) { saveError = "导出失败: ${e.message}" }
+                    finally { isSaving = false }
+                }
+            }
+        )
     }
 
     // 执行优化工作流（对齐 PixelFruit applyAdjustmentsToCachedData 顺序）
@@ -494,28 +581,43 @@ fun SmartOptimizeScreen(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("重置")
             }
+            // P0-1: 保存配方按钮（非破坏性）
             Button(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val bitmap = optimizedBitmap ?: originalBitmap ?: return@Button
                     scope.launch {
-                        isSaving = true
-                        try {
-                            val uri = withContext(Dispatchers.IO) { saveBitmapToGallery(context, bitmap, "PixelFruit") }
-                            if (uri != null) Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show()
-                            else saveError = "保存失败"
-                        } catch (e: Exception) { saveError = "保存失败" }
-                        finally { isSaving = false }
+                        val recipe = EditRecipe(
+                            imageHash = currentImageHash,
+                            pixelFruitParams = params,
+                            label = if (analysisResult != null) "${analysisResult!!.mainScene} 优化" else "手动调整"
+                        )
+                        recipeManager.saveRecipe(currentImageHash, selectedImageUri, recipe)
+                        Toast.makeText(context, "配方已保存", Toast.LENGTH_SHORT).show()
                     }
                 },
-                enabled = !isSaving && (optimizedBitmap != null || originalBitmap != null),
+                enabled = !isSaving && originalBitmap != null,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
             ) {
                 Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isSaving) "保存中..." else "保存")
+                Text("存配方")
+            }
+            // P0-1: 导出副本按钮
+            OutlinedButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showExportOptions = true
+                },
+                enabled = !isSaving && (optimizedBitmap != null || originalBitmap != null),
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
+            ) {
+                Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("导出")
             }
             Button(
                 onClick = {
@@ -1006,6 +1108,131 @@ private fun BeforeAfterCompareView(beforeBitmap: Bitmap, afterBitmap: Bitmap, mo
                 Text("原图", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
                 Text("优化后", color = HasselbladOrange, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
             }
+        }
+    }
+}
+
+// ==================== P0-1: 非破坏性配方 UI 组件 ====================
+
+/**
+ * 配方恢复对话框 — 进入编辑器时若检测到历史配方则弹出
+ *
+ * 产品经理交互审查：
+ * - 用户心智：修图中途退出/崩溃后重进，应当温柔提醒"是否继续上次编辑"
+ * - 操作链路：弹窗 → 恢复（直接应用参数）/ 取消（原图全新开始）
+ * - 阻断性：非阻断 Modal，明确主次按钮（恢复为主操作）
+ */
+@Composable
+private fun RecipeRestoreDialog(
+    recipeLabel: String,
+    onRestore: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = HasselbladOrange)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("发现历史编辑", style = MaterialTheme.typography.titleMedium)
+            }
+        },
+        text = {
+            Text(
+                "该图片存在历史编辑配方「$recipeLabel」，是否恢复继续调整？\n\n选择「恢复」将加载上次参数；选择「取消」将以原图全新开始。",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onRestore,
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("恢复编辑")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消，全新开始", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+/**
+ * 导出选项面板 — 对齐 RapidRAW 精细化导出能力
+ *
+ * 产品经理交互审查：
+ * - 用户心智：手机修图后分享/存档需要不同画质，应提供精细化控制
+ * - 操作链路：点击「导出」→ 底部 Sheet 选择画质 → 确认导出 → Toast 提示完成
+ * - 默认策略：默认「高清」减少用户决策成本
+ */
+@Composable
+private fun ExportOptionsPanel(
+    onDismiss: () -> Unit,
+    onExport: (qualityLevel: String) -> Unit
+) {
+    var selectedQuality by remember { mutableStateOf("high") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("导出设置", style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("选择导出画质与尺寸", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                QualityOption("原画质", "original", "JPEG 100% 保留 EXIF", selectedQuality) { selectedQuality = it }
+                QualityOption("高清", "high", "JPEG 95% 适合存档", selectedQuality) { selectedQuality = it }
+                QualityOption("标准", "medium", "JPEG 85% 适合分享", selectedQuality) { selectedQuality = it }
+                QualityOption("快速", "low", "JPEG 75% 快速发送", selectedQuality) { selectedQuality = it }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onExport(selectedQuality) },
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("确认导出")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+private fun QualityOption(
+    label: String,
+    value: String,
+    desc: String,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect(value) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected == value,
+            onClick = { onSelect(value) },
+            colors = RadioButtonDefaults.colors(selectedColor = HasselbladOrange)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
         }
     }
 }
