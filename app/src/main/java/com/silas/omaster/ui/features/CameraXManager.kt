@@ -285,8 +285,16 @@ class CameraXManager(
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
-            cameraProvider = cameraProviderFuture.get()
-            bindCameraUseCases(previewView)
+            try {
+                cameraProvider = cameraProviderFuture.get()
+                bindCameraUseCases(previewView)
+            } catch (e: Exception) {
+                Log.e(TAG, "CameraProvider 初始化失败: ${e.message}", e)
+                _isCameraReady.value = false
+                mainHandler.post {
+                    Toast.makeText(context, "相机初始化失败，请检查权限或重启应用", Toast.LENGTH_LONG).show()
+                }
+            }
         }, ContextCompat.getMainExecutor(context))
     }
 
@@ -405,6 +413,7 @@ class CameraXManager(
      */
     private fun analyzeFrame(imageProxy: ImageProxy) {
         try {
+            if (isReleased) return
             frameSkipCounter++
             sceneScanCounter++
 
@@ -1214,7 +1223,9 @@ class CameraXManager(
                     it
                 }
             } else {
-                val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "OMaster/CameraX")
+                // Pre-Q：使用应用私有外部目录，无需 WRITE_EXTERNAL_STORAGE 权限，
+                // 扫描后同样可在系统相册中查看
+                val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "OMaster/CameraX")
                 dir.mkdirs()
                 val file = File(dir, filename)
                 FileOutputStream(file).use { out ->

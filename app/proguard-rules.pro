@@ -224,6 +224,19 @@
 -keep class com.silas.omaster.feedback.FeedbackEntry { *; }
 -keep class com.silas.omaster.feedback.DeviceInfo { *; }
 
+# ========================================
+# Gson 序列化模型（本地持久化与跨端传输）
+# ========================================
+# 以下类使用 Gson 进行本地 JSON 持久化，字段名必须保留以确保反序列化正确
+-keep class com.silas.omaster.model.HasselbladParams { *; }
+-keep class com.silas.omaster.model.MasterPreset { *; }
+-keep class com.silas.omaster.model.PresetList { *; }
+-keep class com.silas.omaster.model.PresetDescription { *; }
+-keep class com.silas.omaster.model.PresetSection { *; }
+-keep class com.silas.omaster.model.PresetItem { *; }
+-keep class com.silas.omaster.model.PresetComment { *; }
+-keep class com.silas.omaster.data.local.RecipeRecord { *; }
+
 # 反模式检测器：其 AlertLevel 枚举按名称使用
 -keepclassmembers enum com.silas.omaster.ai.antipattern.AntiPatternDetector$AlertLevel { *; }
 
