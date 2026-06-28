@@ -1,41 +1,37 @@
-// settings.gradle.kts - 国内镜像加速构建配置
-// 使用阿里云 + 腾讯云镜像，加速国内开发环境依赖下载
-// 更新时间: 2026-06-22
+// settings.gradle.kts - 直接使用官方源
+// 更新时间: 2026-06-28
 
 pluginManagement {
     repositories {
-        // 本地 Maven 仓库（CI 离线构建用，优先命中已缓存的 AGP/AndroidX 构件）
+        // 本地 Maven 仓库优先
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
-        // 阿里云 Gradle 插件镜像（Kotlin/AGP 插件优先从此解析）
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        // 阿里云 Google 镜像（AGP 等）
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        // 阿里云公共仓库
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        // Google Maven（AGP、AndroidX 等）
+        google()
+        // Gradle Plugin Portal
+        gradlePluginPortal()
+        // Maven Central
+        mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        // 阿里云 Google 镜像（AndroidX、Compose、CameraX 等）
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        // 阿里云公共仓库（Kotlin、Ktor、Coil、Gson 等）
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // 阿里云 Central 镜像
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
-        // 友盟 SDK 仓库（umeng-common、umeng-asms）
+        // 本地 Maven 仓库
+        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
+        // Google Maven
+        google()
+        // Maven Central
+        mavenCentral()
+        // 友盟 SDK 仓库
         maven {
             url = uri("https://developer.umeng.com/sdk/repo")
             content {
-                // 仅允许 umeng 相关 group，避免其他依赖误命中该仓库返回的 404 HTML
                 includeGroup("com.umeng.umsdk")
             }
         }
-        // JitPack（社区库）
+        // JitPack
         maven { url = uri("https://jitpack.io") }
-        // 本地 Maven 仓库（CI 离线构建用，置后作为兜底）
-        maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
     }
 }
 
