@@ -236,7 +236,8 @@ data class RenderParameters(
             vibrance != 0f || highlights != 0f || shadows != 0f ||
             whites != 0f || blacks != 0f || grain != 0f ||
             fade != 0f || dehaze != 0f || denoise != 0f ||
-            skinSmooth != 0f || exposure != 0f || texture != 0f
+            skinSmooth != 0f || exposure != 0f || texture != 0f ||
+            vignette != 0f
         ) return true
 
         // HSL

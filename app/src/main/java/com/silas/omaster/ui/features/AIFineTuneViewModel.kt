@@ -139,6 +139,9 @@ class AIFineTuneViewModel(
     private val _showSuccess = MutableStateFlow(false)
     val showSuccess: StateFlow<Boolean> = _showSuccess.asStateFlow()
 
+    private val _isExporting = MutableStateFlow(false)
+    val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
+
     // ==================== P0-2: AI 局部遮罩状态 ====================
     private val _activeMaskType = MutableStateFlow<AIMaskManager.MaskType?>(null)
     val activeMaskType: StateFlow<AIMaskManager.MaskType?> = _activeMaskType.asStateFlow()
@@ -165,13 +168,15 @@ class AIFineTuneViewModel(
 
     /**
      * 获取可视化历史节点列表（用于时间轴展示）
+     * 基于 ArrayDeque<RenderParameters> + historyIndex 实现
      */
     fun getHistoryNodes(): List<HistoryNode> {
-        return history.listHistory().mapIndexed { index, params ->
+        val historyList = history.toList()
+        return historyList.mapIndexed { index, params ->
             HistoryNode(
                 index = index,
                 params = params,
-                timestamp = System.currentTimeMillis() - (history.listHistory().size - index) * 1000L,
+                timestamp = System.currentTimeMillis() - (historyList.size - index) * 1000L,
                 actionLabel = inferActionLabel(params, index)
             )
         }
@@ -200,13 +205,15 @@ class AIFineTuneViewModel(
 
     /**
      * 跳转到指定历史节点
+     * 直接设置 historyIndex 并恢复参数
      */
     fun jumpToHistoryNode(context: Context, nodeIndex: Int) {
         viewModelScope.launch {
-            history.jumpTo(nodeIndex)
-            _currentParams.value = history.current() ?: return@launch
-            _canUndo.value = history.canUndo()
-            _canRedo.value = history.canRedo()
+            if (nodeIndex < 0 || nodeIndex >= history.size) return@launch
+            historyIndex = nodeIndex
+            _currentParams.value = history[nodeIndex]
+            _canUndo.value = historyIndex > 0
+            _canRedo.value = historyIndex < history.size - 1
             renderPreviewAsync(context)
             _showHistoryTimeline.value = false
         }
@@ -444,6 +451,7 @@ class AIFineTuneViewModel(
             "clarity" -> current.copy(clarity = value)
             "sharpness" -> current.copy(sharpness = value)
             "dehaze" -> current.copy(dehaze = value)
+            "vignette" -> current.copy(vignette = value)
             "denoise" -> current.copy(denoise = value)
             "grain" -> current.copy(grain = value)
             "fade" -> current.copy(fade = value)
@@ -922,9 +930,9 @@ class AIFineTuneViewModel(
                     luminance = rv.luminance
                 }
             }
-            _selectedCurveType.value = recipe.curvePoints.keys.firstOrNull() ?: "rgb"
+            _curveChannel.value = recipe.curvePoints.keys.firstOrNull() ?: "rgb"
             _curvePoints.value = recipe.curvePoints.toMutableMap()
-            _selectedStyle.value = COLOR_STYLES.find { it.id == recipe.selectedStyleId }
+            _selectedStyleId.value = recipe.selectedStyleId
             _selectedOptimizations.value = recipe.selectedOptimizations
 
             // 应用 LUT
@@ -985,12 +993,20 @@ class AIFineTuneViewModel(
                 // 先保存当前配方
                 autoSaveRecipe()
                 // 使用 GPU 管线渲染最终输出
-                val effective = buildEffectiveParams()
-                val result = withContext(Dispatchers.Default) {
-                    renderWithGPU(source, effective, quality)
+                val manager = gpuRenderManager ?: GPURenderManager.getInstance(context).also {
+                    gpuRenderManager = it
+                    gpuInitialized = it.initialize() == true
                 }
-                val success = saveBitmapToGallery(context, result)
-                if (success) {
+                val effective = buildEffectiveParams()
+                val result = withContext(Dispatchers.IO) {
+                    manager.renderSync(source, effective, quality)
+                }
+                val output = when (result) {
+                    is com.silas.omaster.renderer.RenderResult.Success -> result.outputBitmap
+                    is com.silas.omaster.renderer.RenderResult.FallbackToCPU -> result.outputBitmap
+                    else -> null
+                }
+                if (output != null && saveBitmapToGallery(context, output)) {
                     _showSuccess.value = true
                 }
             } catch (e: Exception) {
@@ -1013,7 +1029,7 @@ class AIFineTuneViewModel(
                 HSLRecipeValue(it.id, it.name, it.hue, it.saturation, it.luminance)
             },
             curvePoints = _curvePoints.value.toMap(),
-            selectedStyleId = _selectedStyle.value?.id,
+            selectedStyleId = _selectedStyleId.value,
             selectedOptimizations = _selectedOptimizations.value.toSet(),
             lutId = _active3DLUTId.value,
             lutStrength = _lut3DStrength.value
@@ -1116,12 +1132,15 @@ class AIFineTuneViewModel(
         val source = _sourceBitmap.value ?: return
         val mask = _maskBitmap.value ?: return
         try {
-            // 1. 先渲染全图调整效果
+            // 1. 先渲染全图调整效果（使用与 renderPreviewAsync 相同的 GPU 管线）
+            ensureGPUInitialized(context)
+            val renderer = gpuRenderManager ?: return
             val effective = buildEffectiveParams()
-            val fullEffect = renderWithGPU(source, effective, RenderQuality.PREVIEW)
+            val fullEffect = renderer.renderPreview(source, effective) ?: return
 
             // 2. 使用遮罩混合：mask白色区域显示调整效果，黑色区域显示原图
             val blended = blendWithMask(source, fullEffect, mask, _maskOpacity.value)
+            _previewBitmap.value?.recycle()
             _previewBitmap.value = blended
         } catch (e: Exception) {
             Log.e("AIFineTuneVM", "遮罩预览渲染失败", e)
@@ -1136,20 +1155,33 @@ class AIFineTuneViewModel(
      * @param opacity 遮罩强度 0-1
      */
     private fun blendWithMask(original: Bitmap, adjusted: Bitmap, mask: Bitmap, opacity: Float): Bitmap {
-        val result = Bitmap.createBitmap(original.width, original.height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(result)
+        val width = original.width
+        val height = original.height
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
-        // 先画原图
-        canvas.drawBitmap(original, 0f, 0f, null)
+        // 逐像素混合：mask 灰度值决定 adjusted 的权重
+        val origPixels = IntArray(width * height)
+        val adjPixels = IntArray(width * height)
+        val maskPixels = IntArray(width * height)
+        original.getPixels(origPixels, 0, width, 0, 0, width, height)
+        adjusted.getPixels(adjPixels, 0, width, 0, 0, width, height)
+        mask.getPixels(maskPixels, 0, width, 0, 0, width, height)
 
-        // 再根据遮罩绘制调整后的图
-        val paint = android.graphics.Paint().apply {
-            alpha = (255 * opacity).toInt()
-            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
+        val outPixels = IntArray(width * height)
+        for (i in outPixels.indices) {
+            val maskValue = android.graphics.Color.red(maskPixels[i]) / 255f // 灰度值 0-1
+            val weight = maskValue * opacity
+            val invWeight = 1f - weight
+
+            val r = (android.graphics.Color.red(origPixels[i]) * invWeight +
+                android.graphics.Color.red(adjPixels[i]) * weight).toInt().coerceIn(0, 255)
+            val g = (android.graphics.Color.green(origPixels[i]) * invWeight +
+                android.graphics.Color.green(adjPixels[i]) * weight).toInt().coerceIn(0, 255)
+            val b = (android.graphics.Color.blue(origPixels[i]) * invWeight +
+                android.graphics.Color.blue(adjPixels[i]) * weight).toInt().coerceIn(0, 255)
+            outPixels[i] = android.graphics.Color.argb(255, r, g, b)
         }
-        canvas.drawBitmap(adjusted, 0f, 0f, null)
-        canvas.drawBitmap(mask, 0f, 0f, paint)
-
+        result.setPixels(outPixels, 0, width, 0, 0, width, height)
         return result
     }
 

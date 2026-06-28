@@ -70,6 +70,9 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.silas.omaster.ai.AIFineTuneManager
+import com.silas.omaster.ai.AIMaskManager
+import com.silas.omaster.data.local.EditRecipeClipboard
+import com.silas.omaster.data.local.NonDestructiveRecipeManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -257,7 +260,7 @@ fun AIFineTuneScreen(
             recipeLabel = pendingRecipeLabel ?: "上次编辑",
             onRestore = {
                 scope.launch {
-                    val hash = viewModel.activeRecipes.value.keys.firstOrNull() ?: return@launch
+                    val hash = recipeManager.activeRecipes.value.keys.firstOrNull() ?: return@launch
                     val recipe = recipeManager.loadLatestRecipe(hash)
                     recipe?.let { viewModel.applyRecipe(context, it) }
                 }

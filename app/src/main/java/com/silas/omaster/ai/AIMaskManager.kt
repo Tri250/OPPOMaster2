@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
-import android.graphics.Rect
 import android.util.Log
 import androidx.core.graphics.createBitmap
 import com.google.mlkit.vision.common.InputImage
@@ -104,7 +103,8 @@ class AIMaskManager private constructor(context: Context) {
                         val maskX = (x * scaleX).toInt().coerceIn(0, maskWidth - 1)
                         val maskY = (y * scaleY).toInt().coerceIn(0, maskHeight - 1)
                         val idx = maskY * maskWidth + maskX
-                        val confidence = buffer.get(idx)
+                        // ML Kit SegmentationMask 的 buffer 是 ByteBuffer，按 float32 (4 bytes) 存储
+                        val confidence = buffer.getFloat(idx * 4)
 
                         // 置信度 > 0.5 视为人像区域
                         val isSubject = confidence > 0.5f

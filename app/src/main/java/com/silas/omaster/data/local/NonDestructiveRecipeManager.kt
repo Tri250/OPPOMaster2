@@ -38,8 +38,18 @@ class NonDestructiveRecipeManager private constructor(context: Context) {
 
     private val appContext = context.applicationContext
     private val recipesDir = File(appContext.filesDir, "recipes")
+
+    // Gson 排除策略：跳过 RenderParameters 中的运行时 GPU 纹理状态字段
+    private val runtimeFieldNames = setOf("lutTextureId", "lutSize", "lutEnabled")
+
     private val gson: Gson = GsonBuilder()
         .setPrettyPrinting()
+        .addSerializationExclusionStrategy(object : com.google.gson.ExclusionStrategy {
+            override fun shouldSkipField(field: com.google.gson.FieldAttributes): Boolean {
+                return field.name in runtimeFieldNames
+            }
+            override fun shouldSkipClass(clazz: Class<*>): Boolean = false
+        })
         .create()
 
     // 内存缓存：当前会话活跃配方

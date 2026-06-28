@@ -52,6 +52,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FilterAlt
@@ -116,6 +118,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.data.local.EditRecipe
+import com.silas.omaster.data.local.EditRecipeClipboard
 import com.silas.omaster.data.local.NonDestructiveRecipeManager
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -304,9 +307,16 @@ fun SmartOptimizeScreen(
                             label = "PixelFruit 导出"
                         )
                         recipeManager.saveRecipe(currentImageHash, selectedImageUri, recipe)
-                        // 2. 再导出图片
+                        // 2. 再导出图片（根据画质选择映射为 JPEG 压缩率）
                         val bitmap = optimizedBitmap ?: originalBitmap ?: return@launch
-                        val uri = withContext(Dispatchers.IO) { saveBitmapToGallery(context, bitmap, "PixelFruit") }
+                        val jpegQuality = when (qualityLevel) {
+                            "original" -> 100
+                            "high" -> 95
+                            "medium" -> 85
+                            "low" -> 75
+                            else -> 95
+                        }
+                        val uri = withContext(Dispatchers.IO) { saveBitmapToGallery(context, bitmap, "PixelFruit", jpegQuality) }
                         if (uri != null) Toast.makeText(context, "已导出到相册", Toast.LENGTH_SHORT).show()
                         else saveError = "导出失败"
                     } catch (e: Exception) { saveError = "导出失败: ${e.message}" }
@@ -603,6 +613,38 @@ fun SmartOptimizeScreen(
                 Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("存配方")
+            }
+            // P1-1: 复制设置按钮
+            val hasClipboard by EditRecipeClipboard.hasClipboard.collectAsState()
+            IconButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    val recipe = EditRecipe(
+                        imageHash = currentImageHash,
+                        pixelFruitParams = params,
+                        label = "已复制"
+                    )
+                    EditRecipeClipboard.copy(recipe)
+                    Toast.makeText(context, "设置已复制", Toast.LENGTH_SHORT).show()
+                },
+                enabled = originalBitmap != null
+            ) {
+                Icon(Icons.Default.ContentCopy, contentDescription = "复制设置", tint = HasselbladOrange)
+            }
+            // P1-1: 粘贴设置按钮
+            IconButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    val recipe = EditRecipeClipboard.paste()
+                    if (recipe != null) {
+                        params = recipe.pixelFruitParams
+                        runOptimizeWorkflow()
+                        Toast.makeText(context, "设置已粘贴", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                enabled = hasClipboard
+            ) {
+                Icon(Icons.Default.ContentPaste, contentDescription = "粘贴设置", tint = if (hasClipboard) HasselbladOrange else Color.Gray)
             }
             // P0-1: 导出副本按钮
             OutlinedButton(
@@ -1066,7 +1108,7 @@ private fun analyzeImage(
     }
 }
 
-private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, tag: String): Uri? {
+private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, tag: String, quality: Int = 95): Uri? {
     return try {
         val filename = "${tag}_${System.currentTimeMillis()}.jpg"
         val contentValues = ContentValues().apply {
@@ -1078,7 +1120,7 @@ private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, tag: String): 
         }
         val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
         uri?.also {
-            context.contentResolver.openOutputStream(it)?.use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out) }
+            context.contentResolver.openOutputStream(it)?.use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out) }
             MediaScannerConnection.scanFile(context, arrayOf(it.toString()), arrayOf("image/jpeg"), null)
         }
     } catch (_: Exception) { null }
