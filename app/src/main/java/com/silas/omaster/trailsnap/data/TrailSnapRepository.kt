@@ -28,6 +28,7 @@ import com.silas.omaster.trailsnap.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -55,11 +56,20 @@ import kotlin.math.abs
  */
 class TrailSnapRepository private constructor(context: Context) {
 
-    private companion object {
-        const val TAG = "TrailSnapRepository"
-        const val FACE_DETECTION_MAX_PER_SESSION = 100
-        const val SIMILAR_TIME_THRESHOLD_SECONDS = 5L
-        const val SIMILAR_SCORE_THRESHOLD = 0.6f
+    companion object {
+        private const val TAG = "TrailSnapRepository"
+        private const val FACE_DETECTION_MAX_PER_SESSION = 100
+        private const val SIMILAR_TIME_THRESHOLD_SECONDS = 5L
+        private const val SIMILAR_SCORE_THRESHOLD = 0.6f
+
+        @Volatile
+        private var instance: TrailSnapRepository? = null
+
+        fun getInstance(context: Context): TrailSnapRepository {
+            return instance ?: synchronized(this) {
+                instance ?: TrailSnapRepository(context.applicationContext).also { instance = it }
+            }
+        }
     }
 
     private val appContext = context.applicationContext
@@ -845,7 +855,12 @@ class TrailSnapRepository private constructor(context: Context) {
             .filter { !it.isDeleted }
             .sortedByDescending { it.photoTime }
             .groupBy { it.photoTime.toLocalDate() }
-            .map { TimelineSection(it.key, it.value.sortedByDescending { p -> p.photoTime }) }
+            .map { entry ->
+                TimelineSection(
+                    date = entry.key,
+                    photos = entry.value.sortedByDescending { p -> p.photoTime }
+                )
+            }
     }
 
     fun getPhotosByAlbum(albumId: String): List<TrailPhoto> {
@@ -1244,17 +1259,6 @@ class TrailSnapRepository private constructor(context: Context) {
             textRecognizer.close()
         } catch (e: Exception) {
             Log.w(TAG, "关闭 TrailSnapRepository 资源异常", e)
-        }
-    }
-
-    companion object {
-        @Volatile
-        private var instance: TrailSnapRepository? = null
-
-        fun getInstance(context: Context): TrailSnapRepository {
-            return instance ?: synchronized(this) {
-                instance ?: TrailSnapRepository(context.applicationContext).also { instance = it }
-            }
         }
     }
 }

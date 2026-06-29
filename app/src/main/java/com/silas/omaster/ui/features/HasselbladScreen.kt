@@ -226,6 +226,10 @@ fun HasselbladScreen(
         }
     }
 
+    // 反馈上传状态与待上传数量
+    val feedbackUploadStatus by viewModel.feedbackUploadStatus.collectAsState()
+    val feedbackPendingCount by viewModel.feedbackPendingCount.collectAsState()
+
     // 应用到 OPPO 大师模式相机状态：成功/失败时弹出 Toast 提示
     val oppoApplyState by viewModel.oppoApplyState.collectAsState()
     LaunchedEffect(oppoApplyState) {
@@ -521,6 +525,8 @@ fun HasselbladScreen(
         ) { currentStage: HasselbladEyeStage ->
             when (currentStage) {
                 HasselbladEyeStage.SETUP -> SetupContent(
+                    currentParams = params,
+                    recipeMatchResult = recipeMatchResult,
                     recentShots = recentShots,
                     intentQuery = intentQuery,
                     onIntentQueryChange = { viewModel.setIntentQuery(it) },
@@ -857,6 +863,8 @@ private fun GlassCard(
 
 @Composable
 private fun SetupContent(
+    currentParams: HasselbladParams,
+    recipeMatchResult: RecipeMatchResult?,
     recentShots: List<Uri>,
     intentQuery: String,
     onIntentQueryChange: (String) -> Unit,
@@ -864,7 +872,7 @@ private fun SetupContent(
     onApplyRecipe: (RecipeMatchResult) -> Unit,
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
-    onLaunchViewfinder: () -> Unit,
+    onLaunchViewfinder: (HasselbladParams, String?) -> Unit,
     onRecentShotClick: (Uri) -> Unit
 ) {
     LazyColumn(
@@ -2010,34 +2018,37 @@ private fun ResultsContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        if (result != null) {
+        // Smart cast 修复：函数参数不能直接智能转型，先捕获到本地 val
+        val nonNullResult = result
+        val nonNullRecipe = recipeMatchResult
+        if (nonNullResult != null) {
             item {
                 ResultPhotoCard(bitmap = originalBitmap, preview = thumbnailPreview)
             }
 
             item {
-                SceneRecognitionCard(profile = result.sceneProfile)
+                SceneRecognitionCard(profile = nonNullResult.sceneProfile)
             }
 
             // P1-10：展示 Top-3 备选场景，支持一键切换
-            if (result.alternativeScenes.isNotEmpty()) {
+            if (nonNullResult.alternativeScenes.isNotEmpty()) {
                 item {
                     SectionTitle(title = "备选场景")
                 }
                 item {
                     AlternativeScenesRow(
-                        alternatives = result.alternativeScenes,
+                        alternatives = nonNullResult.alternativeScenes,
                         onSceneSelected = onFineGrainedSceneSelected
                     )
                 }
             }
 
-            if (result.masterTips.isNotEmpty()) {
+            if (nonNullResult.masterTips.isNotEmpty()) {
                 item {
                     SectionTitle(title = "哈苏大师建议")
                 }
                 item {
-                    MasterTipsCard(tips = result.masterTips)
+                    MasterTipsCard(tips = nonNullResult.masterTips)
                 }
             }
 
@@ -2047,7 +2058,7 @@ private fun ResultsContent(
             }
             item {
                 CompositionGuideCard(
-                    sceneCategory = result.sceneProfile.category,
+                    sceneCategory = nonNullResult.sceneProfile.category,
                     appliedGuideId = appliedGuideId,
                     onGuideClick = onGuideClick,
                     onClearComposition = onClearComposition
@@ -2055,12 +2066,12 @@ private fun ResultsContent(
             }
 
             // Phase 1：大师器材推荐卡（配方匹配结果）
-            if (recipeMatchResult != null) {
+            if (nonNullRecipe != null) {
                 item {
                     SectionTitle(title = "大师器材推荐")
                 }
                 item {
-                    EquipmentRecommendationCard(recipe = recipeMatchResult.recipe)
+                    EquipmentRecommendationCard(recipe = nonNullRecipe.recipe)
                 }
             }
 
@@ -2076,7 +2087,7 @@ private fun ResultsContent(
             }
             item {
                 RecommendedFilmsRow(
-                    films = result.recommendedFilms,
+                    films = nonNullResult.recommendedFilms,
                     onFilmClick = onFilmClick
                 )
             }
@@ -2100,7 +2111,7 @@ private fun ResultsContent(
             item {
                 SubSceneModesPanel(
                     selectedSceneModeId = selectedSceneModeId,
-                    currentSceneId = result.sceneProfile.id,
+                    currentSceneId = nonNullResult.sceneProfile.id,
                     onSceneSelected = onFineGrainedSceneSelected
                 )
             }

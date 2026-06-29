@@ -4,7 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import com.silas.omaster.trailsnap.model.TrailPhoto
-import com.silas.omaster.trailsnap.model.TrailLocation
+import com.silas.omaster.trailsnap.model.LocationPin
 import com.silas.omaster.trailsnap.model.MediaType
 
 /**
@@ -33,7 +33,7 @@ fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
 /**
  * 使用系统地图应用打开指定地点。
  */
-fun openLocationInMap(context: android.content.Context, location: TrailLocation) {
+fun openLocationInMap(context: android.content.Context, location: LocationPin) {
     val uri = Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}(${location.name})")
     val intent = Intent(Intent.ACTION_VIEW, uri).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

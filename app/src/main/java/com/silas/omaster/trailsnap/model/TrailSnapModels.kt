@@ -99,6 +99,9 @@ data class LocationPin(
 
 enum class LocationLevel { CITY, DISTRICT, PROVINCE, COUNTRY, SCENIC }
 
+/** Alias kept for backward compatibility with prior UI code. */
+typealias TrailLocation = LocationPin
+
 data class TravelTicket(
     val id: String = UUID.randomUUID().toString(),
     val type: TicketType,

@@ -253,6 +253,18 @@ data class LUT3DData(
     }
 
     /**
+     * 同 get(r,g,b) — 别名，提供给按整数索引直接采样的旧 API。
+     * 若 r/g/b 任一越界则使用边界值约束后再取样。
+     */
+    fun sample(r: Int, g: Int, b: Int): FloatArray {
+        val maxIndex = size - 1
+        val rr = r.coerceIn(0, maxIndex)
+        val gg = g.coerceIn(0, maxIndex)
+        val bb = b.coerceIn(0, maxIndex)
+        return get(rr, gg, bb)
+    }
+
+    /**
      * 三线性插值采样
      *
      * @param r 归一化 R 值 [0, 1]
