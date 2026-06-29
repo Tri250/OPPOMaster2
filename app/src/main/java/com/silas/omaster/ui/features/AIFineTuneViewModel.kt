@@ -41,6 +41,14 @@ import com.silas.omaster.ai.AISuggestionResult
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
+import com.silas.omaster.engine.AIDenoiseEngine
+import com.silas.omaster.engine.AISuperResolutionEngine
+import com.silas.omaster.engine.AISubjectMaskEngine
+import com.silas.omaster.engine.ColorRangeMaskEngine
+import com.silas.omaster.engine.Float16Pipeline
+import com.silas.omaster.engine.LensCorrectionEngine
+import com.silas.omaster.engine.RawDecodeEngine
+import com.silas.omaster.engine.ScopeEngine
 import com.silas.omaster.manager.EditHistoryManager
 import com.silas.omaster.renderer.GPURenderManager
 import com.silas.omaster.renderer.LocalAdjustment
@@ -210,6 +218,60 @@ class AIFineTuneViewModel(
     val selectedLocalAdjId: StateFlow<String?> = _selectedLocalAdjId.asStateFlow()
     private val _showMaskOverlay = MutableStateFlow(false)
     val showMaskOverlay: StateFlow<Boolean> = _showMaskOverlay.asStateFlow()
+
+    // ==================== 高级引擎 ====================
+    private val superResEngine = AISuperResolutionEngine()
+    private val denoiseEngine = AIDenoiseEngine()
+    private val scopeEngine = ScopeEngine()
+    private val rawDecodeEngine = RawDecodeEngine()
+    private val float16Pipeline = Float16Pipeline()
+    private val lensCorrectionEngine = LensCorrectionEngine()
+    private val colorRangeMaskEngine = ColorRangeMaskEngine()
+    private val subjectMaskEngine = AISubjectMaskEngine()
+
+    // AI 超分状态
+    private val _isSuperResing = MutableStateFlow(false)
+    val isSuperResing: StateFlow<Boolean> = _isSuperResing.asStateFlow()
+    private val _superResResult = MutableStateFlow<AISuperResolutionEngine.SuperResResult?>(null)
+    val superResResult: StateFlow<AISuperResolutionEngine.SuperResResult?> = _superResResult.asStateFlow()
+
+    // AI 去噪状态
+    private val _isDenoising = MutableStateFlow(false)
+    val isDenoising: StateFlow<Boolean> = _isDenoising.asStateFlow()
+    private val _denoiseStrength = MutableStateFlow(0f)
+    val denoiseStrength: StateFlow<Float> = _denoiseStrength.asStateFlow()
+    private val _denoiseResult = MutableStateFlow<AIDenoiseEngine.DenoiseResult?>(null)
+    val denoiseResult: StateFlow<AIDenoiseEngine.DenoiseResult?> = _denoiseResult.asStateFlow()
+
+    // 示波器状态
+    private val _scopeType = MutableStateFlow("waveform")  // waveform / vectorscope / parade
+    val scopeType: StateFlow<String> = _scopeType.asStateFlow()
+    private val _waveformData = MutableStateFlow<ScopeEngine.Waveform2DData?>(null)
+    val waveformData: StateFlow<ScopeEngine.Waveform2DData?> = _waveformData.asStateFlow()
+    private val _vectorscopeData = MutableStateFlow<ScopeEngine.VectorscopeData?>(null)
+    val vectorscopeData: StateFlow<ScopeEngine.VectorscopeData?> = _vectorscopeData.asStateFlow()
+    private val _showScope = MutableStateFlow(false)
+    val showScope: StateFlow<Boolean> = _showScope.asStateFlow()
+
+    // 镜头校正状态
+    private val _lensCorrectionParams = MutableStateFlow(LensCorrectionEngine.CorrectionParams())
+    val lensCorrectionParams: StateFlow<LensCorrectionEngine.CorrectionParams> = _lensCorrectionParams.asStateFlow()
+
+    // 色彩范围蒙版状态
+    private val _colorRangeParams = MutableStateFlow(ColorRangeMaskEngine.ColorRangeParams())
+    val colorRangeParams: StateFlow<ColorRangeMaskEngine.ColorRangeParams> = _colorRangeParams.asStateFlow()
+
+    // AI 主体蒙版状态
+    private val _isDetectingSubject = MutableStateFlow(false)
+    val isDetectingSubject: StateFlow<Boolean> = _isDetectingSubject.asStateFlow()
+    private val _subjectMaskResult = MutableStateFlow<AISubjectMaskEngine.SubjectMaskResult?>(null)
+    val subjectMaskResult: StateFlow<AISubjectMaskEngine.SubjectMaskResult?> = _subjectMaskResult.asStateFlow()
+
+    // RAW 解码状态
+    private val _isDecodingRaw = MutableStateFlow(false)
+    val isDecodingRaw: StateFlow<Boolean> = _isDecodingRaw.asStateFlow()
+    private val _rawMetadata = MutableStateFlow<RawDecodeEngine.RawMetadata?>(null)
+    val rawMetadata: StateFlow<RawDecodeEngine.RawMetadata?> = _rawMetadata.asStateFlow()
 
     // ==================== GPU 渲染器 ====================
     private var gpuRenderManager: GPURenderManager? = null
@@ -727,6 +789,183 @@ class AIFineTuneViewModel(
 
     fun toggleMaskOverlay() {
         _showMaskOverlay.value = !_showMaskOverlay.value
+    }
+
+    // ==================== AI 超分辨率 ====================
+
+    fun applySuperResolution(scale: AISuperResolutionEngine.ScaleFactor = AISuperResolutionEngine.ScaleFactor.X2) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isSuperResing.value = true
+            withContext(Dispatchers.IO) {
+                val result = superResEngine.upscale(bitmap, scale)
+                _superResResult.value = result
+                _sourceBitmap.value = result.bitmap
+            }
+            _isSuperResing.value = false
+            pushHistory(name = "AI超分辨率 ${scale.label}")
+            renderPreviewAsync(getApplication())
+        }
+    }
+
+    // ==================== AI 智能去噪 ====================
+
+    fun applyAIDenoise(strength: Float) {
+        val bitmap = _sourceBitmap.value ?: return
+        _denoiseStrength.value = strength
+        viewModelScope.launch {
+            _isDenoising.value = true
+            withContext(Dispatchers.IO) {
+                val result = denoiseEngine.denoise(bitmap, strength)
+                _denoiseResult.value = result
+                _sourceBitmap.value = result.bitmap
+            }
+            _isDenoising.value = false
+            pushHistory(name = "AI降噪 强度${(strength * 100).toInt()}%")
+            renderPreviewAsync(getApplication())
+        }
+    }
+
+    fun updateDenoiseStrength(strength: Float) {
+        _denoiseStrength.value = strength
+    }
+
+    // ==================== 示波器 ====================
+
+    fun toggleScope() {
+        _showScope.value = !_showScope.value
+        if (_showScope.value) {
+            computeScopeData()
+        }
+    }
+
+    fun setScopeType(type: String) {
+        _scopeType.value = type
+        computeScopeData()
+    }
+
+    private fun computeScopeData() {
+        val bitmap = _previewBitmap.value ?: _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                when (_scopeType.value) {
+                    "waveform" -> _waveformData.value = scopeEngine.computeWaveform2D(bitmap)
+                    "vectorscope" -> _vectorscopeData.value = scopeEngine.computeVectorscope(bitmap)
+                    "parade" -> {} // Parade 按需计算
+                }
+            }
+        }
+    }
+
+    // ==================== 镜头校正 ====================
+
+    fun updateLensCorrection(params: LensCorrectionEngine.CorrectionParams) {
+        _lensCorrectionParams.value = params
+    }
+
+    fun applyLensCorrection() {
+        val bitmap = _sourceBitmap.value ?: return
+        val params = _lensCorrectionParams.value
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val corrected = lensCorrectionEngine.applyCorrections(bitmap, params)
+                _sourceBitmap.value = corrected
+            }
+            pushHistory(name = "镜头校正")
+            renderPreviewAsync(getApplication())
+        }
+    }
+
+    fun applyLensAutoCorrect() {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val corrected = lensCorrectionEngine.autoCorrect(bitmap)
+                _sourceBitmap.value = corrected
+            }
+            pushHistory(name = "自动镜头校正")
+            renderPreviewAsync(getApplication())
+        }
+    }
+
+    // ==================== 色彩范围蒙版 ====================
+
+    fun updateColorRangeParams(params: ColorRangeMaskEngine.ColorRangeParams) {
+        _colorRangeParams.value = params
+    }
+
+    fun pickColorForMask(bitmap: Bitmap, x: Int, y: Int, tolerance: Float = 0.3f) {
+        _colorRangeParams.value = colorRangeMaskEngine.pickColor(bitmap, x, y, tolerance)
+    }
+
+    fun applyColorRangeAsLocalAdjustment() {
+        val params = _colorRangeParams.value
+        val adj = LocalAdjustment(
+            maskType = com.silas.omaster.renderer.MaskType.RADIAL,
+            name = "色彩范围蒙版"
+        )
+        addLocalAdjustment(adj)
+    }
+
+    // ==================== AI 主体检测 ====================
+
+    fun detectSubject() {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isDetectingSubject.value = true
+            withContext(Dispatchers.IO) {
+                val result = subjectMaskEngine.detectSubject(bitmap)
+                _subjectMaskResult.value = result
+                // 将 AI 蒙版转换为局部调整
+                val adj = LocalAdjustment(
+                    maskType = com.silas.omaster.renderer.MaskType.RADIAL,
+                    name = "AI主体蒙版",
+                    centerX = 0.5f,
+                    centerY = 0.5f,
+                    radius = 0.5f
+                )
+                _localAdjustments.value = _localAdjustments.value + adj
+            }
+            _isDetectingSubject.value = false
+            pushHistory(name = "AI主体检测")
+        }
+    }
+
+    // ==================== RAW 解码 ====================
+
+    fun loadRawFile(filePath: String) {
+        viewModelScope.launch {
+            _isDecodingRaw.value = true
+            withContext(Dispatchers.IO) {
+                val result = rawDecodeEngine.decodeRaw(filePath)
+                if (result != null) {
+                    _sourceBitmap.value = result.bitmap
+                    _rawMetadata.value = result.metadata
+                    _selectedImageUri.value = Uri.fromFile(java.io.File(filePath))
+                }
+            }
+            _isDecodingRaw.value = false
+            if (_sourceBitmap.value != null) {
+                pushHistory(force = true, name = "加载RAW文件")
+                renderPreviewAsync(getApplication())
+            }
+        }
+    }
+
+    // ==================== 16-bit 浮点管线 ====================
+
+    fun processWithFloat16(block: (Float16Pipeline.Float16Buffer) -> Unit) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val buffer = float16Pipeline.bitmapToFloat16(bitmap)
+                block(buffer)
+                val result = float16Pipeline.float16ToBitmap(buffer)
+                _sourceBitmap.value = result
+            }
+            pushHistory(name = "16-bit高精度处理")
+            renderPreviewAsync(getApplication())
+        }
     }
 
     // ==================== 重置 ====================

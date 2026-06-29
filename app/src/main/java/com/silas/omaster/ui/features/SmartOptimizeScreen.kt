@@ -50,6 +50,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Compare
@@ -111,6 +112,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -169,7 +171,7 @@ fun SmartOptimizeScreen(
 
     // 编辑Tab
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("调色", "细节", "裁剪", "滤镜", "AI")
+    val tabs = listOf("调色", "细节", "裁剪", "滤镜", "AI", "镜头", "RAW")
 
     // 裁剪旋转状态
     var cropRotateEngine by remember { mutableStateOf(com.silas.omaster.engine.CropRotateEngine()) }
@@ -445,7 +447,9 @@ fun SmartOptimizeScreen(
                                 1 -> Icons.Default.Tune
                                 2 -> Icons.Default.CropFree
                                 3 -> Icons.Default.FilterAlt
-                                else -> Icons.Default.AutoAwesome
+                                4 -> Icons.Default.AutoAwesome
+                                5 -> Icons.Default.CameraAlt
+                                else -> Icons.Default.Image
                             },
                             contentDescription = title,
                             modifier = Modifier.size(20.dp),
@@ -514,6 +518,55 @@ fun SmartOptimizeScreen(
                     context = context,
                     onAnalysisResult = { analysisResult = it },
                     setIsAnalyzing = { isAnalyzing = it }
+                ) }
+                5 -> item { LensCorrectionSmartPanel(
+                    onAutoCorrect = {
+                        originalBitmap?.let { bmp ->
+                            scope.launch {
+                                val corrected = withContext(Dispatchers.IO) {
+                                    com.silas.omaster.engine.LensCorrectionEngine().autoCorrect(bmp)
+                                }
+                                originalBitmap = corrected
+                                optimizedBitmap = null
+                                previewBitmap = null
+                                updatePreview()
+                                Toast.makeText(context, "镜头校正已应用", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    onApplyCA = { rOff, bOff ->
+                        originalBitmap?.let { bmp ->
+                            scope.launch {
+                                val corrected = withContext(Dispatchers.IO) {
+                                    val engine = com.silas.omaster.engine.LensCorrectionEngine()
+                                    val p = com.silas.omaster.engine.LensCorrectionEngine.CorrectionParams(caRedOffset = rOff, caBlueOffset = bOff)
+                                    engine.correctChromaticAberration(bmp, p)
+                                }
+                                originalBitmap = corrected
+                                updatePreview()
+                            }
+                        }
+                    }
+                ) }
+                6 -> item { RawFilePanel(
+                    isLoading = false,
+                    onLoadRaw = { path ->
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) {
+                                com.silas.omaster.engine.RawDecodeEngine().decodeRaw(path)
+                            }
+                            if (result != null) {
+                                originalBitmap = result.bitmap
+                                optimizedBitmap = null
+                                previewBitmap = null
+                                previewMode = "before"
+                                Toast.makeText(context, "RAW文件已加载: ${result.metadata.cameraModel}", Toast.LENGTH_SHORT).show()
+                                updatePreview()
+                            } else {
+                                Toast.makeText(context, "RAW文件解码失败", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 ) }
             }
             item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -1159,5 +1212,278 @@ private fun BeforeAfterCompareView(beforeBitmap: Bitmap, afterBitmap: Bitmap, mo
                 Text("优化后", color = HasselbladOrange, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
             }
         }
+    }
+}
+
+// ==================== 镜头校正面板（SmartOptimize 专用） ====================
+
+@Composable
+private fun LensCorrectionSmartPanel(
+    onAutoCorrect: () -> Unit,
+    onApplyCA: (redOffset: Float, blueOffset: Float) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val engine = remember { com.silas.omaster.engine.LensCorrectionEngine() }
+
+    // 镜头校正参数
+    var caRedOffset by remember { mutableFloatStateOf(0f) }
+    var caBlueOffset by remember { mutableFloatStateOf(0f) }
+    var vignetteAmount by remember { mutableFloatStateOf(0f) }
+    var vignetteRadius by remember { mutableFloatStateOf(50f) }
+    var distortion by remember { mutableFloatStateOf(0f) }
+    var selectedProfileIdx by remember { mutableStateOf(-1) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // 一键自动校正
+        Button(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onAutoCorrect()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+        ) {
+            Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("自动镜头校正")
+        }
+
+        // 镜头预设选择
+        SectionLabel("镜头预设")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(engine.lensProfiles.size) { index ->
+                val profile = engine.lensProfiles[index]
+                val selected = selectedProfileIdx == index
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        selectedProfileIdx = index
+                        val params = engine.paramsFromProfile(profile)
+                        caRedOffset = params.caRedOffset
+                        caBlueOffset = params.caBlueOffset
+                        vignetteAmount = params.vignetteAmount
+                        distortion = params.distortion
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selected) HasselbladOrange else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("${profile.focalLength}", fontSize = 12.sp)
+                }
+            }
+        }
+
+        // 色差校正
+        SectionLabel("色差校正")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("R偏移", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
+            Slider(
+                value = caRedOffset, onValueChange = { caRedOffset = it },
+                valueRange = -5f..5f, modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = Color.Red, activeTrackColor = Color.Red)
+            )
+            Text(String.format("%.1f", caRedOffset), modifier = Modifier.width(48.dp), fontSize = 13.sp, color = Color.Red, fontWeight = FontWeight.SemiBold)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("B偏移", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
+            Slider(
+                value = caBlueOffset, onValueChange = { caBlueOffset = it },
+                valueRange = -5f..5f, modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = Color.Blue, activeTrackColor = Color.Blue)
+            )
+            Text(String.format("%.1f", caBlueOffset), modifier = Modifier.width(48.dp), fontSize = 13.sp, color = Color.Blue, fontWeight = FontWeight.SemiBold)
+        }
+
+        // 暗角校正
+        SectionLabel("暗角校正")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("校正量", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
+            Slider(
+                value = vignetteAmount, onValueChange = { vignetteAmount = it },
+                valueRange = 0f..100f, modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = HasselbladOrange, activeTrackColor = HasselbladOrange)
+            )
+            Text("${vignetteAmount.toInt()}", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+        }
+
+        // 畸变校正
+        SectionLabel("畸变校正")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("系数", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
+            Slider(
+                value = distortion, onValueChange = { distortion = it },
+                valueRange = -0.1f..0.1f, modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = HasselbladOrange, activeTrackColor = HasselbladOrange)
+            )
+            Text(String.format("%.3f", distortion), modifier = Modifier.width(48.dp), fontSize = 13.sp, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+        }
+
+        // 应用按钮
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = {
+                    caRedOffset = 0f; caBlueOffset = 0f
+                    vignetteAmount = 0f; distortion = 0f
+                    selectedProfileIdx = -1
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("重置")
+            }
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onApplyCA(caRedOffset, caBlueOffset)
+                },
+                modifier = Modifier.weight(1.5f),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+            ) {
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("应用校正")
+            }
+        }
+    }
+}
+
+// ==================== RAW 文件面板 ====================
+
+@Composable
+private fun RawFilePanel(
+    isLoading: Boolean,
+    onLoadRaw: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val engine = remember { com.silas.omaster.engine.RawDecodeEngine() }
+
+    var rawFilePath by remember { mutableStateOf("") }
+    var selectedFormat by remember { mutableStateOf(com.silas.omaster.engine.RawDecodeEngine.RawFormat.DNG) }
+    var decodedMetadata by remember { mutableStateOf<com.silas.omaster.engine.RawDecodeEngine.RawMetadata?>(null) }
+
+    // RAW 文件选择器
+    val rawPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                // 复制到缓存文件（RAW 解码需要文件路径）
+                val inputStream = context.contentResolver.openInputStream(it)
+                val fileName = it.lastPathSegment ?: "raw_file"
+                val cacheFile = java.io.File(context.cacheDir, "raw_temp_${System.currentTimeMillis()}_${fileName}")
+                inputStream?.use { input ->
+                    cacheFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                rawFilePath = cacheFile.absolutePath
+                onLoadRaw(cacheFile.absolutePath)
+            } catch (e: Exception) {
+                Toast.makeText(context, "RAW文件读取失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedY(10.dp)) {
+        // RAW 文件说明
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Image, null, tint = HasselbladOrange, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("RAW 文件解码", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "支持 DNG / ARW / NEF / CR2 / ORF / RAF / RW2 / PEP / SRW 格式，保留完整传感器数据，14-bit 高精度解码",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
+            }
+        }
+
+        // 格式选择
+        SectionLabel("RAW 格式")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(com.silas.omaster.engine.RawDecodeEngine.RawFormat.entries.dropLast(1)) { format ->
+                val selected = selectedFormat == format
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        selectedFormat = format
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selected) HasselbladOrange else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(format.extension.uppercase(), fontSize = 12.sp)
+                }
+            }
+        }
+
+        // 选择 RAW 文件按钮
+        Button(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                rawPickerLauncher.launch(arrayOf("image/*", "application/octet-stream"))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+            enabled = !isLoading
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text("解码中...")
+            } else {
+                Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("选择 RAW 文件")
+            }
+        }
+
+        // 已解码的元数据展示
+        decodedMetadata?.let { meta ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    SectionLabel("文件信息")
+                    RawMetaRow("格式", meta.format.name)
+                    RawMetaRow("相机", meta.cameraModel.ifEmpty { "未知" })
+                    RawMetaRow("尺寸", "${meta.width} x ${meta.height}")
+                    RawMetaRow("位深", "${meta.bitsPerPixel}-bit")
+                    RawMetaRow("ISO", meta.iso.toString())
+                    RawMetaRow("快门", meta.shutterSpeed)
+                    RawMetaRow("光圈", meta.aperture)
+                    RawMetaRow("焦距", meta.focalLength)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RawMetaRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        Text(value, style = MaterialTheme.typography.labelMedium, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
     }
 }

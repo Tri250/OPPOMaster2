@@ -333,6 +333,8 @@ fun AIFineTuneScreen(
                 "hsl" to "HSL",
                 "curve" to "曲线",
                 "local" to "局部",
+                "lens" to "镜头",
+                "scope" to "示波",
                 "history" to "历史"
             )
             TabRow(
@@ -410,7 +412,23 @@ fun AIFineTuneScreen(
                         onUpdate = { id, block -> viewModel.updateLocalAdjustment(id, block) },
                         onRemove = { viewModel.removeLocalAdjustment(it) },
                         onToggleMaskOverlay = { viewModel.toggleMaskOverlay() },
-                        showMaskOverlay = showMaskOverlay
+                        showMaskOverlay = showMaskOverlay,
+                        onColorRange = { viewModel.applyColorRangeAsLocalAdjustment() },
+                        onAISubject = { viewModel.detectSubject() },
+                        isDetectingSubject = viewModel.isDetectingSubject.collectAsState().value
+                    )
+                    "lens" -> LensCorrectionPanel(
+                        lensProfiles = com.silas.omaster.engine.LensCorrectionEngine().lensProfiles,
+                        currentParams = viewModel.lensCorrectionParams.collectAsState().value,
+                        onUpdateParams = { viewModel.updateLensCorrection(it) },
+                        onApply = { viewModel.applyLensCorrection() },
+                        onAutoCorrect = { viewModel.applyLensAutoCorrect() }
+                    )
+                    "scope" -> ScopePanel(
+                        scopeType = viewModel.scopeType.collectAsState().value,
+                        onScopeTypeChange = { viewModel.setScopeType(it) },
+                        onToggle = { viewModel.toggleScope() },
+                        isShowing = viewModel.showScope.collectAsState().value
                     )
                     "history" -> EditHistoryPanel(
                         snapshots = historySnapshots,
@@ -1110,7 +1128,10 @@ private fun LocalAdjustPanel(
     onUpdate: (String, (com.silas.omaster.renderer.LocalAdjustment) -> com.silas.omaster.renderer.LocalAdjustment) -> Unit,
     onRemove: (String) -> Unit,
     onToggleMaskOverlay: () -> Unit,
-    showMaskOverlay: Boolean
+    showMaskOverlay: Boolean,
+    onColorRange: () -> Unit = {},
+    onAISubject: () -> Unit = {},
+    isDetectingSubject: Boolean = false
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // 工具栏：添加蒙版按钮 + 蒙版叠加开关
@@ -1124,6 +1145,8 @@ private fun LocalAdjustPanel(
             MaskToolButton("画笔", Icons.Default.Edit) { onAdd(com.silas.omaster.renderer.MaskType.BRUSH) }
             MaskToolButton("径向", Icons.Default.RadioButtonUnchecked) { onAdd(com.silas.omaster.renderer.MaskType.RADIAL) }
             MaskToolButton("线性", Icons.Default.LinearScale) { onAdd(com.silas.omaster.renderer.MaskType.LINEAR) }
+            MaskToolButton("色彩", Icons.Default.Palette) { onColorRange() }
+            MaskToolButton("AI主体", Icons.Default.Person2) { onAISubject() }
             IconButton(onClick = onToggleMaskOverlay) {
                 Icon(
                     imageVector = if (showMaskOverlay) Icons.Default.Visibility else Icons.Default.VisibilityOff,
@@ -1131,6 +1154,14 @@ private fun LocalAdjustPanel(
                     tint = if (showMaskOverlay) HasselbladOrange else Color.Gray
                 )
             }
+        }
+
+        if (isDetectingSubject) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                color = HasselbladOrange,
+                trackColor = Color.White.copy(alpha = 0.15f)
+            )
         }
 
         if (adjustments.isEmpty()) {
@@ -1236,6 +1267,260 @@ private fun LocalParamSliders(
                         inactiveTrackColor = Color.White.copy(alpha = 0.15f)
                     )
                 )
+            }
+        }
+    }
+}
+
+// ==================== 通用组件 ====================
+
+@Composable
+private fun SectionLabel(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = HasselbladOrange,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+    )
+}
+
+// ==================== 镜头校正面板 ====================
+
+@Composable
+private fun LensCorrectionPanel(
+    lensProfiles: List<com.silas.omaster.engine.LensCorrectionEngine.LensProfile>,
+    currentParams: com.silas.omaster.engine.LensCorrectionEngine.CorrectionParams,
+    onUpdateParams: (com.silas.omaster.engine.LensCorrectionEngine.CorrectionParams) -> Unit,
+    onApply: () -> Unit,
+    onAutoCorrect: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 一键自动校正
+        Button(
+            onClick = onAutoCorrect,
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+        ) {
+            Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("自动镜头校正")
+        }
+
+        // 镜头预设
+        SectionLabel("镜头预设")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(lensProfiles) { profile ->
+                Button(
+                    onClick = {
+                        val engine = com.silas.omaster.engine.LensCorrectionEngine()
+                        onUpdateParams(engine.paramsFromProfile(profile))
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(36.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A))
+                ) {
+                    Text("${profile.manufacturer} ${profile.focalLength}", fontSize = 11.sp, color = Color.White)
+                }
+            }
+        }
+
+        // 色差校正
+        SectionLabel("色差校正（Chromatic Aberration）")
+        LensSlider("R水平偏移", currentParams.caRedOffset, -5f..5f) {
+            onUpdateParams(currentParams.copy(caRedOffset = it))
+        }
+        LensSlider("R垂直偏移", currentParams.caRedOffsetV, -5f..5f) {
+            onUpdateParams(currentParams.copy(caRedOffsetV = it))
+        }
+        LensSlider("B水平偏移", currentParams.caBlueOffset, -5f..5f) {
+            onUpdateParams(currentParams.copy(caBlueOffset = it))
+        }
+        LensSlider("B垂直偏移", currentParams.caBlueOffsetV, -5f..5f) {
+            onUpdateParams(currentParams.copy(caBlueOffsetV = it))
+        }
+
+        // 暗角校正
+        SectionLabel("暗角校正")
+        LensSlider("校正量", currentParams.vignetteAmount, 0f..100f) {
+            onUpdateParams(currentParams.copy(vignetteAmount = it))
+        }
+        LensSlider("半径", currentParams.vignetteRadius, 0f..100f) {
+            onUpdateParams(currentParams.copy(vignetteRadius = it))
+        }
+
+        // 畸变校正
+        SectionLabel("畸变校正")
+        LensSlider("畸变系数", currentParams.distortion, -0.1f..0.1f) {
+            onUpdateParams(currentParams.copy(distortion = it))
+        }
+
+        // 应用按钮
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onApply,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+        ) {
+            Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("应用镜头校正")
+        }
+    }
+}
+
+@Composable
+private fun LensSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(80.dp))
+        Slider(
+            value = value,
+            onValueChange = onChange,
+            valueRange = range,
+            modifier = Modifier.weight(1f),
+            colors = SliderDefaults.colors(thumbColor = HasselbladOrange, activeTrackColor = HasselbladOrange)
+        )
+        Text(String.format("%.2f", value), color = HasselbladOrange, fontSize = 11.sp, modifier = Modifier.width(48.dp))
+    }
+}
+
+// ==================== 示波器面板 ====================
+
+@Composable
+private fun ScopePanel(
+    scopeType: String,
+    onScopeTypeChange: (String) -> Unit,
+    onToggle: () -> Unit,
+    isShowing: Boolean
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 示波器开关
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("实时示波器", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Switch(
+                checked = isShowing,
+                onCheckedChange = { onToggle() },
+                colors = SwitchDefaults.colors(checkedTrackColor = HasselbladOrange)
+            )
+        }
+
+        // 示波器类型切换
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("waveform" to "波形", "vectorscope" to "矢量", "parade" to "RGB").forEach { (id, label) ->
+                Button(
+                    onClick = { onScopeTypeChange(id) },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f).height(36.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (scopeType == id) HasselbladOrange else Color(0xFF2A2A2A)
+                    )
+                ) { Text(label, fontSize = 12.sp) }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 示波器显示区域
+        if (isShowing) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(8.dp).height(200.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0A0A)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    when (scopeType) {
+                        "waveform" -> WaveformScopeView()
+                        "vectorscope" -> VectorscopeScopeView()
+                        "parade" -> ParadeScopeView()
+                    }
+                }
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("开启示波器查看图片色彩分布", color = Color.Gray, fontSize = 14.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaveformScopeView() {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        // 绘制波形网格
+        for (i in 0..4) {
+            val y = h * i / 4f
+            drawLine(Color.White.copy(alpha = 0.15f), androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(w, y))
+        }
+        // 标注亮度级
+        drawLine(Color.Green.copy(alpha = 0.1f), androidx.compose.ui.geometry.Offset(0f, h * 0.75f), androidx.compose.ui.geometry.Offset(w, h * 0.75f))
+        // 示波器标签
+        drawContext.canvas.nativeCanvas.apply {
+            val paint = android.graphics.Paint().apply { color = android.graphics.Color.GRAY; textSize = 20f }
+            drawText("100%", 8f, 30f, paint)
+            drawText("50%", 8f, h.toInt() / 2 + 6, paint)
+            drawText("0%", 8f, h.toInt() - 8, paint)
+        }
+    }
+}
+
+@Composable
+private fun VectorscopeScopeView() {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val cx = size.width / 2
+        val cy = size.height / 2
+        val r = min(cx, cy) * 0.85f
+        // 绘制矢量图圆环和肤色线
+        for (i in 1..3) {
+            drawCircle(Color.White.copy(alpha = 0.1f), radius = r * i / 3f, center = androidx.compose.ui.geometry.Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke())
+        }
+        // 肤色线（I线，约33°）
+        val skinAngle = Math.toRadians(33.0)
+        drawLine(
+            Color.Yellow.copy(alpha = 0.3f),
+            androidx.compose.ui.geometry.Offset(cx, cy),
+            androidx.compose.ui.geometry.Offset(cx + r * kotlin.math.cos(skinAngle).toFloat(), cy - r * kotlin.math.sin(skinAngle).toFloat())
+        )
+        // RGB 标注
+        drawContext.canvas.nativeCanvas.apply {
+            val paint = android.graphics.Paint().apply { color = android.graphics.Color.GRAY; textSize = 18f }
+            drawText("R", cx + r + 8, cy + 6, paint)
+            drawText("B", cx - 8, cy - r - 8, paint)
+        }
+    }
+}
+
+@Composable
+private fun ParadeScopeView() {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val sectionW = w / 3f
+        val labels = listOf("R", "G", "B")
+        val colors = listOf(Color.Red.copy(alpha = 0.6f), Color.Green.copy(alpha = 0.6f), Color.Blue.copy(alpha = 0.6f))
+
+        labels.forEachIndexed { i, label ->
+            val offsetX = sectionW * i
+            // 分隔线
+            if (i > 0) {
+                drawLine(Color.White.copy(alpha = 0.2f), androidx.compose.ui.geometry.Offset(offsetX, 0f), androidx.compose.ui.geometry.Offset(offsetX, h))
+            }
+            // 网格
+            for (j in 0..4) {
+                val y = h * j / 4f
+                drawLine(Color.White.copy(alpha = 0.1f), androidx.compose.ui.geometry.Offset(offsetX, y), androidx.compose.ui.geometry.Offset(offsetX + sectionW, y))
+            }
+            // 标注
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply { this.color = colors[i].toArgb(); textSize = 22f; isFakeBoldText = true }
+                drawText(label, offsetX + sectionW / 2 - 6, 30f, paint)
             }
         }
     }
