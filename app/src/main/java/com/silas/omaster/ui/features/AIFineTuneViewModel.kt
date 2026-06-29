@@ -41,7 +41,9 @@ import com.silas.omaster.ai.AISuggestionResult
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
+import com.silas.omaster.manager.EditHistoryManager
 import com.silas.omaster.renderer.GPURenderManager
+import com.silas.omaster.renderer.LocalAdjustment
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.renderer.RenderQuality
 import com.silas.omaster.ui.theme.*
@@ -192,13 +194,22 @@ class AIFineTuneViewModel(
     private val _errorState = MutableStateFlow<String?>(null)
     val errorState: StateFlow<String?> = _errorState.asStateFlow()
 
-    // ==================== 历史记录（撤销/重做） ====================
-    private val history = ArrayDeque<RenderParameters>()
-    private var historyIndex = -1
+    // ==================== 历史记录（非破坏性编辑快照） ====================
+    private val editHistory = EditHistoryManager()
     private val _canUndo = MutableStateFlow(false)
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
     private val _canRedo = MutableStateFlow(false)
     val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
+    private val _historySnapshots = MutableStateFlow(editHistory.getSnapshots())
+    val historySnapshots: StateFlow<List<com.silas.omaster.manager.EditSnapshot>> = _historySnapshots.asStateFlow()
+
+    // ==================== 局部调整 ====================
+    private val _localAdjustments = MutableStateFlow<List<LocalAdjustment>>(emptyList())
+    val localAdjustments: StateFlow<List<LocalAdjustment>> = _localAdjustments.asStateFlow()
+    private val _selectedLocalAdjId = MutableStateFlow<String?>(null)
+    val selectedLocalAdjId: StateFlow<String?> = _selectedLocalAdjId.asStateFlow()
+    private val _showMaskOverlay = MutableStateFlow(false)
+    val showMaskOverlay: StateFlow<Boolean> = _showMaskOverlay.asStateFlow()
 
     // ==================== GPU 渲染器 ====================
     private var gpuRenderManager: GPURenderManager? = null
@@ -207,7 +218,8 @@ class AIFineTuneViewModel(
     private var inferenceJob: kotlinx.coroutines.Job? = null
 
     init {
-        pushHistory()
+        editHistory.record("初始状态", _currentParams.value)
+        updateHistoryState()
     }
 
     // ==================== 图片加载 ====================
@@ -228,7 +240,7 @@ class AIFineTuneViewModel(
                     _previewBitmap.value?.recycle()
                     _previewBitmap.value = null
                     renderPreviewAsync(context)
-                    pushHistory(force = true)
+                    pushHistory(force = true, name = "应用风格预设")
                 } else {
                     _imageLoadError.value = "无法解码图片"
                 }
@@ -252,7 +264,7 @@ class AIFineTuneViewModel(
             _previewBitmap.value = null
             _selectedImageUri.value = null
             renderPreviewAsync(context)
-            pushHistory(force = true)
+            pushHistory(force = true, name = "加载图片")
         }
     }
 
@@ -351,11 +363,14 @@ class AIFineTuneViewModel(
             "grain" -> current.copy(grain = value)
             "fade" -> current.copy(fade = value)
             "skinSmooth" -> current.copy(skinSmooth = value)
+            "tint" -> current.copy(tint = value)
+            "vignette" -> current.copy(vignette = value)
+            "vignetteMidpoint" -> current.copy(vignetteMidpoint = value)
             else -> current
         }
         if (next != current) {
             _currentParams.value = next
-            pushHistory()
+            pushHistory(name = editHistory.autoNameForParamsChange(paramName))
         }
     }
 
@@ -412,7 +427,7 @@ class AIFineTuneViewModel(
             hslMagentaSaturation = map["magenta"]?.saturation?.toFloat() ?: 0f,
             hslMagentaLuminance = map["magenta"]?.luminance?.toFloat() ?: 0f
         )
-        pushHistory()
+        pushHistory(name = "调整HSL")
     }
 
     // ==================== 曲线操作 ====================
@@ -454,7 +469,7 @@ class AIFineTuneViewModel(
             curveGreenLut = generateCurveLut(_curvePoints.value["green"]),
             curveBlueLut = generateCurveLut(_curvePoints.value["blue"])
         )
-        pushHistory()
+        pushHistory(name = "调整曲线")
     }
 
     private fun generateCurveLut(points: List<CurvePoint>?): FloatArray {
@@ -491,7 +506,7 @@ class AIFineTuneViewModel(
             _currentParams.value = style.params
             syncRenderParamsToHSL(style.params)
             syncRenderParamsToCurve(style.params)
-            pushHistory(force = true)
+            pushHistory(force = true, name = "应用风格: ${style.name}")
         }
     }
 
@@ -546,7 +561,7 @@ class AIFineTuneViewModel(
         }
         // 合并到当前参数（保留用户已手动调整的参数）
         _currentParams.value = _currentParams.value.merge(params)
-        pushHistory(force = true)
+        pushHistory(force = true, name = "应用AI建议")
     }
 
     fun toggleParamLock(paramId: String) {
@@ -620,48 +635,59 @@ class AIFineTuneViewModel(
         }
     }
 
-    // ==================== 历史记录（撤销/重做） ====================
+    // ==================== 历史记录（撤销/重做/跳转） ====================
 
-    private fun pushHistory(force: Boolean = false) {
+    private fun pushHistory(force: Boolean = false, name: String = "调整参数") {
         val params = _currentParams.value
-        // 避免重复入栈
-        if (!force && historyIndex >= 0 && history[historyIndex] == params) return
-        // 删除当前索引之后的历史
-        while (history.size > historyIndex + 1) {
-            history.removeLast()
-        }
-        if (history.size >= MAX_HISTORY_SIZE) {
-            history.removeFirst()
-            historyIndex--
-        }
-        history.addLast(params)
-        historyIndex++
+        // 避免重复入栈（比较当前步骤与最新步骤）
+        if (!force && editHistory.getCurrentSnapshot()?.params == params) return
+        editHistory.record(name, params)
         updateHistoryState()
     }
 
     fun undo() {
-        if (historyIndex > 0) {
-            historyIndex--
-            _currentParams.value = history[historyIndex]
-            syncRenderParamsToHSL(_currentParams.value)
-            syncRenderParamsToCurve(_currentParams.value)
+        val params = editHistory.undo()
+        if (params != null) {
+            _currentParams.value = params
+            syncRenderParamsToHSL(params)
+            syncRenderParamsToCurve(params)
             updateHistoryState()
         }
     }
 
     fun redo() {
-        if (historyIndex < history.size - 1) {
-            historyIndex++
-            _currentParams.value = history[historyIndex]
-            syncRenderParamsToHSL(_currentParams.value)
-            syncRenderParamsToCurve(_currentParams.value)
+        val params = editHistory.redo()
+        if (params != null) {
+            _currentParams.value = params
+            syncRenderParamsToHSL(params)
+            syncRenderParamsToCurve(params)
             updateHistoryState()
         }
     }
 
+    fun jumpToHistory(snapshotId: String) {
+        val params = editHistory.jumpTo(snapshotId)
+        if (params != null) {
+            _currentParams.value = params
+            syncRenderParamsToHSL(params)
+            syncRenderParamsToCurve(params)
+            updateHistoryState()
+        }
+    }
+
+    fun createBranch(name: String) {
+        editHistory.createBranch(name)
+        updateHistoryState()
+    }
+
+    private val _currentHistoryIndex = MutableStateFlow(0)
+    val currentHistoryIndex: StateFlow<Int> = _currentHistoryIndex.asStateFlow()
+
     private fun updateHistoryState() {
-        _canUndo.value = historyIndex > 0
-        _canRedo.value = historyIndex < history.size - 1
+        _canUndo.value = editHistory.canUndo
+        _canRedo.value = editHistory.canRedo
+        _historySnapshots.value = editHistory.getSnapshots()
+        _currentHistoryIndex.value = editHistory.index
     }
 
     // ==================== 对比与重置 ====================
@@ -669,6 +695,41 @@ class AIFineTuneViewModel(
     fun toggleCompare() {
         _showCompare.value = !_showCompare.value
     }
+
+    // ==================== 局部调整操作 ====================
+
+    fun addLocalAdjustment(adjustment: LocalAdjustment) {
+        val list = _localAdjustments.value.toMutableList()
+        list.add(adjustment)
+        _localAdjustments.value = list
+        _selectedLocalAdjId.value = adjustment.id
+        pushHistory(name = "添加${adjustment.name}")
+    }
+
+    fun updateLocalAdjustment(id: String, block: (LocalAdjustment) -> LocalAdjustment) {
+        val list = _localAdjustments.value.map {
+            if (it.id == id) block(it) else it
+        }
+        _localAdjustments.value = list
+    }
+
+    fun removeLocalAdjustment(id: String) {
+        _localAdjustments.value = _localAdjustments.value.filter { it.id != id }
+        if (_selectedLocalAdjId.value == id) {
+            _selectedLocalAdjId.value = null
+        }
+        pushHistory(name = "删除局部调整")
+    }
+
+    fun selectLocalAdjustment(id: String?) {
+        _selectedLocalAdjId.value = id
+    }
+
+    fun toggleMaskOverlay() {
+        _showMaskOverlay.value = !_showMaskOverlay.value
+    }
+
+    // ==================== 重置 ====================
 
     fun reset() {
         _currentParams.value = RenderParameters()
@@ -682,8 +743,10 @@ class AIFineTuneViewModel(
         _selectedStyleId.value = null
         _selectedOptimizations.value = emptySet()
         _lockedParams.value = emptySet()
+        _localAdjustments.value = emptyList()
+        _selectedLocalAdjId.value = null
         syncCurveToRenderParameters()
-        pushHistory(force = true)
+        pushHistory(force = true, name = "重置全部参数")
     }
 
     fun clearSuccess() {

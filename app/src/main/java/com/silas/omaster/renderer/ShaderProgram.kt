@@ -311,6 +311,9 @@ class ShaderProgram private constructor(
         setUniform1f("uSkinSmooth", params.skinSmooth / 100f)
         setUniform1f("uExposure", params.exposure / 100f)
         setUniform1f("uTextureStrength", params.texture / 100f)
+        setUniform1f("uTint", params.tint / 100f)
+        setUniform1f("uVignette", params.vignette / 100f)
+        setUniform1f("uVignetteMidpoint", params.vignetteMidpoint / 100f)
 
         // HSL 8 通道（归一化到 [-1, 1]）
         setUniform1f("uHSLRedHue", params.hslRedHue / 180f)

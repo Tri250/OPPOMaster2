@@ -60,10 +60,15 @@ data class RenderParameters(
     val grain: Float = 0f,            // 颗粒 [0, 100]
     val fade: Float = 0f,             // 褪色 [0, 100]
     val dehaze: Float = 0f,           // 去霾 [0, 100]
-    
+    val vignette: Float = 0f,         // 暗角 [0, 100]
+    val vignetteMidpoint: Float = 50f,// 暗角中点 [0, 100]
+
     // 降噪与平滑参数
     val denoise: Float = 0f,          // 降噪 [0, 100]
     val skinSmooth: Float = 0f,       // 肤色平滑 [0, 100]
+
+    // 色调（绿-品红偏移）[-100, 100]
+    val tint: Float = 0f,
 
     // HSL 8 通道调色（每个通道：色相/饱和度/明度）
     val hslRedHue: Float = 0f,        // 红色色相 [-180, 180]
@@ -133,10 +138,12 @@ data class RenderParameters(
             ParamMetadata("grain", "颗粒", RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX, "胶片颗粒效果"),
             ParamMetadata("fade", "褪色", RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX, "褪色效果"),
             ParamMetadata("dehaze", "去霾", RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX, "去雾/去霾"),
+            ParamMetadata("vignette", "暗角", RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX, "镜头暗角效果"),
             ParamMetadata("denoise", "降噪", RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX, "噪点抑制"),
             ParamMetadata("skinSmooth", "肤色平滑", RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX, "人像肤色处理"),
             ParamMetadata("exposure", "曝光", RANGE_MIN, RANGE_MAX, "曝光补偿"),
-            ParamMetadata("texture", "纹理", RANGE_MIN, RANGE_MAX, "纹理增强")
+            ParamMetadata("texture", "纹理", RANGE_MIN, RANGE_MAX, "纹理增强"),
+            ParamMetadata("tint", "色调", RANGE_MIN, RANGE_MAX, "绿-品红偏移")
         )
         
         /**
@@ -158,10 +165,13 @@ data class RenderParameters(
                 grain = map["grain"] ?: 0f,
                 fade = map["fade"] ?: 0f,
                 dehaze = map["dehaze"] ?: 0f,
+                vignette = map["vignette"] ?: 0f,
+                vignetteMidpoint = map["vignetteMidpoint"] ?: 50f,
                 denoise = map["denoise"] ?: 0f,
                 skinSmooth = map["skinSmooth"] ?: 0f,
                 exposure = map["exposure"] ?: 0f,
-                texture = map["texture"] ?: 0f
+                texture = map["texture"] ?: 0f,
+                tint = map["tint"] ?: 0f
             )
         }
         
@@ -192,10 +202,13 @@ data class RenderParameters(
             "grain" to grain,
             "fade" to fade,
             "dehaze" to dehaze,
+            "vignette" to vignette,
+            "vignetteMidpoint" to vignetteMidpoint,
             "denoise" to denoise,
             "skinSmooth" to skinSmooth,
             "exposure" to exposure,
-            "texture" to texture
+            "texture" to texture,
+            "tint" to tint
         )
     }
     
@@ -222,7 +235,10 @@ data class RenderParameters(
             denoise / 100f,
             skinSmooth / 100f,
             exposure / 100f,
-            texture / 100f
+            texture / 100f,
+            tint / 100f,
+            vignette / 100f,
+            vignetteMidpoint / 100f
         )
     }
     
@@ -235,7 +251,8 @@ data class RenderParameters(
             vibrance != 0f || highlights != 0f || shadows != 0f ||
             whites != 0f || blacks != 0f || grain != 0f ||
             fade != 0f || dehaze != 0f || denoise != 0f ||
-            skinSmooth != 0f || exposure != 0f || texture != 0f
+            skinSmooth != 0f || exposure != 0f || texture != 0f ||
+            tint != 0f || vignette != 0f
         ) return true
 
         // HSL
@@ -286,10 +303,13 @@ data class RenderParameters(
             grain = if (grain != 0f) grain else other.grain,
             fade = if (fade != 0f) fade else other.fade,
             dehaze = if (dehaze != 0f) dehaze else other.dehaze,
+            vignette = if (vignette != 0f) vignette else other.vignette,
+            vignetteMidpoint = if (vignetteMidpoint != 50f) vignetteMidpoint else other.vignetteMidpoint,
             denoise = if (denoise != 0f) denoise else other.denoise,
             skinSmooth = if (skinSmooth != 0f) skinSmooth else other.skinSmooth,
             exposure = if (exposure != 0f) exposure else other.exposure,
             texture = if (texture != 0f) texture else other.texture,
+            tint = if (tint != 0f) tint else other.tint,
             hslRedHue = if (hslRedHue != 0f) hslRedHue else other.hslRedHue,
             hslRedSaturation = if (hslRedSaturation != 0f) hslRedSaturation else other.hslRedSaturation,
             hslRedLuminance = if (hslRedLuminance != 0f) hslRedLuminance else other.hslRedLuminance,
@@ -348,10 +368,13 @@ data class RenderParameters(
             grain = grain + (target.grain - grain) * clampedT,
             fade = fade + (target.fade - fade) * clampedT,
             dehaze = dehaze + (target.dehaze - dehaze) * clampedT,
+            vignette = vignette + (target.vignette - vignette) * clampedT,
+            vignetteMidpoint = vignetteMidpoint + (target.vignetteMidpoint - vignetteMidpoint) * clampedT,
             denoise = denoise + (target.denoise - denoise) * clampedT,
             skinSmooth = skinSmooth + (target.skinSmooth - skinSmooth) * clampedT,
             exposure = exposure + (target.exposure - exposure) * clampedT,
             texture = texture + (target.texture - texture) * clampedT,
+            tint = tint + (target.tint - tint) * clampedT,
             hslRedHue = hslRedHue + (target.hslRedHue - hslRedHue) * clampedT,
             hslRedSaturation = hslRedSaturation + (target.hslRedSaturation - hslRedSaturation) * clampedT,
             hslRedLuminance = hslRedLuminance + (target.hslRedLuminance - hslRedLuminance) * clampedT,

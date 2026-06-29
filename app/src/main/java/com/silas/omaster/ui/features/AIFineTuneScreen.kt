@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -122,9 +123,13 @@ fun AIFineTuneScreen(
     val hslValues by viewModel.hslValues.collectAsState()
     val selectedHslId by viewModel.selectedHslId.collectAsState()
     val curveChannel by viewModel.curveChannel.collectAsState()
-    val curvePoints by viewModel.curvePoints.collectAsState()
-    val canUndo by viewModel.canUndo.collectAsState()
-    val canRedo by viewModel.canRedo.collectAsState()
+            val curvePoints by viewModel.curvePoints.collectAsState()
+            val canUndo by viewModel.canUndo.collectAsState()
+            val canRedo by viewModel.canRedo.collectAsState()
+            val localAdjustments by viewModel.localAdjustments.collectAsState()
+            val selectedLocalAdjId by viewModel.selectedLocalAdjId.collectAsState()
+            val showMaskOverlay by viewModel.showMaskOverlay.collectAsState()
+            val historySnapshots by viewModel.historySnapshots.collectAsState()
 
     // 初始化传入的 bitmap
     LaunchedEffect(bitmap) {
@@ -321,23 +326,26 @@ fun AIFineTuneScreen(
             }
 
             // Tab 切换
+            val tabs = listOf(
+                "basic" to "基础",
+                "style" to "风格",
+                "smart" to "智能",
+                "hsl" to "HSL",
+                "curve" to "曲线",
+                "local" to "局部",
+                "history" to "历史"
+            )
             TabRow(
-                selectedTabIndex = listOf("basic", "style", "smart", "hsl", "curve").indexOf(activeTab),
+                selectedTabIndex = tabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0),
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = HasselbladOrange,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                listOf(
-                    "basic" to "基础",
-                    "style" to "风格",
-                    "smart" to "智能",
-                    "hsl" to "HSL",
-                    "curve" to "曲线"
-                ).forEach { (id, label) ->
+                tabs.forEach { (id, label) ->
                     Tab(
                         selected = activeTab == id,
                         onClick = { viewModel.setTab(id) },
-                        text = { Text(label, fontSize = 13.sp) }
+                        text = { Text(label, fontSize = 12.sp) }
                     )
                 }
             }
@@ -383,6 +391,32 @@ fun AIFineTuneScreen(
                         onChannelChange = { viewModel.setCurveChannel(it) },
                         onPointsChange = { viewModel.updateCurvePoints(curveChannel, it) },
                         onPreset = { viewModel.applyCurvePreset(it) }
+                    )
+                    "local" -> LocalAdjustPanel(
+                        adjustments = localAdjustments,
+                        selectedId = selectedLocalAdjId,
+                        onSelect = { viewModel.selectLocalAdjustment(it) },
+                        onAdd = { type ->
+                            val adj = com.silas.omaster.renderer.LocalAdjustment(
+                                maskType = type,
+                                name = when (type) {
+                                    com.silas.omaster.renderer.MaskType.BRUSH -> "画笔蒙版"
+                                    com.silas.omaster.renderer.MaskType.RADIAL -> "径向渐变"
+                                    com.silas.omaster.renderer.MaskType.LINEAR -> "线性渐变"
+                                }
+                            )
+                            viewModel.addLocalAdjustment(adj)
+                        },
+                        onUpdate = { id, block -> viewModel.updateLocalAdjustment(id, block) },
+                        onRemove = { viewModel.removeLocalAdjustment(it) },
+                        onToggleMaskOverlay = { viewModel.toggleMaskOverlay() },
+                        showMaskOverlay = showMaskOverlay
+                    )
+                    "history" -> EditHistoryPanel(
+                        snapshots = historySnapshots,
+                        currentIndex = viewModel.currentHistoryIndex.collectAsState().value,
+                        onJump = { viewModel.jumpToHistory(it) },
+                        onCreateBranch = { viewModel.createBranch(it) }
                     )
                 }
             }
@@ -501,6 +535,7 @@ private fun BasicParamsPanel(
         Triple("saturation", "饱和度", -100f..100f),
         Triple("vibrance", "鲜艳度", -100f..100f),
         Triple("warmth", "色温", -100f..100f),
+        Triple("tint", "色调", -100f..100f),
         Triple("highlights", "高光", -100f..100f),
         Triple("shadows", "阴影", -100f..100f),
         Triple("whites", "白色", -100f..100f),
@@ -512,7 +547,8 @@ private fun BasicParamsPanel(
         Triple("denoise", "降噪", 0f..100f),
         Triple("grain", "颗粒", 0f..100f),
         Triple("fade", "褪色", 0f..100f),
-        Triple("skinSmooth", "肤色平滑", 0f..100f)
+        Triple("skinSmooth", "肤色平滑", 0f..100f),
+        Triple("vignette", "暗角", 0f..100f)
     )
 
     LazyColumn(
@@ -539,6 +575,8 @@ private fun BasicParamsPanel(
                 "grain" -> params.grain
                 "fade" -> params.fade
                 "skinSmooth" -> params.skinSmooth
+                "tint" -> params.tint
+                "vignette" -> params.vignette
                 else -> 0f
             }
             ParamSliderRow(
@@ -1058,5 +1096,250 @@ private fun AIProgressOverlay(
                 }
             }
         }
+    }
+}
+
+// ==================== 局部调整面板 ====================
+
+@Composable
+private fun LocalAdjustPanel(
+    adjustments: List<com.silas.omaster.renderer.LocalAdjustment>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    onAdd: (com.silas.omaster.renderer.MaskType) -> Unit,
+    onUpdate: (String, (com.silas.omaster.renderer.LocalAdjustment) -> com.silas.omaster.renderer.LocalAdjustment) -> Unit,
+    onRemove: (String) -> Unit,
+    onToggleMaskOverlay: () -> Unit,
+    showMaskOverlay: Boolean
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 工具栏：添加蒙版按钮 + 蒙版叠加开关
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MaskToolButton("画笔", Icons.Default.Edit) { onAdd(com.silas.omaster.renderer.MaskType.BRUSH) }
+            MaskToolButton("径向", Icons.Default.RadioButtonUnchecked) { onAdd(com.silas.omaster.renderer.MaskType.RADIAL) }
+            MaskToolButton("线性", Icons.Default.LinearScale) { onAdd(com.silas.omaster.renderer.MaskType.LINEAR) }
+            IconButton(onClick = onToggleMaskOverlay) {
+                Icon(
+                    imageVector = if (showMaskOverlay) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = "蒙版叠加",
+                    tint = if (showMaskOverlay) HasselbladOrange else Color.Gray
+                )
+            }
+        }
+
+        if (adjustments.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("点击上方工具添加局部调整", color = Color.Gray, fontSize = 14.sp)
+            }
+            return
+        }
+
+        // 已添加的局部调整列表
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            items(adjustments) { adj ->
+                val isSelected = adj.id == selectedId
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .clickable { onSelect(if (isSelected) null else adj.id) },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) HasselbladOrange.copy(alpha = 0.15f) else Color(0xFF1A1A1A)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(adj.name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            IconButton(onClick = { onRemove(adj.id) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Delete, contentDescription = "删除", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        if (isSelected) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LocalParamSliders(adj) { updated ->
+                                onUpdate(adj.id, updated)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MaskToolButton(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(onClick = onClick) {
+            Icon(icon, contentDescription = label, tint = HasselbladOrange)
+        }
+        Text(label, color = Color.Gray, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun LocalParamSliders(
+    adj: com.silas.omaster.renderer.LocalAdjustment,
+    onChange: (com.silas.omaster.renderer.LocalAdjustment) -> Unit
+) {
+    val params = listOf(
+        "exposure" to "曝光" to adj.exposure,
+        "brightness" to "亮度" to adj.brightness,
+        "contrast" to "对比度" to adj.contrast,
+        "saturation" to "饱和度" to adj.saturation,
+        "warmth" to "色温" to adj.warmth,
+        "tint" to "色调" to adj.tint,
+        "highlights" to "高光" to adj.highlights,
+        "shadows" to "阴影" to adj.shadows,
+        "clarity" to "清晰度" to adj.clarity,
+        "sharpness" to "锐度" to adj.sharpness
+    )
+
+    Column {
+        params.forEach { (pair, value) ->
+            val (key, name) = pair
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(name, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(48.dp))
+                Slider(
+                    value = value,
+                    onValueChange = { newVal ->
+                        val updated = when (key) {
+                            "exposure" -> adj.copy(exposure = newVal)
+                            "brightness" -> adj.copy(brightness = newVal)
+                            "contrast" -> adj.copy(contrast = newVal)
+                            "saturation" -> adj.copy(saturation = newVal)
+                            "warmth" -> adj.copy(warmth = newVal)
+                            "tint" -> adj.copy(tint = newVal)
+                            "highlights" -> adj.copy(highlights = newVal)
+                            "shadows" -> adj.copy(shadows = newVal)
+                            "clarity" -> adj.copy(clarity = newVal)
+                            "sharpness" -> adj.copy(sharpness = newVal)
+                            else -> adj
+                        }
+                        onChange(updated)
+                    },
+                    valueRange = -100f..100f,
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = HasselbladOrange,
+                        activeTrackColor = HasselbladOrange,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.15f)
+                    )
+                )
+            }
+        }
+    }
+}
+
+// ==================== 编辑历史面板 ====================
+
+@Composable
+private fun EditHistoryPanel(
+    snapshots: List<com.silas.omaster.manager.EditSnapshot>,
+    currentIndex: Int,
+    onJump: (String) -> Unit,
+    onCreateBranch: (String) -> Unit
+) {
+    var showBranchDialog by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("编辑步骤 (${snapshots.size})", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            TextButton(onClick = { showBranchDialog = true }) {
+                Text("创建分支", color = HasselbladOrange, fontSize = 12.sp)
+            }
+        }
+
+        if (snapshots.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("暂无编辑历史", color = Color.Gray, fontSize = 14.sp)
+            }
+            return
+        }
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            itemsIndexed(snapshots) { index, snapshot ->
+                val isCurrent = index == currentIndex
+                val timeText = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(snapshot.timestamp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isCurrent) HasselbladOrange.copy(alpha = 0.2f) else Color.Transparent)
+                        .clickable { onJump(snapshot.id) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${index + 1}.",
+                        color = if (isCurrent) HasselbladOrange else Color.Gray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.width(28.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(snapshot.name, color = Color.White, fontSize = 13.sp)
+                        Text(timeText, color = Color.Gray, fontSize = 10.sp)
+                    }
+                    if (isCurrent) {
+                        Text("当前", color = HasselbladOrange, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showBranchDialog) {
+        var branchName by remember { mutableStateOf("") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showBranchDialog = false },
+            title = { Text("创建分支", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = branchName,
+                    onValueChange = { branchName = it },
+                    label = { Text("分支名称", color = Color.Gray) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = HasselbladOrange,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (branchName.isNotBlank()) {
+                        onCreateBranch(branchName)
+                        showBranchDialog = false
+                    }
+                }) {
+                    Text("确定", color = HasselbladOrange)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBranchDialog = false }) {
+                    Text("取消", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF1A1A1A)
+        )
     }
 }

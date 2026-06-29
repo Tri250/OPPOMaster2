@@ -53,6 +53,14 @@ uniform float uDehaze;          // 去霾 [0, 1]
 uniform float uDenoise;         // 降噪 [0, 1]
 uniform float uSkinSmooth;      // 肤色平滑 [0, 1]
 
+// 色调（Tint）[-1, 1]，负值偏绿，正值偏品红
+uniform float uTint;
+
+// 暗角 [0, 1]
+uniform float uVignette;
+// 暗角中点 [0, 1]
+uniform float uVignetteMidpoint;
+
 // HSL 8 通道调色 uniform（[-1, 1]）
 uniform float uHSLRedHue;       uniform float uHSLRedSat;       uniform float uHSLRedLum;
 uniform float uHSLOrangeHue;    uniform float uHSLOrangeSat;    uniform float uHSLOrangeLum;
@@ -664,6 +672,12 @@ void main() {
         color.b = color.b - uWarmth * 0.1;
     }
 
+    // 色调（Tint）调整：负值偏绿，正值偏品红
+    if (abs(uTint) > 0.01) {
+        color.g = color.g + uTint * 0.1;
+        color.b = color.b - uTint * 0.1;
+    }
+
     // HSL 8 通道调色
     {
         vec3 hslAdjusted = adjustHSL(color);
@@ -742,11 +756,20 @@ void main() {
         color = fadeEffect(color, uFade);
     }
     
-    // 胶片颗粒效果（最后执行）
+    // 胶片颗粒效果
     if (uGrain > 0.01) {
         color = grainEffect(color, vTexCoord, uGrain);
     }
-    
+
+    // 暗角效果（Vignette）：基于到中心的距离压暗边缘
+    if (uVignette > 0.01) {
+        vec2 center = vec2(0.5, 0.5);
+        float dist = distance(vTexCoord, center) * 1.41421356; // 归一化到 [0, 1]
+        float midpoint = uVignetteMidpoint; // 中点控制暗角起始位置
+        float vignetteAmount = smoothstep(midpoint, 1.0, dist) * uVignette * 0.8;
+        color = color * (1.0 - vignetteAmount);
+    }
+
     // ========== 输出结果 ==========
     
     // 确保颜色值在有效范围内

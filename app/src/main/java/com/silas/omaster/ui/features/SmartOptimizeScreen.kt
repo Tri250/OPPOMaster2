@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Image
@@ -168,7 +169,15 @@ fun SmartOptimizeScreen(
 
     // 编辑Tab
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("调色", "细节", "滤镜", "AI")
+    val tabs = listOf("调色", "细节", "裁剪", "滤镜", "AI")
+
+    // 裁剪旋转状态
+    var cropRotateEngine by remember { mutableStateOf(com.silas.omaster.engine.CropRotateEngine()) }
+    var cropRect by remember { mutableStateOf<android.graphics.RectF?>(null) }
+    var rotationDegrees by remember { mutableFloatStateOf(0f) }
+    var flipH by remember { mutableStateOf(false) }
+    var flipV by remember { mutableStateOf(false) }
+    var cropApplied by remember { mutableStateOf(false) }
 
     // 优化进度
     var isOptimizing by remember { mutableStateOf(false) }
@@ -434,7 +443,8 @@ fun SmartOptimizeScreen(
                             when (index) {
                                 0 -> Icons.Default.Palette
                                 1 -> Icons.Default.Tune
-                                2 -> Icons.Default.FilterAlt
+                                2 -> Icons.Default.CropFree
+                                3 -> Icons.Default.FilterAlt
                                 else -> Icons.Default.AutoAwesome
                             },
                             contentDescription = title,
@@ -458,8 +468,44 @@ fun SmartOptimizeScreen(
             when (selectedTab) {
                 0 -> item { ColorAdjustPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
                 1 -> item { DetailPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
-                2 -> item { FilterPresetPanel(onApplyPreset = { params = it; updatePreview() }) }
-                3 -> item { AIPanel(
+                2 -> item {
+                    val src = originalBitmap
+                    if (src != null) {
+                        CropRotatePanel(
+                            sourceBitmap = src,
+                            cropRect = cropRect,
+                            rotationDegrees = rotationDegrees,
+                            flipH = flipH,
+                            flipV = flipV,
+                            onCropRectChange = { cropRect = it },
+                            onRotationChange = { rotationDegrees = it },
+                            onFlipH = { flipH = !flipH },
+                            onFlipV = { flipV = !flipV },
+                            onApply = {
+                                val result = cropRotateEngine.cropAndRotate(src, cropRect, rotationDegrees, flipH, flipV)
+                                originalBitmap = result
+                                optimizedBitmap = null
+                                previewBitmap = null
+                                previewMode = "before"
+                                cropApplied = true
+                                Toast.makeText(context, "裁剪旋转已应用", Toast.LENGTH_SHORT).show()
+                            },
+                            onReset = {
+                                cropRect = null
+                                rotationDegrees = 0f
+                                flipH = false
+                                flipV = false
+                                cropApplied = false
+                            }
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Text("请先选择图片", color = Color.Gray)
+                        }
+                    }
+                }
+                3 -> item { FilterPresetPanel(onApplyPreset = { params = it; updatePreview() }) }
+                4 -> item { AIPanel(
                     params = params,
                     onParamsChange = { params = it; updatePreview() },
                     originalBitmap = originalBitmap,
@@ -991,6 +1037,110 @@ private fun saveBitmapToCache(context: Context, bitmap: Bitmap, filename: String
         file.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out) }
         androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     } catch (_: Exception) { null }
+}
+
+// ==================== 裁剪旋转面板 ====================
+
+@Composable
+private fun CropRotatePanel(
+    sourceBitmap: Bitmap,
+    cropRect: android.graphics.RectF?,
+    rotationDegrees: Float,
+    flipH: Boolean,
+    flipV: Boolean,
+    onCropRectChange: (android.graphics.RectF?) -> Unit,
+    onRotationChange: (Float) -> Unit,
+    onFlipH: () -> Unit,
+    onFlipV: () -> Unit,
+    onApply: () -> Unit,
+    onReset: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val engine = remember { com.silas.omaster.engine.CropRotateEngine() }
+    var selectedRatio by remember { mutableStateOf<com.silas.omaster.engine.CropAspectRatio>(com.silas.omaster.engine.CropAspectRatio.FREE) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel("裁剪比例")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(com.silas.omaster.engine.CropAspectRatio.entries.toList()) { ratio ->
+                val selected = selectedRatio == ratio
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        selectedRatio = ratio
+                        if (ratio != com.silas.omaster.engine.CropAspectRatio.FREE) {
+                            val rect = engine.calculateInitialCropRect(sourceBitmap.width, sourceBitmap.height, ratio.ratio)
+                            onCropRectChange(rect)
+                        } else {
+                            onCropRectChange(null)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selected) HasselbladOrange else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(ratio.label, fontSize = 12.sp)
+                }
+            }
+        }
+
+        SectionLabel("旋转与翻转")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            OutlinedButton(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onRotationChange((rotationDegrees - 90f).mod(360f))
+            }, shape = RoundedCornerShape(10.dp)) { Text("左转90", fontSize = 12.sp) }
+            OutlinedButton(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onRotationChange((rotationDegrees + 90f).mod(360f))
+            }, shape = RoundedCornerShape(10.dp)) { Text("右转90", fontSize = 12.sp) }
+            OutlinedButton(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onFlipH()
+            }, shape = RoundedCornerShape(10.dp)) { Text("水平翻转", fontSize = 12.sp) }
+            OutlinedButton(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onFlipV()
+            }, shape = RoundedCornerShape(10.dp)) { Text("垂直翻转", fontSize = 12.sp) }
+        }
+
+        SectionLabel("自由旋转")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("角度", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
+            Slider(
+                value = rotationDegrees,
+                onValueChange = onRotationChange,
+                valueRange = -180f..180f,
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(thumbColor = HasselbladOrange, activeTrackColor = HasselbladOrange)
+            )
+            Text("${rotationDegrees.toInt()}°", modifier = Modifier.width(48.dp), fontSize = 13.sp, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
+                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("重置")
+            }
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onApply()
+                },
+                modifier = Modifier.weight(1.5f),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+            ) {
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("应用裁剪")
+            }
+        }
+    }
 }
 
 @Composable

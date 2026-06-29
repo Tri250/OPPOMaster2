@@ -1249,6 +1249,7 @@ class CPURenderer {
         val saturation = params.saturation / 100f
         val vibrance = params.vibrance / 100f
         val warmth = params.warmth / 100f
+        val tint = params.tint / 100f
         val highlights = params.highlights / 100f
         val shadows = params.shadows / 100f
         val whites = params.whites / 100f
@@ -1257,6 +1258,8 @@ class CPURenderer {
         val dehaze = params.dehaze / 100f
         val fade = params.fade / 100f
         val grain = params.grain / 100f
+        val vignette = params.vignette / 100f
+        val vignetteMidpoint = params.vignetteMidpoint / 100f
 
         for (i in pixels.indices) {
             val pixel = pixels[i]
@@ -1310,6 +1313,12 @@ class CPURenderer {
             if (abs(warmth) > 0.01f) {
                 r += warmth * 0.1f
                 b -= warmth * 0.1f
+            }
+
+            // 色调（Tint）: g += tint * 0.1, b -= tint * 0.1
+            if (abs(tint) > 0.01f) {
+                g += tint * 0.1f
+                b -= tint * 0.1f
             }
 
             // ========== 5. 光影调整（基于亮度遮罩） ==========
@@ -1403,6 +1412,19 @@ class CPURenderer {
                 r += noise * gs * 0.15f
                 g += noise * gs * 0.15f
                 b += noise * gs * 0.15f
+            }
+
+            // 暗角（Vignette）：基于到中心的距离压暗边缘
+            if (vignette > 0.01f) {
+                val x = (i % width).toFloat() / width
+                val y = (i / width).toFloat() / height
+                val dx = x - 0.5f
+                val dy = y - 0.5f
+                val dist = kotlin.math.sqrt(dx * dx + dy * dy) * 1.41421356f // 归一化到 [0,1]
+                val vignetteMask = smoothstep(vignetteMidpoint, 1.0f, dist) * vignette * 0.8f
+                r *= (1f - vignetteMask)
+                g *= (1f - vignetteMask)
+                b *= (1f - vignetteMask)
             }
 
             // 钳制并写回

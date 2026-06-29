@@ -9,6 +9,9 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import com.silas.omaster.model.HasselbladParams
+import com.silas.omaster.renderer.GPURenderManager
+import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.renderer.RenderQuality
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -170,6 +173,129 @@ class BatchProcessingManager(
             )
         }
         onComplete(results)
+    }
+
+    /**
+     * 使用 GPU/CPU 渲染管线批量处理（支持完整 RenderParameters）
+     * @param imageUris 待处理图片 URI 列表
+     * @param params RenderParameters 完整参数
+     * @param quality 渲染质量
+     * @param exportFormat 导出格式
+     * @param onProgress 进度回调
+     * @param onComplete 完成回调
+     */
+    suspend fun processBatchWithRenderParams(
+        imageUris: List<Uri>,
+        params: RenderParameters,
+        quality: RenderQuality = RenderQuality.STANDARD,
+        exportFormat: HasselbladEyeViewModel.ExportFormat = HasselbladEyeViewModel.ExportFormat.JPEG,
+        onProgress: (current: Int, total: Int, uri: Uri) -> Unit = { _, _, _ -> },
+        onComplete: (results: List<BatchResult>) -> Unit = {}
+    ) {
+        if (imageUris.size > MAX_BATCH_SIZE) {
+            synchronized(lock) {
+                _batchState.value = _batchState.value.copy(
+                    error = "批量处理最多支持 $MAX_BATCH_SIZE 张图片"
+                )
+            }
+            return
+        }
+
+        synchronized(lock) {
+            isCancelled = false
+            _batchState.value = BatchState(
+                isProcessing = true,
+                totalCount = imageUris.size,
+                currentIndex = 0
+            )
+        }
+
+        val results = mutableListOf<BatchResult>()
+        var gpuManager: GPURenderManager? = null
+        var gpuInitialized = false
+
+        withContext(Dispatchers.IO) {
+            processingJob = coroutineContext[Job]
+
+            // 尝试初始化 GPU（复用一个实例）
+            try {
+                gpuManager = GPURenderManager.acquire(context)
+                gpuInitialized = gpuManager?.initialize() == true
+            } catch (_: Exception) {
+                gpuInitialized = false
+            }
+
+            for ((index, uri) in imageUris.withIndex()) {
+                if (!isActive) {
+                    synchronized(lock) { results.add(BatchResult(uri, null, "已取消")) }
+                    break
+                }
+                var shouldBreak = false
+                synchronized(lock) {
+                    if (isCancelled) {
+                        results.add(BatchResult(uri, null, "已取消"))
+                        shouldBreak = true
+                    } else {
+                        _batchState.value = _batchState.value.copy(currentIndex = index)
+                    }
+                }
+                if (shouldBreak) break
+                onProgress(index + 1, imageUris.size, uri)
+
+                try {
+                    val bitmap = loadBitmap(context, uri)
+                    if (bitmap == null) {
+                        synchronized(lock) { results.add(BatchResult(uri, null, "图片加载失败")) }
+                        continue
+                    }
+
+                    // GPU 或 CPU 渲染
+                    val processedBitmap = if (gpuInitialized && gpuManager != null) {
+                        gpuManager.renderSync(bitmap, params, quality)
+                            ?: fallbackCPURender(bitmap, params)
+                    } else {
+                        fallbackCPURender(bitmap, params)
+                    }
+
+                    val savedUri = saveProcessedImage(processedBitmap, uri, exportFormat)
+                    synchronized(lock) {
+                        if (savedUri != null) {
+                            results.add(BatchResult(uri, savedUri, null))
+                        } else {
+                            results.add(BatchResult(uri, null, "保存失败"))
+                        }
+                    }
+
+                    if (processedBitmap !== bitmap) processedBitmap.recycle()
+                    bitmap.recycle()
+                } catch (e: Exception) {
+                    Log.e(TAG, "渲染处理失败: ${e.message}", e)
+                    synchronized(lock) {
+                        results.add(BatchResult(uri, null, e.message ?: "未知错误"))
+                    }
+                }
+            }
+
+            // 释放 GPU
+            gpuManager?.release()
+        }
+
+        synchronized(lock) {
+            _batchState.value = _batchState.value.copy(
+                isProcessing = false,
+                isComplete = true
+            )
+        }
+        onComplete(results)
+    }
+
+    /**
+     * CPU 降级渲染（批量处理 fallback）
+     */
+    private suspend fun fallbackCPURender(bitmap: Bitmap, params: RenderParameters): Bitmap {
+        val result = if (bitmap.config == Bitmap.Config.ARGB_8888 && bitmap.isMutable) bitmap
+        else bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        return com.silas.omaster.renderer.CPURenderer().render(result, params) ?: result
     }
 
     /**
