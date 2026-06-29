@@ -2,7 +2,7 @@ package com.silas.omaster.renderer
 
 import android.graphics.ColorMatrix
 import android.util.Log
-import com.silas.omaster.ai.mapping.HasselbladParams
+import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SoftLightMode
 
 /**
