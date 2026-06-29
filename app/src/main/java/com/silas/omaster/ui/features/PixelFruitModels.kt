@@ -42,7 +42,27 @@ data class PixelFruitParams(
     /** 面部美白 0~100, 默认 0 */
     val faceBrightening: Float = 0f,
     /** 过渡平滑 0~100, 默认 50 */
-    val faceSmoothness: Float = 50f
+    val faceSmoothness: Float = 50f,
+
+    // ========== 白平衡 ==========
+    /** 色温 -100~100, 默认 0 (暖→冷) */
+    val temperature: Float = 0f,
+    /** 色调 -100~100, 默认 0 (绿→品) */
+    val tint: Float = 0f,
+
+    // ========== 高级光影 ==========
+    /** 黑色阶 0~100, 默认 0 (黑场提升) */
+    val blacks: Float = 0f,
+    /** 清晰度 -100~100, 默认 0 (局部对比度增强) */
+    val clarity: Float = 0f,
+    /** 自然饱和度 0~200, 默认 100 (低饱和像素优先增强) */
+    val vibrance: Float = 100f,
+
+    // ========== 效果 ==========
+    /** 晕影 -100~100, 默认 0 (负值=暗角, 正值=亮角) */
+    val vignette: Float = 0f,
+    /** 颗粒感 0~100, 默认 0 (胶片颗粒) */
+    val grain: Float = 0f
 ) {
     /** 检测参数是否全为默认值 */
     fun isDefault(): Boolean = this == PixelFruitParams()
@@ -64,6 +84,13 @@ data class PixelFruitParams(
         if (noiseReduction != 0f) count++
         if (faceBrightening != 0f) count++
         if (faceSmoothness != 50f) count++
+        if (temperature != 0f) count++
+        if (tint != 0f) count++
+        if (blacks != 0f) count++
+        if (clarity != 0f) count++
+        if (vibrance != 100f) count++
+        if (vignette != 0f) count++
+        if (grain != 0f) count++
         return count
     }
 }
@@ -133,6 +160,36 @@ object BuiltInPresets {
             name = "人像",
             description = "提亮美白，柔和自然",
             params = PixelFruitParams(brightness = 1.15f, exposure = 0.3f, faceBrightening = 40f, faceSmoothness = 70f)
+        ),
+        FilterPreset(
+            id = "vivid",
+            name = "鲜艳模式",
+            description = "高饱和度，色彩鲜明生动",
+            params = PixelFruitParams(saturation = 150f, vibrance = 140f, contrast = 8f, sharpness = 15f)
+        ),
+        FilterPreset(
+            id = "muted",
+            name = "柔和淡雅",
+            description = "低饱和度，温柔宁静",
+            params = PixelFruitParams(saturation = 75f, vibrance = 80f, contrast = -8f, blacks = 5f)
+        ),
+        FilterPreset(
+            id = "golden_hour",
+            name = "黄金时刻",
+            description = "暖色调，模拟日出日落",
+            params = PixelFruitParams(temperature = 30f, saturation = 120f, vibrance = 130f, highlights = -10f, shadows = 10f, vignette = -20f)
+        ),
+        FilterPreset(
+            id = "cool_blue",
+            name = "冷蓝调",
+            description = "冷色调，宁静氛围",
+            params = PixelFruitParams(temperature = -25f, tint = 10f, saturation = 90f, contrast = 5f, blacks = 5f)
+        ),
+        FilterPreset(
+            id = "film_grain",
+            name = "胶片颗粒",
+            description = "复古胶片颗粒感",
+            params = PixelFruitParams(saturation = 85f, contrast = 10f, grain = 25f, vignette = -15f, blacks = 8f)
         )
     )
 }
@@ -172,4 +229,23 @@ data class OptimizeParams(
         if (colorCorrectionEnabled) count++
         return count
     }
+}
+
+/**
+ * 裁剪/旋转信息
+ */
+data class CropRotateInfo(
+    /** 旋转角度 0, 90, 180, 270 */
+    val rotation: Int = 0,
+    /** 水平翻转 */
+    val flipHorizontal: Boolean = false,
+    /** 裁剪区域 (left, top, right, bottom) 归一化 0~1 */
+    val cropLeft: Float = 0f,
+    val cropTop: Float = 0f,
+    val cropRight: Float = 1f,
+    val cropBottom: Float = 1f
+) {
+    fun isCropped(): Boolean = cropLeft != 0f || cropTop != 0f || cropRight != 1f || cropBottom != 1f
+    fun isRotated(): Boolean = rotation != 0 || flipHorizontal
+    fun isChanged(): Boolean = isCropped() || isRotated()
 }

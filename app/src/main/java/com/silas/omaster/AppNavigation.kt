@@ -192,7 +192,6 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToCreate = {
                         navController.navigate(Screen.PresetSelection)
                     },
-                    onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
@@ -306,7 +305,6 @@ fun MainApp(navController: NavHostController) {
 
             composable<Screen.CoreFeatures> {
                 CoreFeaturesScreen(
-                    onNavigateToAIFineTune = { navController.navigate(Screen.AIFineTune) },
                     onNavigateToSmartOptimize = { navController.navigate(Screen.SmartOptimize) },
                     onNavigateToPresetManager = { navController.navigate(Screen.Subscription) },
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },

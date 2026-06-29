@@ -168,7 +168,7 @@ fun SmartOptimizeScreen(
 
     // 编辑Tab
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("调色", "细节", "滤镜", "AI")
+    val tabs = listOf("调色", "细节", "效果", "滤镜", "AI")
 
     // 优化进度
     var isOptimizing by remember { mutableStateOf(false) }
@@ -434,7 +434,8 @@ fun SmartOptimizeScreen(
                             when (index) {
                                 0 -> Icons.Default.Palette
                                 1 -> Icons.Default.Tune
-                                2 -> Icons.Default.FilterAlt
+                                2 -> Icons.Default.AutoFixHigh
+                                3 -> Icons.Default.FilterAlt
                                 else -> Icons.Default.AutoAwesome
                             },
                             contentDescription = title,
@@ -458,8 +459,9 @@ fun SmartOptimizeScreen(
             when (selectedTab) {
                 0 -> item { ColorAdjustPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
                 1 -> item { DetailPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
-                2 -> item { FilterPresetPanel(onApplyPreset = { params = it; updatePreview() }) }
-                3 -> item { AIPanel(
+                2 -> item { EffectsPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
+                3 -> item { FilterPresetPanel(onApplyPreset = { params = it; updatePreview() }) }
+                4 -> item { AIPanel(
                     params = params,
                     onParamsChange = { params = it; updatePreview() },
                     originalBitmap = originalBitmap,
@@ -584,6 +586,30 @@ private fun DetailPanel(
 }
 
 /**
+ * 效果面板 — 色温/色调、清晰度、晕影、颗粒感等高级效果
+ */
+@Composable
+private fun EffectsPanel(
+    params: PixelFruitParams,
+    onParamsChange: (PixelFruitParams) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SectionLabel("白平衡")
+        ParamSlider("色温", params.temperature, -100f..100f, Color(0xFFFF9800)) { onParamsChange(params.copy(temperature = it)) }
+        ParamSlider("色调", params.tint, -100f..100f, Color(0xFF9C27B0)) { onParamsChange(params.copy(tint = it)) }
+
+        SectionLabel("高级光影")
+        ParamSlider("黑色阶", params.blacks, -100f..100f, Color(0xFF424242)) { onParamsChange(params.copy(blacks = it)) }
+        ParamSlider("清晰度", params.clarity, -100f..100f, Color(0xFF00BCD4)) { onParamsChange(params.copy(clarity = it)) }
+        ParamSlider("自然饱和度", params.vibrance, 0f..200f, Color(0xFFE91E63)) { onParamsChange(params.copy(vibrance = it)) }
+
+        SectionLabel("特效")
+        ParamSlider("晕影", params.vignette, -100f..100f, Color(0xFF37474F)) { onParamsChange(params.copy(vignette = it)) }
+        ParamSlider("颗粒感", params.grain, 0f..100f, Color(0xFF795548)) { onParamsChange(params.copy(grain = it)) }
+    }
+}
+
+/**
  * 滤镜预设面板 — 对齐 PixelFruit Filter.js 7 个内置预设
  */
 @Composable
@@ -671,12 +697,12 @@ private fun AIPanel(
                             onAnalysisResult(result)
                             // 根据AI场景推荐参数（对齐 PixelFruit applyAutoRecommendations）
                             val recommended = when (result.category) {
-                                com.silas.omaster.model.SceneCategory.PORTRAIT -> PixelFruitParams(brightness = 1.1f, exposure = 0.3f, saturation = 120f, faceBrightening = 40f, faceSmoothness = 70f)
-                                com.silas.omaster.model.SceneCategory.LANDSCAPE -> PixelFruitParams(saturation = 125f, contrast = 10f, sharpness = 20f, shadows = 5f)
-                                com.silas.omaster.model.SceneCategory.NIGHT -> PixelFruitParams(exposure = 0.4f, noiseReduction = 35f, saturation = 85f, highlights = -15f)
-                                com.silas.omaster.model.SceneCategory.FOOD -> PixelFruitParams(brightness = 1.15f, saturation = 140f, contrast = 8f, sharpness = 15f)
-                                com.silas.omaster.model.SceneCategory.URBAN -> PixelFruitParams(contrast = 12f, saturation = 115f, sharpness = 25f, shadows = 3f)
-                                else -> PixelFruitParams(brightness = 1.05f, saturation = 110f, contrast = 5f)
+                                com.silas.omaster.model.SceneCategory.PORTRAIT -> PixelFruitParams(brightness = 1.1f, exposure = 0.3f, saturation = 120f, vibrance = 125f, faceBrightening = 40f, faceSmoothness = 70f, clarity = 10f)
+                                com.silas.omaster.model.SceneCategory.LANDSCAPE -> PixelFruitParams(saturation = 125f, vibrance = 130f, contrast = 10f, sharpness = 20f, shadows = 5f, clarity = 15f, vignette = -10f)
+                                com.silas.omaster.model.SceneCategory.NIGHT -> PixelFruitParams(exposure = 0.4f, noiseReduction = 35f, saturation = 85f, highlights = -15f, blacks = 5f, vignette = -15f)
+                                com.silas.omaster.model.SceneCategory.FOOD -> PixelFruitParams(brightness = 1.15f, saturation = 140f, vibrance = 145f, contrast = 8f, sharpness = 15f, temperature = 10f)
+                                com.silas.omaster.model.SceneCategory.URBAN -> PixelFruitParams(contrast = 12f, saturation = 115f, sharpness = 25f, shadows = 3f, clarity = 12f, grain = 8f)
+                                else -> PixelFruitParams(brightness = 1.05f, saturation = 110f, vibrance = 115f, contrast = 5f, clarity = 5f)
                             }
                             onParamsChange(recommended)
                             isAILoading = false

@@ -70,6 +70,36 @@ class PixelFruitEngine {
             applyFaceBrightening(pixels, width, height, params.faceBrightening, params.faceSmoothness)
         }
 
+        // Step 5: 清晰度（局部对比度增强）
+        if (params.clarity != 0f) {
+            checkActive { onProgress("清晰度", 0.72f) }
+            applyClarity(pixels, width, height, params.clarity)
+        }
+
+        // Step 6: 自然饱和度（低饱和像素优先增强）
+        if (params.vibrance != 100f) {
+            checkActive { onProgress("自然饱和度", 0.74f) }
+            applyVibrance(pixels, width, height, params.vibrance)
+        }
+
+        // Step 7: 黑色阶（黑场提升）
+        if (params.blacks != 0f) {
+            checkActive { onProgress("黑色阶", 0.76f) }
+            applyBlacks(pixels, width, height, params.blacks)
+        }
+
+        // Step 8: 晕影效果
+        if (params.vignette != 0f) {
+            checkActive { onProgress("晕影", 0.78f) }
+            applyVignette(pixels, width, height, params.vignette)
+        }
+
+        // Step 9: 胶片颗粒
+        if (params.grain > 0f) {
+            checkActive { onProgress("颗粒感", 0.80f) }
+            applyGrain(pixels, width, height, params.grain)
+        }
+
         // Step 5: LUT 应用（对齐 LutProcessor.js，三线性插值）
         if (lut != null && lut.size > 0) {
             checkActive { onProgress("LUT", 0.85f) }
@@ -164,7 +194,7 @@ class PixelFruitEngine {
                 b = gray + saturationFactor * (b - gray)
             }
 
-            // 5. 色温/色调偏移
+            // 5. 色温/色调偏移（合并原RGB色调与新色温/色调参数）
             if (params.redTint != 0f || params.blueTint != 0f) {
                 r += tempR + tempB * 0.5f
                 b += tempB + tempR * 0.25f
@@ -172,6 +202,20 @@ class PixelFruitEngine {
             if (params.greenTint != 0f) {
                 g += toneG
                 r += toneR
+            }
+            // 新增色温参数：暖→冷，正值暖（加红减蓝），负值冷（减红加蓝）
+            if (params.temperature != 0f) {
+                val tempShift = params.temperature / 100f
+                r += tempShift * 15f
+                b -= tempShift * 15f
+                g += tempShift * 3f
+            }
+            // 新增色调参数：绿→品，正值偏品（加红蓝），负值偏绿
+            if (params.tint != 0f) {
+                val tintShift = params.tint / 100f
+                r += tintShift * 5f
+                b += tintShift * 5f
+                g -= tintShift * 10f
             }
 
             // 6. 曝光（2的幂）
@@ -417,5 +461,169 @@ class PixelFruitEngine {
     private inline fun checkActive(block: () -> Unit) {
         if (!kotlinx.coroutines.coroutineContext.isActive) return
         block()
+    }
+
+    // ==================== 清晰度: 局部对比度增强 ====================
+
+    /**
+     * 清晰度 = 局部对比度增强 (Clarity)
+     * 对中间调区域应用局部对比度提升，使图像更有质感
+     */
+    private fun applyClarity(pixels: IntArray, width: Int, height: Int, clarity: Float) {
+        if (clarity == 0f) return
+        val strength = clarity / 100f
+        val temp = pixels.copyOf()
+
+        for (y in 2 until height - 2) {
+            for (x in 2 until width - 2) {
+                val i = y * width + x
+                val r = Color.red(temp[i]).toFloat()
+                val g = Color.green(temp[i]).toFloat()
+                val b = Color.blue(temp[i]).toFloat()
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+
+                // 5x5 邻域均值
+                var sumR = 0f; var sumG = 0f; var sumB = 0f
+                for (dy in -2..2) {
+                    for (dx in -2..2) {
+                        val ni = (y + dy) * width + (x + dx)
+                        sumR += Color.red(temp[ni])
+                        sumG += Color.green(temp[ni])
+                        sumB += Color.blue(temp[ni])
+                    }
+                }
+                val meanR = sumR / 25f
+                val meanG = sumG / 25f
+                val meanB = sumB / 25f
+                val meanLum = 0.299f * meanR + 0.587f * meanG + 0.114f * meanB
+
+                // 中间调权重：亮度在64-192之间权重最高
+                val midtoneWeight = when {
+                    lum < 64f -> lum / 64f
+                    lum > 192f -> (255f - lum) / 63f
+                    else -> 1f
+                }
+
+                val factor = strength * midtoneWeight
+                val nr = (r + (r - meanR) * factor).toInt().coerceIn(0, 255)
+                val ng = (g + (g - meanG) * factor).toInt().coerceIn(0, 255)
+                val nb = (b + (b - meanB) * factor).toInt().coerceIn(0, 255)
+
+                pixels[i] = Color.argb(Color.alpha(temp[i]), nr, ng, nb)
+            }
+        }
+    }
+
+    // ==================== 自然饱和度 ====================
+
+    /**
+     * 自然饱和度 (Vibrance)
+     * 低饱和像素获得更大增益，高饱和像素保持不变
+     */
+    private fun applyVibrance(pixels: IntArray, width: Int, height: Int, vibrance: Float) {
+        val factor = vibrance / 100f
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i]).toFloat()
+            val g = Color.green(pixels[i]).toFloat()
+            val b = Color.blue(pixels[i]).toFloat()
+            val a = Color.alpha(pixels[i])
+
+            val maxC = maxOf(r, g, b)
+            val minC = minOf(r, g, b)
+            val currentSat = if (maxC > 0f) (maxC - minC) / maxC else 0f
+
+            // 低饱和像素获得更大增益
+            val satBoost = (1f - currentSat) * (factor - 1f)
+            val gray = 0.299f * r + 0.587f * g + 0.114f * b
+            val boost = 1f + satBoost
+            val nr = (gray + boost * (r - gray)).toInt().coerceIn(0, 255)
+            val ng = (gray + boost * (g - gray)).toInt().coerceIn(0, 255)
+            val nb = (gray + boost * (b - gray)).toInt().coerceIn(0, 255)
+
+            pixels[i] = Color.argb(a, nr, ng, nb)
+        }
+    }
+
+    // ==================== 黑色阶 ====================
+
+    /**
+     * 黑色阶 (Blacks)
+     * 控制黑场水平，正值提亮暗部，负值加深暗部
+     */
+    private fun applyBlacks(pixels: IntArray, width: Int, height: Int, blacks: Float) {
+        val strength = blacks / 100f
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i]).toFloat()
+            val g = Color.green(pixels[i]).toFloat()
+            val b = Color.blue(pixels[i]).toFloat()
+            val a = Color.alpha(pixels[i])
+
+            // 仅影响暗部区域（阈值50以下）
+            val lum = 0.299f * r + 0.587f * g + 0.114f * b
+            if (lum < 50f) {
+                val weight = (50f - lum) / 50f
+                val shift = strength * 30f * weight
+                val nr = (r + shift).toInt().coerceIn(0, 255)
+                val ng = (g + shift).toInt().coerceIn(0, 255)
+                val nb = (b + shift).toInt().coerceIn(0, 255)
+                pixels[i] = Color.argb(a, nr, ng, nb)
+            }
+        }
+    }
+
+    // ==================== 晕影效果 ====================
+
+    /**
+     * 晕影 (Vignette)
+     * 负值=暗角（边缘变暗），正值=亮角（边缘变亮）
+     */
+    private fun applyVignette(pixels: IntArray, width: Int, height: Int, vignette: Float) {
+        val strength = vignette / 100f
+        val cx = width / 2f
+        val cy = height / 2f
+        val maxDist = Math.sqrt((cx * cx + cy * cy).toDouble()).toFloat()
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val i = y * width + x
+                val dx = x - cx
+                val dy = y - cy
+                val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                val normalizedDist = (dist / maxDist).coerceIn(0f, 1f)
+                // 边缘影响更大
+                val edgeFactor = normalizedDist * normalizedDist
+                val adjust = 1f + strength * edgeFactor
+                val r = (Color.red(pixels[i]) * adjust).toInt().coerceIn(0, 255)
+                val g = (Color.green(pixels[i]) * adjust).toInt().coerceIn(0, 255)
+                val b = (Color.blue(pixels[i]) * adjust).toInt().coerceIn(0, 255)
+                pixels[i] = Color.argb(Color.alpha(pixels[i]), r, g, b)
+            }
+        }
+    }
+
+    // ==================== 胶片颗粒 ====================
+
+    /**
+     * 胶片颗粒 (Grain)
+     * 添加随机噪点模拟胶片颗粒感，颗粒强度与亮度相关
+     */
+    private fun applyGrain(pixels: IntArray, width: Int, height: Int, grain: Float) {
+        val strength = grain / 100f * 30f // 最大±30的偏移
+        val random = java.util.Random()
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i])
+            val g = Color.green(pixels[i])
+            val b = Color.blue(pixels[i])
+            val lum = (0.299f * r + 0.587f * g + 0.114f * b) / 255f
+
+            // 颗粒在中间调最明显
+            val grainWeight = 1f - Math.abs(lum - 0.5f) * 1.5f
+            val noise = (random.nextGaussian() * strength * grainWeight.coerceIn(0.2f, 1f)).toInt()
+
+            val nr = (r + noise).coerceIn(0, 255)
+            val ng = (g + noise).coerceIn(0, 255)
+            val nb = (b + noise).coerceIn(0, 255)
+            pixels[i] = Color.argb(Color.alpha(pixels[i]), nr, ng, nb)
+        }
     }
 }

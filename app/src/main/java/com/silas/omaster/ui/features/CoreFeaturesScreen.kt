@@ -99,7 +99,6 @@ data class FeatureData(
  */
 @Composable
 fun CoreFeaturesScreen(
-    onNavigateToAIFineTune: () -> Unit,
     onNavigateToSmartOptimize: () -> Unit,
     onNavigateToPresetManager: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
@@ -114,25 +113,13 @@ fun CoreFeaturesScreen(
     val haptic = LocalHapticFeedback.current
 
     // 功能开关状态
-    var aiFineTuneEnabled by remember { mutableStateOf(settingsManager.isAIFineTuneEnabled) }
     var smartOptimizeEnabled by remember { mutableStateOf(settingsManager.isSmartOptimizeEnabled) }
     var hasselbladEnabled by remember { mutableStateOf(settingsManager.isHasselbladColorEnabled) }
 
     // 定义所有功能数据 - 同步Web端features数组
     val allFeatures = remember {
         listOf(
-            // AI智能功能 (2个：去掉原哈苏之眼与水印编辑器)
-            FeatureData(
-                id = "ai-fine-tune",
-                title = "AI 微调",
-                subtitle = "一键智能微调，色彩风格精准控制",
-                icon = Icons.Default.ColorLens,
-                gradientColors = listOf(Color(0xFF4A148C), Color(0xFF6A1B9A)),
-                description = FeatureDescription(
-                    desc = "一键智能微调，精准控制色彩风格",
-                    tips = listOf("饱和度", "对比度", "亮度", "色温", "锐度")
-                )
-            ),
+            // AI智能功能 (1个：去掉原哈苏之眼与水印编辑器)
             FeatureData(
                 id = "smart-optimize",
                 title = "智能优化",
@@ -222,10 +209,10 @@ fun CoreFeaturesScreen(
     }
 
     // 功能分类 - 同步Web端
-    val aiFeatures = allFeatures.slice(0..1)
-    val toolFeatures = allFeatures.slice(2..3)
-    val brandFeatures = allFeatures.slice(4..6)
-    val memoryFeatures = allFeatures.slice(7..7)
+    val aiFeatures = allFeatures.slice(0..0)
+    val toolFeatures = allFeatures.slice(1..2)
+    val brandFeatures = allFeatures.slice(3..5)
+    val memoryFeatures = allFeatures.slice(6..6)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -282,7 +269,6 @@ fun CoreFeaturesScreen(
         aiFeatures.forEach { feature ->
             item {
                 val isEnabled = when (feature.id) {
-                    "ai-fine-tune" -> aiFineTuneEnabled
                     "smart-optimize" -> smartOptimizeEnabled
                     else -> true
                 }
@@ -293,10 +279,6 @@ fun CoreFeaturesScreen(
                     onToggle = { enabled ->
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when (feature.id) {
-                            "ai-fine-tune" -> {
-                                aiFineTuneEnabled = enabled
-                                settingsManager.isAIFineTuneEnabled = enabled
-                            }
                             "smart-optimize" -> {
                                 smartOptimizeEnabled = enabled
                                 settingsManager.isSmartOptimizeEnabled = enabled
@@ -305,7 +287,6 @@ fun CoreFeaturesScreen(
                     },
                     onClick = {
                         when (feature.id) {
-                            "ai-fine-tune" -> onNavigateToAIFineTune()
                             "smart-optimize" -> onNavigateToSmartOptimize()
                         }
                     }
