@@ -3,7 +3,9 @@ package com.silas.omaster.ui.features
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.SurfaceTexture
 import android.net.Uri
+import android.view.Surface
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -331,7 +333,7 @@ fun CameraXViewfinderScreen(
                         isLUTPreviewEnabled = !isLUTPreviewEnabled
                         if (isLUTPreviewEnabled) {
                             lutTextureView?.surfaceTexture?.let { st ->
-                                cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(st))
+                                cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, Surface(st))
                             }
                         } else {
                             cameraManager.setLUTPreviewRenderer(null, null)
@@ -392,7 +394,7 @@ fun CameraXViewfinderScreen(
                         surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                                 if (isLUTPreviewEnabled) {
-                                    cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(surface))
+                                    cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, Surface(surface))
                                 }
                             }
                             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
