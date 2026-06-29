@@ -113,7 +113,6 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 fun HomeScreen(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit,
-    onNavigateToAIFineTune: () -> Unit = {},
     onNavigateToSmartOptimize: () -> Unit = {},
     onNavigateToPresetManager: () -> Unit = {},
     onNavigateToParamAdjustment: () -> Unit = {},
@@ -260,7 +259,6 @@ fun HomeScreen(
 
             // 快捷功能入口（横向滚动卡片）
             QuickFeaturesSection(
-                onNavigateToAIFineTune = onNavigateToAIFineTune,
                 onNavigateToSmartOptimize = onNavigateToSmartOptimize,
                 onNavigateToParamAdjustment = onNavigateToParamAdjustment,
                 onNavigateToHasselbladEye = onNavigateToHasselbladEye,
@@ -1167,7 +1165,6 @@ private fun LoadingMoreTip() {
  */
 @Composable
 private fun QuickFeaturesSection(
-    onNavigateToAIFineTune: () -> Unit,
     onNavigateToSmartOptimize: () -> Unit,
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToHasselbladEye: () -> Unit,
@@ -1180,16 +1177,6 @@ private fun QuickFeaturesSection(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            QuickFeatureCard(
-                name = "AI微调",
-                icon = Icons.Default.AutoAwesome,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.LongPress)
-                    onNavigateToAIFineTune()
-                }
-            )
-        }
         item {
             QuickFeatureCard(
                 name = "智能优化",
