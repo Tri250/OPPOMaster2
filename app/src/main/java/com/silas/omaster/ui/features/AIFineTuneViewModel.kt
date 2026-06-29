@@ -38,10 +38,20 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.ai.AIFineTuneManager
 import com.silas.omaster.ai.AISuggestionResult
+import com.silas.omaster.ai.AutoAdjustEngine
+import com.silas.omaster.ai.AdvancedDenoiser
+import com.silas.omaster.ai.HistogramComputer
+import com.silas.omaster.ai.WhiteBalanceEngine
+import com.silas.omaster.ai.LocalToneMapper
+import com.silas.omaster.ai.BatchProcessor
+import com.silas.omaster.ai.segmentation.SegmentationEngine
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
+import com.silas.omaster.renderer.FilmHalationEffect
 import com.silas.omaster.renderer.GPURenderManager
+import com.silas.omaster.renderer.LUTExporter
+import com.silas.omaster.renderer.PresetManager
 import com.silas.omaster.renderer.RenderParameters
 import com.silas.omaster.renderer.RenderQuality
 import com.silas.omaster.ui.theme.*
@@ -54,6 +64,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
+
+/**
+ * 对比模式
+ */
+enum class CompareMode {
+    NONE,   // 不对比，正常显示效果图
+    SLIDER  // 滑动对比：左原图右效果
+}
 
 /**
  * 推理阶段
@@ -128,8 +146,11 @@ class AIFineTuneViewModel(
     private val _lockedParams = MutableStateFlow<Set<String>>(emptySet())
     val lockedParams: StateFlow<Set<String>> = _lockedParams.asStateFlow()
 
-    private val _showCompare = MutableStateFlow(false)
-    val showCompare: StateFlow<Boolean> = _showCompare.asStateFlow()
+    private val _compareMode = MutableStateFlow(CompareMode.NONE)
+    val compareMode: StateFlow<CompareMode> = _compareMode.asStateFlow()
+
+    private val _compareSliderPosition = MutableStateFlow(0.5f)
+    val compareSliderPosition: StateFlow<Float> = _compareSliderPosition.asStateFlow()
 
     private val _showSuccess = MutableStateFlow(false)
     val showSuccess: StateFlow<Boolean> = _showSuccess.asStateFlow()
@@ -203,6 +224,47 @@ class AIFineTuneViewModel(
     // ==================== GPU 渲染器 ====================
     private var gpuRenderManager: GPURenderManager? = null
     private var gpuInitialized = false
+
+    // ==================== 引擎实例 ====================
+    private val autoAdjustEngine = AutoAdjustEngine()
+    private val histogramComputer = HistogramComputer()
+    private val whiteBalanceEngine = WhiteBalanceEngine()
+    private val segmentationEngine = SegmentationEngine()
+    private val advancedDenoiser = AdvancedDenoiser()
+    private val localToneMapper = LocalToneMapper()
+    private val halationEffect = FilmHalationEffect()
+    private var presetManager: PresetManager? = null
+    private var batchProcessor: BatchProcessor? = null
+    private var lutExporter: LUTExporter? = null
+
+    // ==================== 直方图状态 ====================
+    private val _histograms = MutableStateFlow(HistogramComputer.Histograms())
+    val histograms: StateFlow<HistogramComputer.Histograms> = _histograms.asStateFlow()
+
+    private val _showHistogram = MutableStateFlow(false)
+    val showHistogram: StateFlow<Boolean> = _showHistogram.asStateFlow()
+
+    // ==================== 白平衡状态 ====================
+    private val _isEyedropperMode = MutableStateFlow(false)
+    val isEyedropperMode: StateFlow<Boolean> = _isEyedropperMode.asStateFlow()
+
+    // ==================== 蒙版/分割状态 ====================
+    private val _activeSegmentationType = MutableStateFlow<SegmentationEngine.MaskType?>(null)
+    val activeSegmentationType: StateFlow<SegmentationEngine.MaskType?> = _activeSegmentationType.asStateFlow()
+
+    private val _segmentationMask = MutableStateFlow<SegmentationEngine.SegmentationMask?>(null)
+    val segmentationMask: StateFlow<SegmentationEngine.SegmentationMask?> = _segmentationMask.asStateFlow()
+
+    // ==================== Halation 状态 ====================
+    private val _halationIntensity = MutableStateFlow(0f)
+    val halationIntensity: StateFlow<Float> = _halationIntensity.asStateFlow()
+
+    // ==================== 预设状态 ====================
+    private val _presetIntensity = MutableStateFlow(1.0f)
+    val presetIntensity: StateFlow<Float> = _presetIntensity.asStateFlow()
+
+    private val _savedPresets = MutableStateFlow<List<PresetManager.PresetEntry>>(emptyList())
+    val savedPresets: StateFlow<List<PresetManager.PresetEntry>> = _savedPresets.asStateFlow()
 
     private var inferenceJob: kotlinx.coroutines.Job? = null
 
@@ -316,6 +378,13 @@ class AIFineTuneViewModel(
         if (result != null) {
             _previewBitmap.value?.recycle()
             _previewBitmap.value = result
+        }
+        // 渲染后更新直方图
+        if (_showHistogram.value && result != null) {
+            val h = withContext(Dispatchers.Default) {
+                histogramComputer.computeFast(result)
+            }
+            _histograms.value = h
         }
     }
 
@@ -667,7 +736,16 @@ class AIFineTuneViewModel(
     // ==================== 对比与重置 ====================
 
     fun toggleCompare() {
-        _showCompare.value = !_showCompare.value
+        _compareMode.value = when (_compareMode.value) {
+            CompareMode.NONE -> CompareMode.SLIDER
+            CompareMode.SLIDER -> CompareMode.NONE
+        }
+        // 重置滑块位置
+        _compareSliderPosition.value = 0.5f
+    }
+
+    fun updateCompareSliderPosition(position: Float) {
+        _compareSliderPosition.value = position.coerceIn(0f, 1f)
     }
 
     fun reset() {
@@ -854,6 +932,408 @@ class AIFineTuneViewModel(
         _lut3DStrength.value = strength.coerceIn(0f, 1f)
         viewModelScope.launch {
             renderPreviewAsync(context)
+        }
+    }
+
+    // ================== 一键 Auto Adjust（P0-2） ==================
+
+    /**
+     * 基于直方图的一键自动调整
+     * 使用 AutoAdjustEngine 分析图片直方图并计算最优参数
+     */
+    fun performAutoAdjust(context: Context) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            _inferenceStage.value = InferenceStage.ANALYZING
+            _inferenceMessage.value = "分析直方图..."
+
+            try {
+                val autoParams = withContext(Dispatchers.Default) {
+                    autoAdjustEngine.autoAdjust(bitmap)
+                }
+                _currentParams.value = autoParams
+                syncRenderParamsToHSL(autoParams)
+                syncRenderParamsToCurve(autoParams)
+                pushHistory(force = true)
+
+                // 更新直方图
+                updateHistograms(bitmap)
+
+                renderPreviewAsync(context)
+                _inferenceStage.value = InferenceStage.COMPLETED
+                _inferenceMessage.value = "自动调整完成"
+                _showSuccess.value = true
+            } catch (e: Exception) {
+                _inferenceStage.value = InferenceStage.ERROR
+                _inferenceMessage.value = "自动调整失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    // ================== 直方图（P2-12） ==================
+
+    /**
+     * 切换直方图显示
+     */
+    fun toggleHistogram() {
+        _showHistogram.value = !_showHistogram.value
+    }
+
+    /**
+     * 更新直方图数据
+     */
+    fun updateHistograms(bitmap: Bitmap? = null) {
+        val source = bitmap ?: _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            val h = withContext(Dispatchers.Default) {
+                histogramComputer.computeFast(source)
+            }
+            _histograms.value = h
+        }
+    }
+
+    // ================== 白平衡（P2-9） ==================
+
+    /**
+     * 开启/关闭吸管白平衡模式
+     */
+    fun toggleEyedropperMode() {
+        _isEyedropperMode.value = !_isEyedropperMode.value
+    }
+
+    /**
+     * 吸管白平衡：在指定坐标取色并校正
+     */
+    fun applyEyedropperWhiteBalance(context: Context, x: Int, y: Int) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val wb = withContext(Dispatchers.Default) {
+                    whiteBalanceEngine.eyedropperWhiteBalance(bitmap, x, y)
+                }
+                val current = _currentParams.value
+                _currentParams.value = whiteBalanceEngine.applyToRenderParameters(current, wb)
+                pushHistory()
+                renderPreviewAsync(context)
+            } catch (e: Exception) {
+                _errorState.value = "白平衡失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+                _isEyedropperMode.value = false
+            }
+        }
+    }
+
+    /**
+     * 自动白平衡
+     */
+    fun applyAutoWhiteBalance(context: Context) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val wb = withContext(Dispatchers.Default) {
+                    whiteBalanceEngine.autoWhiteBalance(bitmap)
+                }
+                val current = _currentParams.value
+                _currentParams.value = whiteBalanceEngine.applyToRenderParameters(current, wb)
+                pushHistory()
+                renderPreviewAsync(context)
+            } catch (e: Exception) {
+                _errorState.value = "自动白平衡失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    // ================== AI 蒙版/分割（P1-7） ==================
+
+    /**
+     * 执行天空分割
+     */
+    fun segmentSky() {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val mask = withContext(Dispatchers.Default) {
+                    segmentationEngine.segmentSky(bitmap)
+                }
+                _segmentationMask.value = mask
+                _activeSegmentationType.value = SegmentationEngine.MaskType.SKY
+            } catch (e: Exception) {
+                _errorState.value = "天空分割失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 执行人像分割
+     */
+    fun segmentPerson() {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val mask = withContext(Dispatchers.Default) {
+                    segmentationEngine.segmentPerson(bitmap)
+                }
+                _segmentationMask.value = mask
+                _activeSegmentationType.value = SegmentationEngine.MaskType.PERSON
+            } catch (e: Exception) {
+                _errorState.value = "人像分割失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 对蒙版区域应用选择性调整
+     */
+    fun applyMaskedEdit(context: Context, maskedParams: RenderParameters) {
+        val bitmap = _sourceBitmap.value ?: return
+        val mask = _segmentationMask.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    segmentationEngine.applyMaskedEdit(
+                        bitmap, mask, _currentParams.value, maskedParams, gpuRenderManager
+                    )
+                }
+                _previewBitmap.value?.recycle()
+                _previewBitmap.value = result
+            } catch (e: Exception) {
+                _errorState.value = "蒙版编辑失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    /**
+     * 清除蒙版
+     */
+    fun clearSegmentationMask() {
+        _segmentationMask.value = null
+        _activeSegmentationType.value = null
+    }
+
+    // ================== Halation 胶片光晕（P2-17） ==================
+
+    /**
+     * 应用胶片光晕效果
+     */
+    fun applyHalation(context: Context, intensity: Float) {
+        _halationIntensity.value = intensity
+        val bitmap = _previewBitmap.value ?: _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    halationEffect.applyHalation(
+                        bitmap,
+                        FilmHalationEffect.HalationParams(intensity = intensity)
+                    )
+                }
+                // 仅更新预览，不改变源图
+                _previewBitmap.value?.recycle()
+                _previewBitmap.value = result
+            } catch (e: Exception) {
+                _errorState.value = "光晕效果失败: ${e.message}"
+            }
+        }
+    }
+
+    // ================== 局部色调映射（P2-10） ==================
+
+    /**
+     * 应用局部色调映射
+     */
+    fun applyLocalToneMap(context: Context, shadowBoost: Float = 0.3f, highlightRecovery: Float = 0.3f) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    localToneMapper.applyToneMap(
+                        bitmap,
+                        LocalToneMapper.ToneMapParams(
+                            shadowBoost = shadowBoost,
+                            highlightRecovery = highlightRecovery
+                        )
+                    )
+                }
+                // 局部色调映射后，更新源图并重新渲染
+                _sourceBitmap.value?.recycle()
+                _sourceBitmap.value = result
+                renderPreviewAsync(context)
+            } catch (e: Exception) {
+                _errorState.value = "局部色调映射失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    // ================== 高级降噪（P1-6） ==================
+
+    /**
+     * 应用高级降噪（双边滤波）
+     */
+    fun applyAdvancedDenoise(context: Context, strength: Float = 1.0f, iterations: Int = 3) {
+        val bitmap = _sourceBitmap.value ?: return
+        viewModelScope.launch {
+            _isProcessing.value = true
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    advancedDenoiser.denoise(
+                        bitmap,
+                        AdvancedDenoiser.DenoiseParams(
+                            strength = strength,
+                            iterations = iterations
+                        )
+                    )
+                }
+                _sourceBitmap.value?.recycle()
+                _sourceBitmap.value = result
+                renderPreviewAsync(context)
+            } catch (e: Exception) {
+                _errorState.value = "降噪失败: ${e.message}"
+            } finally {
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    // ================== 预设管理（P2-13） ==================
+
+    /**
+     * 初始化预设管理器
+     */
+    private fun ensurePresetManager(context: Context): PresetManager {
+        return presetManager ?: PresetManager(context).also {
+            presetManager = it
+            viewModelScope.launch {
+                it.loadAllPresets()
+                _savedPresets.value = it.presets
+            }
+        }
+    }
+
+    /**
+     * 保存当前参数为预设
+     */
+    fun saveAsPreset(context: Context, name: String, category: String = "custom") {
+        val pm = ensurePresetManager(context)
+        viewModelScope.launch {
+            val entry = PresetManager.PresetEntry(
+                id = "preset_${System.currentTimeMillis()}",
+                name = name,
+                category = category,
+                params = _currentParams.value
+            )
+            pm.savePreset(entry)
+            _savedPresets.value = pm.presets
+        }
+    }
+
+    /**
+     * 应用预设（支持强度 0%~200%）
+     */
+    fun applyPresetWithIntensity(context: Context, preset: PresetManager.PresetEntry, intensity: Float) {
+        _presetIntensity.value = intensity
+        val params = ensurePresetManager(context).applyWithIntensity(preset, intensity)
+        _currentParams.value = params
+        syncRenderParamsToHSL(params)
+        syncRenderParamsToCurve(params)
+        pushHistory(force = true)
+        refreshPreview(context)
+    }
+
+    /**
+     * 导出预设到文件
+     */
+    fun exportPreset(context: Context, preset: PresetManager.PresetEntry, outputFile: File) {
+        val pm = ensurePresetManager(context)
+        viewModelScope.launch {
+            pm.exportPreset(preset, outputFile)
+        }
+    }
+
+    /**
+     * 从文件导入预设
+     */
+    fun importPreset(context: Context, file: File) {
+        val pm = ensurePresetManager(context)
+        viewModelScope.launch {
+            pm.importPreset(file)
+            _savedPresets.value = pm.presets
+        }
+    }
+
+    /**
+     * 删除预设
+     */
+    fun deletePreset(context: Context, presetId: String) {
+        val pm = ensurePresetManager(context)
+        pm.deletePreset(presetId)
+        _savedPresets.value = pm.presets
+    }
+
+    // ================== LUT 导出（P2-15） ==================
+
+    /**
+     * 导出当前效果为 .cube LUT 文件
+     */
+    fun exportLUT(context: Context, outputFile: File, lutSize: Int = 33) {
+        viewModelScope.launch {
+            try {
+                val exporter = lutExporter ?: LUTExporter().also { lutExporter = it }
+                val success = withContext(Dispatchers.IO) {
+                    exporter.exportToCube(context, buildEffectiveParams(), outputFile, lutSize, gpuRenderManager)
+                }
+                if (!success) {
+                    _errorState.value = "LUT 导出失败"
+                }
+            } catch (e: Exception) {
+                _errorState.value = "LUT 导出失败: ${e.message}"
+            }
+        }
+    }
+
+    // ================== 批量处理（P2-14） ==================
+
+    /**
+     * 获取批量处理器
+     */
+    fun getBatchProcessor(context: Context): BatchProcessor {
+        return batchProcessor ?: BatchProcessor(context).also { batchProcessor = it }
+    }
+
+    /**
+     * 批量处理图片
+     */
+    fun batchProcess(context: Context, imageUris: List<Uri>, onProgress: ((Int, Int) -> Unit)? = null) {
+        val processor = getBatchProcessor(context)
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    processor.processBatch(imageUris, buildEffectiveParams()) { _, _ ->
+                        val p = processor.progress.value
+                        onProgress?.invoke(p.completed, p.total)
+                    }
+                }
+            } catch (e: Exception) {
+                _errorState.value = "批量处理失败: ${e.message}"
+            }
         }
     }
 

@@ -24,87 +24,145 @@ object HasselbladParamMapper {
     ): RenderParameters {
         val hp = hasselbladParams
 
-        // 归一化函数：-30~+30 → -1.0~+1.0
-        val n30 = { v: Int -> (v / 30f).coerceIn(-1f, 1f) }
-        // 归一化函数：-100~+100 → -1.0~+1.0
-        val n100 = { key: String ->
-            ((colorModeParams[key] ?: 0) / 100f).coerceIn(-1f, 1f)
-        }
+        // 辅助函数：-30~+30 → -100~+100
+        val map30to100 = { v: Int -> (v * 100f / 30f).coerceIn(-100f, 100f) }
+        // 辅助函数：从 colorModeParams 取值（Int → Float）
+        val cm = { key: String -> (colorModeParams[key] ?: 0).toFloat() }
 
-        val rp = RenderParameters(
-            exposure = n30(hp.tone) + n100("brightness"),
-            contrast = n30(hp.contrast) + n100("contrast"),
-            saturation = n30(hp.saturation) + n100("saturation"),
-            vibrance = (hp.clarity / 30f).coerceIn(0f, 1f) + n100("vibrance"),
-            highlights = n30(hp.highlights) + n100("highlights"),
-            shadows = n30(hp.shadows) + n100("shadows"),
-            whitePoint = n100("whitePoint"),
-            blackPoint = n100("blackPoint"),
-            clarity = (hp.sharpness + 30) / 60f,
-            sharpenAmount = ((hp.sharpness + 30) / 60f) * 0.8f,
-            sharpenRadius = 1.0f,
-            temperature = n30(hp.colorTemp) + n100("temperature"),
-            tint = n100("tint"),
-            hueShift = n100("hueShift"),
-            hslHueRed = n100("hslRedHue") + if (hp.cyanMagenta > 0) hp.cyanMagenta / 60f else 0f,
-            hslHueOrange = n100("hslOrangeHue"),
-            hslHueYellow = n100("hslYellowHue"),
-            hslHueGreen = n100("hslGreenHue"),
-            hslHueCyan = n100("hslCyanHue") + if (hp.cyanMagenta < 0) hp.cyanMagenta / 60f else 0f,
-            hslHueBlue = n100("hslBlueHue"),
-            hslHuePurple = n100("hslPurpleHue"),
-            hslHueMagenta = n100("hslMagentaHue"),
-            hslSatRed = n100("hslRedSat"),
-            hslSatOrange = n100("hslOrangeSat"),
-            hslSatYellow = n100("hslYellowSat"),
-            hslSatGreen = n100("hslGreenSat"),
-            hslSatCyan = n100("hslCyanSat"),
-            hslSatBlue = n100("hslBlueSat"),
-            hslSatPurple = n100("hslPurpleSat"),
-            hslSatMagenta = n100("hslMagentaSat"),
-            hslLumRed = n100("hslRedLum"),
-            hslLumOrange = n100("hslOrangeLum"),
-            hslLumYellow = n100("hslYellowLum"),
-            hslLumGreen = n100("hslGreenLum"),
-            hslLumCyan = n100("hslCyanLum"),
-            hslLumBlue = n100("hslBlueLum"),
-            hslLumPurple = n100("hslPurpleLum"),
-            hslLumMagenta = n100("hslMagentaLum"),
-            curveMaster = n100("curveMaster"),
-            curveRed = n100("curveRed"),
-            curveGreen = n100("curveGreen"),
-            curveBlue = n100("curveBlue"),
-            lut3DEnabled = active3DLUTId != null,
-            lut3DStrength = lut3DStrength.coerceIn(0f, 1f),
-            lut3DId = active3DLUTId ?: "",
-            inputColorSpace = "sRGB",
-            outputColorSpace = "sRGB",
-            flipHorizontal = false,
-            flipVertical = false,
-            rotation = 0f
-        )
+        // ── 基础参数：HasselbladParams → RenderParameters ──
+        var exposure = map30to100(hp.tone)                // tone -30..30 → exposure -100..100
+        var saturation = map30to100(hp.saturation)        // -30..30 → -100..100
+        var contrast = map30to100(hp.contrast)            // -30..30 → -100..100
+        var warmth = map30to100(hp.colorTemp)             // -30..30 → -100..100
+        var sharpness = (hp.sharpness + 30) * 100f / 60f  // -30..30 → 0..100
+        var highlights = map30to100(hp.highlights)        // -30..30 → -100..100
+        var shadows = map30to100(hp.shadows)              // -30..30 → -100..100
+        var clarity = hp.clarity * 100f / 30f             // 0..30 → 0..100
+        var brightness = 0f
+        var vibrance = 0f
+        var texture = 0f
+        var grain = 0f
+        var fade = 0f
+        var dehaze = 0f
+        var denoise = 0f
+        var skinSmooth = 0f
+        var whites = 0f
+        var blacks = 0f
 
-        // 柔光模式映射：SOFT/DREAMY 通过 colorMatrix 模拟柔光效果
+        // ── HSL 色相偏移：cyanMagenta 映射 ──
+        // cyanMagenta < 0 偏青（电影感）→ 青色色相偏移；> 0 偏品（复古感）→ 红色色相偏移
+        var hslRedHue = if (hp.cyanMagenta > 0) hp.cyanMagenta * 3f else 0f    // ±90 hue
+        var hslCyanHue = if (hp.cyanMagenta < 0) hp.cyanMagenta * 3f else 0f   // ±90 hue
+
+        // ── colorModeParams 叠加（-100..+100） ──
+        saturation += cm("saturation")
+        contrast += cm("contrast")
+        brightness = cm("brightness")
+        warmth += cm("warmth")
+        vibrance = cm("vibrance")
+        highlights += cm("highlights")
+        shadows += cm("shadows")
+        clarity = (clarity + cm("clarity")).coerceIn(0f, 100f)
+        sharpness = (sharpness + cm("sharpness")).coerceIn(0f, 100f)
+        dehaze = cm("dehaze").coerceIn(0f, 100f)
+        denoise = cm("denoise").coerceIn(0f, 100f)
+        grain = cm("grain").coerceIn(0f, 100f)
+        fade = cm("fade").coerceIn(0f, 100f)
+        skinSmooth = cm("skinSmooth").coerceIn(0f, 100f)
+        texture = cm("texture")
+
+        // ── colorModeParams HSL 叠加 ──
+        hslRedHue += cm("hslRedHue")
+        hslCyanHue += cm("hslCyanHue")
+        val hslOrangeHue = cm("hslOrangeHue")
+        val hslYellowHue = cm("hslYellowHue")
+        val hslGreenHue = cm("hslGreenHue")
+        val hslBlueHue = cm("hslBlueHue")
+        val hslPurpleHue = cm("hslPurpleHue")
+        val hslMagentaHue = cm("hslMagentaHue")
+        val hslRedSaturation = cm("hslRedSaturation")
+        val hslOrangeSaturation = cm("hslOrangeSaturation")
+        val hslYellowSaturation = cm("hslYellowSaturation")
+        val hslGreenSaturation = cm("hslGreenSaturation")
+        val hslCyanSaturation = cm("hslCyanSaturation")
+        val hslBlueSaturation = cm("hslBlueSaturation")
+        val hslPurpleSaturation = cm("hslPurpleSaturation")
+        val hslMagentaSaturation = cm("hslMagentaSaturation")
+        val hslRedLuminance = cm("hslRedLuminance")
+        val hslOrangeLuminance = cm("hslOrangeLuminance")
+        val hslYellowLuminance = cm("hslYellowLuminance")
+        val hslGreenLuminance = cm("hslGreenLuminance")
+        val hslCyanLuminance = cm("hslCyanLuminance")
+        val hslBlueLuminance = cm("hslBlueLuminance")
+        val hslPurpleLuminance = cm("hslPurpleLuminance")
+        val hslMagentaLuminance = cm("hslMagentaLuminance")
+
+        // ── 柔光模式：SOFT/DREAMY 降低对比、饱和、锐度 ──
         when (hp.softLight) {
             SoftLightMode.SOFT -> {
-                // SOFT: 轻微柔化，降低对比，轻微暖调
-                rp.copy(
-                    contrast = (rp.contrast - 0.1f).coerceIn(-1f, 1f),
-                    saturation = (rp.saturation - 0.05f).coerceIn(-1f, 1f),
-                    sharpenAmount = (rp.sharpenAmount * 0.6f).coerceIn(0f, 1f)
-                )
+                contrast = (contrast - 10f).coerceIn(-100f, 100f)
+                saturation = (saturation - 5f).coerceIn(-100f, 100f)
+                sharpness = (sharpness * 0.6f).coerceIn(0f, 100f)
             }
             SoftLightMode.DREAMY -> {
-                // DREAMY: 更强柔化，褪色感，暖调偏移
-                rp.copy(
-                    contrast = (rp.contrast - 0.2f).coerceIn(-1f, 1f),
-                    saturation = (rp.saturation - 0.1f).coerceIn(-1f, 1f),
-                    temperature = (rp.temperature + 0.1f).coerceIn(-1f, 1f),
-                    sharpenAmount = (rp.sharpenAmount * 0.3f).coerceIn(0f, 1f)
-                )
+                contrast = (contrast - 20f).coerceIn(-100f, 100f)
+                saturation = (saturation - 10f).coerceIn(-100f, 100f)
+                warmth = (warmth + 10f).coerceIn(-100f, 100f)
+                sharpness = (sharpness * 0.3f).coerceIn(0f, 100f)
             }
-            else -> rp
+            else -> { /* NONE: 无调整 */ }
         }
+
+        // 暗角由 GPU 外处理（CameraX 预览管线 / 后处理叠加）
+        // hp.vignette 不映射到 RenderParameters
+
+        val rp = RenderParameters(
+            exposure = exposure,
+            contrast = contrast,
+            brightness = brightness,
+            warmth = warmth,
+            sharpness = sharpness,
+            clarity = clarity,
+            vibrance = vibrance,
+            highlights = highlights,
+            shadows = shadows,
+            whites = whites,
+            blacks = blacks,
+            grain = grain,
+            fade = fade,
+            dehaze = dehaze,
+            denoise = denoise,
+            skinSmooth = skinSmooth,
+            texture = texture,
+            // HSL 8 通道
+            hslRedHue = hslRedHue,
+            hslRedSaturation = hslRedSaturation,
+            hslRedLuminance = hslRedLuminance,
+            hslOrangeHue = hslOrangeHue,
+            hslOrangeSaturation = hslOrangeSaturation,
+            hslOrangeLuminance = hslOrangeLuminance,
+            hslYellowHue = hslYellowHue,
+            hslYellowSaturation = hslYellowSaturation,
+            hslYellowLuminance = hslYellowLuminance,
+            hslGreenHue = hslGreenHue,
+            hslGreenSaturation = hslGreenSaturation,
+            hslGreenLuminance = hslGreenLuminance,
+            hslCyanHue = hslCyanHue,
+            hslCyanSaturation = hslCyanSaturation,
+            hslCyanLuminance = hslCyanLuminance,
+            hslBlueHue = hslBlueHue,
+            hslBlueSaturation = hslBlueSaturation,
+            hslBlueLuminance = hslBlueLuminance,
+            hslPurpleHue = hslPurpleHue,
+            hslPurpleSaturation = hslPurpleSaturation,
+            hslPurpleLuminance = hslPurpleLuminance,
+            hslMagentaHue = hslMagentaHue,
+            hslMagentaSaturation = hslMagentaSaturation,
+            hslMagentaLuminance = hslMagentaLuminance,
+            // LUT 3D（lutTextureId / lutSize 由运行时赋值）
+            lutEnabled = active3DLUTId != null,
+            lutStrength = lut3DStrength.coerceIn(0f, 1f)
+        )
 
         Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${rp.exposure}, contrast=${rp.contrast}, saturation=${rp.saturation}")
         return rp

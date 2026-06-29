@@ -17,6 +17,10 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.*
+import com.silas.omaster.renderer.GPURenderManager
+import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.renderer.RenderQuality
+import com.silas.omaster.renderer.RenderResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -54,6 +58,46 @@ class MasterInferenceEngine private constructor(context: Context) {
             .setMinFaceSize(0.15f)
             .build()
         FaceDetection.getClient(options)
+    }
+
+    // GPU 渲染管理器（延迟获取，用于 GPU 加速优化）
+    private var gpuRenderManager: GPURenderManager? = null
+
+    // 自动调整引擎（用于 "auto" 优化类型）
+    private val autoAdjustEngine = AutoAdjustEngine()
+
+    /**
+     * 获取 GPU 渲染管理器实例
+     * 失败时返回 null，调用方回退到 CPU 路径
+     */
+    private fun getGPURenderManager(): GPURenderManager? {
+        return try {
+            gpuRenderManager ?: GPURenderManager.getInstance(context).also {
+                gpuRenderManager = it
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 使用 GPU 渲染管理器执行渲染
+     * @return 渲染后的 Bitmap，失败返回 null
+     */
+    private fun renderWithGPU(bitmap: Bitmap, params: RenderParameters): Bitmap? {
+        val gpu = getGPURenderManager() ?: return null
+        return try {
+            val result = kotlinx.coroutines.runBlocking {
+                gpu.renderSync(bitmap, params, RenderQuality.STANDARD)
+            }
+            when (result) {
+                is RenderResult.Success -> result.outputBitmap
+                is RenderResult.FallbackToCPU -> result.outputBitmap
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
@@ -217,17 +261,93 @@ class MasterInferenceEngine private constructor(context: Context) {
     }
 
     /**
-     * 应用单项优化处理到图片并返回处理后的 Bitmap
-     * 根据 optimizationId 执行对应的原生 Android 图像处理操作
+     * GPU 加速优化：根据优化类型计算 RenderParameters 并通过 GPURenderManager 渲染
      *
      * @param bitmap 待处理的图片
-     * @param optimizationId 优化项ID（hdr/denoise/sharpen/exposure/color）
+     * @param optimizationId 优化项ID
+     * @param strength 强度 0.0~1.0，默认 1.0
+     * @return 渲染后的 Bitmap，GPU 不可用或渲染失败时返回 null
+     */
+    fun applyOptimizationGPU(bitmap: Bitmap, optimizationId: String, strength: Float = 1.0f): Bitmap? {
+        val clampedStrength = strength.coerceIn(0f, 1f)
+        val params = when (optimizationId) {
+            "hdr" -> RenderParameters(
+                clarity = 60f * clampedStrength,
+                shadows = 25f * clampedStrength,
+                highlights = -15f * clampedStrength,
+                vibrance = 30f * clampedStrength,
+                contrast = 20f * clampedStrength
+            )
+            "denoise" -> RenderParameters(
+                denoise = 70f * clampedStrength,
+                skinSmooth = 15f * clampedStrength,
+                texture = -30f * clampedStrength
+            )
+            "sharpen" -> RenderParameters(
+                sharpness = 70f * clampedStrength,
+                clarity = 20f * clampedStrength,
+                texture = 15f * clampedStrength
+            )
+            "brighten" -> RenderParameters(
+                exposure = 40f * clampedStrength,
+                brightness = 15f * clampedStrength
+            )
+            "darken" -> RenderParameters(
+                exposure = -40f * clampedStrength,
+                brightness = -15f * clampedStrength
+            )
+            "warm" -> RenderParameters(
+                warmth = 50f * clampedStrength,
+                saturation = 15f * clampedStrength
+            )
+            "cool" -> RenderParameters(
+                warmth = -50f * clampedStrength,
+                vibrance = 15f * clampedStrength
+            )
+            "vivid" -> RenderParameters(
+                saturation = 60f * clampedStrength,
+                vibrance = 50f * clampedStrength,
+                contrast = 15f * clampedStrength
+            )
+            "soft" -> RenderParameters(
+                contrast = -30f * clampedStrength,
+                fade = 15f * clampedStrength,
+                skinSmooth = 10f * clampedStrength,
+                clarity = -20f * clampedStrength
+            )
+            "auto" -> {
+                val autoParams = autoAdjustEngine.autoAdjust(bitmap)
+                // 按 strength 缩放参数
+                if (clampedStrength >= 0.99f) {
+                    autoParams
+                } else {
+                    RenderParameters.DEFAULT.lerp(autoParams, clampedStrength)
+                }
+            }
+            else -> return null
+        }
+        return renderWithGPU(bitmap, params)
+    }
+
+    /**
+     * 应用单项优化处理到图片并返回处理后的 Bitmap
+     * 优先使用 GPU 加速渲染，GPU 不可用时回退到 CPU 原生操作
+     *
+     * @param bitmap 待处理的图片
+     * @param optimizationId 优化项ID（hdr/denoise/sharpen/exposure/color/brighten/darken/warm/cool/vivid/soft/auto）
      * @param strength 强度 0.0~1.0，默认 1.0（全效果）。各算法根据强度缩放参数
      * @return 处理后的图片（失败时返回原图）
      */
     fun applyOptimization(bitmap: Bitmap, optimizationId: String, strength: Float = 1.0f): Bitmap {
         val clampedStrength = strength.coerceIn(0f, 1f)
         return try {
+            // 优先尝试 GPU 加速路径
+            val gpuResult = applyOptimizationGPU(bitmap, optimizationId, clampedStrength)
+            if (gpuResult != null) {
+                return gpuResult
+            }
+
+            // GPU 不可用或失败，回退到 CPU 原生操作
             when (optimizationId) {
                 "hdr" -> applyHdr(bitmap, clampedStrength)
                 "denoise" -> applyDenoise(bitmap, clampedStrength)
