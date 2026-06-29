@@ -38,6 +38,8 @@ import kotlin.math.sqrt
  */
 class SmartOptimizeEngine {
 
+    private val lutProcessor = LutProcessor()
+
     // ==================== 主处理入口 ====================
 
     suspend fun process(
@@ -157,7 +159,7 @@ class SmartOptimizeEngine {
         result
     }
 
-    /** 快速预览：仅基础+光影+色彩调整 */
+    /** 快速预览：对（已降采样的）位图执行完整管线，保证预览与最终结果一致。 */
     suspend fun processPreview(
         bitmap: Bitmap,
         params: SmartOptimizeParams
@@ -167,13 +169,62 @@ class SmartOptimizeEngine {
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        applyBasicAdjustments(pixels, params)
-        applyLightAdjustments(pixels, params)
-        applyColorAdjustments(pixels, params)
+        applyAllStages(pixels, width, height, params)
 
         val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         result.setPixels(pixels, 0, width, 0, 0, width, height)
         result
+    }
+
+    /** 完整管线的所有阶段（不含进度回调），供 process / processPreview 共用。 */
+    private fun applyAllStages(pixels: IntArray, width: Int, height: Int, params: SmartOptimizeParams) {
+        if (params.distortion != 0f || params.chromaticAberrationR != 0f || params.chromaticAberrationB != 0f) {
+            applyOpticsCorrection(pixels, width, height, params)
+        }
+        if (params.cropLeft != 0f || params.cropRight != 1f || params.cropTop != 0f || params.cropBottom != 1f ||
+            params.perspectiveX != 0f || params.perspectiveY != 0f || params.rotation != 0f) {
+            applyGeometryTransform(pixels, width, height, params)
+        }
+        if (params.exposure != 0f || params.brightness != 0f || params.contrast != 0f) {
+            applyBasicAdjustments(pixels, params)
+        }
+        if (params.highlights != 0f || params.shadows != 0f || params.whites != 0f ||
+            params.blacks != 0f || params.dehaze != 0f) {
+            applyLightAdjustments(pixels, params)
+        }
+        if (params.temperature != 5500f || params.tint != 0f ||
+            params.saturation != 0f || params.vibrance != 0f ||
+            params.hslAdjustments.hasChanges()) {
+            applyColorAdjustments(pixels, params)
+        }
+        if (params.parametricCurve.hasChanges() || params.pointCurve != SmartOptimizeParams.DEFAULT.pointCurve ||
+            params.redCurve.size > 2 || params.greenCurve.size > 2 || params.blueCurve.size > 2) {
+            applyToneCurve(pixels, params)
+        }
+        if (params.shadowWheel.hasChanges() || params.midtoneWheel.hasChanges() ||
+            params.highlightWheel.hasChanges() || params.globalWheel.hasChanges()) {
+            applyColorGrading(pixels, params)
+        }
+        if (params.sharpness != 0f || params.luminanceNoiseReduction != 0f ||
+            params.colorNoiseReduction != 25f || params.texture != 0f || params.clarity != 0f) {
+            applyDetailProcessing(pixels, width, height, params)
+        }
+        if (params.grain != 0f || params.vignette != 0f || params.fade != 0f) {
+            applyEffects(pixels, width, height, params)
+        }
+        if (params.faceBrightening != 0f || params.faceSmoothness > 50f) {
+            applyFaceBeautification(pixels, width, height, params)
+        }
+        if (params.shadowTint != 0f || params.redPrimaryHue != 0f || params.greenPrimaryHue != 0f || params.bluePrimaryHue != 0f) {
+            applyCalibration(pixels, params)
+        }
+        if (params.colorScience != "STANDARD" || params.toneMappingStrength != 0f ||
+            params.sigmoidContrast != 0f || params.highlightTransition != 0f) {
+            applyColorScience(pixels, params)
+        }
+        if (params.lutIntensity > 0f && params.activeLutName.isNotEmpty()) {
+            applyLUT(pixels, params)
+        }
     }
 
     // ==================== Step 1: 光学校正 ====================
@@ -185,6 +236,11 @@ class SmartOptimizeEngine {
         val maxRadius = sqrt(cx * cx + cy * cy)
 
         val distStrength = params.distortion / 100f
+        val caR = params.chromaticAberrationR / 100f
+        val caB = params.chromaticAberrationB / 100f
+        val hasCA = caR != 0f || caB != 0f
+
+        val lastIdx = temp.size - 1
 
         for (y in 0 until height) {
             for (x in 0 until width) {
@@ -194,34 +250,30 @@ class SmartOptimizeEngine {
 
                 // 桶形/枕形畸变校正
                 val distortion = 1f + distStrength * r * r
-                val srcX = (cx + dx * maxRadius * distortion).toInt().coerceIn(0, width - 1)
-                val srcY = (cy + dy * maxRadius * distortion).toInt().coerceIn(0, height - 1)
 
-                val srcIdx = srcY * width + srcX
-                val color = temp[srcIdx]
-
-                // 色差校正（红/青通道偏移）
-                val caR = params.chromaticAberrationR / 100f
-                val caB = params.chromaticAberrationB / 100f
-
-                if (caR != 0f || caB != 0f) {
+                if (hasCA) {
+                    // 色差校正：R/B 通道在不同径向缩放下采样
                     val srcXR = (cx + dx * maxRadius * (distortion + caR)).toInt().coerceIn(0, width - 1)
                     val srcXB = (cx + dx * maxRadius * (distortion + caB)).toInt().coerceIn(0, width - 1)
+                    val srcY0 = (cy + dy * maxRadius * distortion).toInt().coerceIn(0, height - 1)
 
-                    val r = Color.red(temp[srcYR(srcY, width, srcXR)])
-                    val g = Color.green(color)
-                    val b = Color.blue(temp[srcYB(srcY, width, srcXB, height)])
+                    val idxR = (srcY0 * width + srcXR).coerceIn(0, lastIdx)
+                    val idxG = (srcY0 * width + (cx + dx * maxRadius * distortion).toInt().coerceIn(0, width - 1)).coerceIn(0, lastIdx)
+                    val idxB = (srcY0 * width + srcXB).coerceIn(0, lastIdx)
 
-                    pixels[y * width + x] = Color.argb(Color.alpha(color), r, g, b)
+                    val rv = Color.red(temp[idxR])
+                    val gv = Color.green(temp[idxG])
+                    val bv = Color.blue(temp[idxB])
+                    val av = Color.alpha(temp[idxG])
+                    pixels[y * width + x] = Color.argb(av, rv, gv, bv)
                 } else {
-                    pixels[y * width + x] = color
+                    val srcX = (cx + dx * maxRadius * distortion).toInt().coerceIn(0, width - 1)
+                    val srcY = (cy + dy * maxRadius * distortion).toInt().coerceIn(0, height - 1)
+                    pixels[y * width + x] = temp[srcY * width + srcX]
                 }
             }
         }
     }
-
-    private fun srcYR(srcY: Int, width: Int, srcX: Int): Int = (srcY * width + srcX).coerceIn(0, Int.MAX_VALUE)
-    private fun srcYB(srcY: Int, width: Int, srcX: Int, height: Int): Int = (srcY * width + srcX).coerceIn(0, height * width - 1)
 
     // ==================== Step 2: 几何变换 ====================
 
@@ -979,8 +1031,10 @@ class SmartOptimizeEngine {
     // ==================== Step 10: 面部美化 ====================
 
     private fun applyFaceBeautification(pixels: IntArray, width: Int, height: Int, params: SmartOptimizeParams) {
-        val strength = params.faceBrightening / 100f
-        if (strength <= 0.01f) return
+        val brighten = params.faceBrightening / 100f
+        // faceSmoothness 默认 50 视为“无平滑”，>50 才执行平滑
+        val smooth = ((params.faceSmoothness - 50f) / 50f).coerceIn(0f, 1f)
+        if (brighten <= 0.01f && smooth <= 0.01f) return
 
         val mask = FloatArray(pixels.size)
 
@@ -995,32 +1049,49 @@ class SmartOptimizeEngine {
         // 蒙版平滑
         smoothMask(mask, width, height, 2)
 
-        // 应用美白
+        // 平滑用的模糊图（仅在需要时计算）
+        val blurred = if (smooth > 0.01f) boxBlur(pixels, width, height, 2) else null
+
         for (i in pixels.indices) {
             val m = mask[i]
             if (m <= 0.01f) continue
 
-            val r = Color.red(pixels[i]) / 255f
-            val g = Color.green(pixels[i]) / 255f
-            val b = Color.blue(pixels[i]) / 255f
+            var r = Color.red(pixels[i]) / 255f
+            var g = Color.green(pixels[i]) / 255f
+            var b = Color.blue(pixels[i]) / 255f
             val a = Color.alpha(pixels[i])
 
-            val brightness = 1f + 0.3f * strength * m
-            var nr = r * brightness - 5f / 255f * strength * m
-            var ng = g * brightness
-            var nb = b * brightness + 3f / 255f * strength * m
+            // 磨皮：与模糊图按平滑度混合
+            if (blurred != null) {
+                val br = Color.red(blurred[i]) / 255f
+                val bg = Color.green(blurred[i]) / 255f
+                val bb = Color.blue(blurred[i]) / 255f
+                val blend = smooth * m
+                r = r * (1f - blend) + br * blend
+                g = g * (1f - blend) + bg * blend
+                b = b * (1f - blend) + bb * blend
+            }
 
-            // 降饱和
-            val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
-            val desat = 1f - 0.2f * strength * m
-            nr = gray + desat * (nr - gray)
-            ng = gray + desat * (ng - gray)
-            nb = gray + desat * (nb - gray)
+            // 美白
+            if (brighten > 0.01f) {
+                val brightness = 1f + 0.3f * brighten * m
+                var nr = r * brightness - 5f / 255f * brighten * m
+                var ng = g * brightness
+                var nb = b * brightness + 3f / 255f * brighten * m
+
+                // 降饱和
+                val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
+                val desat = 1f - 0.2f * brighten * m
+                nr = gray + desat * (nr - gray)
+                ng = gray + desat * (ng - gray)
+                nb = gray + desat * (nb - gray)
+                r = nr; g = ng; b = nb
+            }
 
             pixels[i] = Color.argb(a,
-                (nr * 255f).toInt().coerceIn(0, 255),
-                (ng * 255f).toInt().coerceIn(0, 255),
-                (nb * 255f).toInt().coerceIn(0, 255))
+                (r * 255f).toInt().coerceIn(0, 255),
+                (g * 255f).toInt().coerceIn(0, 255),
+                (b * 255f).toInt().coerceIn(0, 255))
         }
     }
 
@@ -1221,8 +1292,9 @@ class SmartOptimizeEngine {
     // ==================== Step 13: LUT ====================
 
     private fun applyLUT(pixels: IntArray, params: SmartOptimizeParams) {
-        // LUT 应用由外部 LutProcessor 处理，此处为占位
-        // 实际调用 LutProcessor().applyLut(pixels, lut, intensity)
+        val lut = BuiltInLUTLibrary.get(params.activeLutName) ?: return
+        // lutIntensity 范围 0~100，映射为 0~1 混合强度
+        lutProcessor.applyLut(pixels, lut, (params.lutIntensity / 100f).coerceIn(0f, 1f))
     }
 
     // ==================== 辅助函数 ====================

@@ -64,18 +64,23 @@ fun SmartOptimizeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val engine = remember { SmartOptimizeEngine() }
+    val histogramAnalyzer = remember { HistogramAnalyzer() }
 
     // ========== 状态 ==========
     var selectedTab by remember { mutableStateOf(SmartOptimizeTab.BASIC) }
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var previewSource by remember { mutableStateOf<Bitmap?>(null) }
     var processedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var displayBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var params by remember { mutableStateOf(SmartOptimizeParams.DEFAULT) }
     var isProcessing by remember { mutableStateOf(false) }
+    var isExporting by remember { mutableStateOf(false) }
     var processingStage by remember { mutableStateOf("") }
     var processingProgress by remember { mutableStateOf(0f) }
     var showBefore by remember { mutableStateOf(false) }
     var histogramData by remember { mutableStateOf<HistogramFullResult?>(null) }
+    var waveformData by remember { mutableStateOf<WaveformData?>(null) }
+    var scopeMode by remember { mutableStateOf(ScopeMode.HISTOGRAM) }
     var editHistory by remember { mutableStateOf<List<EditHistoryEntry>>(emptyList()) }
     var historyIndex by remember { mutableIntStateOf(-1) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -85,69 +90,86 @@ fun SmartOptimizeScreen(
     var presetFilter by remember { mutableStateOf<PresetCategory?>(null) }
     var selectedPresetId by remember { mutableStateOf<String?>(null) }
 
+    // ========== 示波器重算 ==========
+    fun recomputeScopes(bmp: Bitmap?) {
+        if (bmp == null) {
+            histogramData = null; waveformData = null; return
+        }
+        scope.launch {
+            val bmpCopy = bmp
+            if (scopeMode == ScopeMode.HISTOGRAM) {
+                histogramData = withContext(Dispatchers.Default) { histogramAnalyzer.analyzeFull(bmpCopy) }
+            } else if (scopeMode == ScopeMode.WAVEFORM) {
+                waveformData = withContext(Dispatchers.Default) { histogramAnalyzer.analyzeWaveform(bmpCopy, 96) }
+            }
+        }
+    }
+
     // ========== 图片选择器 ==========
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
             scope.launch {
-                originalBitmap = withContext(Dispatchers.IO) {
+                isProcessing = true
+                processingStage = "解码图像"; processingProgress = 0.1f
+                val decoded = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(it)?.use { stream ->
                         BitmapFactory.decodeStream(stream)
                     }
                 }
-                originalBitmap?.let { bmp ->
-                    processedBitmap = bmp
-                    displayBitmap = bmp
-                    triggerFullProcess(bmp, params, engine) { stage, prog ->
-                        processingStage = stage; processingProgress = prog
-                    }?.let { result ->
-                        processedBitmap = result
-                        displayBitmap = result
+                if (decoded != null) {
+                    originalBitmap = decoded
+                    // 降采样预览源，保证实时预览流畅
+                    previewSource = downscaleForPreview(decoded, 900)
+                    val preview = withContext(Dispatchers.Default) {
+                        engine.processPreview(previewSource!!, params)
+                    }
+                    processedBitmap = preview
+                    displayBitmap = preview
+                    recomputeScopes(preview)
+                    // 记录初始历史
+                    if (editHistory.isEmpty()) {
+                        editHistory = listOf(
+                            EditHistoryEntry(
+                                id = UUID.randomUUID().toString(),
+                                timestamp = System.currentTimeMillis(),
+                                params = params,
+                                label = "导入图像"
+                            )
+                        )
+                        historyIndex = 0
                     }
                 }
+                isProcessing = false
+                processingProgress = 1f
             }
         }
     }
 
-    // ========== 实时预览 ==========
+    // ========== 实时预览（在降采样源上执行完整管线） ==========
     fun requestPreview(newParams: SmartOptimizeParams) {
         params = newParams
-        if (isProcessing) return
+        val src = previewSource ?: return
 
         scope.launch {
             isProcessing = true
-            originalBitmap?.let { bmp ->
-                val result = withContext(Dispatchers.Default) {
-                    engine.processPreview(bmp, newParams)
-                }
-                processedBitmap = result
-                displayBitmap = result
+            val result = withContext(Dispatchers.Default) {
+                engine.processPreview(src, newParams)
             }
+            processedBitmap = result
+            displayBitmap = result
+            recomputeScopes(result)
             isProcessing = false
         }
     }
 
-    // ========== 完整处理 ==========
-    fun triggerFullProcess(
-        bmp: Bitmap,
-        p: SmartOptimizeParams,
-        eng: SmartOptimizeEngine,
-        onProgress: (String, Float) -> Unit
-    ): Bitmap? {
-        var result: Bitmap? = null
-        scope.launch {
-            isProcessing = true
-            try {
-                result = eng.process(bmp, p, onProgress)
-                processedBitmap = result
-                displayBitmap = result
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            isProcessing = false
+    // ========== 全分辨率最终处理（导出/保存/分享时调用） ==========
+    suspend fun processFullRes(p: SmartOptimizeParams, onProgress: (String, Float) -> Unit): Bitmap? {
+        val src = originalBitmap ?: return null
+        return withContext(Dispatchers.Default) {
+            engine.process(src, p, onProgress)
         }
-        return result
     }
 
     // ========== 保存编辑历史 ==========

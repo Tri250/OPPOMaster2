@@ -231,6 +231,7 @@ data class SmartOptimizeParams(
         if (hslAdjustments.hasChanges()) count++
         if (parametricCurve.hasChanges()) count++
         if (pointCurve != DEFAULT.pointCurve) count++
+        if (redCurve != DEFAULT.redCurve || greenCurve != DEFAULT.greenCurve || blueCurve != DEFAULT.blueCurve) count++
         if (shadowWheel.hasChanges()) count++
         if (midtoneWheel.hasChanges()) count++
         if (highlightWheel.hasChanges()) count++
@@ -246,12 +247,20 @@ data class SmartOptimizeParams(
         if (distortion != 0f) count++
         if (chromaticAberrationR != 0f) count++
         if (chromaticAberrationB != 0f) count++
+        if (perspectiveX != 0f || perspectiveY != 0f) count++
+        if (rotation != 0f) count++
+        if (cropLeft != 0f || cropRight != 1f || cropTop != 0f || cropBottom != 1f) count++
         if (faceBrightening != 0f) count++
-        if (lutIntensity != 0f) count++
+        if (faceSmoothness != 50f) count++
+        if (lutIntensity != 0f && activeLutName.isNotEmpty()) count++
         if (shadowTint != 0f) count++
         if (redPrimaryHue != 0f || redPrimarySaturation != 0f) count++
         if (greenPrimaryHue != 0f || greenPrimarySaturation != 0f) count++
         if (bluePrimaryHue != 0f || bluePrimarySaturation != 0f) count++
+        if (colorScience != "STANDARD") count++
+        if (toneMappingStrength != 0f) count++
+        if (sigmoidContrast != 0f) count++
+        if (highlightTransition != 0f) count++
         return count
     }
 
@@ -368,6 +377,14 @@ data class EditHistoryEntry(
     val isCheckpoint: Boolean = false
 )
 
+// ==================== 示波器模式 ====================
+
+enum class ScopeMode(val label: String) {
+    OFF("关闭"),
+    HISTOGRAM("直方图"),
+    WAVEFORM("波形")
+}
+
 // ==================== 编辑面板 Tab ====================
 
 enum class SmartOptimizeTab(
@@ -381,8 +398,9 @@ enum class SmartOptimizeTab(
     CURVE("曲线", "show_chart", "色调曲线/参数曲线"),
     GRADING("分级", "color_lens", "色彩分级色轮"),
     DETAIL("细节", "grain", "锐化/降噪/纹理"),
+    PORTRAIT("人像", "face", "面部美化/磨皮/美白"),
     EFFECTS("效果", "blur_on", "颗粒/暗角/褪色"),
-    OPTICS("光学", "camera", "畸变/色差/透视"),
+    OPTICS("光学", "camera", "畸变/色差/透视/裁剪"),
     CALIBRATION("校准", "settings", "相机校准"),
     LUT("LUT", "filter", "3D LUT 滤镜"),
     PRESETS("预设", "auto_awesome", "AI 预设/胶片模拟"),
