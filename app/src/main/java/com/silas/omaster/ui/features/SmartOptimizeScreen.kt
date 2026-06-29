@@ -1,1012 +1,1271 @@
 package com.silas.omaster.ui.features
 
-import android.content.ContentValues
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
-import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Compare
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.silas.omaster.ai.MasterInferenceEngine
-import com.silas.omaster.model.SceneProfile
-import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.ui.theme.SuccessGreen
-import com.silas.omaster.ui.theme.WarningYellow
-import kotlinx.coroutines.CoroutineScope
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 /**
- * 智能优化页面 — 基于 PixelFruit 架构重构
+ * 智能优化主界面 — 完整移植 AlcedoStudio + RapidRAW 全部功能
  *
- * 核心架构对齐 PixelFruit (gitee.com/ji_annn/PixelFruit):
- * - 14 参数调色体系（亮度/曝光/饱和度/对比度/高光/阴影/白场/RGB色调/锐化/降噪/面部美白）
- * - 处理管线顺序：颜色调整 → 降噪 → 锐化 → 面部美化 → LUT
- * - 滤镜预设 = 参数快照
- * - AI 调色 = VL 模型 → JSON 参数
- *
- * UI/UX: 哈苏橙主题 + OPPO Find 交互
- * - 底部 Tab 切换调色/细节/滤镜/AI 面板
- * - 大圆角卡片 + 渐变色强调
- * - 触觉反馈 + 按压缩放动画
+ * 功能模块（12个Tab）：
+ * - BASIC: 基础调整（曝光/亮度/对比度/饱和度/鲜艳度）
+ * - LIGHT: 光影调整（高光/阴影/白/黑/去霾）
+ * - COLOR: 色彩调整（色温/色调/HSL八通道）
+ * - CURVE: 色调曲线（参数曲线/点曲线/RGB通道）
+ * - GRADING: 色彩分级（阴影/中间调/高光/全局色轮）
+ * - DETAIL: 细节处理（锐化/降噪/纹理/清晰度）
+ * - EFFECTS: 效果处理（颗粒/暗角/褪色）
+ * - OPTICS: 光学校正（畸变/色差/透视/旋转/裁剪）
+ * - CALIBRATION: 相机校准（阴影色调/原色校准）
+ * - LUT: 3D LUT滤镜
+ * - PRESETS: 预设库（100+胶片模拟/场景/AI推荐）
+ * - HISTORY: 编辑历史（Git-like分支、撤销/重做）
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmartOptimizeScreen(
-    onBack: () -> Unit,
-    onApply: (OptimizeParams) -> Unit,
-    modifier: Modifier = Modifier
+    initialImageUri: Uri? = null,
+    onBack: () -> Unit = {},
+    onSave: (Bitmap) -> Unit = {},
+    onShare: (Bitmap) -> Unit = {}
 ) {
-    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val inferenceEngine = remember(context) { MasterInferenceEngine.getInstance(context) }
-    val pixelFruitEngine = remember { PixelFruitEngine() }
-    val histogramAnalyzer = remember { HistogramAnalyzer() }
+    val engine = remember { SmartOptimizeEngine() }
 
-    // 图片状态
+    // ========== 状态 ==========
+    var selectedTab by remember { mutableStateOf(SmartOptimizeTab.BASIC) }
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var optimizedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var processedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var displayBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var params by remember { mutableStateOf(SmartOptimizeParams.DEFAULT) }
+    var isProcessing by remember { mutableStateOf(false) }
+    var processingStage by remember { mutableStateOf("") }
+    var processingProgress by remember { mutableStateOf(0f) }
+    var showBefore by remember { mutableStateOf(false) }
+    var histogramData by remember { mutableStateOf<HistogramFullResult?>(null) }
+    var editHistory by remember { mutableStateOf<List<EditHistoryEntry>>(emptyList()) }
+    var historyIndex by remember { mutableIntStateOf(-1) }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var showResetConfirm by remember { mutableStateOf(false) }
+    var showColorScience by remember { mutableStateOf(false) }
+    var exportConfig by remember { mutableStateOf(ExportConfig()) }
+    var presetFilter by remember { mutableStateOf<PresetCategory?>(null) }
+    var selectedPresetId by remember { mutableStateOf<String?>(null) }
 
-    // 预览模式
-    var previewMode by remember { mutableStateOf("before") }
-
-    // AI 场景识别
-    var analysisResult by remember { mutableStateOf<SceneProfile?>(null) }
-    var isAnalyzing by remember { mutableStateOf(false) }
-
-    // PixelFruit 14参数体系
-    var params by remember { mutableStateOf(PixelFruitParams()) }
-
-    // 编辑Tab
-    var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("调色", "细节", "滤镜", "AI")
-
-    // 优化进度
-    var isOptimizing by remember { mutableStateOf(false) }
-    var optimizationProgress by remember { mutableFloatStateOf(0f) }
-    var optimizationCurrentName by remember { mutableStateOf("") }
-    // 直方图
-    var histogram by remember { mutableStateOf<HistogramAnalyzer.HistogramResult?>(null) }
-    var showHistogram by remember { mutableStateOf(true) }
-
-    // 实时预览防抖
-    var previewJob by remember { mutableStateOf<Job?>(null) }
-
-    // 保存状态
-    var isSaving by remember { mutableStateOf(false) }
-    var saveError by remember { mutableStateOf<String?>(null) }
-
-    // 图片选择器
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
+    // ========== 图片选择器 ==========
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
         uri?.let {
-            selectedImageUri = it
-            try {
-                val loadedBitmap = loadSampledBitmap(context, it, 2048)
-                if (loadedBitmap != null) {
-                    originalBitmap = loadedBitmap
-                    optimizedBitmap = null
-                    previewBitmap = null
-                    previewMode = "before"
-                    analysisResult = null
-                    // 直方图分析
-                    histogram = histogramAnalyzer.analyze(loadedBitmap)
-                    // 自动AI场景识别
-                    isAnalyzing = true
-                    analyzeImage(
-                        loadedBitmap,
-                        inferenceEngine,
-                        scope,
-                        onResult = { result ->
-                            analysisResult = result
-                            isAnalyzing = false
-                        },
-                        onError = { isAnalyzing = false }
-                    )
-                } else {
-                    Toast.makeText(context, "图片加载失败", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                originalBitmap = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(it)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)
+                    }
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "图片加载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                originalBitmap?.let { bmp ->
+                    processedBitmap = bmp
+                    displayBitmap = bmp
+                    triggerFullProcess(bmp, params, engine) { stage, prog ->
+                        processingStage = stage; processingProgress = prog
+                    }?.let { result ->
+                        processedBitmap = result
+                        displayBitmap = result
+                    }
+                }
             }
         }
     }
 
-    LaunchedEffect(saveError) {
-        saveError?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-            saveError = null
-        }
-    }
-
-    // 执行优化工作流（对齐 PixelFruit applyAdjustmentsToCachedData 顺序）
-    fun runOptimizeWorkflow() {
-        if (params.changedParamCount() == 0) return
-        val source = originalBitmap ?: return
+    // ========== 实时预览 ==========
+    fun requestPreview(newParams: SmartOptimizeParams) {
+        params = newParams
+        if (isProcessing) return
 
         scope.launch {
-            isOptimizing = true
-            optimizationProgress = 0f
+            isProcessing = true
+            originalBitmap?.let { bmp ->
+                val result = withContext(Dispatchers.Default) {
+                    engine.processPreview(bmp, newParams)
+                }
+                processedBitmap = result
+                displayBitmap = result
+            }
+            isProcessing = false
+        }
+    }
 
+    // ========== 完整处理 ==========
+    fun triggerFullProcess(
+        bmp: Bitmap,
+        p: SmartOptimizeParams,
+        eng: SmartOptimizeEngine,
+        onProgress: (String, Float) -> Unit
+    ): Bitmap? {
+        var result: Bitmap? = null
+        scope.launch {
+            isProcessing = true
             try {
-                val result = pixelFruitEngine.process(
-                    bitmap = source,
-                    params = params,
-                    onProgress = { step, progress ->
-                        optimizationCurrentName = step
-                        optimizationProgress = progress
+                result = eng.process(bmp, p, onProgress)
+                processedBitmap = result
+                displayBitmap = result
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            isProcessing = false
+        }
+        return result
+    }
+
+    // ========== 保存编辑历史 ==========
+    fun pushHistory(label: String = "") {
+        val entry = EditHistoryEntry(
+            id = UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            params = params,
+            label = label
+        )
+        editHistory = (editHistory.take(historyIndex + 1) + entry)
+        historyIndex = editHistory.lastIndex
+    }
+
+    fun restoreHistory(index: Int) {
+        if (index in editHistory.indices) {
+            historyIndex = index
+            requestPreview(editHistory[index].params)
+        }
+    }
+
+    fun undo() {
+        if (historyIndex > 0) {
+            historyIndex--
+            requestPreview(editHistory[historyIndex].params)
+        }
+    }
+
+    fun redo() {
+        if (historyIndex < editHistory.lastIndex - 1) {
+            historyIndex++
+            requestPreview(editHistory[historyIndex].params)
+        }
+    }
+
+    // ========== 应用预设 ==========
+    fun applyPreset(preset: SmartOptimizePreset) {
+        selectedPresetId = preset.id
+        pushHistory("应用预设: ${preset.name}")
+        requestPreview(preset.params)
+    }
+
+    // ========== 重置 ==========
+    fun resetAll() {
+        pushHistory("重置全部")
+        requestPreview(SmartOptimizeParams.DEFAULT)
+        selectedPresetId = null
+    }
+
+    // ========== UI ==========
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("智能优化", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, "返回")
                     }
+                },
+                actions = {
+                    // 撤销/重做
+                    IconButton(
+                        onClick = { undo() },
+                        enabled = historyIndex > 0
+                    ) {
+                        Icon(Icons.Default.Undo, "撤销")
+                    }
+                    IconButton(
+                        onClick = { redo() },
+                        enabled = historyIndex < editHistory.lastIndex - 1
+                    ) {
+                        Icon(Icons.Default.Redo, "重做")
+                    }
+                    // 重置
+                    IconButton(onClick = { showResetConfirm = true }) {
+                        Icon(Icons.Default.Refresh, "重置")
+                    }
+                    // 保存
+                    IconButton(onClick = {
+                        processedBitmap?.let { onSave(it) }
+                    }) {
+                        Icon(Icons.Default.Save, "保存")
+                    }
+                    // 导出
+                    IconButton(onClick = { showExportDialog = true }) {
+                        Icon(Icons.Default.FileUpload, "导出")
+                    }
+                    // 分享
+                    IconButton(onClick = {
+                        processedBitmap?.let { onShare(it) }
+                    }) {
+                        Icon(Icons.Default.Share, "分享")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
-                optimizedBitmap = result
-                previewMode = "after"
-                // 更新处理后直方图
-                histogram = histogramAnalyzer.analyze(result)
-                Toast.makeText(context, "PixelFruit 优化完成", Toast.LENGTH_SHORT).show()
-            } catch (e: OutOfMemoryError) {
-                Toast.makeText(context, "内存不足，请选择较小图片", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, "优化失败：${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                isOptimizing = false
-            }
-        }
-    }
-
-    // 实时预览：参数变化时自动更新预览
-    fun updatePreview() {
-        val source = originalBitmap ?: return
-        previewJob?.cancel()
-        previewJob = scope.launch {
-            kotlinx.coroutines.delay(150) // 150ms 防抖
-            if (!isActive) return@launch
-            try {
-                val preview = pixelFruitEngine.processPreview(source, params)
-                previewBitmap = preview
-                if (previewMode == "before") previewMode = "preview"
-            } catch (e: Exception) {
-                android.util.Log.w("SmartOptimizeScreen", "实时预览更新失败", e)
-            }
-        }
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
-        // ===== 顶部导航栏 =====
-        SmartOptimizeTopBar(
-            previewMode = previewMode,
-            onPreviewToggle = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                previewMode = when (previewMode) {
-                    "before" -> "after"
-                    "after" -> "compare"
-                    else -> "before"
-                }
-            },
-            onSave = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                val bitmap = optimizedBitmap ?: originalBitmap ?: return@SmartOptimizeTopBar
-                scope.launch {
-                    isSaving = true
-                    try {
-                        val uri = withContext(Dispatchers.IO) { saveBitmapToGallery(context, bitmap, "PixelFruit") }
-                        if (uri != null) Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
-                        else saveError = "保存失败"
-                    } catch (e: Exception) { saveError = "保存失败：${e.message}" }
-                    finally { isSaving = false }
-                }
-            },
-            onShare = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                val bitmap = optimizedBitmap ?: originalBitmap ?: return@SmartOptimizeTopBar
-                scope.launch {
-                    try {
-                        val uri = withContext(Dispatchers.IO) { saveBitmapToCache(context, bitmap, "share_${System.currentTimeMillis()}.jpg") }
-                        if (uri != null) {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "image/jpeg"
-                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(android.content.Intent.createChooser(intent, "分享优化照片").apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) })
-                        }
-                    } catch (e: Exception) { saveError = "分享失败：${e.message}" }
-                }
-            },
-            onBack = {
-                if (optimizedBitmap != null) {
-                    onApply(OptimizeParams(
-                        hdrEnabled = params.highlights != 0f,
-                        hdrStrength = params.highlights + 50f,
-                        noiseReductionEnabled = params.noiseReduction > 0,
-                        noiseReductionStrength = params.noiseReduction,
-                        sharpenEnabled = params.sharpness > 0,
-                        sharpenStrength = params.sharpness,
-                        exposureAdjustment = params.exposure * 25f,
-                        colorCorrectionEnabled = params.saturation != 100f,
-                        colorCorrectionStrength = params.saturation - 100f
-                    ))
-                } else {
-                    onBack()
-                }
-            },
-            isSaving = isSaving,
-            hasImage = originalBitmap != null,
-            analysisResult = analysisResult
-        )
-
-        // ===== 优化进度条 =====
-        AnimatedVisibility(visible = isOptimizing) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = HasselbladOrange.copy(alpha = 0.1f))
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = HasselbladOrange)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("PixelFruit 处理中", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text("${(optimizationProgress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { optimizationProgress },
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
-                        color = HasselbladOrange,
-                        trackColor = HasselbladOrange.copy(alpha = 0.2f)
-                    )
-                    if (optimizationCurrentName.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("正在处理: $optimizationCurrentName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                    }
-                }
-            }
-        }
-
-        // ===== 图像预览区 =====
-        ImagePreviewArea(
-            originalBitmap = originalBitmap,
-            optimizedBitmap = optimizedBitmap,
-            previewBitmap = previewBitmap,
-            previewMode = previewMode,
-            isAnalyzing = isAnalyzing,
-            onPickImage = { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-            modifier = Modifier.fillMaxWidth().height(240.dp)
-        )
-
-        // ===== 直方图 =====
-        if (showHistogram && histogram != null) {
-            HistogramView(
-                histogram = histogram,
-                mode = HistogramMode.RGB,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
-
-        // ===== Tab 切换栏 =====
-        TabRow(
-            selectedTabIndex = selectedTab,
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = HasselbladOrange,
-            indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    height = 3.dp,
-                    color = HasselbladOrange,
-                    shape = RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)
-                )
-            },
-            divider = {}
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        selectedTab = index
-                    },
-                    text = {
-                        Text(
-                            title,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                            color = if (selectedTab == index) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            when (index) {
-                                0 -> Icons.Default.Palette
-                                1 -> Icons.Default.Tune
-                                2 -> Icons.Default.FilterAlt
-                                else -> Icons.Default.AutoAwesome
-                            },
-                            contentDescription = title,
-                            modifier = Modifier.size(20.dp),
-                            tint = if (selectedTab == index) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                        )
-                    }
-                )
-            }
-        }
-
-        // ===== Tab 内容区 =====
-        LazyColumn(
+    ) { padding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
+                .padding(padding)
         ) {
-            when (selectedTab) {
-                0 -> item { ColorAdjustPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
-                1 -> item { DetailPanel(params = params, onParamsChange = { params = it; updatePreview() }) }
-                2 -> item { FilterPresetPanel(onApplyPreset = { params = it; updatePreview() }) }
-                3 -> item { AIPanel(
-                    params = params,
-                    onParamsChange = { params = it; updatePreview() },
-                    originalBitmap = originalBitmap,
-                    inferenceEngine = inferenceEngine,
-                    scope = scope,
-                    context = context,
-                    onAnalysisResult = { analysisResult = it },
-                    setIsAnalyzing = { isAnalyzing = it }
-                ) }
-            }
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-        }
-
-        // ===== 底部操作栏 =====
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    params = PixelFruitParams()
-                    optimizedBitmap = null
-                    previewBitmap = null
-                    previewMode = "before"
-                    analysisResult = null
-                    previewJob?.cancel()
-                },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground)
-            ) {
-                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("重置")
-            }
-            Button(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val bitmap = optimizedBitmap ?: originalBitmap ?: return@Button
-                    scope.launch {
-                        isSaving = true
-                        try {
-                            val uri = withContext(Dispatchers.IO) { saveBitmapToGallery(context, bitmap, "PixelFruit") }
-                            if (uri != null) Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show()
-                            else saveError = "保存失败"
-                        } catch (e: Exception) { saveError = "保存失败" }
-                        finally { isSaving = false }
-                    }
-                },
-                enabled = !isSaving && (optimizedBitmap != null || originalBitmap != null),
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
-            ) {
-                Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isSaving) "保存中..." else "保存")
-            }
-            Button(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    runOptimizeWorkflow()
-                },
-                enabled = !isOptimizing && params.changedParamCount() > 0,
-                modifier = Modifier.weight(1.2f),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
-            ) {
-                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isOptimizing) "优化中..." else "智能优化")
-            }
-        }
-    }
-}
-
-// ==================== 子面板组件 ====================
-
-/**
- * 调色面板 — 对齐 PixelFruit color.js 的 10 个参数
- */
-@Composable
-private fun ColorAdjustPanel(
-    params: PixelFruitParams,
-    onParamsChange: (PixelFruitParams) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionLabel("光影调整")
-        ParamSlider("亮度", params.brightness, 0.1f..4.0f, HasselbladOrange) { onParamsChange(params.copy(brightness = it)) }
-        ParamSlider("曝光", params.exposure, -2f..2f, Color(0xFFFF9800)) { onParamsChange(params.copy(exposure = it)) }
-        ParamSlider("对比度", params.contrast, -50f..50f, Color(0xFFE91E63)) { onParamsChange(params.copy(contrast = it)) }
-        ParamSlider("饱和度", params.saturation, 0f..300f, Color(0xFF9C27B0)) { onParamsChange(params.copy(saturation = it)) }
-        ParamSlider("高光", params.highlights, -50f..50f, WarningYellow) { onParamsChange(params.copy(highlights = it)) }
-        ParamSlider("阴影", params.shadows, -50f..50f, Color(0xFF42A5F5)) { onParamsChange(params.copy(shadows = it)) }
-        ParamSlider("白场", params.whites, 0f..200f, Color.White.copy(alpha = 0.8f)) { onParamsChange(params.copy(whites = it)) }
-
-        SectionLabel("色调偏移")
-        ParamSlider("红色调", params.redTint, -100f..100f, Color(0xFFF44336)) { onParamsChange(params.copy(redTint = it)) }
-        ParamSlider("绿色调", params.greenTint, -100f..100f, Color(0xFF4CAF50)) { onParamsChange(params.copy(greenTint = it)) }
-        ParamSlider("蓝色调", params.blueTint, -100f..100f, Color(0xFF2196F3)) { onParamsChange(params.copy(blueTint = it)) }
-    }
-}
-
-/**
- * 细节处理面板 — 对齐 PixelFruit Details.js
- */
-@Composable
-private fun DetailPanel(
-    params: PixelFruitParams,
-    onParamsChange: (PixelFruitParams) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionLabel("锐化与降噪")
-        ParamSlider("锐化", params.sharpness, 0f..100f, Color(0xFF9C27B0)) { onParamsChange(params.copy(sharpness = it)) }
-        ParamSlider("降噪", params.noiseReduction, 0f..100f, Color(0xFF2196F3)) { onParamsChange(params.copy(noiseReduction = it)) }
-
-        SectionLabel("面部美化")
-        ParamSlider("面部美白", params.faceBrightening, 0f..100f, Color(0xFFFFAB91)) { onParamsChange(params.copy(faceBrightening = it)) }
-        ParamSlider("过渡平滑", params.faceSmoothness, 0f..100f, Color(0xFF80DEEA)) { onParamsChange(params.copy(faceSmoothness = it)) }
-    }
-}
-
-/**
- * 滤镜预设面板 — 对齐 PixelFruit Filter.js 7 个内置预设
- */
-@Composable
-private fun FilterPresetPanel(
-    onApplyPreset: (PixelFruitParams) -> Unit
-) {
-    val haptic = LocalHapticFeedback.current
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel("内置预设")
-        BuiltInPresets.presets.forEach { preset ->
-            val interactionSource = remember { MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val scale by animateFloatAsState(
-                targetValue = if (isPressed) 0.97f else 1f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                label = "preset_scale"
-            )
-            Row(
+            // ========== 图片预览区域 ==========
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .scale(scale)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .clickable(interactionSource = interactionSource, indication = null) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onApplyPreset(preset.params)
+                    .weight(0.4f)
+                    .background(Color(0xFF111122)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (originalBitmap == null) {
+                    // 空白状态 - 引导选择图片
+                    ImportPlaceholder(
+                        onImport = { imagePicker.launch("image/*") }
+                    )
+                } else {
+                    displayBitmap?.let { bmp ->
+                        Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = "预览",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
                     }
-                    .padding(14.dp),
+
+                    // 处理中遮罩
+                    if (isProcessing) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(processingStage, color = Color.White, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    // 处理进度
+                    if (processingProgress > 0f && processingProgress < 1f) {
+                        ProcessingProgressBar(
+                            stage = processingStage,
+                            progress = processingProgress,
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                        )
+                    }
+
+                    // 参数变更计数
+                    val changedCount = params.changedParamCount()
+                    if (changedCount > 0 && !isProcessing) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                        ) {
+                            Text(
+                                "$changedCount 参数已调整",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                fontSize = 11.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // 前后比较切换
+                    BeforeAfterToggle(
+                        showBefore = showBefore,
+                        onToggle = { showBefore = it },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp)
+                    )
+
+                    // 直方图叠加
+                    if (params.showHistogram && histogramData != null) {
+                        HistogramView(
+                            histogram = histogramData,
+                            mode = params.histogramMode,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .fillMaxWidth(0.4f)
+                                .padding(8.dp)
+                        )
+                    }
+                }
+            }
+
+            // ========== Tab 栏 ==========
+            ScrollableTabRow(
+                selectedTabIndex = SmartOptimizeTab.entries.indexOf(selectedTab),
+                modifier = Modifier.fillMaxWidth(),
+                edgePadding = 8.dp,
+                divider = {},
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                SmartOptimizeTab.entries.forEach { tab ->
+                    val isSelected = tab == selectedTab
+                    Tab(
+                        selected = isSelected,
+                        onClick = { selectedTab = tab },
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                tab.label,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (isSelected) {
+                                Box(
+                                    Modifier
+                                        .width(16.dp)
+                                        .height(2.dp)
+                                        .clip(RoundedCornerShape(1.dp))
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========== Tab 内容面板 ==========
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.6f)
+            ) {
+                when (selectedTab) {
+                    SmartOptimizeTab.BASIC -> BasicAdjustPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.LIGHT -> LightAdjustPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.COLOR -> ColorAdjustPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.CURVE -> CurvePanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.GRADING -> GradingPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.DETAIL -> DetailPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.EFFECTS -> EffectsPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.OPTICS -> OpticsPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.CALIBRATION -> CalibrationPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.LUT -> LUTPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.PRESETS -> PresetsPanel(
+                        params = params,
+                        selectedPresetId = selectedPresetId,
+                        filterCategory = presetFilter,
+                        onFilterChanged = { presetFilter = it },
+                        onPresetSelected = { applyPreset(it) },
+                        enabled = originalBitmap != null
+                    )
+                    SmartOptimizeTab.HISTORY -> HistoryPanel(
+                        history = editHistory,
+                        currentIndex = historyIndex,
+                        onRestore = { restoreHistory(it) },
+                        params = params,
+                        onSaveCheckpoint = { pushHistory("检查点") }
+                    )
+                }
+            }
+        }
+    }
+
+    // ========== 对话框 ==========
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text("重置所有调整") },
+            text = { Text("确定要重置所有参数到默认值吗？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    resetAll()
+                    showResetConfirm = false
+                }) {
+                    Text("确认重置", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text("导出图像") },
+            text = {
+                ExportConfigPanel(
+                    config = exportConfig,
+                    onConfigChanged = { exportConfig = it },
+                    onExport = {
+                        showExportDialog = false
+                        // 触发导出
+                        scope.launch {
+                            processedBitmap?.let { bmp ->
+                                pushHistory("导出: ${exportConfig.format.label}")
+                                onSave(bmp)
+                            }
+                        }
+                    }
+                )
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showExportDialog = false }) {
+                    Text("关闭")
+                }
+            }
+        )
+    }
+
+    if (showColorScience) {
+        AlertDialog(
+            onDismissRequest = { showColorScience = false },
+            title = { Text("色彩科学设置") },
+            text = {
+                ColorScienceSelector(
+                    currentMode = params.colorScience,
+                    displayColorSpace = params.displayColorSpace,
+                    eotf = params.eotf,
+                    peakLuminance = params.peakLuminance,
+                    onColorScienceChanged = {
+                        requestPreview(params.copy(colorScience = it))
+                    },
+                    onDisplayColorSpaceChanged = {
+                        requestPreview(params.copy(displayColorSpace = it))
+                    },
+                    onEOTFChanged = {
+                        requestPreview(params.copy(eotf = it))
+                    },
+                    onPeakLuminanceChanged = {
+                        requestPreview(params.copy(peakLuminance = it))
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showColorScience = false }) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showColorScience = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+// ==================== 导入占位图 ====================
+
+@Composable
+private fun ImportPlaceholder(onImport: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.AddPhotoAlternate,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = Color(0xFF444466)
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "选择图片开始智能优化",
+            color = Color(0xFF666688),
+            fontSize = 16.sp
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "支持 JPEG / PNG / WebP / HEIC",
+            color = Color(0xFF444466),
+            fontSize = 12.sp
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onImport) {
+            Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("选择图片")
+        }
+    }
+}
+
+// ==================== 基础调整面板 ====================
+
+@Composable
+private fun BasicAdjustPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("基础调整", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("曝光", params.exposure, -5f, 5f,
+            { onParamsChanged(params.copy(exposure = it)) },
+            { "%.2f EV".format(it) }, enabled = enabled) }
+        item { LabeledSlider("亮度", params.brightness, -100f, 100f,
+            { onParamsChanged(params.copy(brightness = it)) },
+            enabled = enabled) }
+        item { LabeledSlider("对比度", params.contrast, -100f, 100f,
+            { onParamsChanged(params.copy(contrast = it)) },
+            enabled = enabled) }
+        item { LabeledSlider("饱和度", params.saturation, -100f, 100f,
+            { onParamsChanged(params.copy(saturation = it)) },
+            enabled = enabled) }
+        item { LabeledSlider("鲜艳度", params.vibrance, -100f, 100f,
+            { onParamsChanged(params.copy(vibrance = it)) },
+            enabled = enabled) }
+    }
+}
+
+// ==================== 光影调整面板 ====================
+
+@Composable
+private fun LightAdjustPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("光影调整", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("高光", params.highlights, -100f, 100f,
+            { onParamsChanged(params.copy(highlights = it)) }, enabled = enabled) }
+        item { LabeledSlider("阴影", params.shadows, -100f, 100f,
+            { onParamsChanged(params.copy(shadows = it)) }, enabled = enabled) }
+        item { LabeledSlider("白色色阶", params.whites, -100f, 100f,
+            { onParamsChanged(params.copy(whites = it)) }, enabled = enabled) }
+        item { LabeledSlider("黑色色阶", params.blacks, -100f, 100f,
+            { onParamsChanged(params.copy(blacks = it)) }, enabled = enabled) }
+        item { LabeledSlider("去霾", params.dehaze, 0f, 100f,
+            { onParamsChanged(params.copy(dehaze = it)) }, enabled = enabled) }
+    }
+}
+
+// ==================== 色彩调整面板 ====================
+
+@Composable
+private fun ColorAdjustPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("色彩调整", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("色温", params.temperature, 2000f, 50000f,
+            { onParamsChanged(params.copy(temperature = it)) },
+            { "${it.toInt()}K" }, enabled = enabled) }
+        item { LabeledSlider("色调", params.tint, -100f, 100f,
+            { onParamsChanged(params.copy(tint = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("HSL 调色", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            HSLPanel(
+                hsl = params.hslAdjustments,
+                onHSLChanged = { hsl ->
+                    onParamsChanged(params.copy(hslAdjustments = hsl))
+                }
+            )
+        }
+
+        // 色彩科学快捷入口
+        item {
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(HasselbladOrange.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Palette, preset.name, tint = HasselbladOrange, modifier = Modifier.size(22.dp))
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(preset.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
-                    Text(preset.description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
-                }
-            }
-        }
-    }
-}
-
-/**
- * AI 一键调色面板 — 对齐 PixelFruit Ai.js + 通义千问 VL
- */
-@Composable
-private fun AIPanel(
-    params: PixelFruitParams,
-    onParamsChange: (PixelFruitParams) -> Unit,
-    originalBitmap: Bitmap?,
-    inferenceEngine: MasterInferenceEngine,
-    scope: CoroutineScope,
-    context: Context,
-    onAnalysisResult: (com.silas.omaster.model.SceneProfile) -> Unit,
-    setIsAnalyzing: (Boolean) -> Unit
-) {
-    var isAILoading by remember { mutableStateOf(false) }
-    val haptic = LocalHapticFeedback.current
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // AI 调色卡片
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(HasselbladOrange.copy(alpha = 0.9f), WarningYellow.copy(alpha = 0.8f))
-                    )
+                Text("色彩科学", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    params.colorScience,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                .clickable {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val bitmap = originalBitmap ?: return@clickable
-                    isAILoading = true
-                    setIsAnalyzing(true)
-                    analyzeImage(
-                        bitmap,
-                        inferenceEngine,
-                        scope,
-                        onResult = { result ->
-                            onAnalysisResult(result)
-                            // 根据AI场景推荐参数（对齐 PixelFruit applyAutoRecommendations）
-                            val recommended = when (result.category) {
-                                com.silas.omaster.model.SceneCategory.PORTRAIT -> PixelFruitParams(brightness = 1.1f, exposure = 0.3f, saturation = 120f, faceBrightening = 40f, faceSmoothness = 70f)
-                                com.silas.omaster.model.SceneCategory.LANDSCAPE -> PixelFruitParams(saturation = 125f, contrast = 10f, sharpness = 20f, shadows = 5f)
-                                com.silas.omaster.model.SceneCategory.NIGHT -> PixelFruitParams(exposure = 0.4f, noiseReduction = 35f, saturation = 85f, highlights = -15f)
-                                com.silas.omaster.model.SceneCategory.FOOD -> PixelFruitParams(brightness = 1.15f, saturation = 140f, contrast = 8f, sharpness = 15f)
-                                com.silas.omaster.model.SceneCategory.URBAN -> PixelFruitParams(contrast = 12f, saturation = 115f, sharpness = 25f, shadows = 3f)
-                                else -> PixelFruitParams(brightness = 1.05f, saturation = 110f, contrast = 5f)
-                            }
-                            onParamsChange(recommended)
-                            isAILoading = false
-                            setIsAnalyzing(false)
-                        },
-                        onError = {
-                            isAILoading = false
-                            setIsAnalyzing(false)
-                        }
+            }
+        }
+        item {
+            LabeledSlider("色调映射", params.toneMappingStrength, 0f, 100f,
+                { onParamsChanged(params.copy(toneMappingStrength = it)) }, enabled = enabled)
+        }
+        item {
+            LabeledSlider("Sigmoid对比度", params.sigmoidContrast, 0f, 100f,
+                { onParamsChanged(params.copy(sigmoidContrast = it)) }, enabled = enabled)
+        }
+        item {
+            LabeledSlider("高光过渡", params.highlightTransition, 0f, 100f,
+                { onParamsChanged(params.copy(highlightTransition = it)) }, enabled = enabled)
+        }
+    }
+}
+
+// ==================== 曲线面板 ====================
+
+@Composable
+private fun CurvePanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            // 参数曲线
+            ParametricCurvePanel(
+                curve = params.parametricCurve,
+                onCurveChanged = { onParamsChanged(params.copy(parametricCurve = it)) }
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            // 点曲线
+            ToneCurveEditor(
+                points = params.pointCurve,
+                onPointsChanged = { onParamsChanged(params.copy(pointCurve = it)) },
+                channelLabel = "RGB",
+                channelColor = Color.White
+            )
+        }
+
+        item {
+            // RGB 通道曲线
+            var channelIndex by remember { mutableIntStateOf(0) }
+            val channels = listOf("R", "G", "B")
+            val colors = listOf(Color.Red, Color.Green, Color.Blue)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                channels.forEachIndexed { idx, name ->
+                    FilterChip(
+                        selected = idx == channelIndex,
+                        onClick = { channelIndex = idx },
+                        label = { Text(name) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = colors[idx].copy(alpha = 0.3f)
+                        )
                     )
                 }
-                .padding(20.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(52.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isAILoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp, color = Color.White)
-                    } else {
-                        Icon(Icons.Default.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(28.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("AI 一键调色", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                    Text("智能识别场景，自动推荐最佳参数", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.9f))
-                }
-                Icon(Icons.Default.AutoFixHigh, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             }
-        }
 
-        // 当前参数摘要
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Tune, null, tint = HasselbladOrange, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("当前参数", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("${params.changedParamCount()} 项已调整", style = MaterialTheme.typography.labelMedium, color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
-                }
-                if (params.changedParamCount() == 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("所有参数为默认值，点击上方 AI 按钮开始", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
-                }
+            when (channelIndex) {
+                0 -> ToneCurveEditor(
+                    points = params.redCurve,
+                    onPointsChanged = { onParamsChanged(params.copy(redCurve = it)) },
+                    channelLabel = "R 通道",
+                    channelColor = Color.Red
+                )
+                1 -> ToneCurveEditor(
+                    points = params.greenCurve,
+                    onPointsChanged = { onParamsChanged(params.copy(greenCurve = it)) },
+                    channelLabel = "G 通道",
+                    channelColor = Color.Green
+                )
+                2 -> ToneCurveEditor(
+                    points = params.blueCurve,
+                    onPointsChanged = { onParamsChanged(params.copy(blueCurve = it)) },
+                    channelLabel = "B 通道",
+                    channelColor = Color.Blue
+                )
             }
         }
     }
 }
 
-// ==================== 基础UI组件 ====================
+// ==================== 色彩分级面板 ====================
 
 @Composable
-private fun SectionLabel(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = HasselbladOrange,
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-    )
-}
-
-@Composable
-private fun ParamSlider(
-    label: String,
-    value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    accentColor: Color,
-    onValueChange: (Float) -> Unit
+private fun GradingPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.width(56.dp)
-        )
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = range,
-            modifier = Modifier.weight(1f),
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor
+        item {
+            Text("色彩分级", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+
+        // 色轮区域
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ColorWheelPanel(
+                    wheel = params.shadowWheel,
+                    onWheelChanged = { onParamsChanged(params.copy(shadowWheel = it)) },
+                    label = "阴影",
+                    size = 110f
+                )
+                ColorWheelPanel(
+                    wheel = params.midtoneWheel,
+                    onWheelChanged = { onParamsChanged(params.copy(midtoneWheel = it)) },
+                    label = "中间调",
+                    size = 110f
+                )
+                ColorWheelPanel(
+                    wheel = params.highlightWheel,
+                    onWheelChanged = { onParamsChanged(params.copy(highlightWheel = it)) },
+                    label = "高光",
+                    size = 110f
+                )
+            }
+        }
+
+        item {
+            ColorWheelPanel(
+                wheel = params.globalWheel,
+                onWheelChanged = { onParamsChanged(params.copy(globalWheel = it)) },
+                label = "全局",
+                size = 100f
             )
-        )
-        Text(
-            String.format("%.1f", value),
-            style = MaterialTheme.typography.labelMedium,
-            color = accentColor,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.width(48.dp)
-        )
+        }
+
+        item {
+            LabeledSlider("混合", params.gradingBlend, 0f, 100f,
+                { onParamsChanged(params.copy(gradingBlend = it)) }, enabled = enabled)
+        }
+        item {
+            LabeledSlider("亮度平衡", params.gradingBalance, 0f, 100f,
+                { onParamsChanged(params.copy(gradingBalance = it)) }, enabled = enabled)
+        }
     }
 }
 
+// ==================== 细节面板 ====================
+
 @Composable
-private fun SmartOptimizeTopBar(
-    previewMode: String,
-    onPreviewToggle: () -> Unit,
-    onSave: () -> Unit,
-    onShare: () -> Unit,
-    onBack: () -> Unit,
-    isSaving: Boolean,
-    hasImage: Boolean,
-    analysisResult: SceneProfile?
+private fun DetailPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
 ) {
-    TopAppBar(
-        title = {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("锐化", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("锐化", params.sharpness, 0f, 150f,
+            { onParamsChanged(params.copy(sharpness = it)) }, enabled = enabled) }
+        item { LabeledSlider("半径", params.sharpnessRadius, 0.5f, 3f,
+            { onParamsChanged(params.copy(sharpnessRadius = it)) },
+            { "%.1f".format(it) }, enabled = enabled) }
+        item { LabeledSlider("细节", params.sharpnessDetail, 0f, 100f,
+            { onParamsChanged(params.copy(sharpnessDetail = it)) }, enabled = enabled) }
+        item { LabeledSlider("蒙版", params.sharpnessMasking, 0f, 100f,
+            { onParamsChanged(params.copy(sharpnessMasking = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("降噪", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("亮度降噪", params.luminanceNoiseReduction, 0f, 100f,
+            { onParamsChanged(params.copy(luminanceNoiseReduction = it)) }, enabled = enabled) }
+        item { LabeledSlider("亮度降噪细节", params.noiseReductionDetail, 0f, 100f,
+            { onParamsChanged(params.copy(noiseReductionDetail = it)) }, enabled = enabled) }
+        item { LabeledSlider("色彩降噪", params.colorNoiseReduction, 0f, 100f,
+            { onParamsChanged(params.copy(colorNoiseReduction = it)) }, enabled = enabled) }
+        item { LabeledSlider("色彩降噪细节", params.colorNoiseReductionDetail, 0f, 100f,
+            { onParamsChanged(params.copy(colorNoiseReductionDetail = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("增强", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("纹理", params.texture, -100f, 100f,
+            { onParamsChanged(params.copy(texture = it)) }, enabled = enabled) }
+        item { LabeledSlider("清晰度", params.clarity, -100f, 100f,
+            { onParamsChanged(params.copy(clarity = it)) }, enabled = enabled) }
+    }
+}
+
+// ==================== 效果面板 ====================
+
+@Composable
+private fun EffectsPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("胶片颗粒", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("颗粒", params.grain, 0f, 100f,
+            { onParamsChanged(params.copy(grain = it)) }, enabled = enabled) }
+        item { LabeledSlider("大小", params.grainSize, 0f, 100f,
+            { onParamsChanged(params.copy(grainSize = it)) }, enabled = enabled) }
+        item { LabeledSlider("粗糙度", params.grainRoughness, 0f, 100f,
+            { onParamsChanged(params.copy(grainRoughness = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("暗角", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("暗角", params.vignette, -100f, 100f,
+            { onParamsChanged(params.copy(vignette = it)) }, enabled = enabled) }
+        item { LabeledSlider("中点", params.vignetteMidpoint, 0f, 100f,
+            { onParamsChanged(params.copy(vignetteMidpoint = it)) }, enabled = enabled) }
+        item { LabeledSlider("羽化", params.vignetteFeather, 0f, 100f,
+            { onParamsChanged(params.copy(vignetteFeather = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("其他", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("褪色", params.fade, 0f, 100f,
+            { onParamsChanged(params.copy(fade = it)) }, enabled = enabled) }
+    }
+}
+
+// ==================== 光学面板 ====================
+
+@Composable
+private fun OpticsPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("光学校正", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("畸变校正", params.distortion, -100f, 100f,
+            { onParamsChanged(params.copy(distortion = it)) }, enabled = enabled) }
+        item { LabeledSlider("色差(红/青)", params.chromaticAberrationR, -100f, 100f,
+            { onParamsChanged(params.copy(chromaticAberrationR = it)) }, enabled = enabled) }
+        item { LabeledSlider("色差(蓝/黄)", params.chromaticAberrationB, -100f, 100f,
+            { onParamsChanged(params.copy(chromaticAberrationB = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("透视校正", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("水平透视", params.perspectiveX, -100f, 100f,
+            { onParamsChanged(params.copy(perspectiveX = it)) }, enabled = enabled) }
+        item { LabeledSlider("垂直透视", params.perspectiveY, -100f, 100f,
+            { onParamsChanged(params.copy(perspectiveY = it)) }, enabled = enabled) }
+        item { LabeledSlider("旋转", params.rotation, -45f, 45f,
+            { onParamsChanged(params.copy(rotation = it)) },
+            { "%.1f°".format(it) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("裁剪", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("智能优化", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("PixelFruit", style = MaterialTheme.typography.labelSmall, color = HasselbladOrange.copy(alpha = 0.7f))
+                Checkbox(
+                    checked = params.cropLockAspect,
+                    onCheckedChange = { onParamsChanged(params.copy(cropLockAspect = it)) }
+                )
+                Text("锁定比例", fontSize = 12.sp)
             }
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onBackground)
-            }
-        },
-        actions = {
-            analysisResult?.let {
+        }
+        item { LabeledSlider("裁剪上", params.cropTop, 0f, 0.5f,
+            { onParamsChanged(params.copy(cropTop = it)) },
+            { "%.0f%%".format(it * 100) }, enabled = enabled) }
+        item { LabeledSlider("裁剪左", params.cropLeft, 0f, 0.5f,
+            { onParamsChanged(params.copy(cropLeft = it)) },
+            { "%.0f%%".format(it * 100) }, enabled = enabled) }
+    }
+}
+
+// ==================== 校准面板 ====================
+
+@Composable
+private fun CalibrationPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("相机校准", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item { LabeledSlider("阴影色调", params.shadowTint, -100f, 100f,
+            { onParamsChanged(params.copy(shadowTint = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("红色原色", style = MaterialTheme.typography.labelMedium)
+        }
+        item { LabeledSlider("色相", params.redPrimaryHue, -100f, 100f,
+            { onParamsChanged(params.copy(redPrimaryHue = it)) }, enabled = enabled) }
+        item { LabeledSlider("饱和度", params.redPrimarySaturation, -100f, 100f,
+            { onParamsChanged(params.copy(redPrimarySaturation = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("绿色原色", style = MaterialTheme.typography.labelMedium)
+        }
+        item { LabeledSlider("色相", params.greenPrimaryHue, -100f, 100f,
+            { onParamsChanged(params.copy(greenPrimaryHue = it)) }, enabled = enabled) }
+        item { LabeledSlider("饱和度", params.greenPrimarySaturation, -100f, 100f,
+            { onParamsChanged(params.copy(greenPrimarySaturation = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("蓝色原色", style = MaterialTheme.typography.labelMedium)
+        }
+        item { LabeledSlider("色相", params.bluePrimaryHue, -100f, 100f,
+            { onParamsChanged(params.copy(bluePrimaryHue = it)) }, enabled = enabled) }
+        item { LabeledSlider("饱和度", params.bluePrimarySaturation, -100f, 100f,
+            { onParamsChanged(params.copy(bluePrimarySaturation = it)) }, enabled = enabled) }
+    }
+}
+
+// ==================== LUT 面板 ====================
+
+@Composable
+private fun LUTPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    val builtInLUTs = listOf(
+        "Kodak Portra 400" to "kodak_portra",
+        "Fuji Velvia 50" to "fuji_velvia",
+        "Kodak 2383" to "cine_2383",
+        "Arri Alexa" to "cine_arri",
+        "Teal & Orange" to "cine_teal",
+        "Bleach Bypass" to "cine_bleach",
+        "Agfa Vista" to "agfa_vista",
+        "Ilford HP5" to "ilford_hp5",
+        "16mm Film" to "cine_16mm",
+        "Vintage Fade" to "vintage_fade"
+    )
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            Text("3D LUT 滤镜", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item {
+            LabeledSlider("LUT 强度", params.lutIntensity, 0f, 100f,
+                { onParamsChanged(params.copy(lutIntensity = it)) }, enabled = enabled)
+        }
+        item {
+            Text("内置 LUT", fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        items(builtInLUTs) { (name, id) ->
+            val isActive = params.activeLutName == id
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = enabled) {
+                        onParamsChanged(params.copy(
+                            activeLutName = if (isActive) "" else id,
+                            lutIntensity = if (isActive) 0f else 80f
+                        ))
+                    },
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isActive)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
                 Row(
-                    modifier = Modifier.background(HasselbladOrange.copy(alpha = 0.15f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.AutoAwesome, null, tint = HasselbladOrange, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(it.name, style = MaterialTheme.typography.labelSmall, color = HasselbladOrange, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                when {
+                                    "portra" in id -> Color(0xFFFF6B35)
+                                    "velvia" in id -> Color(0xFF4CAF50)
+                                    "cine" in id -> Color(0xFF4A90D9)
+                                    "ilford" in id -> Color(0xFF888888)
+                                    else -> Color(0xFF607D8B)
+                                }
+                            )
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(name, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    if (isActive) {
+                        Icon(Icons.Default.Check, "已选",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp))
+                    }
                 }
             }
-            IconButton(onClick = onPreviewToggle) {
-                Icon(
-                    when (previewMode) { "after" -> Icons.Default.Visibility; "compare" -> Icons.Default.Compare; else -> Icons.Default.Image },
-                    "预览",
-                    tint = if (previewMode != "before") HasselbladOrange else MaterialTheme.colorScheme.onBackground
-                )
-            }
-            IconButton(onClick = onSave, enabled = !isSaving && hasImage) {
-                Icon(Icons.Default.Save, "保存", tint = if (isSaving) Color.Gray else HasselbladOrange)
-            }
-            IconButton(onClick = onShare, enabled = hasImage) {
-                Icon(Icons.Default.Share, "分享", tint = MaterialTheme.colorScheme.onBackground)
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            titleContentColor = MaterialTheme.colorScheme.onBackground
-        )
-    )
+        }
+    }
 }
 
+// ==================== 预设面板 ====================
+
 @Composable
-private fun ImagePreviewArea(
-    originalBitmap: Bitmap?,
-    optimizedBitmap: Bitmap?,
-    previewBitmap: Bitmap?,
-    previewMode: String,
-    isAnalyzing: Boolean,
-    onPickImage: () -> Unit,
-    modifier: Modifier = Modifier
+private fun PresetsPanel(
+    params: SmartOptimizeParams,
+    selectedPresetId: String?,
+    filterCategory: PresetCategory?,
+    onFilterChanged: (PresetCategory?) -> Unit,
+    onPresetSelected: (SmartOptimizePreset) -> Unit,
+    enabled: Boolean
 ) {
-    Box(
-        modifier = modifier.background(Color(0xFF0D0D0D))
+    val allPresets = remember { SmartOptimizePresets.allPresets() }
+    val filteredPresets = remember(filterCategory) {
+        if (filterCategory != null) allPresets.filter { it.category == filterCategory }
+        else allPresets
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (previewMode == "compare" && originalBitmap != null && optimizedBitmap != null) {
-            BeforeAfterCompareView(beforeBitmap = originalBitmap, afterBitmap = optimizedBitmap, modifier = Modifier.fillMaxSize())
-        } else {
-            val displayBitmap = when (previewMode) {
-                "after" -> optimizedBitmap ?: originalBitmap
-                "preview" -> previewBitmap ?: originalBitmap
-                else -> originalBitmap
-            }
-            displayBitmap?.let { bitmap ->
-                Image(bitmap = bitmap.asImageBitmap(), contentDescription = "预览", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            } ?: run {
-                Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Image, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("选择图片开始优化", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.4f))
+        item {
+            Text("预设库", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+
+        // 分类筛选
+        item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = filterCategory == null,
+                        onClick = { onFilterChanged(null) },
+                        label = { Text("全部", fontSize = 11.sp) },
+                        modifier = Modifier.height(28.dp)
+                    )
+                }
+                items(PresetCategory.entries) { cat ->
+                    FilterChip(
+                        selected = filterCategory == cat,
+                        onClick = { onFilterChanged(cat) },
+                        label = { Text(cat.label, fontSize = 11.sp) },
+                        modifier = Modifier.height(28.dp)
+                    )
                 }
             }
         }
-        // 状态标签
-        Row(
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                when {
-                    previewMode == "compare" -> "前后对比"
-                    previewMode == "preview" -> "实时预览"
-                    previewMode == "after" && optimizedBitmap != null -> "优化后"
-                    else -> "原图"
-                },
-                color = if (previewMode != "before") HasselbladOrange else Color.White,
-                style = MaterialTheme.typography.labelSmall
-            )
+
+        // 预设网格
+        item {
+            val rows = filteredPresets.chunked(3)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                rows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        row.forEach { preset ->
+                            PresetCard(
+                                preset = preset,
+                                isSelected = preset.id == selectedPresetId,
+                                onClick = { onPresetSelected(preset) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        // 填充空白
+                        repeat(3 - row.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
         }
-        // 选图按钮
-        IconButton(
-            onClick = onPickImage,
-            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(36.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)
-        ) {
-            Icon(Icons.Default.AddPhotoAlternate, "选择图片", tint = Color.White, modifier = Modifier.size(20.dp))
-        }
-        // AI分析中
-        if (isAnalyzing) {
+    }
+}
+
+// ==================== 历史面板 ====================
+
+@Composable
+private fun HistoryPanel(
+    history: List<EditHistoryEntry>,
+    currentIndex: Int,
+    onRestore: (Int) -> Unit,
+    params: SmartOptimizeParams,
+    onSaveCheckpoint: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        item {
             Row(
-                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp).background(HasselbladOrange.copy(alpha = 0.2f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = HasselbladOrange)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("AI 场景识别中...", style = MaterialTheme.typography.labelSmall, color = HasselbladOrange)
+                Text("编辑历史 (${history.size})",
+                    style = MaterialTheme.typography.titleSmall)
+                TextButton(onClick = onSaveCheckpoint) {
+                    Icon(Icons.Default.Bookmark, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("保存检查点", fontSize = 12.sp)
+                }
             }
         }
-    }
-}
 
-// ==================== 辅助函数 ====================
-
-private fun loadSampledBitmap(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
-    return try {
-        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, boundsOptions) }
-        val sampleSize = calculateInSampleSize(boundsOptions, maxDimension, maxDimension)
-        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize; inPreferredConfig = Bitmap.Config.ARGB_8888 }
-        val decoded = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, decodeOptions) }
-        decoded?.let { applyExifOrientation(context, uri, it) }
-    } catch (_: Exception) { null } catch (_: OutOfMemoryError) { null }
-}
-
-private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
-    val height = options.outHeight; val width = options.outWidth
-    var inSampleSize = 1
-    if (height <= 0 || width <= 0) return inSampleSize
-    while (height / (inSampleSize * 2) >= reqHeight && width / (inSampleSize * 2) >= reqWidth) { inSampleSize *= 2 }
-    return inSampleSize
-}
-
-private fun applyExifOrientation(context: Context, uri: Uri, bitmap: Bitmap): Bitmap {
-    return try {
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return bitmap
-        val exif = android.media.ExifInterface(inputStream)
-        val orientation = exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)
-        val matrix = Matrix()
-        when (orientation) {
-            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-            android.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-            android.media.ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-            else -> return bitmap
-        }
-        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-        if (rotated !== bitmap) bitmap.recycle()
-        rotated
-    } catch (_: Exception) { bitmap }
-}
-
-private fun analyzeImage(
-    bitmap: Bitmap,
-    engine: MasterInferenceEngine,
-    scope: CoroutineScope,
-    onResult: (SceneProfile) -> Unit,
-    onError: (() -> Unit)? = null
-) {
-    scope.launch(Dispatchers.Default) {
-        try {
-            val result = engine.analyzeImage(bitmap)
-            withContext(Dispatchers.Main) { onResult(result) }
-        } catch (_: Exception) {
-            withContext(Dispatchers.Main) { onError?.invoke() }
-        }
-    }
-}
-
-private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, tag: String): Uri? {
-    return try {
-        val filename = "${tag}_${System.currentTimeMillis()}.jpg"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster/PixelFruit")
+        if (history.isEmpty()) {
+            item {
+                Text(
+                    "暂无编辑历史。调整参数后会自动记录。",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
-        }
-        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        uri?.also {
-            context.contentResolver.openOutputStream(it)?.use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out) }
-            MediaScannerConnection.scanFile(context, arrayOf(it.toString()), arrayOf("image/jpeg"), null)
-        }
-    } catch (_: Exception) { null }
-}
-
-private fun saveBitmapToCache(context: Context, bitmap: Bitmap, filename: String): Uri? {
-    return try {
-        val cacheDir = java.io.File(context.cacheDir, "share").apply { if (!exists()) mkdirs() }
-        val file = java.io.File(cacheDir, filename)
-        file.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out) }
-        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    } catch (_: Exception) { null }
-}
-
-@Composable
-private fun BeforeAfterCompareView(beforeBitmap: Bitmap, afterBitmap: Bitmap, modifier: Modifier = Modifier) {
-    var dividerOffset by remember { mutableFloatStateOf(0.5f) }
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    Box(modifier = modifier) {
-        Image(bitmap = afterBitmap.asImageBitmap(), contentDescription = "优化后", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectHorizontalDragGestures { _, dragAmount -> dividerOffset = (dividerOffset + dragAmount / size.width).coerceIn(0f, 1f) } }) {
-            Box(modifier = Modifier.fillMaxWidth(dividerOffset).fillMaxHeight()) {
-                Image(bitmap = beforeBitmap.asImageBitmap(), contentDescription = "原图", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            }
-            Box(modifier = Modifier.align(Alignment.CenterStart).offset(x = (dividerOffset * screenWidthDp).dp).width(2.dp).fillMaxHeight().background(Color.White))
-            Row(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("原图", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
-                Text("优化后", color = HasselbladOrange, style = MaterialTheme.typography.labelSmall, modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(4.dp))
+        } else {
+            items(history.reversed()) { entry ->
+                val idx = history.indexOf(entry)
+                EditHistoryItem(
+                    entry = entry,
+                    isCurrent = idx == currentIndex,
+                    onRestore = { onRestore(idx) }
+                )
             }
         }
     }
