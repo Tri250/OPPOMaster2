@@ -185,6 +185,7 @@ data class SmartOptimizeParams(
     fun changedParamCount(): Int {
         val d = DEFAULT
         var count = 0
+        // 基础
         if (exposure != d.exposure) count++
         if (brightness != d.brightness) count++
         if (contrast != d.contrast) count++
@@ -194,27 +195,85 @@ data class SmartOptimizeParams(
         if (blacks != d.blacks) count++
         if (saturation != d.saturation) count++
         if (vibrance != d.vibrance) count++
+        if (toneMapper != d.toneMapper) count++
+        if (evShift != d.evShift) count++
+        if (toneMappingStrength != d.toneMappingStrength) count++
+        if (sigmoidContrast != d.sigmoidContrast) count++
+        if (highlightTransition != d.highlightTransition) count++
+        // 光效
+        if (light != d.light) count++
+        if (highlightPreserve != d.highlightPreserve) count++
+        if (shadowRecover != d.shadowRecover) count++
+        if (dehaze != d.dehaze) count++
+        // 色彩
         if (temperature != d.temperature) count++
         if (tint != d.tint) count++
-        if (dehaze != d.dehaze) count++
+        if (hueShift != d.hueShift) count++
+        if (hslAdjustments != d.hslAdjustments) count++
+        if (colorScience != d.colorScience) count++
+        if (displayColorSpace != d.displayColorSpace) count++
+        if (eotf != d.eotf) count++
+        if (peakLuminance != d.peakLuminance) count++
+        // 曲线
+        if (pointCurve != d.pointCurve) count++
+        if (redCurve != d.redCurve) count++
+        if (greenCurve != d.greenCurve) count++
+        if (blueCurve != d.blueCurve) count++
+        if (hueVsSatCurve != d.hueVsSatCurve) count++
+        if (hueVsLumCurve != d.hueVsLumCurve) count++
+        if (lumVsSatCurve != d.lumVsSatCurve) count++
+        // 分级
+        if (shadowWheel != d.shadowWheel) count++
+        if (midtoneWheel != d.midtoneWheel) count++
+        if (highlightWheel != d.highlightWheel) count++
+        if (globalWheel != d.globalWheel) count++
+        if (gradingBlend != d.gradingBlend) count++
+        if (gradingBalance != d.gradingBalance) count++
+        // 细节
         if (sharpness != d.sharpness) count++
+        if (sharpnessRadius != d.sharpnessRadius) count++
         if (clarity != d.clarity) count++
-        if (texture != d.texture) count++
         if (structure != d.structure) count++
+        if (centre != d.centre) count++
+        if (texture != d.texture) count++
+        if (luminanceNoiseReduction != d.luminanceNoiseReduction) count++
+        if (colorNoiseReduction != d.colorNoiseReduction) count++
+        // 特效
         if (grain != d.grain) count++
+        if (grainSize != d.grainSize) count++
         if (vignette != d.vignette) count++
         if (fade != d.fade) count++
-        if (distortion != d.distortion) count++
-        if (chromaticAberrationR != d.chromaticAberrationR) count++
-        if (chromaticAberrationB != d.chromaticAberrationB) count++
         if (glowAmount != d.glowAmount) count++
         if (halationAmount != d.halationAmount) count++
         if (flareAmount != d.flareAmount) count++
-        if (luminanceNoiseReduction != d.luminanceNoiseReduction) count++
-        if (colorNoiseReduction != d.colorNoiseReduction) count++
+        // 光学
+        if (distortion != d.distortion) count++
+        if (chromaticAberrationR != d.chromaticAberrationR) count++
+        if (chromaticAberrationB != d.chromaticAberrationB) count++
+        if (geometryWarp != d.geometryWarp) count++
+        if (lensCorrectionStrength != d.lensCorrectionStrength) count++
+        // 几何
+        if (perspectiveX != d.perspectiveX) count++
+        if (perspectiveY != d.perspectiveY) count++
+        if (rotation != d.rotation) count++
+        if (orientationSteps != d.orientationSteps) count++
+        if (flipHorizontal != d.flipHorizontal) count++
+        if (flipVertical != d.flipVertical) count++
+        // 校准
+        if (shadowTint != d.shadowTint) count++
+        if (redPrimaryHue != d.redPrimaryHue) count++
+        if (redPrimarySaturation != d.redPrimarySaturation) count++
+        if (greenPrimaryHue != d.greenPrimaryHue) count++
+        if (greenPrimarySaturation != d.greenPrimarySaturation) count++
+        if (bluePrimaryHue != d.bluePrimaryHue) count++
+        if (bluePrimarySaturation != d.bluePrimarySaturation) count++
+        // LUT / 胶片
         if (activeLutName != d.activeLutName) count++
         if (filmSimulation != d.filmSimulation) count++
-        if (toneMapper != d.toneMapper) count++
+        if (lutIntensity != d.lutIntensity) count++
+        if (highlightReconstruction != d.highlightReconstruction) count++
+        // 蒙版
+        if (masks != d.masks) count++
         return count
     }
 

@@ -772,7 +772,7 @@ class SmartOptimizeEngine(
 
         // 色彩科学转换
         result = when (settings.colorScience) {
-            "aces" -> applyACESTransform(result)
+            "aces", "aces2" -> applyACESTransform(result)
             "opendrt" -> applyOpenDRT(result)
             "srgb" -> applySRGBTransform(result)
             else -> result
@@ -1088,6 +1088,11 @@ class SmartOptimizeEngine(
             result = applyVignette(result, settings)
         }
 
+        // Fade (褪色)
+        if (settings.fade > 0f) {
+            result = applyFade(result, settings.fade / 100f)
+        }
+
         // Film grain
         if (settings.grain > 0f) {
             result = applyFilmGrain(result, settings)
@@ -1147,6 +1152,34 @@ class SmartOptimizeEngine(
         }
         canvas.drawCircle(cx, cy, maxR * 0.8f, flarePaint)
         return result
+    }
+
+    private fun applyFade(bitmap: Bitmap, amount: Float): Bitmap {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            var r = Color.red(pixel).toFloat()
+            var g = Color.green(pixel).toFloat()
+            var b = Color.blue(pixel).toFloat()
+
+            // Fade: lift blacks and reduce contrast
+            val lift = amount * 40f
+            r = (r * (1f - amount * 0.3f) + lift)
+            g = (g * (1f - amount * 0.3f) + lift)
+            b = (b * (1f - amount * 0.3f) + lift)
+
+            pixels[i] = Color.argb(
+                Color.alpha(pixel),
+                r.toInt().coerceIn(0, 255),
+                g.toInt().coerceIn(0, 255),
+                b.toInt().coerceIn(0, 255)
+            )
+        }
+
+        bitmap.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return bitmap
     }
 
     private fun applyVignette(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
@@ -1265,6 +1298,11 @@ class SmartOptimizeEngine(
             result = applyClarity(result, settings.clarity / 100f)
         }
 
+        // Texture (RapidRAW: mid-frequency detail enhancement)
+        if (settings.texture != 0f) {
+            result = applyTexture(result, settings.texture / 100f)
+        }
+
         // Dehaze
         if (settings.dehaze != 0f) {
             result = applyDehaze(result, settings.dehaze / 100f)
@@ -1350,6 +1388,29 @@ class SmartOptimizeEngine(
                     1 + amount, 0f, 0f, 0f, 0f,
                     0f, 1 + amount, 0f, 0f, 0f,
                     0f, 0f, 1 + amount, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+            })
+        }
+        canvas.drawBitmap(blurred, 0f, 0f, paint)
+        blurred.recycle()
+        return result
+    }
+
+    private fun applyTexture(bitmap: Bitmap, amount: Float): Bitmap {
+        // Texture: fine detail enhancement using local contrast
+        val blurred = applyGaussianBlur(bitmap, 3f)
+        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+
+        val paint = Paint().apply {
+            alpha = (255 * abs(amount) * 0.4f).toInt()
+            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply {
+                set(floatArrayOf(
+                    1f + amount * 0.5f, 0f, 0f, 0f, 0f,
+                    0f, 1f + amount * 0.5f, 0f, 0f, 0f,
+                    0f, 0f, 1f + amount * 0.5f, 0f, 0f,
                     0f, 0f, 0f, 1f, 0f
                 ))
             })

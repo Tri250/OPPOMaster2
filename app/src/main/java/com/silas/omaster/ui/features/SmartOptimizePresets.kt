@@ -24,6 +24,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "kodak_portra",
             contrast = -10f,
             saturation = -5f,
             highlights = -15f,
@@ -52,6 +53,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "kodak_portra",
             contrast = -5f,
             saturation = 3f,
             highlights = -10f,
@@ -73,6 +75,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "kodak_ektar",
             contrast = 18f,
             saturation = 15f,
             vibrance = 10f,
@@ -137,6 +140,7 @@ object SmartOptimizePresets {
         icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
+            filmSimulation = "kodak_tri_x",
             saturation = -100f,
             contrast = 25f,
             grain = 35f,
@@ -176,6 +180,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "ecktachrome",
             contrast = 15f,
             saturation = 12f,
             vibrance = 8f,
@@ -200,6 +205,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "fuji_velvia",
             contrast = 20f,
             saturation = 25f,
             vibrance = 15f,
@@ -223,6 +229,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "fuji_provia",
             contrast = 8f,
             saturation = 10f,
             temperature = 5600f,
@@ -241,6 +248,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "fuji_astia",
             contrast = -8f,
             saturation = -5f,
             temperature = 5400f,
@@ -343,6 +351,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "fujipro400h",
             contrast = -10f,
             saturation = -10f,
             temperature = 5300f,
@@ -388,6 +397,7 @@ object SmartOptimizePresets {
         icon = "camera_alt",
         category = PresetCategory.FILM,
         params = SmartOptimizeParams(
+            filmSimulation = "agfa_vista",
             contrast = 10f,
             saturation = 12f,
             temperature = 5850f,
@@ -429,6 +439,7 @@ object SmartOptimizePresets {
         icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
+            filmSimulation = "agfaapx",
             saturation = -100f,
             contrast = 18f,
             grain = 10f,
@@ -449,6 +460,7 @@ object SmartOptimizePresets {
         icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
+            filmSimulation = "ilfordhp5",
             saturation = -100f,
             contrast = 15f,
             grain = 20f,
@@ -470,6 +482,7 @@ object SmartOptimizePresets {
         icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
+            filmSimulation = "ilford_delta",
             saturation = -100f,
             contrast = 30f,
             grain = 50f,

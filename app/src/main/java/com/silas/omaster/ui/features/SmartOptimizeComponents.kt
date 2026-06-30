@@ -797,42 +797,6 @@ fun ColorScienceSelector(
 
         Spacer(Modifier.height(8.dp))
 
-        // 显示色彩空间
-        Text("显示色彩空间", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            DisplayColorSpace.entries.forEach { space ->
-                FilterChip(
-                    selected = displayColorSpace == space.name,
-                    onClick = { onDisplayColorSpaceChanged(space.name) },
-                    label = { Text(space.label, fontSize = 11.sp) },
-                    modifier = Modifier.height(32.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // EOTF
-        Text("传输函数 (EOTF)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EOTF.entries.forEach { eotfEntry ->
-                FilterChip(
-                    selected = eotf == eotfEntry.name,
-                    onClick = { onEOTFChanged(eotfEntry.name) },
-                    label = { Text(eotfEntry.label, fontSize = 11.sp) },
-                    modifier = Modifier.height(32.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
         LabeledSlider("峰值亮度", peakLuminance, 80f, 4000f,
             onPeakLuminanceChanged, { "${it.toInt()} nits" })
     }

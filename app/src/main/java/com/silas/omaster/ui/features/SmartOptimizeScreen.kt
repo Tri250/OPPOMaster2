@@ -85,6 +85,11 @@ fun SmartOptimizeScreen(
     var presetFilter by remember { mutableStateOf<PresetCategory?>(null) }
     var selectedPresetId by remember { mutableStateOf<String?>(null) }
 
+    // 同步显示位图：切换前后对比时更新
+    LaunchedEffect(showBefore, processedBitmap) {
+        displayBitmap = if (showBefore) originalBitmap else processedBitmap
+    }
+
     // ========== 图片选择器 ==========
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -105,7 +110,9 @@ fun SmartOptimizeScreen(
                     }
                     if (result != null) {
                         processedBitmap = result
-                        displayBitmap = result
+                        if (!showBefore) displayBitmap = result
+                        // 计算初始直方图
+                        histogramData = computeHistogram(result)
                     }
                     isProcessing = false
                 }
@@ -114,7 +121,10 @@ fun SmartOptimizeScreen(
     }
 
     // ========== 实时预览 ==========
-    fun requestPreview(newParams: SmartOptimizeParams) {
+    fun requestPreview(newParams: SmartOptimizeParams, recordHistory: Boolean = false) {
+        if (recordHistory) {
+            pushHistory()
+        }
         params = newParams
         if (isProcessing) return
 
@@ -125,7 +135,11 @@ fun SmartOptimizeScreen(
                     engine.optimize(bmp, newParams)
                 }
                 processedBitmap = result
-                displayBitmap = result
+                if (!showBefore) {
+                    displayBitmap = result
+                }
+                // 更新直方图
+                histogramData = computeHistogram(result)
             }
             isProcessing = false
         }
@@ -170,7 +184,7 @@ fun SmartOptimizeScreen(
     }
 
     fun redo() {
-        if (historyIndex < editHistory.lastIndex - 1) {
+        if (historyIndex < editHistory.lastIndex) {
             historyIndex++
             requestPreview(editHistory[historyIndex].params)
         }
@@ -188,6 +202,30 @@ fun SmartOptimizeScreen(
         pushHistory("重置全部")
         requestPreview(SmartOptimizeParams.DEFAULT)
         selectedPresetId = null
+    }
+
+    // ========== 直方图计算 ==========
+    fun computeHistogram(bitmap: Bitmap): HistogramFullResult {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        val luma = IntArray(256)
+        val red = IntArray(256)
+        val green = IntArray(256)
+        val blue = IntArray(256)
+        for (pixel in pixels) {
+            val r = android.graphics.Color.red(pixel)
+            val g = android.graphics.Color.green(pixel)
+            val b = android.graphics.Color.blue(pixel)
+            val lum = (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
+            luma[lum]++
+            red[r]++
+            green[g]++
+            blue[b]++
+        }
+        var totalLum = 0f
+        for (i in luma.indices) totalLum += i * luma[i]
+        val meanLum = if (pixels.isNotEmpty()) totalLum / pixels.size else 0f
+        return HistogramFullResult(luma = luma, red = red, green = green, blue = blue, meanLuminance = meanLum)
     }
 
     // ========== UI ==========
@@ -210,7 +248,7 @@ fun SmartOptimizeScreen(
                     }
                     IconButton(
                         onClick = { redo() },
-                        enabled = historyIndex < editHistory.lastIndex - 1
+                        enabled = historyIndex < editHistory.lastIndex
                     ) {
                         Icon(Icons.Default.Redo, "重做")
                     }
@@ -260,10 +298,11 @@ fun SmartOptimizeScreen(
                         onImport = { imagePicker.launch("image/*") }
                     )
                 } else {
-                    displayBitmap?.let { bmp ->
+                    val currentDisplayBitmap = if (showBefore) originalBitmap else processedBitmap
+                    currentDisplayBitmap?.let { bmp ->
                         Image(
                             bitmap = bmp.asImageBitmap(),
-                            contentDescription = "预览",
+                            contentDescription = if (showBefore) "原图" else "预览",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit
                         )
@@ -674,6 +713,12 @@ private fun LightAdjustPanel(
             Text("光影调整", style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(vertical = 8.dp))
         }
+        item { LabeledSlider("光效", params.light, -100f, 100f,
+            { onParamsChanged(params.copy(light = it)) }, enabled = enabled) }
+        item { LabeledSlider("高光保留", params.highlightPreserve, 0f, 100f,
+            { onParamsChanged(params.copy(highlightPreserve = it)) }, enabled = enabled) }
+        item { LabeledSlider("阴影恢复", params.shadowRecover, 0f, 100f,
+            { onParamsChanged(params.copy(shadowRecover = it)) }, enabled = enabled) }
         item { LabeledSlider("高光", params.highlights, -100f, 100f,
             { onParamsChanged(params.copy(highlights = it)) }, enabled = enabled) }
         item { LabeledSlider("阴影", params.shadows, -100f, 100f,
@@ -737,18 +782,6 @@ private fun ColorAdjustPanel(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-        }
-        item {
-            LabeledSlider("色调映射", params.toneMappingStrength, 0f, 100f,
-                { onParamsChanged(params.copy(toneMappingStrength = it)) }, enabled = enabled)
-        }
-        item {
-            LabeledSlider("Sigmoid对比度", params.sigmoidContrast, 0f, 100f,
-                { onParamsChanged(params.copy(sigmoidContrast = it)) }, enabled = enabled)
-        }
-        item {
-            LabeledSlider("高光过渡", params.highlightTransition, 0f, 100f,
-                { onParamsChanged(params.copy(highlightTransition = it)) }, enabled = enabled)
         }
     }
 }
@@ -987,15 +1020,6 @@ private fun DetailPanel(
             { onParamsChanged(params.copy(structure = it)) }, enabled = enabled) }
         item { LabeledSlider("中心偏移", params.centre, -100f, 100f,
             { onParamsChanged(params.copy(centre = it)) }, enabled = enabled) }
-
-        item {
-            Spacer(Modifier.height(12.dp))
-            Text("色差校正", style = MaterialTheme.typography.titleSmall)
-        }
-        item { LabeledSlider("色差(红/青)", params.chromaticAberrationR, -100f, 100f,
-            { onParamsChanged(params.copy(chromaticAberrationR = it)) }, enabled = enabled) }
-        item { LabeledSlider("色差(蓝/黄)", params.chromaticAberrationB, -100f, 100f,
-            { onParamsChanged(params.copy(chromaticAberrationB = it)) }, enabled = enabled) }
     }
 }
 
@@ -1121,6 +1145,44 @@ private fun OpticsPanel(
 
         item {
             Spacer(Modifier.height(12.dp))
+            Text("方向", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { onParamsChanged(params.copy(orientationSteps = (params.orientationSteps + 1) % 4)) },
+                    enabled = enabled) {
+                    Icon(Icons.Default.RotateRight, "旋转90°", modifier = Modifier.size(20.dp))
+                }
+                Text("旋转 ${params.orientationSteps * 90}°", fontSize = 12.sp,
+                    modifier = Modifier.weight(1f))
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Checkbox(
+                        checked = params.flipHorizontal,
+                        onCheckedChange = { onParamsChanged(params.copy(flipHorizontal = it)) },
+                        enabled = enabled
+                    )
+                    Text("水平翻转", fontSize = 12.sp)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Checkbox(
+                        checked = params.flipVertical,
+                        onCheckedChange = { onParamsChanged(params.copy(flipVertical = it)) },
+                        enabled = enabled
+                    )
+                    Text("垂直翻转", fontSize = 12.sp)
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(12.dp))
             Text("透视校正", style = MaterialTheme.typography.titleSmall)
         }
         item { LabeledSlider("水平透视", params.perspectiveX, -100f, 100f,
@@ -1130,6 +1192,15 @@ private fun OpticsPanel(
         item { LabeledSlider("旋转", params.rotation, -45f, 45f,
             { onParamsChanged(params.copy(rotation = it)) },
             { "%.1f°".format(it) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("镜头校正", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("几何畸变", params.geometryWarp, -100f, 100f,
+            { onParamsChanged(params.copy(geometryWarp = it)) }, enabled = enabled) }
+        item { LabeledSlider("校正强度", params.lensCorrectionStrength, 0f, 100f,
+            { onParamsChanged(params.copy(lensCorrectionStrength = it)) }, enabled = enabled) }
 
         item {
             Spacer(Modifier.height(12.dp))
