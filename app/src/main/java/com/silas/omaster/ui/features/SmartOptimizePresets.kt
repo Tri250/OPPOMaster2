@@ -21,7 +21,8 @@ object SmartOptimizePresets {
         id = "kodak_portra_400",
         name = "Kodak Portra 400",
         description = "经典柯达Portra 400胶片模拟，肤色还原自然，对比度适中",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = -10f,
             saturation = -5f,
@@ -48,7 +49,8 @@ object SmartOptimizePresets {
         id = "kodak_portra_800",
         name = "Kodak Portra 800",
         description = "高速Portra 800，略暖的色调，更强的颗粒感",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = -5f,
             saturation = 3f,
@@ -68,7 +70,8 @@ object SmartOptimizePresets {
         id = "kodak_ektar_100",
         name = "Kodak Ektar 100",
         description = "高饱和、高对比度，色彩鲜艳，颗粒极细",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 18f,
             saturation = 15f,
@@ -88,7 +91,8 @@ object SmartOptimizePresets {
         id = "kodak_gold_200",
         name = "Kodak Gold 200",
         description = "温暖的金色色调，经典的日常胶片",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 8f,
             saturation = 8f,
@@ -110,7 +114,8 @@ object SmartOptimizePresets {
         id = "kodak_colorplus_200",
         name = "Kodak ColorPlus 200",
         description = "经济实惠的日常卷，暖色调，复古感",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 12f,
             saturation = 10f,
@@ -129,6 +134,7 @@ object SmartOptimizePresets {
         id = "kodak_trix_400",
         name = "Kodak Tri-X 400",
         description = "传奇黑白胶片，高对比度，经典颗粒",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -148,28 +154,27 @@ object SmartOptimizePresets {
         id = "kodak_tmax_100",
         name = "Kodak T-Max 100",
         description = "超细颗粒黑白，高锐度，现代感",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
-        params = SmartOptimizePreset(
-            id = "", name = "", description = "", category = PresetCategory.MONOCHROME,
-            params = SmartOptimizeParams(
-                saturation = -100f,
-                contrast = 15f,
-                grain = 8f,
-                grainSize = 8f,
-                sharpness = 35f,
-                clarity = 15f,
-                shadows = -3f,
-                highlights = -5f,
-                blacks = -3f
-            )
-        ).params
+        params = SmartOptimizeParams(
+            saturation = -100f,
+            contrast = 15f,
+            grain = 8f,
+            grainSize = 8f,
+            sharpness = 35f,
+            clarity = 15f,
+            shadows = -3f,
+            highlights = -5f,
+            blacks = -3f
+        )
     )
 
     fun kodakEktachrome(): SmartOptimizePreset = SmartOptimizePreset(
         id = "kodak_ektachrome",
         name = "Kodak Ektachrome E100",
         description = "反转片，色彩纯净，中高对比度，细腻颗粒",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 15f,
             saturation = 12f,
@@ -192,7 +197,8 @@ object SmartOptimizePresets {
         id = "fuji_velvia_50",
         name = "Fuji Velvia 50",
         description = "传奇风光胶片，超高饱和度，浓郁色彩",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 20f,
             saturation = 25f,
@@ -214,7 +220,8 @@ object SmartOptimizePresets {
         id = "fuji_provia",
         name = "Fuji Provia 100F",
         description = "标准反转片，色彩自然，对比度适中",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 8f,
             saturation = 10f,
@@ -231,7 +238,8 @@ object SmartOptimizePresets {
         id = "fuji_astia",
         name = "Fuji Astia 100F",
         description = "柔和反转片，肤色极佳，低对比度",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = -8f,
             saturation = -5f,
@@ -251,6 +259,7 @@ object SmartOptimizePresets {
         id = "fuji_acros",
         name = "Fuji Acros 100",
         description = "超细腻黑白，丰富的灰阶过渡",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -270,7 +279,8 @@ object SmartOptimizePresets {
         id = "fuji_classic_chrome",
         name = "Fuji Classic Chrome",
         description = "经典正片，低饱和度，柔和的色调，适合街拍",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 10f,
             saturation = -15f,
@@ -292,7 +302,8 @@ object SmartOptimizePresets {
         id = "fuji_pro_neg_hi",
         name = "Fuji Pro Neg Hi",
         description = "专业负片，高对比度，适合棚拍人像",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 15f,
             saturation = -5f,
@@ -310,7 +321,8 @@ object SmartOptimizePresets {
         id = "fuji_pro_neg_std",
         name = "Fuji Pro Neg Std",
         description = "专业负片标准，柔和影调，肤色自然",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = -5f,
             saturation = -8f,
@@ -328,7 +340,8 @@ object SmartOptimizePresets {
         id = "fuji_pro_400h",
         name = "Fuji Pro 400H",
         description = "专业婚礼胶片，柔和的肤色，淡雅的色调",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = -10f,
             saturation = -10f,
@@ -349,7 +362,8 @@ object SmartOptimizePresets {
         id = "fuji_natura_1600",
         name = "Fuji Natura 1600",
         description = "高感光胶片，柔和的暖色调，粗颗粒",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = -5f,
             saturation = 5f,
@@ -371,7 +385,8 @@ object SmartOptimizePresets {
         id = "agfa_vista_200",
         name = "Agfa Vista 200",
         description = "德系色彩，浓郁红色，温暖的色调",
-        category = PresetCategory.FILM_SIMULATION,
+        icon = "camera_alt",
+        category = PresetCategory.FILM,
         params = SmartOptimizeParams(
             contrast = 10f,
             saturation = 12f,
@@ -391,6 +406,7 @@ object SmartOptimizePresets {
         id = "agfa_scala_200",
         name = "Agfa Scala 200X",
         description = "经典黑白反转片，高对比度，丰富的暗部层次",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -410,6 +426,7 @@ object SmartOptimizePresets {
         id = "agfa_apx_100",
         name = "Agfa APX 100",
         description = "经典黑白负片，细腻颗粒，中高对比度",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -429,6 +446,7 @@ object SmartOptimizePresets {
         id = "ilford_hp5_plus",
         name = "Ilford HP5+ 400",
         description = "经典英伦黑白，中等对比度，丰富的灰阶",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -449,6 +467,7 @@ object SmartOptimizePresets {
         id = "ilford_delta_3200",
         name = "Ilford Delta 3200",
         description = "超高感光黑白，粗颗粒，高对比度，戏剧感",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -469,6 +488,7 @@ object SmartOptimizePresets {
         id = "ilford_fp4_plus",
         name = "Ilford FP4+ 125",
         description = "超细腻黑白，低对比度，丰富的暗部细节",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -487,6 +507,7 @@ object SmartOptimizePresets {
         id = "ilford_pan_f_50",
         name = "Ilford Pan F+ 50",
         description = "极细腻黑白，几乎无颗粒，高锐度",
+        icon = "filter_b_and_w",
         category = PresetCategory.MONOCHROME,
         params = SmartOptimizeParams(
             saturation = -100f,
@@ -508,6 +529,7 @@ object SmartOptimizePresets {
         id = "cine_kodak_2383",
         name = "Kodak 2383 Print Film",
         description = "好莱坞标准电影打印胶片，经典电影色调",
+        icon = "movie",
         category = PresetCategory.CINEMATIC,
         params = SmartOptimizeParams(
             contrast = 15f,
@@ -534,6 +556,7 @@ object SmartOptimizePresets {
         id = "cine_arri_alexa",
         name = "Arri Alexa LUT",
         description = "Arri Alexa电影机色彩科学，自然的肤色还原",
+        icon = "movie",
         category = PresetCategory.CINEMATIC,
         params = SmartOptimizeParams(
             contrast = 5f,
@@ -547,7 +570,7 @@ object SmartOptimizePresets {
             sharpness = -5f,
             highlightTransition = 20f,
             sigmoidContrast = 10f,
-            colorScience = "ACES_2_0"
+            colorScience = "aces2"
         )
     )
 
@@ -555,6 +578,7 @@ object SmartOptimizePresets {
         id = "cine_red_komodo",
         name = "RED Komodo",
         description = "RED电影机色彩，高动态范围，冷色调",
+        icon = "movie",
         category = PresetCategory.CINEMATIC,
         params = SmartOptimizeParams(
             contrast = 10f,
@@ -576,6 +600,7 @@ object SmartOptimizePresets {
         id = "cine_16mm",
         name = "16mm Film",
         description = "16mm胶片电影感，粗颗粒，复古色调",
+        icon = "movie",
         category = PresetCategory.CINEMATIC,
         params = SmartOptimizeParams(
             contrast = 8f,
@@ -598,6 +623,7 @@ object SmartOptimizePresets {
         id = "cine_teal_orange",
         name = "Teal & Orange",
         description = "好莱坞蓝橙色调，经典电影风格",
+        icon = "movie",
         category = PresetCategory.CINEMATIC,
         params = SmartOptimizeParams(
             contrast = 12f,
@@ -606,8 +632,8 @@ object SmartOptimizePresets {
             tint = -8f,
             highlights = -10f,
             shadows = 5f,
-            shadowWheel = ColorWheel(210f, 30f, -10f),
-            highlightWheel = ColorWheel(30f, 25f, 5f),
+            shadowWheel = ColorWheelValue(210f, 30f, -10f),
+            highlightWheel = ColorWheelValue(30f, 25f, 5f),
             grain = 8f,
             fade = 5f,
             sigmoidContrast = 15f
@@ -618,6 +644,7 @@ object SmartOptimizePresets {
         id = "cine_bleach_bypass",
         name = "Bleach Bypass",
         description = "漂白工艺跳过，高对比度，低饱和度",
+        icon = "movie",
         category = PresetCategory.CINEMATIC,
         params = SmartOptimizeParams(
             contrast = 30f,
@@ -640,6 +667,7 @@ object SmartOptimizePresets {
         id = "landscape_vibrant",
         name = "风景-鲜艳",
         description = "增强风景色彩，提升蓝天和绿植的饱和度",
+        icon = "landscape",
         category = PresetCategory.LANDSCAPE,
         params = SmartOptimizeParams(
             contrast = 12f,
@@ -659,6 +687,7 @@ object SmartOptimizePresets {
         id = "landscape_golden_hour",
         name = "风景-黄金时刻",
         description = "温暖的日落色调，增强金色光线",
+        icon = "landscape",
         category = PresetCategory.LANDSCAPE,
         params = SmartOptimizeParams(
             temperature = 7500f,
@@ -670,7 +699,7 @@ object SmartOptimizePresets {
             vibrance = 10f,
             dehaze = 10f,
             shadowTint = 15f,
-            highlightWheel = ColorWheel(35f, 20f, 10f),
+            highlightWheel = ColorWheelValue(35f, 20f, 10f),
             grain = 5f,
             fade = 5f
         )
@@ -680,6 +709,7 @@ object SmartOptimizePresets {
         id = "portrait_natural",
         name = "人像-自然",
         description = "自然肤色，柔和对比度，适合日常人像",
+        icon = "person",
         category = PresetCategory.PORTRAIT,
         params = SmartOptimizeParams(
             contrast = -5f,
@@ -690,7 +720,6 @@ object SmartOptimizePresets {
             shadows = 8f,
             vibrance = 5f,
             sharpness = 5f,
-            faceBrightening = 15f,
             shadowTint = 5f,
             redPrimaryHue = 3f,
             redPrimarySaturation = -3f
@@ -701,6 +730,7 @@ object SmartOptimizePresets {
         id = "portrait_fashion",
         name = "人像-时尚",
         description = "时尚杂志风格，清晰锐利，高对比度",
+        icon = "person",
         category = PresetCategory.PORTRAIT,
         params = SmartOptimizeParams(
             contrast = 15f,
@@ -711,9 +741,7 @@ object SmartOptimizePresets {
             highlights = -10f,
             shadows = -5f,
             temperature = 5300f,
-            tint = -3f,
-            faceBrightening = 10f,
-            faceSmoothness = 60f
+            tint = -3f
         )
     )
 
@@ -721,6 +749,7 @@ object SmartOptimizePresets {
         id = "night_city",
         name = "夜景-城市",
         description = "城市夜景增强，提升暗部，控制高光",
+        icon = "nights_stay",
         category = PresetCategory.NIGHT,
         params = SmartOptimizeParams(
             exposure = 0.5f,
@@ -743,6 +772,7 @@ object SmartOptimizePresets {
         id = "food_delicious",
         name = "美食-诱人",
         description = "增强食物色彩，暖色调，提升食欲感",
+        icon = "restaurant",
         category = PresetCategory.MOOD,
         params = SmartOptimizeParams(
             temperature = 6200f,
@@ -770,6 +800,7 @@ object SmartOptimizePresets {
         id = "mood_warm",
         name = "温暖氛围",
         description = "温馨的暖色调，适合生活记录",
+        icon = "auto_awesome",
         category = PresetCategory.MOOD,
         params = SmartOptimizeParams(
             temperature = 7000f,
@@ -781,7 +812,7 @@ object SmartOptimizePresets {
             fade = 10f,
             grain = 8f,
             shadowTint = 15f,
-            highlightWheel = ColorWheel(30f, 10f, 5f)
+            highlightWheel = ColorWheelValue(30f, 10f, 5f)
         )
     )
 
@@ -789,6 +820,7 @@ object SmartOptimizePresets {
         id = "mood_cool",
         name = "冷调氛围",
         description = "清冷的蓝调，适合都市和现代感",
+        icon = "auto_awesome",
         category = PresetCategory.MOOD,
         params = SmartOptimizeParams(
             temperature = 4000f,
@@ -798,7 +830,7 @@ object SmartOptimizePresets {
             highlights = -5f,
             shadows = -5f,
             fade = 8f,
-            shadowWheel = ColorWheel(220f, 15f, -5f),
+            shadowWheel = ColorWheelValue(220f, 15f, -5f),
             bluePrimarySaturation = 5f,
             bluePrimaryHue = 5f
         )
@@ -808,6 +840,7 @@ object SmartOptimizePresets {
         id = "mood_vintage",
         name = "复古怀旧",
         description = "褪色的复古感，温暖的棕色调",
+        icon = "history",
         category = PresetCategory.VINTAGE,
         params = SmartOptimizeParams(
             temperature = 6500f,
@@ -830,6 +863,7 @@ object SmartOptimizePresets {
         id = "mood_dark",
         name = "暗调情绪",
         description = "昏沉的暗调风格，适合情绪表达",
+        icon = "auto_awesome",
         category = PresetCategory.MOOD,
         params = SmartOptimizeParams(
             exposure = -0.5f,
@@ -851,6 +885,7 @@ object SmartOptimizePresets {
         id = "mood_clean",
         name = "清新通透",
         description = "日系清新风格，明亮通透",
+        icon = "auto_awesome",
         category = PresetCategory.MOOD,
         params = SmartOptimizeParams(
             exposure = 0.3f,
@@ -873,6 +908,7 @@ object SmartOptimizePresets {
         id = "hdr_natural",
         name = "自然HDR",
         description = "自然的高动态范围效果，保留细节",
+        icon = "hdr_on",
         category = PresetCategory.HDR,
         params = SmartOptimizeParams(
             highlights = -30f,

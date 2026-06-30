@@ -196,8 +196,8 @@ fun ToneCurveEditor(
 
 @Composable
 fun ParametricCurvePanel(
-    curve: ParametricCurve,
-    onCurveChanged: (ParametricCurve) -> Unit,
+    curve: ParametricCurveData,
+    onCurveChanged: (ParametricCurveData) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -223,8 +223,8 @@ fun ParametricCurvePanel(
 
 @Composable
 fun ColorWheelPanel(
-    wheel: ColorWheel,
-    onWheelChanged: (ColorWheel) -> Unit,
+    wheel: ColorWheelValue,
+    onWheelChanged: (ColorWheelValue) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
     size: Float = 120f
@@ -322,7 +322,7 @@ fun ColorWheelPanel(
 
         // 重置
         TextButton(
-            onClick = { onWheelChanged(ColorWheel()) },
+            onClick = { onWheelChanged(ColorWheelValue()) },
             contentPadding = PaddingValues(4.dp)
         ) {
             Text("重置", fontSize = 10.sp)
@@ -390,7 +390,7 @@ private fun getHSLChannelValues(hsl: HSLAdjustments, channel: Int): Triple<Float
     1 -> Triple(hsl.orangeHue, hsl.orangeSaturation, hsl.orangeLuminance)
     2 -> Triple(hsl.yellowHue, hsl.yellowSaturation, hsl.yellowLuminance)
     3 -> Triple(hsl.greenHue, hsl.greenSaturation, hsl.greenLuminance)
-    4 -> Triple(hsl.cyanHue, hsl.cyanSaturation, hsl.cyanLuminance)
+    4 -> Triple(hsl.aquaHue, hsl.aquaSaturation, hsl.aquaLuminance)
     5 -> Triple(hsl.blueHue, hsl.blueSaturation, hsl.blueLuminance)
     6 -> Triple(hsl.purpleHue, hsl.purpleSaturation, hsl.purpleLuminance)
     7 -> Triple(hsl.magentaHue, hsl.magentaSaturation, hsl.magentaLuminance)
@@ -408,7 +408,7 @@ private fun makeHSLChannelUpdaters(
             1 -> hsl.copy(orangeHue = h ?: hsl.orangeHue, orangeSaturation = s ?: hsl.orangeSaturation, orangeLuminance = l ?: hsl.orangeLuminance)
             2 -> hsl.copy(yellowHue = h ?: hsl.yellowHue, yellowSaturation = s ?: hsl.yellowSaturation, yellowLuminance = l ?: hsl.yellowLuminance)
             3 -> hsl.copy(greenHue = h ?: hsl.greenHue, greenSaturation = s ?: hsl.greenSaturation, greenLuminance = l ?: hsl.greenLuminance)
-            4 -> hsl.copy(cyanHue = h ?: hsl.cyanHue, cyanSaturation = s ?: hsl.cyanSaturation, cyanLuminance = l ?: hsl.cyanLuminance)
+            4 -> hsl.copy(aquaHue = h ?: hsl.aquaHue, aquaSaturation = s ?: hsl.aquaSaturation, aquaLuminance = l ?: hsl.aquaLuminance)
             5 -> hsl.copy(blueHue = h ?: hsl.blueHue, blueSaturation = s ?: hsl.blueSaturation, blueLuminance = l ?: hsl.blueLuminance)
             6 -> hsl.copy(purpleHue = h ?: hsl.purpleHue, purpleSaturation = s ?: hsl.purpleSaturation, purpleLuminance = l ?: hsl.purpleLuminance)
             7 -> hsl.copy(magentaHue = h ?: hsl.magentaHue, magentaSaturation = s ?: hsl.magentaSaturation, magentaLuminance = l ?: hsl.magentaLuminance)
@@ -447,7 +447,7 @@ fun HistogramView(
                         histogram.red.maxOrNull() ?: 1,
                         histogram.green.maxOrNull() ?: 1,
                         histogram.blue.maxOrNull() ?: 1,
-                        histogram.luminance.maxOrNull() ?: 1
+                        histogram.luma.maxOrNull() ?: 1
                     ).toFloat().coerceAtLeast(1f)
 
                     val barWidth = w / 256f
@@ -469,7 +469,7 @@ fun HistogramView(
                         }
                         "LUMINANCE" -> {
                             for (i in 0..255) {
-                                val lH = (histogram.luminance[i] / maxVal * h)
+                                val lH = (histogram.luma[i] / maxVal * h)
                                 drawLine(Color.White.copy(alpha = 0.7f),
                                     Offset(i * barWidth, h), Offset(i * barWidth, h - lH), barWidth)
                             }
@@ -634,7 +634,7 @@ fun PresetCard(
                     .clip(RoundedCornerShape(6.dp))
                     .background(
                         when (preset.category) {
-                            PresetCategory.FILM_SIMULATION -> Color(0xFFFF6B35)
+                            PresetCategory.FILM -> Color(0xFFFF6B35)
                             PresetCategory.CINEMATIC -> Color(0xFF4A90D9)
                             PresetCategory.MONOCHROME -> Color(0xFF666666)
                             PresetCategory.LANDSCAPE -> Color(0xFF4CAF50)
@@ -692,7 +692,7 @@ fun EditHistoryItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = if (entry.isCheckpoint) Icons.Filled.Bookmark
+            imageVector = if (entry.label.contains("检查点")) Icons.Filled.Bookmark
             else Icons.Filled.History,
             contentDescription = null,
             tint = if (isCurrent) MaterialTheme.colorScheme.primary
@@ -797,6 +797,42 @@ fun ColorScienceSelector(
 
         Spacer(Modifier.height(8.dp))
 
+        // 显示色彩空间
+        Text("显示色彩空间", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DisplayColorSpace.entries.forEach { space ->
+                FilterChip(
+                    selected = displayColorSpace == space.name,
+                    onClick = { onDisplayColorSpaceChanged(space.name) },
+                    label = { Text(space.label, fontSize = 11.sp) },
+                    modifier = Modifier.height(32.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // EOTF
+        Text("传输函数 (EOTF)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            EOTF.entries.forEach { eotfEntry ->
+                FilterChip(
+                    selected = eotf == eotfEntry.name,
+                    onClick = { onEOTFChanged(eotfEntry.name) },
+                    label = { Text(eotfEntry.label, fontSize = 11.sp) },
+                    modifier = Modifier.height(32.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         LabeledSlider("峰值亮度", peakLuminance, 80f, 4000f,
             onPeakLuminanceChanged, { "${it.toInt()} nits" })
     }
@@ -821,11 +857,11 @@ fun ExportConfigPanel(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ExportFormat.entries.forEach { format ->
+            ExportFormat.entries.forEach { fmt ->
                 FilterChip(
-                    selected = config.format == format,
-                    onClick = { onConfigChanged(config.copy(format = format)) },
-                    label = { Text(format.label, fontSize = 11.sp) },
+                    selected = config.format == fmt.value,
+                    onClick = { onConfigChanged(config.copy(format = fmt.value)) },
+                    label = { Text(fmt.label, fontSize = 11.sp) },
                     modifier = Modifier.height(32.dp)
                 )
             }
@@ -835,13 +871,10 @@ fun ExportConfigPanel(
             { onConfigChanged(config.copy(quality = it.toInt())) },
             { "${it.toInt()}%" })
 
-        LabeledSlider("输出锐化", config.sharpening, 0f, 100f,
-            { onConfigChanged(config.copy(sharpening = it)) })
-
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
-                checked = config.includeMetadata,
-                onCheckedChange = { onConfigChanged(config.copy(includeMetadata = it)) }
+                checked = config.metadata,
+                onCheckedChange = { onConfigChanged(config.copy(metadata = it)) }
             )
             Text("包含元数据", fontSize = 12.sp)
         }

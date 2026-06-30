@@ -60,7 +60,7 @@ class SmartOptimizeEngine(
 
     // 非破坏性编辑核心：保存原始图像 + 编辑参数
     private var originalBitmap: Bitmap? = null
-    private var currentSettings = SmartOptimizeSettings()
+    private var currentSettings = SmartOptimizeParams()
 
     // 处理锁，防止并发处理导致不一致
     private var isProcessing = false
@@ -72,13 +72,13 @@ class SmartOptimizeEngine(
 
     fun initialize(bitmap: Bitmap) {
         originalBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-        currentSettings = SmartOptimizeSettings()
+        currentSettings = SmartOptimizeParams()
         editHistory.clear()
         editHistory.push(currentSettings, "初始化")
         onHistoryChange?.invoke(false, false)
     }
 
-    fun updateSettings(block: SmartOptimizeSettings.() -> Unit) {
+    fun updateSettings(block: SmartOptimizeParams.() -> Unit) {
         val newSettings = currentSettings.copy().apply(block)
         currentSettings = newSettings
         editHistory.push(newSettings)
@@ -89,7 +89,7 @@ class SmartOptimizeEngine(
      * 请求实时预览（参数变化时调用）
      * 推入历史记录以确保撤销链路完整
      */
-    fun requestPreview(settings: SmartOptimizeSettings) {
+    fun requestPreview(settings: SmartOptimizeParams) {
         currentSettings = settings
         editHistory.push(settings)
         onHistoryChange?.invoke(editHistory.canUndo, editHistory.canRedo)
@@ -129,7 +129,7 @@ class SmartOptimizeEngine(
     /**
      * 完整处理（导出时使用，高质量模式）
      */
-    suspend fun triggerFullProcess(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap? {
+    suspend fun triggerFullProcess(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap? {
         return withContext(Dispatchers.Default) {
             process(bitmap, settings, highQuality = true)
         }
@@ -138,13 +138,13 @@ class SmartOptimizeEngine(
     /**
      * 智能优化主入口
      */
-    fun optimize(bitmap: Bitmap, settings: SmartOptimizeSettings = SmartOptimizeSettings()): Bitmap {
+    fun optimize(bitmap: Bitmap, settings: SmartOptimizeParams = SmartOptimizeParams()): Bitmap {
         return process(bitmap, settings, highQuality = true) ?: bitmap
     }
 
     // ========== 处理管线 ==========
 
-    private fun process(source: Bitmap, settings: SmartOptimizeSettings, highQuality: Boolean): Bitmap? {
+    private fun process(source: Bitmap, settings: SmartOptimizeParams, highQuality: Boolean): Bitmap? {
         if (isProcessing) return null
         isProcessing = true
         try {
@@ -194,7 +194,7 @@ class SmartOptimizeEngine(
 
     // ========== 1. 几何变换 ==========
 
-    private fun applyGeometryTransformations(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyGeometryTransformations(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         var result = bitmap
 
         // 方向步骤 (0,1,2,3 = 0,90,180,270)
@@ -213,15 +213,13 @@ class SmartOptimizeEngine(
         }
 
         // 透视变换
-        if (settings.perspective.vertical != 0f || settings.perspective.horizontal != 0f ||
-            settings.perspective.rotation != 0f || settings.perspective.scale != 100f
-        ) {
-            result = applyPerspective(result, settings.perspective)
+        if (settings.perspectiveX != 0f || settings.perspectiveY != 0f) {
+            result = applyPerspective(result, settings.perspectiveX, settings.perspectiveY)
         }
 
         // 裁切
-        if (settings.cropData.enabled) {
-            result = cropBitmap(result, settings.cropData)
+        if (settings.cropTop != 0f || settings.cropLeft != 0f || settings.cropBottom != 0f || settings.cropRight != 0f) {
+            result = cropBitmap(result, settings.cropTop, settings.cropLeft, settings.cropBottom, settings.cropRight)
         }
 
         return result
@@ -240,31 +238,22 @@ class SmartOptimizeEngine(
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
-    private fun cropBitmap(bitmap: Bitmap, crop: CropData): Bitmap {
-        val left = (crop.x * bitmap.width).toInt().coerceIn(0, bitmap.width)
-        val top = (crop.y * bitmap.height).toInt().coerceIn(0, bitmap.height)
-        val width = (crop.width * bitmap.width).toInt().coerceIn(1, bitmap.width - left)
-        val height = (crop.height * bitmap.height).toInt().coerceIn(1, bitmap.height - top)
-        return Bitmap.createBitmap(bitmap, left, top, width, height)
+    private fun cropBitmap(bitmap: Bitmap, cropTop: Float, cropLeft: Float, cropBottom: Float, cropRight: Float): Bitmap {
+        val left = (cropLeft * bitmap.width).toInt().coerceIn(0, bitmap.width)
+        val top = (cropTop * bitmap.height).toInt().coerceIn(0, bitmap.height)
+        val right = ((1f - cropRight) * bitmap.width).toInt().coerceIn(left + 1, bitmap.width)
+        val bottom = ((1f - cropBottom) * bitmap.height).toInt().coerceIn(top + 1, bitmap.height)
+        return Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
     }
 
-    private fun applyPerspective(bitmap: Bitmap, p: PerspectiveParams): Bitmap {
+    private fun applyPerspective(bitmap: Bitmap, perspectiveX: Float, perspectiveY: Float): Bitmap {
         val w = bitmap.width.toFloat()
         val h = bitmap.height.toFloat()
         val matrix = Matrix()
 
-        // 缩放
-        val scale = p.scale / 100f
-        matrix.postScale(scale, scale, w / 2f, h / 2f)
-
-        // 旋转
-        if (p.rotation != 0f) {
-            matrix.postRotate(p.rotation, w / 2f, h / 2f)
-        }
-
-        // 垂直/水平透视近似
-        val px = p.horizontal / 100f * 0.5f
-        val py = p.vertical / 100f * 0.5f
+        // 水平/垂直透视近似
+        val px = perspectiveX / 100f * 0.5f
+        val py = perspectiveY / 100f * 0.5f
         val src = floatArrayOf(0f, 0f, w, 0f, w, h, 0f, h)
         val dst = floatArrayOf(
             -w * px, -h * py,
@@ -280,7 +269,7 @@ class SmartOptimizeEngine(
 
     // ========== 2. 基础调整 ==========
 
-    private fun applyBasicAdjustments(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyBasicAdjustments(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
@@ -374,7 +363,7 @@ class SmartOptimizeEngine(
 
     // ========== 3. 光效 ==========
 
-    private fun applyLightAdjustments(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyLightAdjustments(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         if (settings.light == 0f && settings.highlightPreserve == 50f && settings.shadowRecover == 50f) return bitmap
 
         val pixels = IntArray(bitmap.width * bitmap.height)
@@ -420,7 +409,7 @@ class SmartOptimizeEngine(
 
     // ========== 4. 色彩 ==========
 
-    private fun applyColorAdjustments(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyColorAdjustments(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
@@ -445,27 +434,35 @@ class SmartOptimizeEngine(
             g -= tint * 10f
             b += tint * 15f
 
-            // HSL 调整
-            settings.hsl.forEach { (key, value) ->
-                when (key) {
-                    "hue" -> {
-                        val shift = value / 100f * 30f
-                        val (h, s, l) = rgbToHsl(r, g, b)
-                        val (nr, ng, nb) = hslToRgb((h + shift) % 360f, s, l)
-                        r = nr; g = ng; b = nb
-                    }
-                    "saturation" -> {
-                        val (h, s, l) = rgbToHsl(r, g, b)
-                        val (nr, ng, nb) = hslToRgb(h, (s + value / 100f).coerceIn(0f, 1f), l)
-                        r = nr; g = ng; b = nb
-                    }
-                    "luminance" -> {
-                        val (h, s, l) = rgbToHsl(r, g, b)
-                        val (nr, ng, nb) = hslToRgb(h, s, (l + value / 100f).coerceIn(0f, 1f))
-                        r = nr; g = ng; b = nb
-                    }
+            // HSL 调整 (per-color-channel hue/saturation/luminance)
+            val hslAdj = settings.hslAdjustments
+            val (currentH, currentS, currentL) = rgbToHsl(r, g, b)
+            // Determine which color range this pixel falls into and apply corresponding HSL shift
+            val colorRanges = listOf(
+                0f to 30f to Triple(hslAdj.redHue, hslAdj.redSaturation, hslAdj.redLuminance),
+                30f to 60f to Triple(hslAdj.orangeHue, hslAdj.orangeSaturation, hslAdj.orangeLuminance),
+                60f to 90f to Triple(hslAdj.yellowHue, hslAdj.yellowSaturation, hslAdj.yellowLuminance),
+                90f to 150f to Triple(hslAdj.greenHue, hslAdj.greenSaturation, hslAdj.greenLuminance),
+                150f to 210f to Triple(hslAdj.aquaHue, hslAdj.aquaSaturation, hslAdj.aquaLuminance),
+                210f to 270f to Triple(hslAdj.blueHue, hslAdj.blueSaturation, hslAdj.blueLuminance),
+                270f to 300f to Triple(hslAdj.purpleHue, hslAdj.purpleSaturation, hslAdj.purpleLuminance),
+                300f to 360f to Triple(hslAdj.magentaHue, hslAdj.magentaSaturation, hslAdj.magentaLuminance)
+            )
+            var newH = currentH
+            var newS = currentS
+            var newL = currentL
+            for ((range, adjustments) in colorRanges) {
+                val (rangeStart, rangeEnd) = range
+                if (currentH >= rangeStart && currentH < rangeEnd) {
+                    val (hueShift, satShift, lumShift) = adjustments
+                    newH = (currentH + hueShift / 100f * 30f + 360f) % 360f
+                    newS = (currentS + satShift / 100f).coerceIn(0f, 1f)
+                    newL = (currentL + lumShift / 100f).coerceIn(0f, 1f)
+                    break
                 }
             }
+            val (nr2, ng2, nb2) = hslToRgb(newH, newS, newL)
+            r = nr2; g = ng2; b = nb2
 
             // Vibrance: 对低饱和像素提升更大
             if (vibrance != 0f) {
@@ -492,14 +489,15 @@ class SmartOptimizeEngine(
                 r = nr; g = ng; b = nb
             }
 
-            // Color Grading (Shadows / Midtones / Highlights)
-            val cg = settings.colorGrading
+            // Color Grading (Shadows / Midtones / Highlights / Global wheels)
             val lum = 0.299f * r + 0.587f * g + 0.114f * b
             val normLum = lum / 255f
 
             val shadowWeight = (1f - normLum).pow(2f)
             val midWeight = 1f - abs(normLum - 0.5f) * 2f
             val highlightWeight = normLum.pow(2f)
+
+            val blendFactor = settings.gradingBlend / 100f
 
             fun applyGrading(hue: Float, sat: Float, lumOffset: Float, weight: Float) {
                 if (weight <= 0.001f) return
@@ -513,12 +511,12 @@ class SmartOptimizeEngine(
                 b = b * (1f - weight) + nb * weight
             }
 
-            applyGrading(cg.shadowsHue, cg.shadowsSaturation, cg.shadowsLuminance, shadowWeight * (cg.blending / 100f))
-            applyGrading(cg.midtonesHue, cg.midtonesSaturation, cg.midtonesLuminance, midWeight * (cg.blending / 100f))
-            applyGrading(cg.highlightsHue, cg.highlightsSaturation, cg.highlightsLuminance, highlightWeight * (cg.blending / 100f))
+            applyGrading(settings.shadowWheel.hue, settings.shadowWheel.saturation, settings.shadowWheel.luminance, shadowWeight * blendFactor)
+            applyGrading(settings.midtoneWheel.hue, settings.midtoneWheel.saturation, settings.midtoneWheel.luminance, midWeight * blendFactor)
+            applyGrading(settings.highlightWheel.hue, settings.highlightWheel.saturation, settings.highlightWheel.luminance, highlightWeight * blendFactor)
 
             // Global grading
-            applyGrading(cg.globalHue, cg.globalSaturation, cg.globalLuminance, 0.3f * (cg.blending / 100f))
+            applyGrading(settings.globalWheel.hue, settings.globalWheel.saturation, settings.globalWheel.luminance, 0.3f * blendFactor)
 
             pixels[i] = Color.argb(
                 Color.alpha(pixel),
@@ -534,10 +532,10 @@ class SmartOptimizeEngine(
 
     // ========== 5. 影调（曲线） ==========
 
-    private fun applyToneAdjustments(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyToneAdjustments(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         // 各通道点曲线
         val curves = listOf(
-            settings.toneCurve to "luma",
+            settings.pointCurve to "luma",
             settings.redCurve to "red",
             settings.greenCurve to "green",
             settings.blueCurve to "blue"
@@ -549,17 +547,9 @@ class SmartOptimizeEngine(
             }
         }
 
-        // 各通道参数化曲线
-        val parametricCurves = listOf(
-            settings.parametricCurve to "luma",
-            settings.redParametricCurve to "red",
-            settings.greenParametricCurve to "green",
-            settings.blueParametricCurve to "blue"
-        )
-        for ((curve, channel) in parametricCurves) {
-            if (isParametricActive(curve)) {
-                bitmap = applyParametricCurve(bitmap, curve, channel)
-            }
+        // 全局参数化曲线
+        if (isParametricActive(settings.parametricCurve)) {
+            bitmap = applyParametricCurve(bitmap, settings.parametricCurve, "luma")
         }
 
         // Hue vs Sat / Hue vs Lum / Lum vs Sat
@@ -580,7 +570,7 @@ class SmartOptimizeEngine(
         return curve.any { it.y != 0.5f } || curve.size > 2
     }
 
-    private fun isParametricActive(curve: ParametricCurve): Boolean {
+    private fun isParametricActive(curve: ParametricCurveData): Boolean {
         return curve.darks != 0f || curve.shadows != 0f || curve.highlights != 0f ||
                curve.lights != 0f || curve.whiteLevel != 0f || curve.blackLevel != 0f
     }
@@ -621,7 +611,7 @@ class SmartOptimizeEngine(
         return bitmap
     }
 
-    private fun applyParametricCurve(bitmap: Bitmap, curve: ParametricCurve, channel: String): Bitmap {
+    private fun applyParametricCurve(bitmap: Bitmap, curve: ParametricCurveData, channel: String): Bitmap {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
@@ -659,7 +649,7 @@ class SmartOptimizeEngine(
         return bitmap
     }
 
-    private fun buildParametricPoints(settings: ParametricCurve): List<CurvePoint> {
+    private fun buildParametricPoints(settings: ParametricCurveData): List<CurvePoint> {
         val vH = settings.highlights / 10f
         val vS = settings.shadows / 10f
         val vD = settings.darks / 10f
@@ -758,7 +748,7 @@ class SmartOptimizeEngine(
 
     // ========== 6. 胶片仿真 / LUT / 色彩科学 ==========
 
-    private fun applyFilmSimulation(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyFilmSimulation(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         var result = bitmap
 
         // 高光重建 (AlcedoStudio)
@@ -791,7 +781,7 @@ class SmartOptimizeEngine(
         return result
     }
 
-    private fun applyLUT(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyLUT(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         if (settings.lutPath.isEmpty()) return bitmap
         val intensity = settings.lutIntensity / 100f
 
@@ -1065,7 +1055,7 @@ class SmartOptimizeEngine(
         return bitmap
     }
 
-    private fun applyColorSpace(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyColorSpace(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         // 最终色彩空间输出转换
         return when (settings.exportColorSpace) {
             "sRGB" -> applySRGBTransform(bitmap)
@@ -1075,7 +1065,7 @@ class SmartOptimizeEngine(
 
     // ========== 7. 特效 ==========
 
-    private fun applyEffects(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyEffects(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         var result = bitmap
 
         // Glow (辉光)
@@ -1094,12 +1084,12 @@ class SmartOptimizeEngine(
         }
 
         // Vignette
-        if (settings.vignetteAmount != 0f) {
+        if (settings.vignette != 0f) {
             result = applyVignette(result, settings)
         }
 
         // Film grain
-        if (settings.grainAmount > 0f) {
+        if (settings.grain > 0f) {
             result = applyFilmGrain(result, settings)
         }
 
@@ -1159,7 +1149,7 @@ class SmartOptimizeEngine(
         return result
     }
 
-    private fun applyVignette(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyVignette(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
@@ -1167,7 +1157,7 @@ class SmartOptimizeEngine(
         val cy = bitmap.height / 2f
         val maxDist = sqrt(cx * cx + cy * cy)
 
-        val amount = settings.vignetteAmount / 100f
+        val amount = settings.vignette / 100f
         val midpoint = settings.vignetteMidpoint / 100f
         val roundness = (settings.vignetteRoundness + 100f) / 200f // -100~100 -> 0~1
         val feather = settings.vignetteFeather / 100f
@@ -1203,11 +1193,11 @@ class SmartOptimizeEngine(
         return bitmap
     }
 
-    private fun applyFilmGrain(bitmap: Bitmap, settings: SmartOptimizeSettings): Bitmap {
+    private fun applyFilmGrain(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
-        val amount = settings.grainAmount / 100f
+        val amount = settings.grain / 100f
         val size = settings.grainSize / 100f
         val roughness = settings.grainRoughness / 100f
         val seed = System.currentTimeMillis()
@@ -1262,7 +1252,7 @@ class SmartOptimizeEngine(
 
     // ========== 8. 细节 ==========
 
-    private fun applyDetails(bitmap: Bitmap, settings: SmartOptimizeSettings, highQuality: Boolean): Bitmap {
+    private fun applyDetails(bitmap: Bitmap, settings: SmartOptimizeParams, highQuality: Boolean): Bitmap {
         var result = bitmap
 
         // 锐化
@@ -1291,12 +1281,12 @@ class SmartOptimizeEngine(
         }
 
         // Noise reduction
-        if (settings.lumaNoiseReduction > 0f || settings.colorNoiseReduction > 0f) {
-            result = applyNoiseReduction(result, settings.lumaNoiseReduction / 100f, settings.colorNoiseReduction / 100f)
+        if (settings.luminanceNoiseReduction > 0f || settings.colorNoiseReduction > 0f) {
+            result = applyNoiseReduction(result, settings.luminanceNoiseReduction / 100f, settings.colorNoiseReduction / 100f)
         }
 
         // Chromatic aberration
-        if (settings.chromaticAberrationRedCyan != 0f || settings.chromaticAberrationBlueYellow != 0f) {
+        if (settings.chromaticAberrationR != 0f || settings.chromaticAberrationB != 0f) {
             result = applyChromaticAberration(result, settings)
         }
 
@@ -1504,4 +1494,267 @@ class SmartOptimizeEngine(
                 val gray = 0.299f * r + 0.587f * g + 0.114f * b
                 val factor = colorAmount * 0.5f
                 val nr = gray * factor + r * (1f - factor)
-                val ng = gray * factor + g
+                val ng = gray * factor + g * (1f - factor)
+                val nb = gray * factor + b * (1f - factor)
+                pixels[i] = Color.argb(
+                    Color.alpha(pixel),
+                    nr.toInt().coerceIn(0, 255),
+                    ng.toInt().coerceIn(0, 255),
+                    nb.toInt().coerceIn(0, 255)
+                )
+            }
+            result.setPixels(pixels, 0, result.width, 0, 0, result.width, result.height)
+        }
+        return result
+    }
+
+    private fun applyChromaticAberration(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
+        val redCyanShift = settings.chromaticAberrationR / 100f
+        val blueYellowShift = settings.chromaticAberrationB / 100f
+        if (redCyanShift == 0f && blueYellowShift == 0f) return bitmap
+
+        val w = bitmap.width
+        val h = bitmap.height
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+        val result = IntArray(w * h)
+
+        val cx = w / 2f
+        val cy = h / 2f
+
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val dx = (x - cx) / cx
+                val dy = (y - cy) / cy
+                val r2 = sqrt(dx * dx + dy * dy)
+
+                // Red channel shift (red/cyan fringe)
+                val rShiftX = if (redCyanShift != 0f) (dx * r2 * redCyanShift * 3f).toInt() else 0
+                val rShiftY = if (redCyanShift != 0f) (dy * r2 * redCyanShift * 3f).toInt() else 0
+
+                // Blue channel shift (blue/yellow fringe)
+                val bShiftX = if (blueYellowShift != 0f) (dx * r2 * blueYellowShift * 3f).toInt() else 0
+                val bShiftY = if (blueYellowShift != 0f) (dy * r2 * blueYellowShift * 3f).toInt() else 0
+
+                val srcIdx = y * w + x
+
+                // Sample R from shifted position
+                val rSrcX = (x - rShiftX).coerceIn(0, w - 1)
+                val rSrcY = (y - rShiftY).coerceIn(0, h - 1)
+                val rPixel = pixels[rSrcY * w + rSrcX]
+
+                // Sample B from shifted position
+                val bSrcX = (x - bShiftX).coerceIn(0, w - 1)
+                val bSrcY = (y - bShiftY).coerceIn(0, h - 1)
+                val bPixel = pixels[bSrcY * w + bSrcX]
+
+                val gPixel = pixels[srcIdx]
+
+                result[srcIdx] = Color.argb(
+                    Color.alpha(pixels[srcIdx]),
+                    Color.red(rPixel),
+                    Color.green(gPixel),
+                    Color.blue(bPixel)
+                )
+            }
+        }
+
+        val output = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        output.setPixels(result, 0, w, 0, 0, w, h)
+        return output
+    }
+
+    private fun applyLensCorrection(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
+        val warpAmount = settings.geometryWarp / 100f
+        val strength = settings.lensCorrectionStrength / 100f
+
+        if (warpAmount == 0f && strength == 1f) return bitmap
+
+        val w = bitmap.width
+        val h = bitmap.height
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+        val result = IntArray(w * h)
+
+        val cx = w / 2f
+        val cy = h / 2f
+        val maxR = sqrt(cx * cx + cy * cy)
+
+        // Combined distortion: geometryWarp for barrel/pincushion, lensCorrectionStrength scales it
+        val k = warpAmount * strength  // positive = barrel, negative = pincushion
+
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val dx = (x - cx) / maxR
+                val dy = (y - cy) / maxR
+                val r2 = dx * dx + dy * dy
+
+                // Radial distortion: r_corrected = r * (1 + k * r^2)
+                val factor = 1f + k * r2
+                val srcX = (dx * factor * maxR + cx).toInt().coerceIn(0, w - 1)
+                val srcY = (dy * factor * maxR + cy).toInt().coerceIn(0, h - 1)
+
+                result[y * w + x] = pixels[srcY * w + srcX]
+            }
+        }
+
+        val output = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        output.setPixels(result, 0, w, 0, 0, w, h)
+        return output
+    }
+
+    private fun applyLocalMasks(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
+        val enabledMasks = settings.masks.filter { it.enabled }
+        if (enabledMasks.isEmpty()) return bitmap
+
+        var result = bitmap
+
+        for (mask in enabledMasks) {
+            val maskAdjustments = mask.adjustments
+            val w = result.width
+            val h = result.height
+
+            // Apply mask adjustments to a copy of the image
+            var maskedCopy = result.copy(Bitmap.Config.ARGB_8888, true)
+            maskedCopy = applyGeometryTransformations(maskedCopy, maskAdjustments)
+            maskedCopy = applyBasicAdjustments(maskedCopy, maskAdjustments)
+            maskedCopy = applyLightAdjustments(maskedCopy, maskAdjustments)
+            maskedCopy = applyColorAdjustments(maskedCopy, maskAdjustments)
+            maskedCopy = applyToneAdjustments(maskedCopy, maskAdjustments)
+            maskedCopy = applyFilmSimulation(maskedCopy, maskAdjustments)
+            maskedCopy = applyEffects(maskedCopy, maskAdjustments)
+            maskedCopy = applyDetails(maskedCopy, maskAdjustments, true)
+            maskedCopy = applyLensCorrection(maskedCopy, maskAdjustments)
+
+            // Generate mask weights
+            val maskWeights = FloatArray(w * h)
+            val cx = w / 2f
+            val cy = h / 2f
+            val density = mask.density / 100f
+            val feather = mask.feather / 100f
+
+            when (mask.type) {
+                "radial" -> {
+                    val maxR = min(cx, cy)
+                    for (y in 0 until h) {
+                        for (x in 0 until w) {
+                            val dx = x - cx
+                            val dy = y - cy
+                            val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                            val norm = dist / maxR
+                            // Sharp edge at feather, falloff beyond
+                            val weight = if (norm <= (1f - feather)) {
+                                1f
+                            } else {
+                                ((1f - norm) / feather).coerceIn(0f, 1f)
+                            }
+                            maskWeights[y * w + x] = if (mask.invert) 1f - weight else weight
+                        }
+                    }
+                }
+                "linear" -> {
+                    for (y in 0 until h) {
+                        for (x in 0 until w) {
+                            val norm = x.toFloat() / w
+                            val edge = 1f - feather
+                            val weight = if (norm <= edge) {
+                                1f
+                            } else {
+                                ((1f - norm) / feather).coerceIn(0f, 1f)
+                            }
+                            maskWeights[y * w + x] = if (mask.invert) 1f - weight else weight
+                        }
+                    }
+                }
+                else -> {
+                    // brush / subject / sky: uniform density if no maskData
+                    for (i in maskWeights.indices) {
+                        maskWeights[i] = if (mask.invert) 0f else density
+                    }
+                }
+            }
+
+            // Scale by density
+            for (i in maskWeights.indices) {
+                maskWeights[i] *= density
+            }
+
+            // Blend
+            val basePixels = IntArray(w * h)
+            result.getPixels(basePixels, 0, w, 0, 0, w, h)
+            val maskedPixels = IntArray(w * h)
+            maskedCopy.getPixels(maskedPixels, 0, w, 0, 0, w, h)
+
+            for (i in basePixels.indices) {
+                val alpha = maskWeights[i]
+                if (alpha <= 0f) continue
+                val bp = basePixels[i]
+                val mp = maskedPixels[i]
+                val r = (Color.red(bp) * (1f - alpha) + Color.red(mp) * alpha).toInt().coerceIn(0, 255)
+                val g = (Color.green(bp) * (1f - alpha) + Color.green(mp) * alpha).toInt().coerceIn(0, 255)
+                val b = (Color.blue(bp) * (1f - alpha) + Color.blue(mp) * alpha).toInt().coerceIn(0, 255)
+                basePixels[i] = Color.argb(Color.alpha(bp), r, g, b)
+            }
+
+            result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            result.setPixels(basePixels, 0, w, 0, 0, w, h)
+            maskedCopy.recycle()
+        }
+
+        return result
+    }
+
+    private fun rgbToHsl(r: Float, g: Float, b: Float): Triple<Float, Float, Float> {
+        val rf = r / 255f
+        val gf = g / 255f
+        val bf = b / 255f
+
+        val max = max(rf, max(gf, bf))
+        val min = min(rf, min(gf, bf))
+        val l = (max + min) / 2f
+
+        if (max == min) {
+            return Triple(0f, 0f, l)
+        }
+
+        val d = max - min
+        val s = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+
+        val h = when (max) {
+            rf -> ((gf - bf) / d + if (gf < bf) 6f else 0f) * 60f
+            gf -> ((bf - rf) / d + 2f) * 60f
+            else -> ((rf - gf) / d + 4f) * 60f
+        }
+
+        return Triple(h, s, l)
+    }
+
+    private fun hslToRgb(h: Float, s: Float, l: Float): Triple<Float, Float, Float> {
+        if (s == 0f) {
+            val v = l * 255f
+            return Triple(v, v, v)
+        }
+
+        val q = if (l < 0.5f) l * (1f + s) else l + s - l * s
+        val p = 2f * l - q
+        val hk = h / 360f
+
+        fun hueToChannel(t: Float): Float {
+            var tt = t
+            if (tt < 0f) tt += 1f
+            if (tt > 1f) tt -= 1f
+            return when {
+                tt < 1f / 6f -> p + (q - p) * 6f * tt
+                tt < 1f / 2f -> q
+                tt < 2f / 3f -> p + (q - p) * (2f / 3f - tt) * 6f
+                else -> p
+            }
+        }
+
+        val r = hueToChannel(hk + 1f / 3f) * 255f
+        val g = hueToChannel(hk) * 255f
+        val b = hueToChannel(hk - 1f / 3f) * 255f
+
+        return Triple(r, g, b)
+    }
+}

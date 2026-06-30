@@ -63,7 +63,7 @@ fun SmartOptimizeScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val engine = remember { SmartOptimizeEngine() }
+    val engine = remember { SmartOptimizeEngine(null) }
 
     // ========== 状态 ==========
     var selectedTab by remember { mutableStateOf(SmartOptimizeTab.BASIC) }
@@ -99,12 +99,15 @@ fun SmartOptimizeScreen(
                 originalBitmap?.let { bmp ->
                     processedBitmap = bmp
                     displayBitmap = bmp
-                    triggerFullProcess(bmp, params, engine) { stage, prog ->
+                    isProcessing = true
+                    val result = triggerFullProcess(bmp, params, engine) { stage, prog ->
                         processingStage = stage; processingProgress = prog
-                    }?.let { result ->
+                    }
+                    if (result != null) {
                         processedBitmap = result
                         displayBitmap = result
                     }
+                    isProcessing = false
                 }
             }
         }
@@ -119,7 +122,7 @@ fun SmartOptimizeScreen(
             isProcessing = true
             originalBitmap?.let { bmp ->
                 val result = withContext(Dispatchers.Default) {
-                    engine.processPreview(bmp, newParams)
+                    engine.optimize(bmp, newParams)
                 }
                 processedBitmap = result
                 displayBitmap = result
@@ -129,25 +132,15 @@ fun SmartOptimizeScreen(
     }
 
     // ========== 完整处理 ==========
-    fun triggerFullProcess(
+    suspend fun triggerFullProcess(
         bmp: Bitmap,
         p: SmartOptimizeParams,
         eng: SmartOptimizeEngine,
         onProgress: (String, Float) -> Unit
     ): Bitmap? {
-        var result: Bitmap? = null
-        scope.launch {
-            isProcessing = true
-            try {
-                result = eng.process(bmp, p, onProgress)
-                processedBitmap = result
-                displayBitmap = result
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            isProcessing = false
+        return withContext(Dispatchers.Default) {
+            eng.optimize(bmp, p)
         }
-        return result
     }
 
     // ========== 保存编辑历史 ==========
@@ -450,12 +443,28 @@ fun SmartOptimizeScreen(
                         onPresetSelected = { applyPreset(it) },
                         enabled = originalBitmap != null
                     )
+                    SmartOptimizeTab.MASK -> MaskPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
                     SmartOptimizeTab.HISTORY -> HistoryPanel(
                         history = editHistory,
                         currentIndex = historyIndex,
                         onRestore = { restoreHistory(it) },
                         params = params,
                         onSaveCheckpoint = { pushHistory("检查点") }
+                    )
+                    SmartOptimizeTab.EXPORT -> ExportTabPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        config = exportConfig,
+                        onConfigChanged = { exportConfig = it },
+                        onExport = {
+                            showExportDialog = false
+                            processedBitmap?.let { bmp -> onSave(bmp) }
+                        },
+                        enabled = originalBitmap != null
                     )
                 }
             }
@@ -497,7 +506,7 @@ fun SmartOptimizeScreen(
                         // 触发导出
                         scope.launch {
                             processedBitmap?.let { bmp ->
-                                pushHistory("导出: ${exportConfig.format.label}")
+                                pushHistory("导出: ${exportConfig.format.uppercase()}")
                                 onSave(bmp)
                             }
                         }
@@ -617,6 +626,35 @@ private fun BasicAdjustPanel(
         item { LabeledSlider("鲜艳度", params.vibrance, -100f, 100f,
             { onParamsChanged(params.copy(vibrance = it)) },
             enabled = enabled) }
+
+        // 色调映射器 (RapidRAW: basic / agx)
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("色调映射", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("basic" to "基础", "agx" to "AgX").forEach { (id, label) ->
+                    FilterChip(
+                        selected = params.toneMapper == id,
+                        onClick = { onParamsChanged(params.copy(toneMapper = id)) },
+                        label = { Text(label, fontSize = 12.sp) }
+                    )
+                }
+            }
+        }
+        item { LabeledSlider("EV偏移", params.evShift, -5f, 5f,
+            { onParamsChanged(params.copy(evShift = it)) },
+            { "%.2f EV".format(it) }, enabled = enabled) }
+        item { LabeledSlider("色调映射强度", params.toneMappingStrength, 0f, 100f,
+            { onParamsChanged(params.copy(toneMappingStrength = it)) }, enabled = enabled) }
+        item { LabeledSlider("Sigmoid对比度", params.sigmoidContrast, 0f, 100f,
+            { onParamsChanged(params.copy(sigmoidContrast = it)) }, enabled = enabled) }
+        item { LabeledSlider("高光过渡", params.highlightTransition, 0f, 100f,
+            { onParamsChanged(params.copy(highlightTransition = it)) }, enabled = enabled) }
     }
 }
 
@@ -789,10 +827,52 @@ private fun CurvePanel(
                 )
             }
         }
+
+        // Hue vs Sat / Hue vs Lum / Lum vs Sat (RapidRAW)
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("色相曲线", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            var hueCurveIndex by remember { mutableIntStateOf(0) }
+            val hueCurveNames = listOf("H-S 色相/饱和度", "H-L 色相/亮度", "L-S 亮度/饱和度")
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                hueCurveNames.forEachIndexed { idx, name ->
+                    FilterChip(
+                        selected = idx == hueCurveIndex,
+                        onClick = { hueCurveIndex = idx },
+                        label = { Text(name, fontSize = 10.sp) }
+                    )
+                }
+            }
+
+            when (hueCurveIndex) {
+                0 -> ToneCurveEditor(
+                    points = params.hueVsSatCurve,
+                    onPointsChanged = { onParamsChanged(params.copy(hueVsSatCurve = it)) },
+                    channelLabel = "色相 → 饱和度",
+                    channelColor = Color(0xFFFF6600)
+                )
+                1 -> ToneCurveEditor(
+                    points = params.hueVsLumCurve,
+                    onPointsChanged = { onParamsChanged(params.copy(hueVsLumCurve = it)) },
+                    channelLabel = "色相 → 亮度",
+                    channelColor = Color(0xFFFFCC00)
+                )
+                2 -> ToneCurveEditor(
+                    points = params.lumVsSatCurve,
+                    onPointsChanged = { onParamsChanged(params.copy(lumVsSatCurve = it)) },
+                    channelLabel = "亮度 → 饱和度",
+                    channelColor = Color(0xFF00CC88)
+                )
+            }
+        }
     }
 }
-
-// ==================== 色彩分级面板 ====================
 
 @Composable
 private fun GradingPanel(
@@ -903,6 +983,19 @@ private fun DetailPanel(
             { onParamsChanged(params.copy(texture = it)) }, enabled = enabled) }
         item { LabeledSlider("清晰度", params.clarity, -100f, 100f,
             { onParamsChanged(params.copy(clarity = it)) }, enabled = enabled) }
+        item { LabeledSlider("结构", params.structure, -100f, 100f,
+            { onParamsChanged(params.copy(structure = it)) }, enabled = enabled) }
+        item { LabeledSlider("中心偏移", params.centre, -100f, 100f,
+            { onParamsChanged(params.copy(centre = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("色差校正", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("色差(红/青)", params.chromaticAberrationR, -100f, 100f,
+            { onParamsChanged(params.copy(chromaticAberrationR = it)) }, enabled = enabled) }
+        item { LabeledSlider("色差(蓝/黄)", params.chromaticAberrationB, -100f, 100f,
+            { onParamsChanged(params.copy(chromaticAberrationB = it)) }, enabled = enabled) }
     }
 }
 
@@ -937,8 +1030,62 @@ private fun EffectsPanel(
             { onParamsChanged(params.copy(vignette = it)) }, enabled = enabled) }
         item { LabeledSlider("中点", params.vignetteMidpoint, 0f, 100f,
             { onParamsChanged(params.copy(vignetteMidpoint = it)) }, enabled = enabled) }
+        item { LabeledSlider("圆度", params.vignetteRoundness, -100f, 100f,
+            { onParamsChanged(params.copy(vignetteRoundness = it)) }, enabled = enabled) }
         item { LabeledSlider("羽化", params.vignetteFeather, 0f, 100f,
             { onParamsChanged(params.copy(vignetteFeather = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("创意光效", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("发光", params.glowAmount, 0f, 100f,
+            { onParamsChanged(params.copy(glowAmount = it)) }, enabled = enabled) }
+        item { LabeledSlider("光晕", params.halationAmount, 0f, 100f,
+            { onParamsChanged(params.copy(halationAmount = it)) }, enabled = enabled) }
+        item { LabeledSlider("光斑", params.flareAmount, 0f, 100f,
+            { onParamsChanged(params.copy(flareAmount = it)) }, enabled = enabled) }
+
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("胶片仿真", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            val filmPresets = listOf("none" to "无", "kodachrome" to "Kodachrome",
+                "portra400" to "Portra 400", "ecktachrome" to "Ektachrome",
+                "fujipro400h" to "Fuji Pro 400H", "agfaapx" to "Agfa APX",
+                "ilfordhp5" to "Ilford HP5", "cinestill800t" to "CineStill 800T")
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it }
+            ) {
+                OutlinedTextField(
+                    value = filmPresets.find { it.first == params.filmSimulation }?.second ?: "无",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("胶片风格") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    filmPresets.forEach { (id, name) ->
+                        DropdownMenuItem(
+                            text = { Text(name) },
+                            onClick = {
+                                onParamsChanged(params.copy(filmSimulation = id))
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        item { LabeledSlider("高光重建", if (params.highlightReconstruction) 100f else 0f, 0f, 100f,
+            { onParamsChanged(params.copy(highlightReconstruction = it > 50f)) }, enabled = enabled) }
 
         item {
             Spacer(Modifier.height(12.dp))
@@ -1266,6 +1413,399 @@ private fun HistoryPanel(
                     isCurrent = idx == currentIndex,
                     onRestore = { onRestore(idx) }
                 )
+            }
+        }
+    }
+}
+
+// ==================== 蒙版面板 (RapidRAW) ====================
+
+@Composable
+private fun MaskPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    var showCreateMask by remember { mutableStateOf(false) }
+    var selectedMaskType by remember { mutableStateOf("brush") }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("局部调整", style = MaterialTheme.typography.titleMedium)
+                IconButton(
+                    onClick = { showCreateMask = true },
+                    enabled = enabled
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "添加蒙版")
+                }
+            }
+        }
+
+        // 现有蒙版列表
+        if (params.masks.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Outlined.Brush,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "添加蒙版以进行局部调整",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "支持画笔、线性、径向、主体和天空蒙版",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        } else {
+            items(params.masks.size) { index ->
+                val mask = params.masks[index]
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            when (mask.type) {
+                                "brush" -> Icons.Default.Brush
+                                "linear" -> Icons.Default.LinearScale
+                                "radial" -> Icons.Default.RadioButtonChecked
+                                "subject" -> Icons.Default.Person
+                                "sky" -> Icons.Default.Cloud
+                                else -> Icons.Default.Brush
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                mask.name.ifEmpty { "蒙版 ${index + 1}" },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                when (mask.type) {
+                                    "brush" -> "画笔"
+                                    "linear" -> "线性"
+                                    "radial" -> "径向"
+                                    "subject" -> "主体"
+                                    "sky" -> "天空"
+                                    else -> mask.type
+                                },
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = mask.enabled,
+                            onCheckedChange = {
+                                val newMasks = params.masks.toMutableList()
+                                newMasks[index] = mask.copy(enabled = it)
+                                onParamsChanged(params.copy(masks = newMasks))
+                            },
+                            modifier = Modifier.height(24.dp)
+                        )
+                        IconButton(onClick = {
+                            val newMasks = params.masks.toMutableList()
+                            newMasks.removeAt(index)
+                            onParamsChanged(params.copy(masks = newMasks))
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "删除",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    // 蒙版参数
+                    if (mask.enabled) {
+                        Column(modifier = Modifier.padding(horizontal = 12.dp)) {
+                            LabeledSlider("羽化", mask.feather, 0f, 100f,
+                                {
+                                    val newMasks = params.masks.toMutableList()
+                                    newMasks[index] = mask.copy(feather = it)
+                                    onParamsChanged(params.copy(masks = newMasks))
+                                }, enabled = enabled)
+                            LabeledSlider("密度", mask.density, 0f, 100f,
+                                {
+                                    val newMasks = params.masks.toMutableList()
+                                    newMasks[index] = mask.copy(density = it)
+                                    onParamsChanged(params.copy(masks = newMasks))
+                                }, enabled = enabled)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("反转", fontSize = 13.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Switch(
+                                    checked = mask.invert,
+                                    onCheckedChange = {
+                                        val newMasks = params.masks.toMutableList()
+                                        newMasks[index] = mask.copy(invert = it)
+                                        onParamsChanged(params.copy(masks = newMasks))
+                                    },
+                                    modifier = Modifier.height(24.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 复制粘贴
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("复制/粘贴设置", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { SettingsClipboard.copy(params) },
+                    enabled = enabled,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("复制", fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (SettingsClipboard.hasData()) {
+                            onParamsChanged(SettingsClipboard.paste(params))
+                        }
+                    },
+                    enabled = enabled && SettingsClipboard.hasData(),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("粘贴", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+
+    // 创建蒙版对话框
+    if (showCreateMask) {
+        AlertDialog(
+            onDismissRequest = { showCreateMask = false },
+            title = { Text("添加蒙版") },
+            text = {
+                Column {
+                    val maskTypes = listOf(
+                        Triple("brush", "画笔", Icons.Default.Brush),
+                        Triple("linear", "线性渐变", Icons.Default.LinearScale),
+                        Triple("radial", "径向渐变", Icons.Default.RadioButtonChecked),
+                        Triple("subject", "主体(AI)", Icons.Default.Person),
+                        Triple("sky", "天空(AI)", Icons.Default.Cloud)
+                    )
+                    maskTypes.forEach { (id, label, icon) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .then(
+                                    if (selectedMaskType == id) Modifier.background(
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    ) else Modifier
+                                )
+                                .clickable { selectedMaskType = id }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(label, fontSize = 14.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newMask = LocalMask(
+                        type = selectedMaskType,
+                        name = when (selectedMaskType) {
+                            "brush" -> "画笔蒙版"
+                            "linear" -> "线性蒙版"
+                            "radial" -> "径向蒙版"
+                            "subject" -> "主体蒙版"
+                            "sky" -> "天空蒙版"
+                            else -> "蒙版"
+                        }
+                    )
+                    onParamsChanged(params.copy(masks = params.masks + newMask))
+                    showCreateMask = false
+                }) {
+                    Text("添加")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateMask = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+// ==================== 导出面板 (AlcedoStudio 风格) ====================
+
+@Composable
+private fun ExportTabPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    config: ExportConfig,
+    onConfigChanged: (ExportConfig) -> Unit,
+    onExport: () -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        item {
+            Text("导出设置", style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+
+        // 格式选择
+        item { Text("格式", style = MaterialTheme.typography.titleSmall) }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("jpeg", "png", "tiff").forEach { fmt ->
+                    FilterChip(
+                        selected = config.format == fmt,
+                        onClick = { onConfigChanged(config.copy(format = fmt)) },
+                        label = { Text(fmt.uppercase(), fontSize = 12.sp) }
+                    )
+                }
+            }
+        }
+
+        // 质量
+        if (config.format == "jpeg") {
+            item { LabeledSlider("质量", config.quality.toFloat(), 1f, 100f,
+                { onConfigChanged(config.copy(quality = it.toInt())) }, enabled = enabled) }
+        }
+
+        // 色彩空间
+        item { Text("色彩空间", style = MaterialTheme.typography.titleSmall) }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf("sRGB", "Rec2020", "DCIP3", "ACEScg").forEach { cs ->
+                    FilterChip(
+                        selected = config.colorSpace == cs,
+                        onClick = { onConfigChanged(config.copy(colorSpace = cs)) },
+                        label = { Text(cs, fontSize = 10.sp) }
+                    )
+                }
+            }
+        }
+
+        // 位深度
+        item { Text("位深度", style = MaterialTheme.typography.titleSmall) }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(8, 16).forEach { bd ->
+                    FilterChip(
+                        selected = config.bitDepth == bd,
+                        onClick = { onConfigChanged(config.copy(bitDepth = bd)) },
+                        label = { Text("${bd}bit", fontSize = 12.sp) }
+                    )
+                }
+            }
+        }
+
+        // 调整大小
+        item { Text("调整大小", style = MaterialTheme.typography.titleSmall) }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(
+                    checked = config.resize.enabled,
+                    onCheckedChange = { onConfigChanged(config.copy(resize = config.resize.copy(enabled = it))) },
+                    modifier = Modifier.height(24.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("启用调整大小", fontSize = 13.sp)
+            }
+        }
+        if (config.resize.enabled) {
+            item { LabeledSlider("长边", config.resize.longEdge.toFloat(), 100f, 10000f,
+                { onConfigChanged(config.copy(resize = config.resize.copy(longEdge = it.toInt()))) },
+                { "${it.toInt()}px" }, enabled = enabled) }
+        }
+
+        // 元数据
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(
+                    checked = config.metadata,
+                    onCheckedChange = { onConfigChanged(config.copy(metadata = it)) },
+                    modifier = Modifier.height(24.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("保留元数据 (EXIF)", fontSize = 13.sp)
+            }
+        }
+
+        // 预设强度 (RapidRAW)
+        item {
+            Spacer(Modifier.height(12.dp))
+            Text("预设强度", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("强度", params.presetIntensity, 0f, 100f,
+            { onParamsChanged(params.copy(presetIntensity = it)) }, enabled = enabled) }
+
+        // 导出按钮
+        item {
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onExport,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("导出图像", fontSize = 16.sp)
             }
         }
     }
