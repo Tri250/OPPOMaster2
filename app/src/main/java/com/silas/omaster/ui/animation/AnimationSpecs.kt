@@ -304,6 +304,211 @@ fun adaptiveSpringSpec(
     )
 }
 
+// ==================== 入场动画 Modifier ====================
+
+/**
+ * 淡入 + 缩放入场动画
+ * 适用于卡片、按钮等元素的出现
+ *
+ * @param delayMillis 延迟时间
+ * @param initialScale 初始缩放
+ */
+@Composable
+fun Modifier.animateFadeInScale(
+    visible: Boolean = true,
+    delayMillis: Int = 0,
+    initialScale: Float = 0.9f
+): Modifier {
+    val animatedAlpha = androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 300,
+            delayMillis = delayMillis,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "fade_in_alpha"
+    )
+    val animatedScale = androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (visible) 1f else initialScale,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = 400f,
+            visibilityThreshold = 0.001f
+        ),
+        label = "fade_in_scale"
+    )
+    return this
+        .graphicsLayer {
+            alpha = animatedAlpha.value
+            scaleX = animatedScale.value
+            scaleY = animatedScale.value
+        }
+}
+
+/**
+ * 向上滑入 + 淡入动画
+ * 适用于列表项、底部面板等
+ *
+ * @param delayMillis 延迟时间
+ * @param translationY 初始位移
+ */
+@Composable
+fun Modifier.animateSlideUpFadeIn(
+    visible: Boolean = true,
+    delayMillis: Int = 0,
+    translationY: Dp = 20.dp
+): Modifier {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val animatedAlpha = androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 300,
+            delayMillis = delayMillis,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "slide_up_alpha"
+    )
+    val animatedTranslationY = androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (visible) 0f else with(density) { translationY.toPx() },
+        animationSpec = spring(
+            dampingRatio = 0.75f,
+            stiffness = 350f,
+            visibilityThreshold = 0.5f
+        ),
+        label = "slide_up_translation"
+    )
+    return this
+        .graphicsLayer {
+            alpha = animatedAlpha.value
+            this.translationY = animatedTranslationY.value
+        }
+}
+
+/**
+ * 呼吸动画效果
+ * 适用于需要吸引注意力的元素（如新功能提示、重要按钮）
+ *
+ * @param minScale 最小缩放
+ * @param maxScale 最大缩放
+ * @param durationMillis 周期时长
+ */
+@Composable
+fun Modifier.animateBreathe(
+    enabled: Boolean = true,
+    minScale: Float = 0.95f,
+    maxScale: Float = 1.05f,
+    durationMillis: Int = 2000
+): Modifier {
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val scale by infiniteTransition.animateFloat(
+        initialValue = minScale,
+        targetValue = maxScale,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = tween(durationMillis / 2, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "breathe_scale"
+    )
+    return if (enabled) {
+        this.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+    } else {
+        this
+    }
+}
+
+/**
+ * 脉冲动画（光晕效果）
+ * 适用于需要强调的元素
+ *
+ * @param color 脉冲颜色
+ * @param maxAlpha 最大透明度
+ */
+@Composable
+fun Modifier.animatePulse(
+    enabled: Boolean = true,
+    color: Color = com.silas.omaster.ui.theme.HasselbladOrange,
+    maxAlpha: Float = 0.3f
+): Modifier {
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = maxAlpha,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+    return this
+        .graphicsLayer {
+            if (enabled) {
+                this.shadowElevation = 0f
+            }
+        }
+        .drawBehind {
+            if (enabled) {
+                drawCircle(
+                    color = color.copy(alpha = alpha),
+                    radius = size.minDimension * scale / 2
+                )
+            }
+        }
+}
+
+// ==================== 页面切换动画 ====================
+
+/**
+ * 页面进入动画 - 从右滑入 + 淡入
+ */
+val PageEnterTransition = androidx.compose.animation.slideInHorizontally(
+    initialOffsetX = { it / 3 },
+    animationSpec = tween(300, easing = FastOutSlowInEasing)
+) + androidx.compose.animation.fadeIn(
+    animationSpec = tween(200, easing = LinearOutSlowInEasing)
+)
+
+/**
+ * 页面退出动画 - 向左滑出 + 淡出
+ */
+val PageExitTransition = androidx.compose.animation.slideOutHorizontally(
+    targetOffsetX = { -it / 3 },
+    animationSpec = tween(250, easing = FastOutLinearInEasing)
+) + androidx.compose.animation.fadeOut(
+    animationSpec = tween(150, easing = FastOutLinearInEasing)
+)
+
+/**
+ * 页面弹出进入动画 - 从底部滑入 + 淡入
+ */
+val BottomSheetEnterTransition = androidx.compose.animation.slideInVertically(
+    initialOffsetY = { it },
+    animationSpec = spring(dampingRatio = 0.85f, stiffness = 300f)
+) + androidx.compose.animation.fadeIn(
+    animationSpec = tween(200)
+)
+
+/**
+ * 页面弹出退出动画 - 向下滑出 + 淡出
+ */
+val BottomSheetExitTransition = androidx.compose.animation.slideOutVertically(
+    targetOffsetY = { it },
+    animationSpec = tween(250, easing = FastOutLinearInEasing)
+) + androidx.compose.animation.fadeOut(
+    animationSpec = tween(150)
+)
+
 // ==================== ColorOS 16 液态玻璃效果 Modifier ====================
 
 /**
@@ -316,6 +521,7 @@ fun adaptiveSpringSpec(
  * @param backgroundColor 背景色，默认使用深色玻璃色
  * @param borderColor 边框色，默认使用玻璃边框色
  */
+@Deprecated("使用 LiquidGlassComponents.kt 中的 liquidGlass Modifier")
 @Composable
 fun Modifier.liquidGlassEffect(
     cornerRadius: Dp = Dp(LiquidGlassConfig.CornerRadius),

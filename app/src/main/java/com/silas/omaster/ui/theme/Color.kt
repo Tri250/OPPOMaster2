@@ -5,11 +5,78 @@ import androidx.compose.ui.graphics.Color
 /**
  * 哈苏品牌色系
  * 哈苏橙是品牌的标志性颜色 (#FF6B35 对齐 Web 端)
+ * 完整的色板系统，包含主色、辅色、渐变色、语义色
  */
 val HasselbladOrange = Color(0xFFFF6B35)
 val HasselbladOrangeDark = Color(0xFFE55A25)
 val HasselbladOrangeLight = Color(0xFFFF8A50)
 val HasselbladGreen = Color(0xFF4CAF50)
+
+/**
+ * 哈苏橙完整色板
+ * 从 50 到 900 的完整色阶
+ */
+object HasselbladPalette {
+    val Orange50 = Color(0xFFFFF3ED)
+    val Orange100 = Color(0xFFFFE0D0)
+    val Orange200 = Color(0xFFFFCCAA)
+    val Orange300 = Color(0xFFFFB080)
+    val Orange400 = Color(0xFFFF9560)
+    val Orange500 = Color(0xFFFF6B35)
+    val Orange600 = Color(0xFFE55A25)
+    val Orange700 = Color(0xFFCC4A1A)
+    val Orange800 = Color(0xFFB33D10)
+    val Orange900 = Color(0xFF993308)
+}
+
+/**
+ * 哈苏渐变配色
+ * 用于按钮、背景、高光等渐变效果
+ */
+object HasselbladGradients {
+    val PrimaryHorizontal = listOf(
+        Color(0xFFFF8A50),
+        Color(0xFFFF6B35)
+    )
+    val PrimaryVertical = listOf(
+        Color(0xFFFF8A50),
+        Color(0xFFFF6B35)
+    )
+    val DarkHorizontal = listOf(
+        Color(0xFFFF6B35),
+        Color(0xFFE55A25)
+    )
+    val GlowHorizontal = listOf(
+        Color(0xFFFFB080),
+        Color(0xFFFF6B35),
+        Color(0xFFFF8A50)
+    )
+    val Sunset = listOf(
+        Color(0xFFFF6B35),
+        Color(0xFFFF9560),
+        Color(0xFFFFCCAA)
+    )
+}
+
+/**
+ * 中性色板
+ * 完整的灰度色阶，用于文本、背景、边框等
+ */
+object NeutralPalette {
+    val White = Color(0xFFFFFFFF)
+    val Gray50 = Color(0xFFFAFAFA)
+    val Gray100 = Color(0xFFF5F5F5)
+    val Gray200 = Color(0xFFE5E5E5)
+    val Gray300 = Color(0xFFD4D4D4)
+    val Gray400 = Color(0xFFA3A3A3)
+    val Gray500 = Color(0xFF737373)
+    val Gray600 = Color(0xFF525252)
+    val Gray700 = Color(0xFF404040)
+    val Gray800 = Color(0xFF262626)
+    val Gray900 = Color(0xFF171717)
+    val Gray950 = Color(0xFF0A0A0A)
+    val Black = Color(0xFF000000)
+}
 
 /**
  * 品牌主题色
