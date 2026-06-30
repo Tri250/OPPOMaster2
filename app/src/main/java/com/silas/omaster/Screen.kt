@@ -99,7 +99,7 @@ sealed class Screen {
     data object XingYingJiFavorites : Screen()
 
     @Serializable
-    data object XingYingJiTimeline : Screen()
+    data object XingYingJiLocations : Screen()
 
     @Serializable
     data class XingYingJiLocationDetail(val locationName: String) : Screen()
