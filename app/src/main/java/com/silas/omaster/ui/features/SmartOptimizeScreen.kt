@@ -62,6 +62,12 @@ fun SmartOptimizeScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // 注入 LUTManager 到 ViewModel，使 Engine 可使用 LUT 缓存链路
+    LaunchedEffect(Unit) {
+        viewModel.initLUTManager(context)
+    }
+
     val uiState by viewModel.uiState.collectAsState()
 
     val params = uiState.params

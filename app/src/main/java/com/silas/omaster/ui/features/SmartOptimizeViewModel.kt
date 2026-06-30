@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.silas.omaster.data.lut.LUTManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -35,7 +36,25 @@ import java.util.UUID
 @OptIn(FlowPreview::class)
 class SmartOptimizeViewModel : ViewModel() {
 
-    private val engine = SmartOptimizeEngine(null)
+    // LUTManager 延迟初始化（需要 Context，通过 initLUTManager 注入）
+    private var _lutManager: LUTManager? = null
+
+    private var engine: SmartOptimizeEngine = SmartOptimizeEngine(null)
+
+    /**
+     * 注入 LUTManager（需要在 Activity/Fragment 中调用，因为 ViewModel 无法直接获取 Context）
+     * 注入后会重建 Engine 以启用 LUTManager 缓存链路
+     */
+    fun initLUTManager(context: Context) {
+        if (_lutManager != null) return
+        _lutManager = LUTManager.getInstance(context)
+        engine.cancel()
+        engine = SmartOptimizeEngine(null, LutProcessor(), _lutManager!!)
+        // 重新初始化 Engine 状态
+        _uiState.value.originalBitmap?.let { bitmap ->
+            engine.initialize(bitmap)
+        }
+    }
 
     private val _uiState = MutableStateFlow(SmartOptimizeUiState())
     val uiState: StateFlow<SmartOptimizeUiState> = _uiState.asStateFlow()

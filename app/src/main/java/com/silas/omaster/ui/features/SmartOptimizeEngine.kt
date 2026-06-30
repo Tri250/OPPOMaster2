@@ -12,6 +12,7 @@ import android.renderscript.Allocation
 import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,7 +50,8 @@ import kotlin.random.Random
  */
 class SmartOptimizeEngine(
     private val renderScript: RenderScript?,
-    private val lutProcessor: LutProcessor = LutProcessor()
+    private val lutProcessor: LutProcessor = LutProcessor(),
+    private val lutManager: com.silas.omaster.data.lut.LUTManager? = null
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -842,9 +844,31 @@ class SmartOptimizeEngine(
             result = applyHighlightReconstruction(result)
         }
 
-        // 真实文件 LUT 应用
-        if (settings.lutPath.isNotEmpty()) {
-            result = applyLUT(result, settings)
+        // 真实文件 LUT 应用（lutPath 或 activeLutName 指向已下载的 LUT）
+        val shouldApplyLUT = settings.lutPath.isNotEmpty() || settings.activeLutName.isNotEmpty()
+        if (shouldApplyLUT) {
+            // 先检查 activeLutName 是否为内置预设 ID
+            val filmId = settings.filmSimulation.takeIf { it != "none" && it.isNotEmpty() }
+                ?: settings.activeLutName.takeIf { it.isNotEmpty() }
+
+            val isBuiltinPreset = filmId in setOf(
+                "vivid", "portrait", "landscape",
+                "fuji_astia", "fuji_provia", "fuji_velvia",
+                "kodak_portra", "kodak_ektar", "kodak_tri_x",
+                "ilford_delta", "agfa_vista", "ilford_hp5",
+                "cine_2383", "cine_arri", "cine_teal", "cine_bleach",
+                "cine_16mm", "vintage_fade",
+                "kodachrome", "portra400", "ecktachrome", "fujipro400h",
+                "agfaapx", "ilfordhp5", "cinestill800t"
+            )
+
+            if (!isBuiltinPreset) {
+                // 非 内置预设 ID：通过 LUTManager 或文件路径应用真实 .cube LUT
+                result = applyLUT(result, settings)
+            } else if (settings.lutPath.isNotEmpty()) {
+                // 内置预设 ID 但同时有 lutPath：也需要应用文件 LUT
+                result = applyLUT(result, settings.copy(activeLutName = ""))
+            }
         }
 
         // 胶片预设 / 内置 LUT：优先使用 filmSimulation，若未设置则回退到 activeLutName
@@ -957,25 +981,88 @@ class SmartOptimizeEngine(
     }
 
     private fun applyLUT(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
-        if (settings.lutPath.isEmpty()) return bitmap
         val intensity = settings.lutIntensity / 100f
+        if (intensity <= 0f) return bitmap
 
-        return try {
-            // 优先使用 LUTManager 获取已缓存的 LUT 数据
-            // 若 LUTManager 中未找到，尝试从文件解析
+        // 1. 优先使用 LUTManager 缓存（activeLutName 或 lutPath 均可命中）
+        val lutId = settings.activeLutName.takeIf { it.isNotEmpty() }
+        if (lutId != null && lutManager != null) {
+            val cachedData = lutManager.getCachedLUTData(lutId)
+            if (cachedData != null) {
+                return try {
+                    applyLUT3DData(bitmap, cachedData, intensity)
+                } catch (e: Exception) {
+                    Log.w("SmartOptimizeEngine", "LUTManager cached LUT apply failed for $lutId", e)
+                    bitmap
+                }
+            }
+        }
+
+        // 2. 如果 lutPath 指向本地 .cube 文件，尝试从 LUTManager 缓存或文件解析
+        if (settings.lutPath.isNotEmpty()) {
             val lutFile = java.io.File(settings.lutPath)
             if (!lutFile.exists()) return bitmap
 
-            val lutData = lutProcessor.parseCube(lutFile.readText())
-            val pixels = IntArray(bitmap.width * bitmap.height)
-            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            lutProcessor.applyLut(pixels, lutData, intensity)
-            bitmap.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            bitmap
-        } catch (e: Exception) {
-            e.printStackTrace()
-            bitmap
+            // 尝试通过 LUTManager 解析并缓存
+            val fileLutData = try {
+                lutManager?.parseAndCache(lutFile.name, lutFile)
+                    ?: com.silas.omaster.data.lut.LUT3DParser.parse(lutFile)
+            } catch (e: Exception) {
+                null
+            }
+
+            if (fileLutData != null) {
+                return try {
+                    applyLUT3DData(bitmap, fileLutData, intensity)
+                } catch (e: Exception) {
+                    bitmap
+                }
+            }
+
+            // 回退到 LutProcessor 解析（兼容两种数据格式）
+            return try {
+                val lutData = lutProcessor.parseCube(lutFile.readText())
+                val pixels = IntArray(bitmap.width * bitmap.height)
+                bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                lutProcessor.applyLut(pixels, lutData, intensity)
+                bitmap.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                bitmap
+            } catch (e: Exception) {
+                e.printStackTrace()
+                bitmap
+            }
         }
+
+        return bitmap
+    }
+
+    /**
+     * 使用 LUT3DData 的三线性插值将 LUT 应用到 Bitmap
+     * 统一使用 LUT3DData.sampleTrilinear 实现高质量采样
+     */
+    private fun applyLUT3DData(bitmap: Bitmap, lutData: com.silas.omaster.data.lut.LUT3DData, strength: Float): Bitmap {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        val s = strength.coerceIn(0f, 1f)
+
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            val r = (pixel shr 16 and 0xFF) / 255f
+            val g = (pixel shr 8 and 0xFF) / 255f
+            val b = (pixel and 0xFF) / 255f
+
+            val mapped = lutData.sampleTrilinear(r, g, b)
+
+            val outR = ((r * (1f - s) + mapped[0] * s).coerceIn(0f, 1f) * 255).toInt()
+            val outG = ((g * (1f - s) + mapped[1] * s).coerceIn(0f, 1f) * 255).toInt()
+            val outB = ((b * (1f - s) + mapped[2] * s).coerceIn(0f, 1f) * 255).toInt()
+            val outA = pixel ushr 24 and 0xFF
+
+            pixels[i] = (outA shl 24) or (outR shl 16) or (outG shl 8) or outB
+        }
+
+        bitmap.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return bitmap
     }
 
     private fun applyHighlightReconstruction(bitmap: Bitmap): Bitmap {
