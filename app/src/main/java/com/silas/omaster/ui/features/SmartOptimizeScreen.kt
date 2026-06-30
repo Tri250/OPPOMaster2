@@ -1,7 +1,6 @@
 package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,12 +28,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.silas.omaster.data.lut.LUTManager
+import com.silas.omaster.data.repository.LUTResourceRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.UUID
 
 /**
  * 智能优化主界面 — 完整移植 AlcedoStudio + RapidRAW 全部功能
@@ -56,177 +53,68 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmartOptimizeScreen(
+    viewModel: SmartOptimizeViewModel = viewModel(),
     initialImageUri: Uri? = null,
     onBack: () -> Unit = {},
     onSave: (Bitmap) -> Unit = {},
-    onShare: (Bitmap) -> Unit = {}
+    onShare: (Bitmap) -> Unit = {},
+    onApply: (SmartOptimizeParams) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val engine = remember { SmartOptimizeEngine(null) }
+    val uiState by viewModel.uiState.collectAsState()
 
-    // ========== 状态 ==========
-    var selectedTab by remember { mutableStateOf(SmartOptimizeTab.BASIC) }
-    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var processedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var displayBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var params by remember { mutableStateOf(SmartOptimizeParams.DEFAULT) }
-    var isProcessing by remember { mutableStateOf(false) }
-    var processingStage by remember { mutableStateOf("") }
-    var processingProgress by remember { mutableStateOf(0f) }
-    var showBefore by remember { mutableStateOf(false) }
-    var histogramData by remember { mutableStateOf<HistogramFullResult?>(null) }
-    var editHistory by remember { mutableStateOf<List<EditHistoryEntry>>(emptyList()) }
-    var historyIndex by remember { mutableIntStateOf(-1) }
-    var showExportDialog by remember { mutableStateOf(false) }
-    var showResetConfirm by remember { mutableStateOf(false) }
-    var showColorScience by remember { mutableStateOf(false) }
-    var exportConfig by remember { mutableStateOf(ExportConfig()) }
-    var presetFilter by remember { mutableStateOf<PresetCategory?>(null) }
-    var selectedPresetId by remember { mutableStateOf<String?>(null) }
-
-    // 同步显示位图：切换前后对比时更新
-    LaunchedEffect(showBefore, processedBitmap) {
-        displayBitmap = if (showBefore) originalBitmap else processedBitmap
-    }
+    val params = uiState.params
+    val originalBitmap = uiState.originalBitmap
+    val processedBitmap = uiState.processedBitmap
+    val displayBitmap = uiState.displayBitmap
+    val isProcessing = uiState.isProcessing
+    val processingStage = uiState.processingStage
+    val processingProgress = uiState.processingProgress
+    val histogramData = uiState.histogramData
+    val editHistory = uiState.editHistory
+    val historyIndex = uiState.historyIndex
+    val exportConfig = uiState.exportConfig
+    val presetFilter = uiState.presetFilter
+    val selectedPresetId = uiState.selectedPresetId
+    val selectedTab = uiState.selectedTab
+    val showBefore = uiState.showBefore
+    val showExportDialog = uiState.showExportDialog
+    val showResetConfirm = uiState.showResetConfirm
+    val showColorScience = uiState.showColorScience
 
     // ========== 图片选择器 ==========
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let {
-            scope.launch {
-                originalBitmap = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(it)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)
-                    }
-                }
-                originalBitmap?.let { bmp ->
-                    processedBitmap = bmp
-                    displayBitmap = bmp
-                    isProcessing = true
-                    val result = triggerFullProcess(bmp, params, engine) { stage, prog ->
-                        processingStage = stage; processingProgress = prog
-                    }
-                    if (result != null) {
-                        processedBitmap = result
-                        if (!showBefore) displayBitmap = result
-                        // 计算初始直方图
-                        histogramData = computeHistogram(result)
-                    }
-                    isProcessing = false
-                }
-            }
-        }
+        uri?.let { viewModel.loadImage(context, it) }
     }
 
-    // ========== 实时预览 ==========
+    // 初始 URI 加载
+    LaunchedEffect(initialImageUri) {
+        initialImageUri?.let { viewModel.loadImage(context, it) }
+    }
+
+    // ========== 实时预览请求封装 ==========
     fun requestPreview(newParams: SmartOptimizeParams, recordHistory: Boolean = false) {
-        if (recordHistory) {
-            pushHistory()
-        }
-        params = newParams
-        if (isProcessing) return
-
-        scope.launch {
-            isProcessing = true
-            originalBitmap?.let { bmp ->
-                val result = withContext(Dispatchers.Default) {
-                    engine.optimize(bmp, newParams)
-                }
-                processedBitmap = result
-                if (!showBefore) {
-                    displayBitmap = result
-                }
-                // 更新直方图
-                histogramData = computeHistogram(result)
-            }
-            isProcessing = false
-        }
+        viewModel.requestPreview(newParams, recordHistory)
     }
 
-    // ========== 完整处理 ==========
-    suspend fun triggerFullProcess(
-        bmp: Bitmap,
-        p: SmartOptimizeParams,
-        eng: SmartOptimizeEngine,
-        onProgress: (String, Float) -> Unit
-    ): Bitmap? {
-        return withContext(Dispatchers.Default) {
-            eng.optimize(bmp, p)
-        }
-    }
-
-    // ========== 保存编辑历史 ==========
-    fun pushHistory(label: String = "") {
-        val entry = EditHistoryEntry(
-            id = UUID.randomUUID().toString(),
-            timestamp = System.currentTimeMillis(),
-            params = params,
-            label = label
-        )
-        editHistory = (editHistory.take(historyIndex + 1) + entry)
-        historyIndex = editHistory.lastIndex
-    }
-
+    // ========== 历史操作 ==========
     fun restoreHistory(index: Int) {
         if (index in editHistory.indices) {
-            historyIndex = index
-            requestPreview(editHistory[index].params)
+            viewModel.applyParamsImmediately(editHistory[index].params.copy(), recordHistory = false)
         }
     }
 
-    fun undo() {
-        if (historyIndex > 0) {
-            historyIndex--
-            requestPreview(editHistory[historyIndex].params)
-        }
-    }
-
-    fun redo() {
-        if (historyIndex < editHistory.lastIndex) {
-            historyIndex++
-            requestPreview(editHistory[historyIndex].params)
-        }
-    }
+    fun undo() = viewModel.undo()
+    fun redo() = viewModel.redo()
 
     // ========== 应用预设 ==========
-    fun applyPreset(preset: SmartOptimizePreset) {
-        selectedPresetId = preset.id
-        pushHistory("应用预设: ${preset.name}")
-        requestPreview(preset.params)
-    }
+    fun applyPreset(preset: SmartOptimizePreset) = viewModel.applyPreset(preset)
 
     // ========== 重置 ==========
-    fun resetAll() {
-        pushHistory("重置全部")
-        requestPreview(SmartOptimizeParams.DEFAULT)
-        selectedPresetId = null
-    }
-
-    // ========== 直方图计算 ==========
-    fun computeHistogram(bitmap: Bitmap): HistogramFullResult {
-        val pixels = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        val luma = IntArray(256)
-        val red = IntArray(256)
-        val green = IntArray(256)
-        val blue = IntArray(256)
-        for (pixel in pixels) {
-            val r = android.graphics.Color.red(pixel)
-            val g = android.graphics.Color.green(pixel)
-            val b = android.graphics.Color.blue(pixel)
-            val lum = (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
-            luma[lum]++
-            red[r]++
-            green[g]++
-            blue[b]++
-        }
-        var totalLum = 0f
-        for (i in luma.indices) totalLum += i * luma[i]
-        val meanLum = if (pixels.isNotEmpty()) totalLum / pixels.size else 0f
-        return HistogramFullResult(luma = luma, red = red, green = green, blue = blue, meanLuminance = meanLum)
-    }
+    fun resetAll() = viewModel.resetAll()
 
     // ========== UI ==========
     Scaffold(
@@ -253,22 +141,30 @@ fun SmartOptimizeScreen(
                         Icon(Icons.Default.Redo, "重做")
                     }
                     // 重置
-                    IconButton(onClick = { showResetConfirm = true }) {
+                    IconButton(onClick = { viewModel.setShowResetConfirm(true) }) {
                         Icon(Icons.Default.Refresh, "重置")
+                    }
+                    // 应用参数到相机
+                    IconButton(onClick = { onApply(params) }) {
+                        Icon(Icons.Default.Check, "应用")
                     }
                     // 保存
                     IconButton(onClick = {
-                        processedBitmap?.let { onSave(it) }
+                        scope.launch {
+                            viewModel.exportCurrentImage()?.let { onSave(it) }
+                        }
                     }) {
                         Icon(Icons.Default.Save, "保存")
                     }
                     // 导出
-                    IconButton(onClick = { showExportDialog = true }) {
+                    IconButton(onClick = { viewModel.setShowExportDialog(true) }) {
                         Icon(Icons.Default.FileUpload, "导出")
                     }
                     // 分享
                     IconButton(onClick = {
-                        processedBitmap?.let { onShare(it) }
+                        scope.launch {
+                            viewModel.exportCurrentImage()?.let { onShare(it) }
+                        }
                     }) {
                         Icon(Icons.Default.Share, "分享")
                     }
@@ -357,7 +253,7 @@ fun SmartOptimizeScreen(
                     // 前后比较切换
                     BeforeAfterToggle(
                         showBefore = showBefore,
-                        onToggle = { showBefore = it },
+                        onToggle = { viewModel.setShowBefore(it) },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 8.dp)
@@ -389,7 +285,7 @@ fun SmartOptimizeScreen(
                     val isSelected = tab == selectedTab
                     Tab(
                         selected = isSelected,
-                        onClick = { selectedTab = tab },
+                        onClick = { viewModel.setSelectedTab(tab) },
                         modifier = Modifier.height(44.dp)
                     ) {
                         Column(
@@ -478,7 +374,7 @@ fun SmartOptimizeScreen(
                         params = params,
                         selectedPresetId = selectedPresetId,
                         filterCategory = presetFilter,
-                        onFilterChanged = { presetFilter = it },
+                        onFilterChanged = { viewModel.setPresetFilter(it) },
                         onPresetSelected = { applyPreset(it) },
                         enabled = originalBitmap != null
                     )
@@ -492,16 +388,18 @@ fun SmartOptimizeScreen(
                         currentIndex = historyIndex,
                         onRestore = { restoreHistory(it) },
                         params = params,
-                        onSaveCheckpoint = { pushHistory("检查点") }
+                        onSaveCheckpoint = { viewModel.saveCheckpoint() }
                     )
                     SmartOptimizeTab.EXPORT -> ExportTabPanel(
                         params = params,
                         onParamsChanged = { requestPreview(it) },
                         config = exportConfig,
-                        onConfigChanged = { exportConfig = it },
+                        onConfigChanged = { viewModel.setExportConfig(it) },
                         onExport = {
-                            showExportDialog = false
-                            processedBitmap?.let { bmp -> onSave(bmp) }
+                            viewModel.setShowExportDialog(false)
+                            scope.launch {
+                                viewModel.exportCurrentImage()?.let { onSave(it) }
+                            }
                         },
                         enabled = originalBitmap != null
                     )
@@ -513,19 +411,19 @@ fun SmartOptimizeScreen(
     // ========== 对话框 ==========
     if (showResetConfirm) {
         AlertDialog(
-            onDismissRequest = { showResetConfirm = false },
+            onDismissRequest = { viewModel.setShowResetConfirm(false) },
             title = { Text("重置所有调整") },
             text = { Text("确定要重置所有参数到默认值吗？此操作不可撤销。") },
             confirmButton = {
                 TextButton(onClick = {
                     resetAll()
-                    showResetConfirm = false
+                    viewModel.setShowResetConfirm(false)
                 }) {
                     Text("确认重置", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) {
+                TextButton(onClick = { viewModel.setShowResetConfirm(false) }) {
                     Text("取消")
                 }
             }
@@ -534,18 +432,18 @@ fun SmartOptimizeScreen(
 
     if (showExportDialog) {
         AlertDialog(
-            onDismissRequest = { showExportDialog = false },
+            onDismissRequest = { viewModel.setShowExportDialog(false) },
             title = { Text("导出图像") },
             text = {
                 ExportConfigPanel(
                     config = exportConfig,
-                    onConfigChanged = { exportConfig = it },
+                    onConfigChanged = { viewModel.setExportConfig(it) },
                     onExport = {
-                        showExportDialog = false
-                        // 触发导出
+                        viewModel.setShowExportDialog(false)
+                        // 触发导出：使用 exportCurrentImage 应用导出配置
                         scope.launch {
-                            processedBitmap?.let { bmp ->
-                                pushHistory("导出: ${exportConfig.format.uppercase()}")
+                            viewModel.exportCurrentImage()?.let { bmp ->
+                                viewModel.saveCheckpoint("导出: ${exportConfig.format.uppercase()}")
                                 onSave(bmp)
                             }
                         }
@@ -554,7 +452,7 @@ fun SmartOptimizeScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showExportDialog = false }) {
+                TextButton(onClick = { viewModel.setShowExportDialog(false) }) {
                     Text("关闭")
                 }
             }
@@ -563,7 +461,7 @@ fun SmartOptimizeScreen(
 
     if (showColorScience) {
         AlertDialog(
-            onDismissRequest = { showColorScience = false },
+            onDismissRequest = { viewModel.setShowColorScience(false) },
             title = { Text("色彩科学设置") },
             text = {
                 ColorScienceSelector(
@@ -586,12 +484,12 @@ fun SmartOptimizeScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showColorScience = false }) {
+                TextButton(onClick = { viewModel.setShowColorScience(false) }) {
                     Text("确定")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showColorScience = false }) {
+                TextButton(onClick = { viewModel.setShowColorScience(false) }) {
                     Text("取消")
                 }
             }
@@ -771,16 +669,29 @@ private fun ColorAdjustPanel(
         item {
             Spacer(Modifier.height(12.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(enabled = enabled) { viewModel.setShowColorScience(true) }
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("色彩科学", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    params.colorScience,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        params.colorScience,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "设置",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
@@ -932,19 +843,19 @@ private fun GradingPanel(
                     wheel = params.shadowWheel,
                     onWheelChanged = { onParamsChanged(params.copy(shadowWheel = it)) },
                     label = "阴影",
-                    size = 110f
+                    wheelSize = 110f
                 )
                 ColorWheelPanel(
                     wheel = params.midtoneWheel,
                     onWheelChanged = { onParamsChanged(params.copy(midtoneWheel = it)) },
                     label = "中间调",
-                    size = 110f
+                    wheelSize = 110f
                 )
                 ColorWheelPanel(
                     wheel = params.highlightWheel,
                     onWheelChanged = { onParamsChanged(params.copy(highlightWheel = it)) },
                     label = "高光",
-                    size = 110f
+                    wheelSize = 110f
                 )
             }
         }
@@ -954,7 +865,7 @@ private fun GradingPanel(
                 wheel = params.globalWheel,
                 onWheelChanged = { onParamsChanged(params.copy(globalWheel = it)) },
                 label = "全局",
-                size = 100f
+                wheelSize = 100f
             )
         }
 
@@ -1280,6 +1191,13 @@ private fun LUTPanel(
     onParamsChanged: (SmartOptimizeParams) -> Unit,
     enabled: Boolean
 ) {
+    val context = LocalContext.current
+    val lutManager = remember { LUTManager.getInstance(context) }
+    val downloadedIds by lutManager.downloadedIds.collectAsState()
+    val downloadedLuts = remember(downloadedIds) {
+        LUTResourceRepository.RESOURCES.filter { downloadedIds.contains(it.id) }
+    }
+
     val builtInLUTs = listOf(
         "Kodak Portra 400" to "kodak_portra",
         "Fuji Velvia 50" to "fuji_velvia",
@@ -1317,6 +1235,7 @@ private fun LUTPanel(
                     .clickable(enabled = enabled) {
                         onParamsChanged(params.copy(
                             activeLutName = if (isActive) "" else id,
+                            lutPath = if (isActive) "" else "",
                             lutIntensity = if (isActive) 0f else 80f
                         ))
                     },
@@ -1352,6 +1271,65 @@ private fun LUTPanel(
                         Icon(Icons.Default.Check, "已选",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+
+        // 已下载 LUT（来自 LUTShare / LUTManager）
+        if (downloadedLuts.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(8.dp))
+                Text("已下载 LUT", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            items(downloadedLuts) { resource ->
+                val localFile = remember(resource.id) { lutManager.getLocalFile(resource) }
+                val isActive = params.lutPath == localFile?.absolutePath
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = enabled && localFile != null) {
+                            if (localFile != null) {
+                                onParamsChanged(params.copy(
+                                    activeLutName = if (isActive) "" else resource.id,
+                                    lutPath = if (isActive) "" else localFile.absolutePath,
+                                    lutIntensity = if (isActive) 0f else 80f
+                                ))
+                            }
+                        },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isActive)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(resource.name, fontSize = 13.sp)
+                            Text(
+                                localFile?.let { "已下载" } ?: "未找到本地文件",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (isActive) {
+                            Icon(Icons.Default.Check, "已选",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }

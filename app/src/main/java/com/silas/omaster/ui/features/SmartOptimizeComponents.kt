@@ -227,8 +227,12 @@ fun ColorWheelPanel(
     onWheelChanged: (ColorWheelValue) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
-    size: Float = 120f
+    wheelSize: Float = 120f
 ) {
+    val density = LocalDensity.current
+    val sizePx = with(density) { wheelSize.dp.toPx() }
+    val maxRadiusPx = sizePx / 2f - 10f
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -238,32 +242,30 @@ fun ColorWheelPanel(
 
         Box(
             modifier = Modifier
-                .size(size.dp)
+                .size(wheelSize.dp)
                 .pointerInput(Unit) {
                     detectDragGestures { change, _ ->
-                        val cx = size / 2f
-                        val cy = size / 2f
+                        val cx = sizePx / 2f
+                        val cy = sizePx / 2f
                         val dx = change.position.x - cx
                         val dy = change.position.y - cy
                         val dist = sqrt(dx * dx + dy * dy)
-                        val maxRadius = size / 2f - 10f
                         val hue = (Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 90f)
                             .let { if (it < 0f) it + 360f else it }
-                        val sat = (dist / maxRadius * 100f).coerceIn(0f, 100f)
+                        val sat = (dist / maxRadiusPx * 100f).coerceIn(0f, 100f)
                         onWheelChanged(wheel.copy(hue = hue, saturation = sat))
                     }
                 }
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
-                        val cx = size / 2f
-                        val cy = size / 2f
+                        val cx = sizePx / 2f
+                        val cy = sizePx / 2f
                         val dx = offset.x - cx
                         val dy = offset.y - cy
                         val dist = sqrt(dx * dx + dy * dy)
-                        val maxRadius = size / 2f - 10f
                         val hue = (Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 90f)
                             .let { if (it < 0f) it + 360f else it }
-                        val sat = (dist / maxRadius * 100f).coerceIn(0f, 100f)
+                        val sat = (dist / maxRadiusPx * 100f).coerceIn(0f, 100f)
                         onWheelChanged(wheel.copy(hue = hue, saturation = sat))
                     }
                 }
@@ -563,7 +565,8 @@ fun LabeledSlider(
     onValueChange: (Float) -> Unit,
     valueFormatter: (Float) -> String = { "%.0f".format(it) },
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = 2.dp),
@@ -579,6 +582,7 @@ fun LabeledSlider(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = { onValueChangeFinished?.invoke() },
             valueRange = rangeStart..rangeEnd,
             enabled = enabled,
             modifier = Modifier.weight(1f).padding(horizontal = 4.dp),

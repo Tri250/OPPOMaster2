@@ -337,15 +337,15 @@ fun MainApp(navController: NavHostController) {
                 SmartOptimizeScreen(
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
-                        // 应用智能优化参数到设置
+                        // 将智能优化参数映射到相机预设参数
                         val settingsManager = SettingsManager.getInstance(context)
                         settingsManager.applyPresetParams(
-                            saturation = params.colorCorrectionStrength.toInt(),
-                            contrast = params.hdrStrength.toInt(),
+                            saturation = params.saturation.toInt(),
+                            contrast = params.contrast.toInt(),
                             warmth = 0,
-                            sharpness = params.sharpenStrength.toInt(),
-                            clarity = params.noiseReductionStrength.toInt(),
-                            brightness = params.exposureAdjustment.toInt()
+                            sharpness = params.sharpness.toInt(),
+                            clarity = params.clarity.toInt(),
+                            brightness = params.brightness.toInt()
                         )
                         navController.popBackStack()
                     }

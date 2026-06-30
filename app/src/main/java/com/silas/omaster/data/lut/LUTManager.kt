@@ -66,8 +66,8 @@ class LUTManager private constructor(private val context: Context) {
     private val _lutStrength = MutableStateFlow(prefs.getFloat(KEY_LUT_STRENGTH, 1.0f))
     val lutStrength: StateFlow<Float> = _lutStrength.asStateFlow()
 
-    // 解析后的 LUT 数据缓存
-    private val lutDataCache = mutableMapOf<String, LUT3DData>()
+    // 解析后的 LUT 数据缓存（线程安全）
+    private val lutDataCache = java.util.concurrent.ConcurrentHashMap<String, LUT3DData>()
 
     // 下载进度
     private val _downloadProgress = MutableStateFlow<Map<String, Int>>(emptyMap())

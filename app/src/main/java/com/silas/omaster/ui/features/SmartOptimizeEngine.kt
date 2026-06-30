@@ -12,9 +12,10 @@ import android.renderscript.Allocation
 import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
-import com.silas.omaster.data.lut.LUTManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,7 +43,7 @@ import kotlin.random.Random
  * - 特效 (Glow, Halation, Flares, Grain, Vignette)
  * - 细节 (Sharpness, Clarity, Dehaze, Structure, Centre, NR, CA)
  * - 几何变换 (Rotate, Flip, Crop, Perspective, Orientation)
- * - 镜头校正 (Lens Correction placeholder, DNG Warp)
+ * - 镜头校正 (Lens Correction / DNG Warp)
  * - 局部蒙版 (Mask blending)
  * - 非破坏性编辑 + Git 风格分支历史
  */
@@ -51,7 +52,8 @@ class SmartOptimizeEngine(
     private val lutProcessor: LutProcessor = LutProcessor()
 ) {
 
-    private var scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var previewJob: Job? = null
     var onPreviewReady: ((Bitmap) -> Unit)? = null
     var onLoadingChange: ((Boolean) -> Unit)? = null
     var onHistoryChange: ((Boolean, Boolean) -> Unit)? = null
@@ -62,8 +64,8 @@ class SmartOptimizeEngine(
     private var originalBitmap: Bitmap? = null
     private var currentSettings = SmartOptimizeParams()
 
-    // 处理锁，防止并发处理导致不一致
-    private var isProcessing = false
+    // 处理锁，使用对象级同步，防止并发处理导致不一致或位图损坏
+    private val processLock = Any()
 
     val canUndo: Boolean get() = editHistory.canUndo
     val canRedo: Boolean get() = editHistory.canRedo
@@ -116,14 +118,31 @@ class SmartOptimizeEngine(
 
     fun processPreview() {
         val source = originalBitmap ?: return
-        scope.launch {
+        previewJob?.cancel()
+        previewJob = scope.launch {
             onLoadingChange?.invoke(true)
-            val result = withContext(Dispatchers.Default) {
-                process(source, currentSettings, highQuality = false)
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    process(source, currentSettings, highQuality = false)
+                }
+                if (isActive) {
+                    result?.let { onPreviewReady?.invoke(it) }
+                }
+            } finally {
+                if (isActive) {
+                    onLoadingChange?.invoke(false)
+                }
             }
-            result?.let { onPreviewReady?.invoke(it) }
-            onLoadingChange?.invoke(false)
         }
+    }
+
+    /**
+     * 取消正在进行的预览任务并释放协程作用域。
+     * 应在宿主生命周期结束时调用，避免协程泄漏。
+     */
+    fun cancel() {
+        previewJob?.cancel()
+        scope.cancel()
     }
 
     /**
@@ -145,50 +164,51 @@ class SmartOptimizeEngine(
     // ========== 处理管线 ==========
 
     private fun process(source: Bitmap, settings: SmartOptimizeParams, highQuality: Boolean): Bitmap? {
-        if (isProcessing) return null
-        isProcessing = true
-        try {
-            var result = source.copy(Bitmap.Config.ARGB_8888, true)
+        synchronized(processLock) {
+            try {
+                var result = source.copy(Bitmap.Config.ARGB_8888, true)
 
-            // 1. 几何变换前置（旋转/翻转/裁切/透视）
-            result = applyGeometryTransformations(result, settings)
+                // 1. 几何变换前置（旋转/翻转/裁切/透视）
+                result = applyGeometryTransformations(result, settings)
 
-            // 2. 基础调整（含色调映射）
-            result = applyBasicAdjustments(result, settings)
+                // 2. 基础调整（含色调映射）
+                result = applyBasicAdjustments(result, settings)
 
-            // 3. 光效
-            result = applyLightAdjustments(result, settings)
+                // 3. 光效
+                result = applyLightAdjustments(result, settings)
 
-            // 4. 色彩
-            result = applyColorAdjustments(result, settings)
+                // 4. 色彩
+        result = applyColorAdjustments(result, settings)
 
-            // 5. 影调（曲线）
-            result = applyToneAdjustments(result, settings)
+        // 4.5 相机校准（原色/阴影色调）
+        result = applyCalibration(result, settings)
 
-            // 6. 胶片仿真 / LUT / 色彩科学
-            result = applyFilmSimulation(result, settings)
+        // 5. 影调（曲线）
+        result = applyToneAdjustments(result, settings)
 
-            // 7. 特效
-            result = applyEffects(result, settings)
+                // 6. 胶片仿真 / LUT / 色彩科学
+                result = applyFilmSimulation(result, settings)
 
-            // 8. 细节
-            result = applyDetails(result, settings, highQuality)
+                // 7. 特效
+                result = applyEffects(result, settings)
 
-            // 9. 镜头校正
-            result = applyLensCorrection(result, settings)
+                // 8. 细节
+                result = applyDetails(result, settings, highQuality)
 
-            // 10. 局部蒙版混合
-            result = applyLocalMasks(result, settings)
+                // 9. 镜头校正
+                result = applyLensCorrection(result, settings)
 
-            // 11. 最终色彩空间转换
-            result = applyColorSpace(result, settings)
+                // 10. 局部蒙版混合
+                result = applyLocalMasks(result, settings)
 
-            return result
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return source
-        } finally {
-            isProcessing = false
+                // 11. 最终色彩空间转换
+                result = applyColorSpace(result, settings)
+
+                return result
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return source
+            }
         }
     }
 
@@ -530,6 +550,72 @@ class SmartOptimizeEngine(
         return bitmap
     }
 
+    // ========== 4.5 相机校准 ==========
+
+    private fun applyCalibration(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
+        if (settings.shadowTint == 0f &&
+            settings.redPrimaryHue == 0f && settings.redPrimarySaturation == 100f &&
+            settings.greenPrimaryHue == 0f && settings.greenPrimarySaturation == 100f &&
+            settings.bluePrimaryHue == 0f && settings.bluePrimarySaturation == 100f
+        ) {
+            return bitmap
+        }
+
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+
+        val shadowTint = settings.shadowTint / 100f
+        val redHueShift = settings.redPrimaryHue / 100f * 30f
+        val redSatScale = settings.redPrimarySaturation / 100f
+        val greenHueShift = settings.greenPrimaryHue / 100f * 30f
+        val greenSatScale = settings.greenPrimarySaturation / 100f
+        val blueHueShift = settings.bluePrimaryHue / 100f * 30f
+        val blueSatScale = settings.bluePrimarySaturation / 100f
+
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            var r = Color.red(pixel).toFloat()
+            var g = Color.green(pixel).toFloat()
+            var b = Color.blue(pixel).toFloat()
+
+            val (h, s, l) = rgbToHsl(r, g, b)
+
+            // 阴影色调：对低亮度像素添加冷暖偏移
+            if (shadowTint != 0f) {
+                val shadowWeight = (1f - l).coerceIn(0f, 1f)
+                r += shadowTint * 20f * shadowWeight
+                b -= shadowTint * 20f * shadowWeight
+            }
+
+            // 原色校准：按色相区间分别旋转色相/缩放饱和度
+            val (hueShift, satScale) = when {
+                h >= 330f || h < 45f -> redHueShift to redSatScale
+                h in 45f..180f -> greenHueShift to greenSatScale
+                h in 180f..300f -> blueHueShift to blueSatScale
+                else -> 0f to 1f
+            }
+
+            if (hueShift != 0f || satScale != 1f) {
+                val newH = (h + hueShift + 360f) % 360f
+                val newS = (s * satScale).coerceIn(0f, 1f)
+                val (nr, ng, nb) = hslToRgb(newH, newS, l)
+                r = nr
+                g = ng
+                b = nb
+            }
+
+            pixels[i] = Color.argb(
+                Color.alpha(pixel),
+                r.toInt().coerceIn(0, 255),
+                g.toInt().coerceIn(0, 255),
+                b.toInt().coerceIn(0, 255)
+            )
+        }
+
+        bitmap.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return bitmap
+    }
+
     // ========== 5. 影调（曲线） ==========
 
     private fun applyToneAdjustments(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
@@ -756,18 +842,35 @@ class SmartOptimizeEngine(
             result = applyHighlightReconstruction(result)
         }
 
-        // LUT 应用
+        // 真实文件 LUT 应用
         if (settings.lutPath.isNotEmpty()) {
             result = applyLUT(result, settings)
         }
 
-        // 胶片预设
-        result = when (settings.filmSimulation) {
-            "vivid", "portrait", "landscape" -> applyFilmCurve(result, settings.filmSimulation)
-            "fuji_astia", "fuji_provia", "fuji_velvia",
-            "kodak_portra", "kodak_ektar", "kodak_tri_x",
-            "ilford_delta", "agfa_vista" -> applyFilmEmulationLUT(result, settings.filmSimulation)
-            else -> result
+        // 胶片预设 / 内置 LUT：优先使用 filmSimulation，若未设置则回退到 activeLutName
+        val filmId = settings.filmSimulation.takeIf { it != "none" && it.isNotEmpty() }
+            ?: settings.activeLutName.takeIf { it.isNotEmpty() }
+
+        filmId?.let {
+            result = when (it) {
+                "vivid", "portrait", "landscape" -> applyFilmCurve(result, it)
+                "fuji_astia", "fuji_provia", "fuji_velvia",
+                "kodak_portra", "kodak_ektar", "kodak_tri_x",
+                "ilford_delta", "agfa_vista" -> applyFilmEmulationLUT(result, it)
+                // LUT 面板内置 ID 中 ilford_hp5 映射到 ilford_delta 实现
+                "ilford_hp5" -> applyFilmEmulationLUT(result, "ilford_delta")
+                "cine_2383", "cine_arri", "cine_teal", "cine_bleach",
+                "cine_16mm", "vintage_fade" -> applyCreativeFilmLook(result, it)
+                // 效果面板下拉菜单中的胶片风格名称映射到真实实现
+                "kodachrome" -> applyFilmEmulationLUT(result, "kodak_ektar")
+                "portra400" -> applyFilmEmulationLUT(result, "kodak_portra")
+                "ecktachrome" -> applyFilmEmulationLUT(result, "fuji_provia")
+                "fujipro400h" -> applyFilmEmulationLUT(result, "kodak_portra")
+                "agfaapx" -> applyFilmEmulationLUT(result, "ilford_delta")
+                "ilfordhp5" -> applyFilmEmulationLUT(result, "ilford_delta")
+                "cinestill800t" -> applyCreativeFilmLook(result, "cine_2383")
+                else -> result
+            }
         }
 
         // 色彩科学转换
@@ -779,6 +882,78 @@ class SmartOptimizeEngine(
         }
 
         return result
+    }
+
+    /**
+     * 创意胶片风格实现（LUT 面板中无真实 .cube 文件的内置 LUT）
+     */
+    private fun applyCreativeFilmLook(bitmap: Bitmap, lookId: String): Bitmap {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            var r = Color.red(pixel).toFloat()
+            var g = Color.green(pixel).toFloat()
+            var b = Color.blue(pixel).toFloat()
+
+            when (lookId) {
+                "cine_2383" -> {
+                    // 暖调 Kodak 2383 打印胶片：提升暖色、压暗阴影
+                    val gray = 0.299f * r + 0.587f * g + 0.114f * b
+                    r = gray + (r - gray) * 1.05f + 8f
+                    g = gray + (g - gray) * 0.98f + 3f
+                    b = gray + (b - gray) * 0.92f - 5f
+                }
+                "cine_arri" -> {
+                    // Arri LogC 风格：略微降低对比、保护高光
+                    val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                    r += (lum - r) * 0.1f + 5f
+                    g += (lum - g) * 0.1f + 5f
+                    b += (lum - b) * 0.1f + 5f
+                }
+                "cine_teal" -> {
+                    // Teal & Orange：阴影偏青、高光偏橙
+                    val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                    val shadowWeight = (1f - lum / 255f).coerceIn(0f, 1f)
+                    r += 15f * (1f - shadowWeight)
+                    g -= 10f * shadowWeight
+                    b -= 15f * shadowWeight
+                }
+                "cine_bleach" -> {
+                    // Bleach Bypass：高对比、低饱和、银盐感
+                    val gray = 0.299f * r + 0.587f * g + 0.114f * b
+                    r = gray + (r - gray) * 0.6f
+                    g = gray + (g - gray) * 0.6f
+                    b = gray + (b - gray) * 0.6f
+                    r += 10f; g += 5f; b += 5f
+                }
+                "cine_16mm" -> {
+                    // 16mm 胶片：粗颗粒感 + 轻微褪色
+                    val gray = 0.299f * r + 0.587f * g + 0.114f * b
+                    r = gray + (r - gray) * 1.1f + 5f
+                    g = gray + (g - gray) * 1.05f + 3f
+                    b = gray + (b - gray) * 1.0f
+                }
+                "vintage_fade" -> {
+                    // 复古褪色：抬升黑场、降低饱和
+                    val gray = 0.299f * r + 0.587f * g + 0.114f * b
+                    r = gray + (r - gray) * 0.75f + 20f
+                    g = gray + (g - gray) * 0.75f + 20f
+                    b = gray + (b - gray) * 0.75f + 20f
+                }
+            }
+
+            pixels[i] = Color.argb(
+                Color.alpha(pixel),
+                r.toInt().coerceIn(0, 255),
+                g.toInt().coerceIn(0, 255),
+                b.toInt().coerceIn(0, 255)
+            )
+        }
+
+        bitmap.setPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return bitmap
     }
 
     private fun applyLUT(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
@@ -1268,19 +1443,115 @@ class SmartOptimizeEngine(
     }
 
     private fun applyGaussianBlur(bitmap: Bitmap, radius: Float): Bitmap {
-        if (renderScript == null) return bitmap
-        val input = Allocation.createFromBitmap(renderScript, bitmap)
-        val output = Allocation.createTyped(renderScript, input.type)
-        val blur = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript))
-        blur.setRadius(radius.coerceIn(0.1f, 25f))
-        blur.setInput(input)
-        blur.forEach(output)
-        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
-        output.copyTo(result)
-        input.destroy()
-        output.destroy()
-        blur.destroy()
-        return result
+        val r = radius.coerceIn(0.1f, 25f)
+        if (renderScript != null) {
+            try {
+                val input = Allocation.createFromBitmap(renderScript, bitmap)
+                val output = Allocation.createTyped(renderScript, input.type)
+                val blur = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript))
+                blur.setRadius(r)
+                blur.setInput(input)
+                blur.forEach(output)
+                val result = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+                output.copyTo(result)
+                input.destroy()
+                output.destroy()
+                blur.destroy()
+                return result
+            } catch (_: Exception) {
+                // RenderScript 失败时回退到 CPU
+            }
+        }
+        return applyBoxBlur(bitmap, r)
+    }
+
+    /**
+     * CPU 盒式模糊回退实现，保证在没有 RenderScript 时辉光/清晰度/降噪/结构等效果仍然真实生效
+     */
+    private fun applyBoxBlur(bitmap: Bitmap, radius: Float): Bitmap {
+        if (radius <= 0.5f) return bitmap
+        val r = radius.toInt().coerceAtLeast(1)
+        val w = bitmap.width
+        val h = bitmap.height
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        val temp = IntArray(pixels.size)
+
+        // 水平模糊
+        for (y in 0 until h) {
+            var sumR = 0L
+            var sumG = 0L
+            var sumB = 0L
+            var count = 0
+            for (x in -r..w + r) {
+                val idx = y * w + x.coerceIn(0, w - 1)
+                if (x < w + r) {
+                    val p = pixels[idx]
+                    sumR += Color.red(p)
+                    sumG += Color.green(p)
+                    sumB += Color.blue(p)
+                    count++
+                }
+                if (x >= r) {
+                    val outX = x - r
+                    if (outX < w) {
+                        temp[y * w + outX] = Color.argb(
+                            Color.alpha(pixels[y * w + outX]),
+                            (sumR / count).toInt().coerceIn(0, 255),
+                            (sumG / count).toInt().coerceIn(0, 255),
+                            (sumB / count).toInt().coerceIn(0, 255)
+                        )
+                    }
+                    val remIdx = y * w + (outX - r).coerceIn(0, w - 1)
+                    val rem = pixels[remIdx]
+                    sumR -= Color.red(rem)
+                    sumG -= Color.green(rem)
+                    sumB -= Color.blue(rem)
+                    count--
+                }
+            }
+        }
+
+        val result = IntArray(pixels.size)
+        // 垂直模糊
+        for (x in 0 until w) {
+            var sumR = 0L
+            var sumG = 0L
+            var sumB = 0L
+            var count = 0
+            for (y in -r..h + r) {
+                val idx = y.coerceIn(0, h - 1) * w + x
+                if (y < h + r) {
+                    val p = temp[idx]
+                    sumR += Color.red(p)
+                    sumG += Color.green(p)
+                    sumB += Color.blue(p)
+                    count++
+                }
+                if (y >= r) {
+                    val outY = y - r
+                    if (outY < h) {
+                        result[outY * w + x] = Color.argb(
+                            Color.alpha(temp[outY * w + x]),
+                            (sumR / count).toInt().coerceIn(0, 255),
+                            (sumG / count).toInt().coerceIn(0, 255),
+                            (sumB / count).toInt().coerceIn(0, 255)
+                        )
+                    }
+                    val remY = (outY - r).coerceIn(0, h - 1)
+                    val rem = temp[remY * w + x]
+                    sumR -= Color.red(rem)
+                    sumG -= Color.green(rem)
+                    sumB -= Color.blue(rem)
+                    count--
+                }
+            }
+        }
+
+        val out = Bitmap.createBitmap(w, h, bitmap.config ?: Bitmap.Config.ARGB_8888)
+        out.setPixels(result, 0, w, 0, 0, w, h)
+        return out
     }
 
     // ========== 8. 细节 ==========
@@ -1533,7 +1804,6 @@ class SmartOptimizeEngine(
     }
 
     private fun applyNoiseReduction(bitmap: Bitmap, lumaAmount: Float, colorAmount: Float): Bitmap {
-        if (renderScript == null) return bitmap
         var result = bitmap
 
         // 亮度降噪
@@ -1626,7 +1896,7 @@ class SmartOptimizeEngine(
     }
 
     private fun applyLensCorrection(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
-        val warpAmount = settings.geometryWarp / 100f
+        val warpAmount = (settings.geometryWarp + settings.distortion) / 100f
         val strength = settings.lensCorrectionStrength / 100f
 
         if (warpAmount == 0f && strength == 1f) return bitmap
