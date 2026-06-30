@@ -846,6 +846,24 @@ fun ExportConfigPanel(
             Text("包含元数据", fontSize = 12.sp)
         }
 
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = config.watermarkEnabled,
+                onCheckedChange = { onConfigChanged(config.copy(watermarkEnabled = it)) }
+            )
+            Text("添加水印", fontSize = 12.sp)
+        }
+
+        if (config.watermarkEnabled) {
+            OutlinedTextField(
+                value = config.watermarkText,
+                onValueChange = { onConfigChanged(config.copy(watermarkText = it)) },
+                label = { Text("水印文字") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Spacer(Modifier.height(8.dp))
 
         Button(

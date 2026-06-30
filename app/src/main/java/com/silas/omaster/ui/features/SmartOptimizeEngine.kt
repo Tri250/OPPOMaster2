@@ -38,6 +38,38 @@ import kotlin.math.sqrt
  */
 class SmartOptimizeEngine {
 
+    // LUT 缓存（名称 -> Lut3D）
+    private val lutCache = mutableMapOf<String, LutProcessor.Lut3D>()
+    private val lutProcessor = LutProcessor()
+
+    /**
+     * 加载并缓存 LUT 文件内容
+     */
+    fun loadLut(name: String, cubeContent: String) {
+        if (!lutCache.containsKey(name)) {
+            lutCache[name] = lutProcessor.parseCube(cubeContent)
+        }
+    }
+
+    /**
+     * 预置内置 LUT（简化版本，用代码生成）
+     */
+    fun ensureBuiltInLuts() {
+        if (lutCache.isEmpty()) {
+            // 生成一个通用电影感 LUT（Teal & Orange 风格）
+            lutCache["cine_teal"] = generateTealOrangeLut()
+            lutCache["cine_bleach"] = generateBleachBypassLut()
+            lutCache["vintage_fade"] = generateVintageFadeLut()
+            lutCache["kodak_portra"] = generateKodakPortraLut()
+            lutCache["fuji_velvia"] = generateFujiVelviaLut()
+            lutCache["cine_2383"] = generateCine2383Lut()
+            lutCache["cine_arri"] = generateArriLut()
+            lutCache["agfa_vista"] = generateAgfaVistaLut()
+            lutCache["ilford_hp5"] = generateIlfordHp5Lut()
+            lutCache["cine_16mm"] = generate16mmLut()
+        }
+    }
+
     // ==================== 主处理入口 ====================
 
     suspend fun process(
@@ -67,39 +99,47 @@ class SmartOptimizeEngine {
         }
         progress = 0.10f
 
-        // Step 3: 基础调整
+        // Step 3: 负片转换 (RapidRAW)
+        if (params.negativeConversion) {
+            checkActive { onProgress("负片转换", progress) }
+            applyNegativeConversion(pixels, params)
+        }
+        progress = 0.12f
+
+        // Step 4: 基础调整
         if (params.exposure != 0f || params.brightness != 0f || params.contrast != 0f) {
             checkActive { onProgress("基础调整", progress) }
             applyBasicAdjustments(pixels, params)
         }
-        progress = 0.15f
+        progress = 0.18f
 
-        // Step 4: 光影调整
+        // Step 5: 光影调整
         if (params.highlights != 0f || params.shadows != 0f || params.whites != 0f ||
             params.blacks != 0f || params.dehaze != 0f) {
             checkActive { onProgress("光影调整", progress) }
             applyLightAdjustments(pixels, params)
         }
-        progress = 0.25f
+        progress = 0.28f
 
-        // Step 5: 色彩调整
+        // Step 6: 色彩调整
         if (params.temperature != 5500f || params.tint != 0f ||
             params.saturation != 0f || params.vibrance != 0f ||
             params.hslAdjustments.hasChanges()) {
             checkActive { onProgress("色彩调整", progress) }
             applyColorAdjustments(pixels, params)
         }
-        progress = 0.35f
+        progress = 0.38f
 
-        // Step 6: 色调曲线
+        // Step 7: 色调曲线
         if (params.parametricCurve.hasChanges() || params.pointCurve != SmartOptimizeParams.DEFAULT.pointCurve ||
-            params.redCurve.any { it.x != 0f || it.y != 0f } || params.blueCurve.any { it.x != 0f || it.y != 0f }) {
+            params.redCurve.any { it.x != 0f || it.y != 0f } || params.greenCurve.any { it.x != 0f || it.y != 0f } ||
+            params.blueCurve.any { it.x != 0f || it.y != 0f }) {
             checkActive { onProgress("色调曲线", progress) }
             applyToneCurve(pixels, params)
         }
-        progress = 0.45f
+        progress = 0.48f
 
-        // Step 7: 色彩分级 (CDL + Wheels)
+        // Step 8: 色彩分级 (CDL + Wheels)
         if (params.shadowWheel.hasChanges() || params.midtoneWheel.hasChanges() ||
             params.highlightWheel.hasChanges() || params.globalWheel.hasChanges()) {
             checkActive { onProgress("色彩分级", progress) }
@@ -107,47 +147,68 @@ class SmartOptimizeEngine {
         }
         progress = 0.55f
 
-        // Step 8: 细节处理
+        // Step 9: 细节处理
         if (params.sharpness != 0f || params.luminanceNoiseReduction != 0f ||
             params.colorNoiseReduction != 25f || params.texture != 0f || params.clarity != 0f) {
             checkActive { onProgress("细节处理", progress) }
             applyDetailProcessing(pixels, width, height, params)
         }
-        progress = 0.70f
+        progress = 0.68f
 
-        // Step 9: 效果处理
+        // Step 10: 效果处理
         if (params.grain != 0f || params.vignette != 0f || params.fade != 0f) {
             checkActive { onProgress("效果处理", progress) }
             applyEffects(pixels, width, height, params)
         }
+        progress = 0.75f
+
+        // Step 11: 黑白转换 (AlcedoStudio)
+        if (params.blackAndWhite > 0f) {
+            checkActive { onProgress("黑白转换", progress) }
+            applyBlackAndWhite(pixels, params)
+        }
         progress = 0.80f
 
-        // Step 10: 面部美化
-        if (params.faceBrightening != 0f) {
+        // Step 12: 面部美化
+        if (params.faceBrightening != 0f || params.faceSmoothness != 50f) {
             checkActive { onProgress("面部美化", progress) }
             applyFaceBeautification(pixels, width, height, params)
         }
         progress = 0.85f
 
-        // Step 11: 相机校准
+        // Step 13: 相机校准
         if (params.shadowTint != 0f || params.redPrimaryHue != 0f || params.greenPrimaryHue != 0f || params.bluePrimaryHue != 0f) {
             checkActive { onProgress("相机校准", progress) }
             applyCalibration(pixels, params)
         }
         progress = 0.90f
 
-        // Step 12: 色彩科学 (ACES/DRT/Sigmoid)
+        // Step 14: 色彩科学 (ACES/DRT/Sigmoid)
         if (params.colorScience != "STANDARD" || params.toneMappingStrength != 0f ||
             params.sigmoidContrast != 0f || params.highlightTransition != 0f) {
             checkActive { onProgress("色彩科学", progress) }
             applyColorScience(pixels, params)
         }
-        progress = 0.95f
+        progress = 0.93f
 
-        // Step 13: LUT 应用
-        if (params.lutIntensity > 0f) {
+        // Step 15: 光晕效果 (AlcedoStudio Halation)
+        if (params.halation > 0f) {
+            checkActive { onProgress("光晕效果", progress) }
+            applyHalation(pixels, width, height, params)
+        }
+        progress = 0.96f
+
+        // Step 16: LUT 应用
+        if (params.lutIntensity > 0f && params.activeLutName.isNotEmpty()) {
             checkActive { onProgress("LUT", progress) }
             applyLUT(pixels, params)
+        }
+        progress = 0.98f
+
+        // Step 17: 遮罩应用 (RapidRAW Masks)
+        if (params.maskEnabled && params.maskType != "NONE") {
+            checkActive { onProgress("遮罩应用", progress) }
+            applyMask(pixels, width, height, params)
         }
 
         checkActive { onProgress("完成", 1.0f) }
@@ -207,10 +268,11 @@ class SmartOptimizeEngine {
                 if (caR != 0f || caB != 0f) {
                     val srcXR = (cx + dx * maxRadius * (distortion + caR)).toInt().coerceIn(0, width - 1)
                     val srcXB = (cx + dx * maxRadius * (distortion + caB)).toInt().coerceIn(0, width - 1)
+                    val srcYInt = srcY.toInt().coerceIn(0, height - 1)
 
-                    val r = Color.red(temp[srcYR(srcY, width, srcXR)])
+                    val r = Color.red(temp[srcYInt * width + srcXR])
                     val g = Color.green(color)
-                    val b = Color.blue(temp[srcYB(srcY, width, srcXB, height)])
+                    val b = Color.blue(temp[srcYInt * width + srcXB])
 
                     pixels[y * width + x] = Color.argb(Color.alpha(color), r, g, b)
                 } else {
@@ -220,15 +282,18 @@ class SmartOptimizeEngine {
         }
     }
 
-    private fun srcYR(srcY: Int, width: Int, srcX: Int): Int = (srcY * width + srcX).coerceIn(0, Int.MAX_VALUE)
-    private fun srcYB(srcY: Int, width: Int, srcX: Int, height: Int): Int = (srcY * width + srcX).coerceIn(0, height * width - 1)
-
     // ==================== Step 2: 几何变换 ====================
 
     private fun applyGeometryTransform(pixels: IntArray, width: Int, height: Int, params: SmartOptimizeParams) {
         val temp = pixels.copyOf()
         val cx = width / 2f
         val cy = height / 2f
+
+        // 裁剪边界（在循环外计算，避免重复）
+        val cropLeftPx = (params.cropLeft * width).toInt().coerceIn(0, width)
+        val cropRightPx = (params.cropRight * width).toInt().coerceIn(0, width)
+        val cropTopPx = (params.cropTop * height).toInt().coerceIn(0, height)
+        val cropBottomPx = (params.cropBottom * height).toInt().coerceIn(0, height)
 
         // 透视
         val px = params.perspectiveX / 100f
@@ -243,34 +308,30 @@ class SmartOptimizeEngine {
             for (x in 0 until width) {
                 val i = y * width + x
 
-                // 裁剪
-                val cropLeft = params.cropLeft * width
-                val cropRight = params.cropRight * width
-                val cropTop = params.cropTop * height
-                val cropBottom = params.cropBottom * height
-
-                if (x < cropLeft || x > cropRight || y < cropTop || y > cropBottom) {
-                    pixels[i] = Color.TRANSPARENT
-                    continue
-                }
-
+                // 从输出坐标反推源坐标（逆映射）
                 var srcX = x.toFloat()
                 var srcY = y.toFloat()
 
-                // 透视变换
-                if (px != 0f || py != 0f) {
-                    val dx = (srcX - cx) / cx
-                    val dy = (srcY - cy) / cy
-                    srcX += px * dx * dy * cx
-                    srcY += py * dx * dy * cy
-                }
-
-                // 旋转
+                // 逆旋转
                 if (params.rotation != 0f) {
                     val rdx = srcX - cx
                     val rdy = srcY - cy
-                    srcX = cx + rdx * cosA - rdy * sinA
-                    srcY = cy + rdx * sinA + rdy * cosA
+                    srcX = cx + rdx * cosA + rdy * sinA
+                    srcY = cy - rdx * sinA + rdy * cosA
+                }
+
+                // 逆透视
+                if (px != 0f || py != 0f) {
+                    val dx = (srcX - cx) / cx
+                    val dy = (srcY - cy) / cy
+                    srcX -= px * dx * dy * cx
+                    srcY -= py * dx * dy * cy
+                }
+
+                // 检查源坐标是否在裁剪区域内
+                if (srcX < cropLeftPx || srcX >= cropRightPx || srcY < cropTopPx || srcY >= cropBottomPx) {
+                    pixels[i] = Color.TRANSPARENT
+                    continue
                 }
 
                 val sx = srcX.toInt().coerceIn(0, width - 1)
@@ -979,8 +1040,9 @@ class SmartOptimizeEngine {
     // ==================== Step 10: 面部美化 ====================
 
     private fun applyFaceBeautification(pixels: IntArray, width: Int, height: Int, params: SmartOptimizeParams) {
-        val strength = params.faceBrightening / 100f
-        if (strength <= 0.01f) return
+        val brightStrength = params.faceBrightening / 100f
+        val smoothStrength = params.faceSmoothness / 100f
+        if (brightStrength <= 0.01f && smoothStrength <= 0.01f) return
 
         val mask = FloatArray(pixels.size)
 
@@ -995,7 +1057,12 @@ class SmartOptimizeEngine {
         // 蒙版平滑
         smoothMask(mask, width, height, 2)
 
-        // 应用美白
+        // 预计算皮肤区域模糊图（用于磨皮）
+        val blurred = if (smoothStrength > 0.01f) {
+            boxBlur(pixels, width, height, (smoothStrength * 3f).toInt().coerceAtLeast(1))
+        } else null
+
+        // 应用美白 + 磨皮
         for (i in pixels.indices) {
             val m = mask[i]
             if (m <= 0.01f) continue
@@ -1005,17 +1072,41 @@ class SmartOptimizeEngine {
             val b = Color.blue(pixels[i]) / 255f
             val a = Color.alpha(pixels[i])
 
-            val brightness = 1f + 0.3f * strength * m
-            var nr = r * brightness - 5f / 255f * strength * m
-            var ng = g * brightness
-            var nb = b * brightness + 3f / 255f * strength * m
+            var nr = r
+            var ng = g
+            var nb = b
 
-            // 降饱和
-            val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
-            val desat = 1f - 0.2f * strength * m
-            nr = gray + desat * (nr - gray)
-            ng = gray + desat * (ng - gray)
-            nb = gray + desat * (nb - gray)
+            // 磨皮：边缘感知混合原图与模糊图
+            if (smoothStrength > 0.01f && blurred != null) {
+                val br = Color.red(blurred[i]) / 255f
+                val bg = Color.green(blurred[i]) / 255f
+                val bb = Color.blue(blurred[i]) / 255f
+                // 边缘检测：避免模糊边缘
+                val edgeR = abs(r - br)
+                val edgeG = abs(g - bg)
+                val edgeB = abs(b - bb)
+                val maxEdge = maxOf(edgeR, edgeG, edgeB)
+                val preserve = min(1f, maxEdge * 3f)
+                val blend = smoothStrength * m * (1f - preserve)
+                nr = (r * (1f - blend) + br * blend).coerceIn(0f, 1f)
+                ng = (g * (1f - blend) + bg * blend).coerceIn(0f, 1f)
+                nb = (b * (1f - blend) + bb * blend).coerceIn(0f, 1f)
+            }
+
+            // 美白
+            if (brightStrength > 0.01f) {
+                val brightness = 1f + 0.3f * brightStrength * m
+                nr = nr * brightness - 5f / 255f * brightStrength * m
+                ng = ng * brightness
+                nb = nb * brightness + 3f / 255f * brightStrength * m
+
+                // 降饱和
+                val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
+                val desat = 1f - 0.2f * brightStrength * m
+                nr = gray + desat * (nr - gray)
+                ng = gray + desat * (ng - gray)
+                nb = gray + desat * (nb - gray)
+            }
 
             pixels[i] = Color.argb(a,
                 (nr * 255f).toInt().coerceIn(0, 255),
@@ -1218,11 +1309,391 @@ class SmartOptimizeEngine {
         return 0.7f + 0.3f * (1f - exp(-t * (1f + strength * 3f)))
     }
 
+    // ==================== Step 3: 负片转换 (RapidRAW) ====================
+
+    private fun applyNegativeConversion(pixels: IntArray, params: SmartOptimizeParams) {
+        val orangeMask = params.negativeOrangeMask / 100f
+        for (i in pixels.indices) {
+            var r = 255 - Color.red(pixels[i])
+            var g = 255 - Color.green(pixels[i])
+            var b = 255 - Color.blue(pixels[i])
+            val a = Color.alpha(pixels[i])
+
+            // 去色罩（模拟橙色色罩去除）
+            if (orangeMask > 0.01f) {
+                val maskR = (r + orangeMask * 30f).coerceIn(0f, 255f)
+                val maskG = (g + orangeMask * 15f).coerceIn(0f, 255f)
+                val maskB = (b + orangeMask * 5f).coerceIn(0f, 255f)
+                r = maskR.toInt()
+                g = maskG.toInt()
+                b = maskB.toInt()
+            }
+
+            pixels[i] = Color.argb(a, r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+        }
+    }
+
+    // ==================== Step 11: 黑白转换 (AlcedoStudio) ====================
+
+    private fun applyBlackAndWhite(pixels: IntArray, params: SmartOptimizeParams) {
+        val mixRatio = params.blackAndWhite / 100f
+        if (mixRatio <= 0.01f) return
+        val filterHue = params.blackAndWhiteFilterHue
+        val filterStrength = params.blackAndWhiteFilterStrength / 100f
+
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i]) / 255f
+            val g = Color.green(pixels[i]) / 255f
+            val b = Color.blue(pixels[i]) / 255f
+            val a = Color.alpha(pixels[i])
+
+            // 基础亮度
+            var lum = 0.299f * r + 0.587f * g + 0.114f * b
+
+            // 模拟彩色滤镜效果（根据色相调整各通道权重）
+            if (filterStrength > 0.01f) {
+                val hueRad = Math.toRadians(filterHue.toDouble()).toFloat()
+                val filterR = (cos(hueRad) + 1f) / 2f
+                val filterG = (cos(hueRad - 2.094f) + 1f) / 2f
+                val filterB = (cos(hueRad + 2.094f) + 1f) / 2f
+                val filtered = (r * filterR + g * filterG + b * filterB) /
+                        (filterR + filterG + filterB).coerceAtLeast(0.01f)
+                lum = mix(lum, filtered, filterStrength)
+            }
+
+            val nr = mix(r, lum, mixRatio)
+            val ng = mix(g, lum, mixRatio)
+            val nb = mix(b, lum, mixRatio)
+
+            pixels[i] = Color.argb(a,
+                (nr * 255f).toInt().coerceIn(0, 255),
+                (ng * 255f).toInt().coerceIn(0, 255),
+                (nb * 255f).toInt().coerceIn(0, 255))
+        }
+    }
+
+    // ==================== Step 15: 光晕效果 (AlcedoStudio Halation) ====================
+
+    private fun applyHalation(pixels: IntArray, width: Int, height: Int, params: SmartOptimizeParams) {
+        val strength = params.halation / 100f
+        if (strength <= 0.01f) return
+        val temp = pixels.copyOf()
+
+        // 仅对红色通道高亮区域产生光晕（简化版）
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                val i = y * width + x
+                val r = Color.red(pixels[i]) / 255f
+                val g = Color.green(pixels[i]) / 255f
+                val b = Color.blue(pixels[i]) / 255f
+                val a = Color.alpha(pixels[i])
+
+                // 高光检测
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                if (lum > 0.7f) {
+                    // 相邻像素红色扩散
+                    var haloR = 0f
+                    var count = 0
+                    for (dy in -1..1) {
+                        for (dx in -1..1) {
+                            if (dx == 0 && dy == 0) continue
+                            val ni = (y + dy) * width + (x + dx)
+                            haloR += Color.red(temp[ni]) / 255f
+                            count++
+                        }
+                    }
+                    haloR /= count
+                    val bloom = (lum - 0.7f) / 0.3f * strength * 0.3f
+                    val colorShift = params.halationColor / 100f * 0.1f
+                    val nr = (r + bloom * haloR * (1f + colorShift)).coerceIn(0f, 1f)
+                    val ng = (g + bloom * haloR * 0.3f).coerceIn(0f, 1f)
+                    val nb = (b + bloom * haloR * 0.1f * (1f - colorShift)).coerceIn(0f, 1f)
+                    pixels[i] = Color.argb(a,
+                        (nr * 255f).toInt(),
+                        (ng * 255f).toInt(),
+                        (nb * 255f).toInt())
+                }
+            }
+        }
+    }
+
+    // ==================== Step 17: 遮罩应用 (RapidRAW Masks) ====================
+
+    private fun applyMask(pixels: IntArray, width: Int, height: Int, params: SmartOptimizeParams) {
+        val maskIntensity = params.maskIntensity / 100f
+        if (maskIntensity <= 0.01f) return
+        val low = params.maskLuminanceLow
+        val high = params.maskLuminanceHigh
+
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i]) / 255f
+            val g = Color.green(pixels[i]) / 255f
+            val b = Color.blue(pixels[i]) / 255f
+            val a = Color.alpha(pixels[i])
+            val lum = 0.299f * r + 0.587f * g + 0.114f * b
+
+            val maskValue = when {
+                lum < low -> 0f
+                lum > high -> 0f
+                else -> {
+                    val center = (low + high) / 2f
+                    val dist = abs(lum - center)
+                    val maxDist = (high - low) / 2f
+                    if (maxDist > 0.001f) 1f - (dist / maxDist) else 1f
+                }
+            }
+
+            // 羽化边缘
+            val feathered = maskValue * maskIntensity
+            if (feathered > 0.01f) {
+                // 亮度遮罩：提亮选中区域
+                val boost = 1f + feathered * 0.2f
+                val nr = (r * boost).coerceIn(0f, 1f)
+                val ng = (g * boost).coerceIn(0f, 1f)
+                val nb = (b * boost).coerceIn(0f, 1f)
+                pixels[i] = Color.argb(a,
+                    (nr * 255f).toInt().coerceIn(0, 255),
+                    (ng * 255f).toInt().coerceIn(0, 255),
+                    (nb * 255f).toInt().coerceIn(0, 255))
+            }
+        }
+    }
+
     // ==================== Step 13: LUT ====================
 
     private fun applyLUT(pixels: IntArray, params: SmartOptimizeParams) {
-        // LUT 应用由外部 LutProcessor 处理，此处为占位
-        // 实际调用 LutProcessor().applyLut(pixels, lut, intensity)
+        ensureBuiltInLuts()
+        val lutName = params.activeLutName
+        if (lutName.isNotEmpty()) {
+            val lut = lutCache[lutName]
+            if (lut != null) {
+                lutProcessor.applyLut(pixels, lut, params.lutIntensity / 100f)
+            }
+        }
+    }
+
+    // ==================== 内置 LUT 生成器 ====================
+
+    private fun generateIdentityLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    data[idx++] = r / (size - 1f)
+                    data[idx++] = g / (size - 1f)
+                    data[idx++] = b / (size - 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateTealOrangeLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    val lum = 0.299f * rf + 0.587f * gf + 0.114f * bf
+                    // 阴影偏青蓝，高光偏橙黄
+                    val shadowWeight = (1f - lum).coerceIn(0f, 1f)
+                    val highlightWeight = lum.coerceIn(0f, 1f)
+                    data[idx++] = (rf + highlightWeight * 0.08f - shadowWeight * 0.05f).coerceIn(0f, 1f)
+                    data[idx++] = (gf + highlightWeight * 0.03f + shadowWeight * 0.08f).coerceIn(0f, 1f)
+                    data[idx++] = (bf - highlightWeight * 0.1f + shadowWeight * 0.12f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateBleachBypassLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    val lum = 0.299f * rf + 0.587f * gf + 0.114f * bf
+                    // 高对比度，低饱和度
+                    val satScale = 0.6f
+                    val contrast = 1.3f
+                    val nr = ((rf - lum) * satScale + lum).coerceIn(0f, 1f)
+                    val ng = ((gf - lum) * satScale + lum).coerceIn(0f, 1f)
+                    val nb = ((bf - lum) * satScale + lum).coerceIn(0f, 1f)
+                    data[idx++] = (0.5f + (nr - 0.5f) * contrast).coerceIn(0f, 1f)
+                    data[idx++] = (0.5f + (ng - 0.5f) * contrast).coerceIn(0f, 1f)
+                    data[idx++] = (0.5f + (nb - 0.5f) * contrast).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateVintageFadeLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    // 降低对比度，提亮暗部，偏暖
+                    data[idx++] = (rf * 0.9f + 0.08f).coerceIn(0f, 1f)
+                    data[idx++] = (gf * 0.9f + 0.06f).coerceIn(0f, 1f)
+                    data[idx++] = (bf * 0.85f + 0.1f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateKodakPortraLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    // 暖调，肤色自然，略降饱和
+                    data[idx++] = (rf * 1.02f + 0.02f).coerceIn(0f, 1f)
+                    data[idx++] = (gf * 0.98f + 0.01f).coerceIn(0f, 1f)
+                    data[idx++] = (bf * 0.95f + 0.03f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateFujiVelviaLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    // 高饱和，鲜艳
+                    val satScale = 1.2f
+                    val lum = 0.299f * rf + 0.587f * gf + 0.114f * bf
+                    data[idx++] = ((rf - lum) * satScale + lum).coerceIn(0f, 1f)
+                    data[idx++] = ((gf - lum) * satScale + lum).coerceIn(0f, 1f)
+                    data[idx++] = ((bf - lum) * satScale + lum).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateCine2383Lut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    val lum = 0.299f * rf + 0.587f * gf + 0.114f * bf
+                    val shadowW = (1f - lum).coerceIn(0f, 1f)
+                    val hlW = lum.coerceIn(0f, 1f)
+                    data[idx++] = (rf * 0.95f + hlW * 0.05f - shadowW * 0.03f).coerceIn(0f, 1f)
+                    data[idx++] = (gf * 0.92f + hlW * 0.02f + shadowW * 0.05f).coerceIn(0f, 1f)
+                    data[idx++] = (bf * 0.88f - hlW * 0.05f + shadowW * 0.1f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateArriLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    // 自然肤色，略降对比
+                    data[idx++] = (0.5f + (rf - 0.5f) * 0.95f + 0.01f).coerceIn(0f, 1f)
+                    data[idx++] = (0.5f + (gf - 0.5f) * 0.95f + 0.005f).coerceIn(0f, 1f)
+                    data[idx++] = (0.5f + (bf - 0.5f) * 0.92f + 0.015f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateAgfaVistaLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    // 德系浓郁红色
+                    data[idx++] = (rf * 1.08f).coerceIn(0f, 1f)
+                    data[idx++] = (gf * 0.98f + 0.01f).coerceIn(0f, 1f)
+                    data[idx++] = (bf * 0.95f + 0.02f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generateIlfordHp5Lut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    val gray = 0.299f * rf + 0.587f * gf + 0.114f * bf
+                    // 黑白，高对比
+                    val v = (gray * 1.1f + 0.02f).coerceIn(0f, 1f)
+                    data[idx++] = v
+                    data[idx++] = v
+                    data[idx++] = v
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
+    }
+
+    private fun generate16mmLut(size: Int = 33): LutProcessor.Lut3D {
+        val data = FloatArray(size * size * size * 3)
+        var idx = 0
+        for (r in 0 until size) {
+            for (g in 0 until size) {
+                for (b in 0 until size) {
+                    val rf = r / (size - 1f)
+                    val gf = g / (size - 1f)
+                    val bf = b / (size - 1f)
+                    val lum = 0.299f * rf + 0.587f * gf + 0.114f * bf
+                    val shadowW = (1f - lum).coerceIn(0f, 1f)
+                    // 复古，略暖，暗部偏青
+                    data[idx++] = (rf * 0.95f + shadowW * 0.05f + 0.03f).coerceIn(0f, 1f)
+                    data[idx++] = (gf * 0.92f + shadowW * 0.08f + 0.02f).coerceIn(0f, 1f)
+                    data[idx++] = (bf * 0.88f + shadowW * 0.1f + 0.04f).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return LutProcessor.Lut3D(size, data)
     }
 
     // ==================== 辅助函数 ====================
@@ -1309,5 +1780,164 @@ class SmartOptimizeEngine {
     private inline fun checkActive(block: () -> Unit) {
         if (!kotlinx.coroutines.currentCoroutineContext().isActive) return
         block()
+    }
+
+    // ==================== 图像分析（直方图/波形/矢量） ====================
+
+    fun computeHistogram(pixels: IntArray): HistogramFullResult {
+        val lumHist = IntArray(256)
+        val rHist = IntArray(256)
+        val gHist = IntArray(256)
+        val bHist = IntArray(256)
+        var totalLum = 0f
+        val lumValues = FloatArray(pixels.size)
+
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i])
+            val g = Color.green(pixels[i])
+            val b = Color.blue(pixels[i])
+            val lum = (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
+
+            rHist[r]++
+            gHist[g]++
+            bHist[b]++
+            lumHist[lum]++
+            totalLum += lum / 255f
+            lumValues[i] = lum / 255f
+        }
+
+        val meanLum = totalLum / pixels.size
+        val sortedLum = lumValues.sortedArray()
+        val medianLum = sortedLum[sortedLum.size / 2]
+
+        val shadowPixels = lumHist.take(16).sum()
+        val highlightPixels = lumHist.takeLast(16).sum()
+        val shadowClipping = shadowPixels > pixels.size * 0.05f
+        val highlightClipping = highlightPixels > pixels.size * 0.05f
+
+        val minLum = sortedLum.indexOfFirst { it > 0.01f }.coerceAtLeast(0) / 255f
+        val maxLum = sortedLum.indexOfLast { it < 0.99f }.coerceAtLeast(0) / 255f
+        val dynamicRange = if (maxLum > minLum) -ln(maxLum - minLum + 0.001f) * 3f else 0f
+
+        val exposureBias = (meanLum - 0.5f) * 2f
+
+        return HistogramFullResult(
+            luminance = lumHist,
+            red = rHist,
+            green = gHist,
+            blue = bHist,
+            meanLuminance = meanLum,
+            medianLuminance = medianLum,
+            shadowClipping = shadowClipping,
+            highlightClipping = highlightClipping,
+            dynamicRange = dynamicRange.coerceIn(0f, 15f),
+            exposureBias = exposureBias
+        )
+    }
+
+    fun computeWaveform(pixels: IntArray, width: Int, height: Int): WaveformData {
+        val scanlines = mutableListOf<FloatArray>()
+        var maxValue = 0f
+        val columns = width.coerceAtMost(512)
+        val stepX = width.toFloat() / columns
+
+        for (col in 0 until columns) {
+            val scanline = FloatArray(256)
+            val xStart = (col * stepX).toInt()
+            val xEnd = ((col + 1) * stepX).toInt().coerceAtMost(width)
+
+            for (y in 0 until height) {
+                var colLum = 0f
+                var count = 0
+                for (x in xStart until xEnd) {
+                    val i = y * width + x
+                    val r = Color.red(pixels[i])
+                    val g = Color.green(pixels[i])
+                    val b = Color.blue(pixels[i])
+                    colLum += (0.299f * r + 0.587f * g + 0.114f * b)
+                    count++
+                }
+                if (count > 0) {
+                    val lum = (colLum / count).toInt().coerceIn(0, 255)
+                    scanline[lum] += 1f
+                }
+            }
+            scanlines.add(scanline)
+            maxValue = maxOf(maxValue, scanline.maxOrNull() ?: 0f)
+        }
+
+        return WaveformData(scanlines, maxValue.coerceAtLeast(1f))
+    }
+
+    fun computeCullingScore(pixels: IntArray, width: Int, height: Int): Int {
+        // 基于锐度、曝光、色彩、动态范围的启发式评分 (RapidRAW Culling)
+        var edgeDiff = 0f
+        var totalLum = 0f
+        var lumSq = 0f
+        var colorVar = 0f
+        var highlightClip = 0
+        var shadowClip = 0
+
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                val i = y * width + x
+                val r = Color.red(pixels[i]) / 255f
+                val g = Color.green(pixels[i]) / 255f
+                val b = Color.blue(pixels[i]) / 255f
+                val lum = 0.299f * r + 0.587f * g + 0.114f * b
+                totalLum += lum
+                lumSq += lum * lum
+
+                // 简单边缘检测（拉普拉斯近似）
+                val left = Color.red(pixels[i - 1]) / 255f
+                val right = Color.red(pixels[i + 1]) / 255f
+                val top = Color.red(pixels[i - width]) / 255f
+                val bottom = Color.red(pixels[i + width]) / 255f
+                edgeDiff += abs(4f * r - left - right - top - bottom)
+
+                // 色彩方差
+                colorVar += abs(r - g) + abs(g - b) + abs(b - r)
+
+                if (lum > 0.98f) highlightClip++
+                if (lum < 0.02f) shadowClip++
+            }
+        }
+
+        val count = (width - 2) * (height - 2)
+        val meanLum = totalLum / count
+        val variance = lumSq / count - meanLum * meanLum
+        val sharpness = (edgeDiff / count) * 1000f
+        val colorScore = (colorVar / count) * 100f
+        val exposureScore = 100f - abs(meanLum - 0.45f) * 200f
+        val clipPenalty = (highlightClip + shadowClip).toFloat() / count * 500f
+        val drScore = sqrt(variance) * 200f
+
+        val score = (sharpness * 0.25f + exposureScore * 0.25f + colorScore * 0.2f + drScore * 0.3f - clipPenalty)
+            .coerceIn(0f, 100f).toInt()
+        return score
+    }
+
+    fun computeVectorscope(pixels: IntArray): Pair<FloatArray, FloatArray> {
+        // 简化矢量图：计算 UV 平面上的颜色分布密度
+        val gridSize = 128
+        val uGrid = FloatArray(gridSize * gridSize)
+        val vGrid = FloatArray(gridSize * gridSize)
+
+        for (i in pixels.indices) {
+            val r = Color.red(pixels[i]) / 255f
+            val g = Color.green(pixels[i]) / 255f
+            val b = Color.blue(pixels[i]) / 255f
+            val y = 0.299f * r + 0.587f * g + 0.114f * b
+            val cb = 0.564f * (b - y)
+            val cr = 0.713f * (r - y)
+
+            val gx = ((cb + 0.5f) * (gridSize - 1)).toInt().coerceIn(0, gridSize - 1)
+            val gy = ((cr + 0.5f) * (gridSize - 1)).toInt().coerceIn(0, gridSize - 1)
+            val idx = gy * gridSize + gx
+            uGrid[idx] += 1f
+            vGrid[idx] += 1f
+        }
+
+        return Pair(uGrid, vGrid)
     }
 }

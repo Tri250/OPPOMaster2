@@ -198,11 +198,51 @@ data class SmartOptimizeParams(
     /** 当前使用的 LUT 名称 */
     val activeLutName: String = "",
 
-    // ========== 直方图/波形 ==========
+    // ========== 黑白转换 (AlcedoStudio B&W) ==========
+    /** 黑白混合比 0~100, 默认 0 */
+    val blackAndWhite: Float = 0f,
+    /** 黑白滤镜色相 0~360, 模拟彩色滤镜 */
+    val blackAndWhiteFilterHue: Float = 0f,
+    /** 黑白滤镜强度 0~100 */
+    val blackAndWhiteFilterStrength: Float = 0f,
+
+    // ========== 光晕效果 (AlcedoStudio Halation) ==========
+    /** 光晕强度 0~100, 默认 0 */
+    val halation: Float = 0f,
+    /** 光晕色温偏移 -50~50 */
+    val halationColor: Float = 0f,
+
+    // ========== 负片转换 (RapidRAW Negative) ==========
+    /** 负片转换开关 */
+    val negativeConversion: Boolean = false,
+    /** 负片去色罩强度 0~100 */
+    val negativeOrangeMask: Float = 50f,
+
+    // ========== AI 自动增强 (RapidRAW AI) ==========
+    /** AI 一键自动增强 */
+    val aiAutoEnhance: Boolean = false,
+    /** AI 增强强度 0~100 */
+    val aiEnhanceStrength: Float = 80f,
+
+    // ========== 遮罩 (RapidRAW Masks) ==========
+    /** 遮罩启用 */
+    val maskEnabled: Boolean = false,
+    /** 遮罩类型: NONE / BRUSH / LUMINANCE / AI_SKY / AI_SUBJECT */
+    val maskType: String = "NONE",
+    /** 遮罩强度/羽化 0~100 */
+    val maskIntensity: Float = 50f,
+    /** 亮度遮罩阈值低 0~1 */
+    val maskLuminanceLow: Float = 0f,
+    /** 亮度遮罩阈值高 0~1 */
+    val maskLuminanceHigh: Float = 1f,
+
+    // ========== 直方图/波形/矢量 ==========
     /** 是否显示直方图 */
     val showHistogram: Boolean = true,
     /** 是否显示波形图 */
     val showWaveform: Boolean = false,
+    /** 是否显示矢量图 */
+    val showVectorscope: Boolean = false,
     /** 直方图模式: "RGB" / "LUMINANCE" / "COLOR" */
     val histogramMode: String = "RGB",
 
@@ -247,11 +287,18 @@ data class SmartOptimizeParams(
         if (chromaticAberrationR != 0f) count++
         if (chromaticAberrationB != 0f) count++
         if (faceBrightening != 0f) count++
+        if (faceSmoothness != 50f) count++
         if (lutIntensity != 0f) count++
         if (shadowTint != 0f) count++
         if (redPrimaryHue != 0f || redPrimarySaturation != 0f) count++
         if (greenPrimaryHue != 0f || greenPrimarySaturation != 0f) count++
         if (bluePrimaryHue != 0f || bluePrimarySaturation != 0f) count++
+        if (blackAndWhite != 0f) count++
+        if (blackAndWhiteFilterStrength != 0f) count++
+        if (halation != 0f) count++
+        if (negativeConversion) count++
+        if (aiAutoEnhance) count++
+        if (maskEnabled) count++
         return count
     }
 
@@ -375,16 +422,17 @@ enum class SmartOptimizeTab(
     val icon: String,
     val description: String
 ) {
-    BASIC("基础", "tune", "曝光/对比度/饱和度"),
+    BASIC("基础", "tune", "曝光/对比度/饱和度/AI"),
     LIGHT("光影", "light_mode", "高光/阴影/去霾"),
     COLOR("色彩", "palette", "色温/色调/HSL"),
     CURVE("曲线", "show_chart", "色调曲线/参数曲线"),
     GRADING("分级", "color_lens", "色彩分级色轮"),
     DETAIL("细节", "grain", "锐化/降噪/纹理"),
-    EFFECTS("效果", "blur_on", "颗粒/暗角/褪色"),
-    OPTICS("光学", "camera", "畸变/色差/透视"),
+    EFFECTS("效果", "blur_on", "颗粒/暗角/褪色/B&W/光晕"),
+    OPTICS("光学", "camera", "畸变/色差/透视/负片"),
     CALIBRATION("校准", "settings", "相机校准"),
     LUT("LUT", "filter", "3D LUT 滤镜"),
+    MASK("遮罩", "masks", "亮度/AI 遮罩"),
     PRESETS("预设", "auto_awesome", "AI 预设/胶片模拟"),
     HISTORY("历史", "history", "编辑历史记录")
 }

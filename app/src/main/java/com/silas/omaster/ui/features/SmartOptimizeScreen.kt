@@ -69,13 +69,23 @@ fun SmartOptimizeScreen(
     var selectedTab by remember { mutableStateOf(SmartOptimizeTab.BASIC) }
     var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var processedBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var displayBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var params by remember { mutableStateOf(SmartOptimizeParams.DEFAULT) }
     var isProcessing by remember { mutableStateOf(false) }
     var processingStage by remember { mutableStateOf("") }
     var processingProgress by remember { mutableStateOf(0f) }
     var showBefore by remember { mutableStateOf(false) }
     var histogramData by remember { mutableStateOf<HistogramFullResult?>(null) }
+    var waveformData by remember { mutableStateOf<WaveformData?>(null) }
+    var showMetadataDialog by remember { mutableStateOf(false) }
+    var exifInfo by remember { mutableStateOf<Map<String, String>?>(null) }
+    var cullingScore by remember { mutableStateOf<Int?>(null) }
+
+    // 显示图像根据 showBefore 自动切换
+    val displayBitmap by remember(showBefore, originalBitmap, processedBitmap) {
+        derivedStateOf {
+            if (showBefore) originalBitmap else (processedBitmap ?: originalBitmap)
+        }
+    }
     var editHistory by remember { mutableStateOf<List<EditHistoryEntry>>(emptyList()) }
     var historyIndex by remember { mutableIntStateOf(-1) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -98,12 +108,16 @@ fun SmartOptimizeScreen(
                 }
                 originalBitmap?.let { bmp ->
                     processedBitmap = bmp
-                    displayBitmap = bmp
+                    // 读取 EXIF
+                    exifInfo = withContext(Dispatchers.IO) {
+                        readExifFromUri(context, it)
+                    }
+                    // 计算评分
+                    val pixels = IntArray(bmp.width * bmp.height)
+                    bmp.getPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+                    cullingScore = engine.computeCullingScore(pixels, bmp.width, bmp.height)
                     triggerFullProcess(bmp, params, engine) { stage, prog ->
                         processingStage = stage; processingProgress = prog
-                    }?.let { result ->
-                        processedBitmap = result
-                        displayBitmap = result
                     }
                 }
             }
@@ -122,7 +136,10 @@ fun SmartOptimizeScreen(
                     engine.processPreview(bmp, newParams)
                 }
                 processedBitmap = result
-                displayBitmap = result
+                // 计算直方图
+                val pixels = IntArray(result.width * result.height)
+                result.getPixels(pixels, 0, result.width, 0, 0, result.width, result.height)
+                histogramData = engine.computeHistogram(pixels)
             }
             isProcessing = false
         }
@@ -134,20 +151,22 @@ fun SmartOptimizeScreen(
         p: SmartOptimizeParams,
         eng: SmartOptimizeEngine,
         onProgress: (String, Float) -> Unit
-    ): Bitmap? {
-        var result: Bitmap? = null
+    ) {
         scope.launch {
             isProcessing = true
             try {
-                result = eng.process(bmp, p, onProgress)
+                val result = eng.process(bmp, p, onProgress)
                 processedBitmap = result
-                displayBitmap = result
+                // 计算直方图和波形
+                val pixels = IntArray(result.width * result.height)
+                result.getPixels(pixels, 0, result.width, 0, 0, result.width, result.height)
+                histogramData = withContext(Dispatchers.Default) { eng.computeHistogram(pixels) }
+                waveformData = withContext(Dispatchers.Default) { eng.computeWaveform(pixels, result.width, result.height) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
             isProcessing = false
         }
-        return result
     }
 
     // ========== 保存编辑历史 ==========
@@ -303,22 +322,55 @@ fun SmartOptimizeScreen(
                         )
                     }
 
-                    // 参数变更计数
+                    // 参数变更计数 + 信息按钮
                     val changedCount = params.changedParamCount()
-                    if (changedCount > 0 && !isProcessing) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                        ) {
-                            Text(
-                                "$changedCount 参数已调整",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                fontSize = 11.sp,
-                                color = Color.White
-                            )
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (cullingScore != null) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f)
+                            ) {
+                                Text(
+                                    "评分: $cullingScore",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    fontSize = 11.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                        if (changedCount > 0 && !isProcessing) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            ) {
+                                Text(
+                                    "$changedCount 参数已调整",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    fontSize = 11.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                        if (exifInfo != null) {
+                            IconButton(
+                                onClick = { showMetadataDialog = true },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color(0xFF2A2A4E).copy(alpha = 0.8f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "元数据",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
 
@@ -333,14 +385,25 @@ fun SmartOptimizeScreen(
 
                     // 直方图叠加
                     if (params.showHistogram && histogramData != null) {
-                        HistogramView(
-                            histogram = histogramData,
-                            mode = params.histogramMode,
+                        Column(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .fillMaxWidth(0.4f)
-                                .padding(8.dp)
-                        )
+                                .fillMaxWidth(0.45f)
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            HistogramView(
+                                histogram = histogramData,
+                                mode = params.histogramMode,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (params.showWaveform && waveformData != null) {
+                                WaveformView(
+                                    waveform = waveformData,
+                                    modifier = Modifier.fillMaxWidth().height(80.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -442,6 +505,11 @@ fun SmartOptimizeScreen(
                         onParamsChanged = { requestPreview(it) },
                         enabled = originalBitmap != null
                     )
+                    SmartOptimizeTab.MASK -> MaskPanel(
+                        params = params,
+                        onParamsChanged = { requestPreview(it) },
+                        enabled = originalBitmap != null
+                    )
                     SmartOptimizeTab.PRESETS -> PresetsPanel(
                         params = params,
                         selectedPresetId = selectedPresetId,
@@ -498,7 +566,10 @@ fun SmartOptimizeScreen(
                         scope.launch {
                             processedBitmap?.let { bmp ->
                                 pushHistory("导出: ${exportConfig.format.label}")
-                                onSave(bmp)
+                                val finalBmp = if (exportConfig.watermarkEnabled && exportConfig.watermarkText.isNotBlank()) {
+                                    applyWatermark(bmp, exportConfig.watermarkText)
+                                } else bmp
+                                onSave(finalBmp)
                             }
                         }
                     }
@@ -547,6 +618,14 @@ fun SmartOptimizeScreen(
                     Text("取消")
                 }
             }
+        )
+    }
+
+    if (showMetadataDialog) {
+        MetadataDialog(
+            exif = exifInfo,
+            score = cullingScore,
+            onDismiss = { showMetadataDialog = false }
         )
     }
 }
@@ -602,6 +681,67 @@ private fun BasicAdjustPanel(
             Text("基础调整", style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(vertical = 8.dp))
         }
+
+        // AI 自动增强（RapidRAW 功能）
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (params.aiAutoEnhance)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceVariant
+                ),
+                onClick = {
+                    onParamsChanged(params.copy(
+                        aiAutoEnhance = !params.aiAutoEnhance,
+                        exposure = if (!params.aiAutoEnhance) 0.3f else 0f,
+                        contrast = if (!params.aiAutoEnhance) 8f else 0f,
+                        highlights = if (!params.aiAutoEnhance) -15f else 0f,
+                        shadows = if (!params.aiAutoEnhance) 15f else 0f,
+                        vibrance = if (!params.aiAutoEnhance) 12f else 0f,
+                        clarity = if (!params.aiAutoEnhance) 10f else 0f,
+                        dehaze = if (!params.aiAutoEnhance) 10f else 0f
+                    ))
+                }
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("AI 自动增强", fontWeight = FontWeight.Medium)
+                        Text("一键智能优化曝光、色彩和细节", fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = params.aiAutoEnhance,
+                        onCheckedChange = {
+                            onParamsChanged(params.copy(
+                                aiAutoEnhance = it,
+                                exposure = if (it) 0.3f else 0f,
+                                contrast = if (it) 8f else 0f,
+                                highlights = if (it) -15f else 0f,
+                                shadows = if (it) 15f else 0f,
+                                vibrance = if (it) 12f else 0f,
+                                clarity = if (it) 10f else 0f,
+                                dehaze = if (it) 10f else 0f
+                            ))
+                        }
+                    )
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(8.dp)) }
+
         item { LabeledSlider("曝光", params.exposure, -5f, 5f,
             { onParamsChanged(params.copy(exposure = it)) },
             { "%.2f EV".format(it) }, enabled = enabled) }
@@ -946,6 +1086,30 @@ private fun EffectsPanel(
         }
         item { LabeledSlider("褪色", params.fade, 0f, 100f,
             { onParamsChanged(params.copy(fade = it)) }, enabled = enabled) }
+
+        // 黑白转换 (AlcedoStudio)
+        item {
+            Spacer(Modifier.height(16.dp))
+            Text("黑白转换", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("黑白混合", params.blackAndWhite, 0f, 100f,
+            { onParamsChanged(params.copy(blackAndWhite = it)) },
+            { "%.0f%%".format(it) }, enabled = enabled) }
+        item { LabeledSlider("滤镜色相", params.blackAndWhiteFilterHue, 0f, 360f,
+            { onParamsChanged(params.copy(blackAndWhiteFilterHue = it)) },
+            { "%.0f°".format(it) }, enabled = enabled) }
+        item { LabeledSlider("滤镜强度", params.blackAndWhiteFilterStrength, 0f, 100f,
+            { onParamsChanged(params.copy(blackAndWhiteFilterStrength = it)) }, enabled = enabled) }
+
+        // 光晕效果 (AlcedoStudio Halation)
+        item {
+            Spacer(Modifier.height(16.dp))
+            Text("光晕效果", style = MaterialTheme.typography.titleSmall)
+        }
+        item { LabeledSlider("光晕强度", params.halation, 0f, 100f,
+            { onParamsChanged(params.copy(halation = it)) }, enabled = enabled) }
+        item { LabeledSlider("光晕色温", params.halationColor, -50f, 50f,
+            { onParamsChanged(params.copy(halationColor = it)) }, enabled = enabled) }
     }
 }
 
@@ -1003,6 +1167,89 @@ private fun OpticsPanel(
         item { LabeledSlider("裁剪左", params.cropLeft, 0f, 0.5f,
             { onParamsChanged(params.copy(cropLeft = it)) },
             { "%.0f%%".format(it * 100) }, enabled = enabled) }
+
+        // 负片转换 (RapidRAW)
+        item {
+            Spacer(Modifier.height(16.dp))
+            Text("负片转换", style = MaterialTheme.typography.titleSmall)
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = params.negativeConversion,
+                    onCheckedChange = { onParamsChanged(params.copy(negativeConversion = it)) }
+                )
+                Text("启用负片转换", fontSize = 12.sp)
+            }
+        }
+        if (params.negativeConversion) {
+            item { LabeledSlider("去色罩", params.negativeOrangeMask, 0f, 100f,
+                { onParamsChanged(params.copy(negativeOrangeMask = it)) }, enabled = enabled) }
+        }
+    }
+}
+
+// ==================== 遮罩面板 (RapidRAW) ====================
+
+@Composable
+private fun MaskPanel(
+    params: SmartOptimizeParams,
+    onParamsChanged: (SmartOptimizeParams) -> Unit,
+    enabled: Boolean
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        item {
+            Text("遮罩控制", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(vertical = 8.dp))
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = params.maskEnabled,
+                    onCheckedChange = { onParamsChanged(params.copy(maskEnabled = it)) }
+                )
+                Text("启用遮罩", fontSize = 12.sp)
+            }
+        }
+        if (params.maskEnabled) {
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                val maskTypes = listOf("NONE" to "无", "BRUSH" to "画笔", "LUMINANCE" to "亮度", "AI_SKY" to "AI 天空", "AI_SUBJECT" to "AI 主体")
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(maskTypes.find { it.first == params.maskType }?.second ?: "选择类型")
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        maskTypes.forEach { (value, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    onParamsChanged(params.copy(maskType = value))
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            item { LabeledSlider("遮罩强度", params.maskIntensity, 0f, 100f,
+                { onParamsChanged(params.copy(maskIntensity = it)) }, enabled = enabled) }
+            if (params.maskType == "LUMINANCE") {
+                item { LabeledSlider("亮度下限", params.maskLuminanceLow, 0f, 1f,
+                    { onParamsChanged(params.copy(maskLuminanceLow = it)) }, enabled = enabled) }
+                item { LabeledSlider("亮度上限", params.maskLuminanceHigh, 0f, 1f,
+                    { onParamsChanged(params.copy(maskLuminanceHigh = it)) }, enabled = enabled) }
+            }
+        }
     }
 }
 
@@ -1269,4 +1516,107 @@ private fun HistoryPanel(
             }
         }
     }
+}
+
+// ==================== 水印处理 ====================
+
+private fun applyWatermark(bitmap: Bitmap, text: String): Bitmap {
+    val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+    val canvas = Canvas(result)
+    val paint = Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = (bitmap.width / 25f).coerceIn(24f, 96f)
+        alpha = 160
+        isAntiAlias = true
+        typeface = Typeface.DEFAULT_BOLD
+    }
+    val x = bitmap.width * 0.05f
+    val y = bitmap.height * 0.95f
+    // 添加半透明阴影背景
+    val bounds = Rect()
+    paint.getTextBounds(text, 0, text.length, bounds)
+    val shadowPaint = Paint().apply {
+        color = android.graphics.Color.BLACK
+        alpha = 80
+    }
+    canvas.drawRect(
+        x - 8f, y + bounds.top - 8f,
+        x + bounds.width() + 16f, y + bounds.bottom + 8f,
+        shadowPaint
+    )
+    canvas.drawText(text, x, y, paint)
+    return result
+}
+
+// ==================== EXIF 读取 ====================
+
+private fun readExifFromUri(context: Context, uri: Uri): Map<String, String>? {
+    return try {
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            val exif = ExifInterface(stream)
+            val map = mutableMapOf<String, String>()
+            exif.getAttribute(ExifInterface.TAG_MAKE)?.let { make ->
+                val model = exif.getAttribute(ExifInterface.TAG_MODEL) ?: ""
+                map["相机"] = "$make $model".trim()
+            }
+            exif.getAttribute("LensModel")?.let { map["镜头"] = it }
+            exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH)?.let { map["焦距"] = it }
+            exif.getAttribute(ExifInterface.TAG_F_NUMBER)?.let { map["光圈"] = it }
+            exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)?.let { map["快门"] = it }
+            exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY)?.let { map["ISO"] = it }
+            exif.getAttribute(ExifInterface.TAG_DATETIME)?.let { map["日期"] = it }
+            exif.getAttribute(ExifInterface.TAG_IMAGE_WIDTH)?.let { w ->
+                val h = exif.getAttribute(ExifInterface.TAG_IMAGE_LENGTH) ?: "?"
+                map["尺寸"] = "${w} x $h"
+            }
+            if (map.isEmpty()) null else map
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+// ==================== 元数据对话框 ====================
+
+@Composable
+private fun MetadataDialog(
+    exif: Map<String, String>?,
+    score: Int?,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("图像元数据") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (score != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("AI 评分", fontWeight = FontWeight.Medium)
+                            Text("$score/100", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                exif?.forEach { (k, v) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(k, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(v, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                } ?: Text("暂无元数据", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("关闭") }
+        }
+    )
 }
