@@ -379,7 +379,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   currentPage: 'home',
   setCurrentPage: (page) => set({ currentPage: page }),
-  currentSubPage: null,
+  currentSubPage: 'hasselblad',
   setCurrentSubPage: (page) => set({ currentSubPage: page }),
   navigateToSubPage: (page) => set({ currentSubPage: page }),
   goBack: () => set({ currentSubPage: null }),
