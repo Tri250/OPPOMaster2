@@ -101,7 +101,7 @@ object BuiltInPresets {
         FilterPreset(
             id = "fuji_color",
             name = "富士色彩",
-            description = "模拟富士胶片色调，浓郁鲜活",
+            description = "复刻富士胶片色调，浓郁鲜活",
             params = PixelFruitParams(saturation = 125f, contrast = 15f, blueTint = 10f)
         ),
         FilterPreset(

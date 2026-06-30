@@ -240,9 +240,14 @@ fun CameraXViewfinderScreen(
         }
     }
 
-    // P2-4 修复：将传入的配方/预设参数应用到 CameraManager，确保取景器实时预览生效
+    // P2-4 修复：将传入的配方/预设参数应用到 CameraManager，确保取景器实时预览生效。
+    // 当传入非默认参数（来自哈苏之眼分析结果/用户调节/配方）时，锁定参数以防止
+    // AI 场景识别自动覆盖用户显式指定的效果，保证"所见即所得"。
     LaunchedEffect(presetParams) {
         cameraManager.updatePresetParams(presetParams)
+        if (presetParams != HasselbladParams()) {
+            cameraManager.setParamsLocked(true)
+        }
     }
 
     LaunchedEffect(isCameraReady) {

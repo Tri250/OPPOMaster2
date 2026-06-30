@@ -594,6 +594,24 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+     * 获取当前生效的哈苏参数。
+     *
+     * - 参数未锁定时：_params 已通过 rebuildParamsFromModes() 融合了场景/色彩模式参数，
+     *   直接返回 _params 即可，避免重复叠加。
+     * - 参数锁定时：_params 是用户手动调节的基础值，场景/色彩模式参数在此基础上叠加，
+     *   保证锁定后切换模式仍能影响最终效果。
+     *
+     * 用于跳转到 CameraX 取景器时携带完整生效参数，确保预览/拍摄效果与当前调节一致。
+     */
+    fun getEffectiveParams(): HasselbladParams {
+        return if (_isParamsLocked.value) {
+            applyParamsMapToBase(_params.value, _selectedSceneParams.value + _selectedColorParams.value)
+        } else {
+            _params.value
+        }
+    }
+
+    /**
      * 设置参数锁定状态。
      */
     fun setParamsLocked(locked: Boolean) {

@@ -79,7 +79,7 @@ write_marker \
   "org.jetbrains.kotlin.plugin.compose" \
   "org.jetbrains.kotlin.plugin.compose.gradle.plugin" \
   "org.jetbrains.kotlin" \
-  "kotlin-compose-compiler-plugin-embeddable" \
+  "compose-compiler-gradle-plugin" \
   "$KOTLIN_VERSION"
 
 write_marker \

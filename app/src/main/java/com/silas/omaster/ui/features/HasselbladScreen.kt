@@ -531,7 +531,11 @@ fun HasselbladScreen(
                     },
                     onLaunchCamera = ::launchCamera,
                     onPickFromGallery = ::onPickFromGallery,
-                    onLaunchViewfinder = onLaunchViewfinder,
+                    // P2-4 修复：将当前生效参数与配方名称绑定到取景器启动 lambda，
+                    // 确保 SetupContent 触发时携带完整参数，拍摄效果与当前调节一致
+                    onLaunchViewfinder = {
+                        onLaunchViewfinder(viewModel.getEffectiveParams(), recipeMatchResult?.recipe?.name)
+                    },
                     onRecentShotClick = { uri ->
                         scope.launch {
                             val bitmap = withContext(Dispatchers.IO) {
@@ -545,7 +549,9 @@ fun HasselbladScreen(
                                 }
                             }
                         }
-                    }
+                    },
+                    params = params,
+                    recipeMatchResult = recipeMatchResult
                 )
 
                 HasselbladEyeStage.ANALYZING -> AnalyzingContent(
@@ -865,7 +871,9 @@ private fun SetupContent(
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
     onLaunchViewfinder: () -> Unit,
-    onRecentShotClick: (Uri) -> Unit
+    onRecentShotClick: (Uri) -> Unit,
+    params: HasselbladParams,
+    recipeMatchResult: RecipeMatchResult?
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -896,14 +904,15 @@ private fun SetupContent(
             ViewfinderEntryCard(
                 onLaunchViewfinder = {
                     // P2-4 修复：将当前配方参数与名称传递给出境器，确保拍摄时自动应用配方
-                    onLaunchViewfinder(currentParams, recipeMatchResult?.recipe?.name)
+                    // 参数已在调用处通过 onLaunchViewfinder lambda 捕获，这里直接触发即可
+                    onLaunchViewfinder()
                 }
             )
         }
 
-        // AR 取景器模拟：拍照前预览构图引导线
+        // AR 构图预览：拍照前预览构图引导线
         item {
-            ViewfinderSimulatorCard()
+            ViewfinderPreviewCard()
         }
 
         if (recentShots.isNotEmpty()) {
@@ -1192,12 +1201,12 @@ private fun HeroCard() {
 }
 
 /**
- * AR 取景器模拟卡片
- * 拍照前预览不同场景的 AR 构图引导线，模拟真实取景器叠加效果
+ * AR 构图预览卡片
+ * 拍照前预览不同场景的 AR 构图引导线，实时取景器叠加效果
  * 用户可切换场景模式与引导线类型，提前了解构图方案
  */
 @Composable
-private fun ViewfinderSimulatorCard() {
+private fun ViewfinderPreviewCard() {
     var selectedSceneMode by remember { mutableStateOf(CompositionSceneMode.TRAVEL) }
     var selectedGuideType by remember { mutableStateOf(ARGuideType.THIRDS) }
     // 根据场景模式自动推荐引导线
@@ -1220,7 +1229,7 @@ private fun ViewfinderSimulatorCard() {
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "AR 取景器模拟",
+                    text = "AR 构图预览",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -1280,7 +1289,7 @@ private fun ViewfinderSimulatorCard() {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // AR 引导线叠加预览（模拟取景器）
+            // AR 引导线叠加预览
             ARGuideOverlay(
                 guideType = selectedGuideType,
                 sceneMode = selectedSceneMode

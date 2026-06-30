@@ -752,27 +752,29 @@ class CameraXManager(
         // 同步到子管理器
         specializedModeManager.setActiveMode(mode)
 
-        // 根据模式预配置参数
+        // 根据模式预配置参数（参数锁定时保留用户显式传入的参数，避免模式切换覆盖）
+        if (!isParamsLocked) {
+            when (mode) {
+                CaptureMode.PORTRAIT -> {
+                    currentPresetParams = SceneToHasselbladMapping.getParams("portrait-standard")
+                }
+                CaptureMode.NIGHT -> {
+                    currentPresetParams = SceneToHasselbladMapping.getParams("night-city")
+                }
+                CaptureMode.FOOD, CaptureMode.STREET, CaptureMode.PET -> {
+                    currentPresetParams = specializedModeManager.getRecommendedParams(mode)
+                }
+                else -> {
+                    // AI_AUTO / LIGHT_PAINTING / PRO 使用当前或 AI 推荐参数
+                }
+            }
+        }
+
+        // 模式特有绑定（与参数是否锁定无关）
         when (mode) {
-            CaptureMode.PORTRAIT -> {
-                currentPresetParams = SceneToHasselbladMapping.getParams("portrait-standard")
-            }
-            CaptureMode.NIGHT -> {
-                currentPresetParams = SceneToHasselbladMapping.getParams("night-city")
-                camera?.let { nightModeManager.bindCamera(it) }
-            }
-            CaptureMode.LIGHT_PAINTING -> {
-                camera?.let { lightPaintingManager.bindCamera(it) }
-            }
-            CaptureMode.FOOD, CaptureMode.STREET, CaptureMode.PET -> {
-                currentPresetParams = specializedModeManager.getRecommendedParams(mode)
-            }
-            CaptureMode.PRO -> {
-                // 专业模式保留用户手动参数，由 ProModeManager 单独管理
-            }
-            else -> {
-                // AI_AUTO / LIGHT_PAINTING 使用当前或 AI 推荐参数
-            }
+            CaptureMode.NIGHT -> camera?.let { nightModeManager.bindCamera(it) }
+            CaptureMode.LIGHT_PAINTING -> camera?.let { lightPaintingManager.bindCamera(it) }
+            else -> { /* 无需额外绑定 */ }
         }
 
         // 根据模式动态调整帧处理频率
