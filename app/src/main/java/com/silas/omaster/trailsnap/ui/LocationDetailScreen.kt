@@ -20,14 +20,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,29 +48,61 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
-import com.silas.omaster.trailsnap.model.LocationPin
+import com.silas.omaster.trailsnap.model.MediaType
+import com.silas.omaster.trailsnap.model.TrailPhoto
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 @Composable
-fun LocationsScreen(
+fun LocationDetailScreen(
+    locationName: String,
     onBack: () -> Unit,
-    onNavigateToLocationDetail: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val repository = remember { TrailSnapRepository.getInstance(context) }
-    val locations by repository.locations.collectAsState()
+    val photos = remember(locationName, repository.photos.value) {
+        repository.getPhotosByLocation(locationName)
+    }
+    val isLoading by repository.isLoading.collectAsState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        TrailSnapTopBar(title = "足迹地图", onBack = onBack)
+        TrailSnapTopBar(
+            title = locationName,
+            onBack = onBack,
+            actions = {
+                IconButton(onClick = {
+                    val location = repository.locations.value.find { it.name == locationName }
+                    if (location != null) {
+                        val uri = Uri.parse(
+                            "geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}(${location.name})"
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.util.Log.w("LocationDetailScreen", "无法打开地图应用", e)
+                        }
+                    }
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = "在地图中查看",
+                        tint = HasselbladOrange
+                    )
+                }
+            }
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(180.dp)
                 .padding(horizontal = 16.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -76,30 +110,32 @@ fun LocationsScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
-                    imageVector = Icons.Default.Map,
-                    contentDescription = "地图",
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
                     tint = HasselbladOrange.copy(alpha = 0.6f),
                     modifier = Modifier.size(64.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "已点亮 ${locations.size} 个位置",
+                    text = "${photos.size} 张照片",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "点击位置可在地图应用中查看",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                )
             }
         }
-        if (locations.isEmpty()) {
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 32.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (photos.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -111,23 +147,22 @@ fun LocationsScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "还没有位置信息",
+                        text = "该位置暂无照片",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                     )
                 }
             }
         } else {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(locations.sortedByDescending { it.photoCount }) { location ->
-                    LocationCard(
-                        location = location,
-                        onClick = { onNavigateToLocationDetail(location.name) }
-                    )
+                items(photos) { photo ->
+                    LocationPhotoItem(photo = photo)
                 }
             }
         }
@@ -135,79 +170,47 @@ fun LocationsScreen(
 }
 
 @Composable
-private fun LocationCard(location: LocationPin, onClick: () -> Unit) {
+private fun LocationPhotoItem(photo: TrailPhoto) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val repository = remember { TrailSnapRepository.getInstance(context) }
-    val coverPhoto = remember(location.coverPhotoId) { location.coverPhotoId?.let { repository.getPhotoById(it) } }
-
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
+        targetValue = if (isPressed) 0.96f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "location_card_scale"
+        label = "location_photo_scale"
     )
 
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(112.dp)
             .scale(scale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onClick()
+                    openPhotoViewer(context, photo)
                 }
-            )
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(CircleShape)
-                .background(HasselbladOrange.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            val coverUri = coverPhoto?.thumbnailUri ?: coverPhoto?.uri
-            if (coverUri != null) {
-                AsyncImage(
-                    model = coverUri,
-                    contentDescription = location.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = location.name,
-                    tint = HasselbladOrange,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.size(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = location.name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "${location.photoCount} 张照片",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
-        }
-        Text(
-            text = "${String.format("%.2f", location.latitude)}, ${String.format("%.2f", location.longitude)}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+        AsyncImage(
+            model = photo.thumbnailUri ?: photo.uri,
+            contentDescription = photo.filename,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
+        if (photo.mediaType == MediaType.VIDEO) {
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.Videocam,
+                contentDescription = "视频",
+                tint = HasselbladOrange,
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 }

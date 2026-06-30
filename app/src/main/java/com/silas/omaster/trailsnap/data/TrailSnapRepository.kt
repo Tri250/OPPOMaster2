@@ -93,6 +93,9 @@ class TrailSnapRepository private constructor(context: Context) {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _favorites = MutableStateFlow<List<TrailPhoto>>(emptyList())
+    val favorites: StateFlow<List<TrailPhoto>> = _favorites.asStateFlow()
+
     private val faceDetectionProcessed = mutableSetOf<String>()
 
     private val faceDetector = FaceDetection.getClient(
@@ -635,8 +638,11 @@ class TrailSnapRepository private constructor(context: Context) {
     private fun extractScenicName(lines: List<String>): String? {
         val scenicKeywords = listOf("景区", "门票", "入园")
         return lines.find { line -> scenicKeywords.any { line.contains(it) } }
-            ?.replace(Regex(".*?(景区|门票|入园)"), "")
-            ?.take(12)
+            ?.let { line ->
+                // 提取关键词前面的景区名称（如 "西湖景区" -> "西湖"）
+                val match = Regex("([\\u4e00-\\u9fa5]{2,8})(?:景区|门票|入园)").find(line)
+                match?.groupValues?.get(1) ?: line.replace(Regex(".*?(景区|门票|入园)"), "").take(12)
+            }
     }
 
     private fun extractHotelName(lines: List<String>): String? {
@@ -787,6 +793,9 @@ class TrailSnapRepository private constructor(context: Context) {
 
         _locations.value = locationPins
 
+        // 4. 收藏列表
+        _favorites.value = photos.filter { it.isFavorite }.sortedByDescending { it.photoTime }
+
         // 5. 统计
         _dashboardStats.value = DashboardStats(
             totalPhotos = photos.count { it.mediaType == MediaType.IMAGE },
@@ -795,6 +804,7 @@ class TrailSnapRepository private constructor(context: Context) {
             locationCount = locationPins.size,
             peopleCount = _faces.value.size,
             ticketCount = _tickets.value.size,
+            favoriteCount = photos.count { it.isFavorite },
             earliestPhotoDate = photos.minOfOrNull { it.photoTime.toLocalDate() },
             latestPhotoDate = photos.maxOfOrNull { it.photoTime.toLocalDate() }
         )
@@ -1155,14 +1165,29 @@ class TrailSnapRepository private constructor(context: Context) {
     /**
      * 从文件名解析日期并修复缺失的拍摄时间
      * 支持格式：IMG_20240101_123045.jpg、2024-01-01_12-30-45.jpg 等
+     *
+     * 真实实现：将解析到的时间通过 MediaStore 写回系统图库
      */
     fun fixTimeFromFilename(): Int {
         var fixed = 0
         val updated = _photos.value.map { photo ->
             val parsed = parseTimeFromFilename(photo.filename)
             if (parsed != null && kotlin.math.abs(Duration.between(photo.photoTime, parsed).toDays()) > 1) {
-                fixed++
-                photo.copy(photoTime = parsed)
+                val uri = photo.uri
+                if (uri != null) {
+                    try {
+                        val epochMillis = parsed.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val values = android.content.ContentValues().apply {
+                            put(MediaStore.MediaColumns.DATE_TAKEN, epochMillis)
+                        }
+                        contentResolver.update(uri, values, null, null)
+                        fixed++
+                        photo.copy(photoTime = parsed)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "修复时间失败: ${photo.filename}", e)
+                        photo
+                    }
+                } else photo
             } else photo
         }
         if (fixed > 0) {
@@ -1205,14 +1230,29 @@ class TrailSnapRepository private constructor(context: Context) {
     }
 
     /**
-     * 执行按日期整理：确保按年月分组的相册存在并包含正确照片
-     * 返回已整理的照片数量
+     * 执行按日期整理：通过 MediaStore 更新照片的 BUCKET_DISPLAY_NAME，实现按年月文件夹归档
+     * 返回实际整理（移动）的照片数量
      */
     fun applyOrganizeByDate(plan: Map<String, List<TrailPhoto>>): Int {
         if (plan.isEmpty()) return 0
-        val organizedCount = plan.values.sumOf { it.size }
-        // Albums are rebuilt in rebuildDerivedData which is called when photos change.
-        // The organize action triggers a refresh to ensure albums are up-to-date.
+        var organizedCount = 0
+        plan.forEach { (monthLabel, photos) ->
+            photos.forEach { photo ->
+                val uri = photo.uri ?: return@forEach
+                try {
+                    val values = android.content.ContentValues().apply {
+                        put(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME, monthLabel)
+                    }
+                    val rows = contentResolver.update(uri, values, null, null)
+                    if (rows > 0) organizedCount++
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "按日期整理失败（权限不足）: ${photo.filename}", e)
+                } catch (e: Exception) {
+                    Log.e(TAG, "按日期整理失败: ${photo.filename}", e)
+                }
+            }
+        }
+        // 刷新以确保相册数据与系统图库同步
         repositoryScope.launch { loadLocalMedia() }
         return organizedCount
     }
@@ -1231,6 +1271,69 @@ class TrailSnapRepository private constructor(context: Context) {
             }
         }
         return preview
+    }
+
+    /**
+     * 切换照片收藏状态：通过 MediaStore 写入 IS_FAVORITE，并同步更新内存状态
+     */
+    fun toggleFavorite(id: String): Boolean {
+        val photo = _photos.value.find { it.id == id } ?: return false
+        val newFavorite = !photo.isFavorite
+        val uri = photo.uri ?: return false
+        return try {
+            val values = android.content.ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_FAVORITE, if (newFavorite) 1 else 0)
+            }
+            val rows = contentResolver.update(uri, values, null, null)
+            if (rows > 0) {
+                _photos.value = _photos.value.map {
+                    if (it.id == id) it.copy(isFavorite = newFavorite) else it
+                }
+                rebuildDerivedData(_photos.value)
+            }
+            rows > 0
+        } catch (e: Exception) {
+            Log.e(TAG, "切换收藏失败: ${photo.filename}", e)
+            false
+        }
+    }
+
+    fun getFavoritePhotos(): List<TrailPhoto> = _favorites.value
+
+    /**
+     * 创建自定义相册：将选中的照片通过 MediaStore 添加到新相册（Bucket）
+     */
+    fun createAlbum(name: String, photoIds: List<String>): TrailAlbum? {
+        if (name.isBlank() || photoIds.isEmpty()) return null
+        val selectedPhotos = _photos.value.filter { it.id in photoIds }
+        if (selectedPhotos.isEmpty()) return null
+
+        var successCount = 0
+        selectedPhotos.forEach { photo ->
+            val uri = photo.uri ?: return@forEach
+            try {
+                val values = android.content.ContentValues().apply {
+                    put(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME, name)
+                }
+                val rows = contentResolver.update(uri, values, null, null)
+                if (rows > 0) successCount++
+            } catch (e: Exception) {
+                Log.w(TAG, "创建相册时更新照片失败: ${photo.filename}", e)
+            }
+        }
+
+        return if (successCount > 0) {
+            val album = TrailAlbum(
+                id = "album_user_${name.hashCode()}",
+                name = name,
+                description = "$successCount 张照片",
+                coverPhotoId = selectedPhotos.firstOrNull()?.id,
+                type = AlbumType.USER,
+                photoIds = selectedPhotos.map { it.id }
+            )
+            _albums.value = _albums.value + album
+            album
+        } else null
     }
 
     /**

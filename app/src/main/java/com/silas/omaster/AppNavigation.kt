@@ -74,6 +74,8 @@ import com.silas.omaster.ui.settings.UpdateChannelScreen
 import com.silas.omaster.trailsnap.ui.AlbumDetailScreen
 import com.silas.omaster.trailsnap.ui.AlbumsScreen
 import com.silas.omaster.trailsnap.ui.AnnualReportScreen
+import com.silas.omaster.trailsnap.ui.FavoritesScreen
+import com.silas.omaster.trailsnap.ui.LocationDetailScreen
 import com.silas.omaster.trailsnap.ui.LocationsScreen
 import com.silas.omaster.trailsnap.ui.PeopleScreen
 import com.silas.omaster.trailsnap.ui.PersonDetailScreen
@@ -578,6 +580,7 @@ fun MainApp(navController: NavHostController) {
                 XingYingJiHomeScreen(
                     onNavigateToTimeline = { navController.navigate(Screen.XingYingJiTimeline) },
                     onNavigateToAlbums = { navController.navigate(Screen.XingYingJiAlbums) },
+                    onNavigateToFavorites = { navController.navigate(Screen.XingYingJiFavorites) },
                     onNavigateToLocations = { navController.navigate(Screen.XingYingJiLocations) },
                     onNavigateToPeople = { navController.navigate(Screen.XingYingJiPeople) },
                     onNavigateToTickets = { navController.navigate(Screen.XingYingJiTickets) },
@@ -608,8 +611,25 @@ fun MainApp(navController: NavHostController) {
                 )
             }
 
+            composable<Screen.XingYingJiFavorites> {
+                FavoritesScreen(onBack = { navController.popBackStack() })
+            }
+
             composable<Screen.XingYingJiLocations> {
-                LocationsScreen(onBack = { navController.popBackStack() })
+                LocationsScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToLocationDetail = { locationName ->
+                        navController.navigate(Screen.XingYingJiLocationDetail(locationName))
+                    }
+                )
+            }
+
+            composable<Screen.XingYingJiLocationDetail> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.XingYingJiLocationDetail>()
+                LocationDetailScreen(
+                    locationName = route.locationName,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable<Screen.XingYingJiPeople> {

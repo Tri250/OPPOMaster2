@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.trailsnap.model.MediaType
@@ -76,7 +79,20 @@ fun TimelineScreen(
                     TimelineDateHeader(date = section.date.format(DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE", Locale.CHINESE)))
                 }
                 items(section.photos.chunked(3)) { rowPhotos ->
-                    TimelinePhotoRow(photos = rowPhotos)
+                    TimelinePhotoRow(
+                        photos = rowPhotos,
+                        onToggleFavorite = { photoId ->
+                            val ok = repository.toggleFavorite(photoId)
+                            val photo = repository.getPhotoById(photoId)
+                            if (ok && photo != null) {
+                                Toast.makeText(
+                                    context,
+                                    if (photo.isFavorite) "已取消收藏" else "已收藏",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -103,7 +119,10 @@ private fun TimelineDateHeader(date: String) {
 }
 
 @Composable
-private fun TimelinePhotoRow(photos: List<TrailPhoto>) {
+private fun TimelinePhotoRow(
+    photos: List<TrailPhoto>,
+    onToggleFavorite: (String) -> Unit
+) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     Row(
@@ -149,6 +168,28 @@ private fun TimelinePhotoRow(photos: List<TrailPhoto>) {
                         contentDescription = "视频",
                         tint = HasselbladOrange,
                         modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // 收藏按钮
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleFavorite(photo.id)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (photo.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (photo.isFavorite) "已收藏" else "收藏",
+                        tint = if (photo.isFavorite) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }

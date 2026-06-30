@@ -33,6 +33,7 @@ data class TrailPhoto(
     val metadata: PhotoMetadata? = null,
     val thumbnailUri: Uri? = null,
     val isDeleted: Boolean = false,
+    val isFavorite: Boolean = false,
     val tags: List<String> = emptyList(),
     val faces: List<FaceCluster> = emptyList()
 )
@@ -125,6 +126,7 @@ data class DashboardStats(
     val locationCount: Int,
     val peopleCount: Int,
     val ticketCount: Int,
+    val favoriteCount: Int,
     val earliestPhotoDate: LocalDate?,
     val latestPhotoDate: LocalDate?
 )

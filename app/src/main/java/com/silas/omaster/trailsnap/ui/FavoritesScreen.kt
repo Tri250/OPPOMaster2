@@ -21,12 +21,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,7 +42,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import coil.compose.AsyncImage
@@ -52,102 +51,52 @@ import com.silas.omaster.trailsnap.model.TrailPhoto
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 @Composable
-fun PersonDetailScreen(
-    faceId: String,
+fun FavoritesScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (faceId.isBlank()) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "人物不存在",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
-        }
-        return
-    }
-
     val context = LocalContext.current
     val repository = remember { TrailSnapRepository.getInstance(context) }
-    val faces by repository.faces.collectAsState()
-    val face = remember(faceId, faces) { faces.find { it.id == faceId } }
-    val photos = remember(faceId, repository.photos.value) {
-        repository.getPhotosByFace(faceId)
-    }
+    val favorites by repository.favorites.collectAsState()
+    val isLoading by repository.isLoading.collectAsState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        TrailSnapTopBar(title = face?.name ?: "人物详情", onBack = onBack)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        TrailSnapTopBar(title = "收藏夹", onBack = onBack)
+
+        if (isLoading) {
             Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape)
-                    .background(HasselbladOrange.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                val avatarUri = face?.avatarUri
-                if (avatarUri != null) {
-                    AsyncImage(
-                        model = avatarUri,
-                        contentDescription = face?.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = face?.name,
-                        tint = HasselbladOrange,
-                        modifier = Modifier.size(44.dp)
-                    )
-                }
+                CircularProgressIndicator()
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = face?.name ?: "未命名",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "${photos.size} 张照片",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
-        }
-
-        if (photos.isEmpty()) {
+        } else if (favorites.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        imageVector = Icons.Default.Person,
+                        imageVector = Icons.Default.Favorite,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "暂无照片",
+                        text = "还没有收藏的照片",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "在照片右上角点击心形图标收藏",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
                     )
                 }
             }
@@ -159,17 +108,13 @@ fun PersonDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(photos, key = { it.id }) { photo ->
-                    PersonPhotoItem(
+                items(favorites, key = { it.id }) { photo ->
+                    FavoritePhotoItem(
                         photo = photo,
                         onToggleFavorite = {
                             val ok = repository.toggleFavorite(photo.id)
                             if (ok) {
-                                Toast.makeText(
-                                    context,
-                                    if (photo.isFavorite) "已取消收藏" else "已收藏",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(context, "已取消收藏", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -180,7 +125,10 @@ fun PersonDetailScreen(
 }
 
 @Composable
-private fun PersonPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
+private fun FavoritePhotoItem(
+    photo: TrailPhoto,
+    onToggleFavorite: () -> Unit
+) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -188,7 +136,7 @@ private fun PersonPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.96f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "person_photo_scale"
+        label = "favorite_photo_scale"
     )
 
     Box(
@@ -214,15 +162,23 @@ private fun PersonPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+        if (photo.mediaType == MediaType.VIDEO) {
+            Icon(
+                imageVector = Icons.Default.Videocam,
+                contentDescription = "视频",
+                tint = HasselbladOrange,
+                modifier = Modifier.size(24.dp)
+            )
+        }
 
-        // 收藏按钮
+        // 收藏按钮（在收藏夹中显示实心）
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .size(24.dp)
+                .padding(6.dp)
+                .size(28.dp)
                 .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.6f))
                 .clickable {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onToggleFavorite()
@@ -230,10 +186,10 @@ private fun PersonPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (photo.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (photo.isFavorite) "已收藏" else "收藏",
-                tint = if (photo.isFavorite) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.size(14.dp)
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "已收藏",
+                tint = HasselbladOrange,
+                modifier = Modifier.size(16.dp)
             )
         }
     }
@@ -248,6 +204,6 @@ private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto)
     try {
         context.startActivity(intent)
     } catch (e: Exception) {
-        android.util.Log.w("PersonDetailScreen", "无法打开照片查看器", e)
+        android.util.Log.w("FavoritesScreen", "无法打开照片查看器", e)
     }
 }

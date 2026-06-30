@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Construction
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
@@ -74,6 +75,7 @@ import kotlinx.coroutines.launch
 fun XingYingJiHomeScreen(
     onNavigateToTimeline: () -> Unit,
     onNavigateToAlbums: () -> Unit,
+    onNavigateToFavorites: () -> Unit,
     onNavigateToLocations: () -> Unit,
     onNavigateToPeople: () -> Unit,
     onNavigateToTickets: () -> Unit,
@@ -217,6 +219,16 @@ fun XingYingJiHomeScreen(
                 icon = Icons.Default.PhotoAlbum,
                 onClick = onNavigateToAlbums,
                 badge = stats?.totalAlbums?.toString()
+            )
+        }
+
+        item {
+            QuickEntryCard(
+                title = "收藏夹",
+                subtitle = "你收藏的心动瞬间",
+                icon = Icons.Default.Favorite,
+                onClick = onNavigateToFavorites,
+                badge = stats?.favoriteCount?.toString()
             )
         }
 

@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -40,10 +42,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.trailsnap.model.MediaType
 import com.silas.omaster.trailsnap.model.TrailPhoto
+import com.silas.omaster.ui.theme.HasselbladOrange
 
 @Composable
 fun AlbumDetailScreen(
@@ -121,8 +125,20 @@ fun AlbumDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(photos) { photo ->
-                    AlbumPhotoItem(photo = photo)
+                items(photos, key = { it.id }) { photo ->
+                    AlbumPhotoItem(
+                        photo = photo,
+                        onToggleFavorite = {
+                            val ok = repository.toggleFavorite(photo.id)
+                            if (ok) {
+                                Toast.makeText(
+                                    context,
+                                    if (photo.isFavorite) "已取消收藏" else "已收藏",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -130,7 +146,7 @@ fun AlbumDetailScreen(
 }
 
 @Composable
-private fun AlbumPhotoItem(photo: TrailPhoto) {
+private fun AlbumPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -164,6 +180,28 @@ private fun AlbumPhotoItem(photo: TrailPhoto) {
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+
+        // 收藏按钮
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(28.dp)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.6f))
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleFavorite()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (photo.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = if (photo.isFavorite) "已收藏" else "收藏",
+                tint = if (photo.isFavorite) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 
