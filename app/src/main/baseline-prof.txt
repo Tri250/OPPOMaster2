@@ -1,12 +1,83 @@
-HSPLandroidx/compose/runtime/ComposerImpl;-><init>(Landroidx/compose/runtime/CompositionContext;Landroidx/compose/runtime/MutableState;Lkotlin/jvm/functions/Function0;)V
-HSPLandroidx/compose/runtime/ComposerImpl;->apply$runtime_release()V
-HSPLandroidx/compose/runtime/ComposerImpl;->startRestartGroup(I)V
-HSPLandroidx/compose/runtime/ComposerImpl;->endRestartGroup()Landroidx/compose/runtime/ScopeUpdateScope;
-HSPLcom/silas/omaster/OMasterApplication;->onCreate()V
-HSPLcom/silas/omaster/ui/home/HomeScreenKt;->HomeScreen(Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
-HSPLcom/silas/omaster/ui/home/HomeViewModel;-><init>(Lcom/silas/omaster/data/repository/PresetRepository;)V
-HSPLcom/silas/omaster/data/repository/PresetRepository;->getInstance(Landroid/content/Context;)Lcom/silas/omaster/data/repository/PresetRepository;
-HSPLcom/silas/omaster/data/local/SettingsManager;->getInstance(Landroid/content/Context;)Lcom/silas/omaster/data/local/SettingsManager;
-HSPLcom/silas/omaster/AppNavigationKt;->OMasterNavHost(Landroidx/navigation/NavHostController;Landroidx/compose/runtime/Composer;I)V
-HSPLandroidx/compose/material3/MaterialThemeKt;->MaterialTheme(Landroidx/compose/material3/ColorScheme;Landroidx/compose/material3/Shapes;Landroidx/compose/material3/Typography;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
-HSPLandroidx/lifecycle/viewmodel/compose/ViewModelKt;->viewModel(Lkotlin/reflect/KClass;Landroidx/lifecycle/ViewModelStoreOwner;Ljava/lang/String;Landroidx/lifecycle/ViewModelProvider$Factory;Landroidx/lifecycle/viewmodel/CreationExtras;Landroidx/compose/runtime/Composer;II)Landroidx/lifecycle/ViewModel;
+# OMaster Baseline Profile
+# 基准配置文件，用于改善应用启动和关键用户路径的性能
+#
+# 此文件定义了在安装时应预先编译（AOT）的类和方法，
+# 以减少应用启动时的JIT编译开销。
+#
+# 生成方式：使用 Macrobenchmark 库自动生成
+# 手动维护：可手动添加关键启动路径的类
+
+# === Application & Entry Points ===
+HSPL com/silas/omaster/OMasterApplication
+HSPL com/silas/omaster/MainActivity
+HSPL com/silas/omaster/InitializationProvider
+
+# === Core Application Classes ===
+HSPL com/silas/omaster/AppNavigation
+HSPL com/silas/omaster/Screen
+HSPL com/silas/omaster/ui/home/HomeScreen
+HSPL com/silas/omaster/ui/home/HomeViewModel
+
+# === Theme & UI Core ===
+HSPL com/silas/omaster/ui/theme/ThemeKt
+HSPL com/silas/omaster/ui/theme/ColorKt
+HSPL com/silas/omaster/ui/theme/TypeKt
+HSPL com/silas/omaster/ui/theme/AppThemeKt
+
+# === Data Layer ===
+HSPL com/silas/omaster/data/repository/PresetRepository
+HSPL com/silas/omaster/data/settings/SettingsManager
+HSPL com/silas/omaster/data/lut/LUTManager
+
+# === Utils ===
+HSPL com/silas/omaster/util/CrashHandler
+HSPL com/silas/omaster/util/SecurityCrypto
+HSPL com/silas/omaster/util/FormatUtils
+HSPL com/silas/omaster/util/PerformanceMonitor
+HSPL com/silas/omaster/util/AnalyticsManager
+
+# === Compose Runtime (for faster first composition) ===
+HSPL androidx/compose/runtime/ComposerImpl
+HSPL androidx/compose/runtime/Recomposer
+HSPL androidx/compose/ui/platform/AndroidComposeView
+
+# === Material3 Components ===
+HSPL androidx/compose/material3/MaterialTheme
+HSPL androidx/compose/material3/Scaffold
+HSPL androidx/compose/material3/ButtonKt
+HSPL androidx/compose/material3/TextFieldKt
+HSPL androidx/compose/material3/CardKt
+
+# === Lifecycle ===
+HSPL androidx/lifecycle/viewmodel/compose/ViewModelKt
+HSPL androidx/lifecycle/runtime/compose/LifecycleKt
+
+# === Coroutines ===
+HSPL kotlinx/coroutines/android/AndroidDispatcherKt
+HSPL kotlinx/coroutines/CoroutineScopeKt
+
+# === Coil (Image Loading) ===
+HSPL coil/ImageLoader
+HSPL coil/request/ImageRequest
+HSPL coil/compose/AsyncImageKt
+
+# === Ktor (Network) ===
+HSPL io/ktor/client/HttpClient
+HSPL io/ktor/client/engine/android/AndroidEngine
+
+# === Navigation ===
+HSPL androidx/navigation/compose/NavHostKt
+HSPL androidx/navigation/NavController
+
+# === Key Methods for Startup ===
+Lcom/silas/omaster/OMasterApplication;->onCreate()V
+Lcom/silas/omaster/MainActivity;->onCreate(Landroid/os/Bundle;)V
+Lcom/silas/omaster/ui/home/HomeViewModel;-><init>()V
+
+# === Settings & Preferences ===
+HSPL androidx/datastore/core/DataStore
+HSPL androidx/datastore/preferences/core/PreferencesSerializer
+
+# === JSON & Serialization ===
+HSPL kotlinx/serialization/json/Json
+HSPL kotlinx/serialization/encoding/Decoder

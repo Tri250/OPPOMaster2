@@ -322,3 +322,73 @@
 # 精确 dontwarn（替代 -dontwarn **.**）
 # ========================================
 -dontwarn java.lang.invoke.**
+
+# ========================================
+# 行影集模块 ProGuard 规则
+# ========================================
+# TrailSnap 数据模型（kotlinx.serialization）
+-keep class com.silas.omaster.trailsnap.model.**$$serializer { *; }
+-keepclassmembers class com.silas.omaster.trailsnap.model.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.silas.omaster.trailsnap.model.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+# TrailSnap 枚举
+-keepclassmembers enum com.silas.omaster.trailsnap.model.** { *; }
+
+# ========================================
+# 行影集 ML Kit / MediaStore 相关
+# ========================================
+# ExifInterface 反射
+-keep class androidx.exifinterface.media.ExifInterface { *; }
+-dontwarn androidx.exifinterface.**
+
+# ========================================
+# 液态玻璃组件 / 动画系统
+# ========================================
+# Compose 动画相关
+-keep class androidx.compose.animation.** { *; }
+-dontwarn androidx.compose.animation.**
+
+# ========================================
+# 发布验证：关键类不被混淆
+# ========================================
+# 应用入口类
+-keep class com.silas.omaster.OMasterApplication { *; }
+-keep class com.silas.omaster.MainActivity { *; }
+-keep class com.silas.omaster.InitializationProvider { *; }
+
+# 崩溃处理器（确保堆栈可追溯）
+-keep class com.silas.omaster.util.CrashHandler { *; }
+
+# 安全加密工具
+-keep class com.silas.omaster.util.SecurityCrypto { *; }
+
+# ========================================
+# R8 优化增强配置
+# ========================================
+# 允许访问修改（优化调用）
+-allowaccessmodification
+
+# 合并相同的类（减少体积）
+-mergeinterfacesaggressively
+
+# 优化次数（平衡体积和稳定性）
+-optimizationpasses 5
+
+# 启用类合并优化
+-optimizations class/marking/*
+
+# ========================================
+# 资源压缩 keep 规则
+# ========================================
+# 保持 drawable 资源（动态引用的图片）
+-keepresources drawable/ic_launcher*
+-keepresources mipmap*/ic_launcher*
+
+# 保持 raw 资源（shader 等）
+-keepresources raw/*
+
+# 保持 assets 资源
+-keepassets **
