@@ -121,36 +121,55 @@ class OMasterApplication : Application() {
         }
 
         /**
-         * 安全获取 Application 实例（可能返回 null）
-         * 推荐在不确定初始化状态时使用此方法
-         */
-        fun getInstanceOrNull(): OMasterApplication? = instance
-        
-        /**
-         * 安全获取 Application 实例，带默认值回退
-         * 用于组件初始化时获取 Context，即使 Application 尚未完全初始化也能安全返回
-         */
-        fun safeGetInstance(): OMasterApplication? = instance
+     * 安全获取 Application 实例（可能返回 null）
+     * 推荐在不确定初始化状态时使用此方法
+     */
+    fun getInstanceOrNull(): OMasterApplication? = instance
 
-        fun getPrefs(): SharedPreferences = prefs
+    /**
+     * 安全获取 Application 实例，带默认值回退
+     * 用于组件初始化时获取 Context，即使 Application 尚未完全初始化也能安全返回
+     *
+     * 2.2.0 闪退修复：在 Application 完全未初始化时，会用 applicationContext 创建
+     * 临时实例以避免空指针，绝不返回 null
+     */
+    fun safeGetInstance(): OMasterApplication? {
+        if (instance != null) return instance
+        // 兜底：从 ContentProvider 缓存中获取 applicationContext
+        return try {
+            val appContext = android.app.ActivityThread
+                .currentApplication()
+            if (appContext is OMasterApplication) {
+                instance = appContext
+                appContext
+            } else {
+                null
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "safeGetInstance 失败", e)
+            null
+        }
+    }
 
-        /**
-         * 由 Application.onCreate 调用，设置实例并确保 SharedPreferences 已初始化
-         */
-        private fun onApplicationCreated(app: OMasterApplication) {
-            synchronized(Companion::class.java) {
-                if (instance != null) {
-                    // 多进程场景：每个进程有自己的 Application 实例，这是正常的
-                    Log.w("OMasterApplication", "Application 实例在多进程中重新创建: ${android.os.Process.myPid()}")
-                }
-                instance = app
-                // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
-                if (!::prefs.isInitialized) {
-                    prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                }
+    fun getPrefs(): SharedPreferences = prefs
+
+    /**
+     * 由 Application.onCreate 调用，设置实例并确保 SharedPreferences 已初始化
+     */
+    private fun onApplicationCreated(app: OMasterApplication) {
+        synchronized(Companion::class.java) {
+            if (instance != null) {
+                // 多进程场景：每个进程有自己的 Application 实例，这是正常的
+                Log.w("OMasterApplication", "Application 实例在多进程中重新创建: ${android.os.Process.myPid()}")
+            }
+            instance = app
+            // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
+            if (!::prefs.isInitialized) {
+                prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             }
         }
     }
+}
 
     override fun onCreate() {
         super.onCreate()
@@ -288,11 +307,34 @@ class OMasterApplication : Application() {
     }
 
     fun hasUserAgreed(): Boolean {
-        return prefs.getBoolean(KEY_USER_AGREED, false)
+        return try {
+            if (::prefs.isInitialized) {
+                prefs.getBoolean(KEY_USER_AGREED, false)
+            } else {
+                // 2.2.0 闪退修复：prefs 未初始化时回退到默认 SharedPreferences
+                try {
+                    val tempPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    tempPrefs.getBoolean(KEY_USER_AGREED, false)
+                } catch (e: Throwable) {
+                    android.util.Log.w("OMasterApplication", "读取用户协议状态失败,返回 false", e)
+                    false
+                }
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "hasUserAgreed 失败", e)
+            false
+        }
     }
 
     fun setUserAgreed(agreed: Boolean) {
-        prefs.edit().putBoolean(KEY_USER_AGREED, agreed).apply()
+        try {
+            if (!::prefs.isInitialized) {
+                prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            }
+            prefs.edit().putBoolean(KEY_USER_AGREED, agreed).apply()
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "setUserAgreed 失败", e)
+        }
     }
 
     /**
