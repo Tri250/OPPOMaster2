@@ -619,4 +619,15 @@
     <string name="pro_badge">PRO</string>
     <string name="upgrade_now">立即升级</string>
 
+    <!-- App Shortcuts (Android 7.1+) -->
+    <string name="shortcut_camera">打开相机</string>
+    <string name="shortcut_camera_long">快速打开相机拍照</string>
+    <string name="shortcut_camera_disabled">相机功能不可用</string>
+    <string name="shortcut_presets">预设库</string>
+    <string name="shortcut_presets_long">浏览预设库</string>
+    <string name="shortcut_presets_disabled">预设库不可用</string>
+    <string name="shortcut_optimize">智能优化</string>
+    <string name="shortcut_optimize_long">快速优化照片</string>
+    <string name="shortcut_optimize_disabled">优化功能不可用</string>
+
 </resources>

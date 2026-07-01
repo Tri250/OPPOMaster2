@@ -533,8 +533,27 @@ class GPURenderManager private constructor(private val context: Context) {
                     Log.e(TAG, "Failed to make EGL context current")
                     return@runOnRenderThreadBlocking false
                 }
+
+                // 检查 OpenGL ES 版本兼容性
+                // 某些低端设备（Android Go / 老旧 GPU）可能仅支持 GLES 2.0
+                // 降级为 CPU 渲染，避免运行时 GLES30 调用崩溃
+                val glVersion = GLES30.glGetString(GLES30.GL_VERSION)
+                val glRenderer = GLES30.glGetString(GLES30.GL_RENDERER)
+                Log.d(TAG, "OpenGL ES Version: $glVersion, Renderer: $glRenderer")
+
+                if (glVersion == null || !glVersion.contains("OpenGL ES 3")) {
+                    Log.w(TAG, "OpenGL ES 3.0 not supported (detected: $glVersion), falling back to CPU rendering")
+                    // 清理已创建的 EGL 资源
+                    try {
+                        EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
+                        EGL14.eglDestroySurface(display, surface)
+                        EGL14.eglDestroyContext(display, context)
+                        EGL14.eglTerminate(display)
+                    } catch (_: Exception) {}
+                    return@runOnRenderThreadBlocking false
+                }
                 
-                Log.d(TAG, "EGL initialized successfully")
+                Log.d(TAG, "EGL initialized successfully, OpenGL ES version: $glVersion")
                 return@runOnRenderThreadBlocking true
                 
             } catch (e: Exception) {

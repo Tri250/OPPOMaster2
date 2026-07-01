@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  高对比度主题
+  当用户启用系统高对比度模式时使用，提高可视性
+  Android 14+ 支持 per-app contrast level
+-->
+<resources>
+    <style name="Theme.OMaster.HighContrast" parent="Theme.OMaster">
+        <!-- 高对比度颜色覆盖 -->
+        <item name="colorPrimary">#000000</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#333333</item>
+        <item name="colorOnPrimaryContainer">#FFFFFF</item>
+        <item name="colorSecondary">#000000</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorOnSurface">#000000</item>
+        <item name="colorError">#CC0000</item>
+        <item name="colorOnError">#FFFFFF</item>
+        <!-- 增大边框清晰度 -->
+        <item name="android:outlineAlpha">1.0</item>
+        <!-- 禁用半透明效果 -->
+        <item name="android:windowIsTranslucent">false</item>
+    </style>
+</resources>
