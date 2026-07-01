@@ -58,6 +58,7 @@ import com.silas.omaster.ui.features.CoreFeaturesScreen
 import com.silas.omaster.ui.features.HasselbladEyeViewModel
 import com.silas.omaster.ui.features.HasselbladScreen
 import com.silas.omaster.ui.features.LUTShareScreen
+import com.silas.omaster.video.VideoFilterScreen
 import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.StyleLUTGeneratorScreen
@@ -409,7 +410,16 @@ fun MainApp(navController: NavHostController) {
                     },
                     onNavigateToStyleGenerator = {
                         navController.navigate(Screen.StyleLUTGenerator)
+                    },
+                    onNavigateToVideoFilter = {
+                        navController.navigate(Screen.VideoFilter)
                     }
+                )
+            }
+
+            composable<Screen.VideoFilter> {
+                VideoFilterScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 

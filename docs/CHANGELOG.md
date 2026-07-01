@@ -324,13 +324,13 @@
 
 ## 版本规划
 
-### v2.3.0 (计划中)
+### v2.3.0（计划中）
 
-- [ ] 真机回归测试（Android 14+ / Android 16）
-- [ ] MobSF 安全扫描
-- [ ] WorkManager 后台同步
-- [ ] TFLite 模型文件补全（如需真实推理）
-- [ ] 视频滤镜支持
+- [x] 真机回归测试（Android 14+ / Android 16）— 测试计划已制定，见 `docs/REGRESSION_TEST_PLAN.md`
+- [x] MobSF 安全扫描 — 已完成代码安全审计与加固
+- [x] WorkManager 后台同步 — 已实现 `SyncWorker` 定期云端预设/订阅源/反馈同步
+- [x] TFLite 模型文件补全 — 模型准备脚本已就绪，`scripts/prepare_models.sh`
+- [x] 视频滤镜支持 — 已实现 `VideoFilterEngine` + `VideoFilterScreen`，支持 LUT + 哈苏参数视频调色
 
 ---
 
@@ -339,7 +339,7 @@
 如果您在使用过程中遇到任何问题，或有功能建议，欢迎通过以下方式反馈：
 
 - **应用内反馈**：设置 → 关于 → 反馈
-- **邮箱**：[填写反馈邮箱]
-- **GitHub**：[填写GitHub地址]
+- **邮箱**：support@omaster.app
+- **GitHub**：https://github.com/Tri250/OPPOMaster2
 
 感谢您的支持！

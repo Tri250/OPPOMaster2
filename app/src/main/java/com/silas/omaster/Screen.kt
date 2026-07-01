@@ -132,4 +132,8 @@ sealed class Screen {
     /** 付费墙页面 */
     @Serializable
     data object Paywall : Screen()
+
+    /** 2.3.0 新增：视频滤镜页面 */
+    @Serializable
+    data object VideoFilter : Screen()
 }

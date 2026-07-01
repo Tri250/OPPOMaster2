@@ -370,6 +370,11 @@
 -keep class com.silas.omaster.billing.SubscriptionState { *; }
 -keep class com.silas.omaster.billing.Tier { *; }
 
+# 视频滤镜引擎（v2.3.0）
+-keep class com.silas.omaster.video.VideoFilterEngine { *; }
+-keep class com.silas.omaster.video.VideoFilterEngine$ProcessProgress { *; }
+-keep class com.silas.omaster.video.VideoFilterEngine$ProcessResult { *; }
+
 # ========================================
 # R8 优化增强配置
 # ========================================

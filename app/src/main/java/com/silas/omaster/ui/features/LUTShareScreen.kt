@@ -30,6 +30,7 @@ import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.model.LUTResource
 import com.silas.omaster.data.repository.LUTResourceRepository
+import com.silas.omaster.Screen
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,6 +56,7 @@ fun LUTShareScreen(
     onDownload: (LUTResource) -> Unit = {},
     onApplyLUT: ((LUTResource) -> Unit)? = null,
     onNavigateToStyleGenerator: () -> Unit = {},
+    onNavigateToVideoFilter: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -127,6 +129,13 @@ fun LUTShareScreen(
                 }
             },
             actions = {
+                // 视频滤镜入口（v2.3.0）
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onNavigateToVideoFilter()
+                }) {
+                    Icon(Icons.Default.Movie, "视频滤镜", tint = HasselbladOrange)
+                }
                 // 风格 LUT 生成器入口
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
