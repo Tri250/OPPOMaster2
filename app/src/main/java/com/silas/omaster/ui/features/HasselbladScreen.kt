@@ -187,6 +187,8 @@ fun HasselbladScreen(
     val stage by viewModel.stage.collectAsState()
     val params by viewModel.params.collectAsState()
     val isParamsLocked by viewModel.isParamsLocked.collectAsState()
+    val feedbackUploadStatus by viewModel.feedbackUploadStatus.collectAsState()
+    val feedbackPendingCount by viewModel.feedbackPendingCount.collectAsState()
     val selectedSceneModeId by viewModel.selectedSceneModeId.collectAsState()
     val selectedColorModeId by viewModel.selectedColorModeId.collectAsState()
     val analysisResult by viewModel.analysisResult.collectAsState()
@@ -532,7 +534,7 @@ fun HasselbladScreen(
                     },
                     onLaunchCamera = ::launchCamera,
                     onPickFromGallery = ::onPickFromGallery,
-                    onLaunchViewfinder = onLaunchViewfinder,
+                    onLaunchViewfinder = { onLaunchViewfinder(params, recipeMatchResult?.recipe?.name) },
                     onRecentShotClick = { uri ->
                         scope.launch {
                             val bitmap = withContext(Dispatchers.IO) {
@@ -896,8 +898,7 @@ private fun SetupContent(
         item {
             ViewfinderEntryCard(
                 onLaunchViewfinder = {
-                    // P2-4 修复：将当前配方参数与名称传递给出境器，确保拍摄时自动应用配方
-                    onLaunchViewfinder(currentParams, recipeMatchResult?.recipe?.name)
+                    onLaunchViewfinder()
                 }
             )
         }
@@ -1699,10 +1700,11 @@ private fun RecentShotThumbnail(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.size(72.dp)
     ) {
+        val thumb = thumbnail
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (thumbnail != null) {
+            if (thumb != null) {
                 Image(
-                    bitmap = thumbnail.asImageBitmap(),
+                    bitmap = thumb.asImageBitmap(),
                     contentDescription = "最近拍摄",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

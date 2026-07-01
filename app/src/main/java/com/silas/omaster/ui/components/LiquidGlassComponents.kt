@@ -1,9 +1,10 @@
 package com.silas.omaster.ui.components
 
-import android.graphics.RenderEffect
+import android.graphics.RenderEffect as AndroidRenderEffect
 import android.graphics.Shader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -95,11 +96,11 @@ fun Modifier.liquidGlass(
     .then(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Modifier.graphicsLayer {
-                renderEffect = RenderEffect.createBlurEffect(
+                renderEffect = AndroidRenderEffect.createBlurEffect(
                     blurRadius.toPx(),
                     blurRadius.toPx(),
                     Shader.TileMode.CLAMP
-                )
+                ).asComposeRenderEffect()
             }
         } else {
             Modifier

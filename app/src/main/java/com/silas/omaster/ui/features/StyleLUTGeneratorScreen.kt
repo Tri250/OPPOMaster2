@@ -242,7 +242,8 @@ fun StyleLUTGeneratorScreen(
             }
 
             // ========== 预览与导出 ==========
-            if (generationResult != null) {
+            val generationResultValue = generationResult
+            if (generationResultValue != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("预览与导出", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(
@@ -294,7 +295,7 @@ fun StyleLUTGeneratorScreen(
                 }
 
                 // 评估指标
-                val metrics = generationResult.metrics
+                val metrics = generationResultValue.metrics
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))

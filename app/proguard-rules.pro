@@ -383,12 +383,13 @@
 # ========================================
 # 资源压缩 keep 规则
 # ========================================
-# 保持 drawable 资源（动态引用的图片）
--keepresources drawable/ic_launcher*
--keepresources mipmap*/ic_launcher*
+# 资源保持请通过 res/raw/keep.xml 或 shrinkResources 配置处理，
+# R8 不识别 -keepresources / -keepassets 选项。
 
-# 保持 raw 资源（shader 等）
--keepresources raw/*
-
-# 保持 assets 资源
--keepassets **
+# ========================================
+# 抑制 AutoValue 等注解处理器在运行时的缺失类警告
+# ========================================
+-dontwarn javax.lang.model.**
+-dontwarn autovalue.shaded.**
+-dontwarn com.google.auto.value.**
+-dontwarn com.squareup.javapoet.**

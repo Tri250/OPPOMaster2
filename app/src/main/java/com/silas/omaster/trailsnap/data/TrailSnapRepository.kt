@@ -31,7 +31,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -318,7 +317,7 @@ class TrailSnapRepository private constructor(context: Context) {
                                 address = it.getAddressLine(0)
                             )
                         }
-                        continuation.resume(info)
+                        continuation.resume(info, onCancellation = null)
                     }
                 }
             } else {

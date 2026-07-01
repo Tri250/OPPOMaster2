@@ -8,76 +8,76 @@
 # 手动维护：可手动添加关键启动路径的类
 
 # === Application & Entry Points ===
-HSPL com/silas/omaster/OMasterApplication
-HSPL com/silas/omaster/MainActivity
-HSPL com/silas/omaster/InitializationProvider
+Lcom/silas/omaster/OMasterApplication;
+Lcom/silas/omaster/MainActivity;
+Lcom/silas/omaster/InitializationProvider;
 
 # === Core Application Classes ===
-HSPL com/silas/omaster/AppNavigation
-HSPL com/silas/omaster/Screen
-HSPL com/silas/omaster/ui/home/HomeScreen
-HSPL com/silas/omaster/ui/home/HomeViewModel
+Lcom/silas/omaster/AppNavigation;
+Lcom/silas/omaster/Screen;
+Lcom/silas/omaster/ui/home/HomeScreen;
+Lcom/silas/omaster/ui/home/HomeViewModel;
 
 # === Theme & UI Core ===
-HSPL com/silas/omaster/ui/theme/ThemeKt
-HSPL com/silas/omaster/ui/theme/ColorKt
-HSPL com/silas/omaster/ui/theme/TypeKt
-HSPL com/silas/omaster/ui/theme/AppThemeKt
+Lcom/silas/omaster/ui/theme/ThemeKt;
+Lcom/silas/omaster/ui/theme/ColorKt;
+Lcom/silas/omaster/ui/theme/TypeKt;
+Lcom/silas/omaster/ui/theme/AppThemeKt;
 
 # === Data Layer ===
-HSPL com/silas/omaster/data/repository/PresetRepository
-HSPL com/silas/omaster/data/settings/SettingsManager
-HSPL com/silas/omaster/data/lut/LUTManager
+Lcom/silas/omaster/data/repository/PresetRepository;
+Lcom/silas/omaster/data/settings/SettingsManager;
+Lcom/silas/omaster/data/lut/LUTManager;
 
 # === Utils ===
-HSPL com/silas/omaster/util/CrashHandler
-HSPL com/silas/omaster/util/SecurityCrypto
-HSPL com/silas/omaster/util/FormatUtils
-HSPL com/silas/omaster/util/PerformanceMonitor
-HSPL com/silas/omaster/util/AnalyticsManager
+Lcom/silas/omaster/util/CrashHandler;
+Lcom/silas/omaster/util/SecurityCrypto;
+Lcom/silas/omaster/util/FormatUtils;
+Lcom/silas/omaster/util/PerformanceMonitor;
+Lcom/silas/omaster/util/AnalyticsManager;
 
 # === Compose Runtime (for faster first composition) ===
-HSPL androidx/compose/runtime/ComposerImpl
-HSPL androidx/compose/runtime/Recomposer
-HSPL androidx/compose/ui/platform/AndroidComposeView
+Landroidx/compose/runtime/ComposerImpl;
+Landroidx/compose/runtime/Recomposer;
+Landroidx/compose/ui/platform/AndroidComposeView;
 
 # === Material3 Components ===
-HSPL androidx/compose/material3/MaterialTheme
-HSPL androidx/compose/material3/Scaffold
-HSPL androidx/compose/material3/ButtonKt
-HSPL androidx/compose/material3/TextFieldKt
-HSPL androidx/compose/material3/CardKt
+Landroidx/compose/material3/MaterialTheme;
+Landroidx/compose/material3/Scaffold;
+Landroidx/compose/material3/ButtonKt;
+Landroidx/compose/material3/TextFieldKt;
+Landroidx/compose/material3/CardKt;
 
 # === Lifecycle ===
-HSPL androidx/lifecycle/viewmodel/compose/ViewModelKt
-HSPL androidx/lifecycle/runtime/compose/LifecycleKt
+Landroidx/lifecycle/viewmodel/compose/ViewModelKt;
+Landroidx/lifecycle/runtime/compose/LifecycleKt;
 
 # === Coroutines ===
-HSPL kotlinx/coroutines/android/AndroidDispatcherKt
-HSPL kotlinx/coroutines/CoroutineScopeKt
+Lkotlinx/coroutines/android/AndroidDispatcherKt;
+Lkotlinx/coroutines/CoroutineScopeKt;
 
 # === Coil (Image Loading) ===
-HSPL coil/ImageLoader
-HSPL coil/request/ImageRequest
-HSPL coil/compose/AsyncImageKt
+Lcoil/ImageLoader;
+Lcoil/request/ImageRequest;
+Lcoil/compose/AsyncImageKt;
 
 # === Ktor (Network) ===
-HSPL io/ktor/client/HttpClient
-HSPL io/ktor/client/engine/android/AndroidEngine
+Lio/ktor/client/HttpClient;
+Lio/ktor/client/engine/android/AndroidEngine;
 
 # === Navigation ===
-HSPL androidx/navigation/compose/NavHostKt
-HSPL androidx/navigation/NavController
+Landroidx/navigation/compose/NavHostKt;
+Landroidx/navigation/NavController;
 
 # === Key Methods for Startup ===
-Lcom/silas/omaster/OMasterApplication;->onCreate()V
-Lcom/silas/omaster/MainActivity;->onCreate(Landroid/os/Bundle;)V
-Lcom/silas/omaster/ui/home/HomeViewModel;-><init>()V
+HSPLcom/silas/omaster/OMasterApplication;->onCreate()V
+HSPLcom/silas/omaster/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/silas/omaster/ui/home/HomeViewModel;-><init>()V
 
 # === Settings & Preferences ===
-HSPL androidx/datastore/core/DataStore
-HSPL androidx/datastore/preferences/core/PreferencesSerializer
+Landroidx/datastore/core/DataStore;
+Landroidx/datastore/preferences/core/PreferencesSerializer;
 
 # === JSON & Serialization ===
-HSPL kotlinx/serialization/json/Json
-HSPL kotlinx/serialization/encoding/Decoder
+Lkotlinx/serialization/json/Json;
+Lkotlinx/serialization/encoding/Decoder;

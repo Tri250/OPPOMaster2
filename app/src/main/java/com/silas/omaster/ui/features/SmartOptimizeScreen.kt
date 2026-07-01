@@ -341,7 +341,7 @@ fun SmartOptimizeScreen(
                         params = params,
                         onParamsChanged = { requestPreview(it) },
                         enabled = originalBitmap != null,
-                        viewModel = viewModel
+                        viewModelInstance = viewModel
                     )
                     SmartOptimizeTab.CURVE -> CurvePanel(
                         params = params,
@@ -645,7 +645,7 @@ private fun ColorAdjustPanel(
     params: SmartOptimizeParams,
     onParamsChanged: (SmartOptimizeParams) -> Unit,
     enabled: Boolean,
-    viewModel: SmartOptimizeViewModel
+    viewModelInstance: SmartOptimizeViewModel
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -681,7 +681,7 @@ private fun ColorAdjustPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable(enabled = enabled) { viewModel.setShowColorScience(true) }
+                    .clickable(enabled = enabled) { viewModelInstance.setShowColorScience(true) }
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically

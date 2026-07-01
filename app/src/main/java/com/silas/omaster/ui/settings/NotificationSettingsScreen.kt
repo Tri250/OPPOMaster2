@@ -90,8 +90,7 @@ fun NotificationSettingsScreen(
         }
     }
 
-    @Composable
-    private fun stringRes(@StringRes id: Int): String = stringResource(id)
+    fun stringRes(@StringRes id: Int): String = context.getString(id)
 
     var masterEnabled by remember { mutableStateOf(notificationManagerCompat.areNotificationsEnabled()) }
 
