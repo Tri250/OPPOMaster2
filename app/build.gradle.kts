@@ -132,11 +132,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v2.2.1
+        // 当前版本: v2.2.6
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 2.2.1 → 2*10000 + 2*100 + 1 = 20201
-        versionCode = 20201
-        versionName = "2.2.1"
+        // 2.2.6 → 2*10000 + 2*100 + 6 = 20206
+        versionCode = 20206
+        versionName = "2.2.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -379,14 +379,13 @@ android {
     // 自动上传 ProGuard mapping 文件，关联版本和提交信息
     // DSN 通过 BuildConfig 注入，支持 debug/release 不同 DSN
     sentry {
-        // 自动上传 ProGuard/R8 mapping 文件
+        // 自动上传 ProGuard/R8 mapping 文件（CI 环境无 Sentry auth token，禁用上传）
         includeProguardMapping = true
-        // 自动上传源码包（用于反混淆堆栈跟踪）
-        includeSourceContext = true
+        autoUploadProguardMapping = false
+        // 自动上传源码包（CI 环境无 Sentry auth token，禁用上传）
+        includeSourceContext = false
         // 自动关联 Git 提交信息
         includeDependenciesReport = true
-        // 自动设置发布版本名
-        autoUploadProguardMapping = gradle.startParameter.taskNames.any { it.contains("Release") }
         // 组织/项目标识（slug），用于在 Sentry 后台区分不同环境
         org = "omaster"
         projectName = "omaster-android"
@@ -504,7 +503,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
 
     // Google Play Billing（订阅与内购）
-    implementation(bundles.billing)
+    implementation(libs.bundles.billing)
 
     // Firebase Cloud Messaging
     implementation(platform(libs.firebase.bom))

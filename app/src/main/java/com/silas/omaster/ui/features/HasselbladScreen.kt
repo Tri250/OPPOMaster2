@@ -414,6 +414,9 @@ fun HasselbladScreen(
         }
     }
 
+    // 保存为预设对话框
+    var showSaveAsPresetDialog by remember { mutableStateOf(false) }
+
     fun onPickFromGallery() {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -476,9 +479,6 @@ fun HasselbladScreen(
     // 放弃修改对话框
     var showDiscardDialog by remember { mutableStateOf(false) }
     val hasChanges = params != HasselbladParams()
-
-    // 保存为预设对话框
-    var showSaveAsPresetDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = hasChanges && stage == HasselbladEyeStage.RESULTS) {
         showDiscardDialog = true

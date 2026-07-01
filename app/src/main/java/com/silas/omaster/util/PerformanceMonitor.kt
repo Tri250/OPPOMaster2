@@ -104,13 +104,13 @@ object PerformanceMonitor {
         return try {
             val sourceDir = context.packageManager
                 .getPackageInfo(context.packageName, 0)
-                .applicationInfo?.sourceDir ?: return ApkSizeInfo(0, 0, 0)
+                .applicationInfo?.sourceDir ?: return ApkSizeInfo(0L, 0.0, 0.0)
 
             val apkFile = File(sourceDir)
             val apkSize = apkFile.length()
 
-            // 计算解压后大小
-            val nativeLibDir = File(context.applicationInfo.nativeLibDir)
+            // 计算 native lib 大小
+            val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
             val libSize = if (nativeLibDir.exists()) {
                 nativeLibDir.walkTopDown().sumOf { it.length() }
             } else 0L
@@ -122,7 +122,7 @@ object PerformanceMonitor {
             )
         } catch (e: Exception) {
             Log.w(TAG, "获取 APK 体积失败", e)
-            ApkSizeInfo(0, 0, 0)
+            ApkSizeInfo(0L, 0.0, 0.0)
         }
     }
 
@@ -137,7 +137,7 @@ object PerformanceMonitor {
     private fun getPssKB(context: Context): Long {
         return try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-            val memInfo = arrayOf(Process.myPid())
+            val memInfo = intArrayOf(Process.myPid())
             val memInfoArray = am?.getProcessMemoryInfo(memInfo)
             memInfoArray?.firstOrNull()?.totalPss?.toLong() ?: 0L
         } catch (e: Exception) {

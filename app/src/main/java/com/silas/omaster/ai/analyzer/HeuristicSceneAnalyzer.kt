@@ -1082,7 +1082,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         // 旧方法: primaryScore / totalScore → 容易高估（单信号高分就能获得高置信度）
         // 新方法: 综合考虑 (1) 首选与次选分数差距 (2) 支撑信号多样性 (3) 绝对分数水平
         val primaryScore = topScenes.first().value
-        val secondScore = topScenes.getOrElse(1) { primaryScore * 0.5f }.value
+        val secondScore = topScenes.drop(1).firstOrNull()?.value ?: (primaryScore * 0.5f)
 
         // 信号多样性：首选场景被多少个不同来源支撑
         val sourceCount = sourceMap[topScenes.first().key]?.distinct()?.size ?: 1

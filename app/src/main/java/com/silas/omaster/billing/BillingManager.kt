@@ -15,6 +15,7 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.android.billingclient.api.PurchasesResponseListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -207,27 +208,25 @@ class BillingManager private constructor(private val context: Context) {
         val client = billingClient ?: return
         if (!client.isReady) return
 
-        // 查询订阅
-        scope.launch {
-            try {
-                val subsResult = client.queryPurchasesAsync(
-                    QueryPurchasesParams.newBuilder()
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build()
-                )
-                processPurchases(subsResult.purchasesList)
-
-                // 查询一次性购买
-                val inAppResult = client.queryPurchasesAsync(
-                    QueryPurchasesParams.newBuilder()
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build()
-                )
-                processPurchases(inAppResult.purchasesList)
-            } catch (e: Exception) {
-                Log.e(TAG, "查询购买失败: ${e.message}")
-            }
+        val listener = PurchasesResponseListener { _, purchases ->
+            processPurchases(purchases)
         }
+
+        // 查询订阅
+        client.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build(),
+            listener
+        )
+
+        // 查询一次性购买
+        client.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build(),
+            listener
+        )
     }
 
     /**
@@ -241,28 +240,25 @@ class BillingManager private constructor(private val context: Context) {
             return
         }
 
-        scope.launch {
-            try {
-                val subsResult = client.queryPurchasesAsync(
-                    QueryPurchasesParams.newBuilder()
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build()
-                )
-                processPurchases(subsResult.purchasesList)
-
-                val inAppResult = client.queryPurchasesAsync(
-                    QueryPurchasesParams.newBuilder()
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build()
-                )
-                processPurchases(inAppResult.purchasesList)
-
-                onComplete?.invoke(true)
-            } catch (e: Exception) {
-                Log.e(TAG, "恢复购买失败: ${e.message}")
-                onComplete?.invoke(false)
-            }
+        val listener = PurchasesResponseListener { _, purchases ->
+            processPurchases(purchases)
         }
+
+        client.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build(),
+            listener
+        )
+
+        client.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build(),
+            listener
+        )
+
+        onComplete?.invoke(true)
     }
 
     // ==================== 购买流程 ====================

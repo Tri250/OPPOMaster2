@@ -513,7 +513,7 @@ private fun ProUpgradeOverlay(onUpgrade: (() -> Unit)? = null) {
                 "风格 LUT 生成器为 Pro 专属功能\nAI 色彩迁移，自动生成 .cube LUT 文件",
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.6f),
-                textAlign = TextAlign.TextAlign.Center
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(

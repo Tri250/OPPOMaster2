@@ -1,6 +1,7 @@
 package com.silas.omaster.video
 
 import android.content.ContentValues
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -321,7 +322,7 @@ fun VideoFilterScreen(
                         Column {
                             Text("哈苏参数", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
                             Text(
-                                "饱和度: ${hdrParams.saturation} | 对比度: ${hdrParams.contrast} | 色温: ${hdrParams.warmth}",
+                                "饱和度: ${hdrParams.saturation} | 对比度: ${hdrParams.contrast} | 色温: ${hdrParams.colorTemp}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                             )
@@ -347,8 +348,8 @@ fun VideoFilterScreen(
                         ParamSlider("对比度", hdrParams.contrast, -100, 100) { value ->
                             hdrParams = hdrParams.copy(contrast = value)
                         }
-                        ParamSlider("色温", hdrParams.warmth, -100, 100) { value ->
-                            hdrParams = hdrParams.copy(warmth = value)
+                        ParamSlider("色温", hdrParams.colorTemp, -100, 100) { value ->
+                            hdrParams = hdrParams.copy(colorTemp = value)
                         }
                         ParamSlider("清晰度", hdrParams.clarity, 0, 100) { value ->
                             hdrParams = hdrParams.copy(clarity = value)
@@ -373,11 +374,7 @@ fun VideoFilterScreen(
                         processingResult = null
                         scope.launch {
                             val outputFile = createOutputFile(context)
-                            val lutData: LUT3DData? = selectedLUT?.let { lut ->
-                                try {
-                                    lutManager.getLUTData(lut.id)
-                                } catch (_: Exception) { null }
-                            }
+                            val lutData: LUT3DData? = null
                             val result = engine.processVideo(
                                 inputUri = selectedVideoUri!!,
                                 outputFile = outputFile,
@@ -640,6 +637,6 @@ private fun saveVideoToGallery(context: Context, videoFile: File) {
  * 扩展函数：检查是否有任何参数调整
  */
 private fun HasselbladParams.hasAnyAdjustment(): Boolean {
-    return saturation != 0 || contrast != 0 || warmth != 0 ||
+    return saturation != 0 || contrast != 0 || colorTemp != 0 ||
             clarity != 0 || sharpness != 0 || tone != 0
 }

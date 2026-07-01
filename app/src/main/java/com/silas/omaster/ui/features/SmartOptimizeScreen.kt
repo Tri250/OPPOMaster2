@@ -2,11 +2,13 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -1926,61 +1928,6 @@ private fun ExportTabPanel(
                 Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("导出图像", fontSize = 16.sp)
-            }
-        }
-    }
-}
-
-// ==================== 前后对比切换按钮 ====================
-
-@Composable
-private fun BeforeAfterToggle(
-    showBefore: Boolean,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-    ) {
-        Row(
-            modifier = Modifier.padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        if (!showBefore) MaterialTheme.colorScheme.primary
-                        else Color.Transparent
-                    )
-                    .clickable { onToggle(false) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    "After",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (!showBefore) Color.White else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        if (showBefore) MaterialTheme.colorScheme.primary
-                        else Color.Transparent
-                    )
-                    .clickable { onToggle(true) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    "Before",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (showBefore) Color.White else MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }

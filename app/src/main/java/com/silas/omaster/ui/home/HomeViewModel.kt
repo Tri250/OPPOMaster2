@@ -358,8 +358,8 @@ class HomeViewModel(
 
     fun selectAll() {
         _selectedPresetIds.value = _allPresets.value
-            .filter { !it.isSystem }
-            .map { it.id }
+            .filter { !it.isCustom }
+            .mapNotNull { it.id }
             .toSet()
     }
 
@@ -388,7 +388,6 @@ class HomeViewModel(
                     "id": "${preset.id}",
                     "name": "${preset.name}",
                     "brand": "${preset.brand}",
-                    "category": "${preset.category}",
                     "params": ${preset.params}
                 }
                 """.trimIndent()

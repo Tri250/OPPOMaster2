@@ -106,7 +106,7 @@ object HasselbladColorEngine {
         working = applyColorMatrix(working, buildColorMatrix(params))
 
         // 2. 高光 / 阴影 / 鲜艳度（逐像素单通道）
-        applyHighlightsShadowsAndVibrance(working, params.highlights, params.shadows, params.vibrance)
+        applyHighlightsShadowsAndVibrance(working, params.highlights, params.shadows, params.vibrance.toFloat())
 
         // 3. 清晰度（中等半径 Unsharp Mask）
         if (params.clarity > 0.005f) {
@@ -131,8 +131,8 @@ object HasselbladColorEngine {
         }
 
         // 7. 胶片颗粒
-        if (params.grain > 0.005f) {
-            applyGrain(working, params.grain)
+        if (params.grain > 0) {
+            applyGrain(working, params.grain.toFloat())
         }
 
         // 8. 水印

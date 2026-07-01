@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * 网络韧性管理器
@@ -131,7 +130,7 @@ object NetworkResilienceManager {
      * 观察网络状态变化（Flow，自动去重）
      */
     fun observeNetworkState(): Flow<NetworkState> {
-        return _networkState.asStateFlow().distinctUntilChanged()
+        return _networkState.asStateFlow()
     }
 
     /**

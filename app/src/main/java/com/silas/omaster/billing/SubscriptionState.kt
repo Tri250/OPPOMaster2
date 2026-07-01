@@ -52,6 +52,11 @@ data class SubscriptionState(
     /** 有效的付费状态（付费且未过期） */
     val isActivePro: Boolean get() = isPro && !isExpired
 
+    /** 序列化为 JSON 用于本地持久化 */
+    fun toJson(): String {
+        return kotlinx.serialization.json.Json.encodeToString(serializer(), this)
+    }
+
     companion object {
         /** 默认免费状态 */
         val FREE = SubscriptionState(tier = Tier.FREE)
@@ -63,11 +68,6 @@ data class SubscriptionState(
             } catch (_: Exception) {
                 FREE
             }
-        }
-
-        /** 序列化为 JSON 用于本地持久化 */
-        fun SubscriptionState.toJson(): String {
-            return kotlinx.serialization.json.Json.encodeToString(serializer(), this)
         }
     }
 }

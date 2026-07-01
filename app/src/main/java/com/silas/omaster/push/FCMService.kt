@@ -101,7 +101,7 @@ class FCMService : FirebaseMessagingService() {
 
         val intent = Intent(this, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = Uri.parse("omaster://preset/$presetId")
+            setData(Uri.parse("omaster://preset/$presetId"))
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 

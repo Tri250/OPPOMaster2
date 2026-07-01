@@ -19,6 +19,7 @@ import com.silas.omaster.background.SyncWorker
 import com.silas.omaster.util.InAppUpdateManager
 import io.sentry.Sentry
 import io.sentry.SentryLevel
+import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
@@ -218,7 +219,7 @@ class OMasterApplication : Application() {
                     // 设置发布版本
                     options.release = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
                     // 在崩溃前添加面包屑（CrashHandler 的异常信息）
-                    options.beforeSend = { event, _ ->
+                    options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
                         // 标记崩溃是否已被 CrashHandler 处理
                         event.setTag("crash_handler_installed", CrashHandler.getInstance().isInstalled().toString())
                         event

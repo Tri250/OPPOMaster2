@@ -1139,8 +1139,6 @@ class PresetRepository private constructor(context: Context) {
             id = newId,
             name = "${original.name} (副本)",
             isSystem = false,
-            isCustom = true,
-            version = 1,
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis()
         )

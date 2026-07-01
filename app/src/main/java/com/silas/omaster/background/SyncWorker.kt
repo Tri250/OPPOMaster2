@@ -75,7 +75,7 @@ class SyncWorker(
          *
          * @return 可用于观察任务状态的 LiveData
          */
-        fun syncNow(context: Context): androidx.lifecycle.LiveData<WorkInfo> {
+        fun syncNow(context: Context): androidx.lifecycle.LiveData<WorkInfo?> {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -203,7 +203,7 @@ class SyncWorker(
                 as? android.net.ConnectivityManager
             val isConnected = cm?.activeNetworkInfo?.isConnected == true
             if (isConnected) {
-                com.silas.omaster.feedback.FeedbackManager.startUploadWorker(applicationContext)
+                com.silas.omaster.feedback.FeedbackManager(applicationContext).retryAll()
             }
         } catch (e: Exception) {
             Log.w(TAG, "反馈上传失败: ${e.message}")

@@ -115,7 +115,9 @@ data class HasselbladParams(
     // 扩展参数（用于高级调节）
     val highlights: Int = 0,     // 高光 -30 ~ +30
     val shadows: Int = 0,        // 阴影 -30 ~ +30
-    val clarity: Int = 0         // 清晰度 0 ~ +30
+    val clarity: Int = 0,        // 清晰度 0 ~ +30
+    val vibrance: Int = 0,       // 鲜艳度 0 ~ +30
+    val grain: Int = 0           // 颗粒感 0 ~ +30
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         tone = parcel.readInt(),
@@ -128,7 +130,9 @@ data class HasselbladParams(
         softLight = try { SoftLightMode.valueOf(parcel.readString() ?: SoftLightMode.NONE.name) } catch (_: IllegalArgumentException) { SoftLightMode.NONE },
         highlights = parcel.readInt(),
         shadows = parcel.readInt(),
-        clarity = parcel.readInt()
+        clarity = parcel.readInt(),
+        vibrance = parcel.readInt(),
+        grain = parcel.readInt()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -143,6 +147,8 @@ data class HasselbladParams(
         parcel.writeInt(highlights)
         parcel.writeInt(shadows)
         parcel.writeInt(clarity)
+        parcel.writeInt(vibrance)
+        parcel.writeInt(grain)
     }
 
     override fun describeContents(): Int = 0

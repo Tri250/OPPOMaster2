@@ -72,6 +72,7 @@ workmanager = "2.10.0"
 
 # ===== Sentry (崩溃上报) =====
 sentry-android = "7.14.0"
+sentry-plugin = "4.14.1"
 
 # ===== LeakCanary (内存泄漏检测) =====
 leakcanary = "2.14"
@@ -185,4 +186,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
-sentry = { id = "io.sentry.android.gradle", version.ref = "sentry-android" }
+sentry = { id = "io.sentry.android.gradle", version.ref = "sentry-plugin" }

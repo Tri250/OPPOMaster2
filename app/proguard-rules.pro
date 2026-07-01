@@ -401,12 +401,34 @@
 # ========================================
 # 资源压缩 keep 规则
 # ========================================
-# 保持 drawable 资源（动态引用的图片）
--keepresources drawable/ic_launcher*
--keepresources mipmap*/ic_launcher*
+# 以下 -keepresources / -keepassets 为 ProGuard 选项，R8 不支持，故移除。
+# 若需保留资源，请在 build.gradle 的 res/raw / resValues 等配置中处理。
 
-# 保持 raw 资源（shader 等）
--keepresources raw/*
-
-# 保持 assets 资源
--keepassets **
+# ========================================
+# AGP 生成的缺失类兜底规则
+# ========================================
+# 这些 javax.lang.model 类仅在注解处理器中使用，不会到达运行时。
+-dontwarn javax.lang.model.element.AnnotationMirror
+-dontwarn javax.lang.model.element.AnnotationValue
+-dontwarn javax.lang.model.element.AnnotationValueVisitor
+-dontwarn javax.lang.model.element.ElementVisitor
+-dontwarn javax.lang.model.element.ExecutableElement
+-dontwarn javax.lang.model.element.Name
+-dontwarn javax.lang.model.element.PackageElement
+-dontwarn javax.lang.model.element.TypeElement
+-dontwarn javax.lang.model.element.TypeParameterElement
+-dontwarn javax.lang.model.element.VariableElement
+-dontwarn javax.lang.model.type.ArrayType
+-dontwarn javax.lang.model.type.DeclaredType
+-dontwarn javax.lang.model.type.ErrorType
+-dontwarn javax.lang.model.type.ExecutableType
+-dontwarn javax.lang.model.type.PrimitiveType
+-dontwarn javax.lang.model.type.TypeKind
+-dontwarn javax.lang.model.type.TypeVariable
+-dontwarn javax.lang.model.type.WildcardType
+-dontwarn javax.lang.model.util.AbstractElementVisitor8
+-dontwarn javax.lang.model.util.ElementFilter
+-dontwarn javax.lang.model.util.Elements
+-dontwarn javax.lang.model.util.SimpleAnnotationValueVisitor8
+-dontwarn javax.lang.model.util.SimpleElementVisitor8
+-dontwarn javax.lang.model.util.Types

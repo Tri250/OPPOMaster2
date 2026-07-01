@@ -24,9 +24,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -36,14 +37,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -51,6 +57,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -1061,6 +1068,9 @@ private fun PresetGrid(
                         onNavigateToDetail = onNavigateToDetail,
                         onToggleFavorite = onToggleFavorite,
                         onDeletePreset = onDeletePreset,
+                        isMultiSelectMode = isMultiSelectMode,
+                        selectedPresetIds = selectedPresetIds,
+                        onToggleSelection = onToggleSelection,
                         modifier = Modifier.animateItem(
                             fadeInSpec = ListItemFadeInSpec,
                             placementSpec = ListItemPlacementSpec
@@ -1094,6 +1104,9 @@ private fun PresetCardItem(
     onNavigateToDetail: (MasterPreset) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onDeletePreset: (String) -> Unit,
+    isMultiSelectMode: Boolean = false,
+    selectedPresetIds: Set<String> = emptySet(),
+    onToggleSelection: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // 使用安全的 key，确保每个预设有独立的动画状态

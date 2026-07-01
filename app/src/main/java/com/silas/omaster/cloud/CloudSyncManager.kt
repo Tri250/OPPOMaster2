@@ -547,7 +547,7 @@ class CloudSyncManager private constructor(private val context: Context) {
                     com.silas.omaster.data.local.DarkMode.DARK
                 }
             }
-            settings["vibration"]?.toBooleanOrNull()?.let { settingsManager.isVibrationEnabled = it }
+            settings["vibration"]?.toBoolean()?.let { settingsManager.isVibrationEnabled = it }
             settings["floatingWindowOpacity"]?.toIntOrNull()?.let { settingsManager.floatingWindowOpacity = it }
             settings["defaultStartTab"]?.toIntOrNull()?.let { settingsManager.defaultStartTab = it }
             Log.i(TAG, "已应用远端设置")

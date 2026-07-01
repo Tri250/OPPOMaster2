@@ -80,10 +80,10 @@ class InAppUpdateManager private constructor(context: Context) {
     private var updateType = AppUpdateType.FLEXIBLE
     private var availableVersionCode = 0
 
-    private val installStateListener = InstallStateUpdatedListener { state ->
+    private val installStateListener: InstallStateUpdatedListener = InstallStateUpdatedListener { state ->
         when (state.installStatus()) {
             InstallStatus.DOWNLOADING -> {
-                val progress = (state.bytesDownloaded.toFloat() / state.totalBytesToDownload.toFloat() * 100).toInt()
+                val progress = (state.bytesDownloaded().toFloat() / state.totalBytesToDownload().toFloat() * 100).toInt()
                 Log.d(TAG, "更新下载中: $progress%")
             }
             InstallStatus.DOWNLOADED -> {
@@ -95,15 +95,15 @@ class InAppUpdateManager private constructor(context: Context) {
             }
             InstallStatus.INSTALLED -> {
                 Log.i(TAG, "更新已安装")
-                appUpdateManager.unregisterListener(this)
+                appUpdateManager.unregisterListener(installStateListener)
             }
             InstallStatus.FAILED -> {
                 Log.e(TAG, "更新下载失败: errorCode=${state.installErrorCode()}")
-                appUpdateManager.unregisterListener(this)
+                appUpdateManager.unregisterListener(installStateListener)
             }
             InstallStatus.CANCELED -> {
                 Log.i(TAG, "更新已取消")
-                appUpdateManager.unregisterListener(this)
+                appUpdateManager.unregisterListener(installStateListener)
             }
             else -> { /* PENDING, REQUIRES_UI_CONFIRMATION 等 */ }
         }

@@ -12,6 +12,8 @@ import com.silas.omaster.model.HasselbladParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,10 +118,10 @@ class BatchProcessingManager(
 
             // F2-17: 使用并行调度器并发处理多张图片
             // 使用 coroutineScope 确保所有子协程完成后再继续
-            kotlinx.coroutines.coroutineScope {
+            coroutineScope {
                 imageUris.forEachIndexed { index, uri ->
                     // 在并行调度器上启动独立的处理协程
-                    kotlinx.coroutines.launch(parallelDispatcher) {
+                    launch(parallelDispatcher) {
                         // 检查取消
                         if (!isActive || isCancelled) {
                             results[index] = BatchResult(uri, null, "已取消")

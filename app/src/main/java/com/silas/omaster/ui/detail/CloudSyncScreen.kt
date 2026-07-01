@@ -648,7 +648,7 @@ private fun OutlinedTestButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(
             containerColor = when {
                 testResult == true -> Color.Green.copy(alpha = 0.15f)
