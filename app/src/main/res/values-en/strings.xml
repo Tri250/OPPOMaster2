@@ -141,7 +141,6 @@
     <string name="empty_icon_add_desc">Add icon</string>
     <string name="empty_icon_default_desc">Empty state icon</string>
     <string name="cache_no_data_to_clear">No cache to clear</string>
-    <string name="cache_cleared">Cache cleared</string>
 
     <!-- Notification Settings -->
     <string name="notification_settings_title">Notification Settings</string>
@@ -452,7 +451,6 @@
     <string name="permission_step_3">Tap ⋮ menu in top right</string>
     <string name="permission_step_4">Select "Remove all authorization restrictions"</string>
     <string name="permission_tip">Tip: After removing restrictions, ensure only "Floating Window" permission is granted</string>
-    <string name="go_to_settings">Go to Settings</string>
     <string name="later">Later</string>
 
     <!-- Floating Window Service -->

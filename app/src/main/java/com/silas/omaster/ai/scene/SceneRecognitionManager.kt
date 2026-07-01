@@ -165,6 +165,14 @@ class SceneRecognitionManager private constructor(context: Context) {
         val recommendedFilms = sceneMapping.getRecommendedFilms(fusedProfile.id)
         val masterTips = sceneMapping.getMasterTips(fusedProfile.id)
 
+        val brightnessNumeric = when (heuristicResult.brightnessLevel) {
+            HeuristicSceneAnalyzer.BrightnessLevel.VERY_DARK -> 25
+            HeuristicSceneAnalyzer.BrightnessLevel.DARK -> 75
+            HeuristicSceneAnalyzer.BrightnessLevel.NORMAL -> 125
+            HeuristicSceneAnalyzer.BrightnessLevel.BRIGHT -> 175
+            HeuristicSceneAnalyzer.BrightnessLevel.VERY_BRIGHT -> 225
+        }
+
         RealtimeSceneResult(
             sceneProfile = fusedProfile.copy(
                 confidence = fusedConfidence,
@@ -178,7 +186,9 @@ class SceneRecognitionManager private constructor(context: Context) {
             recommendedFilm = recommendedFilms.firstOrNull()?.name,
             source = if (modelPrediction != null) "model+heuristic" else "heuristic",
             heuristicConfidence = heuristicResult.confidence,
-            modelConfidence = modelPrediction?.confidence ?: 0f
+            modelConfidence = modelPrediction?.confidence ?: 0f,
+            brightnessLevel = brightnessNumeric,
+            confidenceMap = mapOf("face" to if (heuristicResult.faceCount > 0) 1f else 0f)
         )
     }
 
@@ -330,5 +340,7 @@ data class RealtimeSceneResult(
     val recommendedFilm: String?,
     val source: String,
     val heuristicConfidence: Float,
-    val modelConfidence: Float
+    val modelConfidence: Float,
+    val brightnessLevel: Int = 128,
+    val confidenceMap: Map<String, Float> = emptyMap()
 )

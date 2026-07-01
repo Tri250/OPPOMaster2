@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object PerformanceMonitor {
 
-    private const val TAG = "PerfMonitor"
+    internal const val TAG = "PerfMonitor"
     private const val MAX_RECORDS = 100
 
     // 启动时间记录

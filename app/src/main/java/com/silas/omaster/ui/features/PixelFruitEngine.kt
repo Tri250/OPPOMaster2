@@ -3,6 +3,7 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.graphics.Color
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.min
@@ -414,8 +415,8 @@ class PixelFruitEngine {
         }
     }
 
-    private inline fun checkActive(block: () -> Unit) {
-        if (!kotlinx.coroutines.coroutineContext.isActive) return
+    private suspend inline fun checkActive(block: () -> Unit) {
+        ensureActive()
         block()
     }
 }

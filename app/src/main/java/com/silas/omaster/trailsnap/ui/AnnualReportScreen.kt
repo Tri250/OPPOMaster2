@@ -1,6 +1,5 @@
 package com.silas.omaster.trailsnap.ui
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,7 +54,6 @@ import coil.compose.AsyncImage
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.trailsnap.model.AnnualReport
 import com.silas.omaster.trailsnap.model.CityStat
-import com.silas.omaster.trailsnap.model.MediaType
 import com.silas.omaster.trailsnap.model.TrailPhoto
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
@@ -376,7 +375,7 @@ private fun HighlightGrid(report: AnnualReport?, repository: TrailSnapRepository
 }
 
 @Composable
-private fun HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
+private fun RowScope.HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -411,15 +410,4 @@ private fun HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
     }
 }
 
-private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
-    val uri = photo.uri ?: return
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, if (photo.mediaType == MediaType.VIDEO) "video/*" else "image/*")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    try {
-        context.startActivity(intent)
-    } catch (_: Exception) {
-        Toast.makeText(context, "无法打开照片", Toast.LENGTH_SHORT).show()
-    }
-}
+

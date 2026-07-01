@@ -18,6 +18,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1131,7 +1132,7 @@ class PresetRepository private constructor(context: Context) {
      * 保留入口以便测试或显式生命周期管理
      */
     fun close() {
-        runCatching { repositoryScope.cancel() }
+        runCatching { repositoryScope.coroutineContext.cancel() }
             .onFailure { Log.w(TAG, "取消 repositoryScope 时发生异常", it) }
         runCatching { httpClient.close() }
             .onFailure { Log.w(TAG, "关闭 HttpClient 时发生异常", it) }

@@ -20,8 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.ConfirmationNumber
-import androidx.compose.material.icons.filled.DirectionsTrain
 import androidx.compose.material.icons.filled.Hotel
+import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Landscape
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Schedule
@@ -301,7 +301,7 @@ private fun TicketInfoChip(
 }
 
 private fun ticketTypeIcon(type: TicketType): ImageVector = when (type) {
-    TicketType.TRAIN -> Icons.Default.DirectionsTrain
+    TicketType.TRAIN -> Icons.Default.Train
     TicketType.FLIGHT -> Icons.Default.AirplanemodeActive
     TicketType.SCENIC -> Icons.Default.Landscape
     TicketType.CONCERT -> Icons.Default.Movie

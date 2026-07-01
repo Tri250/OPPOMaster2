@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.StarRate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -4255,7 +4256,7 @@ private fun FeedbackCard(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Star,
+                                imageVector = Icons.Default.StarRate,
                                 contentDescription = "$star 星",
                                 tint = if (star <= rating) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f)
                             )
