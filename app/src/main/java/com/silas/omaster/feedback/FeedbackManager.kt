@@ -86,29 +86,34 @@ class FeedbackManager(context: Context) {
         params: HasselbladParams? = null
     ) {
         managerScope.launch {
-            enforcePendingLimit()
+            try {
+                enforcePendingLimit()
 
-            val id = UUID.randomUUID().toString()
-            val screenshotPath = screenshot?.let { saveScreenshot(it, id) }
+                val id = UUID.randomUUID().toString()
+                val screenshotPath = screenshot?.let { saveScreenshot(it, id) }
 
-            val entry = FeedbackEntry(
-                id = id,
-                rating = rating,
-                tags = tags,
-                comment = comment,
-                screenshotPath = screenshotPath,
-                sceneId = sceneId,
-                recipeId = recipeId,
-                params = params,
-                deviceInfo = buildDeviceInfo()
-            )
+                val entry = FeedbackEntry(
+                    id = id,
+                    rating = rating,
+                    tags = tags,
+                    comment = comment,
+                    screenshotPath = screenshotPath,
+                    sceneId = sceneId,
+                    recipeId = recipeId,
+                    params = params,
+                    deviceInfo = buildDeviceInfo()
+                )
 
-            val file = File(pendingDir, "$id.json")
-            file.writeText(gson.toJson(entry))
-            Log.i(TAG, "Feedback saved to pending: $id")
+                val file = File(pendingDir, "$id.json")
+                file.writeText(gson.toJson(entry))
+                Log.i(TAG, "Feedback saved to pending: $id")
 
-            refreshPendingCount()
-            attemptUpload(entry)
+                refreshPendingCount()
+                attemptUpload(entry)
+            } catch (e: Exception) {
+                Log.e(TAG, "submitFeedback failed", e)
+                _uploadStatus.value = UploadStatus.Failed("submit")
+            }
         }
     }
 
@@ -169,6 +174,9 @@ class FeedbackManager(context: Context) {
                 }
             }
             refreshPendingCount()
+        } catch (e: Exception) {
+            Log.e(TAG, "attemptUpload unexpected exception for ${entry.id}", e)
+            _uploadStatus.value = UploadStatus.Failed(entry.id)
         } finally {
             uploadingIds.remove(entry.id)
         }
@@ -181,13 +189,18 @@ class FeedbackManager(context: Context) {
     private fun startUploadWorker() {
         managerScope.launch {
             while (true) {
-                delay(RETRY_DELAY_MS)
-                if (!isNetworkAvailable()) {
-                    Log.d(TAG, "Network unavailable, skipping upload check")
-                    continue
+                try {
+                    delay(RETRY_DELAY_MS)
+                    if (!isNetworkAvailable()) {
+                        Log.d(TAG, "Network unavailable, skipping upload check")
+                        continue
+                    }
+                    val files = pendingDir.listFiles { _, name -> name.endsWith(".json") } ?: continue
+                    files.mapNotNull { readEntry(it) }.forEach { attemptUpload(it) }
+                } catch (e: Exception) {
+                    // 工作循环异常不应导致上传器退出
+                    Log.e(TAG, "Upload worker loop encountered exception", e)
                 }
-                val files = pendingDir.listFiles { _, name -> name.endsWith(".json") } ?: continue
-                files.mapNotNull { readEntry(it) }.forEach { attemptUpload(it) }
             }
         }
     }
@@ -224,14 +237,22 @@ class FeedbackManager(context: Context) {
         _pendingCount.value = pendingDir.listFiles { _, name -> name.endsWith(".json") }?.size ?: 0
     }
 
-    private fun saveScreenshot(bitmap: Bitmap, id: String): String {
-        val scaled = scaleBitmapIfNeeded(bitmap)
-        val file = File(screenshotDir, "feedback_$id.jpg")
-        FileOutputStream(file).use { out ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, 85, out)
+    private fun saveScreenshot(bitmap: Bitmap, id: String): String? {
+        return try {
+            val scaled = scaleBitmapIfNeeded(bitmap)
+            val file = File(screenshotDir, "feedback_$id.jpg")
+            FileOutputStream(file).use { out ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            }
+            if (scaled !== bitmap) scaled.recycle()
+            file.absolutePath
+        } catch (e: Exception) {
+            Log.e(TAG, "saveScreenshot failed for $id", e)
+            null
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "saveScreenshot OOM for $id", e)
+            null
         }
-        if (scaled !== bitmap) scaled.recycle()
-        return file.absolutePath
     }
 
     /**
@@ -240,10 +261,20 @@ class FeedbackManager(context: Context) {
     private fun scaleBitmapIfNeeded(bitmap: Bitmap): Bitmap {
         val maxDim = MAX_SCREENSHOT_DIMENSION
         if (bitmap.width <= maxDim && bitmap.height <= maxDim) return bitmap
-        val ratio = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
-        val newWidth = (bitmap.width * ratio).toInt()
-        val newHeight = (bitmap.height * ratio).toInt()
-        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+        if (bitmap.width <= 0 || bitmap.height <= 0) return bitmap
+
+        return try {
+            val ratio = minOf(maxDim.toFloat() / bitmap.width, maxDim.toFloat() / bitmap.height)
+            val newWidth = (bitmap.width * ratio).toInt().coerceAtLeast(1)
+            val newHeight = (bitmap.height * ratio).toInt().coerceAtLeast(1)
+            Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+        } catch (e: OutOfMemoryError) {
+            Log.w(TAG, "scaleBitmapIfNeeded OOM, returning original bitmap", e)
+            bitmap
+        } catch (e: Exception) {
+            Log.w(TAG, "scaleBitmapIfNeeded failed, returning original bitmap", e)
+            bitmap
+        }
     }
 
     private fun buildDeviceInfo(): DeviceInfo {

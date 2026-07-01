@@ -25,9 +25,9 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     private var appContext: Context? = null
     private var installed: Boolean = false
 
-    fun install(context: Context? = null) {
+    fun install(context: Context) {
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-        appContext = context?.applicationContext
+        appContext = context.applicationContext
         Thread.setDefaultUncaughtExceptionHandler(this)
         installed = true
         Log.i(TAG, "CrashHandler 已安装")

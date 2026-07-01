@@ -100,13 +100,19 @@ class StyleLUTGeneratorViewModel : ViewModel() {
                     loadBitmapFromUri(context, uri, 2048)
                 }
                 _sourceBitmap.value = bitmap
-                // 自动检测色彩空间
+                // 自动检测色彩空间（缩放与检测均在后台线程执行）
                 if (_colorSpace.value == StyleLUTGenerator.ColorSpace.AUTO && bitmap != null) {
-                    val scaled = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
                     try {
-                        _detectedColorSpace.value = StyleLUTGenerator.detectColorSpace(scaled)
-                    } finally {
-                        scaled.recycle()
+                        _detectedColorSpace.value = withContext(Dispatchers.Default) {
+                            val scaled = Bitmap.createScaledBitmap(bitmap, 256, 256, true)
+                            try {
+                                StyleLUTGenerator.detectColorSpace(scaled)
+                            } finally {
+                                scaled.recycle()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to detect color space", e)
                     }
                 }
             } catch (e: Exception) {
@@ -234,8 +240,11 @@ class StyleLUTGeneratorViewModel : ViewModel() {
                         }
                     } else {
                         val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                            ?: throw IllegalStateException("公共 Download 目录不可用")
                         val lutDir = File(downloadDir, "OMaster/LUTs")
-                        if (!lutDir.exists()) lutDir.mkdirs()
+                        if (!lutDir.exists() && !lutDir.mkdirs()) {
+                            throw IllegalStateException("无法创建 LUT 导出目录")
+                        }
                         val file = File(lutDir, fileName)
                         FileOutputStream(file).use { out ->
                             out.write(cubeContent.toByteArray())
@@ -243,8 +252,12 @@ class StyleLUTGeneratorViewModel : ViewModel() {
                     }
 
                     // 同时保存到应用私有目录（用于内部快速访问）
-                    val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
-                    if (!privateDir.exists()) privateDir.mkdirs()
+                    val privateBaseDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                        ?: context.filesDir
+                    val privateDir = File(privateBaseDir, "OMaster/LUTs")
+                    if (!privateDir.exists() && !privateDir.mkdirs()) {
+                        Log.e(TAG, "Failed to create private LUT export directory")
+                    }
                     val privateFile = File(privateDir, fileName)
                     FileOutputStream(privateFile).use { out ->
                         out.write(cubeContent.toByteArray())

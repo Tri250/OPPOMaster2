@@ -3,6 +3,7 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.GLUtils
+import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -110,20 +111,28 @@ class PixelFruitShader {
         texCoordBuffer.put(FULL_RECTANGLE_TEX_COORDS).position(0)
     }
 
-    /** 初始化 Shader Program */
+    /** 初始化 Shader Program，失败时安全降级 */
     fun initialize() {
         if (program != 0) return
-        program = createProgram(VERTEX_SHADER, FRAGMENT_SHADER)
-        if (program == 0) throw RuntimeException("Failed to create PixelFruit shader program")
+        try {
+            program = createProgram(VERTEX_SHADER, FRAGMENT_SHADER)
+            if (program == 0) {
+                Log.e("PixelFruitShader", "Failed to create PixelFruit shader program")
+                return
+            }
 
-        uBrightness = GLES20.glGetUniformLocation(program, "uBrightness")
-        uContrast = GLES20.glGetUniformLocation(program, "uContrast")
-        uSaturation = GLES20.glGetUniformLocation(program, "uSaturation")
-        uExposure = GLES20.glGetUniformLocation(program, "uExposure")
-        uShadows = GLES20.glGetUniformLocation(program, "uShadows")
-        uHighlights = GLES20.glGetUniformLocation(program, "uHighlights")
-        uWhites = GLES20.glGetUniformLocation(program, "uWhites")
-        uWB = GLES20.glGetUniformLocation(program, "uWB")
+            uBrightness = GLES20.glGetUniformLocation(program, "uBrightness")
+            uContrast = GLES20.glGetUniformLocation(program, "uContrast")
+            uSaturation = GLES20.glGetUniformLocation(program, "uSaturation")
+            uExposure = GLES20.glGetUniformLocation(program, "uExposure")
+            uShadows = GLES20.glGetUniformLocation(program, "uShadows")
+            uHighlights = GLES20.glGetUniformLocation(program, "uHighlights")
+            uWhites = GLES20.glGetUniformLocation(program, "uWhites")
+            uWB = GLES20.glGetUniformLocation(program, "uWB")
+        } catch (e: Exception) {
+            Log.e("PixelFruitShader", "初始化 Shader 失败", e)
+            program = 0
+        }
     }
 
     /** 根据 PixelFruitParams 更新所有 Shader Uniform */

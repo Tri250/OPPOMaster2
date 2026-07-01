@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import kotlin.math.max
 
 /**
  * 智能优化模块 ViewModel
@@ -48,9 +49,10 @@ class SmartOptimizeViewModel : ViewModel() {
      */
     fun initLUTManager(context: Context) {
         if (_lutManager != null) return
-        _lutManager = LUTManager.getInstance(context)
-        engine.cancel()
-        engine = SmartOptimizeEngine(null, LutProcessor(), _lutManager!!)
+        val manager = LUTManager.getInstance(context)
+        _lutManager = manager
+        engine.release()
+        engine = SmartOptimizeEngine(null, LutProcessor(), manager)
         // 重新初始化 Engine 状态
         _uiState.value.originalBitmap?.let { bitmap ->
             engine.initialize(bitmap)
@@ -84,32 +86,43 @@ class SmartOptimizeViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         engine.cancel()
+        engine.release()
+        // 释放 ViewModel 持有的 Bitmap，防止内存泄漏
+        _uiState.value.originalBitmap?.recycle()
+        _uiState.value.processedBitmap?.recycle()
+        _uiState.value = _uiState.value.copy(
+            originalBitmap = null,
+            processedBitmap = null,
+            displayBitmap = null,
+            histogramData = null
+        )
     }
 
     // ========== 图片加载 ==========
 
-    fun loadImage(context: Context, uri: Uri) {
+    fun loadImage(context: Context, uri: Uri, maxDimension: Int = 2048) {
         historyCommitJob?.cancel()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isProcessing = true, processingStage = "正在加载图片...")
 
             val bitmap = withContext(Dispatchers.IO) {
                 runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)
-                    }
+                    decodeSampledBitmap(context, uri, maxDimension)
                 }.getOrNull()
             } ?: run {
                 _uiState.value = _uiState.value.copy(isProcessing = false, processingStage = "")
                 return@launch
             }
 
+            val oldOriginal = _uiState.value.originalBitmap
+            val oldProcessed = _uiState.value.processedBitmap
+
             engine.initialize(bitmap)
             val initialParams = SmartOptimizeParams.DEFAULT
 
             _uiState.value = _uiState.value.copy(
                 originalBitmap = bitmap,
-                processedBitmap = bitmap,
+                processedBitmap = null,
                 displayBitmap = bitmap,
                 params = initialParams,
                 histogramData = computeHistogram(bitmap),
@@ -119,19 +132,63 @@ class SmartOptimizeViewModel : ViewModel() {
                 processingStage = "正在初始化预览..."
             )
 
+            if (oldOriginal !== bitmap && oldOriginal != null && !oldOriginal.isRecycled) {
+                oldOriginal.recycle()
+            }
+            if (oldProcessed !== bitmap && oldProcessed !== oldOriginal && oldProcessed != null && !oldProcessed.isRecycled) {
+                oldProcessed.recycle()
+            }
+
             processWithParams(initialParams)
+        }
+    }
+
+    private fun decodeSampledBitmap(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
+        return context.contentResolver.openInputStream(uri)?.use { input ->
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(input, null, options)
+            val width = options.outWidth
+            val height = options.outHeight
+            if (width <= 0 || height <= 0) return null
+
+            var sampleSize = 1
+            while (max(width, height) / sampleSize > maxDimension) {
+                sampleSize *= 2
+            }
+
+            context.contentResolver.openInputStream(uri)?.use { decodeInput ->
+                val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                BitmapFactory.decodeStream(decodeInput, null, decodeOptions)
+            }?.let { decoded ->
+                if (max(decoded.width, decoded.height) > maxDimension) {
+                    val scale = maxDimension.toFloat() / max(decoded.width, decoded.height)
+                    val scaled = Bitmap.createScaledBitmap(
+                        decoded,
+                        (decoded.width * scale).toInt(),
+                        (decoded.height * scale).toInt(),
+                        true
+                    )
+                    decoded.recycle()
+                    scaled
+                } else {
+                    decoded
+                }
+            }
         }
     }
 
     fun loadImage(bitmap: Bitmap) {
         historyCommitJob?.cancel()
         viewModelScope.launch {
+            val oldOriginal = _uiState.value.originalBitmap
+            val oldProcessed = _uiState.value.processedBitmap
+
             engine.initialize(bitmap)
             val initialParams = SmartOptimizeParams.DEFAULT
 
             _uiState.value = _uiState.value.copy(
                 originalBitmap = bitmap,
-                processedBitmap = bitmap,
+                processedBitmap = null,
                 displayBitmap = bitmap,
                 params = initialParams,
                 histogramData = computeHistogram(bitmap),
@@ -140,6 +197,13 @@ class SmartOptimizeViewModel : ViewModel() {
                 isProcessing = true,
                 processingStage = "正在初始化预览..."
             )
+
+            if (oldOriginal !== bitmap && oldOriginal != null && !oldOriginal.isRecycled) {
+                oldOriginal.recycle()
+            }
+            if (oldProcessed !== bitmap && oldProcessed !== oldOriginal && oldProcessed != null && !oldProcessed.isRecycled) {
+                oldProcessed.recycle()
+            }
 
             processWithParams(initialParams)
         }
@@ -263,6 +327,12 @@ class SmartOptimizeViewModel : ViewModel() {
         }
 
         val showBefore = _uiState.value.showBefore
+        // 释放旧的 processedBitmap，避免连续处理导致内存泄漏
+        _uiState.value.processedBitmap?.let { old ->
+            if (old !== original && old !== result && !old.isRecycled) {
+                old.recycle()
+            }
+        }
         _uiState.value = _uiState.value.copy(
             processedBitmap = result,
             displayBitmap = if (showBefore) original else result,
@@ -288,36 +358,47 @@ class SmartOptimizeViewModel : ViewModel() {
     // ========== 直方图 ==========
 
     private fun computeHistogram(bitmap: Bitmap): HistogramFullResult {
-        val pixels = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return try {
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
-        val luma = IntArray(256)
-        val red = IntArray(256)
-        val green = IntArray(256)
-        val blue = IntArray(256)
+            val luma = IntArray(256)
+            val red = IntArray(256)
+            val green = IntArray(256)
+            val blue = IntArray(256)
 
-        for (pixel in pixels) {
-            val r = android.graphics.Color.red(pixel)
-            val g = android.graphics.Color.green(pixel)
-            val b = android.graphics.Color.blue(pixel)
-            val lum = (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
-            luma[lum]++
-            red[r]++
-            green[g]++
-            blue[b]++
+            for (pixel in pixels) {
+                val r = android.graphics.Color.red(pixel)
+                val g = android.graphics.Color.green(pixel)
+                val b = android.graphics.Color.blue(pixel)
+                val lum = (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
+                luma[lum]++
+                red[r]++
+                green[g]++
+                blue[b]++
+            }
+
+            var totalLum = 0f
+            for (i in luma.indices) totalLum += i * luma[i]
+            val meanLum = if (pixels.isNotEmpty()) totalLum / pixels.size else 0f
+
+            HistogramFullResult(
+                luma = luma,
+                red = red,
+                green = green,
+                blue = blue,
+                meanLuminance = meanLum
+            )
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e("SmartOptimizeVM", "computeHistogram OOM", e)
+            HistogramFullResult(
+                luma = IntArray(256),
+                red = IntArray(256),
+                green = IntArray(256),
+                blue = IntArray(256),
+                meanLuminance = 0f
+            )
         }
-
-        var totalLum = 0f
-        for (i in luma.indices) totalLum += i * luma[i]
-        val meanLum = if (pixels.isNotEmpty()) totalLum / pixels.size else 0f
-
-        return HistogramFullResult(
-            luma = luma,
-            red = red,
-            green = green,
-            blue = blue,
-            meanLuminance = meanLum
-        )
     }
 
     // ========== UI 状态便捷方法 ==========

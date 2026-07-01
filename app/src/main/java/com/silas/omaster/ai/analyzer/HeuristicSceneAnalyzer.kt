@@ -396,11 +396,14 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val width = bitmap.width
         val height = bitmap.height
 
+        // 过小或无效尺寸直接返回 0，避免 Bitmap.createBitmap / Sobel 越界崩溃
+        if (width <= 0 || height <= 0 || width < 3 || height < 3) return 0f
+
         // 计算中心区域（占图像中心40%）
-        val centerWidth = (width * 0.4).toInt()
-        val centerHeight = (height * 0.4).toInt()
-        val centerStartX = (width - centerWidth) / 2
-        val centerStartY = (height - centerHeight) / 2
+        val centerWidth = (width * 0.4).toInt().coerceAtLeast(1)
+        val centerHeight = (height * 0.4).toInt().coerceAtLeast(1)
+        val centerStartX = ((width - centerWidth) / 2).coerceIn(0, width - centerWidth)
+        val centerStartY = ((height - centerHeight) / 2).coerceIn(0, height - centerHeight)
 
         // 追踪需要回收的临时 Bitmap，避免误回收原始 bitmap
         val bitmapsToRecycle = mutableListOf<Bitmap>()
@@ -825,29 +828,30 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val sorted = scoreMap.entries.sortedByDescending { it.value }
         val topScenes = sorted.take(4)
 
-        // 获取场景预设（安全处理空列表）
+        // 获取场景预设（安全处理空列表/空预设库）
+        val unknownScene = ScenePresets.allScenes.firstOrNull()
+            ?: SceneProfile(
+                id = "unknown",
+                name = "Unknown",
+                category = SceneCategory.PORTRAIT,
+                description = "",
+                color = 0xFFFF6B35,
+                confidence = 0f,
+                hasselbladParams = HasselbladParams(),
+                recommendedFilm = emptyList(),
+                masterTips = emptyList()
+            )
+
         if (topScenes.isEmpty()) {
-            val defaultScene = ScenePresets.allScenes.firstOrNull()
-                ?: SceneProfile(
-                    id = "unknown",
-                    name = "Unknown",
-                    category = SceneCategory.PORTRAIT,
-                    description = "",
-                    color = 0xFFFF6B35,
-                    confidence = 0f,
-                    hasselbladParams = HasselbladParams(),
-                    recommendedFilm = emptyList(),
-                    masterTips = emptyList()
-                )
             return FusedResult(
-                primary = defaultScene,
+                primary = unknownScene,
                 confidence = 0f,
                 alternatives = emptyList()
             )
         }
 
         val primaryScene = ScenePresets.getSceneById(topScenes.first().key)
-            ?: ScenePresets.allScenes.first()
+            ?: unknownScene
 
         val alternatives = topScenes.drop(1).mapNotNull { entry ->
             ScenePresets.getSceneById(entry.key)

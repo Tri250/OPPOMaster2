@@ -93,6 +93,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -139,10 +140,8 @@ fun CameraXViewfinderScreen(
     onFixActionRequested: (AntiPatternDetector.FixAction) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = remember {
-        (context as? androidx.lifecycle.LifecycleOwner)
-            ?: throw IllegalStateException("CameraXViewfinderScreen must be used within a LifecycleOwner context")
-    }
+    val appContext = context.applicationContext
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // ==================== 权限 ====================
     var hasCameraPermission by remember { mutableStateOf(false) }
@@ -151,7 +150,7 @@ fun CameraXViewfinderScreen(
     ) { granted ->
         hasCameraPermission = granted
         if (!granted) {
-            Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
+            Toast.makeText(appContext, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
         }
     }
     hasCameraPermission = ContextCompat.checkSelfPermission(
@@ -159,7 +158,7 @@ fun CameraXViewfinderScreen(
     ) == PackageManager.PERMISSION_GRANTED
 
     // ==================== 相机管理器 ====================
-    val cameraManager = remember { CameraXManager(context, lifecycleOwner) }
+    val cameraManager = remember(context, lifecycleOwner) { CameraXManager(context, lifecycleOwner) }
     val isCameraReady by cameraManager.isCameraReady.collectAsState()
     val maxZoomRatio = remember(isCameraReady) { cameraManager.getMaxZoomRatio() }
     val exposureRange = remember(isCameraReady) { cameraManager.getExposureCompensationRange() }
@@ -336,11 +335,21 @@ fun CameraXViewfinderScreen(
                     IconButton(onClick = {
                         isLUTPreviewEnabled = !isLUTPreviewEnabled
                         if (isLUTPreviewEnabled) {
-                            lutTextureView?.surfaceTexture?.let { st ->
-                                cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(st))
+                            val surface = lutTextureView?.surfaceTexture?.let { android.view.Surface(it) }
+                            if (surface != null) {
+                                try {
+                                    cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, surface)
+                                } catch (e: Exception) {
+                                    surface.release()
+                                    android.util.Log.e("CameraXViewfinder", "设置 LUT 预览渲染器失败", e)
+                                }
                             }
                         } else {
-                            cameraManager.setLUTPreviewRenderer(null, null)
+                            try {
+                                cameraManager.setLUTPreviewRenderer(null, null)
+                            } catch (e: Exception) {
+                                android.util.Log.e("CameraXViewfinder", "清除 LUT 预览渲染器失败", e)
+                            }
                         }
                     }) {
                         Icon(
@@ -384,7 +393,11 @@ fun CameraXViewfinderScreen(
                     PreviewView(ctx).also { previewView ->
                         previewViewRef = previewView
                         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                        cameraManager.startCamera(previewView)
+                        try {
+                            cameraManager.startCamera(previewView)
+                        } catch (e: Exception) {
+                            android.util.Log.e("CameraXViewfinder", "启动相机失败", e)
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxSize()
@@ -398,13 +411,21 @@ fun CameraXViewfinderScreen(
                         surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                                 if (isLUTPreviewEnabled) {
-                                    cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(surface))
+                                    try {
+                                        cameraManager.setLUTPreviewRenderer(lutPreviewRenderer, android.view.Surface(surface))
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("CameraXViewfinder", "设置 LUT 预览渲染器失败", e)
+                                    }
                                 }
                             }
                             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
                             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
                                 if (isLUTPreviewEnabled) {
-                                    cameraManager.setLUTPreviewRenderer(null, null)
+                                    try {
+                                        cameraManager.setLUTPreviewRenderer(null, null)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("CameraXViewfinder", "清除 LUT 预览渲染器失败", e)
+                                    }
                                 }
                                 lutTextureView = null
                                 return true
@@ -627,10 +648,10 @@ fun CameraXViewfinderScreen(
                         cameraManager.takePhoto(
                             onPhotoSaved = { uri ->
                                 onPhotoCaptured(uri)
-                                Toast.makeText(context, "照片已保存", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(appContext, "照片已保存", Toast.LENGTH_SHORT).show()
                             },
                             onError = { error ->
-                                Toast.makeText(context, "拍照失败: $error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(appContext, "拍照失败: $error", Toast.LENGTH_SHORT).show()
                             }
                         )
                     },
@@ -1204,7 +1225,7 @@ private fun RightAuxPanel(
                     localZoom = it
                     onZoomChange(it)
                 },
-                valueRange = 1f..maxZoomRatio.coerceAtMost(10f),
+                valueRange = 1f..maxZoomRatio.coerceIn(1.1f, 10f),
                 modifier = Modifier
                     .width(120.dp)
                     .height(24.dp)

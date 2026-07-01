@@ -108,28 +108,18 @@ object CrashMonitorManager {
     private fun initCrashHandler() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            handleUncaughtException(thread, throwable)
-            defaultHandler?.uncaughtException(thread, throwable)
-        }
-    }
-
-    /**
-     * 处理未捕获异常
-     */
-    private fun handleUncaughtException(thread: Thread, throwable: Throwable) {
-        scope.launch {
+            // 崩溃处理器中必须同步完成本地保存，否则默认处理器可能立即杀死进程导致协程无法执行
             try {
                 val report = createCrashReport(thread, throwable)
-                saveCrashReport(report)
-
-                if (isUploadEnabled && uploadUrl != null) {
-                    uploadCrashReport(report)
-                }
-
+                saveCrashReportSync(report)
                 _crashCount.value++
+                if (isUploadEnabled && uploadUrl != null) {
+                    scope.launch { uploadCrashReport(report) }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "处理崩溃异常失败", e)
             }
+            defaultHandler?.uncaughtException(thread, throwable)
         }
     }
 
@@ -181,8 +171,10 @@ object CrashMonitorManager {
     /**
      * 保存崩溃报告到本地
      */
-    private suspend fun saveCrashReport(report: CrashReport) = withContext(Dispatchers.IO) {
-        val ctx = context ?: return@withContext
+    private suspend fun saveCrashReport(report: CrashReport) = withContext(Dispatchers.IO) { saveCrashReportSync(report) }
+
+    private fun saveCrashReportSync(report: CrashReport) {
+        val ctx = context ?: return
         val dir = File(ctx.filesDir, CRASH_LOG_DIR)
         if (!dir.exists()) {
             dir.mkdirs()
@@ -262,20 +254,25 @@ object CrashMonitorManager {
             }
 
             val conn = URL(url).openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput = true
-            conn.connectTimeout = 10000
-            conn.readTimeout = 10000
+            try {
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 10000
+                conn.readTimeout = 10000
 
-            conn.outputStream.use { os ->
-                os.write(json.toString().toByteArray())
-                os.flush()
+                conn.outputStream.use { os ->
+                    os.write(json.toString().toByteArray())
+                    os.flush()
+                }
+
+                val responseCode = conn.responseCode
+                Log.i(TAG, "崩溃报告上传结果: $responseCode")
+            } catch (e: Exception) {
+                Log.e(TAG, "上传崩溃报告失败", e)
+            } finally {
+                conn.disconnect()
             }
-
-            val responseCode = conn.responseCode
-            Log.i(TAG, "崩溃报告上传结果: $responseCode")
-            conn.disconnect()
         } catch (e: Exception) {
             Log.e(TAG, "上传崩溃报告失败", e)
         }

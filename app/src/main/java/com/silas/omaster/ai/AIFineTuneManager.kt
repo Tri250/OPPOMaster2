@@ -211,7 +211,7 @@ class AIFineTuneManager private constructor(context: Context) {
                         val cloudResult = generateCloudSuggestion(bitmap, currentParams)
                         if (cloudResult != null) {
                             Log.d(TAG, "云端AI推理成功")
-                            appliedSuggestions.add(cloudResult)
+                            addAppliedSuggestion(cloudResult)
                             _suggestedParams.value = cloudResult
                             _isProcessing.value = false
                             return@withTimeout AISuggestionResult.Success(cloudResult, isOfflineMode = false)
@@ -225,7 +225,7 @@ class AIFineTuneManager private constructor(context: Context) {
 
                 // 本地启发式推理（真实图像分析）
                 val localResult = generateLocalSuggestionFromImage(bitmap, currentParams)
-                appliedSuggestions.add(localResult)
+                addAppliedSuggestion(localResult)
                 _suggestedParams.value = localResult
                 _isProcessing.value = false
                 AISuggestionResult.Success(localResult, isOfflineMode = true)
@@ -280,7 +280,7 @@ class AIFineTuneManager private constructor(context: Context) {
                 generateFallbackSuggestion(_currentAdjustments.value.toMap())
             }
 
-            appliedSuggestions.add(localResult)
+            addAppliedSuggestion(localResult)
             _suggestedParams.value = localResult
 
             // 最小处理时间，避免UI闪烁
@@ -601,13 +601,25 @@ class AIFineTuneManager private constructor(context: Context) {
             
             // Step 3: 压缩图像并转换为Base64
             val compressedBitmap = compressBitmapForUpload(bitmap)
-            val imageBase64 = bitmapToBase64(compressedBitmap)
-            
+            val imageBase64 = try {
+                bitmapToBase64(compressedBitmap)
+            } finally {
+                // 压缩后的临时 Bitmap 使用完毕后立即回收，避免大图像占用内存
+                if (compressedBitmap !== bitmap && !compressedBitmap.isRecycled) {
+                    compressedBitmap.recycle()
+                }
+            }
+
+            if (imageBase64.isEmpty()) {
+                Log.w(TAG, "图像Base64编码为空，跳过云端推理")
+                return@withContext null
+            }
+
             if (imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
                 Log.w(TAG, "图像数据过大(${imageBase64.length}字节)，跳过云端推理")
                 return@withContext null
             }
-            
+
             // Step 4: 构建请求参数
             val requestParams = buildCloudRequestParams(imageBase64, currentParams)
             
@@ -689,29 +701,42 @@ class AIFineTuneManager private constructor(context: Context) {
      */
     private fun compressBitmapForUpload(bitmap: Bitmap): Bitmap {
         val maxDimension = 512 // 云端推理使用较小尺寸
-        
+
         val width = bitmap.width
         val height = bitmap.height
-        
+
         if (width <= maxDimension && height <= maxDimension) {
             return bitmap
         }
-        
+
         val scale = maxDimension.toFloat() / maxOf(width, height)
         val newWidth = (width * scale).toInt()
         val newHeight = (height * scale).toInt()
-        
-        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+
+        return try {
+            Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+        } catch (e: OutOfMemoryError) {
+            Log.w(TAG, "压缩上传图片时内存不足，返回原图", e)
+            bitmap
+        }
     }
 
     /**
      * 将Bitmap转换为Base64字符串
      */
     private fun bitmapToBase64(bitmap: Bitmap): String {
-        val outputStream = java.io.ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-        val byteArray = outputStream.toByteArray()
-        return android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
+        return try {
+            val outputStream = java.io.ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+            val byteArray = outputStream.toByteArray()
+            android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "Base64 编码时内存不足", e)
+            ""
+        } catch (e: Exception) {
+            Log.e(TAG, "Base64 编码失败", e)
+            ""
+        }
     }
 
     /**
@@ -873,7 +898,8 @@ class AIFineTuneManager private constructor(context: Context) {
                 is Boolean -> jsonObject.put(key, value)
                 is Map<*, *> -> {
                     @Suppress("UNCHECKED_CAST")
-                    jsonObject.put(key, org.json.JSONObject(value as Map<String, Any>))
+                    val safeMap = value.filterKeys { it is String }.mapKeys { it.key as String }
+                    jsonObject.put(key, org.json.JSONObject(safeMap))
                 }
                 else -> jsonObject.put(key, value.toString())
             }
@@ -1259,13 +1285,21 @@ class AIFineTuneManager private constructor(context: Context) {
      */
     fun getAppliedHistory(): List<AISuggestion> = appliedSuggestions.toList()
 
+    private fun addAppliedSuggestion(suggestion: AISuggestion) {
+        appliedSuggestions.add(suggestion)
+        if (appliedSuggestions.size > MAX_APPLIED_HISTORY) {
+            appliedSuggestions.removeAt(0)
+        }
+    }
+
     companion object {
         private const val TAG = "AIFineTuneManager"
-        
+
         // 云端API配置
         private val CLOUD_API_ENDPOINT = UrlConstants.API_CLOUD_SCENE_ANALYZE
         private const val CLOUD_API_TIMEOUT_MS = 5000L // 5秒超时
         private const val MAX_IMAGE_SIZE_BYTES = 500000 // 最大500KB图像数据
+        private const val MAX_APPLIED_HISTORY = 50 // 防止历史记录无限增长导致内存泄漏
 
         @Volatile
         private var instance: AIFineTuneManager? = null

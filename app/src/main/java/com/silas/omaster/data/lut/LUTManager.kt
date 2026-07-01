@@ -78,6 +78,25 @@ class LUTManager private constructor(private val context: Context) {
         scanLocalFiles()
     }
 
+    /**
+     * 安全获取应用外部私有目录，返回 null 时回退到 filesDir。
+     */
+    private fun getExternalFilesDirSafely(type: String? = null): File {
+        return context.getExternalFilesDir(type) ?: context.filesDir
+    }
+
+    /**
+     * 确保目录存在，创建失败时记录日志。
+     */
+    private fun ensureDir(dir: File): Boolean {
+        if (dir.exists()) return true
+        if (!dir.mkdirs()) {
+            Log.e(TAG, "Failed to create directory: ${dir.absolutePath}")
+            return false
+        }
+        return true
+    }
+
     // ========== 收藏管理 ==========
 
     fun isLiked(lutId: String): Boolean = _likedIds.value.contains(lutId)
@@ -128,15 +147,22 @@ class LUTManager private constructor(private val context: Context) {
 
             // 保存到公共 Download 目录
             val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                ?: return@withContext null
             val lutDir = File(downloadDir, "OMaster/LUTs")
-            if (!lutDir.exists()) lutDir.mkdirs()
+            if (!ensureDir(lutDir)) {
+                Log.e(TAG, "Public Download directory unavailable, download aborted")
+                return@withContext null
+            }
 
             val fileName = "${resource.nameEn.replace(Regex("[^a-zA-Z0-9_-]"), "_")}.${resource.format}"
             val targetFile = File(lutDir, fileName)
 
             // 同时保存到应用私有目录（用于内部快速访问）
-            val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
-            if (!privateDir.exists()) privateDir.mkdirs()
+            val privateDir = File(getExternalFilesDirSafely(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
+            if (!ensureDir(privateDir)) {
+                Log.e(TAG, "Private LUT directory unavailable, download aborted")
+                return@withContext null
+            }
             val privateFile = File(privateDir, fileName)
 
             FileOutputStream(targetFile).use { output ->
@@ -196,7 +222,7 @@ class LUTManager private constructor(private val context: Context) {
         val fileName = "${resource.nameEn.replace(Regex("[^a-zA-Z0-9_-]"), "_")}.${resource.format}"
 
         // 优先查找私有目录
-        val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
+        val privateDir = File(getExternalFilesDirSafely(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
         val privateFile = File(privateDir, fileName)
         if (privateFile.exists()) return privateFile
 
@@ -277,18 +303,18 @@ class LUTManager private constructor(private val context: Context) {
         val downloaded = mutableSetOf<String>()
 
         // 扫描私有目录
-        val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
+        val privateDir = File(getExternalFilesDirSafely(Environment.DIRECTORY_DOCUMENTS), "OMaster/LUTs")
         if (privateDir.exists()) {
             scanDirectory(privateDir, downloaded)
         }
 
         // 扫描公共 Download 目录
-        val downloadDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            "OMaster/LUTs"
-        )
-        if (downloadDir.exists()) {
-            scanDirectory(downloadDir, downloaded)
+        val publicDownloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (publicDownloadDir != null) {
+            val downloadDir = File(publicDownloadDir, "OMaster/LUTs")
+            if (downloadDir.exists()) {
+                scanDirectory(downloadDir, downloaded)
+            }
         }
 
         // 合并已有状态

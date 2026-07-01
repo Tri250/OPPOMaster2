@@ -2,6 +2,7 @@ package com.silas.omaster.util
 
 import android.os.SystemClock
 import android.util.Log
+import java.util.Collections
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,8 +28,8 @@ object PerformanceMonitor {
     private val _startupMetrics = MutableStateFlow<StartupMetrics?>(null)
     val startupMetrics: StateFlow<StartupMetrics?> = _startupMetrics.asStateFlow()
 
-    // 页面性能记录
-    private val pageMetrics = mutableListOf<PageMetrics>()
+    // 页面性能记录（线程安全，可能从多线程调用）
+    private val pageMetrics = Collections.synchronizedList(mutableListOf<PageMetrics>())
 
     // 性能配置
     var isEnabled: Boolean = true
@@ -102,7 +103,7 @@ object PerformanceMonitor {
      * 标记首帧渲染完成
      */
     fun markFirstFrame() {
-        if (!isEnabled) return
+        if (!isEnabled || appStartTime == 0L) return
         firstFrameTime = SystemClock.elapsedRealtime()
         val totalTime = firstFrameTime - appStartTime
         if (isDebugMode) {
@@ -114,14 +115,14 @@ object PerformanceMonitor {
      * 标记首次可交互
      */
     fun markFirstInteractive() {
-        if (!isEnabled) return
+        if (!isEnabled || appStartTime == 0L) return
         val interactiveTime = SystemClock.elapsedRealtime()
         val totalTime = interactiveTime - appStartTime
 
         _startupMetrics.value = StartupMetrics(
             totalTimeMs = totalTime,
             applicationCreateTimeMs = startupSteps.sumOf { it.durationMs },
-            firstFrameTimeMs = firstFrameTime - appStartTime,
+            firstFrameTimeMs = if (firstFrameTime > appStartTime) firstFrameTime - appStartTime else 0L,
             firstInteractiveTimeMs = totalTime,
             steps = startupSteps.toList()
         )

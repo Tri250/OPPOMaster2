@@ -42,6 +42,7 @@ object SecurityCrypto {
      * 加密字符串
      * @return Base64 编码的 [版本 + IV长度 + IV + 算法标识 + 密文+Tag]，失败返回 null
      */
+    @Synchronized
     fun encrypt(plainText: String): String? {
         return try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -76,6 +77,7 @@ object SecurityCrypto {
      * 解密字符串
      * 支持版本化密文格式，可处理旧版无版本头的数据（向后兼容）
      */
+    @Synchronized
     fun decrypt(encryptedBase64: String): String? {
         return try {
             val combined = Base64.decode(encryptedBase64, Base64.NO_WRAP)
@@ -135,7 +137,11 @@ object SecurityCrypto {
         val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
         
         // 尝试获取已存在的密钥
-        keyStore.getKey(KEY_ALIAS, null)?.let { return it as SecretKey }
+        keyStore.getKey(KEY_ALIAS, null)?.let { entry ->
+            (entry as? SecretKey)?.let { return it }
+            // 如果别名对应的条目类型异常，删除后重新生成
+            keyStore.deleteEntry(KEY_ALIAS)
+        }
         
         // 不存在则创建
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER)

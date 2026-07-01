@@ -149,9 +149,15 @@ fun HomeScreen(
         }
     }
 
-    // 读取默认启动 Tab 设置
+    // 读取默认启动 Tab 设置（异常时安全回退到 0，避免设置读取异常导致崩溃）
     val settingsManager = remember { SettingsManager.getInstance(context) }
-    val defaultStartTab = remember { settingsManager.defaultStartTab }
+    val defaultStartTab = remember {
+        try {
+            settingsManager.defaultStartTab
+        } catch (e: Exception) {
+            0
+        }
+    }
 
     // 初始化时同步默认 Tab
     LaunchedEffect(Unit) {
@@ -176,7 +182,11 @@ fun HomeScreen(
 
     // 当预设列表变化时，更新到全局控制器
     LaunchedEffect(filteredPresets, selectedTab) {
-        floatingWindowController.setPresetList(filteredPresets)
+        try {
+            floatingWindowController.setPresetList(filteredPresets)
+        } catch (e: Exception) {
+            // 悬浮窗状态同步失败不应影响主界面
+        }
     }
 
     // 删除确认对话框状态

@@ -86,16 +86,21 @@ class ProModeManager(context: Context) {
     @Volatile
     private var isReleased = false
 
+    /** 释放锁，防止 release 与参数更新/任务启动发生竞态 */
+    private val releaseLock = Any()
+
     /**
      * 绑定 Camera 实例，并在绑定后立即应用当前保存的专业模式参数。
      *
      * @param camera CameraX 绑定完成后返回的 [Camera] 实例，传 null 表示解绑。
      */
     fun bindCamera(camera: Camera?) {
-        if (isReleased) return
-        this.camera = camera
-        if (camera != null) {
-            applyParamsToCamera()
+        synchronized(releaseLock) {
+            if (isReleased) return
+            this.camera = camera
+            if (camera != null) {
+                applyParamsToCamera()
+            }
         }
     }
 
@@ -155,8 +160,19 @@ class ProModeManager(context: Context) {
      */
     suspend fun processFrame(bitmap: Bitmap): Pair<HistogramData, ZebraPeakingResult> =
         withContext(Dispatchers.Default) {
-            require(!bitmap.isRecycled) { "输入 Bitmap 已回收" }
-            analyzeFrameInternal(bitmap)
+            if (isReleased || bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) {
+                Log.w(TAG, "processFrame 输入无效或管理器已释放")
+                return@withContext emptyHistogramData() to ZebraPeakingResult(null, null, 0f, 0f)
+            }
+            try {
+                analyzeFrameInternal(bitmap)
+            } catch (e: OutOfMemoryError) {
+                Log.e(TAG, "处理预览帧时内存不足", e)
+                emptyHistogramData() to ZebraPeakingResult(null, null, 0f, 0f)
+            } catch (e: Exception) {
+                Log.e(TAG, "处理预览帧失败", e)
+                emptyHistogramData() to ZebraPeakingResult(null, null, 0f, 0f)
+            }
         }
 
     /**
@@ -165,10 +181,14 @@ class ProModeManager(context: Context) {
      * 释放后，所有设置方法与处理方法均不再生效。
      */
     fun release() {
-        if (isReleased) return
-        isReleased = true
-        camera = null
-        managerScope.cancel()
+        synchronized(releaseLock) {
+            if (isReleased) return
+            isReleased = true
+            camera = null
+            paramsDebounceJob?.cancel()
+            paramsDebounceJob = null
+            managerScope.cancel()
+        }
     }
 
     /**
@@ -176,9 +196,11 @@ class ProModeManager(context: Context) {
      * 会立即应用到相机。
      */
     fun setParams(params: ProModeParams) {
-        if (isReleased) return
-        _params.value = params
-        applyParamsToCamera()
+        synchronized(releaseLock) {
+            if (isReleased) return
+            _params.value = params
+            applyParamsToCamera()
+        }
     }
 
     /**
@@ -186,12 +208,14 @@ class ProModeManager(context: Context) {
      * 避免用户快速滑动 Slider 时频繁触发 Camera2Interop 请求。
      */
     private inline fun updateParams(transform: ProModeParams.() -> ProModeParams) {
-        if (isReleased) return
-        _params.value = _params.value.transform()
-        paramsDebounceJob?.cancel()
-        paramsDebounceJob = managerScope.launch {
-            delay(80) // 80ms debounce
-            applyParamsToCamera()
+        synchronized(releaseLock) {
+            if (isReleased) return
+            _params.value = _params.value.transform()
+            paramsDebounceJob?.cancel()
+            paramsDebounceJob = managerScope.launch {
+                delay(80) // 80ms debounce
+                applyParamsToCamera()
+            }
         }
     }
 
@@ -206,8 +230,13 @@ class ProModeManager(context: Context) {
      */
     @OptIn(ExperimentalCamera2Interop::class)
     private fun applyParamsToCamera() {
-        val camera = this.camera ?: return
-        val params = _params.value
+        val camera: Camera
+        val params: ProModeParams
+        synchronized(releaseLock) {
+            if (isReleased) return
+            camera = this.camera ?: return
+            params = _params.value
+        }
 
         try {
             val characteristics = getCameraCharacteristics(camera)
@@ -360,6 +389,19 @@ class ProModeManager(context: Context) {
         )
     }
 
+    /** 返回空的直方图数据，用于异常降级场景 */
+    private fun emptyHistogramData(): HistogramData {
+        return HistogramData(
+            luminance = IntArray(256),
+            red = IntArray(256),
+            green = IntArray(256),
+            blue = IntArray(256),
+            meanLuminance = 0f,
+            shadowClipping = false,
+            highlightClipping = false
+        )
+    }
+
     /**
      * 单帧图像分析：直方图 + 斑马纹 + 对焦峰值。
      *
@@ -369,6 +411,21 @@ class ProModeManager(context: Context) {
         val width = bitmap.width
         val height = bitmap.height
         val total = width * height
+
+        // 限制最大处理分辨率，防止超大 Bitmap 导致 OOM
+        if (total > 4_000_000) {
+            val scale = sqrt(4_000_000f / total)
+            val newWidth = (width * scale).toInt().coerceAtLeast(1)
+            val newHeight = (height * scale).toInt().coerceAtLeast(1)
+            val scaled = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+                ?: return emptyHistogramData() to ZebraPeakingResult(null, null, 0f, 0f)
+            return try {
+                analyzeFrameInternal(scaled)
+            } finally {
+                if (scaled !== bitmap) scaled.recycle()
+            }
+        }
+
         val pixels = IntArray(total)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 

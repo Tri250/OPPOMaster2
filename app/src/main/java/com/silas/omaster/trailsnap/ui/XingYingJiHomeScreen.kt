@@ -134,7 +134,11 @@ fun XingYingJiHomeScreen(
 
     LaunchedEffect(hasMediaPermission) {
         if (hasMediaPermission) {
-            repository.refresh()
+            try {
+                repository.refresh()
+            } catch (e: Exception) {
+                // 刷新失败已由 loadError 反馈，此处防止未捕获异常崩溃
+            }
         }
     }
 
@@ -156,8 +160,13 @@ fun XingYingJiHomeScreen(
                             if (!isRefreshing && hasMediaPermission) {
                                 isRefreshing = true
                                 scope.launch {
-                                    repository.refresh()
-                                    isRefreshing = false
+                                    try {
+                                        repository.refresh()
+                                    } catch (e: Exception) {
+                                        // 刷新失败已由 loadError 反馈，此处防止未捕获异常崩溃
+                                    } finally {
+                                        isRefreshing = false
+                                    }
                                 }
                             }
                         }
@@ -180,7 +189,11 @@ fun XingYingJiHomeScreen(
                         val intent = Settings.ACTION_APPLICATION_DETAILS_SETTINGS.let {
                             android.content.Intent(it, android.net.Uri.parse("package:${context.packageName}"))
                         }
-                        context.startActivity(intent)
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "无法打开应用设置", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     showRationale = showRationale
                 )

@@ -325,15 +325,24 @@ class LUTPreviewRenderer(context: Context) {
      * 从 Bitmap 更新 LUT（简化接口）。
      */
     fun updateLUTFromBitmap(bitmap: Bitmap, strength: Float) {
+        if (bitmap.isRecycled) {
+            hasLUT = false
+            return
+        }
         lutStrength = strength.coerceIn(0f, 1f)
         hasLUT = strength > 0.01f
 
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, lutTextureId)
-        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        try {
+            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, lutTextureId)
+            GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+            GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        } catch (e: Exception) {
+            Log.e(TAG, "从 Bitmap 更新 LUT 失败", e)
+            hasLUT = false
+        }
     }
 
     /**
@@ -390,13 +399,17 @@ class LUTPreviewRenderer(context: Context) {
     fun release() {
         if (eglDisplay == EGL14.EGL_NO_DISPLAY) return
 
-        GLES30.glDeleteProgram(program)
-        GLES30.glDeleteTextures(2, intArrayOf(cameraTextureId, lutTextureId), 0)
+        try {
+            GLES30.glDeleteProgram(program)
+            GLES30.glDeleteTextures(2, intArrayOf(cameraTextureId, lutTextureId), 0)
 
-        EGL14.eglMakeCurrent(eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
-        EGL14.eglDestroySurface(eglDisplay, eglSurface)
-        EGL14.eglDestroyContext(eglDisplay, eglContext)
-        EGL14.eglTerminate(eglDisplay)
+            EGL14.eglMakeCurrent(eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
+            EGL14.eglDestroySurface(eglDisplay, eglSurface)
+            EGL14.eglDestroyContext(eglDisplay, eglContext)
+            EGL14.eglTerminate(eglDisplay)
+        } catch (e: Exception) {
+            Log.e(TAG, "释放 EGL/OpenGL 资源失败", e)
+        }
 
         eglDisplay = EGL14.EGL_NO_DISPLAY
         eglContext = EGL14.EGL_NO_CONTEXT

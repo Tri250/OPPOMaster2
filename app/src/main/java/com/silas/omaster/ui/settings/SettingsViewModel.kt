@@ -73,8 +73,12 @@ class SettingsViewModel(
      */
     private fun observeSettings() {
         viewModelScope.launch {
-            settingsManager.themeFlow.collect { theme ->
-                _currentTheme.value = theme
+            try {
+                settingsManager.themeFlow.collect { theme ->
+                    _currentTheme.value = theme
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "观察主题设置失败: ${e.message}"
             }
         }
     }
@@ -83,56 +87,91 @@ class SettingsViewModel(
      * 设置主题
      */
     fun setTheme(theme: BrandTheme) {
-        settingsManager.currentTheme = theme
-        _currentTheme.value = theme
+        try {
+            settingsManager.currentTheme = theme
+            _currentTheme.value = theme
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置主题失败: ${e.message}"
+        }
     }
 
     /**
      * 设置深色模式
      */
     fun setDarkMode(mode: DarkMode) {
-        settingsManager.darkMode = mode
-        _darkMode.value = mode
+        try {
+            settingsManager.darkMode = mode
+            _darkMode.value = mode
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置深色模式失败: ${e.message}"
+        }
     }
 
     /**
      * 设置振动开关
      */
     fun setVibrationEnabled(enabled: Boolean) {
-        settingsManager.isVibrationEnabled = enabled
-        _vibrationEnabled.value = enabled
+        try {
+            settingsManager.isVibrationEnabled = enabled
+            _vibrationEnabled.value = enabled
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置振动失败: ${e.message}"
+        }
     }
 
     /**
      * 设置分析开关
      */
     fun setAnalyticsEnabled(enabled: Boolean) {
-        settingsManager.isAnalyticsEnabled = enabled
-        _analyticsEnabled.value = enabled
+        try {
+            settingsManager.isAnalyticsEnabled = enabled
+            _analyticsEnabled.value = enabled
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置分析开关失败: ${e.message}"
+        }
     }
 
     /**
      * 设置默认启动Tab
      */
     fun setDefaultStartTab(tab: Int) {
-        settingsManager.defaultStartTab = tab
-        _defaultStartTab.value = tab
+        try {
+            settingsManager.defaultStartTab = tab
+            _defaultStartTab.value = tab
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置默认启动页失败: ${e.message}"
+        }
     }
 
     /**
      * 设置更新渠道
      */
     fun setUpdateChannel(channel: UpdateChannel) {
-        settingsManager.updateChannel = channel
-        _updateChannel.value = channel
+        try {
+            settingsManager.updateChannel = channel
+            _updateChannel.value = channel
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置更新渠道失败: ${e.message}"
+        }
     }
 
     /**
      * 设置浮窗透明度
      */
     fun setFloatingWindowOpacity(opacity: Int) {
-        settingsManager.floatingWindowOpacity = opacity
-        _floatingWindowOpacity.value = opacity
+        try {
+            settingsManager.floatingWindowOpacity = opacity
+            _floatingWindowOpacity.value = opacity
+            _errorMessage.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "设置浮窗透明度失败: ${e.message}"
+        }
     }
 
     /**
@@ -140,9 +179,14 @@ class SettingsViewModel(
      */
     fun updateCacheSize() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val sizeMb = ImageCacheManager.getInstance(application).getCacheSize(application)
-                _cacheSize.value = String.format("%.2f MB", sizeMb)
+            try {
+                withContext(Dispatchers.IO) {
+                    val sizeMb = ImageCacheManager.getInstance(application).getCacheSize(application)
+                    _cacheSize.value = String.format("%.2f MB", sizeMb)
+                }
+            } catch (e: Exception) {
+                _cacheSize.value = "0.00 MB"
+                _errorMessage.value = "读取缓存失败: ${e.message}"
             }
         }
     }
@@ -152,11 +196,17 @@ class SettingsViewModel(
      */
     fun clearCache(onComplete: () -> Unit) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                ImageCacheManager.getInstance(application).clearCache(application)
+            try {
+                withContext(Dispatchers.IO) {
+                    ImageCacheManager.getInstance(application).clearCache(application)
+                }
+                _cacheSize.value = "0.00 MB"
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "清除缓存失败: ${e.message}"
+            } finally {
+                onComplete()
             }
-            _cacheSize.value = "0.00 MB"
-            onComplete()
         }
     }
 

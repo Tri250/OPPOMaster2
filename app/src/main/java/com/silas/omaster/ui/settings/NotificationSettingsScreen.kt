@@ -50,8 +50,8 @@ fun NotificationSettingsScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val notificationManager = remember {
-        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    }
+        context.getSystemService(NotificationManager::class.java)
+    } ?: return
     val notificationManagerCompat = remember { NotificationManagerCompat.from(context) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -71,7 +71,11 @@ fun NotificationSettingsScreen(
         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
         }
-        context.startActivity(intent)
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // 跳转设置页失败时静默处理，避免崩溃
+        }
     }
 
     fun isChannelEnabled(channelId: String): Boolean {
@@ -82,11 +86,15 @@ fun NotificationSettingsScreen(
 
     fun createOrUpdateChannel(channelId: String, name: String, enabled: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = if (enabled) NotificationManager.IMPORTANCE_DEFAULT else NotificationManager.IMPORTANCE_NONE
-            val channel = NotificationChannel(channelId, name, importance).apply {
-                description = name
+            try {
+                val importance = if (enabled) NotificationManager.IMPORTANCE_DEFAULT else NotificationManager.IMPORTANCE_NONE
+                val channel = NotificationChannel(channelId, name, importance).apply {
+                    description = name
+                }
+                notificationManager.createNotificationChannel(channel)
+            } catch (e: Exception) {
+                // 渠道创建失败不应阻断设置页主流程
             }
-            notificationManager.createNotificationChannel(channel)
         }
     }
 
@@ -108,9 +116,13 @@ fun NotificationSettingsScreen(
             }
         }
         // 确保各渠道已创建（默认开启）
-        createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), generalEnabled)
-        createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), recommendationEnabled)
-        createOrUpdateChannel(CHANNEL_SYNC, stringRes(R.string.notification_category_sync), syncEnabled)
+        try {
+            createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), generalEnabled)
+            createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), recommendationEnabled)
+            createOrUpdateChannel(CHANNEL_SYNC, stringRes(R.string.notification_category_sync), syncEnabled)
+        } catch (e: Exception) {
+            // 渠道初始化失败不应导致页面崩溃
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -118,9 +130,13 @@ fun NotificationSettingsScreen(
     ) { granted ->
         masterEnabled = granted
         if (!granted) {
-            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            })
+            try {
+                context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                })
+            } catch (e: Exception) {
+                // 跳转设置页失败时静默处理
+            }
         }
     }
 

@@ -129,9 +129,13 @@ class RecipeHistoryManager private constructor(context: Context) {
      * 保存配方数据到 SharedPreferences
      */
     private fun saveRecipes(recipes: List<RecipeRecord>) {
-        val json = gson.toJson(recipes)
-        prefs.edit().putString(KEY_RECIPES, json).apply()
-        _recipesFlow.value = recipes
+        try {
+            val json = gson.toJson(recipes)
+            prefs.edit().putString(KEY_RECIPES, json).apply()
+            _recipesFlow.value = recipes
+        } catch (e: Exception) {
+            android.util.Log.e("RecipeHistoryManager", "保存配方数据失败", e)
+        }
     }
 
     /**

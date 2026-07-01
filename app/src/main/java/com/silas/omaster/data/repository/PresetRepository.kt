@@ -513,10 +513,15 @@ class PresetRepository private constructor(context: Context) {
 
     suspend fun importPresets(file: File): Result<ImportResult> = withContext(Dispatchers.IO) {
         try {
+            // 文件大小检查（防止恶意大文件导致 OOM）
+            if (file.length() > MAX_IMPORT_FILE_SIZE_BYTES) {
+                return@withContext Result.failure(IllegalArgumentException("导入文件大小超过5MB限制"))
+            }
+
             val content = file.readText()
 
-            // 文件大小检查（防止恶意大文件）
-            if (content.length > 5 * 1024 * 1024) {
+            // 再次校验读取后内容大小
+            if (content.length > MAX_IMPORT_FILE_SIZE_BYTES) {
                 return@withContext Result.failure(IllegalArgumentException("导入文件大小超过5MB限制"))
             }
 
@@ -1146,6 +1151,7 @@ class PresetRepository private constructor(context: Context) {
         private const val CACHE_VERSION = 1
         private const val NETWORK_CONNECT_TIMEOUT_MS = 10_000L
         private const val NETWORK_READ_TIMEOUT_MS = 30_000L
+        private const val MAX_IMPORT_FILE_SIZE_BYTES = 5 * 1024 * 1024L
 
         @Volatile
         private var instance: PresetRepository? = null

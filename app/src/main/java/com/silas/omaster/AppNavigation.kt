@@ -87,7 +87,9 @@ import com.silas.omaster.trailsnap.ui.XingYingJiHomeScreen
 import com.silas.omaster.util.JsonUtil
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // P2-1 修复：savedStateHandle 键名常量（哈苏构图引导线状态传递）
 private const val KEY_HASSELBLAD_GUIDE_TYPE = "hasselblad_guide_type"
@@ -136,11 +138,15 @@ fun MainApp(navController: NavHostController) {
     if (showMigrationDialog) {
         MigrationDialog(
             onMigrate = {
-                JsonUtil.deleteRemotePresets(context)
-                // 迁移后强制从文件重新加载预设，避免使用旧内存缓存
-                coroutineScope.launch { repository.forceReloadFromFiles() }
-                settingsManager.setMigrationHandled(true)
-                showMigrationDialog = false
+                coroutineScope.launch {
+                    withContext(Dispatchers.IO) {
+                        JsonUtil.deleteRemotePresets(context.applicationContext)
+                        // 迁移后强制从文件重新加载预设，避免使用旧内存缓存
+                        repository.forceReloadFromFiles()
+                    }
+                    settingsManager.setMigrationHandled(true)
+                    showMigrationDialog = false
+                }
             },
             onPostpone = {
                 settingsManager.setMigrationHandled(true)
@@ -339,17 +345,21 @@ fun MainApp(navController: NavHostController) {
                 SmartOptimizeScreen(
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
-                        // 将智能优化参数映射到相机预设参数
-                        val settingsManager = SettingsManager.getInstance(context)
-                        settingsManager.applyPresetParams(
-                            saturation = params.saturation.toInt(),
-                            contrast = params.contrast.toInt(),
-                            warmth = 0,
-                            sharpness = params.sharpness.toInt(),
-                            clarity = params.clarity.toInt(),
-                            brightness = params.brightness.toInt()
-                        )
-                        navController.popBackStack()
+                        coroutineScope.launch {
+                            withContext(Dispatchers.IO) {
+                                // 将智能优化参数映射到相机预设参数
+                                val settingsManager = SettingsManager.getInstance(context.applicationContext)
+                                settingsManager.applyPresetParams(
+                                    saturation = params.saturation.toInt(),
+                                    contrast = params.contrast.toInt(),
+                                    warmth = 0,
+                                    sharpness = params.sharpness.toInt(),
+                                    clarity = params.clarity.toInt(),
+                                    brightness = params.brightness.toInt()
+                                )
+                            }
+                            navController.popBackStack()
+                        }
                     }
                 )
             }
@@ -358,16 +368,20 @@ fun MainApp(navController: NavHostController) {
                 ParamAdjustScreen(
                     onBack = { navController.popBackStack() },
                     onApply = { params ->
-                        val settingsManager = SettingsManager.getInstance(context)
-                        settingsManager.applyCameraParams(
-                            iso = params.iso,
-                            shutterSpeed = params.shutterSpeed,
-                            aperture = params.aperture,
-                            whiteBalance = params.whiteBalance,
-                            focalLength = params.focalLength,
-                            exposureCompensation = params.exposureCompensation
-                        )
-                        navController.popBackStack()
+                        coroutineScope.launch {
+                            withContext(Dispatchers.IO) {
+                                val settingsManager = SettingsManager.getInstance(context.applicationContext)
+                                settingsManager.applyCameraParams(
+                                    iso = params.iso,
+                                    shutterSpeed = params.shutterSpeed,
+                                    aperture = params.aperture,
+                                    whiteBalance = params.whiteBalance,
+                                    focalLength = params.focalLength,
+                                    exposureCompensation = params.exposureCompensation
+                                )
+                            }
+                            navController.popBackStack()
+                        }
                     }
                 )
             }
@@ -521,7 +535,7 @@ fun MainApp(navController: NavHostController) {
                     } else {
                         val pid = route.presetId ?: return@LaunchedEffect
                         val presetItem = repository.presets.value.find { it.id == pid }
-                            ?: repository.loadPresets().find { it.id == pid }
+                            ?: withContext(Dispatchers.IO) { repository.loadPresets() }.find { it.id == pid }
                         val preset = presetItem?.toMasterPreset()
                         if (preset != null) {
                             presetName = preset.name

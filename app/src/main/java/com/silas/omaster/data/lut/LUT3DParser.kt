@@ -23,6 +23,10 @@ object LUT3DParser {
 
     private const val TAG = "LUT3DParser"
 
+    // 限制 LUT 最大尺寸，防止解析恶意/超大文件导致 OOM
+    // 33/65 是常见尺寸，128 已覆盖绝大多数实际用例
+    private const val MAX_LUT_SIZE = 128
+
     /**
      * 解析 .cube 文件
      *
@@ -124,8 +128,8 @@ object LUT3DParser {
         }
 
         // 验证解析结果
-        if (lutSize <= 0) {
-            Log.e(TAG, "Missing or invalid LUT_3D_SIZE in $fileName")
+        if (lutSize <= 0 || lutSize > MAX_LUT_SIZE) {
+            Log.e(TAG, "Missing or invalid LUT_3D_SIZE in $fileName: size=$lutSize")
             return null
         }
 
@@ -175,6 +179,13 @@ object LUT3DParser {
      * @return RGBA FloatArray，宽度=lutSize*lutSize，高度=lutSize
      */
     fun encodeTo2DTexture(lutData: FloatArray, lutSize: Int): FloatArray {
+        if (lutSize <= 0) return FloatArray(0)
+        val expectedPoints = lutSize * lutSize * lutSize * 3
+        if (lutData.size < expectedPoints) {
+            Log.e(TAG, "encodeTo2DTexture: LUT data too small, expected $expectedPoints, got ${lutData.size}")
+            return FloatArray(0)
+        }
+
         val width = lutSize * lutSize
         val height = lutSize
         val result = FloatArray(width * height * 4) // RGBA
@@ -209,9 +220,23 @@ object LUT3DParser {
      * @return 编码为 2D 纹理的 Bitmap
      */
     fun encodeToBitmap(lutData: FloatArray, lutSize: Int): android.graphics.Bitmap {
+        if (lutSize <= 0) {
+            return android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
+        }
+        val expectedPoints = lutSize * lutSize * lutSize * 3
+        if (lutData.size < expectedPoints) {
+            Log.e(TAG, "encodeToBitmap: LUT data too small, expected $expectedPoints, got ${lutData.size}")
+            return android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
+        }
+
         val width = lutSize * lutSize
         val height = lutSize
         val textureData = encodeTo2DTexture(lutData, lutSize)
+
+        // encodeTo2DTexture 已校验数据，此处做二次保护
+        if (textureData.isEmpty()) {
+            return android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
+        }
 
         val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
         val pixels = IntArray(width * height)
@@ -248,6 +273,14 @@ data class LUT3DData(
 
     /** 获取指定 R/G/B 索引处的颜色值 */
     fun get(r: Int, g: Int, b: Int): FloatArray {
+        if (size <= 0 ||
+            r < 0 || r >= size ||
+            g < 0 || g >= size ||
+            b < 0 || b >= size ||
+            data.size < size * size * size * 3
+        ) {
+            return floatArrayOf(0f, 0f, 0f)
+        }
         val index = (b * size * size + g * size + r) * 3
         return floatArrayOf(data[index], data[index + 1], data[index + 2])
     }
@@ -261,6 +294,9 @@ data class LUT3DData(
      * @return 插值后的 RGB 浮点数组
      */
     fun sampleTrilinear(r: Float, g: Float, b: Float): FloatArray {
+        if (size <= 0 || data.size < size * size * size * 3) {
+            return floatArrayOf(0f, 0f, 0f)
+        }
         val maxIndex = size - 1
 
         // 映射到 LUT 索引空间

@@ -461,12 +461,12 @@ private suspend fun checkForUpdate(context: android.content.Context, channel: St
             val url = URL(apiUrl)
             var conn: HttpURLConnection? = null
             try {
-                conn = (url.openConnection() as HttpURLConnection).apply {
+                conn = (url.openConnection() as? HttpURLConnection)?.apply {
                     requestMethod = "GET"
                     setRequestProperty("Accept", "application/vnd.github.v3+json")
                     connectTimeout = 15_000
                     readTimeout = 15_000
-                }
+                } ?: return@withContext "检查失败: 无法建立网络连接"
 
                 val responseCode = conn.responseCode
                 if (responseCode != 200) {

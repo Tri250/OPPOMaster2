@@ -274,7 +274,11 @@ class HomeViewModel(
      * 清空搜索历史
      */
     fun clearSearchHistory() {
-        repository.clearSearchHistory()
+        try {
+            repository.clearSearchHistory()
+        } catch (e: Exception) {
+            _errorState.value = "清空搜索历史失败: ${e.message}"
+        }
     }
 
     /**

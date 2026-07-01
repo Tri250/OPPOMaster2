@@ -86,6 +86,15 @@ fun LUTShareScreen(
     // LUT 数据 - 来自真实数据源
     val luts = remember { repo.RESOURCES }
 
+    // 收藏操作异常保护，避免 SharedPreferences 写入异常导致崩溃
+    val doToggleLike = { lutId: String ->
+        try {
+            lutManager.toggleLike(lutId)
+        } catch (e: Exception) {
+            // 收藏状态写入失败时不应崩溃
+        }
+    }
+
     // 过滤 + 排序
     val filteredLuts = remember(searchQuery, selectedCategory, sortBy, luts) {
         var result = if (searchQuery.isNotBlank()) {
@@ -244,7 +253,7 @@ fun LUTShareScreen(
                                     badge = "NEW",
                                     badgeColor = SuccessGreen,
                                     isLiked = likedIds.contains(lut.id),
-                                    onLike = { lutManager.toggleLike(lut.id) },
+                                    onLike = { doToggleLike(lut.id) },
                                     onClick = { selectedLUT = lut }
                                 )
                             }
@@ -269,7 +278,7 @@ fun LUTShareScreen(
                                     badge = "HOT",
                                     badgeColor = HasselbladOrange,
                                     isLiked = likedIds.contains(lut.id),
-                                    onLike = { lutManager.toggleLike(lut.id) },
+                                    onLike = { doToggleLike(lut.id) },
                                     onClick = { selectedLUT = lut }
                                 )
                             }
@@ -301,7 +310,7 @@ fun LUTShareScreen(
                             isLiked = likedIds.contains(lut.id),
                             isDownloaded = downloadedIds.contains(lut.id),
                             isDownloading = downloadingId == lut.id,
-                            onLike = { lutManager.toggleLike(lut.id) },
+                            onLike = { doToggleLike(lut.id) },
                             onClick = { selectedLUT = lut },
                             onDownload = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -359,7 +368,7 @@ fun LUTShareScreen(
             isDownloading = downloadingId == lut.id,
             previewBitmap = previewBitmap,
             isGeneratingPreview = isGeneratingPreview,
-            onLike = { lutManager.toggleLike(lut.id) },
+            onLike = { doToggleLike(lut.id) },
             onDownload = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 downloadingId = lut.id

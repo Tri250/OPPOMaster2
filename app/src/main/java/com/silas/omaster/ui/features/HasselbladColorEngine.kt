@@ -8,6 +8,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.util.Log
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SoftLightMode
 import kotlin.math.abs
@@ -74,6 +75,8 @@ fun getDominantColor(bitmap: Bitmap): Int = HasselbladColorEngine.getDominantCol
 
 object HasselbladColorEngine {
 
+    private const val TAG = "HasselbladColorEngine"
+
     const val DEFAULT_EXPORT_QUALITY = 95
     const val MAX_PROCESS_DIMENSION_HIGH = 4096
     const val MAX_PROCESS_DIMENSION_MEDIUM = 3072
@@ -89,46 +92,57 @@ object HasselbladColorEngine {
     ): Bitmap {
         require(exportQuality in 0..100) { "exportQuality must be in 0..100" }
 
-        val params = mergeParams(hasselbladParams, colorModeParams)
-        var working = prepareSource(source, exportQuality)
+        var working: Bitmap? = null
+        return try {
+            val params = mergeParams(hasselbladParams, colorModeParams)
+            working = prepareSource(source, exportQuality)
 
-        // 1. 基础 ColorMatrix（饱和度、对比度、色温、影调、青品调、黑白）
-        working = applyColorMatrix(working, buildColorMatrix(params))
+            // 1. 基础 ColorMatrix（饱和度、对比度、色温、影调、青品调、黑白）
+            working = applyColorMatrix(working, buildColorMatrix(params))
 
-        // 2. 高光 / 阴影 / 鲜艳度（逐像素单通道）
-        applyHighlightsShadowsAndVibrance(working, params.highlights, params.shadows, params.vibrance)
+            // 2. 高光 / 阴影 / 鲜艳度（逐像素单通道）
+            applyHighlightsShadowsAndVibrance(working, params.highlights, params.shadows, params.vibrance)
 
-        // 3. 清晰度（中等半径 Unsharp Mask）
-        if (params.clarity > 0.005f) {
-            val radius = (3f + params.clarity * 5f).roundToInt().coerceIn(3, 8)
-            val amount = params.clarity * 0.8f
-            applyUnsharpMask(working, radius, amount)
+            // 3. 清晰度（中等半径 Unsharp Mask）
+            if (params.clarity > 0.005f) {
+                val radius = (3f + params.clarity * 5f).roundToInt().coerceIn(3, 8)
+                val amount = params.clarity * 0.8f
+                applyUnsharpMask(working, radius, amount)
+            }
+
+            // 4. 柔光
+            if (params.softLight != SoftLightMode.NONE) {
+                applySoftLight(working, params.softLight)
+            }
+
+            // 5. 锐度（小半径 Unsharp Mask）
+            if (params.sharpness > 0.005f) {
+                applyUnsharpMask(working, radius = 1, amount = params.sharpness * 1.2f)
+            }
+
+            // 6. 暗角
+            if (params.vignette > 0.005f) {
+                applyVignette(working, params.vignette)
+            }
+
+            // 7. 胶片颗粒
+            if (params.grain > 0.005f) {
+                applyGrain(working, params.grain)
+            }
+
+            // 8. 水印
+            drawHasselbladWatermark(working)
+
+            working
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "哈苏色彩引擎内存不足", e)
+            working?.takeIf { it !== source && !it.isRecycled }?.recycle()
+            source
+        } catch (e: Exception) {
+            Log.e(TAG, "哈苏色彩引擎处理失败", e)
+            working?.takeIf { it !== source && !it.isRecycled }?.recycle()
+            source
         }
-
-        // 4. 柔光
-        if (params.softLight != SoftLightMode.NONE) {
-            applySoftLight(working, params.softLight)
-        }
-
-        // 5. 锐度（小半径 Unsharp Mask）
-        if (params.sharpness > 0.005f) {
-            applyUnsharpMask(working, radius = 1, amount = params.sharpness * 1.2f)
-        }
-
-        // 6. 暗角
-        if (params.vignette > 0.005f) {
-            applyVignette(working, params.vignette)
-        }
-
-        // 7. 胶片颗粒
-        if (params.grain > 0.005f) {
-            applyGrain(working, params.grain)
-        }
-
-        // 8. 水印
-        drawHasselbladWatermark(working)
-
-        return working
     }
 
     fun addHasselbladWatermark(bitmap: Bitmap): Bitmap {
@@ -156,7 +170,11 @@ object HasselbladColorEngine {
         }
 
         val cropped = Bitmap.createBitmap(bitmap, x, y, width, height)
-        return cropped.copy(Bitmap.Config.ARGB_8888, true)
+        return try {
+            cropped.copy(Bitmap.Config.ARGB_8888, true)
+        } finally {
+            cropped.recycle()
+        }
     }
 
     fun getDominantColor(bitmap: Bitmap): Int {
@@ -262,9 +280,8 @@ object HasselbladColorEngine {
                 (source.height * scale).roundToInt(),
                 true
             )
-        } else if (source.config == Bitmap.Config.ARGB_8888 && source.isMutable) {
-            source
         } else {
+            // 始终复制一份可变的 Bitmap，避免修改输入原图
             source.copy(Bitmap.Config.ARGB_8888, true)
         }
     }

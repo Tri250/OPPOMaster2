@@ -61,6 +61,9 @@ import kotlinx.coroutines.withContext
  */
 class ARCompositionManager(context: Context) : SensorEventListener {
 
+    /** 使用 Application Context，避免持有 Activity/Fragment 引用导致内存泄露 */
+    private val appContext = context.applicationContext
+
     /** 内部协程作用域，用于状态流更新与资源生命周期 */
     private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -105,7 +108,7 @@ class ARCompositionManager(context: Context) : SensorEventListener {
 
     // ===== 传感器与水平仪 =====
     private val sensorManager: SensorManager =
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        appContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private val accelerometerReading = FloatArray(3)
     private val magnetometerReading = FloatArray(3)
@@ -281,6 +284,7 @@ class ARCompositionManager(context: Context) : SensorEventListener {
      * 释放后 [analyzeFrame] 将返回空结果。
      */
     fun release() {
+        if (isReleased) return
         isReleased = true
         try {
             sensorManager.unregisterListener(this)
@@ -319,16 +323,21 @@ class ARCompositionManager(context: Context) : SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         event ?: return
-        when (event.sensor.type) {
-            Sensor.TYPE_ROTATION_VECTOR -> updateRollFromRotationVector(event.values)
-            Sensor.TYPE_ACCELEROMETER -> {
-                System.arraycopy(event.values, 0, accelerometerReading, 0, 3)
-                updateRollFromAccelMag()
+        if (isReleased) return
+        try {
+            when (event.sensor.type) {
+                Sensor.TYPE_ROTATION_VECTOR -> updateRollFromRotationVector(event.values)
+                Sensor.TYPE_ACCELEROMETER -> {
+                    System.arraycopy(event.values, 0, accelerometerReading, 0, 3)
+                    updateRollFromAccelMag()
+                }
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    System.arraycopy(event.values, 0, magnetometerReading, 0, 3)
+                    updateRollFromAccelMag()
+                }
             }
-            Sensor.TYPE_MAGNETIC_FIELD -> {
-                System.arraycopy(event.values, 0, magnetometerReading, 0, 3)
-                updateRollFromAccelMag()
-            }
+        } catch (e: Exception) {
+            Log.w(TAG, "传感器数据处理异常", e)
         }
     }
 
@@ -338,37 +347,45 @@ class ARCompositionManager(context: Context) : SensorEventListener {
 
     /** 基于 RotationVector 计算横滚角 */
     private fun updateRollFromRotationVector(rotationVector: FloatArray) {
-        SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVector)
-        SensorManager.remapCoordinateSystem(
-            rotationMatrix,
-            SensorManager.AXIS_X,
-            SensorManager.AXIS_Y,
-            remappedRotationMatrix
-        )
-        SensorManager.getOrientation(remappedRotationMatrix, orientationAngles)
-        synchronized(stateLock) {
-            rollAngle = rollEma.update(orientationAngles[2])
+        try {
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVector)
+            SensorManager.remapCoordinateSystem(
+                rotationMatrix,
+                SensorManager.AXIS_X,
+                SensorManager.AXIS_Y,
+                remappedRotationMatrix
+            )
+            SensorManager.getOrientation(remappedRotationMatrix, orientationAngles)
+            synchronized(stateLock) {
+                rollAngle = rollEma.update(orientationAngles[2])
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "RotationVector 计算横滚角失败", e)
         }
     }
 
     /** 基于加速度计 + 磁力计计算横滚角 */
     private fun updateRollFromAccelMag() {
-        val success = SensorManager.getRotationMatrix(
-            rotationMatrix,
-            null,
-            accelerometerReading,
-            magnetometerReading
-        )
-        if (!success) return
-        SensorManager.remapCoordinateSystem(
-            rotationMatrix,
-            SensorManager.AXIS_X,
-            SensorManager.AXIS_Y,
-            remappedRotationMatrix
-        )
-        SensorManager.getOrientation(remappedRotationMatrix, orientationAngles)
-        synchronized(stateLock) {
-            rollAngle = rollEma.update(orientationAngles[2])
+        try {
+            val success = SensorManager.getRotationMatrix(
+                rotationMatrix,
+                null,
+                accelerometerReading,
+                magnetometerReading
+            )
+            if (!success) return
+            SensorManager.remapCoordinateSystem(
+                rotationMatrix,
+                SensorManager.AXIS_X,
+                SensorManager.AXIS_Y,
+                remappedRotationMatrix
+            )
+            SensorManager.getOrientation(remappedRotationMatrix, orientationAngles)
+            synchronized(stateLock) {
+                rollAngle = rollEma.update(orientationAngles[2])
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "加速度计/磁力计计算横滚角失败", e)
         }
     }
 
@@ -383,8 +400,8 @@ class ARCompositionManager(context: Context) : SensorEventListener {
         if (maxDim <= MAX_INPUT_SIZE) return bitmap
 
         val scale = MAX_INPUT_SIZE.toFloat() / maxDim
-        val newWidth = (bitmap.width * scale).toInt()
-        val newHeight = (bitmap.height * scale).toInt()
+        val newWidth = (bitmap.width * scale).toInt().coerceAtLeast(1)
+        val newHeight = (bitmap.height * scale).toInt().coerceAtLeast(1)
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
             ?: bitmap
     }
@@ -1164,10 +1181,12 @@ class ARCompositionManager(context: Context) : SensorEventListener {
      * 提高 ML Kit 在暗光下的人脸/物体检测成功率。
      */
     private class LowLightEnhancer {
+        private val bufferLock = Any()
         private val reusableBuffer = IntArray(MAX_INPUT_SIZE * MAX_INPUT_SIZE)
 
         /**
          * 返回增强后的 Bitmap（可能为原图副本或新分配）。调用方负责回收。
+         * 方法内部对共享缓冲区加锁，保证并发安全。
          */
         fun enhanceIfNeeded(bitmap: Bitmap): Bitmap {
             val width = bitmap.width
@@ -1175,39 +1194,42 @@ class ARCompositionManager(context: Context) : SensorEventListener {
             val total = width * height
             if (total > reusableBuffer.size) return bitmap
 
-            bitmap.getPixels(reusableBuffer, 0, width, 0, 0, width, height)
+            synchronized(bufferLock) {
+                bitmap.getPixels(reusableBuffer, 0, width, 0, 0, width, height)
 
-            var sum = 0L
-            for (i in 0 until total) {
-                val p = reusableBuffer[i]
-                val r = (p shr 16) and 0xFF
-                val g = (p shr 8) and 0xFF
-                val b = p and 0xFF
-                sum += (0.299f * r + 0.587f * g + 0.114f * b).toInt()
+                var sum = 0L
+                for (i in 0 until total) {
+                    val p = reusableBuffer[i]
+                    val r = (p shr 16) and 0xFF
+                    val g = (p shr 8) and 0xFF
+                    val b = p and 0xFF
+                    sum += (0.299f * r + 0.587f * g + 0.114f * b).toInt()
+                }
+                val meanLum = sum.toFloat() / total
+
+                // 平均亮度低于 45（约暗光环境）才做增强
+                if (meanLum >= 45f) return bitmap
+
+                val gamma = 0.65f
+                val gammaTable = FloatArray(256) { i ->
+                    ((i / 255f).pow(gamma) * 255f).coerceIn(0f, 255f)
+                }
+
+                val output = IntArray(total)
+                for (i in 0 until total) {
+                    val p = reusableBuffer[i]
+                    val a = (p shr 24) and 0xFF
+                    val r = gammaTable[(p shr 16) and 0xFF].toInt()
+                    val g = gammaTable[(p shr 8) and 0xFF].toInt()
+                    val b = gammaTable[p and 0xFF].toInt()
+                    output[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                }
+
+                val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    ?: return bitmap
+                result.setPixels(output, 0, width, 0, 0, width, height)
+                return result
             }
-            val meanLum = sum.toFloat() / total
-
-            // 平均亮度低于 45（约暗光环境）才做增强
-            if (meanLum >= 45f) return bitmap
-
-            val gamma = 0.65f
-            val gammaTable = FloatArray(256) { i ->
-                ((i / 255f).pow(gamma) * 255f).coerceIn(0f, 255f)
-            }
-
-            val output = IntArray(total)
-            for (i in 0 until total) {
-                val p = reusableBuffer[i]
-                val a = (p shr 24) and 0xFF
-                val r = gammaTable[(p shr 16) and 0xFF].toInt()
-                val g = gammaTable[(p shr 8) and 0xFF].toInt()
-                val b = gammaTable[p and 0xFF].toInt()
-                output[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
-            }
-
-            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            result.setPixels(output, 0, width, 0, 0, width, height)
-            return result
         }
     }
 }

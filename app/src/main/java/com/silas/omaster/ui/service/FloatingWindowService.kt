@@ -38,6 +38,12 @@ import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -59,10 +65,21 @@ class FloatingWindowService : Service() {
     private var params: WindowManager.LayoutParams? = null
     private var isExpanded = true
 
+    /** 服务协程作用域，用于后台序列化状态等任务 */
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** 当前正在运行的贴边动画，服务销毁前需要取消 */
+    private var activeSnapAnimator: ValueAnimator? = null
+
     // 配色方案 - 从 SettingsManager 动态读取主题色
     private fun getPrimaryColor(context: Context): Int {
-        val theme = SettingsManager.getInstance(context).currentTheme
-        return theme.primaryColor.toArgb()
+        return try {
+            val theme = SettingsManager.getInstance(context).currentTheme
+            theme.primaryColor.toArgb()
+        } catch (e: Exception) {
+            Log.w(TAG, "读取主题色失败，使用默认色", e)
+            Color.parseColor("#FF6B35")
+        }
     }
 
     private fun getPrimaryDarkColor(context: Context): Int {
@@ -81,9 +98,14 @@ class FloatingWindowService : Service() {
 
     // 背景颜色根据设置动态计算
     private fun getBackgroundColor(context: Context): Int {
-        val opacity = SettingsManager.getInstance(context).floatingWindowOpacity
-        val alpha = (opacity * 255 / 100).coerceIn(30, 255)
-        return Color.argb(alpha, 26, 26, 26) // #1A1A1A with dynamic alpha
+        return try {
+            val opacity = SettingsManager.getInstance(context).floatingWindowOpacity
+            val alpha = (opacity * 255 / 100).coerceIn(30, 255)
+            Color.argb(alpha, 26, 26, 26) // #1A1A1A with dynamic alpha
+        } catch (e: Exception) {
+            Log.w(TAG, "读取悬浮窗透明度失败，使用默认值", e)
+            Color.argb((56 * 255 / 100).coerceIn(30, 255), 26, 26, 26)
+        }
     }
 
     companion object {
@@ -275,7 +297,10 @@ class FloatingWindowService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        activeSnapAnimator?.cancel()
+        activeSnapAnimator = null
         removeWindow()
+        serviceScope.cancel()
         instance = null
     }
 
@@ -284,21 +309,24 @@ class FloatingWindowService : Service() {
         instance = this
 
         if (intent == null) {
-            // START_STICKY 重启：从 SharedPreferences 恢复上次状态
+            // START_STICKY 重启：从 SharedPreferences 恢复上次状态（在后台协程中执行，避免主线程阻塞）
             if (floatingView == null) {
-                val restored = restoreStateFromPrefs()
-                if (restored != null) {
-                    val (name, sections, presetIndex, presetList, expanded, posX, posY) = restored
-                    isExpanded = expanded
-                    if (isExpanded) {
-                        showExpandedWindow(name, sections, posX, posY, presetIndex, presetList.size)
-                    } else {
-                        showCollapsedWindow(name, sections, posX, posY)
+                serviceScope.launch {
+                    val restored = restoreStateFromPrefs()
+                    withContext(Dispatchers.Main) {
+                        if (restored != null) {
+                            val (name, sections, presetIndex, presetList, expanded, posX, posY) = restored
+                            isExpanded = expanded
+                            if (isExpanded) {
+                                showExpandedWindow(name, sections, posX, posY, presetIndex, presetList.size)
+                            } else {
+                                showCollapsedWindow(name, sections, posX, posY)
+                            }
+                        } else {
+                            // 无保存状态，停止服务
+                            stopSelf()
+                        }
                     }
-                } else {
-                    // 无保存状态，停止服务
-                    stopSelf()
-                    return START_NOT_STICKY
                 }
             }
             return START_STICKY
@@ -358,21 +386,24 @@ class FloatingWindowService : Service() {
         posX: Int,
         posY: Int
     ) {
-        try {
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val sectionsJson = stateJson.encodeToString(sections.toList())
-            val presetListJson = stateJson.encodeToString(presetList.toList())
-            prefs.edit()
-                .putString(KEY_LAST_NAME, name)
-                .putString(KEY_LAST_SECTIONS_JSON, sectionsJson)
-                .putInt(KEY_LAST_PRESET_INDEX, presetIndex)
-                .putString(KEY_LAST_PRESET_LIST_JSON, presetListJson)
-                .putBoolean(KEY_LAST_IS_EXPANDED, isExpanded)
-                .putInt(KEY_LAST_POS_X, posX)
-                .putInt(KEY_LAST_POS_Y, posY)
-                .apply()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to save state to prefs", e)
+        // 将 JSON 序列化移到 IO 线程，避免主线程阻塞
+        serviceScope.launch {
+            try {
+                val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val sectionsJson = stateJson.encodeToString(sections.toList())
+                val presetListJson = stateJson.encodeToString(presetList.toList())
+                prefs.edit()
+                    .putString(KEY_LAST_NAME, name)
+                    .putString(KEY_LAST_SECTIONS_JSON, sectionsJson)
+                    .putInt(KEY_LAST_PRESET_INDEX, presetIndex)
+                    .putString(KEY_LAST_PRESET_LIST_JSON, presetListJson)
+                    .putBoolean(KEY_LAST_IS_EXPANDED, isExpanded)
+                    .putInt(KEY_LAST_POS_X, posX)
+                    .putInt(KEY_LAST_POS_Y, posY)
+                    .apply()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to save state to prefs", e)
+            }
         }
     }
 
@@ -380,12 +411,12 @@ class FloatingWindowService : Service() {
      * 从 SharedPreferences 恢复上次保存的状态
      * @return 恢复的数据元组，如果恢复失败则返回 null
      */
-    private fun restoreStateFromPrefs(): StateData? {
-        return try {
+    private suspend fun restoreStateFromPrefs(): StateData? = withContext(Dispatchers.IO) {
+        try {
             val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val name = prefs.getString(KEY_LAST_NAME, null) ?: return null
-            val sectionsJson = prefs.getString(KEY_LAST_SECTIONS_JSON, null) ?: return null
-            val presetListJson = prefs.getString(KEY_LAST_PRESET_LIST_JSON, null) ?: return null
+            val name = prefs.getString(KEY_LAST_NAME, null) ?: return@withContext null
+            val sectionsJson = prefs.getString(KEY_LAST_SECTIONS_JSON, null) ?: return@withContext null
+            val presetListJson = prefs.getString(KEY_LAST_PRESET_LIST_JSON, null) ?: return@withContext null
             val presetIndex = prefs.getInt(KEY_LAST_PRESET_INDEX, 0)
             val isExpanded = prefs.getBoolean(KEY_LAST_IS_EXPANDED, true)
             val posX = prefs.getInt(KEY_LAST_POS_X, 50)
@@ -1165,7 +1196,10 @@ class FloatingWindowService : Service() {
     private fun snapToEdge(wm: WindowManager) {
         val view = floatingView ?: return
         val p = params ?: return
-        
+
+        // 取消可能正在运行的旧动画，避免多个动画同时操作同一 View
+        activeSnapAnimator?.cancel()
+
         // 使用 WindowMetrics API 替代废弃的 DisplayMetrics (API 30+)
         val screenWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val windowMetrics: WindowMetrics = wm.currentWindowMetrics
@@ -1186,6 +1220,7 @@ class FloatingWindowService : Service() {
 
         // 使用动画平滑移动
         val animator = ValueAnimator.ofInt(p.x, targetX)
+        activeSnapAnimator = animator
         animator.duration = 300
         animator.interpolator = DecelerateInterpolator()
         animator.addUpdateListener { animation ->
@@ -1206,6 +1241,9 @@ class FloatingWindowService : Service() {
         animator.addListener(object : android.animation.Animator.AnimatorListener {
             override fun onAnimationStart(animation: android.animation.Animator) {}
             override fun onAnimationEnd(animation: android.animation.Animator) {
+                if (activeSnapAnimator === animation) {
+                    activeSnapAnimator = null
+                }
                 // 动画正常结束，保存最终位置
                 val currentView = floatingView
                 if (currentView != null && currentView.isAttachedToWindow) {
@@ -1217,6 +1255,9 @@ class FloatingWindowService : Service() {
                 }
             }
             override fun onAnimationCancel(animation: android.animation.Animator) {
+                if (activeSnapAnimator === animation) {
+                    activeSnapAnimator = null
+                }
                 // 动画被取消时，确保位置已更新到当前帧的值
                 // ValueAnimator 取消时 animatedValue 停留在被取消时的值，无需额外处理
             }

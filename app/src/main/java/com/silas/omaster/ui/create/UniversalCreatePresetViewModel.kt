@@ -24,9 +24,12 @@ import java.io.IOException
  * 支持基于 sections 的灵活配置
  */
 class UniversalCreatePresetViewModel(
-    private val context: Context,
+    context: Context,
     private val repository: PresetRepository
 ) : ViewModel() {
+
+    // 使用 Application Context，避免持有 Activity/Fragment 引用导致内存泄漏
+    private val appContext = context.applicationContext
 
     private val _uiState = MutableStateFlow(UniversalPresetUiState())
     val uiState: StateFlow<UniversalPresetUiState> = _uiState.asStateFlow()
@@ -318,10 +321,10 @@ class UniversalCreatePresetViewModel(
     @Throws(IOException::class)
     private fun saveImageToInternalStorage(uri: Uri): String {
         val fileName = "custom_${System.currentTimeMillis()}.jpg"
-        val file = File(context.filesDir, "presets/$fileName")
+        val file = File(appContext.filesDir, "presets/$fileName")
         file.parentFile?.mkdirs()
-        
-        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+
+        appContext.contentResolver.openInputStream(uri)?.use { inputStream ->
             FileOutputStream(file).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }

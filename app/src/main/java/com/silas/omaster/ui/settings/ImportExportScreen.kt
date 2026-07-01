@@ -151,7 +151,9 @@ fun ImportExportScreen(
 
                 importProgress = 0.5f
 
-                val result = repository.importPresets(tempFile)
+                val result = withContext(Dispatchers.IO) {
+                    repository.importPresets(tempFile)
+                }
 
                 importProgress = 1f
 
@@ -192,17 +194,25 @@ fun ImportExportScreen(
             coroutineScope.launch {
                 try {
                     exportProgress = 0.3f
-                    val result = repository.exportPresets(selectedPresetIds)
+                    val result = withContext(Dispatchers.IO) {
+                        repository.exportPresets(selectedPresetIds)
+                    }
                     exportProgress = 0.7f
 
                     result.onSuccess { file ->
                         exportProgress = 0.9f
-                        shareExportFile(context, file)
-                        haptic.perform(HapticFeedbackType.LongPress)
+                        try {
+                            shareExportFile(context, file)
+                            haptic.perform(HapticFeedbackType.LongPress)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "分享导出文件失败：${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }.onFailure { e ->
                         Toast.makeText(context, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
                         haptic.perform(HapticFeedbackType.LongPress)
                     }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "导出失败：${e.message}", Toast.LENGTH_SHORT).show()
                 } finally {
                     exportProgress = 1f
                     isExporting = false

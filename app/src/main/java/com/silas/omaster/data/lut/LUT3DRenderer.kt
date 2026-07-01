@@ -156,6 +156,10 @@ object LUT3DRenderer {
      */
     private fun uploadLUT3DTextureAsRGBA8(lutData: LUT3DData) {
         val bitmap = LUT3DParser.encodeToBitmap(lutData.data, lutData.size)
+        if (bitmap.width <= 0 || bitmap.height <= 0) {
+            Log.e(TAG, "uploadLUT3DTextureAsRGBA8: invalid bitmap size")
+            return
+        }
 
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, lutTextureId)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
@@ -221,17 +225,25 @@ object LUT3DRenderer {
 
             vertexBuffer?.let { vb ->
                 vb.position(0)
-                GLES30.glVertexAttribPointer(posLoc, 2, GLES30.GL_FLOAT, false, 16, vb)
-                GLES30.glEnableVertexAttribArray(posLoc)
+                if (posLoc >= 0) {
+                    GLES30.glVertexAttribPointer(posLoc, 2, GLES30.GL_FLOAT, false, 16, vb)
+                    GLES30.glEnableVertexAttribArray(posLoc)
+                }
 
                 vb.position(2)
-                GLES30.glVertexAttribPointer(texLoc, 2, GLES30.GL_FLOAT, false, 16, vb)
-                GLES30.glEnableVertexAttribArray(texLoc)
+                if (texLoc >= 0) {
+                    GLES30.glVertexAttribPointer(texLoc, 2, GLES30.GL_FLOAT, false, 16, vb)
+                    GLES30.glEnableVertexAttribArray(texLoc)
+                }
             }
 
             // 绘制
             GLES30.glViewport(0, 0, width, height)
             GLES30.glDrawArrays(GLES30.GL_TRIANGLE_STRIP, 0, 4)
+
+            // 安全：禁用已启用的顶点属性数组
+            if (posLoc >= 0) GLES30.glDisableVertexAttribArray(posLoc)
+            if (texLoc >= 0) GLES30.glDisableVertexAttribArray(texLoc)
 
             return true
         } catch (e: Exception) {
@@ -282,34 +294,41 @@ object LUT3DRenderer {
     ): Bitmap = withContext(Dispatchers.Default) {
         val width = sourceBitmap.width
         val height = sourceBitmap.height
-        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
-        val srcPixels = IntArray(width * height)
-        val dstPixels = IntArray(width * height)
-        sourceBitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
+        try {
+            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
-        val s = strength.coerceIn(0f, 1f)
+            val srcPixels = IntArray(width * height)
+            val dstPixels = IntArray(width * height)
+            sourceBitmap.getPixels(srcPixels, 0, width, 0, 0, width, height)
 
-        for (i in srcPixels.indices) {
-            val pixel = srcPixels[i]
-            val r = (pixel shr 16 and 0xFF) / 255f
-            val g = (pixel shr 8 and 0xFF) / 255f
-            val b = (pixel and 0xFF) / 255f
+            val s = strength.coerceIn(0f, 1f)
 
-            // 三线性插值采样
-            val mapped = lutData.sampleTrilinear(r, g, b)
+            for (i in srcPixels.indices) {
+                val pixel = srcPixels[i]
+                val r = (pixel shr 16 and 0xFF) / 255f
+                val g = (pixel shr 8 and 0xFF) / 255f
+                val b = (pixel and 0xFF) / 255f
 
-            // 按强度混合
-            val outR = ((r * (1f - s) + mapped[0] * s).coerceIn(0f, 1f) * 255).toInt()
-            val outG = ((g * (1f - s) + mapped[1] * s).coerceIn(0f, 1f) * 255).toInt()
-            val outB = ((b * (1f - s) + mapped[2] * s).coerceIn(0f, 1f) * 255).toInt()
-            val outA = pixel ushr 24 and 0xFF
+                // 三线性插值采样
+                val mapped = lutData.sampleTrilinear(r, g, b)
 
-            dstPixels[i] = (outA shl 24) or (outR shl 16) or (outG shl 8) or outB
+                // 按强度混合
+                val outR = ((r * (1f - s) + mapped[0] * s).coerceIn(0f, 1f) * 255).toInt()
+                val outG = ((g * (1f - s) + mapped[1] * s).coerceIn(0f, 1f) * 255).toInt()
+                val outB = ((b * (1f - s) + mapped[2] * s).coerceIn(0f, 1f) * 255).toInt()
+                val outA = pixel ushr 24 and 0xFF
+
+                dstPixels[i] = (outA shl 24) or (outR shl 16) or (outG shl 8) or outB
+            }
+
+            result.setPixels(dstPixels, 0, width, 0, 0, width, height)
+            result
+        } catch (e: OutOfMemoryError) {
+            // 内存不足时返回原图，避免崩溃
+            Log.e(TAG, "applyLUTCPU: OOM while allocating output bitmap, returning source", e)
+            sourceBitmap
         }
-
-        result.setPixels(dstPixels, 0, width, 0, 0, width, height)
-        result
     }
 
     /**

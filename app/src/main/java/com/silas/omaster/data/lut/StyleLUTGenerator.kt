@@ -143,9 +143,17 @@ object StyleLUTGenerator {
         val targetSize = 256
         if (bitmap.width <= targetSize && bitmap.height <= targetSize) return bitmap
         val scale = minOf(targetSize.toFloat() / bitmap.width, targetSize.toFloat() / bitmap.height)
-        val w = (bitmap.width * scale).toInt()
-        val h = (bitmap.height * scale).toInt()
-        return Bitmap.createScaledBitmap(bitmap, w, h, true)
+        val w = (bitmap.width * scale).toInt().coerceAtLeast(1)
+        val h = (bitmap.height * scale).toInt().coerceAtLeast(1)
+        return try {
+            Bitmap.createScaledBitmap(bitmap, w, h, true)
+        } catch (e: OutOfMemoryError) {
+            Log.w(TAG, "scaleForAnalysis OOM, using original bitmap", e)
+            bitmap
+        } catch (e: Exception) {
+            Log.w(TAG, "scaleForAnalysis failed, using original bitmap", e)
+            bitmap
+        }
     }
 
     /**
@@ -173,27 +181,37 @@ object StyleLUTGenerator {
     private fun convertLogToRec709(bitmap: Bitmap): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
-        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        if (width <= 0 || height <= 0) return bitmap
 
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        return try {
+            val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
-        for (i in pixels.indices) {
-            val pixel = pixels[i]
-            val r = (Color.red(pixel) / 255f).let { logToLinear(it) }
-            val g = (Color.green(pixel) / 255f).let { logToLinear(it) }
-            val b = (Color.blue(pixel) / 255f).let { logToLinear(it) }
-            val a = Color.alpha(pixel)
-            pixels[i] = Color.argb(
-                a,
-                (r.coerceIn(0f, 1f) * 255).toInt(),
-                (g.coerceIn(0f, 1f) * 255).toInt(),
-                (b.coerceIn(0f, 1f) * 255).toInt()
-            )
+            val pixels = IntArray(width * height)
+            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+            for (i in pixels.indices) {
+                val pixel = pixels[i]
+                val r = (Color.red(pixel) / 255f).let { logToLinear(it) }
+                val g = (Color.green(pixel) / 255f).let { logToLinear(it) }
+                val b = (Color.blue(pixel) / 255f).let { logToLinear(it) }
+                val a = Color.alpha(pixel)
+                pixels[i] = Color.argb(
+                    a,
+                    (r.coerceIn(0f, 1f) * 255).toInt(),
+                    (g.coerceIn(0f, 1f) * 255).toInt(),
+                    (b.coerceIn(0f, 1f) * 255).toInt()
+                )
+            }
+
+            result.setPixels(pixels, 0, width, 0, 0, width, height)
+            result
+        } catch (e: OutOfMemoryError) {
+            Log.w(TAG, "convertLogToRec709 OOM, returning original bitmap", e)
+            bitmap
+        } catch (e: Exception) {
+            Log.w(TAG, "convertLogToRec709 failed, returning original bitmap", e)
+            bitmap
         }
-
-        result.setPixels(pixels, 0, width, 0, 0, width, height)
-        return result
     }
 
     /**
@@ -226,6 +244,10 @@ object StyleLUTGenerator {
     private fun computeColorStatistics(bitmap: Bitmap): ColorStatistics {
         val width = bitmap.width
         val height = bitmap.height
+        if (width <= 0 || height <= 0) {
+            return emptyColorStatistics()
+        }
+
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
@@ -237,6 +259,9 @@ object StyleLUTGenerator {
         var sumR = 0.0; var sumG = 0.0; var sumB = 0.0
         var sumLuma = 0.0; var sumSat = 0.0
         val n = pixels.size
+        if (n == 0) {
+            return emptyColorStatistics()
+        }
 
         // 第一遍：计算均值和直方图
         for (pixel in pixels) {
@@ -296,6 +321,27 @@ object StyleLUTGenerator {
             rgbStdDev = rgbStdDev,
             histogramR = normHistR, histogramG = normHistG, histogramB = normHistB,
             cdfR = cdfR, cdfG = cdfG, cdfB = cdfB
+        )
+    }
+
+    /**
+     * 空/无效 Bitmap 时的默认统计信息
+     */
+    private fun emptyColorStatistics(): ColorStatistics {
+        val bins = 256
+        val emptyFloatArray = FloatArray(bins)
+        return ColorStatistics(
+            meanR = 0f, meanG = 0f, meanB = 0f,
+            stdDevR = 0f, stdDevG = 0f, stdDevB = 0f,
+            meanLuminance = 0f,
+            meanSaturation = 0f,
+            rgbStdDev = 0f,
+            histogramR = emptyFloatArray,
+            histogramG = emptyFloatArray,
+            histogramB = emptyFloatArray,
+            cdfR = emptyFloatArray,
+            cdfG = emptyFloatArray,
+            cdfB = emptyFloatArray
         )
     }
 

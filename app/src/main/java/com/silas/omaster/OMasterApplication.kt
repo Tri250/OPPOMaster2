@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * 追踪每个初始化步骤的耗时，用于性能分析和优化
  */
 object StartupLogger {
-    private val steps = mutableListOf<Step>()
+    private val steps = java.util.Collections.synchronizedList(mutableListOf<Step>())
     private var appStartTime: Long = 0L
 
     data class Step(
@@ -132,7 +132,17 @@ class OMasterApplication : Application() {
          */
         fun safeGetInstance(): OMasterApplication? = instance
 
-        fun getPrefs(): SharedPreferences = prefs
+        fun getPrefs(): SharedPreferences {
+            if (!::prefs.isInitialized) {
+                instance?.let { app ->
+                    prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                }
+            }
+            if (!::prefs.isInitialized) {
+                throw IllegalStateException("SharedPreferences 尚未初始化")
+            }
+            return prefs
+        }
 
         /**
          * 由 Application.onCreate 调用，设置实例并确保 SharedPreferences 已初始化
@@ -288,11 +298,19 @@ class OMasterApplication : Application() {
     }
 
     fun hasUserAgreed(): Boolean {
-        return prefs.getBoolean(KEY_USER_AGREED, false)
+        return try {
+            getPrefs().getBoolean(KEY_USER_AGREED, false)
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun setUserAgreed(agreed: Boolean) {
-        prefs.edit().putBoolean(KEY_USER_AGREED, agreed).apply()
+        try {
+            getPrefs().edit().putBoolean(KEY_USER_AGREED, agreed).apply()
+        } catch (e: Exception) {
+            Log.e("OMasterApplication", "保存用户同意状态失败", e)
+        }
     }
 
     /**

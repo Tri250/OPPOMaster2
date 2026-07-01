@@ -101,8 +101,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        // 注销悬浮窗控制器
+        // 在 Activity 被销毁前注销悬浮窗控制器，避免使用已销毁的 Activity 引用
         floatingWindowController?.unregister()
+        super.onDestroy()
     }
 }
