@@ -1221,7 +1221,7 @@ class FloatingWindowService : Service() {
         animator.addUpdateListener { animation ->
             val currentView = floatingView
             if (currentView != null && currentView.isAttachedToWindow) {
-                p.x = animation.animatedValue as Int
+                p.x = (animation.animatedValue as Number).toInt()
                 try {
                     wm.updateViewLayout(currentView, p)
                 } catch (e: Exception) {

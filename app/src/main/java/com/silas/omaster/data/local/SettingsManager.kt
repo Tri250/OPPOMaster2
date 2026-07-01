@@ -274,8 +274,10 @@ class SettingsManager private constructor(private val context: Context) {
                 if (encrypted != null) {
                     setDataSync(KEY_CLOUD_API_KEY, encrypted)
                 } else {
-                    android.util.Log.w("SettingsManager", "API Key 加密失败，回退到明文存储")
-                    setDataSync(KEY_CLOUD_API_KEY, value)
+                    // 加密失败时拒绝明文存储，避免敏感数据以明文形式持久化
+                    // 清除旧值并记录错误，调用方应通过 UI 提示用户重新输入
+                    android.util.Log.e("SettingsManager", "API Key 加密失败，拒绝明文存储，已清除旧值")
+                    removeDataSync(KEY_CLOUD_API_KEY)
                 }
             } else {
                 removeDataSync(KEY_CLOUD_API_KEY)
