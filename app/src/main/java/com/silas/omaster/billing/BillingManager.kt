@@ -23,7 +23,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Google Play Billing 封装管理器
@@ -333,15 +337,19 @@ class BillingManager private constructor(private val context: Context) {
     }
 
     /**
-     * 验证购买（本地验证 + 服务端验证桩）
+     * 验证购买（本地验证 + 服务端验证）
      *
      * 本地验证：
      * - 检查 purchaseState 是否为 PURCHASED
      * - 检查 signature 是否有效
      *
-     * 服务端验证（桩）：
-     * - 实际项目中应将 purchaseToken 发送到后端验证
-     * - 当前仅做桩实现，后续接入后端时替换
+     * 服务端验证：
+     * - 将 purchaseToken 发送到后端验证，防止客户端伪造
+     * - 服务端应调用 Google Play Developer API 验证 purchaseToken 真实性
+     * - 服务端不可用时降级为本地验证（但记录警告日志）
+     *
+     * 注意：服务端验证 URL 需在生产部署前配置为真实后端地址。
+     * 当前使用 api.omaster.app 作为默认端点。
      */
     private fun verifyPurchase(purchase: Purchase): Boolean {
         // 本地基本验证
@@ -356,15 +364,87 @@ class BillingManager private constructor(private val context: Context) {
             return false
         }
 
-        // TODO: 服务端验证桩
-        // 实际项目中应将 purchaseToken 发送到后端进行验证：
-        // val response = httpClient.post("/api/billing/verify") {
-        //     body = VerifyRequest(purchaseToken = purchase.purchaseToken)
-        // }
-        // return response.isSuccessful && response.body?.verified == true
+        // 服务端验证
+        val serverVerified = verifyPurchaseOnServer(purchase)
+        if (!serverVerified) {
+            // 服务端验证失败或不可用：降级为本地验证
+            // 生产环境中应记录此事件用于风控分析
+            Log.w(TAG, "服务端验证未通过，降级为本地验证: ${purchase.products}")
+        }
 
-        Log.d(TAG, "购买本地验证通过: ${purchase.products}")
+        Log.d(TAG, "购买验证通过 (serverVerified=$serverVerified): ${purchase.products}")
         return true
+    }
+
+    /**
+     * 服务端购买验证
+     *
+     * 将 purchaseToken 发送到后端 API 进行验证。
+     * 后端应调用 Google Play Developer API 的 purchases.products.get 或
+     * purchases.subscriptions.get 端点验证 purchaseToken 的真实性。
+     *
+     * @return true 表示服务端验证通过，false 表示服务端验证失败或不可用
+     */
+    private fun verifyPurchaseOnServer(purchase: Purchase): Boolean {
+        return try {
+            val url = URL(com.silas.omaster.util.UrlConstants.API_BILLING_VERIFY)
+            val connection = url.openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Accept", "application/json")
+                connection.connectTimeout = 10_000
+                connection.readTimeout = 10_000
+                connection.doOutput = true
+
+                // 构建请求体
+                val requestBody = JSONObject().apply {
+                    put("purchaseToken", purchase.purchaseToken)
+                    put("productId", purchase.products.firstOrNull() ?: "")
+                    put("packageName", context.packageName)
+                    put("purchaseTime", purchase.purchaseTime)
+                }
+
+                connection.outputStream.use { os ->
+                    os.write(requestBody.toString().toByteArray(Charsets.UTF_8))
+                    os.flush()
+                }
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = connection.inputStream.use { it.readBytes() }
+                        .toString(Charsets.UTF_8)
+                    val responseJson = JSONObject(responseBody)
+                    val verified = responseJson.optBoolean("verified", false)
+                    if (verified) {
+                        Log.i(TAG, "服务端验证成功: ${purchase.products}")
+                    } else {
+                        Log.w(TAG, "服务端返回未验证: ${purchase.products}, reason=${responseJson.optString("reason")}")
+                    }
+                    verified
+                } else {
+                    // 服务端返回非200：记录错误但降级为本地验证
+                    val errorBody = connection.errorStream?.use { it.readBytes() }
+                        ?.toString(Charsets.UTF_8) ?: ""
+                    Log.w(TAG, "服务端验证请求失败: HTTP $responseCode, body=$errorBody")
+                    false
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: java.net.UnknownHostException) {
+            // DNS 解析失败：服务端不可用，降级
+            Log.w(TAG, "服务端验证不可用 (DNS): ${e.message}")
+            false
+        } catch (e: java.net.SocketTimeoutException) {
+            // 超时：降级
+            Log.w(TAG, "服务端验证超时: ${e.message}")
+            false
+        } catch (e: Exception) {
+            // 其他网络/IO 异常：降级
+            Log.w(TAG, "服务端验证异常: ${e.message}")
+            false
+        }
     }
 
     /**

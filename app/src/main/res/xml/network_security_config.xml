@@ -20,6 +20,21 @@
         <domain includeSubdomains="true">umeng.com</domain>
     </domain-config>
 
+    <!-- API 域名证书固定（防止中间人攻击） -->
+    <!-- 注意：证书过期前需更新 pin，建议同时 pin 根证书和备用证书 -->
+    <domain-config>
+        <domain includeSubdomains="true">omaster.app</domain>
+        <domain includeSubdomains="true">omaster.ai</domain>
+        <pin-set expiration="2027-12-31">
+            <!-- Let's Encrypt ISRG Root X1 (RSA) -->
+            <pin digest="SHA-256">C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=</pin>
+            <!-- Let's Encrypt ISRG Root X2 (ECDSA) -->
+            <pin digest="SHA-256">diGVwiVtH1rF8EywzM4S2/xv5c7HMDv7g5qBl5RFw5Q=</pin>
+            <!-- Google Trust Services GTS Root R1 备用 -->
+            <pin digest="SHA-256">hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc=</pin>
+        </pin-set>
+    </domain-config>
+
     <!-- Debug 模式允许本地网络和友盟统计（仅在 debug build 中生效） -->
     <debug-overrides>
         <trust-anchors>

@@ -365,6 +365,11 @@
 # 安全加密工具
 -keep class com.silas.omaster.util.SecurityCrypto { *; }
 
+# 内购管理（防止服务端验证回调被混淆）
+-keep class com.silas.omaster.billing.BillingManager { *; }
+-keep class com.silas.omaster.billing.SubscriptionState { *; }
+-keep class com.silas.omaster.billing.Tier { *; }
+
 # ========================================
 # R8 优化增强配置
 # ========================================

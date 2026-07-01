@@ -33,6 +33,12 @@ object UrlConstants {
     /** AI 场景分析云端 API */
     const val API_CLOUD_SCENE_ANALYZE = "https://api.omaster.ai/v1/scene/analyze"
 
+    /** 内购验证 API */
+    const val API_BILLING_VERIFY = "https://api.omaster.app/billing/verify"
+
+    /** 反馈上传 API（默认端点，可通过 local.properties 覆盖） */
+    const val API_FEEDBACK_ENDPOINT = "https://api.omaster.app/feedback"
+
     // ===== 预设源 URL =====
     /** OPPO/一加 大师模式预设 */
     const val PRESET_OPPO = "$CDN_JSDELIVR/presets/v2/oppo.json"

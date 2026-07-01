@@ -465,6 +465,9 @@ dependencies {
     // ProfileInstaller - 启动性能优化（ART 配置文件）
     implementation(libs.androidx.profileinstaller)
 
+    // WorkManager - 后台定期同步
+    implementation(libs.androidx.work.runtime.ktx)
+
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
 

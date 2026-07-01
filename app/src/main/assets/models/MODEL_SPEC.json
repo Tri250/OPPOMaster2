@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://omaster.app/schemas/model_spec.json",
-  "version": "1.2.0",
-  "lastUpdated": "2024-12-01",
+  "version": "2.2.1",
+  "lastUpdated": "2026-07-01",
   "description": "OMaster TFLite 模型规格配置文件",
   "models": {
     "scene_classifier": {
       "fileName": "scene_classifier.tflite",
       "displayName": "场景分类模型",
       "description": "基于 MobileNetV3-Small 的 36 类场景分类模型",
-      "version": "1.2.0",
+      "version": "2.2.1",
       "status": "placeholder",
       "architecture": {
         "type": "MobileNetV3-Small",
@@ -351,7 +351,7 @@
       "fileName": "quality_analyzer.tflite",
       "displayName": "图像质量分析模型",
       "description": "基于 NIMA 变体的图像质量评估模型",
-      "version": "1.2.0",
+      "version": "2.2.1",
       "status": "placeholder",
       "architecture": {
         "type": "NIMA-MobileNetV2",
@@ -534,7 +534,7 @@
       "fileName": "param_predictor.tflite",
       "displayName": "参数预测模型",
       "description": "基于全连接网络的哈苏调校参数预测模型",
-      "version": "1.2.0",
+      "version": "2.2.1",
       "status": "placeholder",
       "architecture": {
         "type": "MLP",
@@ -858,9 +858,25 @@
   },
   "download": {
     "baseUrl": "https://releases.omaster.app/models",
-    "note": "v1.8.5：模型文件尚未就绪，所有 checksum 留空，禁止 Release 构建下载占位模型。",
+    "note": "v2.2.1：模型文件尚未就绪，所有 checksum 留空，禁止 Release 构建下载占位模型。请使用 scripts/prepare_models.sh 准备真实模型后更新。",
     "versions": {
-      "1.0.0": {
+      "2.2.1": {
+        "releaseDate": "2026-07-01",
+        "status": "not_ready",
+        "scene_classifier": {
+          "url": "https://releases.omaster.app/models/v2.2.1/scene_classifier.tflite",
+          "checksum": ""
+        },
+        "quality_analyzer": {
+          "url": "https://releases.omaster.app/models/v2.2.1/quality_analyzer.tflite",
+          "checksum": ""
+        },
+        "param_predictor": {
+          "url": "https://releases.omaster.app/models/v2.2.1/param_predictor.tflite",
+          "checksum": ""
+        }
+      },
+      "1.2.0": {
         "releaseDate": "2024-01-01",
         "status": "not_ready",
         "scene_classifier": {

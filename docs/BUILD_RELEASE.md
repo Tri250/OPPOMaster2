@@ -74,8 +74,8 @@ app/build/outputs/apk/release/
 
 ### 版本信息
 
-- **versionCode**: 20100
-- **versionName**: 2.1.0
+- **versionCode**: 20201
+- **versionName**: 2.2.1
 
 > 注意：版本号应与 CHANGELOG.md 和 Git Tag 保持同步
 
@@ -146,7 +146,7 @@ export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 
 项目已配置 GitHub Actions，可自动构建 Release APK：
 
-1. 推送 tag 到仓库：`git tag v2.1.0 && git push --tags`
+1. 推送 tag 到仓库：`git tag v2.2.1 && git push --tags`
 2. GitHub Actions 自动构建并发布
 
 ---

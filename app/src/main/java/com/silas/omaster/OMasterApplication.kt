@@ -12,6 +12,8 @@ import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
+import com.silas.omaster.util.SecurityIntegrityChecker
+import com.silas.omaster.background.SyncWorker
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
 import kotlinx.coroutines.CoroutineScope
@@ -195,6 +197,21 @@ class OMasterApplication : Application() {
         }
         StartupLogger.logStep("CrashHandler安装", SystemClock.elapsedRealtime() - step2Start)
 
+        // 第 2.5 步: 安全完整性检查（Release 构建中执行，Debug 跳过）
+        // 检测 Root/模拟器/Hook/调试器，异常环境记录告警但不阻断启动
+        if (!BuildConfig.DEBUG) {
+            val step2_5Start = SystemClock.elapsedRealtime()
+            try {
+                val integrityResult = SecurityIntegrityChecker.performCheck(this)
+                if (!integrityResult.isSafe) {
+                    android.util.Log.w("OMasterApplication", "安全环境异常: ${integrityResult.issues}")
+                }
+            } catch (e: Throwable) {
+                android.util.Log.w("OMasterApplication", "安全检查失败", e)
+            }
+            StartupLogger.logStep("安全完整性检查", SystemClock.elapsedRealtime() - step2_5Start)
+        }
+
         // 第 3 步: 初始化震动设置（fail-safe 模式,使用默认值兜底）
         val step3Start = SystemClock.elapsedRealtime()
         try {
@@ -212,6 +229,16 @@ class OMasterApplication : Application() {
         val step5Start = SystemClock.elapsedRealtime()
         triggerLazyInitialization()
         StartupLogger.logStep("触发懒加载调度", SystemClock.elapsedRealtime() - step5Start)
+
+        // 第 6 步: 调度 WorkManager 后台定期同步
+        // 不影响启动流程，异步调度
+        if (!BuildConfig.DEBUG) {
+            try {
+                SyncWorker.schedule(this, intervalHours = 24)
+            } catch (e: Throwable) {
+                android.util.Log.w("OMasterApplication", "WorkManager 调度失败", e)
+            }
+        }
 
         Log.i("OMasterApplication", StartupLogger.getReport())
     }
