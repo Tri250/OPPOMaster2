@@ -1,6 +1,6 @@
 package com.silas.omaster.ai.recipe
 
-import com.silas.omaster.ai.mapping.HasselbladParams
+import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SoftLightMode
 
 /**

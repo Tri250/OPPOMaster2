@@ -239,15 +239,3 @@ private fun PersonPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
     }
 }
 
-private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
-    val uri = photo.uri ?: return
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, if (photo.mediaType == MediaType.VIDEO) "video/*" else "image/*")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    try {
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.util.Log.w("PersonDetailScreen", "无法打开照片查看器", e)
-    }
-}

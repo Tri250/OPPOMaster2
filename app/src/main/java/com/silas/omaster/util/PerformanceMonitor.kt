@@ -225,7 +225,7 @@ object PerformanceMonitor {
     /**
      * 测量代码块执行时间
      */
-    inline fun <T> measureTime(tag: String, block: () -> T): T {
+    internal inline fun <T> measureTime(tag: String, block: () -> T): T {
         if (!isEnabled) return block()
         val start = SystemClock.elapsedRealtime()
         val result = block()

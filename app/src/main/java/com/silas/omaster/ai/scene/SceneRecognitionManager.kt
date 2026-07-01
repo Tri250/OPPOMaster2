@@ -178,7 +178,9 @@ class SceneRecognitionManager private constructor(context: Context) {
             recommendedFilm = recommendedFilms.firstOrNull()?.name,
             source = if (modelPrediction != null) "model+heuristic" else "heuristic",
             heuristicConfidence = heuristicResult.confidence,
-            modelConfidence = modelPrediction?.confidence ?: 0f
+            modelConfidence = modelPrediction?.confidence ?: 0f,
+            faceCount = heuristicResult.faceCount,
+            brightnessLevel = computeAverageLuminance(bitmap)
         )
     }
 
@@ -312,6 +314,35 @@ class SceneRecognitionManager private constructor(context: Context) {
         }
     }
 
+    /**
+     * 计算整图平均亮度（0-255），用于反模式检测。
+     */
+    private fun computeAverageLuminance(bitmap: Bitmap): Int {
+        val width = bitmap.width
+        val height = bitmap.height
+        if (width <= 0 || height <= 0) return 128
+        var total = 0L
+        var count = 0
+        val step = when {
+            width > 1000 -> 8
+            width > 500 -> 4
+            else -> 2
+        }
+        val rowPixels = IntArray(width)
+        for (y in 0 until height step step) {
+            bitmap.getPixels(rowPixels, 0, width, 0, y, width, 1)
+            for (x in 0 until width step step) {
+                val pixel = rowPixels[x]
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                total += (0.2126 * r + 0.7152 * g + 0.0722 * b).toInt()
+                count++
+            }
+        }
+        return if (count > 0) (total / count).toInt() else 128
+    }
+
     private data class ModelPrediction(
         val label: String,
         val confidence: Float,
@@ -330,5 +361,7 @@ data class RealtimeSceneResult(
     val recommendedFilm: String?,
     val source: String,
     val heuristicConfidence: Float,
-    val modelConfidence: Float
+    val modelConfidence: Float,
+    val faceCount: Int = 0,
+    val brightnessLevel: Int = 128
 )

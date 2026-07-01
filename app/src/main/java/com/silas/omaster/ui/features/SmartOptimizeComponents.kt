@@ -204,18 +204,14 @@ fun ParametricCurvePanel(
         Text("参数曲线", style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 8.dp))
 
-        LabeledSlider("高光", curve.highlights, -100f, 100f) {
-            onCurveChanged(curve.copy(highlights = it))
-        }
-        LabeledSlider("亮调", curve.lights, -100f, 100f) {
-            onCurveChanged(curve.copy(lights = it))
-        }
-        LabeledSlider("暗调", curve.darks, -100f, 100f) {
-            onCurveChanged(curve.copy(darks = it))
-        }
-        LabeledSlider("阴影", curve.shadows, -100f, 100f) {
-            onCurveChanged(curve.copy(shadows = it))
-        }
+        LabeledSlider("高光", curve.highlights, -100f, 100f,
+            onValueChange = { onCurveChanged(curve.copy(highlights = it)) })
+        LabeledSlider("亮调", curve.lights, -100f, 100f,
+            onValueChange = { onCurveChanged(curve.copy(lights = it)) })
+        LabeledSlider("暗调", curve.darks, -100f, 100f,
+            onValueChange = { onCurveChanged(curve.copy(darks = it)) })
+        LabeledSlider("阴影", curve.shadows, -100f, 100f,
+            onValueChange = { onCurveChanged(curve.copy(shadows = it)) })
     }
 }
 
@@ -319,7 +315,7 @@ fun ColorWheelPanel(
             value = wheel.luminance,
             onValueChange = { onWheelChanged(wheel.copy(luminance = it)) },
             valueRange = -100f..100f,
-            modifier = Modifier.width(size.dp)
+            modifier = Modifier.width(wheelSize.dp)
         )
 
         // 重置

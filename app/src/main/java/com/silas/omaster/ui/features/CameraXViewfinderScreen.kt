@@ -3,6 +3,7 @@ package com.silas.omaster.ui.features
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -48,6 +49,8 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +63,8 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +81,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -194,11 +200,11 @@ fun CameraXViewfinderScreen(
                 zoomRatio = currentZoom,
                 iso = proParams.iso,
                 shutterSpeedNs = proParams.shutterSpeedNs,
-                exposureCompensation = proParams.exposureCompensation ?: 0f
+                exposureCompensation = proParams.exposureCompensation.toFloat()
             ),
             gyroscopeStable = gyroscopeStable,
             upperBrightnessRatio = brightnessStats.upperBrightnessRatio,
-            faceRatio = sr.confidenceMap["face"] ?: 0f
+            faceRatio = if (sr.faceCount > 0) 1f else 0f
         )
         antiPatternAlerts = alerts
     }

@@ -365,7 +365,11 @@ private fun HighlightGrid(report: AnnualReport?, repository: TrailSnapRepository
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 row.forEach { photo ->
-                    HighlightPhotoItem(photo = photo, onClick = { openPhotoViewer(context, photo) })
+                    HighlightPhotoItem(
+                        photo = photo,
+                        onClick = { openPhotoViewer(context, photo) },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 repeat(3 - row.size) {
                     Spacer(modifier = Modifier.weight(1f))
@@ -376,7 +380,11 @@ private fun HighlightGrid(report: AnnualReport?, repository: TrailSnapRepository
 }
 
 @Composable
-private fun HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
+private fun HighlightPhotoItem(
+    photo: TrailPhoto,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -387,8 +395,7 @@ private fun HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
     )
 
     Box(
-        modifier = Modifier
-            .weight(1f)
+        modifier = modifier
             .height(96.dp)
             .scale(scale)
             .clip(RoundedCornerShape(16.dp))
@@ -411,15 +418,3 @@ private fun HighlightPhotoItem(photo: TrailPhoto, onClick: () -> Unit) {
     }
 }
 
-private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
-    val uri = photo.uri ?: return
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, if (photo.mediaType == MediaType.VIDEO) "video/*" else "image/*")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    try {
-        context.startActivity(intent)
-    } catch (_: Exception) {
-        Toast.makeText(context, "无法打开照片", Toast.LENGTH_SHORT).show()
-    }
-}

@@ -67,6 +67,7 @@ fun RecycleBinScreen(
     var showClearAllDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var photoToDelete by remember { mutableStateOf<TrailPhoto?>(null) }
+    val deletedPhotosList = deletedPhotos
 
     // Load deleted photos with error handling
     fun reloadDeletedPhotos() {
@@ -80,7 +81,7 @@ fun RecycleBinScreen(
     }
 
     // Initial load
-    if (deletedPhotos == null && !loadError) {
+    if (deletedPhotosList == null && !loadError) {
         reloadDeletedPhotos()
     }
 
@@ -93,7 +94,7 @@ fun RecycleBinScreen(
             title = "回收站",
             onBack = onBack,
             actions = {
-                if (deletedPhotos != null && deletedPhotos.isNotEmpty()) {
+                if (deletedPhotosList != null && deletedPhotosList.isNotEmpty()) {
                     TextButton(onClick = { showClearAllDialog = true }) {
                         Text(
                             "清空",
@@ -127,14 +128,14 @@ fun RecycleBinScreen(
                     }
                 }
             }
-        } else if (deletedPhotos == null) {
+        } else if (deletedPhotosList == null) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = HasselbladOrange)
             }
-        } else if (deletedPhotos.isEmpty()) {
+        } else if (deletedPhotosList.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -149,7 +150,7 @@ fun RecycleBinScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(deletedPhotos, key = { it.id }) { photo ->
+                items(deletedPhotosList, key = { it.id }) { photo ->
                     DeletedPhotoItem(
                         photo = photo,
                         onRestore = {
@@ -176,7 +177,7 @@ fun RecycleBinScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        deletedPhotos?.forEach { repository.permanentlyDelete(it.id) }
+                        deletedPhotosList?.forEach { repository.permanentlyDelete(it.id) }
                         reloadDeletedPhotos()
                         showClearAllDialog = false
                         Toast.makeText(context, "回收站已清空", Toast.LENGTH_SHORT).show()
@@ -306,16 +307,3 @@ private fun DeletedPhotoItem(
     }
 }
 
-private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
-    val uri = photo.uri ?: return
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, if (photo.mediaType == MediaType.VIDEO) "video/*" else "image/*")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    try {
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.util.Log.w("RecycleBinScreen", "无法打开系统照片查看器", e)
-        Toast.makeText(context, "未找到可查看此照片的应用", Toast.LENGTH_SHORT).show()
-    }
-}

@@ -133,19 +133,15 @@ object AnalyticsManager {
 
         try {
             if (params != null) {
-                val jsonParams = JSONObject()
+                val stringParams = mutableMapOf<String, String>()
                 params.forEach { (key, value) ->
-                    when (value) {
-                        is String -> jsonParams.put(key, value)
-                        is Int -> jsonParams.put(key, value)
-                        is Long -> jsonParams.put(key, value)
-                        is Float -> jsonParams.put(key, value)
-                        is Double -> jsonParams.put(key, value)
-                        is Boolean -> jsonParams.put(key, value)
-                        else -> jsonParams.put(key, value.toString())
+                    stringParams[key] = when (value) {
+                        is String -> value
+                        is Int, is Long, is Float, is Double, is Boolean -> value.toString()
+                        else -> value.toString()
                     }
                 }
-                MobclickAgent.onEvent(context, eventName, jsonParams)
+                MobclickAgent.onEvent(context, eventName, stringParams)
             } else {
                 MobclickAgent.onEvent(context, eventName)
             }

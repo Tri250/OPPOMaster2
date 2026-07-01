@@ -381,7 +381,7 @@ fun AIFineTuneScreen(
                         channel = curveChannel,
                         points = curvePoints[curveChannel] ?: emptyList(),
                         onChannelChange = { viewModel.setCurveChannel(it) },
-                        onPointsChange = { viewModel.updateCurvePoints(curveChannel, it) },
+                        onPointsChange = { viewModel.updateAIFineTuneCurvePoints(curveChannel, it) },
                         onPreset = { viewModel.applyCurvePreset(it) }
                     )
                 }
@@ -779,9 +779,9 @@ private fun HSLSliderRow(
 @Composable
 private fun CurvePanel(
     channel: String,
-    points: List<CurvePoint>,
+    points: List<AIFineTuneCurvePoint>,
     onChannelChange: (String) -> Unit,
-    onPointsChange: (List<CurvePoint>) -> Unit,
+    onPointsChange: (List<AIFineTuneCurvePoint>) -> Unit,
     onPreset: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -839,9 +839,9 @@ private fun CurvePanel(
 
 @Composable
 private fun CurveEditor(
-    points: List<CurvePoint>,
+    points: List<AIFineTuneCurvePoint>,
     channelColor: Color,
-    onPointsChange: (List<CurvePoint>) -> Unit,
+    onPointsChange: (List<AIFineTuneCurvePoint>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var controlPoints by remember(points) { mutableStateOf(points) }
@@ -870,7 +870,7 @@ private fun CurveEditor(
                                 val x = (change.position.x / size.width).coerceIn(0f, 1f)
                                 val y = 1f - (change.position.y / size.height).coerceIn(0f, 1f)
                                 val newPoints = controlPoints.toMutableList()
-                                newPoints[index] = CurvePoint(x, y)
+                                newPoints[index] = AIFineTuneCurvePoint(x, y)
                                 controlPoints = newPoints.sortedBy { it.x }
                                 onPointsChange(controlPoints)
                             }
@@ -918,7 +918,7 @@ private fun CurveEditor(
     }
 }
 
-private fun findNearestPoint(points: List<CurvePoint>, x: Float, y: Float): Int? {
+private fun findNearestPoint(points: List<AIFineTuneCurvePoint>, x: Float, y: Float): Int? {
     if (points.isEmpty()) return null
     var bestIndex: Int? = null
     var bestDist = Float.MAX_VALUE

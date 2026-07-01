@@ -51,6 +51,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.ui.theme.HasselbladOrange
@@ -99,7 +101,7 @@ fun Modifier.liquidGlass(
                     blurRadius.toPx(),
                     blurRadius.toPx(),
                     Shader.TileMode.CLAMP
-                )
+                ).asComposeRenderEffect()
             }
         } else {
             Modifier

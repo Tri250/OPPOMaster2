@@ -141,7 +141,6 @@
     <string name="empty_icon_add_desc">Add icon</string>
     <string name="empty_icon_default_desc">Empty state icon</string>
     <string name="cache_no_data_to_clear">No cache to clear</string>
-    <string name="cache_cleared">Cache cleared</string>
 
     <!-- Notification Settings -->
     <string name="notification_settings_title">Notification Settings</string>
@@ -489,7 +488,6 @@
     <string name="view_annual_report">View annual report</string>
     <string name="permission_storage_title">Storage permission required</string>
     <string name="permission_storage_desc">Travel Gallery needs access to your photos and videos to build timeline, albums, locations and people clusters.</string>
-    <string name="go_to_settings">Open settings</string>
     <string name="request_permission_again">Request again</string>
     <string name="grant_permission">Grant access</string>
     <string name="memories_entry">Memory entrances</string>

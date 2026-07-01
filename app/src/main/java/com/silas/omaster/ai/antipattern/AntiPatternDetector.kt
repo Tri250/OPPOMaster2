@@ -47,7 +47,7 @@ object AntiPatternDetector {
     ): List<AntiPatternAlert> {
         val alerts = mutableListOf<AntiPatternAlert>()
         val sceneId = sceneResult.sceneProfile.id
-        val hasFace = sceneResult.confidenceMap.containsKey("face")
+        val hasFace = sceneResult.faceCount > 0
 
         // 1. 顶光人像
         if (hasFace && upperBrightnessRatio > 0.55f) {

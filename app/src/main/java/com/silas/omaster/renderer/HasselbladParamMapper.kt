@@ -2,7 +2,7 @@ package com.silas.omaster.renderer
 
 import android.graphics.ColorMatrix
 import android.util.Log
-import com.silas.omaster.ai.mapping.HasselbladParams
+import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SoftLightMode
 
 /**
@@ -32,82 +32,70 @@ object HasselbladParamMapper {
         }
 
         val rp = RenderParameters(
-            exposure = n30(hp.tone) + n100("brightness"),
-            contrast = n30(hp.contrast) + n100("contrast"),
-            saturation = n30(hp.saturation) + n100("saturation"),
-            vibrance = (hp.clarity / 30f).coerceIn(0f, 1f) + n100("vibrance"),
-            highlights = n30(hp.highlights) + n100("highlights"),
-            shadows = n30(hp.shadows) + n100("shadows"),
-            whitePoint = n100("whitePoint"),
-            blackPoint = n100("blackPoint"),
-            clarity = (hp.sharpness + 30) / 60f,
-            sharpenAmount = ((hp.sharpness + 30) / 60f) * 0.8f,
-            sharpenRadius = 1.0f,
-            temperature = n30(hp.colorTemp) + n100("temperature"),
-            tint = n100("tint"),
-            hueShift = n100("hueShift"),
-            hslHueRed = n100("hslRedHue") + if (hp.cyanMagenta > 0) hp.cyanMagenta / 60f else 0f,
-            hslHueOrange = n100("hslOrangeHue"),
-            hslHueYellow = n100("hslYellowHue"),
-            hslHueGreen = n100("hslGreenHue"),
-            hslHueCyan = n100("hslCyanHue") + if (hp.cyanMagenta < 0) hp.cyanMagenta / 60f else 0f,
-            hslHueBlue = n100("hslBlueHue"),
-            hslHuePurple = n100("hslPurpleHue"),
-            hslHueMagenta = n100("hslMagentaHue"),
-            hslSatRed = n100("hslRedSat"),
-            hslSatOrange = n100("hslOrangeSat"),
-            hslSatYellow = n100("hslYellowSat"),
-            hslSatGreen = n100("hslGreenSat"),
-            hslSatCyan = n100("hslCyanSat"),
-            hslSatBlue = n100("hslBlueSat"),
-            hslSatPurple = n100("hslPurpleSat"),
-            hslSatMagenta = n100("hslMagentaSat"),
-            hslLumRed = n100("hslRedLum"),
-            hslLumOrange = n100("hslOrangeLum"),
-            hslLumYellow = n100("hslYellowLum"),
-            hslLumGreen = n100("hslGreenLum"),
-            hslLumCyan = n100("hslCyanLum"),
-            hslLumBlue = n100("hslBlueLum"),
-            hslLumPurple = n100("hslPurpleLum"),
-            hslLumMagenta = n100("hslMagentaLum"),
-            curveMaster = n100("curveMaster"),
-            curveRed = n100("curveRed"),
-            curveGreen = n100("curveGreen"),
-            curveBlue = n100("curveBlue"),
-            lut3DEnabled = active3DLUTId != null,
-            lut3DStrength = lut3DStrength.coerceIn(0f, 1f),
-            lut3DId = active3DLUTId ?: "",
-            inputColorSpace = "sRGB",
-            outputColorSpace = "sRGB",
-            flipHorizontal = false,
-            flipVertical = false,
-            rotation = 0f
+            exposure = ((n30(hp.tone) + n100("brightness")) * 100f).coerceIn(-100f, 100f),
+            contrast = ((n30(hp.contrast) + n100("contrast")) * 100f).coerceIn(-100f, 100f),
+            saturation = ((n30(hp.saturation) + n100("saturation")) * 100f).coerceIn(-100f, 100f),
+            brightness = 0f,
+            vibrance = (((hp.clarity / 30f).coerceIn(0f, 1f) + n100("vibrance")) * 100f).coerceIn(-100f, 100f),
+            highlights = ((n30(hp.highlights) + n100("highlights")) * 100f).coerceIn(-100f, 100f),
+            shadows = ((n30(hp.shadows) + n100("shadows")) * 100f).coerceIn(-100f, 100f),
+            whites = (n100("whitePoint") * 100f).coerceIn(-100f, 100f),
+            blacks = (n100("blackPoint") * 100f).coerceIn(-100f, 100f),
+            clarity = ((hp.sharpness + 30) / 60f * 100f).coerceIn(0f, 100f),
+            sharpness = (((hp.sharpness + 30) / 60f) * 0.8f * 100f).coerceIn(0f, 100f),
+            warmth = ((n30(hp.colorTemp) + n100("temperature")) * 100f).coerceIn(-100f, 100f),
+            hslRedHue = (n100("hslRedHue") * 180f + if (hp.cyanMagenta > 0) hp.cyanMagenta / 60f * 180f else 0f).coerceIn(-180f, 180f),
+            hslOrangeHue = (n100("hslOrangeHue") * 180f).coerceIn(-180f, 180f),
+            hslYellowHue = (n100("hslYellowHue") * 180f).coerceIn(-180f, 180f),
+            hslGreenHue = (n100("hslGreenHue") * 180f).coerceIn(-180f, 180f),
+            hslCyanHue = (n100("hslCyanHue") * 180f + if (hp.cyanMagenta < 0) hp.cyanMagenta / 60f * 180f else 0f).coerceIn(-180f, 180f),
+            hslBlueHue = (n100("hslBlueHue") * 180f).coerceIn(-180f, 180f),
+            hslPurpleHue = (n100("hslPurpleHue") * 180f).coerceIn(-180f, 180f),
+            hslMagentaHue = (n100("hslMagentaHue") * 180f).coerceIn(-180f, 180f),
+            hslRedSaturation = (n100("hslRedSat") * 100f).coerceIn(-100f, 100f),
+            hslOrangeSaturation = (n100("hslOrangeSat") * 100f).coerceIn(-100f, 100f),
+            hslYellowSaturation = (n100("hslYellowSat") * 100f).coerceIn(-100f, 100f),
+            hslGreenSaturation = (n100("hslGreenSat") * 100f).coerceIn(-100f, 100f),
+            hslCyanSaturation = (n100("hslCyanSat") * 100f).coerceIn(-100f, 100f),
+            hslBlueSaturation = (n100("hslBlueSat") * 100f).coerceIn(-100f, 100f),
+            hslPurpleSaturation = (n100("hslPurpleSat") * 100f).coerceIn(-100f, 100f),
+            hslMagentaSaturation = (n100("hslMagentaSat") * 100f).coerceIn(-100f, 100f),
+            hslRedLuminance = (n100("hslRedLum") * 100f).coerceIn(-100f, 100f),
+            hslOrangeLuminance = (n100("hslOrangeLum") * 100f).coerceIn(-100f, 100f),
+            hslYellowLuminance = (n100("hslYellowLum") * 100f).coerceIn(-100f, 100f),
+            hslGreenLuminance = (n100("hslGreenLum") * 100f).coerceIn(-100f, 100f),
+            hslCyanLuminance = (n100("hslCyanLum") * 100f).coerceIn(-100f, 100f),
+            hslBlueLuminance = (n100("hslBlueLum") * 100f).coerceIn(-100f, 100f),
+            hslPurpleLuminance = (n100("hslPurpleLum") * 100f).coerceIn(-100f, 100f),
+            hslMagentaLuminance = (n100("hslMagentaLum") * 100f).coerceIn(-100f, 100f),
+            lutEnabled = active3DLUTId != null,
+            lutStrength = (lut3DStrength * 100f).coerceIn(0f, 100f)
         )
 
-        // 柔光模式映射：SOFT/DREAMY 通过 colorMatrix 模拟柔光效果
-        when (hp.softLight) {
+        // 柔光模式映射：SOFT/DREAMY 通过调整渲染参数模拟柔光效果
+        val adjustedRp = when (hp.softLight) {
             SoftLightMode.SOFT -> {
                 // SOFT: 轻微柔化，降低对比，轻微暖调
                 rp.copy(
-                    contrast = (rp.contrast - 0.1f).coerceIn(-1f, 1f),
-                    saturation = (rp.saturation - 0.05f).coerceIn(-1f, 1f),
-                    sharpenAmount = (rp.sharpenAmount * 0.6f).coerceIn(0f, 1f)
+                    contrast = (rp.contrast - 10f).coerceIn(-100f, 100f),
+                    saturation = (rp.saturation - 5f).coerceIn(-100f, 100f),
+                    sharpness = (rp.sharpness * 0.6f).coerceIn(0f, 100f)
                 )
             }
             SoftLightMode.DREAMY -> {
                 // DREAMY: 更强柔化，褪色感，暖调偏移
                 rp.copy(
-                    contrast = (rp.contrast - 0.2f).coerceIn(-1f, 1f),
-                    saturation = (rp.saturation - 0.1f).coerceIn(-1f, 1f),
-                    temperature = (rp.temperature + 0.1f).coerceIn(-1f, 1f),
-                    sharpenAmount = (rp.sharpenAmount * 0.3f).coerceIn(0f, 1f)
+                    contrast = (rp.contrast - 20f).coerceIn(-100f, 100f),
+                    saturation = (rp.saturation - 10f).coerceIn(-100f, 100f),
+                    warmth = (rp.warmth + 10f).coerceIn(-100f, 100f),
+                    sharpness = (rp.sharpness * 0.3f).coerceIn(0f, 100f)
                 )
             }
             else -> rp
         }
 
-        Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${rp.exposure}, contrast=${rp.contrast}, saturation=${rp.saturation}")
-        return rp
+        Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${adjustedRp.exposure}, contrast=${adjustedRp.contrast}, saturation=${adjustedRp.saturation}")
+        return adjustedRp
     }
 
     /**

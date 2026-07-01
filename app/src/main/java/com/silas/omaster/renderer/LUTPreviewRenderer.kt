@@ -8,7 +8,6 @@ import android.opengl.EGLConfig
 import android.opengl.EGLContext
 import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
-import android.opengl.GLES10
 import android.opengl.GLES11Ext
 import android.opengl.GLES30
 import android.opengl.GLUtils
@@ -16,12 +15,13 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.view.Surface
-import com.silas.omaster.ai.mapping.HasselbladParams
+import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DParser
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.nio.IntBuffer
 
 /**
  * CameraX 取景器实时 LUT 预览渲染器（OpenGL ES 3.0）
@@ -288,7 +288,7 @@ class LUTPreviewRenderer(context: Context) {
                         val b = (bx + by * 8)
                         val pixelIndex = r + g * texSize
                         if (pixelIndex < pixels.size) {
-                            val rgb = lutData.sample(r, g, b)
+                            val rgb = lutData.get(r, g, b)
                             val ir = (rgb[0] * 255).toInt().coerceIn(0, 255)
                             val ig = (rgb[1] * 255).toInt().coerceIn(0, 255)
                             val ib = (rgb[2] * 255).toInt().coerceIn(0, 255)
@@ -318,7 +318,7 @@ class LUTPreviewRenderer(context: Context) {
      */
     fun updateColorMatrix(params: HasselbladParams) {
         val cm = HasselbladParamMapper.buildColorMatrix(params)
-        cm.getArray(colorMatrix)
+        cm.getArray().copyInto(colorMatrix, 0)
     }
 
     /**
@@ -358,7 +358,7 @@ class LUTPreviewRenderer(context: Context) {
 
         // 绑定 Camera 纹理（External OES）到 unit 0
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-        GLES11Ext.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
+        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId)
         GLES30.glUniform1i(uCameraTextureLoc, 0)
 
         // 绑定 LUT 纹理到 unit 1
@@ -463,13 +463,13 @@ class LUTPreviewRenderer(context: Context) {
 
     private fun createOESTexture(): Int {
         val textures = IntArray(1)
-        GLES11Ext.glGenTextures(1, textures, 0)
+        GLES30.glGenTextures(1, textures, 0)
         val id = textures[0]
-        GLES11Ext.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, id)
-        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_MIN_FILTER, GLES10.GL_LINEAR.toFloat())
-        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_MAG_FILTER, GLES10.GL_LINEAR.toFloat())
-        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_WRAP_S, GLES10.GL_CLAMP_TO_EDGE.toFloat())
-        GLES11Ext.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES10.GL_TEXTURE_WRAP_T, GLES10.GL_CLAMP_TO_EDGE.toFloat())
+        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, id)
+        GLES30.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+        GLES30.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
         return id
     }
 }

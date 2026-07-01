@@ -3,6 +3,7 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 // ==================== 选项卡定义 ====================
 
@@ -70,15 +71,15 @@ data class SmartOptimizeParams(
 
     // ========== 影调曲线 (Curve) ==========
     var parametricCurve: ParametricCurveData = ParametricCurveData(),
-    var pointCurve: List<CurvePoint> = defaultCurve(),
-    var redCurve: List<CurvePoint> = defaultCurve(),
-    var greenCurve: List<CurvePoint> = defaultCurve(),
-    var blueCurve: List<CurvePoint> = defaultCurve(),
+    var pointCurve: @RawValue List<CurvePoint> = defaultCurve(),
+    var redCurve: @RawValue List<CurvePoint> = defaultCurve(),
+    var greenCurve: @RawValue List<CurvePoint> = defaultCurve(),
+    var blueCurve: @RawValue List<CurvePoint> = defaultCurve(),
 
     // Hue vs Sat / Hue vs Lum / Lum vs Sat (RapidRAW)
-    var hueVsSatCurve: List<CurvePoint> = flatCurve(),
-    var hueVsLumCurve: List<CurvePoint> = flatCurve(),
-    var lumVsSatCurve: List<CurvePoint> = flatCurve(),
+    var hueVsSatCurve: @RawValue List<CurvePoint> = flatCurve(),
+    var hueVsLumCurve: @RawValue List<CurvePoint> = flatCurve(),
+    var lumVsSatCurve: @RawValue List<CurvePoint> = flatCurve(),
 
     // ========== 色彩分级 (Grading) - CDL Lift/Gain + 3-Way ==========
     var shadowWheel: ColorWheelValue = ColorWheelValue(),

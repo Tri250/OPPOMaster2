@@ -5,6 +5,11 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -19,6 +24,7 @@ import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
+import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.ai.recipe.RecipeMatchResult
 import com.silas.omaster.ai.recipe.RecipeRepository
 import com.silas.omaster.camera.CameraApplyResult
@@ -30,6 +36,7 @@ import com.silas.omaster.model.SoftLightMode
 import com.silas.omaster.renderer.GPURenderManager
 import com.silas.omaster.renderer.HasselbladParamMapper
 import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.renderer.RenderResult
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
 import com.silas.omaster.ui.components.ApertureState
@@ -423,7 +430,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                     applyRecipe(match)
                 } ?: run {
                     // 无配方匹配时，按场景加载默认反模式提示
-                    _avoidTips.value = com.silas.omaster.ai.mapping.getAvoidTips(profile.id)
+                    _avoidTips.value = SceneToHasselbladMapping.getAvoidTips(profile.id)
                 }
 
                 _stage.value = HasselbladEyeStage.RESULTS
@@ -688,7 +695,12 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 active3DLUTId = _active3DLUTId.value,
                 lut3DStrength = _lut3DStrength.value
             )
-            val gpuResult = manager.render(source, renderParams)
+            val result = manager.renderSync(source, renderParams)
+            val gpuResult = when (result) {
+                is RenderResult.Success -> result.outputBitmap
+                is RenderResult.FallbackToCPU -> result.outputBitmap
+                else -> null
+            }
             if (gpuResult == null) {
                 Log.w(TAG, "GPU 渲染返回 null，降级到 CPU 路径")
                 val colorApplied = applyHasselbladColorScience(source, params)
@@ -712,6 +724,28 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         if (bitmap == null || vignette <= 0) return bitmap
         // 复用 HasselbladColorEngine 的暗角实现（轻量操作）
         return applyHasselbladColorEngineVignette(bitmap, vignette)
+    }
+
+    /**
+     * 径向暗角实现（对齐 HasselbladColorEngine）。
+     */
+    private fun applyHasselbladColorEngineVignette(bitmap: Bitmap, vignette: Int): Bitmap {
+        val canvas = Canvas(bitmap)
+        val cx = bitmap.width / 2f
+        val cy = bitmap.height / 2f
+        val radius = maxOf(cx, cy) * 1.15f
+        val alpha = (vignette * 200f).toInt().coerceIn(0, 255)
+
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = RadialGradient(
+                cx, cy, radius,
+                Color.TRANSPARENT,
+                Color.argb(alpha, 0, 0, 0),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRect(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat(), paint)
+        return bitmap
     }
 
     // ===== 配方系统方法（Phase 1 新增）=====

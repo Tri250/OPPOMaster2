@@ -78,7 +78,7 @@ data class HSLValue(
 /**
  * 曲线控制点（0~1 归一化坐标，Y 轴 0 在左下，1 在右上）
  */
-data class CurvePoint(
+data class AIFineTuneCurvePoint(
     val x: Float,
     val y: Float
 )
@@ -163,15 +163,15 @@ class AIFineTuneViewModel(
     private val _curveChannel = MutableStateFlow("rgb")
     val curveChannel: StateFlow<String> = _curveChannel.asStateFlow()
 
-    private val _curvePoints = MutableStateFlow<Map<String, List<CurvePoint>>>(
+    private val _curvePoints = MutableStateFlow<Map<String, List<AIFineTuneCurvePoint>>>(
         mapOf(
-            "rgb" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-            "red" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-            "green" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-            "blue" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
+            "rgb" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+            "red" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+            "green" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+            "blue" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f))
         )
     )
-    val curvePoints: StateFlow<Map<String, List<CurvePoint>>> = _curvePoints.asStateFlow()
+    val curvePoints: StateFlow<Map<String, List<AIFineTuneCurvePoint>>> = _curvePoints.asStateFlow()
 
     // ==================== AI 推理状态 ====================
     private val _isProcessing = MutableStateFlow(false)
@@ -421,7 +421,7 @@ class AIFineTuneViewModel(
         _curveChannel.value = channel
     }
 
-    fun updateCurvePoints(channel: String, points: List<CurvePoint>) {
+    fun updateAIFineTuneCurvePoints(channel: String, points: List<AIFineTuneCurvePoint>) {
         val current = _curvePoints.value.toMutableMap()
         current[channel] = points.sortedBy { it.x }
         _curvePoints.value = current
@@ -430,20 +430,20 @@ class AIFineTuneViewModel(
 
     fun applyCurvePreset(presetId: String) {
         val points = when (presetId) {
-            "linear" -> listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
+            "linear" -> listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f))
             "highContrast" -> listOf(
-                CurvePoint(0f, 0f), CurvePoint(0.25f, 0.1f),
-                CurvePoint(0.75f, 0.9f), CurvePoint(1f, 1f)
+                AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(0.25f, 0.1f),
+                AIFineTuneCurvePoint(0.75f, 0.9f), AIFineTuneCurvePoint(1f, 1f)
             )
-            "soft" -> listOf(CurvePoint(0f, 0f), CurvePoint(0.5f, 0.55f), CurvePoint(1f, 1f))
+            "soft" -> listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(0.5f, 0.55f), AIFineTuneCurvePoint(1f, 1f))
             "sCurve" -> listOf(
-                CurvePoint(0f, 0f), CurvePoint(0.25f, 0.15f),
-                CurvePoint(0.5f, 0.5f), CurvePoint(0.75f, 0.85f), CurvePoint(1f, 1f)
+                AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(0.25f, 0.15f),
+                AIFineTuneCurvePoint(0.5f, 0.5f), AIFineTuneCurvePoint(0.75f, 0.85f), AIFineTuneCurvePoint(1f, 1f)
             )
-            "invert" -> listOf(CurvePoint(0f, 1f), CurvePoint(1f, 0f))
-            else -> listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
+            "invert" -> listOf(AIFineTuneCurvePoint(0f, 1f), AIFineTuneCurvePoint(1f, 0f))
+            else -> listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f))
         }
-        updateCurvePoints(_curveChannel.value, points)
+        updateAIFineTuneCurvePoints(_curveChannel.value, points)
     }
 
     private fun syncCurveToRenderParameters() {
@@ -457,7 +457,7 @@ class AIFineTuneViewModel(
         pushHistory()
     }
 
-    private fun generateCurveLut(points: List<CurvePoint>?): FloatArray {
+    private fun generateCurveLut(points: List<AIFineTuneCurvePoint>?): FloatArray {
         val sorted = points?.sortedBy { it.x } ?: return RenderParameters.IDENTITY_CURVE.copyOf()
         val lut = FloatArray(256)
         for (i in 0..255) {
@@ -467,7 +467,7 @@ class AIFineTuneViewModel(
         return lut
     }
 
-    private fun interpolateCurve(points: List<CurvePoint>, x: Float): Float {
+    private fun interpolateCurve(points: List<AIFineTuneCurvePoint>, x: Float): Float {
         if (points.isEmpty()) return x
         if (x <= points.first().x) return points.first().y
         if (x >= points.last().x) return points.last().y
@@ -520,10 +520,10 @@ class AIFineTuneViewModel(
             params.curveGreenLut.contentEquals(RenderParameters.IDENTITY_CURVE) &&
             params.curveBlueLut.contentEquals(RenderParameters.IDENTITY_CURVE)) {
             _curvePoints.value = mapOf(
-                "rgb" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-                "red" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-                "green" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-                "blue" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
+                "rgb" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+                "red" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+                "green" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+                "blue" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f))
             )
         }
     }
@@ -674,10 +674,10 @@ class AIFineTuneViewModel(
         _currentParams.value = RenderParameters()
         _hslValues.value = getDefaultHSLValues()
         _curvePoints.value = mapOf(
-            "rgb" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-            "red" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-            "green" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
-            "blue" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
+            "rgb" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+            "red" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+            "green" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f)),
+            "blue" to listOf(AIFineTuneCurvePoint(0f, 0f), AIFineTuneCurvePoint(1f, 1f))
         )
         _selectedStyleId.value = null
         _selectedOptimizations.value = emptySet()

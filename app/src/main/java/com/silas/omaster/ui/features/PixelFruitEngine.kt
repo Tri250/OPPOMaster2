@@ -3,7 +3,10 @@ package com.silas.omaster.ui.features
 import android.graphics.Bitmap
 import android.graphics.Color
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
@@ -48,38 +51,38 @@ class PixelFruitEngine {
 
         // Step 1: 颜色调整（对齐 color.js）
         if (params.changedParamCount() > 0) {
-            checkActive { onProgress("颜色调整", 0.1f) }
+            checkActive(coroutineContext) { onProgress("颜色调整", 0.1f) }
             applyColorAdjustments(pixels, width, height, params)
         }
 
         // Step 2: 降噪（对齐 Details.js，边缘感知均值滤波）
         if (params.noiseReduction > 0) {
-            checkActive { onProgress("降噪", 0.3f) }
+            checkActive(coroutineContext) { onProgress("降噪", 0.3f) }
             applyNoiseReduction(pixels, width, height, params.noiseReduction, detailPreservation = 50f)
         }
 
         // Step 3: 锐化（对齐 Details.js，USM 非锐化蒙版）
         if (params.sharpness > 0) {
-            checkActive { onProgress("锐化", 0.5f) }
+            checkActive(coroutineContext) { onProgress("锐化", 0.5f) }
             applyUnsharpMask(pixels, width, height, params.sharpness)
         }
 
         // Step 4: 面部美白（对齐 Details.js，四重肤色检测）
         if (params.faceBrightening > 0) {
-            checkActive { onProgress("面部美白", 0.7f) }
+            checkActive(coroutineContext) { onProgress("面部美白", 0.7f) }
             applyFaceBrightening(pixels, width, height, params.faceBrightening, params.faceSmoothness)
         }
 
         // Step 5: LUT 应用（对齐 LutProcessor.js，三线性插值）
         if (lut != null && lut.size > 0) {
-            checkActive { onProgress("LUT", 0.85f) }
+            checkActive(coroutineContext) { onProgress("LUT", 0.85f) }
             LutProcessor().applyLut(pixels, lut, 1.0f)
         }
 
         // 写回 Bitmap
         val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         result.setPixels(pixels, 0, width, 0, 0, width, height)
-        checkActive { onProgress("完成", 1.0f) }
+        checkActive(coroutineContext) { onProgress("完成", 1.0f) }
         result
     }
 
@@ -414,8 +417,8 @@ class PixelFruitEngine {
         }
     }
 
-    private inline fun checkActive(block: () -> Unit) {
-        if (!kotlinx.coroutines.coroutineContext.isActive) return
+    private inline fun checkActive(context: CoroutineContext, block: () -> Unit) {
+        if (!context.isActive) return
         block()
     }
 }
