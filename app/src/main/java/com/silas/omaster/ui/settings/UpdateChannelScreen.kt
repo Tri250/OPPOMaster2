@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.BuildConfig
+import androidx.compose.ui.res.stringResource
+import com.silas.omaster.R
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.UrlConstants
@@ -62,9 +64,9 @@ fun UpdateChannelScreen(
     var autoInstallEnabled by remember { mutableStateOf(false) }
 
     val channels = listOf(
-        UpdateChannelInfo("stable", "稳定版", "最稳定的版本，推荐日常使用", Icons.Default.Shield, Color(0xFF10B981)),
-        UpdateChannelInfo("beta", "测试版", "提前体验新功能，可能存在小问题", Icons.Default.Bolt, Color(0xFFF59E0B)),
-        UpdateChannelInfo("dev", "开发版", "最新功能，适合尝鲜用户", Icons.Default.Autorenew, Color(0xFF3B82F6))
+        UpdateChannelInfo("stable", stringResource(R.string.update_channel_stable), stringResource(R.string.update_channel_stable_desc), Icons.Default.Shield, Color(0xFF10B981)),
+        UpdateChannelInfo("beta", stringResource(R.string.update_channel_beta), stringResource(R.string.update_channel_beta_desc), Icons.Default.Bolt, Color(0xFFF59E0B)),
+        UpdateChannelInfo("dev", stringResource(R.string.update_channel_dev), stringResource(R.string.update_channel_dev_desc), Icons.Default.Autorenew, Color(0xFF3B82F6))
     )
 
     Column(
@@ -79,7 +81,7 @@ fun UpdateChannelScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Download, null, tint = HasselbladOrange)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("更新设置", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.update_settings_title), fontWeight = FontWeight.Bold)
                 }
             },
             navigationIcon = {
@@ -135,7 +137,7 @@ fun UpdateChannelScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "更新渠道",
+                        text = stringResource(R.string.update_channel_label),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -162,14 +164,14 @@ fun UpdateChannelScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "更新选项",
+                        text = stringResource(R.string.update_options_label),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     UpdateOptionRow(
-                        title = "自动检查更新",
+                        title = stringResource(R.string.update_option_auto_check),
                         checked = autoCheckEnabled,
                         onCheckedChange = {
                             haptic.perform(HapticFeedbackType.LongPress)
@@ -178,7 +180,7 @@ fun UpdateChannelScreen(
                     )
                     Divider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
                     UpdateOptionRow(
-                        title = "仅 Wi-Fi 下下载",
+                        title = stringResource(R.string.update_option_wifi_only),
                         checked = wifiOnlyEnabled,
                         onCheckedChange = {
                             haptic.perform(HapticFeedbackType.LongPress)
@@ -187,7 +189,7 @@ fun UpdateChannelScreen(
                     )
                     Divider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
                     UpdateOptionRow(
-                        title = "夜间自动安装",
+                        title = stringResource(R.string.update_option_auto_install),
                         checked = autoInstallEnabled,
                         onCheckedChange = {
                             haptic.perform(HapticFeedbackType.LongPress)
@@ -261,7 +263,7 @@ private fun CurrentVersionCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "已是最新版本",
+                            text = stringResource(R.string.update_already_latest),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -283,7 +285,7 @@ private fun CurrentVersionCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (lastCheckTime != null) "最后检查：$lastCheckTime" else "尚未检查",
+                        text = if (lastCheckTime != null) stringResource(R.string.update_last_check, lastCheckTime) else stringResource(R.string.update_not_checked),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
@@ -306,9 +308,9 @@ private fun CurrentVersionCard(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("正在检查...", fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.update_checking), fontWeight = FontWeight.Medium)
                     } else {
-                        Text("检查更新", fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.update_check_button), fontWeight = FontWeight.Medium)
                     }
                 }
 
@@ -495,7 +497,9 @@ private suspend fun checkForUpdate(context: android.content.Context, channel: St
                     "当前已是最新版本 (v$currentVersion)"
                 }
             } finally {
-                try { conn?.disconnect() } catch (_: Exception) {}
+                try { conn?.disconnect() } catch (e: Exception) {
+                    android.util.Log.w("UpdateChannel", "Failed to disconnect HTTP connection", e)
+                }
             }
         } catch (e: Exception) {
             "检查失败: ${e.message}"

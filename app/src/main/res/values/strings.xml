@@ -523,6 +523,30 @@
     <string name="floating_vignette_label">暗角</string>
 
     <!-- 行影集 -->
+    <string name="update_settings_title">更新设置</string>
+    <string name="update_channel_stable">稳定版</string>
+    <string name="update_channel_stable_desc">最稳定的版本，推荐日常使用</string>
+    <string name="update_channel_beta">测试版</string>
+    <string name="update_channel_beta_desc">提前体验新功能，可能存在小问题</string>
+    <string name="update_channel_dev">开发版</string>
+    <string name="update_channel_dev_desc">最新功能，适合尝鲜用户</string>
+    <string name="update_channel_label">更新渠道</string>
+    <string name="update_options_label">更新选项</string>
+    <string name="update_option_auto_check">自动检查更新</string>
+    <string name="update_option_wifi_only">仅 Wi-Fi 下下载</string>
+    <string name="update_option_auto_install">夜间自动安装</string>
+    <string name="update_already_latest">已是最新版本</string>
+    <string name="update_check_button">检查更新</string>
+    <string name="update_checking">正在检查…</string>
+    <string name="update_not_checked">尚未检查</string>
+    <string name="update_last_check">最后检查：%1$s</string>
+    <string name="update_found_new">发现新版本: v%1$s (%2$s)</string>
+    <string name="update_current_latest">当前已是最新版本 (v%1$s)</string>
+    <string name="update_check_failed">检查失败: %1$s</string>
+    <string name="update_cannot_get_version">无法获取版本信息</string>
+    <string name="update_http_failed">检查失败: HTTP %1$d</string>
+
+    <!-- 行影集 -->
     <string name="xingyingji_title">行影集</string>
     <string name="annual_report_title">%1$d 年度回忆录</string>
     <string name="annual_report_subtitle">一帧一画，定格步履与温柔</string>

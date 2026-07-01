@@ -1,9 +1,9 @@
 # OMaster Android 端 Android 16 适配与真实可用性审计报告
 
-**审计日期**: 2026-06-23  
-**审计范围**: Android 16 (API 36) 系统兼容性、功能真实可用性、2026 年正式版自检规范  
-**审计对象**: OMaster Android 项目 (`com.silas.omaster`)  
-**当前版本**: `versionCode = 10900`, `versionName = "1.9.0"`  
+**审计日期**: 2026-06-23
+**审计范围**: Android 16 (API 36) 系统兼容性、功能真实可用性、2026 年正式版自检规范
+**审计对象**: OMaster Android 项目 (`com.silas.omaster`)
+**当前版本**: `versionCode = 20200`, `versionName = "2.2.0"`  
 
 ---
 

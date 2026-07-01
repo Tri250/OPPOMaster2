@@ -53,6 +53,17 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
       - name: Cache Gradle
         uses: actions/cache@v5
         with:
@@ -74,6 +85,20 @@ jobs:
             echo "✅ CI settings 配置已切换"
           else
             echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
+
+      # 配置友盟 AppKey（从 GitHub Secrets 注入，避免构建时 AppKey 为空导致问题）
+      - name: Configure UMENG AppKey
+        run: |
+          if [ -n "${{ secrets.UMENG_APPKEY }}" ]; then
+            echo "UMENG_APPKEY=${{ secrets.UMENG_APPKEY }}" >> local.properties
+            echo "UMENG_MESSAGE_SECRET=${{ secrets.UMENG_MESSAGE_SECRET }}" >> local.properties
+            echo "✅ UMENG AppKey 已配置"
+          else
+            echo "⚠️ UMENG_APPKEY 未在 Secrets 中配置，友盟统计将不可用"
+            # 写入空值避免构建失败
+            echo "UMENG_APPKEY=" >> local.properties
+            echo "UMENG_MESSAGE_SECRET=" >> local.properties
           fi
 
       # 生成 debug 签名用于 CI 构建

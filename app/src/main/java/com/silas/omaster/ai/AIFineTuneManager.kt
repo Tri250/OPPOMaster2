@@ -283,9 +283,10 @@ class AIFineTuneManager private constructor(context: Context) {
             appliedSuggestions.add(localResult)
             _suggestedParams.value = localResult
 
-            // 最小处理时间，避免UI闪烁
+            // 最小处理时间，避免UI闪烁（仅首次展示时生效，后续缩短至 200ms）
             val elapsed = System.currentTimeMillis() - startTime
-            if (elapsed < 500) delay(500 - elapsed)
+            val minDelay = if (_suggestedParams.value == null) 500L else 200L
+            if (elapsed < minDelay) delay(minDelay - elapsed)
 
             _isProcessing.value = false
             // 无图像输入的预设推理本质上是本地离线推理
