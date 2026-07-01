@@ -36,6 +36,7 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.util.PermissionChecker
 import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.formatSigned
 import kotlinx.serialization.encodeToString
@@ -153,7 +154,16 @@ class FloatingWindowService : Service() {
         }
 
         fun show(context: Context, preset: com.silas.omaster.model.MasterPreset, presetIndex: Int = 0, presetIds: List<String> = emptyList()) {
+            // 2.2.0：使用 PermissionChecker 二次校验，避免漏检导致启动失败
+            if (!PermissionChecker.canStartFloatingService(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                if (!canDrawOverlays(context)) {
+                    requestOverlayPermission(context)
+                }
+                return
+            }
             if (!canDrawOverlays(context)) {
+                // 兜底二次确认（PermissionChecker 内部已检查）
                 android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
                 requestOverlayPermission(context)
                 return
@@ -177,6 +187,14 @@ class FloatingWindowService : Service() {
          * 更新悬浮窗内容（不重启服务，避免闪动）
          */
         fun update(context: Context, preset: com.silas.omaster.model.MasterPreset, presetIndex: Int = 0, presetIds: List<String> = emptyList()) {
+            // 2.2.0：update 前也校验权限
+            if (!PermissionChecker.canStartFloatingService(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                if (!canDrawOverlays(context)) {
+                    requestOverlayPermission(context)
+                }
+                return
+            }
             if (!canDrawOverlays(context)) {
                 android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
                 requestOverlayPermission(context)

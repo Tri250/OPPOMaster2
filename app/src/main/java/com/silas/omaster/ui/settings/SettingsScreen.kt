@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SettingsEthernet
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,7 +93,8 @@ fun SettingsScreen(
     onNavigateToApiConfig: (() -> Unit)? = null,
     onNavigateToThemeSettings: (() -> Unit)? = null,
     onNavigateToSceneAnalysisReport: (() -> Unit)? = null,
-    onNavigateToImportExport: (() -> Unit)? = null
+    onNavigateToImportExport: (() -> Unit)? = null,
+    onNavigateToPermissionCheck: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -432,6 +434,16 @@ fun SettingsScreen(
         // Advanced Section
         SettingsSectionCard {
             SettingsSectionTitle(title = stringResource(R.string.settings_section_advanced))
+
+            // 2.2.0 新增：权限自检入口
+            SettingsClickableItem(
+                icon = Icons.Default.VerifiedUser,
+                title = "权限自检",
+                subtitle = "检查相机/悬浮窗/通知等权限状态",
+                onClick = { onNavigateToPermissionCheck?.invoke() }
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
             SettingsClickableItem(
                 icon = Icons.Default.SettingsEthernet,

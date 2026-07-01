@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -101,6 +102,7 @@ import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.renderer.LUTPreviewRenderer
 import com.silas.omaster.ai.antipattern.AntiPatternDetector
 import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.util.PermissionChecker
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -143,8 +145,22 @@ fun CameraXViewfinderScreen(
 
     // ==================== 权限 ====================
     var hasCameraPermission by remember { mutableStateOf(false) }
+    var hasAudioPermission by remember { mutableStateOf(true) } // 视频录制时才需要
     var shouldShowRationale by remember { mutableStateOf(false) }
     var permissionPermanentlyDenied by remember { mutableStateOf(false) }
+
+    // 2.2.0 闪退修复：使用 PermissionChecker 统一校验入口
+    LaunchedEffect(Unit) {
+        try {
+            // 启动前先校验，避免 UI 闪烁
+            if (!PermissionChecker.canStartCamera(context)) {
+                // 不立即 return，让 UI 渲染 PermissionRequestScreen
+                Log.w("CameraXViewfinder", "PermissionChecker.canStartCamera 返回 false，等待用户授予")
+            }
+        } catch (e: Throwable) {
+            Log.e("CameraXViewfinder", "PermissionChecker 校验失败", e)
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -161,12 +177,23 @@ fun CameraXViewfinderScreen(
             } else {
                 Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
             }
+        } else {
+            // 2.2.0：相机权限授予后，同步刷新全局状态
+            try {
+                PermissionChecker.refresh(context)
+            } catch (e: Throwable) {
+                Log.e("CameraXViewfinder", "刷新权限状态失败", e)
+            }
         }
     }
 
-    hasCameraPermission = ContextCompat.checkSelfPermission(
-        context, Manifest.permission.CAMERA
-    ) == PackageManager.PERMISSION_GRANTED
+    // 2.2.0：使用 PermissionChecker 统一权限判定
+    hasCameraPermission = try {
+        PermissionChecker.canStartCamera(context)
+    } catch (e: Throwable) {
+        Log.e("CameraXViewfinder", "检查相机权限失败", e)
+        false
+    }
 
     shouldShowRationale = (context as? android.app.Activity)?.let {
         ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA)
@@ -683,7 +710,8 @@ private fun PermissionRequestScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(24.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.PhotoCamera,
@@ -699,7 +727,7 @@ private fun PermissionRequestScreen(
             )
             if (permissionPermanentlyDenied) {
                 Text(
-                    text = "相机权限已被永久拒绝。\n请前往系统设置手动开启相机权限，\n以使用 AI 场景识别、实时滤镜和专业拍摄功能。",
+                    text = "相机权限已被永久拒绝。\n请前往系统设置手动开启相机权限，\n以使用 AI 场景识别、实时滤镜和专业拍摄功能。\n\n提示：您也可以在「设置 → 权限自检」中查看所有权限状态。",
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center

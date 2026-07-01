@@ -82,6 +82,10 @@ sealed class Screen {
     @Serializable
     data object ImportExport : Screen()
 
+    /** 2.2.0 新增：权限自检页面 */
+    @Serializable
+    data object PermissionCheck : Screen()
+
     // 行影集（TrailSnap Android 原生版）
     @Serializable
     data object XingYingJiHome : Screen()
