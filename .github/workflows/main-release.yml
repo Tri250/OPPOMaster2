@@ -43,7 +43,7 @@ jobs:
       build_status: ${{ steps.build.outputs.status }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -231,7 +231,7 @@ jobs:
       release_url: ${{ steps.create_release.outputs.url }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
