@@ -151,7 +151,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 
             // 加密存储：使用 AES/GCM + Android Keystore
             val encryptedContent = try {
-                SecurityCrypto.getInstance(ctx).encrypt(sanitizedContent)
+                SecurityCrypto.encrypt(sanitizedContent)
             } catch (e: Exception) {
                 Log.w(TAG, "日志加密失败，降级为明文存储", e)
                 sanitizedContent
@@ -159,7 +159,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 
             val fileName = "crash_${getCurrentTime().replace(":", "-").replace(" ", "_")}_$type.enc"
             val crashFile = File(crashDir, fileName)
-            crashFile.writeText(encryptedContent)
+            crashFile.writeText(encryptedContent ?: sanitizedContent)
 
             // 清理旧日志（只保留最近 10 个）
             cleanupOldCrashLogs(crashDir, keepCount = 10)

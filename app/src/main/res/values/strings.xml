@@ -145,7 +145,6 @@
     <string name="empty_icon_add_desc">添加图标</string>
     <string name="empty_icon_default_desc">空状态图标</string>
     <string name="cache_no_data_to_clear">暂无缓存需要清理</string>
-    <string name="cache_cleared">缓存已清理</string>
     <string name="filter_result_count">已筛选 %1$d 条</string>
     <string name="clear_filter">清空筛选</string>
     <string name="load_more_hint">持续更新 敬请期待</string>
@@ -500,7 +499,6 @@
     <string name="permission_step_3">点击右上角 ⋮ 菜单</string>
     <string name="permission_step_4">选择「解除所有授权限制」</string>
     <string name="permission_tip">提示：解除限制后，请确保只授予「悬浮窗」权限</string>
-    <string name="go_to_settings">去开启权限</string>
     <string name="later">以后再说</string>
 
     <!-- 悬浮窗服务 -->

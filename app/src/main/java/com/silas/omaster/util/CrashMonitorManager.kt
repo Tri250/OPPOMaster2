@@ -5,6 +5,9 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -48,8 +51,8 @@ object CrashMonitorManager {
     private var deviceInfo: String = "unknown"
 
     // 统计数据
-    private val _crashCount = kotlinx.coroutines.flow.MutableStateFlow(0)
-    val crashCount: kotlinx.coroutines.flow.StateFlow<Int> = _crashCount.asStateFlow()
+    private val _crashCount = MutableStateFlow(0)
+    val crashCount: StateFlow<Int> = _crashCount.asStateFlow()
 
     /**
      * 崩溃报告数据类

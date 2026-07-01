@@ -68,13 +68,13 @@ class OMasterApplication : Application() {
 
         @Volatile
         private var instance: OMasterApplication? = null
-        private lateinit var prefs: SharedPreferences
+        private var prefs: SharedPreferences? = null
 
         /**
          * 由 InitializationProvider 在早期阶段调用，初始化 SharedPreferences
          */
         fun initializePrefs(context: Context) {
-            if (!::prefs.isInitialized) {
+            if (prefs == null) {
                 prefs = context.applicationContext.getSharedPreferences(
                     PREFS_NAME,
                     Context.MODE_PRIVATE
@@ -137,8 +137,9 @@ class OMasterApplication : Application() {
         if (instance != null) return instance
         // 兜底：从 ContentProvider 缓存中获取 applicationContext
         return try {
-            val appContext = android.app.ActivityThread
-                .currentApplication()
+            val appContext = Class.forName("android.app.ActivityThread")
+                .getMethod("currentApplication")
+                .invoke(null)
             if (appContext is OMasterApplication) {
                 instance = appContext
                 appContext
@@ -151,7 +152,8 @@ class OMasterApplication : Application() {
         }
     }
 
-    fun getPrefs(): SharedPreferences = prefs
+    fun getPrefs(): SharedPreferences? = prefs
+    }
 
     /**
      * 由 Application.onCreate 调用，设置实例并确保 SharedPreferences 已初始化
@@ -164,12 +166,11 @@ class OMasterApplication : Application() {
             }
             instance = app
             // 如果 InitializationProvider 尚未完成初始化，则在此补初始化
-            if (!::prefs.isInitialized) {
+            if (prefs == null) {
                 prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             }
         }
     }
-}
 
     override fun onCreate() {
         super.onCreate()
@@ -308,18 +309,16 @@ class OMasterApplication : Application() {
 
     fun hasUserAgreed(): Boolean {
         return try {
-            if (::prefs.isInitialized) {
-                prefs.getBoolean(KEY_USER_AGREED, false)
-            } else {
+            val currentPrefs = prefs ?: run {
                 // 2.2.0 闪退修复：prefs 未初始化时回退到默认 SharedPreferences
                 try {
-                    val tempPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                    tempPrefs.getBoolean(KEY_USER_AGREED, false)
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 } catch (e: Throwable) {
                     android.util.Log.w("OMasterApplication", "读取用户协议状态失败,返回 false", e)
-                    false
+                    null
                 }
             }
+            currentPrefs?.getBoolean(KEY_USER_AGREED, false) ?: false
         } catch (e: Throwable) {
             android.util.Log.e("OMasterApplication", "hasUserAgreed 失败", e)
             false
@@ -328,10 +327,10 @@ class OMasterApplication : Application() {
 
     fun setUserAgreed(agreed: Boolean) {
         try {
-            if (!::prefs.isInitialized) {
+            if (prefs == null) {
                 prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             }
-            prefs.edit().putBoolean(KEY_USER_AGREED, agreed).apply()
+            prefs?.edit()?.putBoolean(KEY_USER_AGREED, agreed)?.apply()
         } catch (e: Throwable) {
             android.util.Log.e("OMasterApplication", "setUserAgreed 失败", e)
         }

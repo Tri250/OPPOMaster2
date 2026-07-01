@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object PerformanceMonitor {
 
-    private const val TAG = "PerfMonitor"
+    internal const val TAG = "PerfMonitor"
     private const val MAX_RECORDS = 100
 
     // 启动时间记录
@@ -225,7 +225,7 @@ object PerformanceMonitor {
     /**
      * 测量代码块执行时间
      */
-    inline fun <T> measureTime(tag: String, block: () -> T): T {
+    fun <T> measureTime(tag: String, block: () -> T): T {
         if (!isEnabled) return block()
         val start = SystemClock.elapsedRealtime()
         val result = block()

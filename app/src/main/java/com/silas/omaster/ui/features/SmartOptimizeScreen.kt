@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -339,7 +340,8 @@ fun SmartOptimizeScreen(
                     SmartOptimizeTab.COLOR -> ColorAdjustPanel(
                         params = params,
                         onParamsChanged = { requestPreview(it) },
-                        enabled = originalBitmap != null
+                        enabled = originalBitmap != null,
+                        onShowColorScience = { viewModel.setShowColorScience(true) }
                     )
                     SmartOptimizeTab.CURVE -> CurvePanel(
                         params = params,
@@ -642,7 +644,8 @@ private fun LightAdjustPanel(
 private fun ColorAdjustPanel(
     params: SmartOptimizeParams,
     onParamsChanged: (SmartOptimizeParams) -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    onShowColorScience: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -678,7 +681,7 @@ private fun ColorAdjustPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable(enabled = enabled) { viewModel.setShowColorScience(true) }
+                    .clickable(enabled = enabled) { onShowColorScience() }
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically

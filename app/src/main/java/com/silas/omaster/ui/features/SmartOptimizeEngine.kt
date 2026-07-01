@@ -17,7 +17,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
@@ -621,6 +623,7 @@ class SmartOptimizeEngine(
     // ========== 5. 影调（曲线） ==========
 
     private fun applyToneAdjustments(bitmap: Bitmap, settings: SmartOptimizeParams): Bitmap {
+        var result = bitmap
         // 各通道点曲线
         val curves = listOf(
             settings.pointCurve to "luma",
@@ -631,27 +634,27 @@ class SmartOptimizeEngine(
 
         for ((curve, channel) in curves) {
             if (curve.size > 2 || (curve.size == 2 && (curve[0].y != 0f || curve[1].y != 1f))) {
-                bitmap = applyPointCurve(bitmap, curve, channel)
+                result = applyPointCurve(result, curve, channel)
             }
         }
 
         // 全局参数化曲线
         if (isParametricActive(settings.parametricCurve)) {
-            bitmap = applyParametricCurve(bitmap, settings.parametricCurve, "luma")
+            result = applyParametricCurve(result, settings.parametricCurve, "luma")
         }
 
         // Hue vs Sat / Hue vs Lum / Lum vs Sat
         if (settings.hueVsSatCurve.size > 2 || isCurveActive(settings.hueVsSatCurve)) {
-            bitmap = applyHueVsSat(bitmap, settings.hueVsSatCurve)
+            result = applyHueVsSat(result, settings.hueVsSatCurve)
         }
         if (settings.hueVsLumCurve.size > 2 || isCurveActive(settings.hueVsLumCurve)) {
-            bitmap = applyHueVsLum(bitmap, settings.hueVsLumCurve)
+            result = applyHueVsLum(result, settings.hueVsLumCurve)
         }
         if (settings.lumVsSatCurve.size > 2 || isCurveActive(settings.lumVsSatCurve)) {
-            bitmap = applyLumVsSat(bitmap, settings.lumVsSatCurve)
+            result = applyLumVsSat(result, settings.lumVsSatCurve)
         }
 
-        return bitmap
+        return result
     }
 
     private fun isCurveActive(curve: List<CurvePoint>): Boolean {
@@ -1835,7 +1838,7 @@ class SmartOptimizeEngine(
         val edges = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
         val canvas = Canvas(edges)
         val paint = Paint().apply {
-            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SUBTRACT)
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SCREEN)
         }
         canvas.drawBitmap(gray, 0f, 0f, null)
         canvas.drawBitmap(blurred, 0f, 0f, paint)

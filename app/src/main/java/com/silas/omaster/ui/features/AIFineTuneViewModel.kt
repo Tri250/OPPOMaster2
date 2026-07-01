@@ -76,14 +76,6 @@ data class HSLValue(
 )
 
 /**
- * 曲线控制点（0~1 归一化坐标，Y 轴 0 在左下，1 在右上）
- */
-data class CurvePoint(
-    val x: Float,
-    val y: Float
-)
-
-/**
  * 色彩风格预设
  */
 data class ColorStylePreset(

@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -209,6 +210,8 @@ fun HasselbladScreen(
     val recipeMatchResult by viewModel.recipeMatchResult.collectAsState()
     val avoidTips by viewModel.avoidTips.collectAsState()
     val intentQuery by viewModel.intentQuery.collectAsState()
+    val feedbackUploadStatus by viewModel.feedbackUploadStatus.collectAsState()
+    val feedbackPendingCount by viewModel.feedbackPendingCount.collectAsState()
 
     // P2-1 修复：将哈苏构图引导线状态同步给上层（AppNavigation），
     // 用于跳转到 CameraXViewfinder 时通过 savedStateHandle 传递
@@ -531,7 +534,7 @@ fun HasselbladScreen(
                     },
                     onLaunchCamera = ::launchCamera,
                     onPickFromGallery = ::onPickFromGallery,
-                    onLaunchViewfinder = onLaunchViewfinder,
+                    onLaunchViewfinder = { onLaunchViewfinder(params, recipeMatchResult?.recipe?.name) },
                     onRecentShotClick = { uri ->
                         scope.launch {
                             val bitmap = withContext(Dispatchers.IO) {
@@ -896,7 +899,7 @@ private fun SetupContent(
             ViewfinderEntryCard(
                 onLaunchViewfinder = {
                     // P2-4 修复：将当前配方参数与名称传递给出境器，确保拍摄时自动应用配方
-                    onLaunchViewfinder(currentParams, recipeMatchResult?.recipe?.name)
+                    onLaunchViewfinder()
                 }
             )
         }
@@ -1699,14 +1702,14 @@ private fun RecentShotThumbnail(
         modifier = Modifier.size(72.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (thumbnail != null) {
+            thumbnail?.let { thumb ->
                 Image(
-                    bitmap = thumbnail.asImageBitmap(),
+                    bitmap = thumb.asImageBitmap(),
                     contentDescription = "最近拍摄",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-            } else {
+            } ?: run {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     color = HasselbladOrange,

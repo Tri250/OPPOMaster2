@@ -19,6 +19,7 @@ import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
 import com.silas.omaster.ai.mapping.FilmAdjustments
+import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.ai.recipe.RecipeMatchResult
 import com.silas.omaster.ai.recipe.RecipeRepository
 import com.silas.omaster.camera.CameraApplyResult
@@ -30,6 +31,7 @@ import com.silas.omaster.model.SoftLightMode
 import com.silas.omaster.renderer.GPURenderManager
 import com.silas.omaster.renderer.HasselbladParamMapper
 import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.renderer.RenderResult
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
 import com.silas.omaster.ui.components.ApertureState
@@ -423,7 +425,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                     applyRecipe(match)
                 } ?: run {
                     // 无配方匹配时，按场景加载默认反模式提示
-                    _avoidTips.value = com.silas.omaster.ai.mapping.getAvoidTips(profile.id)
+                    _avoidTips.value = SceneToHasselbladMapping.getAvoidTips(profile.id)
                 }
 
                 _stage.value = HasselbladEyeStage.RESULTS
@@ -688,7 +690,14 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 active3DLUTId = _active3DLUTId.value,
                 lut3DStrength = _lut3DStrength.value
             )
-            val gpuResult = manager.render(source, renderParams)
+            val gpuResult = when (val renderResult = manager.renderSync(source, renderParams)) {
+                is RenderResult.Success -> renderResult.outputBitmap
+                is RenderResult.FallbackToCPU -> renderResult.outputBitmap
+                is RenderResult.Error -> {
+                    Log.w(TAG, "GPU 渲染失败：${renderResult.message}，降级到 CPU 路径")
+                    null
+                }
+            }
             if (gpuResult == null) {
                 Log.w(TAG, "GPU 渲染返回 null，降级到 CPU 路径")
                 val colorApplied = applyHasselbladColorScience(source, params)

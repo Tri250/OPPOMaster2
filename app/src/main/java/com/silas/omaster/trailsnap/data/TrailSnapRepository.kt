@@ -28,6 +28,7 @@ import com.silas.omaster.trailsnap.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -54,13 +55,6 @@ import kotlin.math.abs
  * - 使用 ML Kit 进行真实人脸检测与票据 OCR
  */
 class TrailSnapRepository private constructor(context: Context) {
-
-    private companion object {
-        const val TAG = "TrailSnapRepository"
-        const val FACE_DETECTION_MAX_PER_SESSION = 100
-        const val SIMILAR_TIME_THRESHOLD_SECONDS = 5L
-        const val SIMILAR_SCORE_THRESHOLD = 0.6f
-    }
 
     private val appContext = context.applicationContext
     private val contentResolver: ContentResolver = appContext.contentResolver
@@ -262,23 +256,23 @@ class TrailSnapRepository private constructor(context: Context) {
             null
         } ?: return null
 
-        val latLong = try { exif.latLong } catch (_: Exception) { null }
+        val latLong = FloatArray(2).takeIf { exif.getLatLong(it) }
         val make = try { exif.getAttribute(ExifInterface.TAG_MAKE) } catch (_: Exception) { null }
         val model = try { exif.getAttribute(ExifInterface.TAG_MODEL) } catch (_: Exception) { null }
-        val iso = try { exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY)?.toIntOrNull() } catch (_: Exception) { null }
+        val iso = try { exif.getAttribute("PhotographicSensitivity")?.toIntOrNull() } catch (_: Exception) { null }
         val focalLength = try { exif.getAttribute(ExifInterface.TAG_FOCAL_LENGTH) } catch (_: Exception) { null }
         val aperture = try { exif.getAttribute(ExifInterface.TAG_F_NUMBER) } catch (_: Exception) { null }
         val exposureTime = try { exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME) } catch (_: Exception) { null }
 
         val locationInfo = latLong?.let {
-            try { resolveLocationName(it[0], it[1]) } catch (_: Exception) { null }
+            try { resolveLocationName(it[0].toDouble(), it[1].toDouble()) } catch (_: Exception) { null }
         }
 
         val scene = try { inferScene(exif) } catch (_: Exception) { null }
 
         return PhotoMetadata(
-            longitude = latLong?.get(1),
-            latitude = latLong?.get(0),
+            longitude = latLong?.get(1)?.toDouble(),
+            latitude = latLong?.get(0)?.toDouble(),
             city = locationInfo?.city,
             district = locationInfo?.district,
             province = locationInfo?.province,
@@ -320,7 +314,7 @@ class TrailSnapRepository private constructor(context: Context) {
                                 address = it.getAddressLine(0)
                             )
                         }
-                        continuation.resume(info)
+                        continuation.resume(info) {}
                     }
                 }
             } else {
@@ -1351,6 +1345,11 @@ class TrailSnapRepository private constructor(context: Context) {
     }
 
     companion object {
+        const val TAG = "TrailSnapRepository"
+        const val FACE_DETECTION_MAX_PER_SESSION = 100
+        const val SIMILAR_TIME_THRESHOLD_SECONDS = 5L
+        const val SIMILAR_SCORE_THRESHOLD = 0.6f
+
         @Volatile
         private var instance: TrailSnapRepository? = null
 

@@ -213,9 +213,10 @@ fun ImportExportScreen(
     }
 
     // Import result dialog
-    if (showImportResultDialog && importResult != null) {
+    val importResultLocal = importResult
+    if (showImportResultDialog && importResultLocal != null) {
         ImportResultDialog(
-            result = importResult,
+            result = importResultLocal,
             onDismiss = {
                 showImportResultDialog = false
                 importResult = null

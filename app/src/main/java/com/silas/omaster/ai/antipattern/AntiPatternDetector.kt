@@ -118,7 +118,7 @@ object AntiPatternDetector {
         }
 
         // 7. 过曝高光
-        if (upperBrightnessRatio > 0.45f && sceneResult.brightnessLevel > 180) {
+        if (upperBrightnessRatio > 0.65f) {
             alerts.add(AntiPatternAlert(
                 level = AlertLevel.ORANGE,
                 type = "overexposed_highlights",
@@ -129,7 +129,7 @@ object AntiPatternDetector {
         }
 
         // 8. 暗部死黑
-        if (sceneResult.brightnessLevel < 60 && !sceneId.startsWith("night")) {
+        if (upperBrightnessRatio < 0.15f && !sceneId.startsWith("night")) {
             alerts.add(AntiPatternAlert(
                 level = AlertLevel.ORANGE,
                 type = "crushed_shadows",

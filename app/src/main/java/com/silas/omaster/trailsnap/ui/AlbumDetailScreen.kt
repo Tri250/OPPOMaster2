@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -202,18 +203,5 @@ private fun AlbumPhotoItem(photo: TrailPhoto, onToggleFavorite: () -> Unit) {
                 modifier = Modifier.size(16.dp)
             )
         }
-    }
-}
-
-private fun openPhotoViewer(context: android.content.Context, photo: TrailPhoto) {
-    val uri = photo.uri ?: return
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, if (photo.mediaType == MediaType.VIDEO) "video/*" else "image/*")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    try {
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.util.Log.w("AlbumDetailScreen", "无法打开照片查看器", e)
     }
 }

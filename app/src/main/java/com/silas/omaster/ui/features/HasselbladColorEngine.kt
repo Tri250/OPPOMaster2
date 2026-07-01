@@ -60,6 +60,16 @@ fun addHasselbladWatermark(bitmap: Bitmap): Bitmap =
     HasselbladColorEngine.addHasselbladWatermark(bitmap)
 
 /**
+ * 对 [bitmap] 应用哈苏暗角效果。
+ * 输入不会被修改，返回新 Bitmap。
+ */
+fun applyHasselbladColorEngineVignette(bitmap: Bitmap, vignette: Int): Bitmap {
+    val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+    HasselbladColorEngine.applyVignette(result, vignette.toFloat())
+    return result
+}
+
+/**
  * 将 [bitmap] 按比例 [ratio]（宽/高）居中裁剪。
  * 输入不会被修改，返回新 Bitmap。
  */
@@ -475,7 +485,7 @@ object HasselbladColorEngine {
 
     // ==================== 暗角 ====================
 
-    private fun applyVignette(bitmap: Bitmap, vignette: Float) {
+    internal fun applyVignette(bitmap: Bitmap, vignette: Float) {
         val canvas = Canvas(bitmap)
         val cx = bitmap.width / 2f
         val cy = bitmap.height / 2f

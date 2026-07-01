@@ -4,6 +4,7 @@ import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -99,7 +100,7 @@ fun Modifier.liquidGlass(
                     blurRadius.toPx(),
                     blurRadius.toPx(),
                     Shader.TileMode.CLAMP
-                )
+                ).asComposeRenderEffect()
             }
         } else {
             Modifier

@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -206,7 +207,7 @@ private fun LocationPhotoItem(photo: TrailPhoto) {
         )
         if (photo.mediaType == MediaType.VIDEO) {
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Videocam,
+                imageVector = Icons.Default.Videocam,
                 contentDescription = "视频",
                 tint = HasselbladOrange,
                 modifier = Modifier.size(24.dp)

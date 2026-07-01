@@ -90,9 +90,6 @@ fun NotificationSettingsScreen(
         }
     }
 
-    @Composable
-    private fun stringRes(@StringRes id: Int): String = stringResource(id)
-
     var masterEnabled by remember { mutableStateOf(notificationManagerCompat.areNotificationsEnabled()) }
 
     var generalEnabled by remember { mutableStateOf(isChannelEnabled(CHANNEL_GENERAL)) }
@@ -109,9 +106,9 @@ fun NotificationSettingsScreen(
             }
         }
         // 确保各渠道已创建（默认开启）
-        createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), generalEnabled)
-        createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), recommendationEnabled)
-        createOrUpdateChannel(CHANNEL_SYNC, stringRes(R.string.notification_category_sync), syncEnabled)
+        createOrUpdateChannel(CHANNEL_GENERAL, context.getString(R.string.notification_category_general), generalEnabled)
+        createOrUpdateChannel(CHANNEL_RECOMMENDATION, context.getString(R.string.notification_category_recommendation), recommendationEnabled)
+        createOrUpdateChannel(CHANNEL_SYNC, context.getString(R.string.notification_category_sync), syncEnabled)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -245,7 +242,7 @@ fun NotificationSettingsScreen(
                         } else {
                             generalEnabled = newValue
                             systemAnnounceEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), newValue)
+                            createOrUpdateChannel(CHANNEL_GENERAL, context.getString(R.string.notification_category_general), newValue)
                         }
                     }
                 )
@@ -263,7 +260,7 @@ fun NotificationSettingsScreen(
                         } else {
                             recommendationEnabled = newValue
                             dailyTipEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), newValue)
+                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, context.getString(R.string.notification_category_recommendation), newValue)
                         }
                     }
                 )
@@ -280,7 +277,7 @@ fun NotificationSettingsScreen(
                             openNotificationSettings()
                         } else {
                             syncEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_SYNC, stringRes(R.string.notification_category_sync), newValue)
+                            createOrUpdateChannel(CHANNEL_SYNC, context.getString(R.string.notification_category_sync), newValue)
                         }
                     }
                 )
@@ -298,7 +295,7 @@ fun NotificationSettingsScreen(
                         } else {
                             systemAnnounceEnabled = newValue
                             generalEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_GENERAL, stringRes(R.string.notification_category_general), newValue)
+                            createOrUpdateChannel(CHANNEL_GENERAL, context.getString(R.string.notification_category_general), newValue)
                         }
                     }
                 )
@@ -316,7 +313,7 @@ fun NotificationSettingsScreen(
                         } else {
                             dailyTipEnabled = newValue
                             recommendationEnabled = newValue
-                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, stringRes(R.string.notification_category_recommendation), newValue)
+                            createOrUpdateChannel(CHANNEL_RECOMMENDATION, context.getString(R.string.notification_category_recommendation), newValue)
                         }
                     }
                 )

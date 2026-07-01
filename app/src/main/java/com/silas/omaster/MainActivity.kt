@@ -150,8 +150,8 @@ class MainActivity : ComponentActivity() {
         try {
             if (Settings.canDrawOverlays(this) && floatingWindowController?.let {
                 try {
-                    it::class.java.getDeclaredField("isRegistered").apply { isAccessible = true }
-                    !(this.get(it) as Boolean)
+                    val field = it::class.java.getDeclaredField("isRegistered").apply { isAccessible = true }
+                    !(field.get(it) as Boolean)
                 } catch (e: Throwable) { true }
             } == true) {
                 floatingWindowController?.register()

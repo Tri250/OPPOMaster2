@@ -178,7 +178,8 @@ class SceneRecognitionManager private constructor(context: Context) {
             recommendedFilm = recommendedFilms.firstOrNull()?.name,
             source = if (modelPrediction != null) "model+heuristic" else "heuristic",
             heuristicConfidence = heuristicResult.confidence,
-            modelConfidence = modelPrediction?.confidence ?: 0f
+            modelConfidence = modelPrediction?.confidence ?: 0f,
+            confidenceMap = buildConfidenceMap(heuristicResult, modelPrediction)
         )
     }
 
@@ -317,6 +318,29 @@ class SceneRecognitionManager private constructor(context: Context) {
         val confidence: Float,
         val allScores: Map<String, Float>
     )
+
+    /**
+     * 构建场景置信度映射，供反模式检测使用。
+     */
+    private fun buildConfidenceMap(
+        heuristicResult: com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer.AnalysisResult,
+        modelPrediction: ModelPrediction?
+    ): Map<String, Float> {
+        val map = mutableMapOf<String, Float>()
+        map["heuristic"] = heuristicResult.confidence.coerceIn(0f, 1f)
+        heuristicResult.analysisDetails.forEach { (key, value) ->
+            map[key] = value.coerceIn(0f, 1f)
+        }
+        // 根据人脸数量估算人脸占比（保守估计，单张人脸约占画面的 5%）
+        map["face"] = (heuristicResult.faceCount * 0.05f).coerceIn(0f, 1f)
+        modelPrediction?.let { prediction ->
+            map["model"] = prediction.confidence.coerceIn(0f, 1f)
+            prediction.allScores.forEach { (label, score) ->
+                map[label] = score.coerceIn(0f, 1f)
+            }
+        }
+        return map
+    }
 }
 
 /**
@@ -330,5 +354,6 @@ data class RealtimeSceneResult(
     val recommendedFilm: String?,
     val source: String,
     val heuristicConfidence: Float,
-    val modelConfidence: Float
+    val modelConfidence: Float,
+    val confidenceMap: Map<String, Float> = emptyMap()
 )
