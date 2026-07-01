@@ -196,6 +196,11 @@
 -keep class com.silas.omaster.data.model.**$$serializer { *; }
 -keep class com.silas.omaster.renderer.**$$serializer { *; }
 -keep class com.silas.omaster.watermark.**$$serializer { *; }
+# v2.2.6 闪退修复：补充缺失的序列化包
+-keep class com.silas.omaster.billing.**$$serializer { *; }
+-keep class com.silas.omaster.data.local.**$$serializer { *; }
+-keep class com.silas.omaster.cloud.**$$serializer { *; }
+-keep class com.silas.omaster.data.repository.**$$serializer { *; }
 
 # @Serializable 类的 Companion 对象（提供 serializer() 函数入口）
 -keepclassmembers class com.silas.omaster.model.** {
@@ -208,6 +213,19 @@
     *** Companion;
 }
 -keepclassmembers class com.silas.omaster.watermark.** {
+    *** Companion;
+}
+# v2.2.6 闪退修复：补充缺失的序列化包
+-keepclassmembers class com.silas.omaster.billing.** {
+    *** Companion;
+}
+-keepclassmembers class com.silas.omaster.data.local.** {
+    *** Companion;
+}
+-keepclassmembers class com.silas.omaster.cloud.** {
+    *** Companion;
+}
+-keepclassmembers class com.silas.omaster.data.repository.** {
     *** Companion;
 }
 
@@ -224,6 +242,19 @@
 -keepclasseswithmembers class com.silas.omaster.watermark.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+# v2.2.6 闪退修复：补充缺失的序列化包
+-keepclasseswithmembers class com.silas.omaster.billing.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.silas.omaster.data.local.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.silas.omaster.cloud.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.silas.omaster.data.repository.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
 # Kotlin Serialization 枚举需要保留（枚举值按名称序列化）
 -keepclassmembers enum com.silas.omaster.model.SceneCategory { *; }
@@ -233,6 +264,24 @@
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkLayerType { *; }
 -keepclassmembers enum com.silas.omaster.watermark.ContentSource { *; }
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkPosition { *; }
+# v2.2.6 闪退修复：补充缺失的枚举
+-keepclassmembers enum com.silas.omaster.billing.Tier { *; }
+-keepclassmembers enum com.silas.omaster.ai.antipattern.AntiPatternDetector$AlertLevel { *; }
+
+# ========================================
+# v2.2.6 闪退修复：Compose Navigation 类型安全路由 keep 规则
+# ========================================
+# Screen 密封类及其子类被 Compose Navigation 2.8+ 用作类型安全路由，
+# R8 混淆后会导致 NavHost 构造时无法解析 serializer() 而直接崩溃。
+# 必须保留类名、Companion 和 serializer 入口。
+-keep @kotlinx.serialization.Serializable class com.silas.omaster.Screen { *; }
+-keep @kotlinx.serialization.Serializable class com.silas.omaster.Screen$* { *; }
+-keepclassmembers class com.silas.omaster.Screen$* {
+    *** Companion;
+}
+-keepclasseswithmembers class com.silas.omaster.Screen$* {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
 # ========================================
 # Phase 1 新增模块 ProGuard 规则
@@ -382,21 +431,6 @@
 -keep class com.silas.omaster.video.VideoFilterEngine { *; }
 -keep class com.silas.omaster.video.VideoFilterEngine$ProcessProgress { *; }
 -keep class com.silas.omaster.video.VideoFilterEngine$ProcessResult { *; }
-
-# ========================================
-# R8 优化增强配置
-# ========================================
-# 允许访问修改（优化调用）
--allowaccessmodification
-
-# 合并相同的类（减少体积）
--mergeinterfacesaggressively
-
-# 优化次数（平衡体积和稳定性）
--optimizationpasses 5
-
-# 启用类合并优化
--optimizations class/marking/*
 
 # ========================================
 # 资源压缩 keep 规则
