@@ -1,7 +1,7 @@
 # OMaster Android Release 构建状态报告
 
-**报告时间**: 2026-06-17  
-**项目版本**: v1.3.1 (versionCode: 10301)  
+**报告时间**: 2026-07-01
+**项目版本**: v2.2.0 (versionCode: 20200)
 **构建目标**: Android 纯原生 Release APK
 
 ---

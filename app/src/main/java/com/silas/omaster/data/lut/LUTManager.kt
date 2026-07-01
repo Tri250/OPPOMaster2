@@ -72,6 +72,9 @@ class LUTManager private constructor(private val context: Context) {
     // 解析后的 LUT 数据缓存（线程安全）
     private val lutDataCache = java.util.concurrent.ConcurrentHashMap<String, LUT3DData>()
 
+    // 缓存写入锁，防止 parseAndCache 并发重复解析
+    private val cacheLock = Any()
+
     // 下载进度
     private val _downloadProgress = MutableStateFlow<Map<String, Int>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, Int>> = _downloadProgress.asStateFlow()
@@ -128,7 +131,10 @@ class LUTManager private constructor(private val context: Context) {
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                Log.e(TAG, "Download failed: HTTP $responseCode for ${resource.id}")
+                val errorBody = try {
+                    connection.errorStream?.bufferedReader()?.use { it.readText().take(200) }
+                } catch (_: Exception) { null }
+                Log.e(TAG, "Download failed: HTTP $responseCode for ${resource.id}, body: $errorBody")
                 return@withContext null
             }
 
@@ -185,6 +191,18 @@ class LUTManager private constructor(private val context: Context) {
 
             Log.d(TAG, "LUT downloaded: ${resource.name} → ${targetFile.absolutePath}")
             targetFile
+        } catch (e: java.net.SocketTimeoutException) {
+            Log.e(TAG, "Download timed out for ${resource.id}: ${e.message}")
+            val progress = _downloadProgress.value.toMutableMap()
+            progress.remove(resource.id)
+            _downloadProgress.value = progress
+            null
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Download IO error for ${resource.id}: ${e.message}", e)
+            val progress = _downloadProgress.value.toMutableMap()
+            progress.remove(resource.id)
+            _downloadProgress.value = progress
+            null
         } catch (e: Exception) {
             Log.e(TAG, "Download failed for ${resource.id}", e)
             val progress = _downloadProgress.value.toMutableMap()
@@ -193,8 +211,12 @@ class LUTManager private constructor(private val context: Context) {
             null
         } finally {
             // 确保资源在任何路径下都被释放，避免连接泄漏
-            try { inputStream?.close() } catch (_: Exception) {}
-            try { connection?.disconnect() } catch (_: Exception) {}
+            try { inputStream?.close() } catch (e: Exception) {
+                Log.w(TAG, "Failed to close download input stream for ${resource.id}", e)
+            }
+            try { connection?.disconnect() } catch (e: Exception) {
+                Log.w(TAG, "Failed to disconnect HTTP connection for ${resource.id}", e)
+            }
         }
     }
 
@@ -220,37 +242,45 @@ class LUTManager private constructor(private val context: Context) {
     // ========== LUT 解析与缓存 ==========
 
     /**
-     * 解析 .cube 文件并缓存
+     * 解析 .cube 文件并缓存（线程安全）
      */
     fun parseAndCache(lutId: String, file: File): LUT3DData? {
-        if (lutDataCache.containsKey(lutId)) return lutDataCache[lutId]
+        lutDataCache[lutId]?.let { return it }
 
-        val data = LUT3DParser.parse(file)
-        if (data != null) {
-            lutDataCache[lutId] = data
+        synchronized(cacheLock) {
+            // 双重检查：锁内再查一次，防止并发重复解析
+            lutDataCache[lutId]?.let { return it }
+
+            val data = LUT3DParser.parse(file)
+            if (data != null) {
+                lutDataCache[lutId] = data
+            } else {
+                Log.w(TAG, "Failed to parse LUT file: ${file.absolutePath} for id: $lutId")
+            }
+            return data
         }
-        return data
     }
 
     /**
      * 直接缓存 LUT3DData（用于风格 LUT 生成器等场景）
      */
     fun parseAndCache(lutId: String, lutData: LUT3DData): LUT3DData {
-        lutDataCache[lutId] = lutData
+        synchronized(cacheLock) {
+            lutDataCache[lutId] = lutData
+        }
         return lutData
     }
 
     /**
-     * 获取缓存的 LUT 数据
+     * 获取缓存的 LUT 数据（线程安全）
      */
     fun getCachedLUTData(lutId: String): LUT3DData? {
-        // 如果缓存中没有，尝试从本地文件解析
-        if (!lutDataCache.containsKey(lutId)) {
-            val resource = LUTResourceRepository.RESOURCES.find { it.id == lutId } ?: return null
-            val file = getLocalFile(resource) ?: return null
-            parseAndCache(lutId, file)
-        }
-        return lutDataCache[lutId]
+        lutDataCache[lutId]?.let { return it }
+
+        // 缓存未命中，尝试从本地文件解析
+        val resource = LUTResourceRepository.RESOURCES.find { it.id == lutId } ?: return null
+        val file = getLocalFile(resource) ?: return null
+        return parseAndCache(lutId, file)
     }
 
     /**

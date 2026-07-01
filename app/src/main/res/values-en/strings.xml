@@ -483,6 +483,30 @@
     <string name="go_add_preset">Add preset</string>
 
     <!-- XingYingJi -->
+    <string name="update_settings_title">Update Settings</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_stable_desc">Most stable, recommended for daily use</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_beta_desc">Try new features early, may have minor issues</string>
+    <string name="update_channel_dev">Dev</string>
+    <string name="update_channel_dev_desc">Latest features, for early adopters</string>
+    <string name="update_channel_label">Update Channel</string>
+    <string name="update_options_label">Update Options</string>
+    <string name="update_option_auto_check">Auto check for updates</string>
+    <string name="update_option_wifi_only">Download on Wi-Fi only</string>
+    <string name="update_option_auto_install">Auto install at night</string>
+    <string name="update_already_latest">Already up to date</string>
+    <string name="update_check_button">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_not_checked">Not checked yet</string>
+    <string name="update_last_check">Last checked: %1$s</string>
+    <string name="update_found_new">New version available: v%1$s (%2$s)</string>
+    <string name="update_current_latest">Already on latest version (v%1$s)</string>
+    <string name="update_check_failed">Check failed: %1$s</string>
+    <string name="update_cannot_get_version">Cannot get version info</string>
+    <string name="update_http_failed">Check failed: HTTP %1$d</string>
+
+    <!-- XingYingJi -->
     <string name="xingyingji_title">Travel Gallery</string>
     <string name="annual_report_title">%1$d Year in Review</string>
     <string name="annual_report_subtitle">Every frame captures footsteps and tenderness</string>
