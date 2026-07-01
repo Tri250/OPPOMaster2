@@ -123,3 +123,7 @@ app/src/main/assets/models/*.h5
 
 # 开发过程记录（不应提交到版本控制）
 WORKTREE_RECORD.md
+
+# R8 混淆映射文件（体积大，通过 Release Assets 分发）
+app/mapping/
+*.mapping.txt
