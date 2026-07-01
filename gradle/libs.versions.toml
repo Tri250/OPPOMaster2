@@ -26,7 +26,7 @@ ktor = "3.0.3"
 gson = "2.11.0"
 
 # ===== Serialization =====
-kotlinxSerialization = "1.8.0"
+kotlinxSerialization = "1.11.0"
 
 # ===== ML & AI =====
 mlkit-face-detection = "16.1.7"
