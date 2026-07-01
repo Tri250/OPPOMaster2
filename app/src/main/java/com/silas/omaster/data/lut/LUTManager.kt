@@ -6,10 +6,13 @@ import android.os.Environment
 import android.util.Log
 import com.silas.omaster.data.model.LUTResource
 import com.silas.omaster.data.repository.LUTResourceRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -73,9 +76,14 @@ class LUTManager private constructor(private val context: Context) {
     private val _downloadProgress = MutableStateFlow<Map<String, Int>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, Int>> = _downloadProgress.asStateFlow()
 
+    // 异步协程作用域，用于初始化扫描等后台任务
+    private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     init {
-        // 启动时扫描本地文件，恢复下载状态
-        scanLocalFiles()
+        // 异步扫描本地文件，避免阻塞主线程导致 ANR/闪退
+        managerScope.launch {
+            scanLocalFiles()
+        }
     }
 
     // ========== 收藏管理 ==========
@@ -108,7 +116,8 @@ class LUTManager private constructor(private val context: Context) {
         try {
             val url = URL(resource.downloadUrl)
             if (!url.protocol.startsWith("https")) {
-                Log.w(TAG, "Non-HTTPS download URL: ${resource.downloadUrl}")
+                Log.e(TAG, "LUT download rejected: non-HTTPS URL is not allowed for security. ${resource.downloadUrl}")
+                return@withContext null
             }
 
             connection = url.openConnection() as HttpURLConnection

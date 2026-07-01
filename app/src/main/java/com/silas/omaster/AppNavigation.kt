@@ -159,17 +159,25 @@ fun MainApp(navController: NavHostController) {
         )
     }
 
-    val showBottomNav = currentRoute?.contains("Home") == true ||
-        currentRoute?.contains("About") == true ||
-        currentRoute?.contains("Subscription") == true ||
-        currentRoute?.contains("CoreFeatures") == true
+    // P2 修复：使用类型安全的路由匹配，避免子页面名称巧合包含主路由名导致底部导航栏误显
+    val showBottomNav = currentRoute.isRoute("com.silas.omaster.Screen.Home") ||
+        currentRoute.isRoute("com.silas.omaster.Screen.About") ||
+        currentRoute.isRoute("com.silas.omaster.Screen.Subscription") ||
+        currentRoute.isRoute("com.silas.omaster.Screen.CoreFeatures")
 
     var isHomeScrollingUp by remember { mutableStateOf(true) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    val mainRouteList = remember { listOf("Home", "Subscription", "CoreFeatures", "About") }
+    val mainRouteList = remember {
+        listOf(
+            "com.silas.omaster.Screen.Home",
+            "com.silas.omaster.Screen.Subscription",
+            "com.silas.omaster.Screen.CoreFeatures",
+            "com.silas.omaster.Screen.About"
+        )
+    }
     val getNavIndex: (String?) -> Int = { route ->
-        mainRouteList.indexOfFirst { route?.contains(it) == true }
+        mainRouteList.indexOfFirst { route.isRoute(it) }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -738,12 +746,12 @@ private fun handleBottomNav(
 ) {
     when (route) {
         "home" -> {
-            if (currentRoute?.contains("Home") != true) {
+            if (!currentRoute.isRoute("com.silas.omaster.Screen.Home")) {
                 navController.popBackStack(Screen.Home, false)
             }
         }
         "subscription" -> {
-            if (currentRoute?.contains("Subscription") != true) {
+            if (!currentRoute.isRoute("com.silas.omaster.Screen.Subscription")) {
                 navController.navigate(Screen.Subscription) {
                     popUpTo(Screen.Home) { saveState = true }
                     launchSingleTop = true
@@ -752,7 +760,7 @@ private fun handleBottomNav(
             }
         }
         "features" -> {
-            if (currentRoute?.contains("CoreFeatures") != true) {
+            if (!currentRoute.isRoute("com.silas.omaster.Screen.CoreFeatures")) {
                 navController.navigate(Screen.CoreFeatures) {
                     popUpTo(Screen.Home) { saveState = true }
                     launchSingleTop = true
@@ -761,7 +769,7 @@ private fun handleBottomNav(
             }
         }
         "about" -> {
-            if (currentRoute?.contains("About") != true) {
+            if (!currentRoute.isRoute("com.silas.omaster.Screen.About")) {
                 navController.navigate(Screen.About) {
                     popUpTo(Screen.Home) { saveState = true }
                     launchSingleTop = true
@@ -816,6 +824,14 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.computeSlideDirect
         forward -> AnimatedContentTransitionScope.SlideDirection.Left
         else -> AnimatedContentTransitionScope.SlideDirection.Right
     }
+}
+
+/**
+ * 类型安全的路由匹配辅助函数。
+ * 使用 startsWith 替代 contains，避免子页面名称巧合包含主路由名。
+ */
+private fun String?.isRoute(routePrefix: String): Boolean {
+    return this?.startsWith(routePrefix) == true
 }
 
 

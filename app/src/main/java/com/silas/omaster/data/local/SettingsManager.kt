@@ -998,6 +998,17 @@ class SettingsManager private constructor(private val context: Context) {
         }
 
         /**
+         * 校验当前是否运行在应用主进程。
+         * DataStore 不支持多进程并发访问，若 Service/BroadcastReceiver 配置了独立进程，
+         * 应通过 ContentProvider 或跨进程通信访问配置，避免直接创建 SettingsManager 实例。
+         */
+        fun isMainProcess(context: Context): Boolean {
+            val pid = android.os.Process.myPid()
+            val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            return manager.runningAppProcesses?.any { it.pid == pid && it.processName == context.packageName } == true
+        }
+
+        /**
          * 关闭 SettingsManager 实例，取消所有协程并清理资源。
          * 应在 Application.onTerminate() 或进程退出前调用。
          */

@@ -962,6 +962,13 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     ): Uri? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
 
+        // P2 修复：预先检测 HEVC 编码器可用性，避免创建空 MediaStore 条目后失败
+        if (!isHevcEncoderAvailable()) {
+            Log.w(TAG, "HEVC encoder not available on this device, falling back to JPEG")
+            val jpegFilename = filename.replace(".heic", ".jpg")
+            return saveToMediaStore(context, bitmap, Bitmap.CompressFormat.JPEG, 98, jpegFilename, "image/jpeg")
+        }
+
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
             put(MediaStore.Images.Media.MIME_TYPE, "image/heif")
@@ -1000,6 +1007,22 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
             }
             val jpegFilename = filename.replace(".heic", ".jpg")
             return saveToMediaStore(context, bitmap, Bitmap.CompressFormat.JPEG, 98, jpegFilename, "image/jpeg")
+        }
+    }
+
+    /**
+     * 检测设备是否支持 HEVC 软件/硬件编码器。
+     * 部分低端设备、模拟器、特殊形态设备在 Android R~T 上无 HEVC 编码能力。
+     */
+    private fun isHevcEncoderAvailable(): Boolean {
+        return try {
+            val codecList = android.media.MediaCodecList(android.media.MediaCodecList.ALL_CODECS)
+            codecList.codecInfos.any { codecInfo ->
+                codecInfo.isEncoder && codecInfo.supportedTypes.contains(android.media.MediaFormat.MIMETYPE_VIDEO_HEVC)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query HEVC encoder availability", e)
+            false
         }
     }
 

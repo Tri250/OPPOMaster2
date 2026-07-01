@@ -302,7 +302,21 @@ class GPURenderManager private constructor(private val context: Context) {
             Log.d(TAG, "acquire refCount=$count")
             return manager
         }
-        
+
+        /**
+         * 系统内存紧张时的强制释放兜底。
+         * 无视引用计数，直接销毁底层 EGL/线程资源，防止 OOM。
+         * 调用后若仍需使用 GPU 渲染，会重新创建实例。
+         */
+        fun forceReleaseAll() {
+            synchronized(this) {
+                instance?.apply {
+                    refCount.set(0)
+                    release()
+                }
+            }
+        }
+
         // 渲染超时时间
         private const val RENDER_TIMEOUT_MS = 5000L
         

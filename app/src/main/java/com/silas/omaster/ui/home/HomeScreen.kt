@@ -70,6 +70,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -195,6 +199,9 @@ fun HomeScreen(
                     viewModel.refresh()
                 }
             )
+
+            // 权限自检横幅：在关键权限缺失时提示用户
+            PermissionCheckBanner()
 
             // 错误状态提示卡片
             if (errorState != null) {
@@ -1270,5 +1277,87 @@ private fun QuickFeatureCard(
             maxLines = 1,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/**
+ * 权限自检横幅：在 HomeScreen 入口检查核心权限状态，缺失时提示用户引导授权。
+ * 覆盖 2026 正式版自检要求中的权限获取闭环。
+ */
+@Composable
+private fun PermissionCheckBanner() {
+    val context = LocalContext.current
+
+    // 核心权限列表（根据系统版本适配）
+    val requiredPermissions = remember {
+        buildList {
+            add(Manifest.permission.CAMERA)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.READ_MEDIA_IMAGES)
+            } else {
+                add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    var missingPermissions by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // 每次重组时重新检查权限（用户从设置页返回后会触发）
+    LaunchedEffect(Unit) {
+        missingPermissions = requiredPermissions.filter { permission ->
+            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    if (missingPermissions.isEmpty()) return
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "部分核心权限未授权，可能影响功能使用",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            val permissionNames = missingPermissions.joinToString(separator = "、") { permission ->
+                when (permission) {
+                    Manifest.permission.CAMERA -> "相机"
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_MEDIA_IMAGES -> "存储/相册"
+                    Manifest.permission.POST_NOTIFICATIONS -> "通知"
+                    else -> permission.substringAfterLast(".")
+                }
+            }
+            Text(
+                text = "缺失权限：$permissionNames",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                        ).apply {
+                            data = android.net.Uri.fromParts("package", context.packageName, null)
+                        }
+                        context.startActivity(intent)
+                    }
+                ) {
+                    Text("去设置授权", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
     }
 }

@@ -1,12 +1,15 @@
 package com.silas.omaster.ui.features
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.camera.core.ImageCapture
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
@@ -140,17 +143,34 @@ fun CameraXViewfinderScreen(
 
     // ==================== 权限 ====================
     var hasCameraPermission by remember { mutableStateOf(false) }
+    var shouldShowRationale by remember { mutableStateOf(false) }
+    var permissionPermanentlyDenied by remember { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasCameraPermission = granted
         if (!granted) {
-            Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
+            val activity = context as? android.app.Activity
+            val permanentlyDenied = activity?.let {
+                !ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA)
+            } ?: false
+            permissionPermanentlyDenied = permanentlyDenied
+            if (permanentlyDenied) {
+                Toast.makeText(context, "相机权限被永久拒绝，请前往系统设置手动开启", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "需要相机权限才能使用哈苏之眼", Toast.LENGTH_LONG).show()
+            }
         }
     }
+
     hasCameraPermission = ContextCompat.checkSelfPermission(
         context, Manifest.permission.CAMERA
     ) == PackageManager.PERMISSION_GRANTED
+
+    shouldShowRationale = (context as? android.app.Activity)?.let {
+        ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA)
+    } ?: false
 
     // ==================== 相机管理器 ====================
     val cameraManager = remember { CameraXManager(context, lifecycleOwner) }
@@ -256,7 +276,14 @@ fun CameraXViewfinderScreen(
     // ==================== 权限提示 ====================
     if (!hasCameraPermission) {
         PermissionRequestScreen(
-            onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+            permissionPermanentlyDenied = permissionPermanentlyDenied,
+            onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+            onOpenSettings = {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            }
         )
         return
     }
@@ -643,7 +670,11 @@ fun CameraXViewfinderScreen(
 
 // ==================== 权限请求界面 ====================
 @Composable
-private fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
+private fun PermissionRequestScreen(
+    permissionPermanentlyDenied: Boolean,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -666,17 +697,32 @@ private fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             )
-            Text(
-                text = "哈苏之眼需要使用您的相机来提供\nAI 场景识别、实时滤镜和专业拍摄功能",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
-            Button(
-                onClick = onRequestPermission,
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
-            ) {
-                Text("授予相机权限")
+            if (permissionPermanentlyDenied) {
+                Text(
+                    text = "相机权限已被永久拒绝。\n请前往系统设置手动开启相机权限，\n以使用 AI 场景识别、实时滤镜和专业拍摄功能。",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+                Button(
+                    onClick = onOpenSettings,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("去系统设置开启")
+                }
+            } else {
+                Text(
+                    text = "哈苏之眼需要使用您的相机来提供\nAI 场景识别、实时滤镜和专业拍摄功能",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+                Button(
+                    onClick = onRequestPermission,
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("授予相机权限")
+                }
             }
         }
     }

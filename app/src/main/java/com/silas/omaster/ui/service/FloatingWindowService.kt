@@ -170,7 +170,7 @@ class FloatingWindowService : Service() {
                 putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
                 putExtra(EXTRA_IS_EXPANDED, true)
             }
-            ContextCompat.startForegroundService(context, intent)
+            safeStartForegroundService(context, intent)
         }
 
         /**
@@ -193,7 +193,37 @@ class FloatingWindowService : Service() {
                 putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
                 putExtra(EXTRA_IS_EXPANDED, instance?.isExpanded ?: true)
             }
-            ContextCompat.startForegroundService(context, intent)
+            safeStartForegroundService(context, intent)
+        }
+
+        /**
+         * Android 12+ (API 31+) 后台启动前台服务限制防护。
+         * 若应用处于后台，startForegroundService 会抛出 ForegroundServiceStartNotAllowedException。
+         * 捕获后降级为普通启动或提示用户。
+         */
+        private fun safeStartForegroundService(context: Context, intent: Intent) {
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (e: IllegalStateException) {
+                // Android 12+ 后台启动限制
+                Log.w(TAG, "startForegroundService failed, app may be in background", e)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    e is android.app.ForegroundServiceStartNotAllowedException
+                ) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "悬浮窗需在应用前台启动，请打开应用后再试",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    // 降级尝试：普通 startService（无通知，可能被系统限制）
+                    try {
+                        context.startService(intent)
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "startService also failed", e2)
+                    }
+                }
+            }
         }
 
         fun hide(context: Context) {

@@ -319,16 +319,32 @@ class OMasterApplication : Application() {
 
     /**
      * 应用终止时释放资源（尽最大努力）
-     * 
+     *
      * ⚠️ 注意：Android 系统不保证 onTerminate() 一定会被调用。
      * 对于仅运行单个 Activity 的应用，系统通常直接杀死进程而不会调用此方法。
      * 因此，关键资源释放应放在各组件各自的 onDestroy() 或 DisposableEffect 中。
-     * 
+     *
      * 此方法仅作为补充性的兜底清理。
      */
     override fun onTerminate() {
         super.onTerminate()
         releaseResources()
+    }
+
+    /**
+     * 系统内存紧张时主动回收 GPU 等非关键资源，防止 OOM/ANR。
+     * 修复 L3: GPURenderManager 引用计数泄漏兜底。
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_MODERATE) {
+            try {
+                com.silas.omaster.renderer.GPURenderManager.forceReleaseAll()
+                Log.i("OMasterApplication", "onTrimMemory: GPURenderManager 强制释放完成")
+            } catch (e: Exception) {
+                Log.w("OMasterApplication", "onTrimMemory: GPURenderManager 释放失败", e)
+            }
+        }
     }
 
     /**

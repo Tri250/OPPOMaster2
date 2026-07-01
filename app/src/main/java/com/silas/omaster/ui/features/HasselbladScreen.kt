@@ -901,7 +901,7 @@ private fun SetupContent(
             )
         }
 
-        // AR 取景器模拟：拍照前预览构图引导线
+        // AR 取景器预览：拍照前叠加构图引导线
         item {
             ViewfinderSimulatorCard()
         }
@@ -1192,7 +1192,7 @@ private fun HeroCard() {
 }
 
 /**
- * AR 取景器模拟卡片
+ * AR 取景器预览卡片
  * 拍照前预览不同场景的 AR 构图引导线，模拟真实取景器叠加效果
  * 用户可切换场景模式与引导线类型，提前了解构图方案
  */
@@ -1220,7 +1220,7 @@ private fun ViewfinderSimulatorCard() {
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "AR 取景器模拟",
+                    text = "AR 取景器预览",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -1280,7 +1280,7 @@ private fun ViewfinderSimulatorCard() {
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // AR 引导线叠加预览（模拟取景器）
+            // AR 引导线叠加预览（取景器叠加层）
             ARGuideOverlay(
                 guideType = selectedGuideType,
                 sceneMode = selectedSceneMode

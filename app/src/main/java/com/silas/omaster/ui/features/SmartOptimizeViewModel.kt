@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -41,18 +43,26 @@ class SmartOptimizeViewModel : ViewModel() {
 
     private var engine: SmartOptimizeEngine = SmartOptimizeEngine(null)
 
+    // 保护 engine 重建与参数处理的互斥锁，防止竞态崩溃
+    private val engineMutex = Mutex()
+
     /**
      * 注入 LUTManager（需要在 Activity/Fragment 中调用，因为 ViewModel 无法直接获取 Context）
      * 注入后会重建 Engine 以启用 LUTManager 缓存链路
      */
     fun initLUTManager(context: Context) {
         if (_lutManager != null) return
-        _lutManager = LUTManager.getInstance(context)
-        engine.cancel()
-        engine = SmartOptimizeEngine(null, LutProcessor(), _lutManager!!)
-        // 重新初始化 Engine 状态
-        _uiState.value.originalBitmap?.let { bitmap ->
-            engine.initialize(bitmap)
+        val lutManager = LUTManager.getInstance(context)
+        _lutManager = lutManager
+        viewModelScope.launch {
+            engineMutex.withLock {
+                engine.cancel()
+                engine = SmartOptimizeEngine(null, LutProcessor(), lutManager)
+                // 重新初始化 Engine 状态
+                _uiState.value.originalBitmap?.let { bitmap ->
+                    engine.initialize(bitmap)
+                }
+            }
         }
     }
 
@@ -256,9 +266,11 @@ class SmartOptimizeViewModel : ViewModel() {
         )
 
         val result = withContext(Dispatchers.Default) {
-            runCatching {
-                engine.optimize(original, params)
-            }.getOrElse { original }
+            engineMutex.withLock {
+                runCatching {
+                    engine.optimize(original, params)
+                }.getOrElse { original }
+            }
         }
 
         val showBefore = _uiState.value.showBefore

@@ -138,6 +138,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     /**
      * 持久化崩溃报告到文件
      * 修复 P2-9: 隐私保护 - 不存储可能包含敏感信息的路径/IP
+     * 修复 L2: 崩溃日志文件加密存储，防止 root 后泄露业务逻辑
      */
     private fun persistCrashReport(content: String, type: String) {
         val ctx = appContext ?: return
@@ -148,9 +149,17 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             // 隐私保护：过滤敏感信息
             val sanitizedContent = sanitizeCrashReport(content)
 
-            val fileName = "crash_${getCurrentTime().replace(":", "-").replace(" ", "_")}_$type.log"
+            // 加密存储：使用 AES/GCM + Android Keystore
+            val encryptedContent = try {
+                SecurityCrypto.getInstance(ctx).encrypt(sanitizedContent)
+            } catch (e: Exception) {
+                Log.w(TAG, "日志加密失败，降级为明文存储", e)
+                sanitizedContent
+            }
+
+            val fileName = "crash_${getCurrentTime().replace(":", "-").replace(" ", "_")}_$type.enc"
             val crashFile = File(crashDir, fileName)
-            crashFile.writeText(sanitizedContent)
+            crashFile.writeText(encryptedContent)
 
             // 清理旧日志（只保留最近 10 个）
             cleanupOldCrashLogs(crashDir, keepCount = 10)
