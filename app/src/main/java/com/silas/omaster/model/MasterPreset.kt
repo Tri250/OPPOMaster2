@@ -226,7 +226,9 @@ data class MasterPreset(
     val ratingCount: Int? = null,         // 评分数量
     val comments: List<PresetComment>? = null, // 评论列表
     // ========== HNCS 认证相关 ==========
-    val isHncs: Boolean = false           // 是否 HNCS 认证预设
+    val isHncs: Boolean = false,          // 是否 HNCS 认证预设
+    // ========== 软删除支持 ==========
+    val deletedAt: Long? = null           // 软删除时间戳，非 null 表示已删除
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         id = parcel.readString(),
@@ -267,7 +269,8 @@ data class MasterPreset(
         comments = parcel.createTypedArrayList(PresetComment.CREATOR),
         isHncs = parcel.readByte() != 0.toByte(),
         params = parcel.readStringMap(),
-        colorGradingParams = parcel.readStringMap()
+        colorGradingParams = parcel.readStringMap(),
+        deletedAt = parcel.readValue(Long::class.java.classLoader) as? Long
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -312,6 +315,7 @@ data class MasterPreset(
         parcel.writeByte(if (isHncs) 1 else 0)
         parcel.writeStringMap(params)
         parcel.writeStringMap(colorGradingParams)
+        parcel.writeValue(deletedAt)
     }
 
     fun getDisplaySections(context: Context): List<PresetSection> {

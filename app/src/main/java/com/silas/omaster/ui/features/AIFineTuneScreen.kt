@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,7 +71,11 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.silas.omaster.ai.AIFineTuneManager
+import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.ui.components.DiscardChangesDialog
+import com.silas.omaster.ui.components.SaveAsPresetDialog
+import com.silas.omaster.ui.components.SaveErrorRetryDialog
 import com.silas.omaster.ui.theme.CyanAccent
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
@@ -125,6 +130,63 @@ fun AIFineTuneScreen(
     val curvePoints by viewModel.curvePoints.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
+    val hasChanges by viewModel.hasChanges.collectAsState()
+    val saveError by viewModel.saveError.collectAsState()
+
+    // 放弃修改对话框
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    // 保存为预设对话框
+    var showSaveAsPresetDialog by remember { mutableStateOf(false) }
+    var lastSaveSuccess by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = hasChanges) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            onConfirm = {
+                showDiscardDialog = false
+                onBack()
+            },
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
+
+    if (showSaveAsPresetDialog) {
+        val repository = remember { PresetRepository.getInstance(context) }
+        SaveAsPresetDialog(
+            defaultName = "AI微调预设",
+            onConfirm = { presetName ->
+                scope.launch {
+                    val paramsMap = viewModel.getFinalParams().toMap().mapValues { it.value.toInt() }
+                    repository.createCustomPreset(name = presetName, params = paramsMap)
+                    Toast.makeText(context, "预设已保存", Toast.LENGTH_SHORT).show()
+                }
+                showSaveAsPresetDialog = false
+            },
+            onDismiss = { showSaveAsPresetDialog = false }
+        )
+    }
+
+    if (saveError != null) {
+        SaveErrorRetryDialog(
+            errorMessage = saveError ?: "保存失败",
+            onRetry = {
+                viewModel.clearSaveError()
+                scope.launch {
+                    val success = viewModel.exportImage(context)
+                    Toast.makeText(context, if (success) "已保存到相册" else "保存失败", Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        lastSaveSuccess = true
+                        showSaveAsPresetDialog = true
+                    }
+                }
+            },
+            onDismiss = { viewModel.clearSaveError() }
+        )
+    }
 
     // 初始化传入的 bitmap
     LaunchedEffect(bitmap) {
@@ -254,6 +316,11 @@ fun AIFineTuneScreen(
                     IconButton(onClick = { viewModel.reset() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "重置", tint = MaterialTheme.colorScheme.onBackground)
                     }
+                    if (hasChanges) {
+                        IconButton(onClick = { viewModel.resetToOriginal() }) {
+                            Icon(Icons.Default.History, contentDescription = "恢复原始", tint = HasselbladOrange)
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -274,6 +341,10 @@ fun AIFineTuneScreen(
                     scope.launch {
                         val success = viewModel.exportImage(context)
                         Toast.makeText(context, if (success) "已保存到相册" else "保存失败", Toast.LENGTH_SHORT).show()
+                        if (success) {
+                            lastSaveSuccess = true
+                            showSaveAsPresetDialog = true
+                        }
                     }
                 },
                 onApply = { onApply(viewModel.getFinalParams()) },

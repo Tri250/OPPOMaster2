@@ -1,6 +1,7 @@
 package com.silas.omaster.ui.create
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +32,7 @@ import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.ui.components.DiscardChangesDialog
 
 import java.io.File
 import kotlin.math.roundToInt
@@ -60,6 +62,24 @@ fun UniversalCreatePresetScreen(
     
     // Edit item state
     var editingItem by remember { mutableStateOf<PresetItem?>(null) }
+
+    // 放弃修改对话框
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    val hasFormChanges = uiState.name.isNotBlank() || uiState.imageUri != null || uiState.sections.isNotEmpty()
+
+    BackHandler(enabled = hasFormChanges) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            onConfirm = {
+                showDiscardDialog = false
+                onBack()
+            },
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
 
     Scaffold(
         topBar = {

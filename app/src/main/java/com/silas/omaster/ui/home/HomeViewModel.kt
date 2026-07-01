@@ -78,6 +78,13 @@ class HomeViewModel(
     private var allPresetsJob: Job? = null
     private var favoritesJob: Job? = null
     private var customPresetsJob: Job? = null
+
+    // P7: 多选批量操作
+    private val _isMultiSelectMode = MutableStateFlow(false)
+    val isMultiSelectMode: StateFlow<Boolean> = _isMultiSelectMode.asStateFlow()
+
+    private val _selectedPresetIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedPresetIds: StateFlow<Set<String>> = _selectedPresetIds.asStateFlow()
     private var searchHistoryJob: Job? = null
 
     init {
@@ -329,6 +336,67 @@ class HomeViewModel(
         favoritesJob?.cancel()
         customPresetsJob?.cancel()
         searchHistoryJob?.cancel()
+    }
+// P7: 多选批量操作方法
+
+    fun toggleMultiSelectMode() {
+        _isMultiSelectMode.value = !_isMultiSelectMode.value
+        if (!_isMultiSelectMode.value) {
+            _selectedPresetIds.value = emptySet()
+        }
+    }
+
+    fun toggleSelection(id: String) {
+        val current = _selectedPresetIds.value.toMutableSet()
+        if (current.contains(id)) {
+            current.remove(id)
+        } else {
+            current.add(id)
+        }
+        _selectedPresetIds.value = current
+    }
+
+    fun selectAll() {
+        _selectedPresetIds.value = _allPresets.value
+            .filter { !it.isSystem }
+            .map { it.id }
+            .toSet()
+    }
+
+    fun deselectAll() {
+        _selectedPresetIds.value = emptySet()
+    }
+
+    fun batchDelete() {
+        viewModelScope.launch {
+            val ids = _selectedPresetIds.value.toList()
+            for (id in ids) {
+                repository.softDeletePreset(id)
+            }
+            _selectedPresetIds.value = emptySet()
+            _isMultiSelectMode.value = false
+        }
+    }
+
+    fun batchExport() {
+        viewModelScope.launch {
+            val ids = _selectedPresetIds.value
+            val presets = _allPresets.value.filter { it.id in ids }
+            val json = presets.joinToString(",\n") { preset ->
+                """
+                {
+                    "id": "${preset.id}",
+                    "name": "${preset.name}",
+                    "brand": "${preset.brand}",
+                    "category": "${preset.category}",
+                    "params": ${preset.params}
+                }
+                """.trimIndent()
+            }.let { "[\n$it\n]" }
+            android.util.Log.d("HomeViewModel", "批量导出预设: $json")
+            _selectedPresetIds.value = emptySet()
+            _isMultiSelectMode.value = false
+        }
     }
 }
 

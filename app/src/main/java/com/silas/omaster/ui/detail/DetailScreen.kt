@@ -469,6 +469,28 @@ fun DetailScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             
+                            // 复制按钮
+                            OutlinedButton(
+                                onClick = {
+                                    haptic.perform(HapticFeedbackType.LongPress)
+                                    viewModel.duplicatePreset()
+                                    Toast.makeText(context, "预设已复制", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onBackground
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "复制",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("复制", fontSize = 14.sp)
+                            }
+                            
                             // 应用按钮（带动画反馈）
                             ApplyPresetButton(
                                 onApply = {

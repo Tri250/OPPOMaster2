@@ -8,6 +8,7 @@ import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
+import java.util.UUID
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpRequestRetry
@@ -1040,7 +1041,8 @@ class PresetRepository private constructor(context: Context) {
      */
     fun getAllPresets(): Flow<List<MasterPreset>> {
         return combine(_presets, _favorites) { items, favIds ->
-            items.map { item ->
+            items.filter { it.deletedAt == null }
+                .map { item ->
                 item.toMasterPreset().copy(isFavorite = favIds.contains(item.id))
             }
         }
@@ -1052,7 +1054,7 @@ class PresetRepository private constructor(context: Context) {
      */
     fun getFavoritePresets(): Flow<List<MasterPreset>> {
         return combine(_presets, _favorites) { items, favIds ->
-            items.filter { favIds.contains(it.id) }
+            items.filter { it.deletedAt == null && favIds.contains(it.id) }
                 .map { it.toMasterPreset().copy(isFavorite = true) }
         }
     }
@@ -1062,7 +1064,7 @@ class PresetRepository private constructor(context: Context) {
      */
     fun getCustomPresets(): Flow<List<MasterPreset>> {
         return combine(_presets, _favorites) { items, favIds ->
-            items.filter { !it.isSystem }
+            items.filter { it.deletedAt == null && !it.isSystem }
                 .map { item ->
                     item.toMasterPreset().copy(
                         isFavorite = favIds.contains(item.id),
@@ -1123,7 +1125,125 @@ class PresetRepository private constructor(context: Context) {
      * 删除自定义预设（简化版本）
      */
     suspend fun deleteCustomPreset(presetId: String) {
-        deletePreset(presetId, forceConfirm = true)
+        softDeletePreset(presetId)
+    }
+
+    /**
+     * 复制预设 - 创建副本（名称加"副本"后缀）
+     */
+    suspend fun duplicatePreset(presetId: String): MasterPreset? = withContext(Dispatchers.IO) {
+        val original = _presets.value.find { it.id == presetId && it.deletedAt == null }
+            ?: return@withContext null
+        val newId = UUID.randomUUID().toString()
+        val duplicated = original.copy(
+            id = newId,
+            name = "${original.name} (副本)",
+            isSystem = false,
+            isCustom = true,
+            version = 1,
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
+        )
+        val current = _presets.value.toMutableList()
+        val insertIndex = _presets.value.indexOf(original) + 1
+        current.add(insertIndex, duplicated)
+        _presets.value = current
+        saveToCache()
+        Log.d(TAG, "复制预设: $presetId -> $newId")
+        duplicated.toMasterPreset()
+    }
+
+    /**
+     * 软删除预设 - 标记为已删除状态，而非立即移除
+     */
+    suspend fun softDeletePreset(presetId: String) = withContext(Dispatchers.IO) {
+        val index = _presets.value.indexOfFirst { it.id == presetId }
+        if (index < 0) return@withContext
+        val preset = _presets.value[index]
+        if (preset.isSystem) return@withContext
+        val updated = preset.copy(deletedAt = System.currentTimeMillis())
+        val current = _presets.value.toMutableList()
+        current[index] = updated
+        _presets.value = current
+        saveToCache()
+        Log.d(TAG, "软删除预设: $presetId")
+    }
+
+    /**
+     * 恢复软删除的预设
+     */
+    suspend fun restorePreset(presetId: String) = withContext(Dispatchers.IO) {
+        val index = _presets.value.indexOfFirst { it.id == presetId && it.deletedAt != null }
+        if (index < 0) return@withContext
+        val preset = _presets.value[index]
+        val updated = preset.copy(deletedAt = null)
+        val current = _presets.value.toMutableList()
+        current[index] = updated
+        _presets.value = current
+        saveToCache()
+        Log.d(TAG, "恢复预设: $presetId")
+    }
+
+    /**
+     * 永久删除预设（物理删除）
+     */
+    suspend fun permanentlyDeletePreset(presetId: String) = withContext(Dispatchers.IO) {
+        val preset = _presets.value.find { it.id == presetId }
+            ?: return@withContext
+        if (preset.isSystem) return@withContext
+
+        // 移除收藏
+        val favorites = _favorites.value.toMutableSet()
+        favorites.remove(presetId)
+        _favorites.value = favorites
+        saveFavorites(favorites)
+
+        // 移除置顶
+        val pinned = _pinnedIds.value.toMutableSet()
+        pinned.remove(presetId)
+        _pinnedIds.value = pinned
+        savePinned(pinned)
+
+        // 删除封面文件
+        preset.coverPath?.let { path ->
+            runCatching {
+                val file = if (File(path).isAbsolute) File(path) else File(appContext.filesDir, path)
+                file.delete()
+            }
+        }
+
+        val current = _presets.value.toMutableList()
+        current.removeIf { it.id == presetId }
+        _presets.value = current
+        saveToCache()
+        Log.d(TAG, "永久删除预设: $presetId")
+    }
+
+    /**
+     * 获取已删除的预设（软删除回收站）
+     */
+    fun getDeletedPresets(): Flow<List<MasterPreset>> {
+        return combine(_presets, _favorites) { allPresets, _ ->
+            allPresets.filter { it.deletedAt != null }
+                .map { it.toMasterPreset() }
+        }
+    }
+
+    /**
+     * 清理过期删除（超过30天的软删除记录自动永久删除）
+     */
+    suspend fun purgeExpiredDeletes() = withContext(Dispatchers.IO) {
+        val thirtyDaysMs = 30L * 24 * 60 * 60 * 1000
+        val now = System.currentTimeMillis()
+        val expiredIds = _presets.value
+            .filter { it.deletedAt != null && (now - it.deletedAt) > thirtyDaysMs }
+            .map { it.id }
+        for (id in expiredIds) {
+            permanentlyDeletePreset(id)
+        }
+        if (expiredIds.isNotEmpty()) {
+            Log.d(TAG, "清理过期删除预设: ${expiredIds.size} 个")
+        }
     }
 
     /**
@@ -1196,7 +1316,8 @@ data class PresetItem(
     val shutterSpeed: String? = null,
     val exposureCompensation: String? = null,
     val whiteBalance: String? = null,
-    val colorTone: String? = null
+    val colorTone: String? = null,
+    val deletedAt: Long? = null  // 软删除时间戳
 ) {
     fun toExportModel() = ExportPresetModel(
         name = name,
@@ -1247,7 +1368,8 @@ data class PresetItem(
             iso = iso,
             shutterSpeed = shutterSpeed,
             whiteBalance = whiteBalance,
-            colorTone = colorTone
+            colorTone = colorTone,
+            deletedAt = deletedAt
         )
     }
 }

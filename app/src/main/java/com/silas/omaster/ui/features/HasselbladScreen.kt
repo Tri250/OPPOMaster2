@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -137,6 +138,8 @@ import com.silas.omaster.model.SoftLightMode
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
 import com.silas.omaster.ui.components.ApertureState
+import com.silas.omaster.ui.components.DiscardChangesDialog
+import com.silas.omaster.ui.components.SaveAsPresetDialog
 import com.silas.omaster.ui.components.defaultAnalysisSteps
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
@@ -446,6 +449,7 @@ fun HasselbladScreen(
         val bitmap = previewBitmap ?: return
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         viewModel.saveImage(context, bitmap, exportFormat)
+        showSaveAsPresetDialog = true
     }
 
     fun onShareImage() {
@@ -467,6 +471,50 @@ fun HasselbladScreen(
     fun onRetake() {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         viewModel.clear()
+    }
+
+    // 放弃修改对话框
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    val hasChanges = params != HasselbladParams()
+
+    // 保存为预设对话框
+    var showSaveAsPresetDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = hasChanges && stage == HasselbladEyeStage.RESULTS) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            onConfirm = {
+                showDiscardDialog = false
+                onBack()
+            },
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
+
+    if (showSaveAsPresetDialog) {
+        val repository = remember { PresetRepository.getInstance(context) }
+        SaveAsPresetDialog(
+            defaultName = "哈苏预设",
+            onConfirm = { presetName ->
+                scope.launch {
+                    val paramsMap = mapOf(
+                        "tone" to params.tone,
+                        "saturation" to params.saturation,
+                        "contrast" to params.contrast,
+                        "colorTemp" to params.colorTemp,
+                        "sharpness" to params.sharpness,
+                        "vignette" to params.vignette
+                    )
+                    repository.createCustomPreset(name = presetName, params = paramsMap)
+                    Toast.makeText(context, "预设已保存", Toast.LENGTH_SHORT).show()
+                }
+                showSaveAsPresetDialog = false
+            },
+            onDismiss = { showSaveAsPresetDialog = false }
+        )
     }
 
     Scaffold(

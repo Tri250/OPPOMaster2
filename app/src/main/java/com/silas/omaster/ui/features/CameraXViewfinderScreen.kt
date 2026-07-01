@@ -261,6 +261,10 @@ fun CameraXViewfinderScreen(
     var showARTips by remember { mutableStateOf(true) }
     var showProPanel by remember { mutableStateOf(false) }
 
+    // P4: 拍照后审核状态
+    var capturedPhotoUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showCaptureReview by remember { mutableStateOf(false) }
+
     // Phase 2.1：LUT 实时预览状态
     var isLUTPreviewEnabled by remember { mutableStateOf(false) }
     var lutTextureView by remember { mutableStateOf<android.view.TextureView?>(null) }
@@ -680,7 +684,8 @@ fun CameraXViewfinderScreen(
                     onShutterClick = {
                         cameraManager.takePhoto(
                             onPhotoSaved = { uri ->
-                                onPhotoCaptured(uri)
+                                capturedPhotoUri = uri
+                                showCaptureReview = true
                                 Toast.makeText(context, "照片已保存", Toast.LENGTH_SHORT).show()
                             },
                             onError = { error ->
@@ -697,6 +702,84 @@ fun CameraXViewfinderScreen(
                         .padding(vertical = 20.dp, horizontal = 32.dp)
                 )
             }
+
+            // P4: 拍照后审核栏
+            if (showCaptureReview) {
+                CaptureReviewBar(
+                    onRetake = {
+                        showCaptureReview = false
+                        capturedPhotoUri = null
+                    },
+                    onUsePhoto = {
+                        capturedPhotoUri?.let { uri ->
+                            onPhotoCaptured(uri)
+                        }
+                        showCaptureReview = false
+                        capturedPhotoUri = null
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+// ==================== 拍照后审核栏 ====================
+
+@Composable
+private fun CaptureReviewBar(
+    onRetake: () -> Unit,
+    onUsePhoto: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .background(Color.Black.copy(alpha = 0.9f))
+            .padding(vertical = 16.dp, horizontal = 24.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedButton(
+            onClick = onRetake,
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color.White
+            ),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("重新拍摄", color = Color.White, fontWeight = FontWeight.SemiBold)
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Button(
+            onClick = onUsePhoto,
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = HasselbladOrange
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("使用照片", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }

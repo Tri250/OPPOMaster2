@@ -61,6 +61,7 @@ fun PaywallScreen(
     var isPurchasing by remember { mutableStateOf(false) }
     var isRestoring by remember { mutableStateOf(false) }
     var showRestoreResult by remember { mutableStateOf<String?>(null) }
+    var purchaseError by remember { mutableStateOf<String?>(null) }
 
     // 如果已经是 Pro，显示已解锁状态
     val isPro = subscriptionState.isActivePro
@@ -144,6 +145,7 @@ fun PaywallScreen(
                         val activity = context as? android.app.Activity ?: return@Button
                         val manager = billingManager ?: return@Button
                         isPurchasing = true
+                        purchaseError = null
 
                         val productId = when (selectedPlan) {
                             0 -> BillingManager.PRODUCT_MONTHLY
@@ -155,10 +157,12 @@ fun PaywallScreen(
                             val result = manager.launchBillingFlow(activity, details)
                             if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
                                 isPurchasing = false
+                                purchaseError = "购买流程启动失败，请重试"
                             }
                             // 购买结果通过 PurchasesUpdatedListener 回调处理
                         } else {
                             isPurchasing = false
+                            purchaseError = "无法获取商品信息，请检查网络连接"
                         }
                     },
                     enabled = !isPurchasing,
@@ -184,6 +188,33 @@ fun PaywallScreen(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 购买错误重试
+                if (purchaseError != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Color.Red.copy(alpha = 0.1f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            purchaseError ?: "购买失败",
+                            color = Color.Red.copy(alpha = 0.8f),
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = { purchaseError = null }) {
+                            Text("重试", color = HasselbladOrange, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
 

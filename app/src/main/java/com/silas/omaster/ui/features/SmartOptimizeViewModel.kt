@@ -71,6 +71,10 @@ class SmartOptimizeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(SmartOptimizeUiState())
     val uiState: StateFlow<SmartOptimizeUiState> = _uiState.asStateFlow()
 
+    // 是否有修改（相对于原始默认值）
+    private val _hasChanges = MutableStateFlow(false)
+    val hasChanges: StateFlow<Boolean> = _hasChanges.asStateFlow()
+
     /**
      * 参数变化请求流，用于防抖处理。
      * 拖动滑块时可能连续发射多次，debounce 后统一渲染。
@@ -172,6 +176,7 @@ class SmartOptimizeViewModel : ViewModel() {
             // 自动防抖记录历史：用户停止操作 800ms 后将最终参数提交为历史节点
             scheduleHistoryCommit()
         }
+        _hasChanges.value = true
         _uiState.value = _uiState.value.copy(params = params)
         paramChangeRequests.tryEmit(params)
     }
@@ -253,6 +258,20 @@ class SmartOptimizeViewModel : ViewModel() {
     fun resetAll() {
         pushHistory("重置全部")
         _uiState.value = _uiState.value.copy(selectedPresetId = null)
+        _hasChanges.value = false
+        applyParamsImmediately(SmartOptimizeParams.DEFAULT.copy(), recordHistory = false)
+    }
+
+    /**
+     * 恢复到原始状态（清除所有修改，包括编辑历史）
+     */
+    fun resetToOriginal() {
+        _uiState.value = _uiState.value.copy(
+            selectedPresetId = null,
+            editHistory = emptyList(),
+            historyIndex = -1
+        )
+        _hasChanges.value = false
         applyParamsImmediately(SmartOptimizeParams.DEFAULT.copy(), recordHistory = false)
     }
 

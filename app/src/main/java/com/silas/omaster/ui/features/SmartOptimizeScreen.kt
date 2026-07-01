@@ -2,6 +2,7 @@ package com.silas.omaster.ui.features
 
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.data.repository.LUTResourceRepository
+import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.ui.components.DiscardChangesDialog
+import com.silas.omaster.ui.components.SaveAsPresetDialog
 import kotlinx.coroutines.launch
 
 /**
@@ -89,6 +94,52 @@ fun SmartOptimizeScreen(
     val showExportDialog = uiState.showExportDialog
     val showResetConfirm = uiState.showResetConfirm
     val showColorScience = uiState.showColorScience
+
+    // 放弃修改对话框
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    val hasChanges = params.changedParamCount() > 0
+
+    // 保存为预设对话框
+    var showSaveAsPresetDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = hasChanges) {
+        showDiscardDialog = true
+    }
+
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            onConfirm = {
+                showDiscardDialog = false
+                onBack()
+            },
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
+
+    if (showSaveAsPresetDialog) {
+        val repository = remember { PresetRepository.getInstance(context) }
+        SaveAsPresetDialog(
+            defaultName = "智能优化预设",
+            onConfirm = { presetName ->
+                scope.launch {
+                    val paramsMap = mapOf(
+                        "exposure" to params.exposure.toInt(),
+                        "brightness" to params.brightness.toInt(),
+                        "contrast" to params.contrast.toInt(),
+                        "saturation" to params.saturation.toInt(),
+                        "vibrance" to params.vibrance.toInt(),
+                        "sharpness" to params.sharpness.toInt(),
+                        "temperature" to params.temperature.toInt(),
+                        "tint" to params.tint.toInt()
+                    )
+                    repository.createCustomPreset(name = presetName, params = paramsMap)
+                    Toast.makeText(context, "预设已保存", Toast.LENGTH_SHORT).show()
+                }
+                showSaveAsPresetDialog = false
+            },
+            onDismiss = { showSaveAsPresetDialog = false }
+        )
+    }
 
     // ========== 图片选择器 ==========
     val imagePicker = rememberLauncherForActivityResult(
@@ -158,7 +209,10 @@ fun SmartOptimizeScreen(
                     // 保存
                     IconButton(onClick = {
                         scope.launch {
-                            viewModel.exportCurrentImage()?.let { onSave(it) }
+                            viewModel.exportCurrentImage()?.let {
+                                onSave(it)
+                                showSaveAsPresetDialog = true
+                            }
                         }
                     }) {
                         Icon(Icons.Default.Save, "保存")
@@ -206,7 +260,15 @@ fun SmartOptimizeScreen(
                         Image(
                             bitmap = bmp.asImageBitmap(),
                             contentDescription = if (showBefore) "原图" else "预览",
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(showBefore) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            viewModel.setShowBefore(!showBefore)
+                                        }
+                                    )
+                                },
                             contentScale = ContentScale.Fit
                         )
                     }
@@ -1864,6 +1926,61 @@ private fun ExportTabPanel(
                 Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("导出图像", fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+// ==================== 前后对比切换按钮 ====================
+
+@Composable
+private fun BeforeAfterToggle(
+    showBefore: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    ) {
+        Row(
+            modifier = Modifier.padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (!showBefore) MaterialTheme.colorScheme.primary
+                        else Color.Transparent
+                    )
+                    .clickable { onToggle(false) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "After",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (!showBefore) Color.White else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (showBefore) MaterialTheme.colorScheme.primary
+                        else Color.Transparent
+                    )
+                    .clickable { onToggle(true) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "Before",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (showBefore) Color.White else MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }

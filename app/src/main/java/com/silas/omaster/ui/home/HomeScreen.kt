@@ -146,6 +146,8 @@ fun HomeScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorState by viewModel.errorState.collectAsState()
     val searchHistory by viewModel.searchHistory.collectAsState()
+    val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
+    val selectedPresetIds by viewModel.selectedPresetIds.collectAsState()
 
     // 当 refreshTrigger 变化时刷新数据
     LaunchedEffect(refreshTrigger) {
@@ -199,7 +201,11 @@ fun HomeScreen(
                 onRefresh = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     viewModel.refresh()
-                }
+                },
+                isMultiSelectMode = isMultiSelectMode,
+                onToggleMultiSelect = { viewModel.toggleMultiSelectMode() },
+                onSelectAll = { viewModel.selectAll() },
+                onDeselectAll = { viewModel.deselectAll() }
             )
 
             // 权限自检横幅：在关键权限缺失时提示用户
@@ -326,7 +332,10 @@ fun HomeScreen(
                     showDeleteConfirm = true
                 },
                 onScrollStateChanged = onScrollStateChanged,
-                onRefresh = { onComplete -> viewModel.refresh(onComplete) }
+                onRefresh = { onComplete -> viewModel.refresh(onComplete) },
+                isMultiSelectMode = isMultiSelectMode,
+                selectedPresetIds = selectedPresetIds,
+                onToggleSelection = { viewModel.toggleSelection(it) }
             )
         }
 
@@ -355,6 +364,22 @@ fun HomeScreen(
                     modifier = Modifier.size(32.dp)
                 )
             }
+        }
+
+        // P7: 多选批量操作栏
+        if (isMultiSelectMode && selectedPresetIds.isNotEmpty()) {
+            MultiSelectBottomBar(
+                selectedCount = selectedPresetIds.size,
+                onDelete = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    viewModel.batchDelete()
+                },
+                onExport = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    viewModel.batchExport()
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 
@@ -403,6 +428,10 @@ fun HomeScreen(
 @Composable
 private fun HeaderSection(
     onRefresh: () -> Unit,
+    isMultiSelectMode: Boolean = false,
+    onToggleMultiSelect: () -> Unit = {},
+    onSelectAll: () -> Unit = {},
+    onDeselectAll: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -413,57 +442,90 @@ private fun HeaderSection(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            // 哈苏大师标签（对齐Web端）
-            Box(
-                modifier = Modifier
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(HasselbladOrange, WarningYellow)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
+        if (isMultiSelectMode) {
+            // 多选模式：显示全选/取消全选
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                TextButton(onClick = onDeselectAll) {
+                    Text("取消", color = MaterialTheme.colorScheme.onBackground)
+                }
+                TextButton(onClick = onSelectAll) {
+                    Text("全选", color = HasselbladOrange)
+                }
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                // 哈苏大师标签（对齐Web端）
+                Box(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(HasselbladOrange, WarningYellow)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
-                    Text(
-                        text = "👑",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = stringResource(R.string.hasselblad_master),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "👑",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = stringResource(R.string.hasselblad_master),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
                 }
             }
         }
 
-        // 刷新按钮
-        IconButton(
-            onClick = onRefresh,
-            modifier = Modifier.size(36.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = stringResource(R.string.refresh),
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp)
-            )
+            // 多选按钮
+            TextButton(
+                onClick = onToggleMultiSelect,
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = if (isMultiSelectMode) "完成" else "选择",
+                    color = if (isMultiSelectMode) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+            }
+
+            // 刷新按钮
+            IconButton(
+                onClick = onRefresh,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = stringResource(R.string.refresh),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -808,6 +870,63 @@ private fun BrandFilterButton(
     }
 }
 
+// P7: 多选批量操作栏
+@Composable
+private fun MultiSelectBottomBar(
+    selectedCount: Int,
+    onDelete: () -> Unit,
+    onExport: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+        tonalElevation = 3.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "已选择 $selectedCount 项",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Red.copy(alpha = 0.8f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("删除", color = Color.White)
+                }
+                Button(
+                    onClick = onExport,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = HasselbladOrange
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("导出", color = Color.White)
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun PresetGrid(
@@ -819,7 +938,10 @@ private fun PresetGrid(
     onToggleFavorite: (String) -> Unit,
     onDeletePreset: (String) -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {},
-    onRefresh: (onComplete: () -> Unit) -> Unit = {}
+    onRefresh: (onComplete: () -> Unit) -> Unit = {},
+    isMultiSelectMode: Boolean = false,
+    selectedPresetIds: Set<String> = emptySet(),
+    onToggleSelection: (String) -> Unit = {}
 ) {
     val listState = rememberLazyStaggeredGridState()
     val haptic = LocalHapticFeedback.current
@@ -1004,25 +1126,57 @@ private fun PresetCardItem(
                 this.shadowElevation = if (alpha > 0.9f) 4f else 0f
             }
     ) {
-        PresetCard(
-            preset = preset,
-            onClick = {
-                haptic.perform(HapticFeedbackType.LongPress)
-                onNavigateToDetail(preset)
-                // 触发应用内评分检查
-                try {
-                    val activity = context as? android.app.Activity
-                    if (activity != null) {
-                        AppReviewManager.getInstance(activity).tryShowReview()
+        Box {
+            PresetCard(
+                preset = preset,
+                onClick = {
+                    if (isMultiSelectMode) {
+                        onToggleSelection(preset.id ?: return@PresetCard)
+                    } else {
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        onNavigateToDetail(preset)
+                        // 触发应用内评分检查
+                        try {
+                            val activity = context as? android.app.Activity
+                            if (activity != null) {
+                                AppReviewManager.getInstance(activity).tryShowReview()
+                            }
+                        } catch (_: Exception) {}
                     }
-                } catch (_: Exception) {}
-            },
-            onFavoriteClick = {
-                haptic.perform(HapticFeedbackType.LongPress)
-                preset.id?.let { onToggleFavorite(it) }
-            },
-            imageHeight = imageHeight
-        )
+                },
+                onFavoriteClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    preset.id?.let { onToggleFavorite(it) }
+                },
+                imageHeight = imageHeight
+            )
+
+            // 多选模式复选框
+            if (isMultiSelectMode) {
+                val isSelected = selectedPresetIds.contains(preset.id)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(24.dp)
+                        .background(
+                            if (isSelected) HasselbladOrange else Color.White.copy(alpha = 0.8f),
+                            CircleShape
+                        )
+                        .border(2.dp, if (isSelected) HasselbladOrange else Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

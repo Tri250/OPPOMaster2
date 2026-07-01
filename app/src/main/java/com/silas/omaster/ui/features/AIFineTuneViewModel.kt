@@ -184,6 +184,10 @@ class AIFineTuneViewModel(
     private val _errorState = MutableStateFlow<String?>(null)
     val errorState: StateFlow<String?> = _errorState.asStateFlow()
 
+    // 保存错误状态
+    private val _saveError = MutableStateFlow<String?>(null)
+    val saveError: StateFlow<String?> = _saveError.asStateFlow()
+
     // ==================== 历史记录（撤销/重做） ====================
     private val history = ArrayDeque<RenderParameters>()
     private var historyIndex = -1
@@ -191,6 +195,10 @@ class AIFineTuneViewModel(
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
     private val _canRedo = MutableStateFlow(false)
     val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
+
+    // 是否有修改（相对于原始默认值）
+    private val _hasChanges = MutableStateFlow(false)
+    val hasChanges: StateFlow<Boolean> = _hasChanges.asStateFlow()
 
     // ==================== GPU 渲染器 ====================
     private var gpuRenderManager: GPURenderManager? = null
@@ -628,6 +636,9 @@ class AIFineTuneViewModel(
         }
         history.addLast(params)
         historyIndex++
+        if (!force) {
+            _hasChanges.value = true
+        }
         updateHistoryState()
     }
 
@@ -674,8 +685,32 @@ class AIFineTuneViewModel(
         _selectedStyleId.value = null
         _selectedOptimizations.value = emptySet()
         _lockedParams.value = emptySet()
+        _hasChanges.value = false
         syncCurveToRenderParameters()
         pushHistory(force = true)
+    }
+
+    /**
+     * 恢复到原始状态（清除所有修改，包括历史记录）
+     */
+    fun resetToOriginal() {
+        _currentParams.value = RenderParameters()
+        _hslValues.value = getDefaultHSLValues()
+        _curvePoints.value = mapOf(
+            "rgb" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
+            "red" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
+            "green" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f)),
+            "blue" to listOf(CurvePoint(0f, 0f), CurvePoint(1f, 1f))
+        )
+        _selectedStyleId.value = null
+        _selectedOptimizations.value = emptySet()
+        _lockedParams.value = emptySet()
+        _hasChanges.value = false
+        history.clear()
+        historyIndex = -1
+        _canUndo.value = false
+        _canRedo.value = false
+        syncCurveToRenderParameters()
     }
 
     fun clearSuccess() {
@@ -688,7 +723,10 @@ class AIFineTuneViewModel(
      * 使用 GPU 渲染管线导出最终图片，确保与预览完全一致
      */
     suspend fun exportImage(context: Context): Boolean = withContext(Dispatchers.IO) {
-        val source = _sourceBitmap.value ?: return@withContext false
+        val source = _sourceBitmap.value ?: run {
+            _saveError.value = "没有可保存的图片"
+            return@withContext false
+        }
         val manager = gpuRenderManager ?: GPURenderManager.acquire(context).also {
             gpuRenderManager = it
             gpuInitialized = it.initialize() == true
@@ -704,13 +742,26 @@ class AIFineTuneViewModel(
                 is com.silas.omaster.renderer.RenderResult.Success -> result.outputBitmap
                 is com.silas.omaster.renderer.RenderResult.FallbackToCPU -> result.outputBitmap
                 else -> null
-            } ?: return@withContext false
+            }
+            if (output == null) {
+                _saveError.value = "渲染失败"
+                return@withContext false
+            }
 
-            saveBitmapToGallery(context, output)
+            val saved = saveBitmapToGallery(context, output)
+            if (!saved) {
+                _saveError.value = "保存到相册失败"
+            }
+            saved
         } catch (e: Exception) {
             Log.e("AIFineTuneVM", "导出失败", e)
+            _saveError.value = e.message ?: "导出失败"
             false
         }
+    }
+
+    fun clearSaveError() {
+        _saveError.value = null
     }
 
     private fun saveBitmapToGallery(context: Context, bitmap: Bitmap): Boolean {

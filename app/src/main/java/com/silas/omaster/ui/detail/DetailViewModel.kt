@@ -99,6 +99,20 @@ class DetailViewModel(
         }
     }
 
+    /**
+     * 复制预设
+     */
+    fun duplicatePreset() {
+        val id = currentPresetId ?: return
+        viewModelScope.launch {
+            try {
+                repository.duplicatePreset(id)
+            } catch (e: Exception) {
+                android.util.Log.e("DetailViewModel", "Error duplicating preset: $id", e)
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         // 清理时取消加载任务

@@ -84,6 +84,10 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     private val _params = MutableStateFlow(HasselbladParams())
     val params: StateFlow<HasselbladParams> = _params.asStateFlow()
 
+    // 是否有修改（相对于原始默认值）
+    private val _hasChanges = MutableStateFlow(false)
+    val hasChanges: StateFlow<Boolean> = _hasChanges.asStateFlow()
+
     private val _recommendedParams = MutableStateFlow<HasselbladParams?>(null)
     val recommendedParams: StateFlow<HasselbladParams?> = _recommendedParams.asStateFlow()
 
@@ -472,6 +476,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
             "clarity" -> current.copy(clarity = value)
             else -> current
         }
+        _hasChanges.value = true
     }
 
     /**
@@ -480,6 +485,15 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     fun resetToRecommended() {
         if (_isParamsLocked.value) return
         _recommendedParams.value?.let { _params.value = it }
+    }
+
+    /**
+     * 恢复到原始状态（清除所有修改）
+     */
+    fun resetToOriginal() {
+        _params.value = HasselbladParams()
+        _recommendedParams.value = null
+        _hasChanges.value = false
     }
 
     // ================== 3D LUT 集成 ==================
