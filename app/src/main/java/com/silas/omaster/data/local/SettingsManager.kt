@@ -137,6 +137,13 @@ class SettingsManager private constructor(private val context: Context) {
     val isApiConfigLoaded: Boolean
         get() = getDataSync(KEY_API_CONFIG_LOADED, false)
 
+    // FCM Token
+    var fcmToken: String
+        get() = getDataSync(KEY_FCM_TOKEN, "")
+        set(value) {
+            setDataSync(KEY_FCM_TOKEN, value)
+        }
+
     // 震动开关（使用 Flow）
     private val _isVibrationEnabledFlow = MutableStateFlow(true)
     val isVibrationEnabledFlow: StateFlow<Boolean> = _isVibrationEnabledFlow.asStateFlow()
@@ -963,6 +970,7 @@ class SettingsManager private constructor(private val context: Context) {
         private val KEY_PRESET_API_ENDPOINT = stringPreferencesKey("preset_api_endpoint")
         private val KEY_AUTH_API_ENDPOINT = stringPreferencesKey("auth_api_endpoint")
         private val KEY_API_VERSION = stringPreferencesKey("api_version")
+        private val KEY_FCM_TOKEN = stringPreferencesKey("fcm_token")
 
         // 应用预设参数 Key
         private val KEY_APPLIED_SATURATION = intPreferencesKey("applied_saturation")

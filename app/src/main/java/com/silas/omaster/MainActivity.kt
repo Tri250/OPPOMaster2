@@ -54,9 +54,14 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
 class MainActivity : ComponentActivity() {
 
     private var floatingWindowController: FloatingWindowController? = null
+    /** 通过 Deep Link 传入的预设 ID，用于导航到详情页 */
+    private var deepLinkPresetId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 解析 Deep Link: omaster://preset/{id} 或 https://omaster.app/preset/{id}
+        deepLinkPresetId = parseDeepLink(intent)
 
         // 2.2.0 闪退修复：所有关键调用包 try-catch，绝不让 onCreate 抛出
         try {
@@ -128,7 +133,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         } else {
-                            MainApp(navController = navController)
+                            MainApp(
+                                navController = navController,
+                                deepLinkPresetId = deepLinkPresetId
+                            )
+                            // 消费 Deep Link，避免重复导航
+                            deepLinkPresetId = null
                         }
                     }
                 }
@@ -168,6 +178,43 @@ class MainActivity : ComponentActivity() {
             floatingWindowController?.unregister()
         } catch (e: Throwable) {
             Log.e("MainActivity", "注销悬浮窗控制器失败", e)
+        }
+    }
+
+    /**
+     * 当应用已在前台时收到新的 Deep Link Intent
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        deepLinkPresetId = parseDeepLink(intent)
+        // 如果 Deep Link 有效，标记需要导航
+        if (deepLinkPresetId != null) {
+            Log.d("MainActivity", "DeepLink received: presetId=$deepLinkPresetId")
+        }
+    }
+
+    /**
+     * 解析 Deep Link Intent
+     * 支持格式:
+     *   - omaster://preset/{id}
+     *   - https://omaster.app/preset/{id}
+     *
+     * @return 预设 ID，无效时返回 null
+     */
+    private fun parseDeepLink(intent: Intent?): String? {
+        if (intent?.action != Intent.ACTION_VIEW) return null
+        val uri = intent.data ?: return null
+
+        return when {
+            // 自定义 scheme: omaster://preset/{id}
+            uri.scheme == "omaster" && uri.host == "preset" -> {
+                uri.pathSegments?.firstOrNull()
+            }
+            // HTTPS: https://omaster.app/preset/{id}
+            uri.scheme == "https" && uri.host == "omaster.app" && uri.path?.startsWith("/preset") == true -> {
+                uri.lastPathSegment
+            }
+            else -> null
         }
     }
 }

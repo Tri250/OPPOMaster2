@@ -112,6 +112,19 @@
                 android:value="camera_preset_overlay" />
         </service>
 
+        <!-- Firebase Cloud Messaging -->
+        <service
+            android:name=".push.FCMService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="omaster_news" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -122,8 +135,26 @@
             android:theme="@style/Theme.OMaster">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep Link: omaster://preset/{id} 和 https://omaster.app/preset/{id} -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- 自定义 scheme -->
+                <data android:scheme="omaster" android:host="preset" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- HTTPS 链接（需配置 assetlinks.json） -->
+                <data
+                    android:scheme="https"
+                    android:host="omaster.app"
+                    android:pathPrefix="/preset" />
             </intent-filter>
         </activity>
 

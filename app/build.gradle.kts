@@ -506,6 +506,16 @@ dependencies {
     // Google Play Billing（订阅与内购）
     implementation(bundles.billing)
 
+    // Firebase Cloud Messaging
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
+    // Google Play In-App Review
+    implementation(libs.play.review.ktx)
+
+    // Google Play In-App Update
+    implementation(libs.play.app.update.ktx)
+
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

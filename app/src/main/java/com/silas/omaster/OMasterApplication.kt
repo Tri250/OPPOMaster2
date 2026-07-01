@@ -16,6 +16,7 @@ import com.silas.omaster.util.SecurityIntegrityChecker
 import com.silas.omaster.util.ANRWatchdog
 import com.silas.omaster.network.NetworkResilienceManager
 import com.silas.omaster.background.SyncWorker
+import com.silas.omaster.util.InAppUpdateManager
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import io.sentry.android.core.SentryAndroid
@@ -383,6 +384,14 @@ class OMasterApplication : Application() {
                     }
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "订阅初始拉取失败", e)
+                }
+
+                // 检查应用内更新（非阻塞，失败不影响启动）
+                try {
+                    InAppUpdateManager.init(this@OMasterApplication)
+                    StartupLogger.logStep("应用内更新检查", SystemClock.elapsedRealtime() - lazyStart)
+                } catch (e: Throwable) {
+                    Log.w("OMasterApplication", "应用内更新检查失败", e)
                 }
 
             } catch (e: Throwable) {

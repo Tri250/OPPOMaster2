@@ -234,27 +234,28 @@ class CloudSyncManager private constructor(private val context: Context) {
     /**
      * Google Drive 同步流程
      *
-     * 使用 Google Drive REST API v3 上传/下载同步数据
+     * 使用 GoogleDriveClient 调用 Google Drive REST API v3
      */
     private suspend fun syncWithGoogleDrive(provider: CloudProvider.GoogleDrive) {
+        val client = GoogleDriveClient(provider.accessToken, provider.folderId)
+
         // 上传预设数据
         val localPresetsData = collectLocalPresets()
         if (localPresetsData.isNotEmpty()) {
             val encryptedPresets = encryptData(localPresetsData)
-            gdriveUpload(provider, FILE_PRESETS, encryptedPresets)
+            client.uploadFile("$REMOTE_DIR_PRESETS/$FILE_PRESETS", encryptedPresets)
         }
 
         // 上传设置数据
         val localSettingsData = collectLocalSettings()
         val encryptedSettings = encryptData(localSettingsData)
-        gdriveUpload(provider, FILE_SETTINGS, encryptedSettings)
+        client.uploadFile("$REMOTE_DIR_SETTINGS/$FILE_SETTINGS", encryptedSettings)
 
         // 上传版本信息
         syncVersion = System.currentTimeMillis()
         val versionData = json.encodeToString(SyncVersion(syncVersion, DEVICE_ID))
-        gdriveUpload(
-            provider,
-            FILE_VERSION,
+        client.uploadFile(
+            "$REMOTE_DIR_SETTINGS/$FILE_VERSION",
             encryptData(versionData.toByteArray(Charsets.UTF_8))
         )
 
@@ -473,8 +474,10 @@ class CloudSyncManager private constructor(private val context: Context) {
      * 从 Google Drive 下载远端数据并合并
      */
     private suspend fun downloadAndMergeGDrive(provider: CloudProvider.GoogleDrive) {
+        val client = GoogleDriveClient(provider.accessToken, provider.folderId)
+
         // 下载远端版本信息
-        val remoteVersionBytes = gdriveDownload(provider, FILE_VERSION)
+        val remoteVersionBytes = client.downloadFile("$REMOTE_DIR_SETTINGS/$FILE_VERSION").getOrNull()
         val remoteVersion = remoteVersionBytes?.let {
             val decrypted = decryptData(it)
             if (decrypted != null) {
@@ -489,12 +492,12 @@ class CloudSyncManager private constructor(private val context: Context) {
         if (remoteVersion != null && remoteVersion.timestamp > syncVersion && remoteVersion.deviceId != DEVICE_ID) {
             Log.i(TAG, "远端版本更新 (v${remoteVersion.timestamp}), 执行下载合并")
 
-            val remotePresets = gdriveDownload(provider, FILE_PRESETS)
+            val remotePresets = client.downloadFile("$REMOTE_DIR_PRESETS/$FILE_PRESETS").getOrNull()
             if (remotePresets != null) {
                 applyRemotePresets(remotePresets)
             }
 
-            val remoteSettings = gdriveDownload(provider, FILE_SETTINGS)
+            val remoteSettings = client.downloadFile("$REMOTE_DIR_SETTINGS/$FILE_SETTINGS").getOrNull()
             if (remoteSettings != null) {
                 applyRemoteSettings(remoteSettings)
             }

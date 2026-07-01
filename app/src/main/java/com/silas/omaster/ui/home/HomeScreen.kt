@@ -108,6 +108,7 @@ import com.silas.omaster.util.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
+import com.silas.omaster.billing.AppReviewManager
 import kotlinx.coroutines.delay
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -977,6 +978,7 @@ private fun PresetCardItem(
     val animationKey = preset.id ?: preset.name
     val animatedProgress = remember(animationKey) { Animatable(0f) }
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     LaunchedEffect(animationKey) {
         if (delayMillis > 0) {
@@ -1007,6 +1009,13 @@ private fun PresetCardItem(
             onClick = {
                 haptic.perform(HapticFeedbackType.LongPress)
                 onNavigateToDetail(preset)
+                // 触发应用内评分检查
+                try {
+                    val activity = context as? android.app.Activity
+                    if (activity != null) {
+                        AppReviewManager.getInstance(activity).tryShowReview()
+                    }
+                } catch (_: Exception) {}
             },
             onFavoriteClick = {
                 haptic.perform(HapticFeedbackType.LongPress)

@@ -109,7 +109,10 @@ private const val KEY_VIEWFINDER_RECIPE_NAME = "viewfinder_recipe_name"
  *  4. 启动时的旧版数据迁移对话框
  */
 @Composable
-fun MainApp(navController: NavHostController) {
+fun MainApp(
+    navController: NavHostController,
+    deepLinkPresetId: String? = null
+) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -127,6 +130,17 @@ fun MainApp(navController: NavHostController) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    // Deep Link 导航：当通过 Deep Link 打开时，自动导航到预设详情页
+    LaunchedEffect(deepLinkPresetId) {
+        if (!deepLinkPresetId.isNullOrBlank()) {
+            try {
+                navController.navigate(Screen.Detail(deepLinkPresetId))
+            } catch (e: Exception) {
+                Log.e("AppNavigation", "DeepLink navigation failed", e)
+            }
+        }
+    }
 
     // 迁移对话框：仅在首次检测到旧版本数据时显示一次
     LaunchedEffect(Unit) {
