@@ -488,7 +488,7 @@ class MasterInferenceEngine private constructor(context: Context) {
      * 优化：使用 getPixels 批量读取整行像素，替代逐像素 getPixel 调用，
      * 减少 JNI 开销，大图性能提升 10 倍以上。
      */
-    private fun computeRealHistogram(bitmap: Bitmap): HistogramData {
+    fun computeRealHistogram(bitmap: Bitmap): HistogramData {
         val width = bitmap.width
         val height = bitmap.height
 

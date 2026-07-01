@@ -8,6 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.ln1p
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -53,7 +57,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val darkPixelRatio: Float,     // 暗部像素占比
         val highlightRatio: Float,     // 高光像素占比
         val skyBlueRatio: Float = 0f,  // 天空区域蓝色主导度
-        val groundWarmthRatio: Float = 0f  // 地面区域暖色调占比
+        val groundWarmthRatio: Float = 0f,  // 地面区域暖色调占比
+        // F2-10: 新增色温与饱和度特征
+        val colorTemperature: Float = 0f,   // 色温指数 -1(冷)~+1(暖)，基于 R/B 比率
+        val avgSaturation: Float = 0f,      // 平均饱和度 0-1
+        val highSatRatio: Float = 0f,       // 高饱和像素占比（sat > 0.5）
+        val lowSatRatio: Float = 0f,        // 低饱和像素占比（sat < 0.15）
+        val saturationVariance: Float = 0f  // 饱和度方差，区分均匀vs多彩场景
     )
 
     /**
@@ -114,6 +124,10 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         }
         // 纹理投票
         candidates.addAll(voteByTexture(edgeDensity, colorProfile))
+        // F2-10: 色温投票
+        candidates.addAll(voteByColorTemperature(colorProfile, brightnessLevel))
+        // F2-10: 饱和度投票
+        candidates.addAll(voteBySaturation(colorProfile))
 
         // 6. 加权融合
         val fused = fuseVotes(candidates, userContext)
@@ -179,6 +193,33 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
         val avgTotal = (avgR + avgG + avgB) / 3f
 
+        // F2-10: 色温指数计算 - 基于 R/B 通道比率映射到 -1(冷)~+1(暖)
+        val totalWarmChannel = topProfile.warmChannelSum + midProfile.warmChannelSum + botProfile.warmChannelSum
+        val totalColdChannel = topProfile.coldChannelSum + midProfile.coldChannelSum + botProfile.coldChannelSum
+        val colorTemperature = if (totalColdChannel > 0) {
+            val ratio = totalWarmChannel / totalColdChannel
+            // ratio ~1 = 中性, >1 = 暖, <1 = 冷; 用 ln 映射到对称区间
+            (ln1p(ratio - 1.0) / ln1p(2.0)).coerceIn(-1.0, 1.0).toFloat()
+        } else if (totalWarmChannel > 0) {
+            1.0f  // 纯暖色
+        } else {
+            0.0f
+        }
+
+        // F2-10: 饱和度统计
+        val avgSaturation = if (totalPixels > 0) {
+            (topProfile.totalSaturation + midProfile.totalSaturation + botProfile.totalSaturation).toFloat() / totalPixels
+        } else 0f
+        val highSatRatio = if (totalPixels > 0) {
+            (topProfile.highSatPixels + midProfile.highSatPixels + botProfile.highSatPixels).toFloat() / totalPixels
+        } else 0f
+        val lowSatRatio = if (totalPixels > 0) {
+            (topProfile.lowSatPixels + midProfile.lowSatPixels + botProfile.lowSatPixels).toFloat() / totalPixels
+        } else 0f
+        // 饱和度方差近似：用高/低占比偏差估计（无需存储全部值）
+        val midSatRatio = 1.0f - highSatRatio - lowSatRatio
+        val satVariance = highSatRatio * (1.0f - highSatRatio) + lowSatRatio * (1.0f - lowSatRatio)
+
         return ColorProfile(
             avgRed = avgR,
             avgGreen = avgG,
@@ -192,7 +233,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             highlightRatio = highlightRatio,
             // 新增：天空和地面特征
             skyBlueRatio = topProfile.blueDominance,
-            groundWarmthRatio = botProfile.warmthRatio
+            groundWarmthRatio = botProfile.warmthRatio,
+            // F2-10: 色温与饱和度特征
+            colorTemperature = colorTemperature,
+            avgSaturation = avgSaturation,
+            highSatRatio = highSatRatio,
+            lowSatRatio = lowSatRatio,
+            saturationVariance = satVariance
         )
     }
 
@@ -204,7 +251,10 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val warmPixels: Int, val coldPixels: Int,
         val skinPixels: Int, val darkPixels: Int, val highlightPixels: Int,
         val pixelCount: Int,
-        val blueDominance: Float, val warmthRatio: Float
+        val blueDominance: Float, val warmthRatio: Float,
+        // F2-10: 新增色温与饱和度统计
+        val totalSaturation: Double, val highSatPixels: Int, val lowSatPixels: Int,
+        val warmChannelSum: Double, val coldChannelSum: Double  // R通道总和 vs B通道总和，用于色温计算
     )
 
     private fun sampleRegion(
@@ -219,7 +269,7 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val regionWidth = ex - sx
         val regionHeight = ey - sy
         if (regionWidth <= 0 || regionHeight <= 0) {
-            return RegionSample(0L, 0L, 0L, 0, 0, 0, 0, 0, 0, 1f, 0f)
+            return RegionSample(0L, 0L, 0L, 0, 0, 0, 0, 0, 0, 1f, 0f, 0.0, 0, 0, 0.0, 0.0)
         }
 
         // 批量读取所有像素
@@ -231,6 +281,11 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         var skinPixels = 0; var darkPixels = 0; var highlightPixels = 0
         var pixelCount = 0
         var blueSum = 0.0
+        // F2-10: 饱和度与色温统计
+        var totalSaturation = 0.0
+        var highSatPixels = 0; var lowSatPixels = 0
+        var warmChannelSum = 0.0; var coldChannelSum = 0.0
+        val saturationValues = mutableListOf<Float>()
 
         for (y in sy until ey step step) {
             val rowOffset = (y - sy) * regionWidth
@@ -262,6 +317,19 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
                 // 高光判定：亮度 > 200
                 if (luminance > 200) highlightPixels++
+
+                // F2-10: 饱和度计算 (HSV-style)
+                val maxVal = maxOf(r, g, b)
+                val minVal = minOf(r, g, b)
+                val saturation = if (maxVal > 0) (maxVal - minVal).toFloat() / maxVal else 0f
+                totalSaturation += saturation
+                if (saturation > 0.5f) highSatPixels++
+                if (saturation < 0.15f) lowSatPixels++
+                saturationValues.add(saturation)
+
+                // F2-10: 色温 R/B 通道累积
+                warmChannelSum += r
+                coldChannelSum += b
             }
         }
 
@@ -280,7 +348,12 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             highlightPixels = (highlightPixels * weight).toInt(),
             pixelCount = (pixelCount * weight).toInt(),
             blueDominance = blueDominance,
-            warmthRatio = warmthRatio
+            warmthRatio = warmthRatio,
+            totalSaturation = totalSaturation * weight,
+            highSatPixels = (highSatPixels * weight).toInt(),
+            lowSatPixels = (lowSatPixels * weight).toInt(),
+            warmChannelSum = warmChannelSum * weight,
+            coldChannelSum = coldChannelSum * weight
         )
     }
 
@@ -514,13 +587,14 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
     /**
      * 颜色→场景投票
-     * 
-     * 规则：
+     *
+     * 规则（F2-10 增强：整合色温+饱和度+肤色多信号）：
      * ├── 暖色调占比 > 60% + 高亮度 → 日落/金色时刻
      * ├── 绿色通道占比 > 35% → 森林/自然
      * ├── 蓝色通道占比 > 40% → 天空/海滩
      * ├── 暗部占比 > 70% → 夜景
-     * └── 肤色检测 → 人像
+     * ├── 肤色检测 → 人像（F2-10: 结合色温区分人像/美食）
+     * └── F2-10: 饱和度辅助区分美食/花卉 vs 文档/黑白
      */
     private fun voteByColor(cp: ColorProfile): List<SceneCandidate> {
         val votes = mutableListOf<SceneCandidate>()
@@ -546,8 +620,10 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         }
 
         // 暖色调 35%-55%（不含55%）→ 美食（修复：与上方区间互斥，避免重叠）
+        // F2-10: 高饱和度增强美食置信度
         if (cp.warmthRatio >= 0.35f && cp.warmthRatio < 0.55f) {
-            val score = 0.50f + cp.warmthRatio * 0.2f
+            val satBoost = if (cp.highSatRatio > 0.3f) 0.1f else 0f
+            val score = 0.50f + cp.warmthRatio * 0.2f + satBoost
             votes.add(SceneCandidate("food-restaurant", score, "color"))
             votes.add(SceneCandidate("food-dessert", score * 0.9f, "color"))
         }
@@ -560,15 +636,39 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         }
 
         // 肤色检测 → 人像
+        // F2-10: 结合色温区分 — 暖色温+肤色偏人像，冷色温+肤色可能偏美食
         if (cp.skinToneRatio > 0.05f) {
-            val score = 0.65f + cp.skinToneRatio * 0.3f
-            votes.add(SceneCandidate("portrait-standard", score.coerceAtMost(0.95f), "color"))
-            votes.add(SceneCandidate("portrait-backlit", score * 0.8f, "color"))
+            val isWarmScene = cp.colorTemperature > 0.2f
+            val isCoolScene = cp.colorTemperature < -0.2f
+            val portraitScore = when {
+                isWarmScene -> 0.65f + cp.skinToneRatio * 0.3f  // 暖色温肤色更可能是人像
+                isCoolScene -> 0.55f + cp.skinToneRatio * 0.2f  // 冷色温肤色可能是食物/其他
+                else -> 0.60f + cp.skinToneRatio * 0.25f
+            }
+            votes.add(SceneCandidate("portrait-standard", portraitScore.coerceAtMost(0.95f), "color"))
+            // 冷色温+肤色+高饱和 → 更可能是食物而非人像
+            if (isCoolScene && cp.highSatRatio > 0.25f) {
+                votes.add(SceneCandidate("food-restaurant", portraitScore * 0.7f, "color"))
+            } else {
+                votes.add(SceneCandidate("portrait-backlit", portraitScore * 0.8f, "color"))
+            }
         }
 
         // 高光占比高 → 可能是逆光场景
         if (cp.highlightRatio > 0.15f && cp.warmthRatio > 0.3f) {
             votes.add(SceneCandidate("portrait-backlit", 0.55f + cp.highlightRatio * 0.2f, "color"))
+        }
+
+        // F2-10: 低饱和度 → 文档/黑白场景
+        if (cp.lowSatRatio > 0.6f) {
+            val score = 0.50f + cp.lowSatRatio * 0.2f
+            votes.add(SceneCandidate("document-text", score.coerceAtMost(0.85f), "color"))
+        }
+
+        // F2-10: 高饱和度 → 花卉/美食
+        if (cp.highSatRatio > 0.4f && cp.warmthRatio > 0.25f) {
+            votes.add(SceneCandidate("food-dessert", 0.50f + cp.highSatRatio * 0.15f, "color"))
+            votes.add(SceneCandidate("macro-flower", 0.45f + cp.highSatRatio * 0.15f, "color"))
         }
 
         return votes
@@ -743,8 +843,8 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
     /**
      * 纹理→场景投票
-     * 
-     * 规则：
+     *
+     * 规则（F2-10 增强：结合边缘密度与色温/饱和度交叉信号）：
      * ├── 高对比 + 清晰边缘 → 建筑/街拍
      * ├── 低对比 + 柔和 → 人像/柔光
      * └── 高纹理密度 → 细节特写/微距
@@ -754,9 +854,18 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
         // 高边缘密度 → 建筑/街拍/微距
         if (edgeDensity > 0.30f) {
-            votes.add(SceneCandidate("urban-architecture", 0.65f + edgeDensity * 0.2f, "texture"))
+            // F2-10: 冷色温+高边缘 → 建筑；暖色温+高边缘+高饱和 → 美食特写
+            val isCoolArchitecture = cp.colorTemperature < -0.1f
+            val archScore = if (isCoolArchitecture) 0.70f else 0.65f
+            votes.add(SceneCandidate("urban-architecture", archScore + edgeDensity * 0.2f, "texture"))
             votes.add(SceneCandidate("urban-street", 0.60f + edgeDensity * 0.15f, "texture"))
-            votes.add(SceneCandidate("macro-texture", 0.55f + edgeDensity * 0.25f, "texture"))
+            // 暖色温+高饱和+高纹理 → 美食特写/微距纹理
+            if (cp.colorTemperature > 0.1f && cp.highSatRatio > 0.25f) {
+                votes.add(SceneCandidate("macro-texture", 0.60f + edgeDensity * 0.25f, "texture"))
+                votes.add(SceneCandidate("food-restaurant", 0.50f + edgeDensity * 0.15f, "texture"))
+            } else {
+                votes.add(SceneCandidate("macro-texture", 0.55f + edgeDensity * 0.25f, "texture"))
+            }
         }
 
         // 中等边缘密度 → 正常场景
@@ -767,8 +876,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 
         // 低边缘密度 → 柔光场景
         if (edgeDensity < 0.15f) {
-            votes.add(SceneCandidate("portrait-standard", 0.60f, "texture"))
-            votes.add(SceneCandidate("portrait-child", 0.55f, "texture"))
+            // F2-10: 低边缘+低饱和 → 文档；低边缘+高饱和+暖 → 美食甜点
+            if (cp.lowSatRatio > 0.5f) {
+                votes.add(SceneCandidate("document-text", 0.55f, "texture"))
+            } else {
+                votes.add(SceneCandidate("portrait-standard", 0.60f, "texture"))
+                votes.add(SceneCandidate("portrait-child", 0.55f, "texture"))
+            }
             if (cp.warmthRatio > 0.3f) {
                 votes.add(SceneCandidate("food-dessert", 0.50f, "texture"))
             }
@@ -778,7 +892,115 @@ class HeuristicSceneAnalyzer(private val context: Context) {
     }
 
     /**
+     * F2-10: 色温→场景投票
+     *
+     * 基于 RGB 比率分析的色温指数(-1冷~+1暖)：
+     * ├── 暖色温(>0.3) + 亮调 → 日落/室内暖光/美食
+     * ├── 暖色温(>0.3) + 暗调 → 烛光/夜景
+     * ├── 冷色温(<-0.3) + 亮调 → 雪景/阴天
+     * └── 冷色温(<-0.3) + 暗调 → 夜景/霓虹
+     */
+    private fun voteByColorTemperature(cp: ColorProfile, brightness: BrightnessLevel): List<SceneCandidate> {
+        val votes = mutableListOf<SceneCandidate>()
+        val temp = cp.colorTemperature
+
+        // 暖色温场景
+        if (temp > 0.3f) {
+            val warmScore = 0.35f + temp * 0.25f
+            when (brightness) {
+                BrightnessLevel.BRIGHT, BrightnessLevel.VERY_BRIGHT -> {
+                    votes.add(SceneCandidate("landscape-sunset", warmScore, "color-temp"))
+                    // 肤色+暖色温+亮 → 室内人像
+                    if (cp.skinToneRatio > 0.05f) {
+                        votes.add(SceneCandidate("portrait-standard", warmScore * 0.85f, "color-temp"))
+                    }
+                    // 高饱和+暖 → 美食
+                    if (cp.highSatRatio > 0.3f) {
+                        votes.add(SceneCandidate("food-restaurant", warmScore * 0.8f, "color-temp"))
+                    }
+                }
+                BrightnessLevel.DARK, BrightnessLevel.VERY_DARK -> {
+                    votes.add(SceneCandidate("night-candle", warmScore, "color-temp"))
+                    votes.add(SceneCandidate("night-neon", warmScore * 0.7f, "color-temp"))
+                }
+                else -> {
+                    votes.add(SceneCandidate("urban-cafe", warmScore * 0.7f, "color-temp"))
+                }
+            }
+        }
+
+        // 冷色温场景
+        if (temp < -0.3f) {
+            val coolScore = 0.35f + abs(temp) * 0.25f
+            when (brightness) {
+                BrightnessLevel.BRIGHT, BrightnessLevel.VERY_BRIGHT -> {
+                    votes.add(SceneCandidate("landscape-snow", coolScore, "color-temp"))
+                    votes.add(SceneCandidate("landscape-sky", coolScore * 0.8f, "color-temp"))
+                }
+                BrightnessLevel.DARK, BrightnessLevel.VERY_DARK -> {
+                    votes.add(SceneCandidate("night-city", coolScore, "color-temp"))
+                    votes.add(SceneCandidate("night-starry", coolScore * 0.7f, "color-temp"))
+                }
+                else -> {
+                    votes.add(SceneCandidate("urban-street", coolScore * 0.6f, "color-temp"))
+                }
+            }
+        }
+
+        return votes
+    }
+
+    /**
+     * F2-10: 饱和度→场景投票
+     *
+     * 饱和度分布分析：
+     * ├── 高饱和占比大(>40%) → 美食/花卉/色彩丰富场景
+     * ├── 低饱和占比大(>60%) → 文档/黑白/低对比场景
+     * ├── 高方差 → 多彩/混合场景
+     * └── 均匀中饱和 → 自然/标准场景
+     */
+    private fun voteBySaturation(cp: ColorProfile): List<SceneCandidate> {
+        val votes = mutableListOf<SceneCandidate>()
+
+        // 高饱和 → 色彩丰富的场景
+        if (cp.highSatRatio > 0.4f) {
+            val satScore = 0.40f + cp.highSatRatio * 0.2f
+            // 暖色+高饱和 → 美食
+            if (cp.colorTemperature > 0.1f) {
+                votes.add(SceneCandidate("food-restaurant", satScore, "saturation"))
+                votes.add(SceneCandidate("food-dessert", satScore * 0.9f, "saturation"))
+            }
+            // 任何色温+高饱和 → 花卉
+            votes.add(SceneCandidate("macro-flower", satScore * 0.85f, "saturation"))
+            // 高饱和+高方差 → 多彩场景（街拍/活动）
+            if (cp.saturationVariance > 0.3f) {
+                votes.add(SceneCandidate("event-party", satScore * 0.7f, "saturation"))
+            }
+        }
+
+        // 低饱和 → 文档/黑白/阴天
+        if (cp.lowSatRatio > 0.6f) {
+            val desatScore = 0.40f + cp.lowSatRatio * 0.15f
+            // 极低饱和 → 黑白/文档
+            if (cp.lowSatRatio > 0.8f) {
+                votes.add(SceneCandidate("document-text", desatScore, "saturation"))
+            }
+            // 低饱和+冷色 → 阴天/雾
+            if (cp.colorTemperature < -0.1f) {
+                votes.add(SceneCandidate("landscape-overcast", desatScore * 0.8f, "saturation"))
+            }
+            // 低饱和+暗调 → 夜景
+            if (cp.darkPixelRatio > 0.5f) {
+                votes.add(SceneCandidate("night-city", desatScore * 0.7f, "saturation"))
+            }
+        }
+
+        return votes
+    }
+
+    /**
      * 加权融合投票结果
+     * F2-10: 更精细的多信号权重 + 置信度校准
      */
     private fun fuseVotes(
         candidates: List<SceneCandidate>,
@@ -788,13 +1010,16 @@ class HeuristicSceneAnalyzer(private val context: Context) {
         val scoreMap = mutableMapOf<String, Float>()
         val sourceMap = mutableMapOf<String, MutableList<String>>()
 
-        // 权重配置
+        // F2-10: 多信号权重配置（调整：色温/饱和度作为独立信号参与融合）
         val weights = mapOf(
             "color" to 1.0f,
             "brightness" to 0.8f,
-            "face" to 1.2f,      // 人脸检测权重最高
+            "face" to 1.2f,         // 人脸检测权重最高
             "exif" to 0.9f,
-            "texture" to 0.7f
+            "exif-fallback" to 0.6f, // EXIF 回退权重较低
+            "texture" to 0.7f,
+            "color-temp" to 0.75f,   // F2-10: 色温信号
+            "saturation" to 0.70f    // F2-10: 饱和度信号
         )
 
         for (candidate in candidates) {
@@ -853,10 +1078,31 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             ScenePresets.getSceneById(entry.key)
         }
 
-        // 计算置信度
-        val totalScore = sorted.sumOf { it.value.toDouble() }.toFloat()
+        // F2-10: 改进置信度校准
+        // 旧方法: primaryScore / totalScore → 容易高估（单信号高分就能获得高置信度）
+        // 新方法: 综合考虑 (1) 首选与次选分数差距 (2) 支撑信号多样性 (3) 绝对分数水平
         val primaryScore = topScenes.first().value
-        val confidence = (primaryScore / totalScore.coerceAtLeast(1f)).coerceIn(0f, 1f)
+        val secondScore = topScenes.getOrElse(1) { primaryScore * 0.5f }.value
+
+        // 信号多样性：首选场景被多少个不同来源支撑
+        val sourceCount = sourceMap[topScenes.first().key]?.distinct()?.size ?: 1
+        val diversityBonus = (sourceCount - 1) * 0.08f  // 每多一个独立信号来源 +0.08
+
+        // 首选与次选的区分度：差距越大越确定
+        val gapRatio = if (secondScore > 0) {
+            (primaryScore - secondScore) / secondScore.coerceAtLeast(0.1f)
+        } else {
+            1.0f
+        }
+        val gapBonus = gapRatio.coerceIn(0f, 1.5f) * 0.15f
+
+        // 绝对分数水平：分数过低时降低置信度
+        val absolutePenalty = if (primaryScore < 1.0f) primaryScore / 1.0f * 0.3f else 0.3f
+
+        // 组合置信度
+        val rawConfidence = absolutePenalty + diversityBonus + gapBonus
+        // Sigmoid 压缩到合理区间，避免过高估计
+        val confidence = (1.0f / (1.0f + exp(-6.0f * (rawConfidence - 0.35f)))).coerceIn(0.1f, 0.95f)
 
         return FusedResult(
             primary = primaryScene.copy(confidence = confidence),
@@ -892,7 +1138,13 @@ class HeuristicSceneAnalyzer(private val context: Context) {
             },
             "face_count" to faceCount.toFloat(),
             "edge_density" to edgeDensity,
-            "has_exif" to if (exif != null) 1f else 0f
+            "has_exif" to if (exif != null) 1f else 0f,
+            // F2-10: 新增色温与饱和度详情
+            "color_temperature" to cp.colorTemperature,
+            "avg_saturation" to cp.avgSaturation,
+            "high_sat_ratio" to cp.highSatRatio,
+            "low_sat_ratio" to cp.lowSatRatio,
+            "saturation_variance" to cp.saturationVariance
         )
     }
 

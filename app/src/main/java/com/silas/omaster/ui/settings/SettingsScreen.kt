@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.DarkMode
@@ -94,7 +95,8 @@ fun SettingsScreen(
     onNavigateToThemeSettings: (() -> Unit)? = null,
     onNavigateToSceneAnalysisReport: (() -> Unit)? = null,
     onNavigateToImportExport: (() -> Unit)? = null,
-    onNavigateToPermissionCheck: (() -> Unit)? = null
+    onNavigateToPermissionCheck: (() -> Unit)? = null,
+    onNavigateToCloudSync: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager.getInstance(context) }
@@ -426,6 +428,15 @@ fun SettingsScreen(
                 title = "导入/导出预设",
                 subtitle = "批量导入或导出预设文件",
                 onClick = { onNavigateToImportExport?.invoke() }
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+
+            SettingsClickableItem(
+                icon = Icons.Default.Cloud,
+                title = "云端同步",
+                subtitle = "WebDAV / Google Drive 同步预设和设置",
+                onClick = { onNavigateToCloudSync?.invoke() }
             )
         }
 

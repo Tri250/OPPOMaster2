@@ -533,4 +533,41 @@
     <string name="stat_cities">Cities</string>
     <string name="stat_people">People</string>
 
+    <!-- Cloud Sync -->
+    <string name="cloud_sync_title">Cloud Sync</string>
+    <string name="cloud_provider_webdav">WebDAV</string>
+    <string name="cloud_provider_gdrive">Google Drive</string>
+    <string name="cloud_connect">Connect</string>
+    <string name="cloud_disconnect">Disconnect</string>
+    <string name="cloud_test_connection">Test Connection</string>
+    <string name="cloud_syncing">Syncing…</string>
+    <string name="cloud_sync_success">Sync Successful</string>
+    <string name="cloud_sync_failed">Sync Failed</string>
+    <string name="cloud_last_sync">Last Sync</string>
+    <string name="cloud_auto_sync">Auto Sync</string>
+    <string name="cloud_server_url">Server URL</string>
+    <string name="cloud_username">Username</string>
+    <string name="cloud_password">Password</string>
+    <string name="cloud_not_configured">Cloud service not configured</string>
+    <string name="cloud_connected">Connected</string>
+
+    <!-- Paywall / Subscription -->
+    <string name="paywall_title">Upgrade to Pro</string>
+    <string name="paywall_monthly">Monthly</string>
+    <string name="paywall_yearly">Yearly</string>
+    <string name="paywall_lifetime">Lifetime</string>
+    <string name="paywall_restore">Restore Purchases</string>
+    <string name="paywall_feature_1">Basic Camera</string>
+    <string name="paywall_feature_2">Basic Presets</string>
+    <string name="paywall_feature_3">Basic Editing</string>
+    <string name="paywall_feature_4">AI Advanced Tuning</string>
+    <string name="paywall_feature_5">Night Mode</string>
+    <string name="paywall_feature_6">Light Painting</string>
+    <string name="paywall_feature_7">Portrait Bokeh</string>
+    <string name="paywall_feature_8">Style LUT Generator</string>
+    <string name="paywall_feature_9">Cloud Sync</string>
+    <string name="paywall_feature_10">Hasselblad Advanced</string>
+    <string name="pro_badge">PRO</string>
+    <string name="upgrade_now">Upgrade Now</string>
+
 </resources>

@@ -27,7 +27,12 @@ import androidx.compose.ui.hapticfeedback.*
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
+import android.graphics.Bitmap
+import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.model.HistogramData
 import com.silas.omaster.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.log2
 import kotlin.math.roundToInt
 
@@ -50,7 +55,8 @@ import kotlin.math.roundToInt
 @Composable
 fun ParamAdjustScreen(
     onBack: () -> Unit,
-    onApply: (CameraParams) -> Unit
+    onApply: (CameraParams) -> Unit,
+    sourceBitmap: Bitmap? = null
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -268,7 +274,8 @@ fun ParamAdjustScreen(
             currentEV = currentEV,
             iso = iso,
             shutterSpeed = shutterSpeed,
-            aperture = aperture
+            aperture = aperture,
+            sourceBitmap = sourceBitmap
         )
 
         // ========== 快速预设芯片 ==========
@@ -446,7 +453,8 @@ private fun ExposureHistogramSection(
     currentEV: Float,
     iso: Int,
     shutterSpeed: Float,
-    aperture: Float
+    aperture: Float,
+    sourceBitmap: Bitmap? = null
 ) {
     Card(
         modifier = Modifier
@@ -532,44 +540,93 @@ private fun ExposureHistogramSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 基于当前曝光参数预测的测光分布直方图
-            ExposureHistogram(iso = iso, shutterSpeed = shutterSpeed, aperture = aperture)
+            // 直方图标签
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (sourceBitmap != null) "真实直方图" else "预测直方图",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+                if (sourceBitmap != null) {
+                    Text(
+                        text = "基于图像像素",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = HasselbladOrange.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 直方图：有源图时计算真实像素分布，否则使用曝光参数预测
+            ExposureHistogram(iso = iso, shutterSpeed = shutterSpeed, aperture = aperture, sourceBitmap = sourceBitmap)
         }
     }
 }
 
 /**
- * 基于曝光参数（ISO/快门/光圈）预测的亮度分布直方图
+ * 直方图组件
  *
- * 物理原理：
+ * 当 sourceBitmap 可用时，使用 MasterInferenceEngine.computeRealHistogram()
+ * 计算真实像素亮度分布；否则基于曝光参数（ISO/快门/光圈）的虚拟预测。
+ *
+ * 物理原理（虚拟模式）：
  * 1. EV（曝光值）= log2(N²/t) - log2(ISO/100)，决定整体亮度中心位置
  * 2. 真实相机传感器在不同 EV 下的直方图近似高斯分布
  * 3. sigma 随 EV 变化：低 EV 暗部细节多，分布更宽；高 EV 亮部集中，分布更窄
- *
- * 这是测光辅助可视化，用于帮助摄影师判断当前参数组合的曝光倾向，
- * 不是对实际拍摄图像的直方图统计。
  */
 @Composable
 private fun ExposureHistogram(
     iso: Int,
     shutterSpeed: Float,
-    aperture: Float
+    aperture: Float,
+    sourceBitmap: Bitmap? = null
 ) {
-    // 基于当前曝光参数计算亮度中心（确定性，无随机数）
-    val brightness = calculateBrightness(iso, shutterSpeed, aperture)
-    val barHeights = remember(brightness) {
-        (0..31).map { i ->
-            // 将 bin 索引映射到 0-255 亮度范围
-            val binCenter = i * 255f / 31f
-            // 基于当前 EV 计算期望亮度中心
-            val evCenter = brightness * 255f
-            // 高斯分布：sigma 随 EV 变化（低 EV 更宽，高 EV 更窄）
-            val sigma = 40f + (1f - brightness) * 30f
-            val dist = binCenter - evCenter
-            val gaussian = kotlin.math.exp(-(dist * dist) / (2f * sigma * sigma))
-            // 基于 bin 索引的确定性微扰（保证重组一致性，无 Random 调用）
-            val perturbation = kotlin.math.sin(i * 0.7f + brightness * 10f) * 0.05f
-            (gaussian * 0.85f + perturbation).coerceIn(0.05f, 1f)
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // 真实直方图数据：从 Bitmap 像素计算（离线线程）
+    var realHistogramData by remember { mutableStateOf<HistogramData?>(null) }
+    LaunchedEffect(sourceBitmap) {
+        if (sourceBitmap != null && !sourceBitmap.isRecycled) {
+            realHistogramData = withContext(Dispatchers.Default) {
+                MasterInferenceEngine.getInstance(context).computeRealHistogram(sourceBitmap)
+            }
+        } else {
+            realHistogramData = null
+        }
+    }
+
+    // 计算柱状高度：真实模式 or 虚拟预测
+    val barHeights = if (realHistogramData != null) {
+        // 真实直方图：256 bins → 32 bins 降采样
+        remember(realHistogramData) {
+            val lum = realHistogramData!!.luminance
+            val bins = (0..31).map { i ->
+                var sum = 0
+                for (j in 0..7) {
+                    sum += lum[i * 8 + j]
+                }
+                sum
+            }
+            val maxBin = bins.maxOrNull()?.coerceAtLeast(1) ?: 1
+            bins.map { (it.toFloat() / maxBin).coerceIn(0.05f, 1f) }
+        }
+    } else {
+        // 虚拟预测：基于曝光参数计算亮度中心
+        val brightness = calculateBrightness(iso, shutterSpeed, aperture)
+        remember(brightness) {
+            (0..31).map { i ->
+                val binCenter = i * 255f / 31f
+                val evCenter = brightness * 255f
+                val sigma = 40f + (1f - brightness) * 30f
+                val dist = binCenter - evCenter
+                val gaussian = kotlin.math.exp(-(dist * dist) / (2f * sigma * sigma))
+                val perturbation = kotlin.math.sin(i * 0.7f + brightness * 10f) * 0.05f
+                (gaussian * 0.85f + perturbation).coerceIn(0.05f, 1f)
+            }
         }
     }
 

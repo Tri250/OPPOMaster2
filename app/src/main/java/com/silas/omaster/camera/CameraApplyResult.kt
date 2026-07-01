@@ -19,5 +19,6 @@ data class DeviceCapability(
     val isOppoDevice: Boolean,
     val isFindXSeries: Boolean,
     val supportsMasterMode: Boolean,
-    val supportsContentProvider: Boolean
+    val supportsContentProvider: Boolean,
+    val brand: DeviceBrand = DeviceBrand.GENERIC
 )

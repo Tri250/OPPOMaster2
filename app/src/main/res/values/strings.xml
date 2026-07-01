@@ -545,6 +545,13 @@
     <string name="update_check_failed">检查失败: %1$s</string>
     <string name="update_cannot_get_version">无法获取版本信息</string>
     <string name="update_http_failed">检查失败: HTTP %1$d</string>
+    <string name="update_download_button">下载更新</string>
+    <string name="update_downloading">正在下载…</string>
+    <string name="update_download_progress">下载中…%1$d%%</string>
+    <string name="update_install_button">安装更新</string>
+    <string name="update_download_failed">下载失败，请重试</string>
+    <string name="update_installing">正在安装…</string>
+    <string name="update_download_complete">下载完成，点击安装</string>
 
     <!-- 行影集 -->
     <string name="xingyingji_title">行影集</string>
@@ -574,5 +581,42 @@
     <string name="stat_videos">视频</string>
     <string name="stat_cities">城市</string>
     <string name="stat_people">人物</string>
+
+    <!-- 云端同步 -->
+    <string name="cloud_sync_title">云端同步</string>
+    <string name="cloud_provider_webdav">WebDAV</string>
+    <string name="cloud_provider_gdrive">Google Drive</string>
+    <string name="cloud_connect">连接</string>
+    <string name="cloud_disconnect">断开</string>
+    <string name="cloud_test_connection">测试连接</string>
+    <string name="cloud_syncing">同步中…</string>
+    <string name="cloud_sync_success">同步成功</string>
+    <string name="cloud_sync_failed">同步失败</string>
+    <string name="cloud_last_sync">上次同步</string>
+    <string name="cloud_auto_sync">自动同步</string>
+    <string name="cloud_server_url">服务器地址</string>
+    <string name="cloud_username">用户名</string>
+    <string name="cloud_password">密码</string>
+    <string name="cloud_not_configured">未配置云端服务</string>
+    <string name="cloud_connected">已连接</string>
+
+    <!-- 付费墙 / 订阅 -->
+    <string name="paywall_title">升级 Pro</string>
+    <string name="paywall_monthly">月度</string>
+    <string name="paywall_yearly">年度</string>
+    <string name="paywall_lifetime">终身</string>
+    <string name="paywall_restore">恢复购买</string>
+    <string name="paywall_feature_1">基础相机</string>
+    <string name="paywall_feature_2">基础预设</string>
+    <string name="paywall_feature_3">基础编辑</string>
+    <string name="paywall_feature_4">AI 高级调色</string>
+    <string name="paywall_feature_5">夜景模式</string>
+    <string name="paywall_feature_6">光绘模式</string>
+    <string name="paywall_feature_7">人像散景</string>
+    <string name="paywall_feature_8">风格 LUT 生成器</string>
+    <string name="paywall_feature_9">云同步</string>
+    <string name="paywall_feature_10">哈苏高级模式</string>
+    <string name="pro_badge">PRO</string>
+    <string name="upgrade_now">立即升级</string>
 
 </resources>

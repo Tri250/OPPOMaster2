@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.lut.StyleLUTGenerator
+import com.silas.omaster.billing.ProFeature
+import com.silas.omaster.billing.ProFeatureGate
 import com.silas.omaster.ui.theme.*
 
 /**
@@ -52,6 +54,7 @@ import com.silas.omaster.ui.theme.*
 fun StyleLUTGeneratorScreen(
     onBack: () -> Unit,
     onApplyLUT: (() -> Unit)? = null,
+    onUpgrade: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val viewModel: StyleLUTGeneratorViewModel = viewModel()
@@ -112,14 +115,20 @@ fun StyleLUTGeneratorScreen(
             )
         }
     ) { padding ->
-        Column(
+        val isFeatureAvailable = ProFeatureGate.isFeatureAvailable(ProFeature.STYLE_LUT_GENERATOR)
+
+        Box(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Spacer(modifier = Modifier.height(4.dp))
 
             // ========== 说明 ==========
@@ -371,6 +380,12 @@ fun StyleLUTGeneratorScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+
+            // Pro 功能锁定遮罩
+            if (!isFeatureAvailable) {
+                ProUpgradeOverlay(onUpgrade = onUpgrade)
+            }
+        }
     }
 }
 
@@ -459,4 +474,60 @@ private fun colorSpaceLabel(cs: StyleLUTGenerator.ColorSpace): String = when (cs
     StyleLUTGenerator.ColorSpace.AUTO -> "自动检测"
     StyleLUTGenerator.ColorSpace.REC709 -> "Rec.709"
     StyleLUTGenerator.ColorSpace.LOG -> "Log"
+}
+
+/**
+ * Pro 升级遮罩
+ * 当用户未解锁 Pro 时，覆盖在功能页面上方
+ */
+@Composable
+private fun ProUpgradeOverlay(onUpgrade: (() -> Unit)? = null) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Color(0xFF0A0A0A).copy(alpha = 0.85f)
+            )
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = HasselbladOrange,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Pro 专属功能",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "风格 LUT 生成器为 Pro 专属功能\nAI 色彩迁移，自动生成 .cube LUT 文件",
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.6f),
+                textAlign = TextAlign.TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = { onUpgrade?.invoke() },
+                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(44.dp)
+            ) {
+                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("升级到 Pro", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
 }

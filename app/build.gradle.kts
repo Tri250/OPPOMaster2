@@ -468,6 +468,9 @@ dependencies {
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // Google Play Billing（订阅与内购）
+    implementation(bundles.billing)
+
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

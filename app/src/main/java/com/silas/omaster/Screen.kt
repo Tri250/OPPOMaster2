@@ -80,6 +80,9 @@ sealed class Screen {
     data class CameraXViewfinder(val presetId: String? = null) : Screen()
 
     @Serializable
+    data object CloudSync : Screen()
+
+    @Serializable
     data object ImportExport : Screen()
 
     /** 2.2.0 新增：权限自检页面 */
@@ -125,4 +128,8 @@ sealed class Screen {
 
     @Serializable
     data object XingYingJiAnnualReport : Screen()
+
+    /** 付费墙页面 */
+    @Serializable
+    data object Paywall : Screen()
 }

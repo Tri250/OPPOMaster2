@@ -1,5 +1,13 @@
 package com.silas.omaster.ui.settings
 
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.silas.omaster.BuildConfig
 import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
@@ -30,9 +39,11 @@ import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.UrlConstants
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -42,6 +53,7 @@ import java.net.URL
  * - 渠道选择：稳定版 / 测试版 / 开发版
  * - 更新选项：自动检查 / 仅Wi-Fi / 夜间自动安装
  * - 发布说明
+ * - 下载并安装更新
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,13 +67,64 @@ fun UpdateChannelScreen(
 
     // 更新检查状态
     var isCheckingUpdate by remember { mutableStateOf(false) }
-    var updateCheckResult by remember { mutableStateOf<String?>(null) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var lastCheckTime by remember { mutableStateOf<String?>(null) }
+
+    // 下载状态
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableFloatStateOf(0f) }
+    var downloadComplete by remember { mutableStateOf(false) }
+    var downloadFailed by remember { mutableStateOf(false) }
+    var downloadId by remember { mutableLongStateOf(-1L) }
 
     // 更新选项状态（对齐 Web 端 UPDATE_SETTINGS）
     var autoCheckEnabled by remember { mutableStateOf(true) }
     var wifiOnlyEnabled by remember { mutableStateOf(true) }
     var autoInstallEnabled by remember { mutableStateOf(false) }
+
+    // 下载完成广播接收器
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == downloadId) {
+                    isDownloading = false
+                    downloadComplete = true
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        }
+        onDispose {
+            try { context.unregisterReceiver(receiver) } catch (_: Exception) {}
+        }
+    }
+
+    // 下载进度轮询
+    LaunchedEffect(isDownloading, downloadId) {
+        while (isDownloading && downloadId >= 0) {
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val query = DownloadManager.Query().setFilterById(downloadId)
+            val cursor = dm.query(query)
+            if (cursor.moveToFirst()) {
+                val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                if (bytesTotal > 0) {
+                    downloadProgress = bytesDownloaded.toFloat() / bytesTotal
+                }
+                val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                if (status == DownloadManager.STATUS_FAILED) {
+                    isDownloading = false
+                    downloadFailed = true
+                }
+            }
+            cursor.close()
+            delay(500)
+        }
+    }
 
     val channels = listOf(
         UpdateChannelInfo("stable", stringResource(R.string.update_channel_stable), stringResource(R.string.update_channel_stable_desc), Icons.Default.Shield, Color(0xFF10B981)),
@@ -109,22 +172,61 @@ fun UpdateChannelScreen(
             CurrentVersionCard(
                 lastCheckTime = lastCheckTime,
                 isCheckingUpdate = isCheckingUpdate,
-                updateCheckResult = updateCheckResult,
+                updateInfo = updateInfo,
+                isDownloading = isDownloading,
+                downloadProgress = downloadProgress,
+                downloadComplete = downloadComplete,
+                downloadFailed = downloadFailed,
                 onCheckForUpdate = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     scope.launch {
                         isCheckingUpdate = true
-                        updateCheckResult = null
+                        updateInfo = null
+                        downloadComplete = false
+                        downloadFailed = false
                         try {
                             val result = checkForUpdate(context, selectedChannelId)
-                            updateCheckResult = result
+                            updateInfo = result
                             lastCheckTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
                                 .format(java.util.Date())
                         } catch (e: Exception) {
-                            updateCheckResult = "检查失败: ${e.message}"
+                            updateInfo = UpdateInfo(isNewVersion = false, latestVersion = "", releaseName = "", downloadUrl = "", htmlUrl = "", releaseNotes = "", message = "检查失败: ${e.message}")
                         } finally {
                             isCheckingUpdate = false
                         }
+                    }
+                },
+                onDownload = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    val info = updateInfo ?: return@CurrentVersionCard
+                    val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                    val fileName = "OMaster-v${info.latestVersion}.apk"
+                    val request = DownloadManager.Request(Uri.parse(info.downloadUrl)).apply {
+                        setTitle("OMaster v${info.latestVersion}")
+                        setDescription(context.getString(R.string.update_downloading))
+                        setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        setMimeType("application/vnd.android.package-archive")
+                    }
+                    downloadId = dm.enqueue(request)
+                    isDownloading = true
+                    downloadProgress = 0f
+                    downloadComplete = false
+                    downloadFailed = false
+                },
+                onInstall = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    val info = updateInfo ?: return@CurrentVersionCard
+                    val fileName = "OMaster-v${info.latestVersion}.apk"
+                    val apkFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                    if (apkFile.exists()) {
+                        val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(apkUri, "application/vnd.android.package-archive")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(installIntent)
                     }
                 }
             )
@@ -229,8 +331,14 @@ fun UpdateChannelScreen(
 private fun CurrentVersionCard(
     lastCheckTime: String?,
     isCheckingUpdate: Boolean,
-    updateCheckResult: String?,
-    onCheckForUpdate: () -> Unit
+    updateInfo: UpdateInfo?,
+    isDownloading: Boolean,
+    downloadProgress: Float,
+    downloadComplete: Boolean,
+    downloadFailed: Boolean,
+    onCheckForUpdate: () -> Unit,
+    onDownload: () -> Unit,
+    onInstall: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -263,13 +371,13 @@ private fun CurrentVersionCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = stringResource(R.string.update_already_latest),
+                            text = if (updateInfo?.isNewVersion == true) "发现新版本" else stringResource(R.string.update_already_latest),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "v3.2.0 (20260608)",
+                            text = "v${BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                         )
@@ -294,7 +402,7 @@ private fun CurrentVersionCard(
                 Button(
                     onClick = onCheckForUpdate,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isCheckingUpdate,
+                    enabled = !isCheckingUpdate && !isDownloading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                         contentColor = MaterialTheme.colorScheme.onBackground
@@ -315,22 +423,99 @@ private fun CurrentVersionCard(
                 }
 
                 // 显示检查结果
-                updateCheckResult?.let { result ->
+                updateInfo?.let { info ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (result.startsWith("发现新版本"))
+                            containerColor = if (info.isNewVersion)
                                 HasselbladOrange.copy(alpha = 0.15f)
                             else MaterialTheme.colorScheme.surfaceVariant
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = result,
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = if (info.isNewVersion)
+                                    "发现新版本: v${info.latestVersion} (${info.releaseName})"
+                                else info.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            if (info.isNewVersion && info.releaseNotes.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = info.releaseNotes.take(200),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                )
+                            }
+
+                            // 下载进度条
+                            if (isDownloading) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                    progress = { downloadProgress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.update_download_progress, (downloadProgress * 100).toInt()),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                )
+                            }
+
+                            // 下载失败提示
+                            if (downloadFailed) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = stringResource(R.string.update_download_failed),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFFF5722)
+                                )
+                            }
+                        }
+                    }
+
+                    // 下载/安装按钮
+                    if (info.isNewVersion && info.downloadUrl.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (downloadComplete) {
+                            // 安装按钮
+                            Button(
+                                onClick = onInstall,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                                    contentColor = MaterialTheme.colorScheme.onBackground
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.SystemUpdate, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.update_install_button), fontWeight = FontWeight.Medium)
+                            }
+                        } else if (!isDownloading) {
+                            // 下载按钮
+                            Button(
+                                onClick = onDownload,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                                    contentColor = MaterialTheme.colorScheme.onBackground
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.update_download_button), fontWeight = FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
@@ -445,11 +630,24 @@ private data class UpdateChannelInfo(
 )
 
 /**
+ * 更新检查结果数据类
+ */
+private data class UpdateInfo(
+    val isNewVersion: Boolean,
+    val latestVersion: String,
+    val releaseName: String,
+    val downloadUrl: String,
+    val htmlUrl: String,
+    val releaseNotes: String,
+    val message: String
+)
+
+/**
  * 真实检查更新：从 GitHub/Gitee Release API 获取最新版本信息
  *
- * 链路：选择渠道 → 确定 API URL → HTTPS 请求 → JSON 解析 → 版本比较 → 返回结果
+ * 链路：选择渠道 → 确定 API URL → HTTPS 请求 → JSON 解析 → 版本比较 → 返回结构化结果
  */
-private suspend fun checkForUpdate(context: android.content.Context, channel: String): String =
+private suspend fun checkForUpdate(context: android.content.Context, channel: String): UpdateInfo =
     withContext(Dispatchers.IO) {
         try {
             // 根据渠道选择 API 端点
@@ -472,7 +670,11 @@ private suspend fun checkForUpdate(context: android.content.Context, channel: St
 
                 val responseCode = conn.responseCode
                 if (responseCode != 200) {
-                    return@withContext "检查失败: HTTP $responseCode"
+                    return@withContext UpdateInfo(
+                        isNewVersion = false, latestVersion = "", releaseName = "",
+                        downloadUrl = "", htmlUrl = "", releaseNotes = "",
+                        message = "检查失败: HTTP $responseCode"
+                    )
                 }
 
                 val jsonString = conn.inputStream.bufferedReader().use { it.readText() }
@@ -484,17 +686,40 @@ private suspend fun checkForUpdate(context: android.content.Context, channel: St
                 val body = json.optString("body", "")
 
                 if (latestVersion.isBlank()) {
-                    return@withContext "无法获取版本信息"
+                    return@withContext UpdateInfo(
+                        isNewVersion = false, latestVersion = "", releaseName = "",
+                        downloadUrl = "", htmlUrl = "", releaseNotes = "",
+                        message = "无法获取版本信息"
+                    )
                 }
+
+                // 提取 APK 下载链接
+                val downloadUrl = extractApkDownloadUrl(json)
 
                 // 版本比较
                 val currentVersion = BuildConfig.VERSION_NAME
                 val comparison = compareVersions(latestVersion, currentVersion)
 
                 if (comparison > 0) {
-                    "发现新版本: v$latestVersion ($releaseName)\n${if (htmlUrl.isNotBlank()) "下载: $htmlUrl" else ""}\n\n${body.take(200)}"
+                    UpdateInfo(
+                        isNewVersion = true,
+                        latestVersion = latestVersion,
+                        releaseName = releaseName,
+                        downloadUrl = downloadUrl,
+                        htmlUrl = htmlUrl,
+                        releaseNotes = body,
+                        message = "发现新版本: v$latestVersion ($releaseName)"
+                    )
                 } else {
-                    "当前已是最新版本 (v$currentVersion)"
+                    UpdateInfo(
+                        isNewVersion = false,
+                        latestVersion = latestVersion,
+                        releaseName = releaseName,
+                        downloadUrl = downloadUrl,
+                        htmlUrl = htmlUrl,
+                        releaseNotes = body,
+                        message = "当前已是最新版本 (v$currentVersion)"
+                    )
                 }
             } finally {
                 try { conn?.disconnect() } catch (e: Exception) {
@@ -502,9 +727,40 @@ private suspend fun checkForUpdate(context: android.content.Context, channel: St
                 }
             }
         } catch (e: Exception) {
-            "检查失败: ${e.message}"
+            UpdateInfo(
+                isNewVersion = false, latestVersion = "", releaseName = "",
+                downloadUrl = "", htmlUrl = "", releaseNotes = "",
+                message = "检查失败: ${e.message}"
+            )
         }
     }
+
+/**
+ * 从 Release JSON 中提取 APK 下载链接
+ * 优先选择 arm64-v8a 架构的 APK，其次选第一个 APK
+ */
+private fun extractApkDownloadUrl(json: JSONObject): String {
+    // 尝试从 assets 数组中找 APK
+    val assets = json.optJSONArray("assets") ?: return ""
+    for (i in 0 until assets.length()) {
+        val asset = assets.optJSONObject(i) ?: continue
+        val name = asset.optString("name", "")
+        val downloadUrl = asset.optString("browser_download_url", "")
+        if (name.endsWith(".apk") && (name.contains("arm64") || name.contains("universal"))) {
+            return downloadUrl
+        }
+    }
+    // 没找到 arm64/universal，返回第一个 APK
+    for (i in 0 until assets.length()) {
+        val asset = assets.optJSONObject(i) ?: continue
+        val name = asset.optString("name", "")
+        val downloadUrl = asset.optString("browser_download_url", "")
+        if (name.endsWith(".apk")) {
+            return downloadUrl
+        }
+    }
+    return ""
+}
 
 /**
  * 语义化版本比较

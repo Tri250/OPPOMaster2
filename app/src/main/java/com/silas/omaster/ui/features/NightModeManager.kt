@@ -13,6 +13,8 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
+import com.silas.omaster.billing.ProFeature
+import com.silas.omaster.billing.ProFeatureGate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -153,6 +155,14 @@ class NightModeManager(private val context: Context) {
     }
 
     /**
+     * 检查夜景模式是否可用（Pro 专属功能）
+     * @return true 如果用户已解锁 Pro，false 如果为免费用户
+     */
+    fun isNightModeAvailable(): Boolean {
+        return ProFeatureGate.isFeatureAvailable(ProFeature.NIGHT_MODE)
+    }
+
+    /**
      * 提交一帧到夜景缓冲区。
      *
      * 本方法轻量、非阻塞：仅复制 Bitmap 并加入队列，实际处理在 [captureAndProcess] 中异步完成。
@@ -161,6 +171,7 @@ class NightModeManager(private val context: Context) {
      * @return 是否成功接收该帧
      */
     fun submitFrame(bitmap: Bitmap): Boolean {
+        if (!isNightModeAvailable()) return false
         if (!isCapturing || captureCancelled) return false
         if (bitmap.isRecycled) return false
 
@@ -212,15 +223,21 @@ class NightModeManager(private val context: Context) {
     suspend fun captureAndProcess(
         targetFrames: Int = 7,
         onStateUpdate: ((NightModeState) -> Unit)? = null
-    ): Bitmap? = coroutineScope {
-        val deferred = async(Dispatchers.Default) {
-            doCaptureAndProcess(targetFrames, onStateUpdate)
+    ): Bitmap? {
+        if (!isNightModeAvailable()) {
+            Log.w(TAG, "夜景模式为 Pro 专属功能，请升级后使用")
+            return null
         }
-        captureJob = deferred
-        try {
-            deferred.await()
-        } finally {
-            captureJob = null
+        return coroutineScope {
+            val deferred = async(Dispatchers.Default) {
+                doCaptureAndProcess(targetFrames, onStateUpdate)
+            }
+            captureJob = deferred
+            try {
+                deferred.await()
+            } finally {
+                captureJob = null
+            }
         }
     }
 

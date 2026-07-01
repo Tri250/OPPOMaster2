@@ -11,6 +11,7 @@ import android.util.Log
 import com.silas.omaster.model.HasselbladParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +19,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * 批量处理管理器 - P2 深度优化
+ * 批量处理管理器 - P2 深度优化 + F2-17 多核并行
  *
  * 功能：
  * - 多选图片批量应用预设
@@ -28,6 +31,8 @@ import java.io.FileOutputStream
  * - 支持取消操作
  * - 导出格式选择
  * - 内存安全的大图批量处理
+ * - F2-17: 多核并行处理（根据 CPU 核心数自动分配线程池）
+ * - F2-17: 独立图片进度追踪与错误隔离
  */
 class BatchProcessingManager(
     private val context: Context
@@ -38,9 +43,20 @@ class BatchProcessingManager(
         private const val EXPORT_MAX_DIMENSION = 2048
     }
 
+    // F2-17: 检测 CPU 核心数并创建固定线程池
+    private val cpuCores: Int = Runtime.getRuntime().availableProcessors()
+    // 最多使用 core-1 个线程，保留一个核心给 UI 和其他任务
+    private val parallelism: Int = maxOf(2, cpuCores - 1).coerceAtMost(4)
+    private val threadPool = Executors.newFixedThreadPool(parallelism)
+    private val parallelDispatcher = threadPool.asCoroutineDispatcher()
+
     // 批次状态
     private val _batchState = MutableStateFlow(BatchState())
     val batchState: StateFlow<BatchState> = _batchState.asStateFlow()
+
+    // F2-17: 每张图片的独立进度追踪
+    private val _imageProgress = MutableStateFlow<Map<Int, ImageProgress>>(emptyMap())
+    val imageProgress: StateFlow<Map<Int, ImageProgress>> = _imageProgress.asStateFlow()
 
     // 取消标志
     @Volatile
@@ -53,11 +69,12 @@ class BatchProcessingManager(
     private val lock = Any()
 
     /**
-     * 批量处理图片
+     * 批量处理图片 - F2-17: 多核并行处理
      * @param imageUris 待处理的图片 URI 列表
      * @param params 预设参数
      * @param exportFormat 导出格式
-     * @param onProgress 进度回调
+     * @param onProgress 进度回调（合并后的整体进度）
+     * @param onImageProgress F2-17: 单图进度回调（独立追踪每张图）
      * @param onComplete 完成回调
      */
     suspend fun processBatch(
@@ -65,6 +82,7 @@ class BatchProcessingManager(
         params: HasselbladParams,
         exportFormat: HasselbladEyeViewModel.ExportFormat = HasselbladEyeViewModel.ExportFormat.JPEG,
         onProgress: (current: Int, total: Int, uri: Uri) -> Unit = { _, _, _ -> },
+        onImageProgress: ((index: Int, progress: ImageProgress) -> Unit)? = null,
         onComplete: (results: List<BatchResult>) -> Unit = {}
     ) {
         if (imageUris.size > MAX_BATCH_SIZE) {
@@ -85,70 +103,81 @@ class BatchProcessingManager(
             )
         }
 
-        val results = mutableListOf<BatchResult>()
+        // F2-17: 初始化每张图片的独立进度
+        val initialProgress = imageUris.indices.associateWith { ImageProgress() }
+        _imageProgress.value = initialProgress
+
+        val results = arrayOfNulls<BatchResult>(imageUris.size)
+        val completedCount = AtomicInteger(0)
 
         withContext(Dispatchers.IO) {
             // 捕获当前协程的 Job 以便外部取消
             processingJob = coroutineContext[Job]
 
-            for ((index, uri) in imageUris.withIndex()) {
-                // 检查协程是否已被取消（通过 Job.cancel() 或外部取消）
-                if (!isActive) {
-                    synchronized(lock) {
-                        results.add(BatchResult(uri, null, "已取消"))
-                    }
-                    break
-                }
-
-                // 检查 volatile 取消标志
-                var shouldBreak = false
-                synchronized(lock) {
-                    if (isCancelled) {
-                        results.add(BatchResult(uri, null, "已取消"))
-                        shouldBreak = true
-                    } else {
-                        _batchState.value = _batchState.value.copy(currentIndex = index)
-                    }
-                }
-                if (shouldBreak) break
-                onProgress(index + 1, imageUris.size, uri)
-
-                try {
-                    // 加载图片
-                    val bitmap = loadBitmap(context, uri)
-                    if (bitmap == null) {
-                        synchronized(lock) {
-                            results.add(BatchResult(uri, null, "图片加载失败"))
+            // F2-17: 使用并行调度器并发处理多张图片
+            // 使用 coroutineScope 确保所有子协程完成后再继续
+            kotlinx.coroutines.coroutineScope {
+                imageUris.forEachIndexed { index, uri ->
+                    // 在并行调度器上启动独立的处理协程
+                    kotlinx.coroutines.launch(parallelDispatcher) {
+                        // 检查取消
+                        if (!isActive || isCancelled) {
+                            results[index] = BatchResult(uri, null, "已取消")
+                            updateImageProgress(index, ImageProgress(status = ImageStatus.CANCELLED), onImageProgress)
+                            val done = completedCount.incrementAndGet()
+                            updateOverallProgress(done, imageUris.size, onProgress, imageUris, results)
+                            return@launch
                         }
-                        continue
-                    }
 
-                    // 应用预设参数
-                    val processedBitmap = applyPreset(bitmap, params)
+                        try {
+                            // 阶段 1: 加载图片
+                            updateImageProgress(index, ImageProgress(status = ImageStatus.LOADING, progress = 0.2f), onImageProgress)
 
-                    // 保存图片
-                    val savedUri = saveProcessedImage(
-                        processedBitmap,
-                        uri,
-                        exportFormat
-                    )
+                            val bitmap = loadBitmap(context, uri)
+                            if (bitmap == null) {
+                                results[index] = BatchResult(uri, null, "图片加载失败")
+                                updateImageProgress(index, ImageProgress(status = ImageStatus.FAILED, progress = 1f, error = "图片加载失败"), onImageProgress)
+                                val done = completedCount.incrementAndGet()
+                                updateOverallProgress(done, imageUris.size, onProgress, imageUris, results)
+                                return@launch
+                            }
 
-                    synchronized(lock) {
-                        if (savedUri != null) {
-                            results.add(BatchResult(uri, savedUri, null))
-                        } else {
-                            results.add(BatchResult(uri, null, "保存失败"))
+                            // 阶段 2: 应用预设
+                            updateImageProgress(index, ImageProgress(status = ImageStatus.PROCESSING, progress = 0.5f), onImageProgress)
+
+                            val processedBitmap = applyPreset(bitmap, params)
+
+                            // 阶段 3: 保存图片
+                            updateImageProgress(index, ImageProgress(status = ImageStatus.SAVING, progress = 0.8f), onImageProgress)
+
+                            val savedUri = saveProcessedImage(
+                                processedBitmap,
+                                uri,
+                                exportFormat
+                            )
+
+                            // 回收 Bitmap
+                            if (processedBitmap !== bitmap) processedBitmap.recycle()
+                            bitmap.recycle()
+
+                            if (savedUri != null) {
+                                results[index] = BatchResult(uri, savedUri, null)
+                                updateImageProgress(index, ImageProgress(status = ImageStatus.COMPLETED, progress = 1f), onImageProgress)
+                            } else {
+                                results[index] = BatchResult(uri, null, "保存失败")
+                                updateImageProgress(index, ImageProgress(status = ImageStatus.FAILED, progress = 1f, error = "保存失败"), onImageProgress)
+                            }
+
+                        } catch (e: Exception) {
+                            Log.e(TAG, "处理图片[$index]失败: ${e.message}", e)
+                            // F2-17: 单图错误不影响其他图片，继续处理
+                            results[index] = BatchResult(uri, null, e.message ?: "未知错误")
+                            updateImageProgress(index, ImageProgress(status = ImageStatus.FAILED, progress = 1f, error = e.message), onImageProgress)
                         }
-                    }
 
-                    // 回收 Bitmap
-                    if (processedBitmap !== bitmap) processedBitmap.recycle()
-                    bitmap.recycle()
-
-                } catch (e: Exception) {
-                    Log.e(TAG, "处理图片失败: ${e.message}", e)
-                    synchronized(lock) {
-                        results.add(BatchResult(uri, null, e.message ?: "未知错误"))
+                        // 更新整体进度
+                        val done = completedCount.incrementAndGet()
+                        updateOverallProgress(done, imageUris.size, onProgress, imageUris, results)
                     }
                 }
             }
@@ -156,8 +185,11 @@ class BatchProcessingManager(
             // 如果中途取消，填充剩余结果
             if (!isActive || isCancelled) {
                 synchronized(lock) {
-                    for (i in results.size until imageUris.size) {
-                        results.add(BatchResult(imageUris[i], null, "已取消"))
+                    for (i in imageUris.indices) {
+                        if (results[i] == null) {
+                            results[i] = BatchResult(imageUris[i], null, "已取消")
+                            updateImageProgress(i, ImageProgress(status = ImageStatus.CANCELLED, progress = 1f), onImageProgress)
+                        }
                     }
                 }
             }
@@ -169,7 +201,40 @@ class BatchProcessingManager(
                 isComplete = true
             )
         }
-        onComplete(results)
+        onComplete(results.filterNotNull())
+    }
+
+    /**
+     * F2-17: 更新单图进度
+     */
+    private fun updateImageProgress(
+        index: Int,
+        progress: ImageProgress,
+        callback: ((index: Int, progress: ImageProgress) -> Unit)?
+    ) {
+        val current = _imageProgress.value.toMutableMap()
+        current[index] = progress
+        _imageProgress.value = current
+        callback?.invoke(index, progress)
+    }
+
+    /**
+     * F2-17: 更新整体进度（合并所有图片进度）
+     */
+    private fun updateOverallProgress(
+        completedCount: Int,
+        totalCount: Int,
+        onProgress: (current: Int, total: Int, uri: Uri) -> Unit,
+        imageUris: List<Uri>,
+        results: Array<BatchResult?>
+    ) {
+        synchronized(lock) {
+            _batchState.value = _batchState.value.copy(currentIndex = completedCount)
+        }
+        // 找到最后完成的图片的 URI 用于回调
+        val lastCompletedIndex = results.indexOfLast { it != null }
+        val lastUri = if (lastCompletedIndex >= 0) imageUris[lastCompletedIndex] else imageUris.first()
+        onProgress(completedCount, totalCount, lastUri)
     }
 
     /**
@@ -192,6 +257,7 @@ class BatchProcessingManager(
             isCancelled = false
             _batchState.value = BatchState()
         }
+        _imageProgress.value = emptyMap()
         processingJob = null
     }
 
@@ -360,4 +426,24 @@ data class BatchResult(
     val originalUri: Uri,
     val savedUri: Uri?,
     val error: String?
+)
+
+/**
+ * F2-17: 单图处理进度状态
+ * 用于独立追踪每张图片的处理进度
+ */
+enum class ImageStatus {
+    PENDING,        // 等待处理
+    LOADING,        // 正在加载图片
+    PROCESSING,     // 正在应用预设
+    SAVING,         // 正在保存
+    COMPLETED,      // 已完成
+    FAILED,         // 处理失败（不影响其他图片）
+    CANCELLED       // 已取消
+}
+
+data class ImageProgress(
+    val status: ImageStatus = ImageStatus.PENDING,
+    val progress: Float = 0f,   // 0f~1f 单图内部进度
+    val error: String? = null   // 失败时的错误信息
 )

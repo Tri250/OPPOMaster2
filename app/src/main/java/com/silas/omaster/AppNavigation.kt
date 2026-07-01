@@ -49,6 +49,7 @@ import com.silas.omaster.ui.create.UniversalCreatePresetScreen
 import com.silas.omaster.ui.create.UniversalCreatePresetViewModel
 import com.silas.omaster.ui.create.UniversalCreatePresetViewModelFactory
 import com.silas.omaster.ui.detail.AboutScreen
+import com.silas.omaster.ui.detail.CloudSyncScreen
 import com.silas.omaster.ui.detail.DetailScreen
 import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.features.AIFineTuneScreen
@@ -291,7 +292,8 @@ fun MainApp(navController: NavHostController) {
                     onNavigateToThemeSettings = { navController.navigate(Screen.ThemeSettings) },
                     onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onNavigateToImportExport = { navController.navigate(Screen.ImportExport) },
-                    onNavigateToPermissionCheck = { navController.navigate(Screen.PermissionCheck) }
+                    onNavigateToPermissionCheck = { navController.navigate(Screen.PermissionCheck) },
+                    onNavigateToCloudSync = { navController.navigate(Screen.CloudSync) }
                 )
             }
 
@@ -584,6 +586,12 @@ fun MainApp(navController: NavHostController) {
                             }
                         }
                     }
+                )
+            }
+
+            composable<Screen.CloudSync> {
+                CloudSyncScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 

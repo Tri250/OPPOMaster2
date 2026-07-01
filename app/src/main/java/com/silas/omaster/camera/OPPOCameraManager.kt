@@ -15,12 +15,39 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.SoftLightMode
 
 /**
- * OPPO Find X9 哈苏大师模式相机参数管理器
+ * 设备品牌枚举
  *
- * 实现真实的相机参数应用，支持以下四种应用方式（按优先级降序）：
- * 1. ContentProvider：写入 OPPO 相机大师模式 ContentProvider
- * 2. System Settings：通过 Settings.System/Global 写入 OPPO 专属设置键
- * 3. Camera Intent：启动 OPPO 相机大师模式并传递参数
+ * 支持的 Android 设备品牌，每个品牌有专属的相机参数应用方式。
+ */
+enum class DeviceBrand {
+    /** OPPO / Realme（含 OnePlus 同系） */
+    OPPO,
+    /** Samsung Galaxy S/Z 系列 */
+    SAMSUNG,
+    /** Xiaomi / Redmi / POCO */
+    XIAOMI,
+    /** Huawei / Honor */
+    HUAWEI,
+    /** OnePlus（独立于 OPPO，使用 OxygenOS） */
+    ONEPLUS,
+    /** vivo / iQOO */
+    VIVO,
+    /** Google Pixel */
+    GOOGLE,
+    /** 通用/未知品牌回退 */
+    GENERIC
+}
+
+/**
+ * 多品牌 Android 相机参数管理器
+ *
+ * 原为 OPPO Find X 系列专用的哈苏大师模式管理器，
+ * 现已扩展支持 Samsung、Xiaomi、Huawei、OnePlus、vivo、Google Pixel 及通用设备。
+ *
+ * 每个品牌按以下优先级尝试多种应用方式：
+ * 1. ContentProvider：写入品牌相机专属 ContentProvider
+ * 2. System Settings：通过 Settings.System/Global 写入品牌专属设置键
+ * 3. Camera Intent：启动品牌相机并传递参数
  * 4. Clipboard Fallback：将参数复制到剪贴板供手动输入
  *
  * 单例模式，通过 [getInstance] 获取实例。
@@ -78,12 +105,51 @@ class OPPOCameraManager private constructor(private val context: Context) {
         private const val EXTRA_SOFT_LIGHT = "master_soft_light"
         private const val EXTRA_FILTER = "master_filter"
 
-        // OPPO/Realme/OnePlus 品牌标识
-        private val OPPO_FAMILY_MANUFACTURERS = setOf("oppo", "realme", "oneplus", "one plus")
-        private val OPPO_FAMILY_BRANDS = setOf("oppo", "realme", "oneplus", "one plus")
+        // OPPO/Realme 品牌标识（OnePlus 已独立为单独品牌）
+        private val OPPO_FAMILY_MANUFACTURERS = setOf("oppo", "realme")
+        private val OPPO_FAMILY_BRANDS = setOf("oppo", "realme")
 
         // Find X 系列型号前缀
         private val FIND_X_MODEL_PREFIXES = listOf("CPH", "PFM", "PFT", "PDS", "RMX", "CPH3", "PFHM")
+
+        // ========== Samsung 专属常量 ==========
+        private const val SAMSUNG_CAMERA_PACKAGE = "com.samsung.android.app.camera"
+        private const val SAMSUNG_EXPERT_RAW_PACKAGE = "com.samsung.android.app.camera.expertraw"
+        private const val SAMSUNG_SEM_INTENT_ACTION = "com.samsung.android.app.camera.SEM_CAMERA_INTENT"
+        private const val SAMSUNG_SETTINGS_PREFIX = "samsung_camera_"
+        // Samsung 系统 Settings 键名
+        private const val SAMSUNG_KEY_CAMERA_MODE = "camera_mode"
+        private const val SAMSUNG_KEY_PRO_MODE = "camera_pro_mode"
+
+        // ========== Xiaomi/Redmi 专属常量 ==========
+        private const val XIAOMI_CAMERA_PACKAGE = "com.android.camera"
+        private const val XIAOMI_CAMERA_ACTION_PRO = "com.android.camera.action.PRO_MODE"
+        private const val XIAOMI_SETTINGS_PREFIX = "xiaomi_camera_"
+        private const val XIAOMI_KEY_PRO_MODE = "pref_camera_pro_mode_key"
+
+        // ========== Huawei/Honor 专属常量 ==========
+        private const val HUAWEI_CAMERA_PACKAGE = "com.huawei.camera"
+        private const val HUAWEI_CAMERA_ACTION_PRO = "com.huawei.camera.action.PROFESSIONAL_MODE"
+        private const val HUAWEI_SETTINGS_PREFIX = "huawei_camera_"
+        private const val HUAWEI_KEY_PRO_MODE = "camera_pro_mode"
+        private const val HUAWEI_KEY_ISO = "camera_iso"
+        private const val HUAWEI_KEY_WHITE_BALANCE = "camera_white_balance"
+        private const val HUAWEI_KEY_EXPOSURE = "camera_exposure_compensation"
+
+        // ========== OnePlus (OxygenOS) 专属常量 ==========
+        private const val ONEPLUS_CAMERA_PACKAGE = "com.oneplus.camera"
+        private const val ONEPLUS_CAMERA_ACTION_PRO = "com.oneplus.camera.action.PRO_MODE"
+        private const val ONEPLUS_SETTINGS_PREFIX = "oneplus_camera_pro_"
+        private const val ONEPLUS_KEY_PRO_MODE = "camera_pro_mode_enabled"
+
+        // ========== vivo/iQOO 专属常量 ==========
+        private const val VIVO_CAMERA_PACKAGE = "com.vivo.camera"
+        private const val VIVO_CAMERA_ACTION_PRO = "com.vivo.camera.action.PROFESSIONAL"
+        private const val VIVO_SETTINGS_PREFIX = "vivo_camera_"
+        private const val VIVO_KEY_PRO_MODE = "camera_professional_mode"
+
+        // ========== Google Pixel 专属常量 ==========
+        private const val GOOGLE_CAMERA_PACKAGE = "com.google.android.apps.camera"
 
         /**
          * 参数白名单：允许校验的参数键名集合。
@@ -123,6 +189,37 @@ class OPPOCameraManager private constructor(private val context: Context) {
     private var cachedDeviceCapabilityTimestamp: Long = 0L
 
     // ==================== 公共 API ====================
+
+    /**
+     * 检测当前设备品牌
+     *
+     * 通过 Build.MANUFACTURER 和 Build.BRAND 判断设备品牌。
+     * 优先匹配特定品牌，无法识别则返回 [DeviceBrand.GENERIC]。
+     *
+     * @return 检测到的设备品牌
+     */
+    fun detectDeviceBrand(): DeviceBrand {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val brand = Build.BRAND.lowercase()
+
+        return when {
+            manufacturer in OPPO_FAMILY_MANUFACTURERS || brand in OPPO_FAMILY_BRANDS -> DeviceBrand.OPPO
+            manufacturer == "samsung" || brand == "samsung" -> DeviceBrand.SAMSUNG
+            manufacturer in setOf("xiaomi", "redmi", "poco") ||
+                    brand in setOf("xiaomi", "redmi", "poco") -> DeviceBrand.XIAOMI
+            manufacturer in setOf("huawei", "honor") ||
+                    brand in setOf("huawei", "honor") -> DeviceBrand.HUAWEI
+            manufacturer in setOf("oneplus", "one plus") ||
+                    brand in setOf("oneplus", "one plus") -> DeviceBrand.ONEPLUS
+            manufacturer in setOf("vivo", "iqoo") ||
+                    brand in setOf("vivo", "iqoo") -> DeviceBrand.VIVO
+            manufacturer == "google" || brand == "google" -> DeviceBrand.GOOGLE
+            else -> {
+                Log.d(TAG, "未识别品牌: manufacturer=$manufacturer, brand=$brand，使用通用模式")
+                DeviceBrand.GENERIC
+            }
+        }
+    }
 
     /**
      * 检测当前设备能力
@@ -169,17 +266,20 @@ class OPPOCameraManager private constructor(private val context: Context) {
                 modelLower.contains("gt") // Realme GT 系列
                 )
 
+        val deviceBrand = detectDeviceBrand()
+
         val capability = DeviceCapability(
             manufacturer = Build.MANUFACTURER,
             model = model,
             isOppoDevice = isOppoDevice,
             isFindXSeries = isFindXSeries,
             supportsMasterMode = supportsMasterMode,
-            supportsContentProvider = supportsContentProvider
+            supportsContentProvider = supportsContentProvider,
+            brand = deviceBrand
         )
 
         Log.d(TAG, "设备能力检测: manufacturer=${capability.manufacturer}, " +
-                "model=${capability.model}, isOppo=${capability.isOppoDevice}, " +
+                "model=${capability.model}, brand=${capability.brand}, isOppo=${capability.isOppoDevice}, " +
                 "isFindX=${capability.isFindXSeries}, masterMode=${capability.supportsMasterMode}, " +
                 "contentProvider=${capability.supportsContentProvider}")
 
@@ -241,7 +341,10 @@ class OPPOCameraManager private constructor(private val context: Context) {
     }
 
     /**
-     * 应用原始参数 Map 到 OPPO 相机大师模式
+     * 应用原始参数 Map 到相机
+     *
+     * 根据检测到的设备品牌，路由到品牌专属的应用逻辑。
+     * 每个品牌内部按优先级依次尝试：ContentProvider → System Settings → Camera Intent → Clipboard
      *
      * @param params 参数键值对，键名参考 PARAM_KEY_* 常量
      * @return 应用结果
@@ -261,41 +364,239 @@ class OPPOCameraManager private constructor(private val context: Context) {
         }
 
         val capability = detectDeviceCapability()
+        val brand = capability.brand
 
+        Log.d(TAG, "品牌路由: brand=$brand，开始品牌专属应用逻辑")
+
+        return when (brand) {
+            DeviceBrand.OPPO -> applyForOPPO(params, capability)
+            DeviceBrand.SAMSUNG -> applyForSamsung(params, capability)
+            DeviceBrand.XIAOMI -> applyForXiaomi(params, capability)
+            DeviceBrand.HUAWEI -> applyForHuawei(params, capability)
+            DeviceBrand.ONEPLUS -> applyForOnePlus(params, capability)
+            DeviceBrand.VIVO -> applyForVivo(params, capability)
+            DeviceBrand.GOOGLE -> applyForGoogle(params, capability)
+            DeviceBrand.GENERIC -> applyForGeneric(params, capability)
+        }
+    }
+
+    // ==================== 品牌路由实现 ====================
+
+    /**
+     * OPPO 品牌参数应用
+     *
+     * 优先级：ContentProvider → System Settings → Camera Intent → Clipboard
+     */
+    private fun applyForOPPO(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
         // 优先级 1：ContentProvider
         if (capability.supportsContentProvider) {
             val result = applyViaContentProvider(params)
             if (result != null) {
-                Log.d(TAG, "ContentProvider 方式应用成功")
+                Log.d(TAG, "[OPPO] ContentProvider 方式应用成功")
                 return result
             }
-            Log.w(TAG, "ContentProvider 方式失败，尝试下一方式")
+            Log.w(TAG, "[OPPO] ContentProvider 方式失败，尝试下一方式")
         }
 
         // 优先级 2：System Settings
         if (capability.isOppoDevice) {
-            val result = applyViaSystemSettings(params)
+            val result = applyViaSystemSettings(params, SETTINGS_PREFIX)
             if (result != null) {
-                Log.d(TAG, "System Settings 方式应用成功")
+                Log.d(TAG, "[OPPO] System Settings 方式应用成功")
                 return result
             }
-            Log.w(TAG, "System Settings 方式失败，尝试下一方式")
+            Log.w(TAG, "[OPPO] System Settings 方式失败，尝试下一方式")
         }
 
         // 优先级 3：Camera Intent
         if (capability.supportsMasterMode) {
             val result = applyViaCameraIntent(params)
             if (result != null) {
-                Log.d(TAG, "Camera Intent 方式应用成功")
+                Log.d(TAG, "[OPPO] Camera Intent 方式应用成功")
                 return result
             }
-            Log.w(TAG, "Camera Intent 方式失败，尝试下一方式")
+            Log.w(TAG, "[OPPO] Camera Intent 方式失败，尝试下一方式")
         }
 
         // 优先级 4：Clipboard Fallback
-        val result = applyViaClipboard(params)
-        Log.d(TAG, "Clipboard Fallback 方式应用完成")
-        return result
+        return applyViaClipboard(params).also { Log.d(TAG, "[OPPO] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * Samsung 品牌参数应用
+     *
+     * 优先级：System Settings → Camera Intent (Pro/Expert RAW) → Clipboard
+     * Samsung 无公开的相机 ContentProvider，因此从 System Settings 开始。
+     */
+    private fun applyForSamsung(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：System Settings（Samsung 相机模式键）
+        val result1 = applyViaSamsungSettings(params)
+        if (result1 != null) {
+            Log.d(TAG, "[Samsung] System Settings 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[Samsung] System Settings 方式失败，尝试下一方式")
+
+        // 优先级 2：Camera Intent（先尝试 SEM Intent，再尝试 Expert RAW，最后尝试通用）
+        val result2 = applyViaSamsungIntent(params)
+        if (result2 != null) {
+            Log.d(TAG, "[Samsung] Camera Intent 方式应用成功")
+            return result2
+        }
+        Log.w(TAG, "[Samsung] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 3：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[Samsung] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * Xiaomi/Redmi 品牌参数应用
+     *
+     * 优先级：System Settings → Camera Intent → Clipboard
+     */
+    private fun applyForXiaomi(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：System Settings
+        val result1 = applyViaSystemSettings(params, XIAOMI_SETTINGS_PREFIX)
+        if (result1 != null) {
+            Log.d(TAG, "[Xiaomi] System Settings 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[Xiaomi] System Settings 方式失败，尝试下一方式")
+
+        // 优先级 2：Camera Intent
+        val result2 = applyViaXiaomiIntent(params)
+        if (result2 != null) {
+            Log.d(TAG, "[Xiaomi] Camera Intent 方式应用成功")
+            return result2
+        }
+        Log.w(TAG, "[Xiaomi] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 3：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[Xiaomi] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * Huawei/Honor 品牌参数应用
+     *
+     * 优先级：System Settings → Camera Intent → Clipboard
+     */
+    private fun applyForHuawei(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：System Settings
+        val result1 = applyViaHuaweiSettings(params)
+        if (result1 != null) {
+            Log.d(TAG, "[Huawei] System Settings 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[Huawei] System Settings 方式失败，尝试下一方式")
+
+        // 优先级 2：Camera Intent
+        val result2 = applyViaHuaweiIntent(params)
+        if (result2 != null) {
+            Log.d(TAG, "[Huawei] Camera Intent 方式应用成功")
+            return result2
+        }
+        Log.w(TAG, "[Huawei] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 3：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[Huawei] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * OnePlus 品牌参数应用
+     *
+     * OnePlus 与 OPPO 同属 BBK，使用 OxygenOS 专属设置键。
+     * 优先级：System Settings → Camera Intent → Clipboard
+     */
+    private fun applyForOnePlus(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：System Settings（OxygenOS 专属前缀）
+        val result1 = applyViaSystemSettings(params, ONEPLUS_SETTINGS_PREFIX)
+        if (result1 != null) {
+            Log.d(TAG, "[OnePlus] System Settings 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[OnePlus] System Settings 方式失败，尝试下一方式")
+
+        // 优先级 2：Camera Intent
+        val result2 = applyViaOnePlusIntent(params)
+        if (result2 != null) {
+            Log.d(TAG, "[OnePlus] Camera Intent 方式应用成功")
+            return result2
+        }
+        Log.w(TAG, "[OnePlus] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 3：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[OnePlus] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * vivo/iQOO 品牌参数应用
+     *
+     * 优先级：System Settings → Camera Intent → Clipboard
+     */
+    private fun applyForVivo(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：System Settings
+        val result1 = applyViaSystemSettings(params, VIVO_SETTINGS_PREFIX)
+        if (result1 != null) {
+            Log.d(TAG, "[vivo] System Settings 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[vivo] System Settings 方式失败，尝试下一方式")
+
+        // 优先级 2：Camera Intent
+        val result2 = applyViaVivoIntent(params)
+        if (result2 != null) {
+            Log.d(TAG, "[vivo] Camera Intent 方式应用成功")
+            return result2
+        }
+        Log.w(TAG, "[vivo] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 3：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[vivo] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * Google Pixel 品牌参数应用
+     *
+     * Pixel 使用原生 Camera2 API，无品牌专属 ContentProvider/Settings。
+     * 优先级：Camera Intent（Camera2 extras） → Clipboard
+     */
+    private fun applyForGoogle(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：Camera Intent（附加 Camera2 兼容 extras）
+        val result1 = applyViaGoogleIntent(params)
+        if (result1 != null) {
+            Log.d(TAG, "[Google] Camera Intent 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[Google] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 2：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[Google] Clipboard Fallback 方式应用完成") }
+    }
+
+    /**
+     * 通用品牌参数应用（回退方案）
+     *
+     * 优先级：System Settings（通用前缀） → Camera Intent（标准 Action） → Clipboard
+     */
+    private fun applyForGeneric(params: Map<String, Any>, capability: DeviceCapability): CameraApplyResult {
+        // 优先级 1：尝试 System Settings（使用通用前缀）
+        val result1 = applyViaSystemSettings(params, "omaster_camera_")
+        if (result1 != null) {
+            Log.d(TAG, "[Generic] System Settings 方式应用成功")
+            return result1
+        }
+        Log.w(TAG, "[Generic] System Settings 方式失败，尝试下一方式")
+
+        // 优先级 2：标准相机 Intent（带 extras）
+        val result2 = applyViaGenericCameraIntent(params)
+        if (result2 != null) {
+            Log.d(TAG, "[Generic] Camera Intent 方式应用成功")
+            return result2
+        }
+        Log.w(TAG, "[Generic] Camera Intent 方式失败，尝试下一方式")
+
+        // 优先级 3：Clipboard Fallback
+        return applyViaClipboard(params).also { Log.d(TAG, "[Generic] Clipboard Fallback 方式应用完成") }
     }
 
     /**
@@ -462,17 +763,18 @@ class OPPOCameraManager private constructor(private val context: Context) {
     // ==================== System Settings 应用 ====================
 
     /**
-     * 通过 Settings.System / Settings.Global 写入 OPPO 专属设置键
+     * 通过 Settings.System / Settings.Global 写入品牌专属设置键
      *
-     * OPPO 相机大师模式参数通过 oppo_camera_master_* 前缀的系统设置键存储。
-     * 在非 OPPO 设备上此方法会因无法写入而返回 null。
+     * 各品牌相机参数通过品牌前缀的系统设置键存储（如 oppo_camera_master_*、xiaomi_camera_* 等）。
      *
      * 注意：Settings.System 写入需要 WRITE_SETTINGS 权限（Android 6.0+）。
      * 如果权限未授予，将跳过此方式并返回 null。
      *
+     * @param params 参数键值对
+     * @param prefix 设置键前缀（如 "oppo_camera_master_"、"xiaomi_camera_" 等）
      * @return 成功返回 CameraApplyResult，失败返回 null
      */
-    private fun applyViaSystemSettings(params: Map<String, Any>): CameraApplyResult? {
+    private fun applyViaSystemSettings(params: Map<String, Any>, prefix: String): CameraApplyResult? {
         // 检查是否有 WRITE_SETTINGS 权限（Android 6.0+）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.System.canWrite(context)) {
@@ -485,7 +787,7 @@ class OPPOCameraManager private constructor(private val context: Context) {
         val failedParams = mutableListOf<String>()
 
         for ((key, value) in params) {
-            val settingsKey = SETTINGS_PREFIX + key
+            val settingsKey = prefix + key
             try {
                 val success = when (value) {
                     is Int -> Settings.System.putInt(context.contentResolver, settingsKey, value)
@@ -555,6 +857,467 @@ class OPPOCameraManager private constructor(private val context: Context) {
         } catch (e: SecurityException) {
             Log.w(TAG, "Settings.Global: 无权限写入 $key: ${e.message}")
             false
+        }
+    }
+
+    // ==================== Samsung 专属应用 ====================
+
+    /**
+     * 通过 Samsung 系统设置键写入相机 Pro 模式参数
+     *
+     * Samsung 相机通过 camera_mode / camera_pro_mode 等系统键控制专业模式。
+     * 先写入模式切换键启用 Pro 模式，再逐条写入参数。
+     */
+    private fun applyViaSamsungSettings(params: Map<String, Any>): CameraApplyResult? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(context)) {
+                Log.w(TAG, "[Samsung] Settings: 缺少 WRITE_SETTINGS 权限")
+                return null
+            }
+        }
+
+        val appliedParams = mutableMapOf<String, Any>()
+        val failedParams = mutableListOf<String>()
+
+        try {
+            // 启用 Pro 模式
+            Settings.System.putInt(context.contentResolver, SAMSUNG_KEY_CAMERA_MODE, 1) // 1 = Pro
+            Settings.System.putInt(context.contentResolver, SAMSUNG_KEY_PRO_MODE, 1)
+            Log.d(TAG, "[Samsung] Settings: 已写入 Pro 模式切换键")
+        } catch (e: Exception) {
+            Log.w(TAG, "[Samsung] Settings: 写入 Pro 模式键失败: ${e.message}")
+        }
+
+        for ((key, value) in params) {
+            val settingsKey = SAMSUNG_SETTINGS_PREFIX + key
+            try {
+                val success = when (value) {
+                    is Int -> Settings.System.putInt(context.contentResolver, settingsKey, value)
+                    is Float -> Settings.System.putFloat(context.contentResolver, settingsKey, value)
+                    is Double -> Settings.System.putFloat(context.contentResolver, settingsKey, value.toFloat())
+                    is Long -> Settings.System.putLong(context.contentResolver, settingsKey, value)
+                    is String -> Settings.System.putString(context.contentResolver, settingsKey, value)
+                    else -> Settings.System.putString(context.contentResolver, settingsKey, value.toString())
+                }
+                if (success) {
+                    appliedParams[key] = value
+                    Log.d(TAG, "[Samsung] Settings: 写入 $settingsKey=$value 成功")
+                } else {
+                    failedParams.add(key)
+                }
+            } catch (e: Exception) {
+                failedParams.add(key)
+                Log.w(TAG, "[Samsung] Settings: 写入 $settingsKey 异常: ${e.message}")
+            }
+        }
+
+        if (appliedParams.isEmpty()) return null
+
+        return if (failedParams.isEmpty()) {
+            CameraApplyResult.Success(ApplyMethod.SYSTEM_SETTINGS, appliedParams)
+        } else {
+            CameraApplyResult.PartialSuccess(ApplyMethod.SYSTEM_SETTINGS, appliedParams, failedParams)
+        }
+    }
+
+    /**
+     * 通过 Samsung Camera Intent 启动 Pro 模式并传递参数
+     *
+     * 依次尝试：SEM Camera Intent → Expert RAW → Samsung Camera launch → 标准 Intent
+     */
+    private fun applyViaSamsungIntent(params: Map<String, Any>): CameraApplyResult? {
+        // 尝试 1：SEM Camera Intent
+        try {
+            val semIntent = Intent(SAMSUNG_SEM_INTENT_ACTION).apply {
+                setPackage(SAMSUNG_CAMERA_PACKAGE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra("mode", "pro")
+                putParamsAsExtras(params)
+            }
+            if (context.packageManager.resolveActivity(semIntent, 0) != null) {
+                context.startActivity(semIntent)
+                Log.d(TAG, "[Samsung] Intent: SEM Camera Intent 启动成功")
+                return CameraApplyResult.Success(ApplyMethod.CAMERA_INTENT, params)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Samsung] Intent: SEM Camera Intent 失败: ${e.message}")
+        }
+
+        // 尝试 2：Expert RAW
+        try {
+            val expertRawIntent = Intent(Intent.ACTION_MAIN).apply {
+                setPackage(SAMSUNG_EXPERT_RAW_PACKAGE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putParamsAsExtras(params)
+            }
+            if (context.packageManager.resolveActivity(expertRawIntent, 0) != null) {
+                context.startActivity(expertRawIntent)
+                Log.d(TAG, "[Samsung] Intent: Expert RAW 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("expert_raw_params_not_guaranteed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Samsung] Intent: Expert RAW 启动失败: ${e.message}")
+        }
+
+        // 尝试 3：Samsung Camera launch intent
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(SAMSUNG_CAMERA_PACKAGE)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.putExtra("mode", "pro")
+                launchIntent.putParamsAsExtras(params)
+                context.startActivity(launchIntent)
+                Log.d(TAG, "[Samsung] Intent: Samsung Camera launch 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("pro_mode_not_confirmed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Samsung] Intent: Samsung Camera launch 失败: ${e.message}")
+        }
+
+        // 尝试 4：标准相机 Intent
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    // ==================== Xiaomi 专属应用 ====================
+
+    /**
+     * 通过 Xiaomi Camera Intent 启动 Pro 模式并传递参数
+     */
+    private fun applyViaXiaomiIntent(params: Map<String, Any>): CameraApplyResult? {
+        // 尝试 1：MIUI 相机 Pro 模式 Action
+        try {
+            val proIntent = Intent(XIAOMI_CAMERA_ACTION_PRO).apply {
+                setPackage(XIAOMI_CAMERA_PACKAGE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putParamsAsExtras(params)
+            }
+            if (context.packageManager.resolveActivity(proIntent, 0) != null) {
+                context.startActivity(proIntent)
+                Log.d(TAG, "[Xiaomi] Intent: MIUI Pro Mode Action 启动成功")
+                return CameraApplyResult.Success(ApplyMethod.CAMERA_INTENT, params)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Xiaomi] Intent: MIUI Pro Mode Action 失败: ${e.message}")
+        }
+
+        // 尝试 2：MIUI 相机 launch intent + Pro 模式 extra
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(XIAOMI_CAMERA_PACKAGE)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.putExtra(XIAOMI_KEY_PRO_MODE, true)
+                launchIntent.putParamsAsExtras(params)
+                context.startActivity(launchIntent)
+                Log.d(TAG, "[Xiaomi] Intent: MIUI Camera launch 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("pro_mode_not_confirmed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Xiaomi] Intent: MIUI Camera launch 失败: ${e.message}")
+        }
+
+        // 尝试 3：标准相机 Intent
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    // ==================== Huawei 专属应用 ====================
+
+    /**
+     * 通过 Huawei 系统设置键写入专业模式参数
+     */
+    private fun applyViaHuaweiSettings(params: Map<String, Any>): CameraApplyResult? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(context)) {
+                Log.w(TAG, "[Huawei] Settings: 缺少 WRITE_SETTINGS 权限")
+                return null
+            }
+        }
+
+        val appliedParams = mutableMapOf<String, Any>()
+        val failedParams = mutableListOf<String>()
+
+        try {
+            // 启用专业模式
+            Settings.System.putInt(context.contentResolver, HUAWEI_KEY_PRO_MODE, 1)
+            Log.d(TAG, "[Huawei] Settings: 已写入 Pro 模式切换键")
+        } catch (e: Exception) {
+            Log.w(TAG, "[Huawei] Settings: 写入 Pro 模式键失败: ${e.message}")
+        }
+
+        // 写入已知键名映射
+        val keyMapping = mapOf(
+            "iso" to HUAWEI_KEY_ISO,
+            "whiteBalance" to HUAWEI_KEY_WHITE_BALANCE,
+            "exposureCompensation" to HUAWEI_KEY_EXPOSURE
+        )
+
+        for ((key, value) in params) {
+            val settingsKey = keyMapping[key] ?: (HUAWEI_SETTINGS_PREFIX + key)
+            try {
+                val success = when (value) {
+                    is Int -> Settings.System.putInt(context.contentResolver, settingsKey, value)
+                    is Float -> Settings.System.putFloat(context.contentResolver, settingsKey, value)
+                    is Double -> Settings.System.putFloat(context.contentResolver, settingsKey, value.toFloat())
+                    is Long -> Settings.System.putLong(context.contentResolver, settingsKey, value)
+                    is String -> Settings.System.putString(context.contentResolver, settingsKey, value)
+                    else -> Settings.System.putString(context.contentResolver, settingsKey, value.toString())
+                }
+                if (success) {
+                    appliedParams[key] = value
+                    Log.d(TAG, "[Huawei] Settings: 写入 $settingsKey=$value 成功")
+                } else {
+                    failedParams.add(key)
+                }
+            } catch (e: Exception) {
+                failedParams.add(key)
+                Log.w(TAG, "[Huawei] Settings: 写入 $settingsKey 异常: ${e.message}")
+            }
+        }
+
+        if (appliedParams.isEmpty()) return null
+
+        return if (failedParams.isEmpty()) {
+            CameraApplyResult.Success(ApplyMethod.SYSTEM_SETTINGS, appliedParams)
+        } else {
+            CameraApplyResult.PartialSuccess(ApplyMethod.SYSTEM_SETTINGS, appliedParams, failedParams)
+        }
+    }
+
+    /**
+     * 通过 Huawei Camera Intent 启动专业模式并传递参数
+     */
+    private fun applyViaHuaweiIntent(params: Map<String, Any>): CameraApplyResult? {
+        // 尝试 1：Huawei 专业模式 Action
+        try {
+            val proIntent = Intent(HUAWEI_CAMERA_ACTION_PRO).apply {
+                setPackage(HUAWEI_CAMERA_PACKAGE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putParamsAsExtras(params)
+            }
+            if (context.packageManager.resolveActivity(proIntent, 0) != null) {
+                context.startActivity(proIntent)
+                Log.d(TAG, "[Huawei] Intent: Professional Mode Action 启动成功")
+                return CameraApplyResult.Success(ApplyMethod.CAMERA_INTENT, params)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Huawei] Intent: Professional Mode Action 失败: ${e.message}")
+        }
+
+        // 尝试 2：Huawei Camera launch intent
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(HUAWEI_CAMERA_PACKAGE)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.putExtra("mode", "professional")
+                launchIntent.putParamsAsExtras(params)
+                context.startActivity(launchIntent)
+                Log.d(TAG, "[Huawei] Intent: Huawei Camera launch 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("pro_mode_not_confirmed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Huawei] Intent: Huawei Camera launch 失败: ${e.message}")
+        }
+
+        // 尝试 3：标准相机 Intent
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    // ==================== OnePlus 专属应用 ====================
+
+    /**
+     * 通过 OnePlus Camera Intent 启动 Pro 模式并传递参数
+     */
+    private fun applyViaOnePlusIntent(params: Map<String, Any>): CameraApplyResult? {
+        // 尝试 1：OnePlus Pro Mode Action
+        try {
+            val proIntent = Intent(ONEPLUS_CAMERA_ACTION_PRO).apply {
+                setPackage(ONEPLUS_CAMERA_PACKAGE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putParamsAsExtras(params)
+            }
+            if (context.packageManager.resolveActivity(proIntent, 0) != null) {
+                context.startActivity(proIntent)
+                Log.d(TAG, "[OnePlus] Intent: Pro Mode Action 启动成功")
+                return CameraApplyResult.Success(ApplyMethod.CAMERA_INTENT, params)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[OnePlus] Intent: Pro Mode Action 失败: ${e.message}")
+        }
+
+        // 尝试 2：OnePlus Camera launch intent
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(ONEPLUS_CAMERA_PACKAGE)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.putExtra(ONEPLUS_KEY_PRO_MODE, true)
+                launchIntent.putParamsAsExtras(params)
+                context.startActivity(launchIntent)
+                Log.d(TAG, "[OnePlus] Intent: OnePlus Camera launch 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("pro_mode_not_confirmed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[OnePlus] Intent: OnePlus Camera launch 失败: ${e.message}")
+        }
+
+        // 尝试 3：回退到 OPPO 相机（OnePlus 与 OPPO 共享相机模块）
+        try {
+            val oppoLaunch = context.packageManager.getLaunchIntentForPackage(OPPO_CAMERA_PACKAGE)
+            if (oppoLaunch != null) {
+                oppoLaunch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                oppoLaunch.putStandardizedExtras(params)
+                context.startActivity(oppoLaunch)
+                Log.d(TAG, "[OnePlus] Intent: OPPO Camera launch 启动成功（共享相机模块）")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("oppo_camera_fallback")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[OnePlus] Intent: OPPO Camera launch 失败: ${e.message}")
+        }
+
+        // 尝试 4：标准相机 Intent
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    // ==================== vivo 专属应用 ====================
+
+    /**
+     * 通过 vivo Camera Intent 启动专业模式并传递参数
+     */
+    private fun applyViaVivoIntent(params: Map<String, Any>): CameraApplyResult? {
+        // 尝试 1：vivo 专业模式 Action
+        try {
+            val proIntent = Intent(VIVO_CAMERA_ACTION_PRO).apply {
+                setPackage(VIVO_CAMERA_PACKAGE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putParamsAsExtras(params)
+            }
+            if (context.packageManager.resolveActivity(proIntent, 0) != null) {
+                context.startActivity(proIntent)
+                Log.d(TAG, "[vivo] Intent: Professional Mode Action 启动成功")
+                return CameraApplyResult.Success(ApplyMethod.CAMERA_INTENT, params)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[vivo] Intent: Professional Mode Action 失败: ${e.message}")
+        }
+
+        // 尝试 2：vivo Camera launch intent
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(VIVO_CAMERA_PACKAGE)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.putExtra(VIVO_KEY_PRO_MODE, true)
+                launchIntent.putParamsAsExtras(params)
+                context.startActivity(launchIntent)
+                Log.d(TAG, "[vivo] Intent: vivo Camera launch 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("pro_mode_not_confirmed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[vivo] Intent: vivo Camera launch 失败: ${e.message}")
+        }
+
+        // 尝试 3：标准相机 Intent
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    // ==================== Google Pixel 专属应用 ====================
+
+    /**
+     * 通过 Google Camera Intent 启动并传递 Camera2 兼容参数
+     *
+     * Pixel 使用原生 Camera2 API，参数通过标准 Intent extras 传递。
+     */
+    private fun applyViaGoogleIntent(params: Map<String, Any>): CameraApplyResult? {
+        // 尝试 1：Google Camera with extras
+        try {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(GOOGLE_CAMERA_PACKAGE)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                // Camera2 API 兼容 extras
+                launchIntent.putParamsAsExtras(params)
+                // 附加 Camera2 风格的标准化 extras
+                params["iso"]?.let { launchIntent.putExtra("android.intent.extra.ISO", it.toString().toIntOrNull() ?: 100) }
+                params["whiteBalance"]?.let { launchIntent.putExtra("android.intent.extra.WHITE_BALANCE", it.toString().toIntOrNull() ?: 5500) }
+                params["exposureCompensation"]?.let {
+                    launchIntent.putExtra("android.intent.extra.EXPOSURE_COMPENSATION", it.toString().toFloatOrNull() ?: 0f)
+                }
+                context.startActivity(launchIntent)
+                Log.d(TAG, "[Google] Intent: Google Camera 启动成功")
+                return CameraApplyResult.PartialSuccess(
+                    ApplyMethod.CAMERA_INTENT, params,
+                    listOf("camera2_params_not_guaranteed")
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Google] Intent: Google Camera 启动失败: ${e.message}")
+        }
+
+        // 尝试 2：标准相机 Intent
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    // ==================== 通用相机 Intent ====================
+
+    /**
+     * 通用相机 Intent：使用标准 Android Action 启动相机并附加参数 extras
+     */
+    private fun applyViaGenericCameraIntent(params: Map<String, Any>): CameraApplyResult? {
+        return tryLaunchStandardCameraIntent(params)
+    }
+
+    /**
+     * 通用辅助方法：将参数 Map 写入 Intent extras
+     */
+    private fun Intent.putParamsAsExtras(params: Map<String, Any>) {
+        for ((key, value) in params) {
+            when (value) {
+                is Int -> putExtra(key, value)
+                is Float -> putExtra(key, value)
+                is Double -> putExtra(key, value)
+                is Long -> putExtra(key, value)
+                is String -> putExtra(key, value)
+                else -> putExtra(key, value.toString())
+            }
+        }
+    }
+
+    /**
+     * 通用辅助方法：尝试使用标准 ACTION_IMAGE_CAPTURE 启动相机
+     */
+    private fun tryLaunchStandardCameraIntent(params: Map<String, Any>): CameraApplyResult? {
+        return try {
+            val cameraIntent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putParamsAsExtras(params)
+            }
+            context.startActivity(cameraIntent)
+            Log.d(TAG, "Standard Camera Intent: 启动了标准相机应用")
+            CameraApplyResult.PartialSuccess(
+                ApplyMethod.CAMERA_INTENT,
+                emptyMap(),
+                params.keys.toList()
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Standard Camera Intent: 启动失败: ${e.message}")
+            null
         }
     }
 
