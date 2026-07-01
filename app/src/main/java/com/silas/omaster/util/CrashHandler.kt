@@ -25,6 +25,30 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     private var appContext: Context? = null
     private var installed: Boolean = false
 
+    /**
+     * 崩溃回调监听器列表（线程安全）
+     * 其他组件（如 CrashMonitorManager）可通过此接口接收崩溃事件，
+     * 避免多个组件争抢 Thread.setDefaultUncaughtExceptionHandler 导致覆盖。
+     */
+    private val crashListeners = java.util.concurrent.CopyOnWriteArrayList<CrashListener>()
+
+    /**
+     * 崩溃事件监听器
+     */
+    interface CrashListener {
+        fun onCrash(thread: Thread, throwable: Throwable, exceptionType: String)
+    }
+
+    fun addCrashListener(listener: CrashListener) {
+        if (!crashListeners.contains(listener)) {
+            crashListeners.add(listener)
+        }
+    }
+
+    fun removeCrashListener(listener: CrashListener) {
+        crashListeners.remove(listener)
+    }
+
     fun install(context: Context? = null) {
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         appContext = context?.applicationContext
@@ -70,6 +94,16 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             // 4. 持久化到文件（重要：让下次启动能读取）
             persistCrashReport(detailInfo, exceptionType)
 
+            // 5. 通知所有已注册的崩溃监听器（如 CrashMonitorManager）
+            // 逐个通知，单个监听器异常不影响其他监听器
+            for (listener in crashListeners) {
+                try {
+                    listener.onCrash(thread, throwable, exceptionType)
+                } catch (e: Throwable) {
+                    Log.e(TAG, "崩溃监听器 ${listener.javaClass.simpleName} 处理失败", e)
+                }
+            }
+
         } catch (e: Throwable) {
             // CrashHandler 本身绝不能再崩
             try {
@@ -79,7 +113,7 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
             }
         }
 
-        // 5. 委托给默认处理器（最终由系统决定是否退出）
+        // 6. 委托给默认处理器（最终由系统决定是否退出）
         // 注意：必须在 finally 之外，避免前序代码异常时跳过记录
         try {
             defaultHandler?.uncaughtException(thread, throwable)

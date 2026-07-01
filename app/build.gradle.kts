@@ -58,6 +58,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.sentry)
 }
 
 // ===== 安全配置读取 =====
@@ -74,6 +75,11 @@ val umengAppKey: String = localProperties.getProperty("UMENG_APPKEY")
     ?: ""
 val umengMessageSecret: String = localProperties.getProperty("UMENG_MESSAGE_SECRET")
     ?: project.findProperty("UMENG_MESSAGE_SECRET") as String?
+    ?: ""
+
+val sentryDsn: String = localProperties.getProperty("SENTRY_DSN")
+    ?: project.findProperty("SENTRY_DSN") as String?
+    ?: System.getenv("SENTRY_DSN")
     ?: ""
 
 if (umengAppKey.isEmpty()) {
@@ -145,6 +151,7 @@ android {
         buildConfigField("String", "UMENG_APPKEY", "\"${obfuscateXor(umengAppKey, obfuscationKey)}\"")
         buildConfigField("String", "UMENG_MESSAGE_SECRET", "\"${obfuscateXor(umengMessageSecret, obfuscationKey)}\"")
         buildConfigField("String", "OBFUSCATION_KEY", "\"$obfuscationKey\"")
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     // 签名配置
@@ -368,6 +375,25 @@ android {
         }
     }
 
+    // ===== Sentry 配置 =====
+    // 自动上传 ProGuard mapping 文件，关联版本和提交信息
+    // DSN 通过 BuildConfig 注入，支持 debug/release 不同 DSN
+    sentry {
+        // 自动上传 ProGuard/R8 mapping 文件
+        includeProguardMapping = true
+        // 自动上传源码包（用于反混淆堆栈跟踪）
+        includeSourceContext = true
+        // 自动关联 Git 提交信息
+        includeDependenciesReport = true
+        // 自动设置发布版本名
+        autoUploadProguardMapping = gradle.startParameter.taskNames.any { it.contains("Release") }
+        // 组织/项目标识（slug），用于在 Sentry 后台区分不同环境
+        org = "omaster"
+        projectName = "omaster-android"
+        // 调试/发布使用不同环境
+        debug = false
+    }
+
     // 打包配置
     packaging {
         // Android 16 (API 36) 要求支持 16KB 页对齐，避免运行时加载 .so 失败
@@ -467,6 +493,12 @@ dependencies {
 
     // WorkManager - 后台定期同步
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Sentry - 崩溃上报与性能监控
+    implementation(libs.sentry.android)
+
+    // LeakCanary - 内存泄漏检测（仅 Debug 构建）
+    debugImplementation(libs.leakcanary.android)
 
     // kotlinx-coroutines-play-services（为 ML Kit Task 提供 await()）
     implementation(libs.kotlinx.coroutines.play.services)

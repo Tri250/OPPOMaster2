@@ -361,6 +361,14 @@
 
 # 崩溃处理器（确保堆栈可追溯）
 -keep class com.silas.omaster.util.CrashHandler { *; }
+-keep class com.silas.omaster.util.CrashMonitorManager { *; }
+
+# Sentry 崩溃上报
+-keep class io.sentry.** { *; }
+-dontwarn io.sentry.**
+# 保留 Sentry 需要的行号信息
+-keepattributes LineNumberTable,SourceFile
+-keep class com.silas.omaster.util.CrashHandler$CrashListener { *; }
 
 # 安全加密工具
 -keep class com.silas.omaster.util.SecurityCrypto { *; }

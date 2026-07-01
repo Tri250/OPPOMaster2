@@ -13,7 +13,12 @@ import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.util.CrashHandler
 import com.silas.omaster.util.HapticSettings
 import com.silas.omaster.util.SecurityIntegrityChecker
+import com.silas.omaster.util.ANRWatchdog
+import com.silas.omaster.network.NetworkResilienceManager
 import com.silas.omaster.background.SyncWorker
+import io.sentry.Sentry
+import io.sentry.SentryLevel
+import io.sentry.android.core.SentryAndroid
 import com.umeng.commonsdk.UMConfigure
 import com.umeng.analytics.MobclickAgent
 import kotlinx.coroutines.CoroutineScope
@@ -196,6 +201,82 @@ class OMasterApplication : Application() {
             android.util.Log.e("OMasterApplication", "CrashHandler安装失败", e)
         }
         StartupLogger.logStep("CrashHandler安装", SystemClock.elapsedRealtime() - step2Start)
+
+        // 第 2.1 步: 初始化 Sentry 崩溃上报（必须紧接 CrashHandler 之后）
+        // 配置了 DSN 才初始化，未配置时静默跳过
+        val step2_1Start = SystemClock.elapsedRealtime()
+        try {
+            if (BuildConfig.SENTRY_DSN.isNotEmpty()) {
+                SentryAndroid.init(this) { options ->
+                    options.dsn = BuildConfig.SENTRY_DSN
+                    options.isEnableUserInteractionTracing = true
+                    options.tracesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.3
+                    options.profilesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.3
+                    // 设置环境标识
+                    options.environment = if (BuildConfig.DEBUG) "development" else "production"
+                    // 设置发布版本
+                    options.release = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
+                    // 在崩溃前添加面包屑（CrashHandler 的异常信息）
+                    options.beforeSend = { event, _ ->
+                        // 标记崩溃是否已被 CrashHandler 处理
+                        event.setTag("crash_handler_installed", CrashHandler.getInstance().isInstalled().toString())
+                        event
+                    }
+                }
+                android.util.Log.i("OMasterApplication", "Sentry 崩溃上报已初始化")
+            } else {
+                android.util.Log.d("OMasterApplication", "SENTRY_DSN 未配置，跳过 Sentry 初始化")
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "Sentry初始化失败", e)
+        }
+        StartupLogger.logStep("Sentry初始化", SystemClock.elapsedRealtime() - step2_1Start)
+
+        // 第 2.2 步: 启用 StrictMode 违规检测（仅 Debug 构建）
+        // 检测主线程磁盘 I/O、网络调用等，及早发现潜在 ANR 问题
+        if (BuildConfig.DEBUG) {
+            val step2_2Start = SystemClock.elapsedRealtime()
+            try {
+                android.os.StrictMode.setThreadPolicy(
+                    android.os.StrictMode.ThreadPolicy.Builder()
+                        .detectDiskReads()
+                        .detectDiskWrites()
+                        .detectNetwork()
+                        .penaltyLog()
+                        .build()
+                )
+                android.os.StrictMode.setVmPolicy(
+                    android.os.StrictMode.VmPolicy.Builder()
+                        .detectLeakedSqlLiteObjects()
+                        .detectLeakedClosableObjects()
+                        .detectActivityLeaks()
+                        .detectLeakedRegistrationObjects()
+                        .penaltyLog()
+                        .build()
+                )
+            } catch (e: Throwable) {
+                android.util.Log.e("OMasterApplication", "StrictMode设置失败", e)
+            }
+            StartupLogger.logStep("StrictMode设置", SystemClock.elapsedRealtime() - step2_2Start)
+        }
+
+        // 第 2.3 步: 安装 ANR 看门狗
+        val step2_3Start = SystemClock.elapsedRealtime()
+        try {
+            ANRWatchdog.install()
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "ANRWatchdog安装失败", e)
+        }
+        StartupLogger.logStep("ANRWatchdog安装", SystemClock.elapsedRealtime() - step2_3Start)
+
+        // 第 2.4 步: 初始化网络韧性管理器
+        val step2_4Start = SystemClock.elapsedRealtime()
+        try {
+            NetworkResilienceManager.init(applicationContext)
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "NetworkResilienceManager初始化失败", e)
+        }
+        StartupLogger.logStep("NetworkResilienceManager初始化", SystemClock.elapsedRealtime() - step2_4Start)
 
         // 第 2.5 步: 安全完整性检查（Release 构建中执行，Debug 跳过）
         // 检测 Root/模拟器/Hook/调试器，异常环境记录告警但不阻断启动
@@ -456,6 +537,13 @@ class OMasterApplication : Application() {
             android.util.Log.i("OMasterApplication", "SettingsManager 已关闭")
         } catch (e: Exception) {
             android.util.Log.e("OMasterApplication", "关闭 SettingsManager 失败", e)
+        }
+
+        // 卸载 ANR 看门狗
+        try {
+            ANRWatchdog.uninstall()
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "ANRWatchdog卸载失败", e)
         }
 
         // 注意：GPURenderManager 由具体页面通过 acquire/release 管理引用计数，

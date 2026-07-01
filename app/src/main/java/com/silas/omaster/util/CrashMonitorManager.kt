@@ -31,10 +31,11 @@ import java.util.Locale
  * - 崩溃统计分析
  * - 可选的线上崩溃上报
  * - 崩溃报告生成
+ * - 与 CrashHandler 通过 CrashListener 接口协作，避免双重注册冲突
  *
  * 注意：上报功能需要配置上报URL，默认仅本地存储
  */
-object CrashMonitorManager {
+object CrashMonitorManager : CrashHandler.CrashListener {
 
     private const val TAG = "CrashMonitor"
     private const val CRASH_LOG_DIR = "crash_logs"
@@ -74,6 +75,7 @@ object CrashMonitorManager {
 
     /**
      * 初始化崩溃监控
+     * 不再独立设置 UncaughtExceptionHandler，而是通过 CrashHandler.CrashListener 接口注册
      */
     fun init(
         context: Context,
@@ -93,7 +95,8 @@ object CrashMonitorManager {
             append("Hardware: ").append(android.os.Build.HARDWARE)
         }
 
-        initCrashHandler()
+        // 注册为 CrashHandler 的监听器，避免双重注册 UncaughtExceptionHandler
+        CrashHandler.getInstance().addCrashListener(this)
 
         // 统计已有的崩溃数
         scope.launch {
@@ -105,14 +108,11 @@ object CrashMonitorManager {
     }
 
     /**
-     * 初始化崩溃处理器（作为CrashHandler的补充）
+     * CrashHandler.CrashListener 实现
+     * 当 CrashHandler 捕获到未处理异常时回调
      */
-    private fun initCrashHandler() {
-        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            handleUncaughtException(thread, throwable)
-            defaultHandler?.uncaughtException(thread, throwable)
-        }
+    override fun onCrash(thread: Thread, throwable: Throwable, exceptionType: String) {
+        handleUncaughtException(thread, throwable)
     }
 
     /**
