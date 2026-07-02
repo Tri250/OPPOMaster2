@@ -293,8 +293,7 @@ class BatchProcessingManager(
     }
 
     /**
-     * 加载图片 - 使用单一字节数组流避免重复打开资源。
-     * 低内存设备自动降级分辨率，防止 OOM。
+     * 加载图片 - 使用单一字节数组流避免重复打开资源
      */
     private fun loadBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
@@ -309,41 +308,16 @@ class BatchProcessingManager(
             }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
 
-            // 使用自适应最大尺寸（低内存设备降级）
-            val maxDim = adaptiveMaxDimension
             // 计算采样率
             options.inSampleSize = calculateSampleSize(
                 options.outWidth, options.outHeight,
-                maxDim, maxDim
+                EXPORT_MAX_DIMENSION, EXPORT_MAX_DIMENSION
             )
             options.inJustDecodeBounds = false
             options.inPreferredConfig = Bitmap.Config.RGB_565
 
             // 第二次解码：使用同一字节数组实际解码
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-        } catch (e: OutOfMemoryError) {
-            Log.e(TAG, "加载图片 OOM: ${e.message}, 尝试再次降级", e)
-            System.gc()
-            // OOM 时再次降级到 1/4 分辨率
-            try {
-                val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.readBytes()
-                } ?: return null
-                val options = BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true
-                }
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                options.inSampleSize = calculateSampleSize(
-                    options.outWidth, options.outHeight,
-                    LOW_MEM_DIMENSION / 2, LOW_MEM_DIMENSION / 2
-                ).coerceAtLeast(4)
-                options.inJustDecodeBounds = false
-                options.inPreferredConfig = Bitmap.Config.RGB_565
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-            } catch (e2: Exception) {
-                Log.e(TAG, "加载图片降级也失败: ${e2.message}", e2)
-                null
-            }
         } catch (e: Exception) {
             Log.e(TAG, "加载图片失败: ${e.message}", e)
             null
