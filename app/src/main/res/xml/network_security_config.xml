@@ -31,6 +31,11 @@
             <!-- Google Trust Services GTS Root R1 备用 -->
             <pin digest="SHA-256">hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc=</pin>
         </pin-set>
+        <!-- 信任用户安装的证书（兼容代理/VPN环境） -->
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
     </domain-config>
 
     <!-- Debug 模式信任用户证书（仅在 debug build 中生效） -->

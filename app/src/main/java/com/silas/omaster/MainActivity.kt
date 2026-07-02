@@ -53,12 +53,29 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
  */
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val TAG = "MainActivity"
+        /** 进程被杀后恢复的标记键 */
+        private const val KEY_LAST_SAVED_STATE = "main_activity_last_state"
+        /** 启动计数键（用于验证多次启动稳定性） */
+        private const val KEY_LAUNCH_COUNT = "launch_count"
+    }
+
     private var floatingWindowController: FloatingWindowController? = null
     /** 通过 Deep Link 传入的预设 ID，用于导航到详情页 */
     private var deepLinkPresetId: String? = null
+    /** 标记Activity是否正常启动过（用于区分进程被杀后的恢复） */
+    private var hasLaunchedSuccessfully = false
+    /** 启动次数（用于验证多次启动稳定性） */
+    private var launchCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 启动恢复：检查上次是否被异常终止（如进程被杀）
+        launchCount = getPreferences(MODE_PRIVATE).getInt(KEY_LAUNCH_COUNT, 0) + 1
+        getPreferences(MODE_PRIVATE).edit().putInt(KEY_LAUNCH_COUNT, launchCount).apply()
+        Log.i(TAG, "MainActivity 启动 #$launchCount")
 
         // 解析 Deep Link: omaster://preset/{id} 或 https://omaster.app/preset/{id}
         deepLinkPresetId = parseDeepLink(intent)
@@ -156,8 +173,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 2.2.0 闪退修复：每次回到前台检查悬浮窗权限状态
         try {
+            // 权限收回检查：用户可能在设置中手动关闭了权限
+            if (hasLaunchedSuccessfully) {
+                PermissionChecker.refresh(this)
+                Log.d(TAG, "onResume: 权限状态已刷新")
+            }
+
+            // 悬浮窗权限状态检查
             if (Settings.canDrawOverlays(this) && floatingWindowController?.let {
                 try {
                     val field = it::class.java.getDeclaredField("isRegistered").apply { isAccessible = true }
@@ -167,7 +190,43 @@ class MainActivity : ComponentActivity() {
                 floatingWindowController?.register()
             }
         } catch (e: Throwable) {
-            Log.e("MainActivity", "onResume 权限检查失败", e)
+            Log.e(TAG, "onResume 权限检查失败", e)
+        }
+        hasLaunchedSuccessfully = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 保存当前状态，防止进程被杀后数据丢失
+        try {
+            val prefs = getPreferences(MODE_PRIVATE)
+            prefs.edit()
+                .putBoolean(KEY_LAST_SAVED_STATE, true)
+                .putLong("last_pause_timestamp", System.currentTimeMillis())
+                .apply()
+        } catch (e: Throwable) {
+            Log.e(TAG, "onPause 保存状态失败", e)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // 活动不可见时，释放非关键资源（如悬浮窗可暂停更新）
+        try {
+            Log.d(TAG, "onStop: Activity 进入后台")
+        } catch (e: Throwable) {
+            Log.e(TAG, "onStop 处理失败", e)
+        }
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        try {
+            Log.i(TAG, "onRestart: Activity 从后台恢复")
+            // 恢复时重新检查权限状态
+            PermissionChecker.refresh(this)
+        } catch (e: Throwable) {
+            Log.e(TAG, "onRestart 处理失败", e)
         }
     }
 

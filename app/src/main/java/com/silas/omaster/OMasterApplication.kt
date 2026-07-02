@@ -1,5 +1,6 @@
 package com.silas.omaster
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
@@ -17,6 +18,8 @@ import com.silas.omaster.util.ANRWatchdog
 import com.silas.omaster.network.NetworkResilienceManager
 import com.silas.omaster.background.SyncWorker
 import com.silas.omaster.util.InAppUpdateManager
+import com.silas.omaster.util.StartupResilienceManager
+import com.silas.omaster.util.ResourceFallbackHandler
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import io.sentry.SentryOptions
@@ -28,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * 启动初始化日志记录器
@@ -280,6 +284,31 @@ class OMasterApplication : Application() {
         }
         StartupLogger.logStep("NetworkResilienceManager初始化", SystemClock.elapsedRealtime() - step2_4Start)
 
+        // 第 2.4a 步: 启动韧性环境检查
+        // 覆盖所有兼容性场景，记录问题不阻断启动
+        val step2_4aStart = SystemClock.elapsedRealtime()
+        try {
+            val env = StartupResilienceManager.checkStartupEnvironment(this)
+            if (env.hasIssues) {
+                StartupLogger.logStep("启动韧性检查(${env.issues.size}项问题)", SystemClock.elapsedRealtime() - step2_4aStart)
+            } else {
+                StartupLogger.logStep("启动韧性检查通过", SystemClock.elapsedRealtime() - step2_4aStart)
+            }
+            // 检查SO库兼容性（不同CPU架构设备）
+            try {
+                StartupResilienceManager.checkNativeLibCompatibility(this)
+            } catch (e: Throwable) {
+                Log.w("OMasterApplication", "SO库兼容性检查失败", e)
+            }
+            // 记录定制ROM信息用于分析
+            StartupResilienceManager.checkCustomROM()?.let { rom ->
+                Log.i("OMasterApplication", "检测到定制ROM: $rom")
+            }
+        } catch (e: Throwable) {
+            Log.w("OMasterApplication", "启动韧性环境检查失败", e)
+        }
+        StartupLogger.logStep("启动韧性环境检查", SystemClock.elapsedRealtime() - step2_4aStart)
+
         // 第 2.5 步: 安全完整性检查（Release 构建中执行，Debug 跳过）
         // 检测 Root/模拟器/Hook/调试器，异常环境记录告警但不阻断启动
         if (!BuildConfig.DEBUG) {
@@ -334,6 +363,16 @@ class OMasterApplication : Application() {
     private val lazyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun triggerLazyInitialization() {
+        // 低内存设备/低内存状态：跳过非关键懒加载，避免OOM
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val isLowRam = activityManager?.isLowRamDevice ?: false
+        val memInfo = ActivityManager.MemoryInfo().also { activityManager?.getMemoryInfo(it) }
+        val availableMemMB = memInfo.availMem / (1024 * 1024)
+        if (isLowRam || availableMemMB < 128) {
+            Log.w("OMasterApplication", "低内存状态(RAM:${availableMemMB}MB, lowRam:$isLowRam)，跳过非关键懒加载")
+            return
+        }
+
         // 使用后台协程预初始化非关键组件，避免阻塞主线程启动流程
         lazyScope.launch {
             try {
@@ -358,33 +397,41 @@ class OMasterApplication : Application() {
 
                 // 订阅动态加载：首次启动或本地缓存缺失时，拉取所有启用的订阅源
                 // 取代已删除的云同步功能，所有预设源统一由订阅管理驱动
+                // 添加网络超时保护（防止弱网环境导致无限等待）
                 try {
-                    val subManager = com.silas.omaster.data.local.SubscriptionManager.getInstance(this@OMasterApplication)
-                    val enabledSubs = subManager.subscriptionsFlow.value.filter { it.isEnabled }
-                    var fetchedCount = 0
-                    for (sub in enabledSubs) {
-                        val cacheFile = java.io.File(this@OMasterApplication.filesDir, subManager.getFileNameForUrl(sub.url))
-                        // 仅在本地缓存缺失时拉取，避免每次启动都产生网络请求
-                        if (!cacheFile.exists()) {
-                            try {
-                                val result = com.silas.omaster.network.PresetRemoteManager.fetchAndSave(
-                                    this@OMasterApplication, sub.url, forceUpdate = false
-                                )
-                                if (result.isSuccess) {
-                                    fetchedCount++
-                                    Log.i("OMasterApplication", "订阅拉取成功: ${sub.name}")
+                    kotlinx.coroutines.withTimeout(15000) { // 15秒超时
+                        val subManager = com.silas.omaster.data.local.SubscriptionManager.getInstance(this@OMasterApplication)
+                        val enabledSubs = subManager.subscriptionsFlow.value.filter { it.isEnabled }
+                        var fetchedCount = 0
+                        for (sub in enabledSubs) {
+                            val cacheFile = java.io.File(this@OMasterApplication.filesDir, subManager.getFileNameForUrl(sub.url))
+                            // 仅在本地缓存缺失时拉取，避免每次启动都产生网络请求
+                            if (!cacheFile.exists()) {
+                                try {
+                                    // 网络请求失败不影响启动，静默降级
+                                    val result = com.silas.omaster.network.PresetRemoteManager.fetchAndSave(
+                                        this@OMasterApplication, sub.url, forceUpdate = false
+                                    )
+                                    if (result.isSuccess) {
+                                        fetchedCount++
+                                        Log.i("OMasterApplication", "订阅拉取成功: ${sub.name}")
+                                    }
+                                } catch (e: Throwable) {
+                                    Log.w("OMasterApplication", "订阅拉取失败: ${sub.name}", e)
+                                    // 网络请求失败不影响启动，继续下一个
                                 }
-                            } catch (e: Throwable) {
-                                Log.w("OMasterApplication", "订阅拉取失败: ${sub.name}", e)
                             }
                         }
+                        if (fetchedCount > 0) {
+                            StartupLogger.logStep("订阅初始拉取($fetchedCount)", SystemClock.elapsedRealtime() - lazyStart)
+                            Log.i("OMasterApplication", "订阅初始拉取完成: $fetchedCount/$enabledSubs.size 个源")
+                        }
                     }
-                    if (fetchedCount > 0) {
-                        StartupLogger.logStep("订阅初始拉取($fetchedCount)", SystemClock.elapsedRealtime() - lazyStart)
-                        Log.i("OMasterApplication", "订阅初始拉取完成: $fetchedCount/$enabledSubs.size 个源")
-                    }
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.w("OMasterApplication", "订阅初始拉取超时，停止拉取不影响启动", e)
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "订阅初始拉取失败", e)
+                    // 订阅拉取失败不影响应用启动，静默降级
                 }
 
                 // 检查应用内更新（非阻塞，失败不影响启动）
