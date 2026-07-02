@@ -383,20 +383,8 @@
 -keep class com.silas.omaster.video.VideoFilterEngine$ProcessProgress { *; }
 -keep class com.silas.omaster.video.VideoFilterEngine$ProcessResult { *; }
 
-# ========================================
-# R8 优化增强配置
-# ========================================
-# 允许访问修改（优化调用）
--allowaccessmodification
-
-# 合并相同的类（减少体积）
--mergeinterfacesaggressively
-
-# 优化次数（平衡体积和稳定性）
--optimizationpasses 5
-
-# 启用类合并优化
--optimizations class/marking/*
+# 注意：R8 优化配置已在上方"P2-12 修复"段落统一管理
+# 此处不再重复声明，避免 -optimizationpasses / -mergeinterfacesaggressively 冲突
 
 # ========================================
 # 资源压缩 keep 规则

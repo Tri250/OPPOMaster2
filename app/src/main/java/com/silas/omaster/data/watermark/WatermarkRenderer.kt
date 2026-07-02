@@ -182,8 +182,7 @@ object WatermarkRenderer {
      *
      * @param bitmap 原始图片（不会被修改）
      * @param config XPAN 水印配置
-     * @param brandConfig 可选的品牌水印配置，同时启用时在/**
-     * 渲染 XPAN 宽幅水印
+     * @param brandConfig 可选的品牌水印配置，同时启用时在XPAN画布上渲染品牌水印
      */
     private fun renderXpanWatermark(bitmap: Bitmap, config: WatermarkConfig, brandConfig: WatermarkConfig?): Bitmap {
         // ST-WATERMARK-02: 防御性检查超大bitmap防止OOM

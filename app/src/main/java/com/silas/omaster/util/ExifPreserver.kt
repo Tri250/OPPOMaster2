@@ -60,7 +60,7 @@ object ExifPreserver {
         if (!customDeviceModel.isNullOrBlank()) {
             // ST-DEVICE-02: 截断超长型号并过滤非法字符，防止EXIF写入失败或DB字段溢出
             val safeModel = customDeviceModel
-                .replace(Regex("[\x00-\x1F\\x7F]"), "") // 过滤控制字符
+                .replace(Regex("[\\u0000-\\u001F\\u007F]"), "") // 过滤控制字符
                 .take(100) // EXIF MODEL标签通常限制在32-128字节，100字符安全上限
             exifAttributes[ExifInterface.TAG_MODEL] = safeModel
             // 从自定义型号提取厂商部分（如 "Hasselblad 907X" → "Hasselblad"）

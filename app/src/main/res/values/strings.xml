@@ -700,10 +700,7 @@
 
     <!-- 参数微调 -->
     <string name="param_fine_tune">参数微调</string>
-    <string name="param_exposure">曝光</string>
-    <string name="param_color_temp">色温</string>
     <string name="param_contrast">对比度</string>
-    <string name="param_saturation">饱和度</string>
     <string name="param_save_copy">保存副本</string>
     <string name="param_reset">重置</string>
     <string name="param_copy_saved">副本已保存</string>

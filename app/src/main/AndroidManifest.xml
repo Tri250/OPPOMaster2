@@ -91,7 +91,6 @@
         android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:resizeableActivity="true"
-        android:pageAlignment="none"
         tools:targetApi="36">
 
         <!-- App Shortcuts (Android 7.1+) - 提供相机快捷入口 -->

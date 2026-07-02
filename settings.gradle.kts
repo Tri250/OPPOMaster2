@@ -1,6 +1,6 @@
-// settings.ci.gradle.kts - CI 专用配置
-// 使用本地 Maven 仓库 + 阿里云镜像，CI 环境无需代理
-// 更新时间: 2026-06-22
+// settings.gradle.kts - CI 专用配置
+// 使用本地 Maven 仓库 + 阿里云镜像，CI 环境通过代理访问
+// 更新时间: 2026-07-02
 
 pluginManagement {
     repositories {

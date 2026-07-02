@@ -724,9 +724,10 @@ fun HasselbladScreen(
                     },
                     onHncsABCompare = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        val source = originalBitmap ?: return@Unit
-                        viewModel.generateHncsABComparison(source)
-                        showHncsABCompare = true
+                        originalBitmap?.let { source ->
+                            viewModel.generateHncsABComparison(source)
+                            showHncsABCompare = true
+                        }
                     }
                 )
 
@@ -1660,8 +1661,8 @@ private fun ParamsPanel(
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = HasselbladOrange,
                     checkedTrackColor = HasselbladOrange.copy(alpha = 0.5f),
-                    disabledThumbColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                    disabledTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                    disabledCheckedThumbColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                    disabledCheckedTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                 )
             )
         }

@@ -341,11 +341,13 @@ fun AIFineTuneScreen(
                 },
                 onAI = { viewModel.performAIInference(sourceBitmap) },
                 onApplyFineTune = {
-                    val success = viewModel.applyFineTune(sourceBitmap)
-                    if (success) {
-                        Toast.makeText(context, "AI 微调已应用", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "AI 微调应用失败", Toast.LENGTH_SHORT).show()
+                    scope.launch {
+                        val success = viewModel.applyFineTune(sourceBitmap)
+                        if (success) {
+                            Toast.makeText(context, "AI 微调已应用", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "AI 微调应用失败", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
                 onExport = {

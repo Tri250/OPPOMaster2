@@ -640,7 +640,7 @@ class AIFineTuneViewModel(
      * 应用 AI 微调参数到当前预设。
      * AI 不可用时返回 false 并设置错误状态。
      */
-    fun applyFineTune(bitmap: Bitmap?): Boolean {
+    suspend fun applyFineTune(bitmap: Bitmap?): Boolean {
         if (bitmap == null) return false
 
         val inferenceEngine = aiManager.getInferenceEngine()

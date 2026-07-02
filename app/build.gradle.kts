@@ -132,11 +132,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v2.2.8
+        // 当前版本: v2.3.0
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 2.2.8 → 2*10000 + 2*100 + 8 = 20208
-        versionCode = 20208
-        versionName = "2.2.8"
+        // 2.3.0 → 2*10000 + 3*100 + 0 = 20300
+        versionCode = 20300
+        versionName = "2.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -414,6 +414,9 @@ android {
     // ===== 排除 Web 前端资源，防止打包进 APK =====
     // 项目根目录存在 React/Vite Web 项目（src/、public/、index.html 等）
     // 这些文件不属于 Android 模块，必须显式排除
+    sourceSets["main"].java.setSrcDirs(
+        listOf(file("src/main/java"), file("src/main/kotlin"))
+    )
     sourceSets["main"].assets.setSrcDirs(
         listOf(file("src/main/assets"))
     )
