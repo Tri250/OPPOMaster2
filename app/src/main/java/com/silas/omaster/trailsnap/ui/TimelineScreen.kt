@@ -1,0 +1,201 @@
+package com.silas.omaster.trailsnap.ui
+
+import android.content.Intent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import coil.compose.AsyncImage
+import com.silas.omaster.trailsnap.data.TrailSnapRepository
+import com.silas.omaster.trailsnap.model.MediaType
+import com.silas.omaster.trailsnap.model.TimelineSection
+import com.silas.omaster.trailsnap.model.TrailPhoto
+import com.silas.omaster.ui.theme.HasselbladOrange
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+@Composable
+fun TimelineScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val repository = remember { TrailSnapRepository.getInstance(context) }
+    val photos by repository.photos.collectAsState()
+    val sections = remember(photos) { repository.getTimelineSections() }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        TrailSnapTopBar(title = "时间轴", onBack = onBack)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            sections.forEach { section ->
+                item {
+                    TimelineDateHeader(date = section.date.format(DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE", Locale.CHINESE)))
+                }
+                items(section.photos.chunked(3)) { rowPhotos ->
+                    TimelinePhotoRow(
+                        photos = rowPhotos,
+                        onToggleFavorite = { photoId ->
+                            val ok = repository.toggleFavorite(photoId)
+                            val photo = repository.getPhotoById(photoId)
+                            if (ok && photo != null) {
+                                Toast.makeText(
+                                    context,
+                                    if (photo.isFavorite) "已取消收藏" else "已收藏",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineDateHeader(date: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(HasselbladOrange)
+        )
+        Spacer(modifier = Modifier.size(10.dp))
+        Text(
+            text = date,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+private fun TimelinePhotoRow(
+    photos: List<TrailPhoto>,
+    onToggleFavorite: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        photos.forEach { photo ->
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.96f else 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                label = "timeline_photo_scale"
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .scale(scale)
+                    .height(112.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                            if (photo.uri != null) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                openPhotoViewer(context, photo)
+                            }
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = photo.thumbnailUri ?: photo.uri,
+                    contentDescription = photo.filename,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                if (photo.mediaType == MediaType.VIDEO) {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = "视频",
+                        tint = HasselbladOrange,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // 收藏按钮
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleFavorite(photo.id)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (photo.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (photo.isFavorite) "已收藏" else "收藏",
+                        tint = if (photo.isFavorite) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+        repeat(3 - photos.size) {
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}

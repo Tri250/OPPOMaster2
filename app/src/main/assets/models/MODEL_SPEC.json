@@ -1,0 +1,929 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omaster.app/schemas/model_spec.json",
+  "version": "2.2.1",
+  "lastUpdated": "2026-07-01",
+  "description": "OMaster TFLite 模型规格配置文件",
+  "models": {
+    "scene_classifier": {
+      "fileName": "scene_classifier.tflite",
+      "displayName": "场景分类模型",
+      "description": "基于 MobileNetV3-Small 的 36 类场景分类模型",
+      "version": "2.2.1",
+      "status": "placeholder",
+      "architecture": {
+        "type": "MobileNetV3-Small",
+        "framework": "TensorFlow 2.14",
+        "inputSize": 224,
+        "numClasses": 36,
+        "parameters": 2542856,
+        "flops": 56595904
+      },
+      "input": {
+        "name": "input",
+        "dataType": "FLOAT32",
+        "shape": [1, 224, 224, 3],
+        "format": "RGB",
+        "normalization": {
+          "type": "min-max",
+          "range": [0, 1],
+          "mean": [0.485, 0.456, 0.406],
+          "std": [0.229, 0.224, 0.225]
+        },
+        "preprocessing": {
+          "resizeMethod": "bilinear",
+          "maintainAspectRatio": true,
+          "padding": "reflect"
+        }
+      },
+      "output": {
+        "name": "output",
+        "dataType": "FLOAT32",
+        "shape": [1, 36],
+        "format": "softmax_probabilities",
+        "range": [0.0, 1.0],
+        "classes": [
+          {
+            "id": 0,
+            "name": "landscape",
+            "displayName": "风景",
+            "description": "自然风光、山川河流"
+          },
+          {
+            "id": 1,
+            "name": "portrait",
+            "displayName": "人像",
+            "description": "人物特写、半身照"
+          },
+          {
+            "id": 2,
+            "name": "night",
+            "displayName": "夜景",
+            "description": "夜间场景、城市夜景"
+          },
+          {
+            "id": 3,
+            "name": "food",
+            "displayName": "美食",
+            "description": "菜肴、饮品"
+          },
+          {
+            "id": 4,
+            "name": "street",
+            "displayName": "街拍",
+            "description": "街头摄影、城市街景"
+          },
+          {
+            "id": 5,
+            "name": "architecture",
+            "displayName": "建筑",
+            "description": "建筑物、城市天际线"
+          },
+          {
+            "id": 6,
+            "name": "pet",
+            "displayName": "宠物",
+            "description": "猫、狗等宠物"
+          },
+          {
+            "id": 7,
+            "name": "snow",
+            "displayName": "雪景",
+            "description": "雪地、冬季场景"
+          },
+          {
+            "id": 8,
+            "name": "beach",
+            "displayName": "海滩",
+            "description": "海边、沙滩"
+          },
+          {
+            "id": 9,
+            "name": "sunset",
+            "displayName": "日落",
+            "description": "黄昏、日出日落"
+          },
+          {
+            "id": 10,
+            "name": "flower",
+            "displayName": "花卉",
+            "description": "花朵、植物特写"
+          },
+          {
+            "id": 11,
+            "name": "forest",
+            "displayName": "森林",
+            "description": "树林、丛林"
+          },
+          {
+            "id": 12,
+            "name": "mountain",
+            "displayName": "山脉",
+            "description": "山峰、山景"
+          },
+          {
+            "id": 13,
+            "name": "water",
+            "displayName": "水景",
+            "description": "湖泊、河流、瀑布"
+          },
+          {
+            "id": 14,
+            "name": "city",
+            "displayName": "城市",
+            "description": "城市景观、街道"
+          },
+          {
+            "id": 15,
+            "name": "indoor",
+            "displayName": "室内",
+            "description": "室内场景、房间"
+          },
+          {
+            "id": 16,
+            "name": "sky",
+            "displayName": "天空",
+            "description": "天空特写、云彩"
+          },
+          {
+            "id": 17,
+            "name": "macro",
+            "displayName": "微距",
+            "description": "微距摄影、细节特写"
+          },
+          {
+            "id": 18,
+            "name": "sports",
+            "displayName": "运动",
+            "description": "运动场景、动态"
+          },
+          {
+            "id": 19,
+            "name": "document",
+            "displayName": "文档",
+            "description": "文档、文字"
+          },
+          {
+            "id": 20,
+            "name": "product",
+            "displayName": "产品",
+            "description": "商品、静物"
+          },
+          {
+            "id": 21,
+            "name": "wedding",
+            "displayName": "婚礼",
+            "description": "婚礼场景"
+          },
+          {
+            "id": 22,
+            "name": "children",
+            "displayName": "儿童",
+            "description": "儿童摄影"
+          },
+          {
+            "id": 23,
+            "name": "group",
+            "displayName": "群体",
+            "description": "多人合影"
+          },
+          {
+            "id": 24,
+            "name": "backlight",
+            "displayName": "逆光",
+            "description": "逆光场景"
+          },
+          {
+            "id": 25,
+            "name": "cloudy",
+            "displayName": "阴天",
+            "description": "阴天、多云"
+          },
+          {
+            "id": 26,
+            "name": "sunny",
+            "displayName": "晴天",
+            "description": "晴朗天气"
+          },
+          {
+            "id": 27,
+            "name": "rainy",
+            "displayName": "雨天",
+            "description": "雨天场景"
+          },
+          {
+            "id": 28,
+            "name": "autumn",
+            "displayName": "秋景",
+            "description": "秋季景色"
+          },
+          {
+            "id": 29,
+            "name": "spring",
+            "displayName": "春景",
+            "description": "春季景色"
+          },
+          {
+            "id": 30,
+            "name": "summer",
+            "displayName": "夏景",
+            "description": "夏季景色"
+          },
+          {
+            "id": 31,
+            "name": "winter",
+            "displayName": "冬景",
+            "description": "冬季景色"
+          },
+          {
+            "id": 32,
+            "name": "abstract",
+            "displayName": "抽象",
+            "description": "抽象艺术"
+          },
+          {
+            "id": 33,
+            "name": "bw",
+            "displayName": "黑白",
+            "description": "黑白摄影"
+          },
+          {
+            "id": 34,
+            "name": "vintage",
+            "displayName": "复古",
+            "description": "复古风格"
+          },
+          {
+            "id": 35,
+            "name": "other",
+            "displayName": "其他",
+            "description": "未分类场景"
+          }
+        ]
+      },
+      "quantization": {
+        "type": "INT8",
+        "method": "full_integer_quantization",
+        "optimizationLevel": "optimal",
+        "representativeDatasetSize": 500,
+        "inputQuantization": {
+          "scale": 0.007843137,
+          "zeroPoint": -1
+        },
+        "outputQuantization": {
+          "scale": 0.003921569,
+          "zeroPoint": 0
+        }
+      },
+      "performance": {
+        "fileSize": {
+          "value": 700,
+          "unit": "KB"
+        },
+        "inferenceTime": {
+          "cpu": {
+            "min": 15,
+            "max": 30,
+            "unit": "ms",
+            "device": "Pixel 6"
+          },
+          "gpu": {
+            "min": 5,
+            "max": 10,
+            "unit": "ms",
+            "device": "Pixel 6"
+          },
+          "nnapi": {
+            "min": 8,
+            "max": 15,
+            "unit": "ms",
+            "device": "Pixel 6"
+          }
+        },
+        "memoryUsage": {
+          "modelLoad": {
+            "value": 2.5,
+            "unit": "MB"
+          },
+          "inference": {
+            "value": 8,
+            "unit": "MB"
+          }
+        },
+        "accuracy": {
+          "top1": 0.892,
+          "top5": 0.976,
+          "dataset": "validation_set_5000"
+        }
+      },
+      "training": {
+        "baseModel": "MobileNetV3-Small (ImageNet-1K pretrained)",
+        "framework": "TensorFlow 2.14",
+        "dataset": {
+          "name": "OMaster Scene Classification Dataset",
+          "trainSize": 50000,
+          "validationSize": 5000,
+          "testSize": 5000,
+          "augmentation": [
+            "random_crop",
+            "color_jitter",
+            "horizontal_flip",
+            "rotation_15"
+          ]
+        },
+        "hyperparameters": {
+          "batchSize": 32,
+          "epochs": 50,
+          "learningRate": 0.001,
+          "optimizer": "Adam",
+          "loss": "categorical_crossentropy"
+        }
+      },
+      "compatibility": {
+        "minTFLiteVersion": "2.10.0",
+        "recommendedTFLiteVersion": "2.14.0",
+        "minAndroidAPI": 23,
+        "recommendedAndroidAPI": 27,
+        "supportedDelegates": ["GPU", "NNAPI", "XNNPACK"]
+      }
+    },
+    "quality_analyzer": {
+      "fileName": "quality_analyzer.tflite",
+      "displayName": "图像质量分析模型",
+      "description": "基于 NIMA 变体的图像质量评估模型",
+      "version": "2.2.1",
+      "status": "placeholder",
+      "architecture": {
+        "type": "NIMA-MobileNetV2",
+        "framework": "TensorFlow 2.14",
+        "inputSize": 224,
+        "outputDimensions": 4,
+        "parameters": 2351248,
+        "flops": 42895616
+      },
+      "input": {
+        "name": "input",
+        "dataType": "FLOAT32",
+        "shape": [1, 224, 224, 3],
+        "format": "RGB",
+        "normalization": {
+          "type": "min-max",
+          "range": [0, 1],
+          "mean": [0.485, 0.456, 0.406],
+          "std": [0.229, 0.224, 0.225]
+        },
+        "preprocessing": {
+          "resizeMethod": "bilinear",
+          "maintainAspectRatio": true,
+          "padding": "reflect"
+        }
+      },
+      "output": {
+        "name": "output",
+        "dataType": "FLOAT32",
+        "shape": [1, 4],
+        "format": "quality_scores",
+        "range": [0.0, 1.0],
+        "metrics": [
+          {
+            "id": 0,
+            "name": "brightness",
+            "displayName": "亮度评分",
+            "description": "图像整体亮度质量",
+            "optimalRange": [0.4, 0.6],
+            "interpretation": {
+              "low": "过暗或过亮",
+              "medium": "亮度适中",
+              "high": "理想亮度"
+            }
+          },
+          {
+            "id": 1,
+            "name": "contrast",
+            "displayName": "对比度评分",
+            "description": "图像对比度质量",
+            "optimalRange": [0.6, 1.0],
+            "interpretation": {
+              "low": "对比度不足",
+              "medium": "对比度适中",
+              "high": "对比度良好"
+            }
+          },
+          {
+            "id": 2,
+            "name": "noise",
+            "displayName": "噪点评分",
+            "description": "图像噪点水平（越高噪点越少）",
+            "optimalRange": [0.6, 1.0],
+            "interpretation": {
+              "low": "噪点明显",
+              "medium": "噪点可控",
+              "high": "噪点极低"
+            }
+          },
+          {
+            "id": 3,
+            "name": "sharpness",
+            "displayName": "清晰度评分",
+            "description": "图像清晰度/锐度",
+            "optimalRange": [0.6, 1.0],
+            "interpretation": {
+              "low": "图像模糊",
+              "medium": "清晰度一般",
+              "high": "图像清晰锐利"
+            }
+          }
+        ]
+      },
+      "quantization": {
+        "type": "INT8",
+        "method": "full_integer_quantization",
+        "optimizationLevel": "optimal",
+        "representativeDatasetSize": 500,
+        "inputQuantization": {
+          "scale": 0.007843137,
+          "zeroPoint": -1
+        },
+        "outputQuantization": {
+          "scale": 0.003921569,
+          "zeroPoint": 0
+        }
+      },
+      "performance": {
+        "fileSize": {
+          "value": 500,
+          "unit": "KB"
+        },
+        "inferenceTime": {
+          "cpu": {
+            "min": 12,
+            "max": 25,
+            "unit": "ms",
+            "device": "Pixel 6"
+          },
+          "gpu": {
+            "min": 4,
+            "max": 8,
+            "unit": "ms",
+            "device": "Pixel 6"
+          },
+          "nnapi": {
+            "min": 6,
+            "max": 12,
+            "unit": "ms",
+            "device": "Pixel 6"
+          }
+        },
+        "memoryUsage": {
+          "modelLoad": {
+            "value": 2.0,
+            "unit": "MB"
+          },
+          "inference": {
+            "value": 6,
+            "unit": "MB"
+          }
+        },
+        "accuracy": {
+          "brightness": {
+            "mae": 0.082,
+            "correlation": 0.91
+          },
+          "contrast": {
+            "mae": 0.075,
+            "correlation": 0.93
+          },
+          "noise": {
+            "mae": 0.091,
+            "correlation": 0.88
+          },
+          "sharpness": {
+            "mae": 0.068,
+            "correlation": 0.94
+          },
+          "dataset": "quality_validation_set_3000"
+        }
+      },
+      "training": {
+        "baseModel": "MobileNetV2 (ImageNet-1K pretrained) + NIMA head",
+        "framework": "TensorFlow 2.14",
+        "dataset": {
+          "name": "OMaster Quality Assessment Dataset",
+          "trainSize": 30000,
+          "validationSize": 3000,
+          "testSize": 3000,
+          "sources": ["AVA", "PIPAL", "Custom"]
+        },
+        "hyperparameters": {
+          "batchSize": 32,
+          "epochs": 40,
+          "learningRate": 0.0005,
+          "optimizer": "Adam",
+          "loss": "mse"
+        }
+      },
+      "compatibility": {
+        "minTFLiteVersion": "2.10.0",
+        "recommendedTFLiteVersion": "2.14.0",
+        "minAndroidAPI": 23,
+        "recommendedAndroidAPI": 27,
+        "supportedDelegates": ["GPU", "NNAPI", "XNNPACK"]
+      }
+    },
+    "param_predictor": {
+      "fileName": "param_predictor.tflite",
+      "displayName": "参数预测模型",
+      "description": "基于全连接网络的哈苏调校参数预测模型",
+      "version": "2.2.1",
+      "status": "placeholder",
+      "architecture": {
+        "type": "MLP",
+        "framework": "TensorFlow 2.14",
+        "layers": [
+          {"type": "input", "size": 40},
+          {"type": "dense", "size": 128, "activation": "relu"},
+          {"type": "dropout", "rate": 0.2},
+          {"type": "dense", "size": 64, "activation": "relu"},
+          {"type": "dropout", "rate": 0.2},
+          {"type": "dense", "size": 32, "activation": "relu"},
+          {"type": "dense", "size": 18, "activation": "sigmoid"}
+        ],
+        "parameters": 12690,
+        "flops": 25380
+      },
+      "input": {
+        "name": "input",
+        "dataType": "FLOAT32",
+        "shape": [1, 40],
+        "format": "feature_vector",
+        "components": [
+          {
+            "name": "scene_features",
+            "startIndex": 0,
+            "endIndex": 35,
+            "size": 36,
+            "source": "scene_classifier.output",
+            "description": "36维场景概率向量"
+          },
+          {
+            "name": "quality_features",
+            "startIndex": 36,
+            "endIndex": 39,
+            "size": 4,
+            "source": "quality_analyzer.output",
+            "description": "4维质量评分向量"
+          }
+        ]
+      },
+      "output": {
+        "name": "output",
+        "dataType": "FLOAT32",
+        "shape": [1, 18],
+        "format": "normalized_parameters",
+        "range": [0.0, 1.0],
+        "parameters": [
+          {
+            "id": 0,
+            "name": "exposure",
+            "displayName": "曝光补偿",
+            "range": [0.0, 1.0],
+            "mappedRange": [-2.0, 2.0],
+            "mappedUnit": "EV",
+            "formula": "(value - 0.5) * 4.0"
+          },
+          {
+            "id": 1,
+            "name": "contrast",
+            "displayName": "对比度",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 2,
+            "name": "saturation",
+            "displayName": "饱和度",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 3,
+            "name": "highlights",
+            "displayName": "高光调整",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 4,
+            "name": "shadows",
+            "displayName": "阴影调整",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 5,
+            "name": "whites",
+            "displayName": "白色色阶",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 6,
+            "name": "blacks",
+            "displayName": "黑色色阶",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 7,
+            "name": "clarity",
+            "displayName": "清晰度",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 100],
+            "mappedUnit": "",
+            "formula": "value * 100.0"
+          },
+          {
+            "id": 8,
+            "name": "vibrance",
+            "displayName": "自然饱和度",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 9,
+            "name": "warmth",
+            "displayName": "色温",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 10,
+            "name": "tint",
+            "displayName": "色调",
+            "range": [0.0, 1.0],
+            "mappedRange": [-100, 100],
+            "mappedUnit": "",
+            "formula": "(value - 0.5) * 200.0"
+          },
+          {
+            "id": 11,
+            "name": "sharpness",
+            "displayName": "锐化",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 100],
+            "mappedUnit": "",
+            "formula": "value * 100.0"
+          },
+          {
+            "id": 12,
+            "name": "noise_reduction",
+            "displayName": "降噪",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 100],
+            "mappedUnit": "",
+            "formula": "value * 100.0"
+          },
+          {
+            "id": 13,
+            "name": "vignette",
+            "displayName": "暗角",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 100],
+            "mappedUnit": "",
+            "formula": "value * 100.0"
+          },
+          {
+            "id": 14,
+            "name": "grain",
+            "displayName": "颗粒",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 100],
+            "mappedUnit": "",
+            "formula": "value * 100.0"
+          },
+          {
+            "id": 15,
+            "name": "fade",
+            "displayName": "褪色",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 100],
+            "mappedUnit": "",
+            "formula": "value * 100.0"
+          },
+          {
+            "id": 16,
+            "name": "split_tone_highlights",
+            "displayName": "分离色调高光",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 360],
+            "mappedUnit": "°",
+            "formula": "value * 360.0"
+          },
+          {
+            "id": 17,
+            "name": "split_tone_shadows",
+            "displayName": "分离色调阴影",
+            "range": [0.0, 1.0],
+            "mappedRange": [0, 360],
+            "mappedUnit": "°",
+            "formula": "value * 360.0"
+          }
+        ]
+      },
+      "quantization": {
+        "type": "INT8",
+        "method": "full_integer_quantization",
+        "optimizationLevel": "optimal",
+        "representativeDatasetSize": 500,
+        "inputQuantization": {
+          "scale": 0.007843137,
+          "zeroPoint": 0
+        },
+        "outputQuantization": {
+          "scale": 0.003921569,
+          "zeroPoint": 0
+        }
+      },
+      "performance": {
+        "fileSize": {
+          "value": 200,
+          "unit": "KB"
+        },
+        "inferenceTime": {
+          "cpu": {
+            "min": 1,
+            "max": 3,
+            "unit": "ms",
+            "device": "Pixel 6"
+          }
+        },
+        "memoryUsage": {
+          "modelLoad": {
+            "value": 0.5,
+            "unit": "MB"
+          },
+          "inference": {
+            "value": 1,
+            "unit": "MB"
+          }
+        },
+        "accuracy": {
+          "mse": 0.023,
+          "mae": 0.089,
+          "correlation": 0.92,
+          "dataset": "param_validation_set_10000"
+        }
+      },
+      "training": {
+        "baseModel": "Custom MLP",
+        "framework": "TensorFlow 2.14",
+        "dataset": {
+          "name": "OMaster Parameter Prediction Dataset",
+          "trainSize": 100000,
+          "validationSize": 10000,
+          "testSize": 10000,
+          "annotationMethod": "expert_tuning"
+        },
+        "hyperparameters": {
+          "batchSize": 64,
+          "epochs": 100,
+          "learningRate": 0.001,
+          "optimizer": "Adam",
+          "loss": "mse",
+          "earlyStoppingPatience": 10
+        }
+      },
+      "compatibility": {
+        "minTFLiteVersion": "2.10.0",
+        "recommendedTFLiteVersion": "2.14.0",
+        "minAndroidAPI": 23,
+        "recommendedAndroidAPI": 27,
+        "supportedDelegates": ["XNNPACK"]
+      }
+    }
+  },
+  "pipeline": {
+    "description": "模型推理管道配置",
+    "executionOrder": [
+      "scene_classifier",
+      "quality_analyzer",
+      "param_predictor"
+    ],
+    "featureFusion": {
+      "inputModels": ["scene_classifier", "quality_analyzer"],
+      "outputModel": "param_predictor",
+      "fusionMethod": "concatenation",
+      "outputDimension": 40
+    },
+    "totalInferenceTime": {
+      "cpu": {
+        "min": 28,
+        "max": 58,
+        "unit": "ms",
+        "device": "Pixel 6"
+      },
+      "gpu": {
+        "min": 10,
+        "max": 21,
+        "unit": "ms",
+        "device": "Pixel 6"
+      }
+    },
+    "totalMemoryUsage": {
+      "modelLoad": {
+        "value": 5.0,
+        "unit": "MB"
+      },
+      "inference": {
+        "value": 15,
+        "unit": "MB"
+      }
+    }
+  },
+  "download": {
+    "baseUrl": "https://releases.omaster.app/models",
+    "note": "v2.2.1：模型文件尚未就绪，所有 checksum 留空，禁止 Release 构建下载占位模型。请使用 scripts/prepare_models.sh 准备真实模型后更新。",
+    "versions": {
+      "2.2.1": {
+        "releaseDate": "2026-07-01",
+        "status": "not_ready",
+        "scene_classifier": {
+          "url": "https://releases.omaster.app/models/v2.2.1/scene_classifier.tflite",
+          "checksum": ""
+        },
+        "quality_analyzer": {
+          "url": "https://releases.omaster.app/models/v2.2.1/quality_analyzer.tflite",
+          "checksum": ""
+        },
+        "param_predictor": {
+          "url": "https://releases.omaster.app/models/v2.2.1/param_predictor.tflite",
+          "checksum": ""
+        }
+      },
+      "1.2.0": {
+        "releaseDate": "2024-01-01",
+        "status": "not_ready",
+        "scene_classifier": {
+          "url": "https://releases.omaster.app/models/v1.0/scene_classifier.tflite",
+          "checksum": ""
+        },
+        "quality_analyzer": {
+          "url": "https://releases.omaster.app/models/v1.0/quality_analyzer.tflite",
+          "checksum": ""
+        },
+        "param_predictor": {
+          "url": "https://releases.omaster.app/models/v1.0/param_predictor.tflite",
+          "checksum": ""
+        }
+      },
+      "1.1.0": {
+        "releaseDate": "2024-06-01",
+        "status": "not_ready",
+        "scene_classifier": {
+          "url": "https://releases.omaster.app/models/v1.1/scene_classifier.tflite",
+          "checksum": ""
+        },
+        "quality_analyzer": {
+          "url": "https://releases.omaster.app/models/v1.1/quality_analyzer.tflite",
+          "checksum": ""
+        },
+        "param_predictor": {
+          "url": "https://releases.omaster.app/models/v1.1/param_predictor.tflite",
+          "checksum": ""
+        }
+      },
+      "1.2.0": {
+        "releaseDate": "2024-12-01",
+        "status": "not_ready",
+        "scene_classifier": {
+          "url": "https://releases.omaster.app/models/v1.2/scene_classifier.tflite",
+          "checksum": ""
+        },
+        "quality_analyzer": {
+          "url": "https://releases.omaster.app/models/v1.2/quality_analyzer.tflite",
+          "checksum": ""
+        },
+        "param_predictor": {
+          "url": "https://releases.omaster.app/models/v1.2/param_predictor.tflite",
+          "checksum": ""
+        }
+      }
+    }
+  }
+}

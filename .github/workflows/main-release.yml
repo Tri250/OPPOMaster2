@@ -1,0 +1,397 @@
+name: Main Release
+
+# 主分支正式发版 CI 流程
+# 功能：
+# 1. 推送标签自动触发构建
+# 2. 手动触发工作流
+# 3. 多架构 APK 构建
+# 4. 自动创建 GitHub Release
+# 5. 构建报告生成
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'           # 正式版本标签，如 v1.3.1
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc*'       # RC 候选版本，如 v1.3.1-rc1
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release 标签 (例如: v1.3.1)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release 名称 (留空则使用标签)'
+        required: false
+        type: string
+      prerelease:
+        description: '标记为预发布版本'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.14.4'
+
+jobs:
+  # 构建阶段
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.version.outputs.version_name }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      build_status: ${{ steps.build.outputs.status }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # CI 环境：使用专用 settings 文件，避免本地仓库导致的 AGP 版本冲突
+      - name: Use CI Settings
+        run: |
+          if [ -f settings.ci.gradle.kts ]; then
+            mv settings.gradle.kts settings.gradle.kts.local
+            cp settings.ci.gradle.kts settings.gradle.kts
+            echo "✅ CI settings 配置已切换"
+          else
+            echo "⚠️ settings.ci.gradle.kts 不存在，使用默认配置"
+          fi
+
+      # 配置友盟 AppKey（从 GitHub Secrets 注入，避免构建时 AppKey 为空导致问题）
+      - name: Configure UMENG AppKey
+        run: |
+          if [ -n "${{ secrets.UMENG_APPKEY }}" ]; then
+            echo "UMENG_APPKEY=${{ secrets.UMENG_APPKEY }}" >> local.properties
+            echo "UMENG_MESSAGE_SECRET=${{ secrets.UMENG_MESSAGE_SECRET }}" >> local.properties
+            echo "✅ UMENG AppKey 已配置"
+          else
+            echo "⚠️ UMENG_APPKEY 未在 Secrets 中配置，友盟统计将不可用"
+            # 写入空值避免构建失败
+            echo "UMENG_APPKEY=" >> local.properties
+            echo "UMENG_MESSAGE_SECRET=" >> local.properties
+          fi
+
+      # 生成 debug 签名用于 CI 构建
+      - name: Generate Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            echo "✅ Debug keystore 已生成"
+          else
+            echo "✅ Debug keystore 已存在"
+          fi
+
+      # 同步版本号到 Git Tag
+      - name: Sync Version with Git Tag
+        id: version
+        run: |
+          # 从 Git Tag 提取版本号 (v1.3.1 -> 1.3.1)
+          TAG_VERSION="${{ github.ref_name }}"
+          if [[ "$TAG_VERSION" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
+            VERSION_NAME="${BASH_REMATCH[1]}"
+            echo "从 Tag 提取版本号: $VERSION_NAME"
+            
+            # 更新 build.gradle.kts 中的 versionName
+            sed -i "s/versionName = \"[^\"]*\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
+            
+            # 根据 versionName 计算 versionCode: 主*10000 + 次*100 + 修订
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+            # 提取 patch 中的数字部分（兼容 0-rc1 等预发布格式）
+            PATCH_NUM=$(echo "$PATCH" | grep -o '^[0-9]*')
+            VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH_NUM))
+            sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/" app/build.gradle.kts
+            
+            echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+            echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+            
+            # 验证更新
+            echo "✅ 版本信息:"
+            grep -E "versionName|versionCode" app/build.gradle.kts | head -2
+          else
+            echo "⚠️ Tag 格式不符合 vX.Y.Z，使用 build.gradle.kts 中的默认版本号"
+            VERSION_NAME=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | grep -o '"[^"]*"' | tr -d '"')
+            VERSION_CODE=$(grep -o 'versionCode = [0-9]*' app/build.gradle.kts | grep -o '[0-9]*')
+            echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+            echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          fi
+
+      # 构建 Release APK
+      - name: Build Release APK
+        id: build
+        run: |
+          echo "status=building" >> $GITHUB_OUTPUT
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          echo "status=success" >> $GITHUB_OUTPUT
+        env:
+          CI: true
+
+      # 获取 APK 信息
+      - name: Get APK Info
+        id: apk_info
+        run: |
+          APK_DIR="app/build/outputs/apk/release"
+          
+          # 获取 universal APK 信息
+          UNIVERSAL_APK=$(find $APK_DIR -name "*-universal-*.apk" | head -1)
+          if [ -n "$UNIVERSAL_APK" ]; then
+            SIZE=$(du -h "$UNIVERSAL_APK" | cut -f1)
+            echo "universal_apk=$UNIVERSAL_APK" >> $GITHUB_OUTPUT
+            echo "universal_size=$SIZE" >> $GITHUB_OUTPUT
+          fi
+          
+          # 列出所有 APK
+          echo "=== 构建产物 ==="
+          ls -lh $APK_DIR/*.apk
+
+      # 上传 Universal APK
+      - name: Upload Universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-universal
+          path: app/build/outputs/apk/release/*-universal-*.apk
+          retention-days: 30
+
+      # 上传各架构 APK
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-armeabi-v7a
+          path: app/build/outputs/apk/release/*-armeabi-v7a-*.apk
+          retention-days: 30
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-arm64-v8a
+          path: app/build/outputs/apk/release/*-arm64-v8a-*.apk
+          retention-days: 30
+
+      - name: Upload x86 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-x86
+          path: app/build/outputs/apk/release/*-x86-*.apk
+          retention-days: 30
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-x86_64
+          path: app/build/outputs/apk/release/*-x86_64-*.apk
+          retention-days: 30
+
+      # 上传构建报告
+      - name: Upload Build Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/
+            app/build/outputs/mapping/
+          retention-days: 30
+
+  # 发布阶段
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release_url: ${{ steps.create_release.outputs.url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+          else
+            echo "TAG=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=${{ github.event.inputs.prerelease }}" >> $GITHUB_ENV
+          fi
+
+      - name: Validate tag format
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "❌ 错误: 标签格式不正确，请使用 vX.Y.Z 格式"
+            exit 1
+          fi
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release notes
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -2 | tail -1)
+          if [ -z "$PREVIOUS_TAG" ] || [ "$PREVIOUS_TAG" == "$TAG" ]; then
+            echo "📝 首个版本或无法找到上一个标签"
+            git-cliff --unreleased --output RELEASE_NOTES.md
+          else
+            echo "📝 生成从 $PREVIOUS_TAG 到 $TAG 的更新日志"
+            git-cliff ${PREVIOUS_TAG}..${TAG} --output RELEASE_NOTES.md
+          fi
+          echo "📋 生成的 Release 说明："
+          cat RELEASE_NOTES.md
+
+      - name: Create and push tag (if workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if ! git tag --list | grep -q "^${TAG}$"; then
+            git tag $TAG
+            git push origin $TAG
+          fi
+
+      - name: Download APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./apk
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ github.event.inputs.release_name || env.TAG }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ env.IS_PRERELEASE }}
+          files: ./apk/**/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Release Summary
+        run: |
+          cat > release-summary.md << EOF
+          # 🎉 Release 创建成功
+
+          ## 版本信息
+          - **标签**: ${{ env.TAG }}
+          - **版本名称**: ${{ needs.build.outputs.version_name }}
+          - **版本代码**: ${{ needs.build.outputs.version_code }}
+          - **预发布**: ${{ env.IS_PRERELEASE }}
+          - **Release 链接**: ${{ steps.create_release.outputs.url }}
+
+          ## 构建产物
+          - Universal APK (全架构)
+          - ARM64-v8a APK (推荐)
+          - armeabi-v7a APK
+          - x86 APK
+          - x86_64 APK
+
+          ## 下载地址
+          https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG }}
+          EOF
+
+          cat release-summary.md
+
+  # 构建报告阶段
+  build-report:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate Build Report
+        run: |
+          cat > build-report.md << 'EOF'
+          # OMaster 构建报告
+
+          **构建时间**: ${{ github.run_started_at }}
+          **工作流**: ${{ github.workflow }}
+          **运行编号**: #${{ github.run_number }}
+
+          ## 构建状态
+
+          | 阶段 | 状态 |
+          |------|------|
+          | 构建 | ${{ needs.build.result }} |
+          | 发布 | ${{ needs.release.result }} |
+
+          ## 版本信息
+
+          - **版本名称**: ${{ needs.build.outputs.version_name }}
+          - **版本代码**: ${{ needs.build.outputs.version_code }}
+
+          ## 构建链接
+
+          - [查看工作流运行](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [查看 Release](${{ needs.release.outputs.release_url }})
+
+          ---
+          *此报告由 CI 自动生成*
+          EOF
+
+          cat build-report.md
+
+      - name: Upload Build Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-report
+          path: build-report.md
+          retention-days: 90
+
+  # 通知阶段
+  notify:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify Success
+        if: needs.build.result == 'success' && needs.release.result == 'success'
+        run: |
+          echo "✅ 构建和发布成功完成！"
+          echo "版本: ${{ needs.build.outputs.version_name }}"
+          echo "Release: ${{ needs.release.outputs.release_url }}"
+
+      - name: Notify Failure
+        if: needs.build.result == 'failure' || needs.release.result == 'failure'
+        run: |
+          echo "❌ 构建或发布失败"
+          echo "构建状态: ${{ needs.build.result }}"
+          echo "发布状态: ${{ needs.release.result }}"
+          echo "请查看日志: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

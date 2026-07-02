@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App Shortcuts (Android 7.1+)
+  提供长按应用图标时的快捷操作入口
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 快捷方式：打开相机 -->
+    <shortcut
+        android:shortcutId="open_camera"
+        android:enabled="true"
+        android:icon="@drawable/ic_camera_shortcut"
+        android:shortcutShortLabel="@string/shortcut_camera"
+        android:shortcutLongLabel="@string/shortcut_camera_long"
+        android:shortcutDisabledMessage="@string/shortcut_camera_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="${applicationId}"
+            android:targetClass="com.silas.omaster.MainActivity">
+            <extra android:name="shortcut_target" android:value="camera" />
+        </intent>
+    </shortcut>
+
+    <!-- 快捷方式：打开预设库 -->
+    <shortcut
+        android:shortcutId="open_presets"
+        android:enabled="true"
+        android:icon="@drawable/ic_presets_shortcut"
+        android:shortcutShortLabel="@string/shortcut_presets"
+        android:shortcutLongLabel="@string/shortcut_presets_long"
+        android:shortcutDisabledMessage="@string/shortcut_presets_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="${applicationId}"
+            android:targetClass="com.silas.omaster.MainActivity">
+            <extra android:name="shortcut_target" android:value="presets" />
+        </intent>
+    </shortcut>
+
+    <!-- 快捷方式：打开智能优化 -->
+    <shortcut
+        android:shortcutId="smart_optimize"
+        android:enabled="true"
+        android:icon="@drawable/ic_optimize_shortcut"
+        android:shortcutShortLabel="@string/shortcut_optimize"
+        android:shortcutLongLabel="@string/shortcut_optimize_long"
+        android:shortcutDisabledMessage="@string/shortcut_optimize_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="${applicationId}"
+            android:targetClass="com.silas.omaster.MainActivity">
+            <extra android:name="shortcut_target" android:value="optimize" />
+        </intent>
+    </shortcut>
+</shortcuts>

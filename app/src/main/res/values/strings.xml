@@ -1,0 +1,711 @@
+<resources>
+    <!-- 应用名称 -->
+    <string name="app_name">OMaster</string>
+    <string name="app_slogan">专业影像参数管理工具</string>
+
+    <!-- 通用按钮 -->
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="close">关闭</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="back">返回</string>
+    <string name="refresh">刷新</string>
+    <string name="update">更新</string>
+    <string name="retry">重试</string>
+    <string name="loading">加载中…</string>
+    <string name="checking">检查中…</string>
+
+    <!-- 底部导航 -->
+    <string name="nav_home">首页</string>
+    <string name="nav_subscription">订阅</string>
+    <string name="nav_featured">精选推荐</string>
+    <string name="nav_core_features">核心功能</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_about">关于</string>
+
+    <!-- 订阅 -->
+    <string name="sub_title">订阅管理</string>
+    <string name="sub_add">添加订阅</string>
+    <string name="sub_url_label">链接 (JSON URL)</string>
+    <string name="sub_name_label">名称 (可选)</string>
+    <string name="sub_empty">暂无订阅</string>
+    <string name="sub_delete_confirm_title">确认删除</string>
+    <string name="sub_delete_confirm_msg">确定要删除这个订阅吗？对应的预设也将不再显示。</string>
+    <string name="sub_details">订阅详情</string>
+    <string name="sub_edit_title">编辑订阅</string>
+    <string name="sub_update_status">更新完成: %1$d/%2$d</string>
+    <string name="sub_preset_count">预设数量: %1$d</string>
+    <string name="sub_last_update">更新于: %1$s</string>
+    <string name="sub_no_name">未命名订阅</string>
+
+    <!-- 设置 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_section_general">常规</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_floating_window">悬浮窗</string>
+    <string name="settings_section_privacy">隐私</string>
+    <string name="vibration_feedback">震动反馈</string>
+    <string name="default_start_tab">默认启动页面</string>
+    <string name="settings_theme_title">主题颜色</string>
+    <string name="settings_theme_dialog_title">选择主题颜色</string>
+    <string name="floating_window_opacity">悬浮窗透明度</string>
+    <string name="analytics_enabled">使用友盟统计</string>
+    <string name="analytics_restart_hint">重启应用后生效</string>
+    <string name="clear_cache">清理图片缓存</string>
+    <string name="clear_cache_desc">释放存储空间，下次浏览时重新下载</string>
+    <string name="cache_size_format">缓存大小: %.2f MB</string>
+    <string name="cache_cleared">缓存已清理</string>
+
+    <!-- 品牌名称 -->
+    <string name="brand_hasselblad">哈苏</string>
+    <string name="brand_zeiss">蔡司</string>
+    <string name="brand_leica">徕卡</string>
+    <string name="brand_ricoh">理光</string>
+    <string name="brand_fujifilm">富士</string>
+    <string name="brand_canon">佳能</string>
+    <string name="brand_nikon">尼康</string>
+    <string name="brand_sony">索尼</string>
+    <string name="brand_phaseone">飞思</string>
+
+    <!-- 品牌颜色名称 -->
+    <string name="color_hasselblad_orange">哈苏橙</string>
+    <string name="color_zeiss_blue">蔡司蓝</string>
+    <string name="color_leica_red">徕卡红</string>
+    <string name="color_ricoh_green">理光绿</string>
+    <string name="color_fujifilm_green">富士绿</string>
+    <string name="color_canon_red">佳能红</string>
+    <string name="color_nikon_yellow">尼康黄</string>
+    <string name="color_sony_orange">索尼橙</string>
+    <string name="color_phaseone_grey">飞思灰</string>
+
+    <!-- 主页 Tab (对齐Web端) -->
+    <string name="tab_discover">发现</string>
+    <string name="tab_favorites">收藏</string>
+    <string name="tab_hncs">哈苏</string>
+    <string name="tab_new">上新</string>
+    
+    <!-- 品牌筛选 -->
+    <string name="brand_all">全部</string>
+    <string name="brand_oppo">OPPO</string>
+    <string name="brand_realme">真我</string>
+    <string name="brand_vivo">vivo</string>
+    <string name="brand_honor">荣耀</string>
+    <string name="brand_xiaomi">小米</string>
+    
+    <!-- 排序筛选 -->
+    <string name="sort_newest">最新</string>
+    <string name="sort_popular">最热</string>
+    <string name="sort_rating">评分</string>
+
+    <!-- PM-02: 风格标签筛选 -->
+    <string name="style_all">全部风格</string>
+    <string name="style_film">胶片</string>
+    <string name="style_portrait">人像</string>
+    <string name="style_landscape">风景</string>
+    <string name="style_street">街拍</string>
+    <string name="style_bw">黑白</string>
+    <string name="style_retro">复古</string>
+    <string name="style_fresh">清新</string>
+
+    <!-- PM-02: 场景标签筛选 -->
+    <string name="scene_all">全部场景</string>
+    <string name="scene_indoor">室内</string>
+    <string name="scene_outdoor">户外</string>
+    <string name="scene_night">夜景</string>
+    <string name="scene_backlight">逆光</string>
+    <string name="scene_overcast">阴天</string>
+    <string name="scene_portrait">人像</string>
+    <string name="scene_scenery">风光</string>
+    <string name="scene_street">街拍</string>
+
+    <!-- UC-21: 胶片推荐 -->
+    <string name="film_recommendation_title">胶片推荐</string>
+    <string name="film_recommendation_more">更多</string>
+    
+    <!-- 搜索 -->
+    <string name="search_hint">搜索预设 / 作者 / 标签</string>
+    
+    <!-- 角标 -->
+    <string name="badge_hncs">HNCS</string>
+    <string name="badge_new">NEW</string>
+    <string name="badge_pro">PRO</string>
+    
+    <!-- 哈苏大师 -->
+    <string name="hasselblad_master">哈苏大师</string>
+    
+    <!-- 搜索栏 -->
+    <string name="search_placeholder">搜索预设 / 作者 / 标签</string>
+
+    <!-- 主页操作 -->
+    <string name="create_preset">新建预设</string>
+    <string name="delete_preset_title">确认删除</string>
+    <string name="delete_preset_message">确定要删除这个预设吗？此操作无法撤销。</string>
+    <string name="error_icon_desc">错误</string>
+    <string name="sort">排序</string>
+    <string name="refresh_data">刷新数据</string>
+    <string name="go_add_preset">去添加预设</string>
+
+    <!-- 空状态 -->
+    <string name="empty_no_presets">未找到匹配的预设</string>
+    <string name="empty_no_favorites">暂无收藏预设</string>
+    <string name="empty_no_custom">暂无自定义预设</string>
+    <string name="empty_no_data">暂无数据</string>
+    <string name="empty_hint_add_presets">请调整筛选条件</string>
+    <string name="empty_hint_favorite">点击心形图标收藏预设</string>
+    <string name="empty_hint_create">点击右下角按钮创建预设</string>
+    <string name="empty_no_featured">暂无精选预设</string>
+    <string name="empty_hint_filter">请调整筛选条件</string>
+    <string name="empty_no_hncs_presets">暂无哈苏预设</string>
+    <string name="empty_hint_hncs_presets">敬请期待更多哈苏色彩科学预设</string>
+    <string name="empty_no_new_presets">暂无上新预设</string>
+    <string name="empty_hint_new_presets">新预设正在路上，敬请期待</string>
+    <string name="empty_no_custom_presets">暂无自定义预设</string>
+    <string name="empty_hint_custom_presets">点击右下角按钮创建您的专属预设</string>
+    <string name="empty_icon_search_desc">搜索图标</string>
+    <string name="empty_icon_favorite_desc">收藏图标</string>
+    <string name="empty_icon_color_desc">色彩图标</string>
+    <string name="empty_icon_refresh_desc">刷新图标</string>
+    <string name="empty_icon_add_desc">添加图标</string>
+    <string name="empty_icon_default_desc">空状态图标</string>
+    <string name="cache_no_data_to_clear">暂无缓存需要清理</string>
+    <string name="filter_result_count">已筛选 %1$d 条</string>
+    <string name="clear_filter">清空筛选</string>
+    <string name="load_more_hint">持续更新 敬请期待</string>
+    <string name="loading_more">正在加载更多...</string>
+    <string name="no_more_data">没有更多数据了</string>
+
+    <!-- Config Update -->
+    <string name="config_update_title">配置更新</string>
+    <string name="set_update_url">设置更新链接</string>
+    <string name="fetch_presets_desc">从远程服务器获取最新预设配置</string>
+    <string name="config_update_success">配置更新成功</string>
+    <string name="config_update_failed">配置更新失败</string>
+    <string name="config_update_failed_prefix">配置更新失败: </string>
+    <string name="updating">正在更新...</string>
+    <string name="check_now">立即检查</string>
+    <string name="update_url_saved">已保存更新链接</string>
+
+    <!-- 预设卡片 -->
+    <string name="preset_favorite">收藏</string>
+    <string name="preset_favorited">已收藏</string>
+    <string name="preset_delete">删除</string>
+    <string name="preset_new">NEW</string>
+    <string name="preset_card_description">预设 %1$s，作者 %2$s</string>
+
+    <!-- 详情页 -->
+    <string name="detail_title">预设详情</string>
+    <string name="detail_load_failed">预设数据加载失败</string>
+    <string name="floating_window">悬浮窗</string>
+    <string name="share_preset">分享预设</string>
+
+    <!-- 专业参数 -->
+    <string name="param_iso">ISO</string>
+    <string name="param_shutter">快门</string>
+    <string name="param_exposure">曝光补偿</string>
+    <string name="param_color_temp">色温</string>
+    <string name="param_white_balance">白平衡</string>
+    <string name="param_tone">色调</string>
+    <string name="param_tone_style">色调风格</string>
+    <string name="param_pro_adjust">专业参数（具体视环境调整）</string>
+
+    <!-- 调色参数 -->
+    <string name="section_color_grading">调色参数</string>
+    <string name="param_filter">滤镜</string>
+    <string name="param_soft_light">柔光</string>
+    <string name="param_tone_curve">影调</string>
+    <string name="param_saturation">饱和度</string>
+    <string name="param_warm_cool">冷暖</string>
+    <string name="param_cyan_magenta">青品</string>
+    <string name="param_sharpness">锐度</string>
+    <string name="param_vignette">暗角</string>
+    <string name="param_film_simulation">胶片模拟</string>
+    <string name="param_creative_look">S-Log/创意外观</string>
+    <string name="param_s_log">S-Log</string>
+    <string name="param_leica_tone">徕卡色调</string>
+
+    <!-- 拍摄模式 -->
+    <string name="mode_pro">Pro 模式</string>
+    <string name="mode_auto">Auto 模式</string>
+
+    <!-- 创建/编辑预设 -->
+    <string name="create_preset_title">新建预设</string>
+    <string name="edit_preset_title">编辑预设</string>
+    <string name="save_preset">保存预设</string>
+    <string name="save_changes">保存修改</string>
+    <string name="save_failed">保存失败，请重试</string>
+    <string name="feature_coming_soon">功能即将开放，敬请期待</string>
+    <string name="add_item">添加参数</string>
+    <string name="edit_item">编辑参数</string>
+    <string name="param_label">参数名 (Label)</string>
+    <string name="param_value">参数值 (Value)</string>
+    <string name="span_label">宽度占比 (Span): %1$d</string>
+    <string name="add_section">添加分类</string>
+    <string name="section_name">分类名称</string>
+    <string name="remove_item">移除参数</string>
+    <string name="remove_section">移除分类</string>
+    <string name="select_template">选择预设模版</string>
+    <string name="start_from_scratch">从零开始创建</string>
+    <string name="or_choose_template">或者选择一个现有预设作为起点：</string>
+    <string name="upload_cover_hint">点击上传封面</string>
+    <string name="unnamed_section">未命名分组</string>
+
+    <!-- 封面图片 -->
+    <string name="cover_image">封面图片</string>
+    <string name="change_image">点击更换图片</string>
+    <string name="select_image">选择封面图片</string>
+    <string name="image_ratio_hint">建议使用 16:9 比例的图片</string>
+
+    <!-- 预设名称 -->
+    <string name="preset_name">预设名称</string>
+    <string name="preset_name_hint">给你的预设起个名字</string>
+
+    <!-- 参数分类 -->
+    <string name="section_basic">基础参数</string>
+    <string name="section_pro">专业参数</string>
+    <string name="section_color">调色参数</string>
+    <string name="section_other">其他</string>
+    <string name="shooting_mode">拍摄模式</string>
+    <string name="shooting_tips">拍摄建议</string>
+    <string name="filter_style">滤镜风格</string>
+    <string name="filter_intensity">滤镜强度</string>
+    <string name="soft_light_effect">柔光效果</string>
+
+    <!-- 滤镜选项 -->
+    <string name="filter_standard">标准</string>
+    <string name="filter_neon">霓虹</string>
+    <string name="filter_fresh">清新</string>
+    <string name="filter_vintage">复古</string>
+    <string name="filter_clear">通透</string>
+    <string name="filter_vivid">明艳</string>
+    <string name="filter_fairy">童话</string>
+    <string name="filter_humanities">人文</string>
+    <string name="filter_natural">自然</string>
+    <string name="filter_delicious">美味</string>
+    <string name="filter_cool">冷调</string>
+    <string name="filter_warm">暖调</string>
+    <string name="filter_rich">浓郁</string>
+    <string name="filter_advanced_gray">高级灰</string>
+    <string name="filter_bw">黑白</string>
+    <string name="filter_mono">单色</string>
+    <string name="filter_cyberpunk">赛博朋克</string>
+
+    <!-- 柔光选项 -->
+    <string name="soft_none">无</string>
+    <string name="soft_gentle">柔美</string>
+    <string name="soft_dreamy">梦幻</string>
+    <string name="soft_hazy">朦胧</string>
+
+    <!-- 暗角选项 -->
+    <string name="vignette_on">开启</string>
+    <string name="vignette_off">关闭</string>
+
+    <!-- 白平衡选项 -->
+    <string name="white_balance_cloudy">阴天</string>
+    <string name="white_balance_daylight">日光</string>
+    <string name="white_balance_fluorescent">荧光灯</string>
+    <string name="white_balance_incandescent">白炽灯</string>
+    <string name="white_balance_auto">自动</string>
+
+    <!-- 色调选项 -->
+    <string name="tone_warm">暖调</string>
+    <string name="tone_cool">冷调</string>
+
+    <!-- 预设名称 -->
+    <string name="preset_fuji_film">富士胶片</string>
+    <string name="preset_film_feel">胶片感</string>
+    <string name="preset_fairy_tale">童话</string>
+    <string name="preset_high_contrast_bw">高对比黑白</string>
+    <string name="preset_ricoh_green">理光绿</string>
+    <string name="preset_ricoh_blue">理光蓝</string>
+    <string name="preset_blue_hour">蓝调时刻</string>
+    <string name="preset_dreamy_blackmist">梦幻黑柔</string>
+    <string name="preset_fuji_nc">富士NC</string>
+    <string name="preset_humanities">人文</string>
+    <string name="preset_fresh_humanities">清新人文</string>
+    <string name="preset_snowy_night">氛围雪夜</string>
+    <string name="preset_delicious">美味流芳</string>
+    <string name="preset_mobile_leica">手机徕卡</string>
+    <string name="preset_dreamy_fuji">梦幻富士</string>
+    <string name="preset_hasselblad_rich">哈苏浓郁</string>
+    <string name="preset_holiday_fresh">假日清新</string>
+    <string name="preset_dreamy_bw">梦幻黑白</string>
+    <string name="preset_delicious_dream">美味梦境</string>
+    <string name="preset_blue_clear">蓝调通透</string>
+    <string name="preset_sunny_vintage">晴天复古</string>
+    <string name="preset_neon_lights">霓虹灯</string>
+    <string name="preset_retro_nostalgia">复古怀旧</string>
+
+    <!-- 拍摄建议 -->
+    <string name="tips_fuji_film">【环境建议】日间户外或光线充足的室内\n【场景推荐】街拍、人像、风景、建筑\n【拍摄要点】适合追求经典胶片质感的场景，色彩浓郁复古，建议寻找有光影对比的场景增强层次感</string>
+    <string name="tips_film_feel">【环境建议】自然光或柔和人工光源\n【场景推荐】人像写真、静物、咖啡馆、文艺场景\n【拍摄要点】柔光效果营造梦幻氛围，适合拍摄情绪感照片，建议对焦主体保持清晰</string>
+    <string name="tips_fairy_tale">【环境建议】清晨、黄昏或阴天散射光\n【场景推荐】儿童摄影、花园、公园、浪漫场景\n【拍摄要点】影调偏暗营造神秘感，梦幻柔光适合营造童话氛围，建议寻找色彩丰富的场景</string>
+    <string name="tips_high_contrast_bw">【环境建议】强烈光影对比场景，如阳光直射或聚光灯\n【场景推荐】建筑、纪实摄影、街头、艺术人像\n【拍摄要点】利用明暗对比突出主体轮廓，适合几何线条和纹理丰富的场景，注意构图简洁有力</string>
+    <string name="tips_ricoh_green">【环境建议】户外自然光，森林、草地、植物丰富的场景\n【场景推荐】植物摄影、森林漫步、春日户外、清新人像\n【拍摄要点】影调偏亮突出清新感，绿色表现自然通透，适合拍摄植物和户外自然场景</string>
+    <string name="tips_ricoh_blue">【环境建议】晴朗天气或蓝天背景\n【场景推荐】海边、城市建筑、天空、冷色调场景\n【拍摄要点】偏冷色调增强蓝色表现力，适合拍摄天空、水面和城市建筑，营造通透冷静的氛围</string>
+    <string name="tips_blue_hour">【环境建议】日出前或日落后20分钟的蓝调时刻\n【场景推荐】城市夜景、灯光璀璨的场景、水面倒影\n【拍摄要点】冷暖对比强烈，适合拍摄城市灯光和夜景，建议寻找有水面的场景增强倒影效果</string>
+    <string name="tips_dreamy_blackmist">【环境建议】逆光或侧逆光场景\n【场景推荐】人像写真、情绪摄影、艺术场景、柔美人像\n【拍摄要点】黑柔滤镜效果营造梦幻氛围，适合拍摄唯美人像，建议利用逆光创造光晕效果</string>
+    <string name="tips_fuji_nc">【环境建议】日间户外或充足自然光\n【场景推荐】日系人像、街拍、日常记录、旅行摄影\n【拍摄要点】模拟富士NC胶片效果，影调偏亮，色彩柔和自然，适合日常记录和日系风格拍摄</string>
+    <string name="tips_humanities">【环境建议】自然光或柔和人工光源\n【场景推荐】街头纪实、人文摄影、生活记录、故事性场景\n【拍摄要点】Pro模式参数固定，ISO 50保证画质纯净，轻微欠曝保留细节，适合捕捉真实生活瞬间</string>
+    <string name="tips_fresh_humanities">【环境建议】明亮的户外或室内自然光\n【场景推荐】日系清新人像、校园、旅行、日常生活\n【拍摄要点】影调明亮，饱和度较高，适合清新明亮的人像和场景，建议寻找光线充足的场景拍摄</string>
+    <string name="tips_snowy_night">【环境建议】雪天、阴天或低色温场景\n【场景推荐】雪景、冬日街景、暖光室内、节日氛围\n【拍摄要点】偏暖色调平衡雪景冷色，营造温馨氛围，适合拍摄冬日场景和暖光环境</string>
+    <string name="tips_delicious">【环境建议】餐厅、厨房、美食拍摄场景\n【场景推荐】美食摄影、饮品、烘焙、精致料理\n【拍摄要点】影调偏暗突出食物质感，饱和度适中保持食物本色，适合拍摄精致美食和饮品</string>
+    <string name="tips_mobile_leica">【环境建议】日间户外或充足光线\n【场景推荐】街拍、建筑、风景、日常记录\n【拍摄要点】模拟徕卡德味风格，影调深沉，色彩克制，适合追求德味质感的摄影爱好者</string>
+    <string name="tips_dreamy_fuji">【环境建议】日间户外或柔和光线\n【场景推荐】人像、风景、日系场景、文艺摄影\n【拍摄要点】Pro模式自动曝光，轻微过曝营造梦幻感，复古色调配合梦幻柔光，适合唯美人像和风景</string>
+    <string name="tips_hasselblad_rich">【环境建议】光线充足的户外或室内\n【场景推荐】风景、建筑、人像、艺术摄影\n【拍摄要点】模拟哈苏自然色彩解决方案，色彩浓郁但不失真，适合追求高品质色彩表现的场景</string>
+    <string name="tips_holiday_fresh">【环境建议】晴朗天气或明亮的度假场景\n【场景推荐】海边、度假、旅行、夏日户外\n【拍摄要点】影调明亮通透，饱和度略低营造清新感，适合度假和旅行场景，记录轻松愉快的时光</string>
+    <string name="tips_dreamy_bw">【环境建议】柔和光线或阴天\n【场景推荐】情绪人像、艺术摄影、静物、建筑\n【拍摄要点】保留轻微色彩信息，梦幻柔光营造艺术感，适合追求艺术表达的黑白摄影</string>
+    <string name="tips_delicious_dream">【环境建议】餐厅、咖啡馆、温馨室内\n【场景推荐】美食、甜品、饮品、精致小物\n【拍摄要点】梦幻柔光营造温馨氛围，影调略暗突出质感，适合拍摄精致美食和温馨场景</string>
+    <string name="tips_blue_clear">【环境建议】日间户外或室内、海边、天空、水面\n【场景推荐】风景、建筑、人像、静物\n【拍摄要点】蓝调通透风格，冷色调营造清新通透感，轻微欠曝保留细节，梦幻柔光增加氛围感，适合拍摄清新风景和人像</string>
+    <string name="tips_sunny_vintage">【环境建议】晴天户外、阳光充足场景\n【场景推荐】街拍、人像、风景、复古场景\n【拍摄要点】晴天复古风格，色温5000K还原自然色彩，负色调营造复古感，轻微欠曝保留高光细节，暖调柔光增加复古氛围，适合拍摄晴天户外人像和风景</string>
+    <string name="tips_neon_lights">【环境建议】夜晚城市、霓虹灯招牌、繁华街道\n【场景推荐】夜景、街景、人像、城市风光\n【拍摄要点】霓虹灯风格，浓郁滤镜增强色彩饱和度，柔美柔光营造梦幻感，轻微欠曝保留霓虹细节，适合拍摄夜晚城市霓虹灯场景</string>
+    <string name="tips_retro_nostalgia">【环境建议】老城区、复古场景、室内怀旧场景\n【场景推荐】老物件、街景、人像、故事性场景\n【拍摄要点】复古怀旧风格，65%复古滤镜营造怀旧感，低影调增加复古氛围，降低饱和度模拟老照片质感，适合拍摄怀旧主题照片</string>
+
+    <!-- 关于页 -->
+    <string name="about_title">关于</string>
+    <string name="version_current">当前版本：v%1$s</string>
+    <string name="version_format">版本 %1$s</string>
+    <string name="version_check">点击检查更新</string>
+    <string name="version_checking">正在检查更新…</string>
+    <string name="version_new_found">发现新版本 v%1$s</string>
+    <string name="version_new_available">有更新</string>
+    <string name="version_latest">当前已是最新版本</string>
+    <string name="version_latest_badge">最新</string>
+    <string name="version_check_failed">检查失败</string>
+    <string name="version_download">国内下载</string>
+    <string name="version_download_btn">更新</string>
+    <string name="version_is_latest">已是最新</string>
+    <string name="version_retry">点击重试</string>
+    <string name="last_check">最后检查：%1$s</string>
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%1$d分钟前</string>
+    <string name="time_hours_ago">%1$d小时前</string>
+    <string name="time_days_ago">%1$d天前</string>
+    <string name="update_notes_title">更新内容</string>
+    
+    <!-- 设置项标题 -->
+    <string name="dark_mode_title">深色模式</string>
+    <string name="dark_mode_system">跟随系统</string>
+    <string name="dark_mode_light">浅色模式</string>
+    <string name="dark_mode_dark">深色模式</string>
+    <string name="update_channel_title">更新渠道</string>
+    <string name="update_channel_gitee">稳定版</string>
+    <string name="update_channel_github">GitHub</string>
+    <string name="notification_settings_title">通知设置</string>
+    <string name="notification_receive_push">接收推送通知</string>
+    <string name="notification_receive_push_desc">开启后接收重要通知</string>
+    <string name="notification_category_general">通用通知</string>
+    <string name="notification_category_recommendation">推荐与提示</string>
+    <string name="notification_category_sync">云同步提醒</string>
+    <string name="notification_feature_update_title">功能更新通知</string>
+    <string name="notification_feature_update_desc">接收新功能和更新提醒</string>
+    <string name="notification_preset_recommendation_title">预设推荐</string>
+    <string name="notification_preset_recommendation_desc">接收个性化预设推荐</string>
+    <string name="notification_sync_reminder_title">云同步提醒</string>
+    <string name="notification_sync_reminder_desc">同步状态变更通知</string>
+    <string name="notification_system_announcement_title">系统公告</string>
+    <string name="notification_system_announcement_desc">重要系统公告通知</string>
+    <string name="notification_daily_tip_title">每日提示</string>
+    <string name="notification_daily_tip_desc">摄影技巧每日提示</string>
+    <string name="notification_dnd_title">夜间免打扰</string>
+    <string name="notification_dnd_time_title">免打扰时段</string>
+    <string name="notification_dnd_time_value">22:00 - 08:00</string>
+    <string name="notification_types">通知类型</string>
+    <string name="notification_dnd_settings">免打扰设置</string>
+    <string name="preset_source_title">预设源管理</string>
+    <string name="privacy_policy_title">隐私政策</string>
+    <string name="user_agreement_title">用户协议</string>
+    
+    <!-- 高级设置 -->
+    <string name="settings_section_advanced">高级</string>
+    <string name="api_config_title">API 配置</string>
+    <string name="api_config_desc">配置云端 API 端点地址</string>
+    <string name="api_endpoint_ai">AI 推理端点</string>
+    <string name="api_endpoint_preset">预设同步端点</string>
+    <string name="api_endpoint_auth">用户认证端点</string>
+    <string name="api_config_saved">API 配置已保存</string>
+    <string name="api_config_reset">重置为默认</string>
+    <string name="api_config_reset_confirm">确定要重置所有 API 端点为默认值吗？</string>
+
+    <!-- 底部开发者信息 -->
+    <string name="developer_footer">Developed by Silas</string>
+    <string name="copyright_footer">© 2026 OMaster. All rights reserved.</string>
+
+    <!-- 功能介绍 -->
+    <string name="feature_title">功能介绍</string>
+    <string name="feature_desc_1">OMaster 是一款面向摄影爱好者与专业人士的调色参数管理工具。</string>
+    <string name="feature_desc_2">您可以在这里查看、收藏和复现哈苏、徕卡、富士等品牌的大师调色参数，包括曝光、对比度、饱和度、色温等专业参数。</string>
+
+    <!-- 制作信息 -->
+    <string name="credits_title">制作信息</string>
+    <string name="developer">开发者</string>
+    <string name="developer_name">Silas</string>
+    <string name="material_provider">素材提供</string>
+
+    <!-- 页脚 -->
+    <string name="footer_local"></string>
+    <string name="privacy_policy">《用户协议和隐私政策》</string>
+
+    <!-- 隐私政策页 -->
+    <string name="privacy_title">用户协议和隐私政策</string>
+    <string name="welcome_title">欢迎使用 OMaster</string>
+    <string name="welcome_desc">OMaster 是一款面向摄影爱好者与专业人士的调色参数管理工具。在这里，您可以查看、收藏和复现哈苏、徕卡、富士等品牌的大师调色参数。</string>
+    <string name="features_title">功能介绍</string>
+    <string name="features_list">• 查看哈苏、徕卡、富士等品牌大师调色参数\n• 支持多种预设风格\n• 本地预设管理，无需联网即可使用</string>
+    <string name="data_collection_title">数据收集说明</string>
+    <string name="data_collection_desc">为了提供更好的服务，我们使用了友盟统计分析 SDK 来收集应用使用数据。</string>
+    <string name="sdk_info_title">友盟 SDK 信息</string>
+    <string name="sdk_name_label">使用 SDK 名称</string>
+    <string name="sdk_name">友盟 SDK</string>
+    <string name="service_type_label">服务类型</string>
+    <string name="service_type">统计分析</string>
+    <string name="collect_info_label">收集个人信息类型</string>
+    <string name="collect_info">设备信息（MAC/Android ID/IDFA/GUID/IP信息等）</string>
+    <string name="privacy_link_label">隐私权政策链接：</string>
+    <string name="user_rights_title">用户权利</string>
+    <string name="user_rights_desc">您有权访问、更正、删除您的个人信息。如需行使这些权利，请通过应用内的联系方式与我们联系。</string>
+
+    <!-- 悬浮窗引导 -->
+    <string name="guide_title">开启悬浮窗权限</string>
+    <string name="guide_desc">为了在拍摄时方便查看参数，OMaster 需要悬浮窗权限</string>
+    <string name="guide_step_1">1. 在设置页面找到“允许显示在其他应用上层”或类似选项</string>
+    <string name="guide_step_2">2. 开启开关</string>
+    <string name="guide_step_3">3. 返回 OMaster</string>
+    <string name="guide_fail_title">如果遇到权限开启失败：</string>
+    <string name="guide_fail_step_1">前往「设置 → 应用管理」</string>
+    <string name="guide_fail_step_2">找到 OMaster 应用</string>
+    <string name="guide_fail_step_3">点击右上角 ⋮ 菜单</string>
+    <string name="guide_fail_step_4">选择「解除所有授权限制」</string>
+    <string name="guide_tip">提示：解除限制后，请确保只授予「悬浮窗」权限</string>
+    <string name="guide_btn_open">去开启权限</string>
+    <string name="guide_later">以后再说</string>
+
+    <!-- AI场景识别 -->
+    <string name="ai_unavailable">AI 功能暂不可用</string>
+    <string name="ai_initialization_failed">AI 模型初始化失败，请重启应用重试</string>
+    <string name="analysis_failed">分析失败，请重试</string>
+    <string name="ai_smart_shoot">AI 智能拍摄</string>
+    <string name="scene_recognition_50plus">50+ 精细场景识别</string>
+    <string name="one_click_optimize">一键参数优化</string>
+    <string name="ai_analyzing">AI 场景分析中...</string>
+    <string name="processed">处理后</string>
+    <string name="original">原图</string>
+    <string name="before">Before</string>
+    <string name="after">After</string>
+    <string name="hasselblad_master_recognition">哈苏大师识别</string>
+    <string name="auto_matched_params">已自动匹配最佳参数</string>
+    <string name="hasselblad_master_params">哈苏大师参数</string>
+    <string name="master_tips_title">大师建议</string>
+    <string name="recent_recognition">最近识别</string>
+    <string name="retake">重拍</string>
+    <string name="apply_params">应用参数</string>
+    <string name="view_online_privacy_policy">查看在线隐私政策</string>
+    <string name="contact_title">联系我们</string>
+    <string name="contact_info">如果您对本隐私政策有任何疑问，请联系：\n开发者：Silas \n邮箱：iboy66lee@qq.com</string>
+    <string name="last_updated">最后更新日期：%1$s</string>
+    <string name="no_release_notes">暂无更新说明</string>
+
+    <!-- 欢迎对话框 -->
+    <string name="welcome_dialog_title">欢迎使用 OMaster</string>
+    <string name="welcome_version">OMaster v1.3.1</string>
+    <string name="feature_1_title">专业参数</string>
+    <string name="feature_1_desc">查看哈苏、徕卡、富士等品牌的大师调色参数</string>
+    <string name="feature_2_title">多种风格</string>
+    <string name="feature_2_desc">支持多种预设风格，满足不同拍摄需求</string>
+    <string name="feature_3_title">离线可用</string>
+    <string name="feature_3_desc">本地预设管理，无需联网即可使用</string>
+    <string name="agree_prefix">我已阅读并同意</string>
+    <string name="umeng_notice">• 我们使用友盟 SDK 进行统计分析\n• 收集设备信息以优化应用体验</string>
+    <string name="privacy_hint">点击《用户协议和隐私政策》查看详细信息</string>
+    <string name="disagree">不同意</string>
+    <string name="agree_and_start">同意并开始</string>
+
+    <!-- 悬浮窗引导对话框 -->
+    <string name="floating_guide_title">开启悬浮窗权限</string>
+    <string name="floating_guide_desc">为了在拍摄时方便查看参数，OMaster 需要悬浮窗权限</string>
+    <string name="permission_trouble">如果遇到权限开启失败：</string>
+    <string name="permission_step_1">前往「设置 → 应用管理」</string>
+    <string name="permission_step_2">找到 OMaster 应用</string>
+    <string name="permission_step_3">点击右上角 ⋮ 菜单</string>
+    <string name="permission_step_4">选择「解除所有授权限制」</string>
+    <string name="permission_tip">提示：解除限制后，请确保只授予「悬浮窗」权限</string>
+    <string name="later">以后再说</string>
+
+    <!-- 悬浮窗服务 -->
+    <string name="floating_preset">预设</string>
+    <string name="floating_original">原图</string>
+    <string name="floating_basic_params">基础参数</string>
+    <string name="floating_filter_icon">◈</string>
+    <string name="floating_filter_label">滤镜风格</string>
+    <string name="floating_soft_icon">✦</string>
+    <string name="floating_soft_label">柔光</string>
+    <string name="floating_tone_icon">◐</string>
+    <string name="floating_tone_label">影调</string>
+    <string name="floating_saturation_icon">◉</string>
+    <string name="floating_saturation_label">饱和度</string>
+    <string name="floating_warm_icon">◑</string>
+    <string name="floating_warm_label">冷暖</string>
+    <string name="floating_cyan_icon">◒</string>
+    <string name="floating_cyan_label">青品</string>
+    <string name="floating_sharpness_icon">◆</string>
+    <string name="floating_sharpness_label">锐度</string>
+    <string name="floating_vignette_icon">◍</string>
+    <string name="floating_vignette_label">暗角</string>
+
+    <!-- 行影集 -->
+    <string name="update_settings_title">更新设置</string>
+    <string name="update_channel_stable">稳定版</string>
+    <string name="update_channel_stable_desc">最稳定的版本，推荐日常使用</string>
+    <string name="update_channel_beta">测试版</string>
+    <string name="update_channel_beta_desc">提前体验新功能，可能存在小问题</string>
+    <string name="update_channel_dev">开发版</string>
+    <string name="update_channel_dev_desc">最新功能，适合尝鲜用户</string>
+    <string name="update_channel_label">更新渠道</string>
+    <string name="update_options_label">更新选项</string>
+    <string name="update_option_auto_check">自动检查更新</string>
+    <string name="update_option_wifi_only">仅 Wi-Fi 下下载</string>
+    <string name="update_option_auto_install">夜间自动安装</string>
+    <string name="update_already_latest">已是最新版本</string>
+    <string name="update_check_button">检查更新</string>
+    <string name="update_checking">正在检查…</string>
+    <string name="update_not_checked">尚未检查</string>
+    <string name="update_last_check">最后检查：%1$s</string>
+    <string name="update_found_new">发现新版本: v%1$s (%2$s)</string>
+    <string name="update_current_latest">当前已是最新版本 (v%1$s)</string>
+    <string name="update_check_failed">检查失败: %1$s</string>
+    <string name="update_cannot_get_version">无法获取版本信息</string>
+    <string name="update_http_failed">检查失败: HTTP %1$d</string>
+    <string name="update_download_button">下载更新</string>
+    <string name="update_downloading">正在下载…</string>
+    <string name="update_download_progress">下载中…%1$d%%</string>
+    <string name="update_install_button">安装更新</string>
+    <string name="update_download_failed">下载失败，请重试</string>
+    <string name="update_installing">正在安装…</string>
+    <string name="update_download_complete">下载完成，点击安装</string>
+
+    <!-- 行影集 -->
+    <string name="xingyingji_title">行影集</string>
+    <string name="annual_report_title">%1$d 年度回忆录</string>
+    <string name="annual_report_subtitle">一帧一画，定格步履与温柔</string>
+    <string name="view_annual_report">查看年度报告</string>
+    <string name="permission_storage_title">需要存储权限</string>
+    <string name="permission_storage_desc">行影集需要访问您的照片和视频，才能生成时间轴、相册、足迹和人物聚类。</string>
+    <string name="go_to_settings">前往设置开启</string>
+    <string name="request_permission_again">重新申请</string>
+    <string name="grant_permission">授权访问</string>
+    <string name="memories_entry">回忆入口</string>
+    <string name="timeline">时间轴</string>
+    <string name="timeline_desc">按时间回顾所有照片与视频</string>
+    <string name="albums">相册</string>
+    <string name="albums_desc">普通相册、智能相册与条件相册</string>
+    <string name="locations_map">足迹地图</string>
+    <string name="locations_map_desc">点亮你去过的每一座城市</string>
+    <string name="people">人物</string>
+    <string name="people_desc">人脸识别聚类，找到每个人的身影</string>
+    <string name="tickets">行程票据</string>
+    <string name="tickets_desc">火车票、机票、景区门票自动识别</string>
+    <string name="toolbox">工具箱</string>
+    <string name="toolbox_desc">清理、整理、重命名与回收站</string>
+    <string name="travel_quote">把旅行从“拍过”变成“可回味、可分享、可沉淀”。</string>
+    <string name="stat_photos">照片</string>
+    <string name="stat_videos">视频</string>
+    <string name="stat_cities">城市</string>
+    <string name="stat_people">人物</string>
+
+    <!-- 云端同步 -->
+    <string name="cloud_sync_title">云端同步</string>
+    <string name="cloud_provider_webdav">WebDAV</string>
+    <string name="cloud_provider_gdrive">Google Drive</string>
+    <string name="cloud_connect">连接</string>
+    <string name="cloud_disconnect">断开</string>
+    <string name="cloud_test_connection">测试连接</string>
+    <string name="cloud_syncing">同步中…</string>
+    <string name="cloud_sync_success">同步成功</string>
+    <string name="cloud_sync_failed">同步失败</string>
+    <string name="cloud_last_sync">上次同步</string>
+    <string name="cloud_auto_sync">自动同步</string>
+    <string name="cloud_server_url">服务器地址</string>
+    <string name="cloud_username">用户名</string>
+    <string name="cloud_password">密码</string>
+    <string name="cloud_not_configured">未配置云端服务</string>
+    <string name="cloud_connected">已连接</string>
+
+    <!-- 付费墙 / 订阅 -->
+    <string name="paywall_title">升级 Pro</string>
+    <string name="paywall_monthly">月度</string>
+    <string name="paywall_yearly">年度</string>
+    <string name="paywall_lifetime">终身</string>
+    <string name="paywall_restore">恢复购买</string>
+    <string name="paywall_feature_1">基础相机</string>
+    <string name="paywall_feature_2">基础预设</string>
+    <string name="paywall_feature_3">基础编辑</string>
+    <string name="paywall_feature_4">AI 高级调色</string>
+    <string name="paywall_feature_5">夜景模式</string>
+    <string name="paywall_feature_6">光绘模式</string>
+    <string name="paywall_feature_7">人像散景</string>
+    <string name="paywall_feature_8">风格 LUT 生成器</string>
+    <string name="paywall_feature_9">云同步</string>
+    <string name="paywall_feature_10">哈苏高级模式</string>
+    <string name="pro_badge">PRO</string>
+    <string name="upgrade_now">立即升级</string>
+
+    <!-- App Shortcuts (Android 7.1+) -->
+    <string name="shortcut_camera">打开相机</string>
+    <string name="shortcut_camera_long">快速打开相机拍照</string>
+    <string name="shortcut_camera_disabled">相机功能不可用</string>
+    <string name="shortcut_presets">预设库</string>
+    <string name="shortcut_presets_long">浏览预设库</string>
+    <string name="shortcut_presets_disabled">预设库不可用</string>
+    <string name="shortcut_optimize">智能优化</string>
+    <string name="shortcut_optimize_long">快速优化照片</string>
+    <string name="shortcut_optimize_disabled">优化功能不可用</string>
+
+    <!-- HNCS 3.0 -->
+    <string name="hncs_only_hasselblad">仅哈苏预设可用</string>
+    <string name="hncs_ab_compare">HNCS 对比</string>
+    <string name="hncs_before">关闭 HNCS</string>
+    <string name="hncs_after">开启 HNCS</string>
+
+    <!-- XMP 导入 -->
+    <string name="import_xmp">导入 XMP</string>
+    <string name="xmp_parse_failed">解析失败</string>
+    <string name="xmp_import_success">XMP 导入成功</string>
+
+    <!-- 水印功能 -->
+    <string name="watermark_title">水印编辑</string>
+    <string name="watermark_preview">预览</string>
+    <string name="watermark_preview_placeholder">配置水印后实时预览</string>
+    <string name="watermark_template">预设模板</string>
+    <string name="watermark_type_label">水印类型</string>
+    <string name="watermark_type_brand">品牌水印</string>
+    <string name="watermark_type_master">大师签名</string>
+    <string name="watermark_type_xpan">XPAN 宽幅</string>
+    <string name="watermark_text">水印文字</string>
+    <string name="watermark_font">字体</string>
+    <string name="watermark_font_size">字号</string>
+    <string name="watermark_color">颜色</string>
+    <string name="watermark_position">位置</string>
+    <string name="watermark_pos_bottom_left">左下</string>
+    <string name="watermark_pos_bottom_right">右下</string>
+    <string name="watermark_pos_center">居中</string>
+    <string name="watermark_opacity">透明度</string>
+    <string name="watermark_undo">撤销</string>
+    <string name="watermark_redo">重做</string>
+    <string name="watermark_pick_signature">选择签名图片</string>
+    <string name="watermark_signature_loaded">签名图片已加载</string>
+    <string name="watermark_xpan_bar_ratio">黑边比例</string>
+    <string name="watermark_xpan_text">宽幅文字</string>
+    <string name="watermark_quick_entry">水印</string>
+
+    <!-- 参数微调 -->
+    <string name="param_fine_tune">参数微调</string>
+    <string name="param_exposure">曝光</string>
+    <string name="param_color_temp">色温</string>
+    <string name="param_contrast">对比度</string>
+    <string name="param_saturation">饱和度</string>
+    <string name="param_save_copy">保存副本</string>
+    <string name="param_reset">重置</string>
+    <string name="param_copy_saved">副本已保存</string>
+    <string name="param_reset_done">已重置</string>
+</resources>

@@ -1,0 +1,372 @@
+[
+  {
+    "id": "ENV-001",
+    "name": "赛博朋克城市",
+    "category": "environment",
+    "intentKeywords": ["赛博朋克", "霓虹", "夜景", "cyberpunk", "neon", "night city"],
+    "equivalentEquipment": {
+      "camera": "Sony A7S III",
+      "lens": "FE 24mm f/1.4 GM",
+      "focalLength": "24mm",
+      "aperture": "f/1.4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.6,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "tungsten",
+      "exposureCompensation": -0.5
+    },
+    "hasselbladPreset": {
+      "tone": -15,
+      "saturation": 12,
+      "contrast": 25,
+      "colorTemp": -10,
+      "sharpness": 20,
+      "vignette": 20,
+      "cyanMagenta": -15,
+      "softLight": "NONE",
+      "highlights": -20,
+      "shadows": -5,
+      "clarity": 15
+    },
+    "lutRecommendation": { "id": "800t", "strength": 0.8 },
+    "arGuideLine": "FRAME",
+    "compositionTip": "利用建筑线条框住画面，霓虹招牌作为视觉焦点",
+    "lightingTip": "雨后地面反光增强霓虹效果，蓝调时刻最佳",
+    "avoidTips": ["过曝高光", "暖调", "柔光"]
+  },
+  {
+    "id": "ENV-002",
+    "name": "奇幻自然景观",
+    "category": "environment",
+    "intentKeywords": ["奇幻", "森林", "自然", "fantasy", "forest", "nature"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R5",
+      "lens": "RF 15-35mm f/2.8L",
+      "focalLength": "24mm",
+      "aperture": "f/5.6"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.6,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.3
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": 20,
+      "contrast": 10,
+      "colorTemp": 5,
+      "sharpness": 15,
+      "vignette": 0,
+      "cyanMagenta": 0,
+      "softLight": "DREAMY",
+      "highlights": -5,
+      "shadows": 10,
+      "clarity": 8
+    },
+    "lutRecommendation": { "id": "rdp3", "strength": 0.7 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "低角度仰拍增强纵深感，前景引导视线入画",
+    "lightingTip": "晨雾时段光线柔和，穿透林间的光束最梦幻",
+    "avoidTips": ["低饱和", "高对比", "硬光"]
+  },
+  {
+    "id": "ENV-003",
+    "name": "室内氛围",
+    "category": "environment",
+    "intentKeywords": ["室内", "氛围", "温馨", "indoor", "cozy", "warm"],
+    "equivalentEquipment": {
+      "camera": "Leica M11",
+      "lens": "Summilux 35mm f/1.4",
+      "focalLength": "35mm",
+      "aperture": "f/1.4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "tungsten",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 8,
+      "contrast": 5,
+      "colorTemp": 15,
+      "sharpness": 10,
+      "vignette": 5,
+      "cyanMagenta": 8,
+      "softLight": "SOFT",
+      "highlights": -5,
+      "shadows": 8,
+      "clarity": 3
+    },
+    "lutRecommendation": { "id": "warm_ccd", "strength": 0.6 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "利用门窗光线作为侧光，人物融入环境叙事",
+    "lightingTip": "暖色调灯光为主，避免色温过冷破坏氛围",
+    "avoidTips": ["顶光", "冷调", "高锐度"]
+  },
+  {
+    "id": "ENV-004",
+    "name": "荒野废墟",
+    "category": "environment",
+    "intentKeywords": ["废墟", "荒凉", "末日", "ruins", "wasteland", "apocalyptic"],
+    "equivalentEquipment": {
+      "camera": "Fujifilm GFX 100S",
+      "lens": "GF 32-64mm f/4",
+      "focalLength": "32mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.6,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": -0.3
+    },
+    "hasselbladPreset": {
+      "tone": -10,
+      "saturation": 0,
+      "contrast": 20,
+      "colorTemp": 0,
+      "sharpness": 18,
+      "vignette": 15,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -10,
+      "shadows": -5,
+      "clarity": 12
+    },
+    "lutRecommendation": { "id": "tx400", "strength": 0.8 },
+    "arGuideLine": "DIAGONAL",
+    "compositionTip": "利用废墟的几何线条和光影对比，人物点缀其中",
+    "lightingTip": "侧光强化废墟纹理，暗调为主保留神秘感",
+    "avoidTips": ["柔光", "高饱和", "暖调"]
+  },
+  {
+    "id": "ENV-005",
+    "name": "建筑内景",
+    "category": "environment",
+    "intentKeywords": ["建筑", "内景", "空间", "architecture", "interior", "wide"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R5",
+      "lens": "TS-E 17mm f/4L",
+      "focalLength": "17mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.5,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "auto",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": 5,
+      "contrast": 25,
+      "colorTemp": 0,
+      "sharpness": 28,
+      "vignette": 0,
+      "cyanMagenta": -10,
+      "softLight": "NONE",
+      "highlights": -10,
+      "shadows": 5,
+      "clarity": 15
+    },
+    "lutRecommendation": { "id": "nc_natural", "strength": 0.5 },
+    "arGuideLine": "HORIZON",
+    "compositionTip": "保持水平线平直，利用对称或引导线构图",
+    "lightingTip": "自然光或均匀人工照明，避免局部过曝",
+    "avoidTips": ["广角畸变", "柔光", "低对比"]
+  },
+  {
+    "id": "ENV-006",
+    "name": "海岸氛围",
+    "category": "environment",
+    "intentKeywords": ["海岸", "雾气", "孤独", "coast", "mist", "lonely"],
+    "equivalentEquipment": {
+      "camera": "Nikon Z8",
+      "lens": "NIKKOR Z 14-24mm f/2.8",
+      "focalLength": "24mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.6,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 10,
+      "saturation": 8,
+      "contrast": 5,
+      "colorTemp": -5,
+      "sharpness": 15,
+      "vignette": -10,
+      "cyanMagenta": -5,
+      "softLight": "NONE",
+      "highlights": 5,
+      "shadows": 10,
+      "clarity": 5
+    },
+    "lutRecommendation": { "id": "cool_ccd", "strength": 0.5 },
+    "arGuideLine": "HORIZON",
+    "compositionTip": "海平线保持水平，前景石头或人物增加层次",
+    "lightingTip": "清晨或傍晚侧光，雾气增加画面层次感",
+    "avoidTips": ["正午顶光", "高饱和", "暖调"]
+  },
+  {
+    "id": "ENV-007",
+    "name": "雪地冷调",
+    "category": "environment",
+    "intentKeywords": ["雪地", "冷调", "极简", "snow", "cold", "minimal"],
+    "equivalentEquipment": {
+      "camera": "Sony A7R V",
+      "lens": "FE 16-35mm f/2.8 GM",
+      "focalLength": "35mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.7
+    },
+    "hasselbladPreset": {
+      "tone": 15,
+      "saturation": -5,
+      "contrast": -10,
+      "colorTemp": -5,
+      "sharpness": 10,
+      "vignette": -15,
+      "cyanMagenta": -8,
+      "softLight": "NONE",
+      "highlights": 10,
+      "shadows": 15,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "cool_ccd", "strength": 0.7 },
+    "arGuideLine": "HORIZON",
+    "compositionTip": "大面积留白，主体小巧突出孤独感",
+    "lightingTip": "阴天漫反射光最佳，避免直射光造成阴影",
+    "avoidTips": ["过曝", "暖调", "高饱和"]
+  },
+  {
+    "id": "ENV-008",
+    "name": "沙漠史诗",
+    "category": "environment",
+    "intentKeywords": ["沙漠", "热浪", "远景", "desert", "epic", "vast"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R5",
+      "lens": "RF 70-200mm f/2.8L",
+      "focalLength": "200mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 5.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.3
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 15,
+      "contrast": 10,
+      "colorTemp": 15,
+      "sharpness": 18,
+      "vignette": 10,
+      "cyanMagenta": 10,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 10
+    },
+    "lutRecommendation": { "id": "nh_rich", "strength": 0.7 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "利用沙丘线条引导视线，人物点缀增加尺度感",
+    "lightingTip": "日出日落侧光强化沙丘纹理，暖金色调",
+    "avoidTips": ["冷调", "低饱和", "柔光"]
+  },
+  {
+    "id": "ENV-009",
+    "name": "城市街头",
+    "category": "environment",
+    "intentKeywords": ["街头", "城市", "烟火气", "city", "street", "urban"],
+    "equivalentEquipment": {
+      "camera": "Leica Q3",
+      "lens": "Summilux 28mm f/1.7",
+      "focalLength": "28mm",
+      "aperture": "f/2.8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "auto",
+      "exposureCompensation": -0.3
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 5,
+      "contrast": 18,
+      "colorTemp": 0,
+      "sharpness": 22,
+      "vignette": 10,
+      "cyanMagenta": -5,
+      "softLight": "NONE",
+      "highlights": -10,
+      "shadows": 5,
+      "clarity": 12
+    },
+    "lutRecommendation": { "id": "tx400", "strength": 0.8 },
+    "arGuideLine": "DIAGONAL",
+    "compositionTip": "等待决定性瞬间，利用街头元素形成对比",
+    "lightingTip": "自然光为主，侧光强化人物轮廓",
+    "avoidTips": ["柔光", "低对比", "中心构图"]
+  },
+  {
+    "id": "ENV-010",
+    "name": "奢华室内",
+    "category": "environment",
+    "intentKeywords": ["奢华", "酒店", "空间", "luxury", "hotel", "interior"],
+    "equivalentEquipment": {
+      "camera": "Hasselblad X2D",
+      "lens": "XCD 38mm f/2.5",
+      "focalLength": "38mm",
+      "aperture": "f/4"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "tungsten",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 5,
+      "contrast": 10,
+      "colorTemp": 5,
+      "sharpness": 15,
+      "vignette": 0,
+      "cyanMagenta": 0,
+      "softLight": "SOFT",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 5
+    },
+    "lutRecommendation": { "id": "warm_ccd", "strength": 0.5 },
+    "arGuideLine": "GOLDEN_RATIO",
+    "compositionTip": "利用空间纵深感和装饰细节，展现奢华质感",
+    "lightingTip": "暖色调灯光营造奢华氛围，避免直射光反光",
+    "avoidTips": ["顶光", "冷调", "杂乱背景"]
+  }
+]

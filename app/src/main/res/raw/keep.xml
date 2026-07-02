@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/*,@drawable/ic_launcher*,@drawable/ic_launcher_foreground,@drawable/ic_launcher_background,@mipmap/*,@raw/hasselblad_aperture_*,@raw/*_shader"
+    tools:discard="@string/abx_*,@string/cronet_*,@string/grpc_*,@string/flutter_*"
+    tools:shrinkMode="strict" />

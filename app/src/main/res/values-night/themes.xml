@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  夜间/高对比度主题兜底
+  应用主 UI 使用 Compose MaterialTheme 管理，此处仅覆盖系统窗口级属性
+-->
+<resources>
+    <style name="Theme.OMaster.HighContrast" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#000000</item>
+        <item name="android:colorPrimaryDark">#000000</item>
+        <item name="android:colorAccent">#333333</item>
+        <item name="android:windowBackground">#FFFFFF</item>
+        <item name="android:windowIsTranslucent">false</item>
+    </style>
+</resources>
