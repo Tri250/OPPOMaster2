@@ -5,6 +5,9 @@ import android.os.Build
 import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.SubscriptionManager
+import com.silas.omaster.data.local.database.AppDatabase
+import com.silas.omaster.data.local.database.PresetDao
+import com.silas.omaster.data.local.database.PresetEntity
 import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
@@ -44,6 +47,7 @@ class PresetRepository private constructor(context: Context) {
     private val settingsManager = SettingsManager.getInstance(context)
     private val subscriptionManager = SubscriptionManager.getInstance(context)
     private val appContext = context.applicationContext
+    private val presetDao: PresetDao = AppDatabase.getInstance(context).presetDao()
 
     // 预设列表
     private val _presets = MutableStateFlow<List<PresetItem>>(emptyList())
@@ -146,6 +150,21 @@ class PresetRepository private constructor(context: Context) {
                         Log.e(TAG, "本地预设初始化彻底失败,使用空列表")
                         _presets.value = emptyList()
                     }
+                }
+            }
+
+            // 如果文件缓存为空，尝试从Room数据库加载（PM-005：断网兜底）
+            if (_presets.value.isEmpty()) {
+                try {
+                    val roomPresets = presetDao.getAllPresets()
+                    roomPresets.collect { entities ->
+                        if (entities.isNotEmpty()) {
+                            _presets.value = entities.map { PresetItem.fromMasterPreset(it.toMasterPreset()) }
+                            Log.i(TAG, "从Room数据库恢复: ${entities.size} 条预设")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "从Room数据库恢复失败", e)
                 }
             }
 
@@ -986,6 +1005,16 @@ class PresetRepository private constructor(context: Context) {
                 tempFile.delete()
             }
             Log.d(TAG, "已写入本地缓存: ${currentList.size} 条, ${jsonStr.length / 1024}KB")
+
+            // 同步到Room数据库，实现本地持久化（PM-003）
+            try {
+                val entities = currentList.filter { it.deletedAt == null }
+                    .map { PresetEntity.fromMasterPreset(it.toMasterPreset()) }
+                presetDao.insertPresets(entities)
+                Log.d(TAG, "已同步到Room数据库: ${entities.size} 条")
+            } catch (e: Exception) {
+                Log.e(TAG, "同步到Room数据库失败", e)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "写入本地缓存失败", e)
         }
@@ -1107,18 +1136,33 @@ class PresetRepository private constructor(context: Context) {
         // 验证预设是否存在
         val exists = _presets.value.any { it.id == presetId }
         if (!exists) {
-            Log.w(TAG, "toggleFavorite: 预设 $presetId 不存在，跳过收藏操作")
-            return
+            // 尝试从Room验证，支持离线收藏已缓存的预设
+            val roomPreset = withContext(Dispatchers.IO) {
+                try { presetDao.getPresetById(presetId) } catch (_: Exception) { null }
+            }
+            if (roomPreset == null) {
+                Log.w(TAG, "toggleFavorite: 预设 $presetId 不存在，跳过收藏操作")
+                return
+            }
         }
 
         val current = _favorites.value.toMutableSet()
-        if (current.contains(presetId)) {
+        val isNowFavorite = if (current.contains(presetId)) {
             current.remove(presetId)
+            false
         } else {
             current.add(presetId)
+            true
         }
         _favorites.value = current
         saveFavorites(current)
+
+        // 同步收藏状态到Room数据库（PM-003：本地持久化）
+        try {
+            presetDao.updateFavoriteStatus(presetId, isNowFavorite)
+        } catch (e: Exception) {
+            Log.e(TAG, "更新Room收藏状态失败", e)
+        }
     }
 
     /**
@@ -1326,6 +1370,59 @@ data class PresetItem(
         tags = tags,
         mode = mode
     )
+
+    companion object {
+        /**
+         * 从 MasterPreset 转换为 PresetItem（用于 Room 恢复等场景）
+         */
+        fun fromMasterPreset(mp: MasterPreset): PresetItem {
+            return PresetItem(
+                id = mp.id ?: "${mp.name}_${System.currentTimeMillis()}",
+                name = mp.name,
+                brand = mp.brand ?: "custom",
+                scene = mp.shootingTips ?: "",
+                params = buildMap {
+                    mp.tone?.let { put("contrast", it) }
+                    mp.saturation?.let { put("saturation", it) }
+                    mp.warmCool?.let { put("warmth", it) }
+                    mp.sharpness?.let { put("sharpness", it) }
+                    mp.cyanMagenta?.let { put("cyan_magenta", it) }
+                    mp.colorTemperature?.let { put("color_temperature", it) }
+                    mp.colorHue?.let { put("color_hue", it) }
+                    mp.params?.forEach { (k, v) ->
+                        v.toIntOrNull()?.let { put(k, it) }
+                    }
+                },
+                coverPath = mp.coverPath,
+                galleryImages = mp.galleryImages,
+                description = mp.description?.content ?: mp.shootingTips ?: "",
+                isSystem = !mp.isCustom,
+                isHncs = mp.isHncs,
+                rating = mp.rating ?: 0f,
+                ratingCount = mp.ratingCount,
+                downloadCount = mp.downloads ?: 0,
+                favoriteCount = 0,
+                comments = mp.comments,
+                tags = mp.tags ?: emptyList(),
+                createdAt = mp.createdAt,
+                updatedAt = mp.updatedAt ?: mp.createdAt,
+                isNew = mp.isNew,
+                isPinned = false,
+                mode = mp.mode,
+                author = mp.author,
+                sections = mp.sections,
+                filter = mp.filter,
+                softLight = mp.softLight,
+                vignette = mp.vignette,
+                iso = mp.iso,
+                shutterSpeed = mp.shutterSpeed,
+                exposureCompensation = mp.exposureCompensation,
+                whiteBalance = mp.whiteBalance,
+                colorTone = mp.colorTone,
+                deletedAt = mp.deletedAt
+            )
+        }
+    }
 
     /**
      * 转换为 MasterPreset（用于 UI 层）

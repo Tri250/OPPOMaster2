@@ -148,6 +148,8 @@ fun HomeScreen(
     val customPresets by viewModel.customPresets.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val selectedBrand by viewModel.selectedBrand.collectAsState()
+    val selectedStyleTag by viewModel.selectedStyleTag.collectAsState()
+    val selectedSceneTag by viewModel.selectedSceneTag.collectAsState()
     val sortType by viewModel.sortType.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -183,9 +185,25 @@ fun HomeScreen(
         }
     }
 
-    // 获取过滤后的预设列表
-    val filteredPresets = remember(selectedTab, selectedBrand, sortType, searchQuery, allPresets) {
+    // 获取过滤后的预设列表（PM-02：加入风格/场景二级筛选依赖）
+    val filteredPresets = remember(selectedTab, selectedBrand, selectedStyleTag, selectedSceneTag, sortType, searchQuery, allPresets) {
         viewModel.getFilteredPresets()
+    }
+
+    // 从当前预设列表中提取可用的风格/场景标签（用于二级筛选展示）
+    val availableStyleTags = remember(allPresets, selectedBrand) {
+        val base = if (selectedBrand == "all") allPresets else allPresets.filter { it.brand == selectedBrand }
+        base.flatMap { it.tags ?: emptyList() }
+            .filter { it in listOf("胶片", "人像", "风景", "夜景", "街拍", "美食", "黑白", "复古", "清新", "日系", "欧美", "电影感") }
+            .distinct()
+            .sorted()
+    }
+    val availableSceneTags = remember(allPresets, selectedBrand) {
+        val base = if (selectedBrand == "all") allPresets else allPresets.filter { it.brand == selectedBrand }
+        base.flatMap { it.tags ?: emptyList() }
+            .filter { it in listOf("室内", "室外", "逆光", "晴天", "阴天", "雨天", "海边", "森林", "城市", "人像", "静物", "运动") }
+            .distinct()
+            .sorted()
     }
 
     // 当预设列表变化时，更新到全局控制器
@@ -317,6 +335,9 @@ fun HomeScreen(
                 onBrandSelected = { brand ->
                     haptic.perform(HapticFeedbackType.LongPress)
                     viewModel.selectBrand(brand)
+                    // 切换品牌时重置二级筛选
+                    viewModel.selectStyleTag(null)
+                    viewModel.selectSceneTag(null)
                 },
                 sortType = sortType,
                 onSortSelected = { sort ->
@@ -325,6 +346,25 @@ fun HomeScreen(
                 },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
+
+            // PM-02：风格/场景二级筛选
+            if (availableStyleTags.isNotEmpty() || availableSceneTags.isNotEmpty()) {
+                SecondaryFilterBar(
+                    styleTags = availableStyleTags,
+                    sceneTags = availableSceneTags,
+                    selectedStyleTag = selectedStyleTag,
+                    selectedSceneTag = selectedSceneTag,
+                    onStyleTagSelected = { tag ->
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        viewModel.selectStyleTag(if (selectedStyleTag == tag) null else tag)
+                    },
+                    onSceneTagSelected = { tag ->
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        viewModel.selectSceneTag(if (selectedSceneTag == tag) null else tag)
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
 
             // 预设网格
             PresetGrid(
@@ -769,10 +809,10 @@ private fun BrandAndSortFilter(
 ) {
     val brands = listOf(
         "all" to stringResource(R.string.brand_all),
-        "OPPO" to stringResource(R.string.brand_oppo),
-        "realme" to stringResource(R.string.brand_realme),
-        "vivo" to stringResource(R.string.brand_vivo),
-        "荣耀" to stringResource(R.string.brand_honor)
+        "hasselblad" to stringResource(R.string.brand_hasselblad),
+        "fujifilm" to stringResource(R.string.brand_fujifilm),
+        "sony" to stringResource(R.string.brand_sony),
+        "leica" to stringResource(R.string.brand_leica)
     )
 
     val sortOptions = listOf(
@@ -873,6 +913,97 @@ private fun BrandFilterButton(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+    }
+}
+
+/**
+ * PM-02：风格/场景二级筛选栏
+ */
+@Composable
+private fun SecondaryFilterBar(
+    styleTags: List<String>,
+    sceneTags: List<String>,
+    selectedStyleTag: String?,
+    selectedSceneTag: String?,
+    onStyleTagSelected: (String) -> Unit,
+    onSceneTagSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (styleTags.isNotEmpty()) {
+            Text(
+                text = "风格",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 0.dp)
+            ) {
+                items(styleTags) { tag ->
+                    SecondaryFilterChip(
+                        label = tag,
+                        isSelected = selectedStyleTag == tag,
+                        onClick = { onStyleTagSelected(tag) }
+                    )
+                }
+            }
+        }
+        if (sceneTags.isNotEmpty()) {
+            Text(
+                text = "场景",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 0.dp)
+            ) {
+                items(sceneTags) { tag ->
+                    SecondaryFilterChip(
+                        label = tag,
+                        isSelected = selectedSceneTag == tag,
+                        onClick = { onSceneTagSelected(tag) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecondaryFilterChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .hapticClickable { onClick() }
+            .background(
+                color = if (isSelected) com.silas.omaster.ui.theme.HasselbladOrange.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .border(
+                width = if (isSelected) 1.dp else 0.dp,
+                color = if (isSelected) com.silas.omaster.ui.theme.HasselbladOrange
+                else Color.Transparent,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) com.silas.omaster.ui.theme.HasselbladOrange
+            else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
     }
 }

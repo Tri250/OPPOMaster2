@@ -88,6 +88,10 @@
     
     <!-- 品牌筛选 -->
     <string name="brand_all">全部</string>
+    <string name="brand_hasselblad">哈苏</string>
+    <string name="brand_fujifilm">富士</string>
+    <string name="brand_sony">索尼</string>
+    <string name="brand_leica">徕卡</string>
     <string name="brand_oppo">OPPO</string>
     <string name="brand_realme">真我</string>
     <string name="brand_vivo">vivo</string>

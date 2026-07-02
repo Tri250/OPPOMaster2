@@ -59,6 +59,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.sentry)
+    id("org.jetbrains.kotlin.kapt")
 }
 
 // ===== 安全配置读取 =====
@@ -514,6 +515,11 @@ dependencies {
 
     // Google Play In-App Update
     implementation(libs.play.app.update.ktx)
+
+    // Room 本地数据库
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
 
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)

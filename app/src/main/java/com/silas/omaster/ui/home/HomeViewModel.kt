@@ -54,6 +54,14 @@ class HomeViewModel(
     private val _selectedBrand = MutableStateFlow("all")
     val selectedBrand: StateFlow<String> = _selectedBrand.asStateFlow()
 
+    // 当前选中的风格标签（PM-02：二级筛选）
+    private val _selectedStyleTag = MutableStateFlow<String?>(null)
+    val selectedStyleTag: StateFlow<String?> = _selectedStyleTag.asStateFlow()
+
+    // 当前选中的场景标签（PM-02：二级筛选）
+    private val _selectedSceneTag = MutableStateFlow<String?>(null)
+    val selectedSceneTag: StateFlow<String?> = _selectedSceneTag.asStateFlow()
+
     // 当前排序方式（对齐Web端）
     private val _sortType = MutableStateFlow(SortType.NEWEST)
     val sortType: StateFlow<SortType> = _sortType.asStateFlow()
@@ -177,6 +185,20 @@ class HomeViewModel(
     }
 
     /**
+     * 切换风格标签筛选（PM-02：二级筛选）
+     */
+    fun selectStyleTag(tag: String?) {
+        _selectedStyleTag.value = tag
+    }
+
+    /**
+     * 切换场景标签筛选（PM-02：二级筛选）
+     */
+    fun selectSceneTag(tag: String?) {
+        _selectedSceneTag.value = tag
+    }
+
+    /**
      * 切换排序方式（对齐Web端）
      */
     fun setSortType(sortType: SortType) {
@@ -193,6 +215,7 @@ class HomeViewModel(
     /**
      * 获取过滤后的预设列表（对齐Web端）
      * 修复：增加空安全检查，防止预设列表为null时崩溃
+     * PM-02：新增风格/场景二级筛选支持
      */
     fun getFilteredPresets(): List<MasterPreset> {
         val baseList = _allPresets.value
@@ -210,6 +233,20 @@ class HomeViewModel(
         val currentBrand = _selectedBrand.value
         if (currentBrand != "all") {
             result = result.filter { it.brand == currentBrand }
+        }
+
+        // PM-02：风格标签二级筛选
+        _selectedStyleTag.value?.let { styleTag ->
+            result = result.filter { preset ->
+                preset.tags?.any { it.contains(styleTag, ignoreCase = true) } == true
+            }
+        }
+
+        // PM-02：场景标签二级筛选
+        _selectedSceneTag.value?.let { sceneTag ->
+            result = result.filter { preset ->
+                preset.tags?.any { it.contains(sceneTag, ignoreCase = true) } == true
+            }
         }
 
         // 搜索过滤

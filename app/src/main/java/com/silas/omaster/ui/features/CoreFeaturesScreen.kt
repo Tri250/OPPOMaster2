@@ -107,6 +107,8 @@ fun CoreFeaturesScreen(
     onNavigateToHasselbladColor: () -> Unit,
     onNavigateToSceneAnalysisReport: () -> Unit = {},
     onNavigateToXingYingJi: () -> Unit = {},
+    onNavigateToWatermark: () -> Unit = {},
+    onNavigateToXmpImport: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -169,6 +171,30 @@ fun CoreFeaturesScreen(
                 ),
                 showToggle = false
             ),
+            FeatureData(
+                id = "xmp-import",
+                title = "XMP 导入",
+                subtitle = "导入 .xmp 文件，解析专业预设参数",
+                icon = Icons.Default.AutoAwesome,
+                gradientColors = listOf(Color(0xFF455A64), Color(0xFF607D8B)),
+                description = FeatureDescription(
+                    desc = "支持哈苏/富士/索尼/徕卡等品牌 .xmp 文件导入与解析",
+                    tips = listOf("曲线", "色相", "饱和度", "HSL", "胶片模拟")
+                ),
+                showToggle = false
+            ),
+            FeatureData(
+                id = "watermark",
+                title = "水印编辑器",
+                subtitle = "品牌水印、大师印记、XPAN 宽幅",
+                icon = Icons.Default.Brush,
+                gradientColors = listOf(Color(0xFF5D4037), Color(0xFF795548)),
+                description = FeatureDescription(
+                    desc = "创建品牌水印、大师印记签名、XPAN 宽幅黑边水印",
+                    tips = listOf("品牌水印", "大师印记", "XPAN 宽幅")
+                ),
+                showToggle = false
+            ),
             // 品牌特色 (4个：原哈苏色彩科学改名为哈苏之眼)
             FeatureData(
                 id = "lut-share",
@@ -223,9 +249,9 @@ fun CoreFeaturesScreen(
 
     // 功能分类 - 同步Web端
     val aiFeatures = allFeatures.slice(0..1)
-    val toolFeatures = allFeatures.slice(2..3)
-    val brandFeatures = allFeatures.slice(4..6)
-    val memoryFeatures = allFeatures.slice(7..7)
+    val toolFeatures = allFeatures.slice(2..5)
+    val brandFeatures = allFeatures.slice(6..8)
+    val memoryFeatures = allFeatures.slice(9..9)
 
     val listState = rememberLazyListState()
     var previousIndex by remember { mutableIntStateOf(0) }
@@ -335,6 +361,8 @@ fun CoreFeaturesScreen(
                         when (feature.id) {
                             "param-adjust" -> onNavigateToParamAdjustment()
                             "preset-manager" -> onNavigateToPresetManager()
+                            "xmp-import" -> onNavigateToXmpImport()
+                            "watermark" -> onNavigateToWatermark()
                         }
                     }
                 )

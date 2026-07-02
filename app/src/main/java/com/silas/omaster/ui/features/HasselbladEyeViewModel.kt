@@ -18,6 +18,7 @@ import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ai.TFLiteModelManager
 import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.ai.recipe.RecipeMatchResult
@@ -301,6 +302,14 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
             _analysisError.value = null
             _stage.value = HasselbladEyeStage.ANALYZING
 
+            // AI-03: TFLite 初始化失败兜底
+            val appContext = getApplication<android.app.Application>().applicationContext
+            val tfliteStatus = TFLiteModelManager.getModelStatus(appContext)
+            if (tfliteStatus != TFLiteModelManager.ModelStatus.READY) {
+                Log.w(TAG, "TFLite model not ready: $tfliteStatus, using heuristic fallback")
+                // 启发式分析器作为 fallback 继续运行，不阻断主流程
+            }
+
             val steps = defaultAnalysisSteps().toMutableList()
 
             try {
@@ -438,7 +447,15 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 _stage.value = HasselbladEyeStage.SETUP
             } catch (e: Exception) {
                 Log.e(TAG, "Analysis failed", e)
-                _analysisError.value = "分析失败: ${e.message ?: "未知错误"}"
+                // AI-03: TFLite 初始化失败兜底，区分模型错误与一般错误
+                val isTfliteError = e.message?.contains("tflite", ignoreCase = true) == true
+                    || e.message?.contains("model", ignoreCase = true) == true
+                    || e.cause?.message?.contains("tflite", ignoreCase = true) == true
+                _analysisError.value = if (isTfliteError) {
+                    "AI 功能暂不可用，已切换为基础分析模式"
+                } else {
+                    "分析失败: ${e.message ?: "未知错误"}"
+                }
                 _stage.value = HasselbladEyeStage.RESULTS
             }
         }

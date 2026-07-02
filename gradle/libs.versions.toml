@@ -74,6 +74,9 @@ workmanager = "2.10.0"
 sentry-android = "7.14.0"
 sentry-plugin = "4.14.1"
 
+# ===== Room (本地数据库) =====
+room = "2.6.1"
+
 # ===== LeakCanary (内存泄漏检测) =====
 leakcanary = "2.14"
 
@@ -172,6 +175,11 @@ sentry-android = { group = "io.sentry", name = "sentry-android", version.ref = "
 
 # ===== LeakCanary (内存泄漏检测，仅 Debug) =====
 leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+
+# ===== Room =====
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 # ===== Testing Libraries =====
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

@@ -56,17 +56,23 @@ import kotlin.math.roundToInt
 fun ParamAdjustScreen(
     onBack: () -> Unit,
     onApply: (CameraParams) -> Unit,
-    sourceBitmap: Bitmap? = null
+    sourceBitmap: Bitmap? = null,
+    initialParams: CameraParams? = null,
+    onSaveCopy: ((CameraParams) -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
-    // ========== 相机参数状态 ==========
-    var iso by remember { mutableIntStateOf(100) }
-    var shutterSpeed by remember { mutableFloatStateOf(1f / 125f) }
-    var aperture by remember { mutableFloatStateOf(2.8f) }
-    var whiteBalance by remember { mutableIntStateOf(5500) }
-    var focalLength by remember { mutableIntStateOf(23) }
-    var exposureCompensation by remember { mutableFloatStateOf(0f) }
+    // ========== 原始参数（用于重置） ==========
+    val originalParams = remember { initialParams ?: CameraParams() }
+
+    // ========== 相机参数状态（优先使用初始参数） ==========
+    var iso by remember { mutableIntStateOf(originalParams.iso) }
+    var shutterSpeed by remember { mutableFloatStateOf(originalParams.shutterSpeed) }
+    var aperture by remember { mutableFloatStateOf(originalParams.aperture) }
+    var whiteBalance by remember { mutableIntStateOf(originalParams.whiteBalance) }
+    var focalLength by remember { mutableIntStateOf(originalParams.focalLength) }
+    var exposureCompensation by remember { mutableFloatStateOf(originalParams.exposureCompensation) }
 
     // ========== 新增参数状态 ==========
     var focusMode by remember { mutableStateOf(FocusMode.AUTO) }
@@ -231,20 +237,40 @@ fun ParamAdjustScreen(
                         tint = if (linkageEnabled) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                     )
                 }
-                // 重置按钮
+                // 重置按钮：回到该预设原始值（PR-05修复）
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    iso = 100
-                    shutterSpeed = 1f / 125f
-                    aperture = 2.8f
-                    whiteBalance = 5500
-                    focalLength = 23
-                    exposureCompensation = 0f
+                    iso = originalParams.iso
+                    shutterSpeed = originalParams.shutterSpeed
+                    aperture = originalParams.aperture
+                    whiteBalance = originalParams.whiteBalance
+                    focalLength = originalParams.focalLength
+                    exposureCompensation = originalParams.exposureCompensation
                     focusMode = FocusMode.AUTO
                     meteringMode = MeteringMode.MATRIX
                     selectedPreset = null
+                    android.widget.Toast.makeText(context, "已重置到原始参数", android.widget.Toast.LENGTH_SHORT).show()
                 }) {
                     Icon(Icons.Default.Refresh, "重置", tint = MaterialTheme.colorScheme.onBackground)
+                }
+                // 保存副本按钮（PR-04修复）
+                if (onSaveCopy != null) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSaveCopy(
+                            CameraParams(
+                                iso = iso,
+                                shutterSpeed = shutterSpeed,
+                                aperture = aperture,
+                                whiteBalance = whiteBalance,
+                                focalLength = focalLength,
+                                exposureCompensation = exposureCompensation
+                            )
+                        )
+                        android.widget.Toast.makeText(context, "已保存为新预设副本", android.widget.Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.SaveAs, "保存副本", tint = HasselbladOrange)
+                    }
                 }
                 // 应用按钮
                 IconButton(onClick = {

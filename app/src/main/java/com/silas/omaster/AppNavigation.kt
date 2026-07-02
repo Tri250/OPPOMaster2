@@ -351,6 +351,8 @@ fun MainApp(
                     onNavigateToHasselbladColor = { navController.navigate(Screen.HasselbladColor) },
                     onNavigateToSceneAnalysisReport = { navController.navigate(Screen.SceneAnalysisReport) },
                     onNavigateToXingYingJi = { navController.navigate(Screen.XingYingJiHome) },
+                    onNavigateToWatermark = { navController.navigate(Screen.Watermark) },
+                    onNavigateToXmpImport = { navController.navigate(Screen.XmpImport) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp }
                 )
             }
@@ -403,7 +405,36 @@ fun MainApp(
                             exposureCompensation = params.exposureCompensation
                         )
                         navController.popBackStack()
+                    },
+                    onSaveCopy = { params ->
+                        // PR-04：保存为新预设副本
+                        val repo = PresetRepository.getInstance(context)
+                        repo.createCustomPreset(
+                            name = "参数微调副本 ${java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}",
+                            params = mapOf(
+                                "iso" to params.iso.toString(),
+                                "shutterSpeed" to params.shutterSpeed.toString(),
+                                "aperture" to params.aperture.toString(),
+                                "whiteBalance" to params.whiteBalance.toString(),
+                                "focalLength" to params.focalLength.toString(),
+                                "exposureCompensation" to params.exposureCompensation.toString()
+                            ),
+                            brand = "custom",
+                            description = "通过参数微调保存的自定义预设"
+                        )
                     }
+                )
+            }
+
+            composable<Screen.Watermark> {
+                com.silas.omaster.ui.features.watermark.WatermarkScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<Screen.XmpImport> {
+                com.silas.omaster.ui.features.xmp.XmpImportScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
