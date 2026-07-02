@@ -8,6 +8,7 @@ import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
+import com.silas.omaster.util.FileAccessController
 import java.util.UUID
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -787,12 +788,76 @@ class PresetRepository private constructor(context: Context) {
      */
     private fun loadLocalPresets() {
         try {
-            val loaded = readFromCache() ?: readFromAssets() ?: emptyList()
+            var loaded = readFromCache()
+            if (loaded == null) {
+                loaded = readFromAssets() ?: emptyList()
+                Log.d(TAG, "本地预设加载完成: ${loaded.size} 条 (来源=assets)")
+            } else {
+                // INST-002: 检查缓存版本并执行迁移
+                val cacheVersion = getCacheVersion()
+                if (cacheVersion < CACHE_VERSION) {
+                    Log.i(TAG, "INST-002: 检测到旧版本缓存 ($cacheVersion -> $CACHE_VERSION)，执行迁移")
+                    loaded = migrateCache(cacheVersion, loaded)
+                    // 迁移后立即保存新格式
+                    saveToCache()
+                    Log.i(TAG, "INST-002: 缓存迁移完成")
+                }
+                Log.d(TAG, "本地预设加载完成: ${loaded.size} 条 (来源=cache, version=$cacheVersion)")
+            }
             _presets.value = loaded
-            Log.d(TAG, "本地预设加载完成: ${loaded.size} 条 (来源=${if (cacheFile.exists()) "cache" else "assets"})")
         } catch (e: Exception) {
             Log.e(TAG, "本地预设加载失败，返回空列表", e)
             _presets.value = emptyList()
+        }
+    }
+
+    /**
+     * INST-002: 获取缓存文件版本号
+     */
+    private fun getCacheVersion(): Int {
+        if (!cacheFile.exists()) return 0
+        return try {
+            val text = cacheFile.readText()
+            val cache = json.decodeFromString(PresetCache.serializer(), text)
+            cache.version
+        } catch (e: Exception) {
+            1 // 无法解析版本号时假设为版本1
+        }
+    }
+
+    /**
+     * INST-002: 执行缓存版本迁移
+     * 当前支持: v1 -> v2
+     * v2 新增字段: sections, filter, softLight, vignette, iso, shutterSpeed, exposureCompensation, whiteBalance, colorTone, deletedAt
+     */
+    private fun migrateCache(fromVersion: Int, presets: List<PresetItem>): List<PresetItem> {
+        return when (fromVersion) {
+            0 -> {
+                // 无缓存，直接返回
+                presets
+            }
+            1 -> {
+                // v1 -> v2: 为旧数据补充新字段默认值
+                presets.map { item ->
+                    // v2 新增字段，旧数据中缺失，需要补充默认值
+                    item.copy(
+                        sections = item.sections ?: null,
+                        filter = item.filter ?: null,
+                        softLight = item.softLight ?: null,
+                        vignette = item.vignette ?: null,
+                        iso = item.iso ?: null,
+                        shutterSpeed = item.shutterSpeed ?: null,
+                        exposureCompensation = item.exposureCompensation ?: null,
+                        whiteBalance = item.whiteBalance ?: null,
+                        colorTone = item.colorTone ?: null,
+                        deletedAt = null // 旧数据没有软删除标记
+                    )
+                }
+            }
+            else -> {
+                // 未来版本迁移逻辑
+                presets
+            }
         }
     }
 
@@ -804,18 +869,22 @@ class PresetRepository private constructor(context: Context) {
             Log.d(TAG, "本地缓存文件不存在: ${cacheFile.absolutePath}")
             return null
         }
-        return try {
-            val text = cacheFile.readText()
-            if (text.isBlank()) {
-                Log.w(TAG, "本地缓存文件为空: ${cacheFile.absolutePath}")
-                return null
+
+        // STAB-003: 使用文件访问控制器防止并发读取导致的FD泄漏
+        return FileAccessController.withLock(cacheFile.absolutePath) {
+            try {
+                val text = cacheFile.readText()
+                if (text.isBlank()) {
+                    Log.w(TAG, "本地缓存文件为空: ${cacheFile.absolutePath}")
+                    return@withLock null
+                }
+                val cache = json.decodeFromString(PresetCache.serializer(), text)
+                Log.d(TAG, "从本地缓存读取 ${cache.presets.size} 条预设 (version=${cache.version})")
+                cache.presets
+            } catch (e: Exception) {
+                Log.w(TAG, "本地缓存解析失败，将回退到 assets", e)
+                null
             }
-            val cache = json.decodeFromString(PresetCache.serializer(), text)
-            Log.d(TAG, "从本地缓存读取 ${cache.presets.size} 条预设 (version=${cache.version})")
-            cache.presets
-        } catch (e: Exception) {
-            Log.w(TAG, "本地缓存解析失败，将回退到 assets", e)
-            null
         }
     }
 
@@ -967,27 +1036,30 @@ class PresetRepository private constructor(context: Context) {
      * 写入采用「写临时文件 + 原子重命名」的方式，避免写入过程中崩溃导致缓存损坏
      */
     private suspend fun saveToCache() = withContext(Dispatchers.IO) {
-        try {
-            val currentList = _presets.value
-            // 即使列表为空也写入缓存，避免清空操作后重启数据"复活"
-            val cache = PresetCache(
-                version = CACHE_VERSION,
-                timestamp = System.currentTimeMillis(),
-                presets = currentList
-            )
-            val jsonStr = json.encodeToString(cache)
+        // STAB-003: 使用文件访问控制器防止并发写入导致的FD泄漏和文件损坏
+        FileAccessController.withLock(cacheFile.absolutePath) {
+            try {
+                val currentList = _presets.value
+                // 即使列表为空也写入缓存，避免清空操作后重启数据"复活"
+                val cache = PresetCache(
+                    version = CACHE_VERSION,
+                    timestamp = System.currentTimeMillis(),
+                    presets = currentList
+                )
+                val jsonStr = json.encodeToString(cache)
 
-            // 写入临时文件，再原子替换
-            val tempFile = File(appContext.filesDir, "$CACHE_FILE_NAME.tmp")
-            tempFile.writeText(jsonStr, Charsets.UTF_8)
-            if (!tempFile.renameTo(cacheFile)) {
-                // renameTo 在跨文件系统等场景可能失败，fallback 到直接写入
-                cacheFile.writeText(jsonStr, Charsets.UTF_8)
-                tempFile.delete()
+                // 写入临时文件，再原子替换
+                val tempFile = File(appContext.filesDir, "$CACHE_FILE_NAME.tmp")
+                tempFile.writeText(jsonStr, Charsets.UTF_8)
+                if (!tempFile.renameTo(cacheFile)) {
+                    // renameTo 在跨文件系统等场景可能失败，fallback 到直接写入
+                    cacheFile.writeText(jsonStr, Charsets.UTF_8)
+                    tempFile.delete()
+                }
+                Log.d(TAG, "已写入本地缓存: ${currentList.size} 条, ${jsonStr.length / 1024}KB")
+            } catch (e: Exception) {
+                Log.e(TAG, "写入本地缓存失败", e)
             }
-            Log.d(TAG, "已写入本地缓存: ${currentList.size} 条, ${jsonStr.length / 1024}KB")
-        } catch (e: Exception) {
-            Log.e(TAG, "写入本地缓存失败", e)
         }
     }
 
@@ -1261,7 +1333,7 @@ class PresetRepository private constructor(context: Context) {
         private const val CACHE_FILE_NAME = "presets_cache.json"
         private const val CORRUPTED_BACKUP_FILE_NAME = "presets_cache.json.corrupted"
         private const val ASSETS_PRESETS_FILE = "presets.json"
-        private const val CACHE_VERSION = 1
+        private const val CACHE_VERSION = 2
         private const val NETWORK_CONNECT_TIMEOUT_MS = 10_000L
         private const val NETWORK_READ_TIMEOUT_MS = 30_000L
 

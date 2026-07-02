@@ -117,6 +117,15 @@ class SceneRecognitionManager private constructor(context: Context) {
     private fun initTFLite() {
         if (isInitializing.getAndSet(true)) return
         try {
+            // INST-004: 尝试加载 TFLite 共享库，捕获 UnsatisfiedLinkError
+            try {
+                System.loadLibrary("tensorflowlite_jni")
+                Log.d(TAG, "TFLite JNI 库加载成功")
+            } catch (e: UnsatisfiedLinkError) {
+                // 某些设备上系统会自动加载，这里失败不代表真正失败
+                Log.w(TAG, "TFLite JNI 库加载失败，尝试直接初始化", e)
+            }
+
             val modelFile: MappedByteBuffer = FileUtil.loadMappedFile(appContext, MODEL_FILE)
             val options = Interpreter.Options().apply {
                 numThreads = 2
@@ -131,6 +140,15 @@ class SceneRecognitionManager private constructor(context: Context) {
             tfliteInterpreter = Interpreter(modelFile, options)
             _isModelAvailable.set(true)
             Log.d(TAG, "TFLite 场景分类模型加载成功")
+        } catch (e: UnsatisfiedLinkError) {
+            // INST-004: SO库加载失败（不同ABI架构不匹配）
+            _isModelAvailable.set(false)
+            Log.e(TAG, "INST-004: TFLite SO库加载失败 - UnsatisfiedLinkError", e)
+            Log.i(TAG, "INST-004: 当前ABI: ${android.os.Build.SUPPORTED_ABIS.joinToString(", ")}")
+        } catch (e: IllegalArgumentException) {
+            // INST-004: 模型文件格式错误或不兼容
+            _isModelAvailable.set(false)
+            Log.e(TAG, "INST-004: TFLite 模型文件不兼容", e)
         } catch (e: Exception) {
             _isModelAvailable.set(false)
             Log.w(TAG, "TFLite 模型未找到或加载失败，将使用启发式分析器: ${e.message}")

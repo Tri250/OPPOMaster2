@@ -118,6 +118,8 @@ android {
     compileSdk = 36
     buildToolsVersion = "36.0.0"
 
+    // INST-001: 防止 INSTALL_FAILED_TEST_ONLY 错误
+    // release 构建必须设置 testOnly=false，否则 adb install 会失败
     defaultConfig {
         applicationId = "com.silas.omaster"
         minSdk = 24

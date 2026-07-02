@@ -193,28 +193,46 @@ class HomeViewModel(
     /**
      * 获取过滤后的预设列表（对齐Web端）
      * 修复：增加空安全检查，防止预设列表为null时崩溃
+     * HOME-001: 增加 IndexOutOfBoundsException 防护，确保所有操作安全
      */
     fun getFilteredPresets(): List<MasterPreset> {
         val baseList = _allPresets.value
-        var result = baseList.toList()
-
-        // Tab 过滤
-        when (_selectedTab.value) {
-            1 -> result = result.filter { it.isFavorite } // 收藏
-            2 -> result = result.filter { it.isHncs }     // 哈苏
-            3 -> result = result.filter { it.isNew }      // 上新
-            4 -> result = _customPresets.value // 我的（自定义预设）
+        if (baseList.isNullOrEmpty()) {
+            return emptyList()
         }
 
-        // 品牌过滤
+        var result: List<MasterPreset>
+        try {
+            result = baseList.toList()
+        } catch (e: Exception) {
+            return emptyList()
+        }
+
+        // HOME-001: Tab 索引安全检查
+        val tabIndex = _selectedTab.value
+        when {
+            tabIndex == 1 -> result = result.filter { it.isFavorite } // 收藏
+            tabIndex == 2 -> result = result.filter { it.isHncs }     // 哈苏
+            tabIndex == 3 -> result = result.filter { it.isNew }      // 上新
+            tabIndex == 4 -> {
+                // HOME-001: 安全获取自定义预设
+                try {
+                    result = _customPresets.value ?: emptyList()
+                } catch (e: Exception) {
+                    result = emptyList()
+                }
+            }
+        }
+
+        // HOME-001: 品牌过滤安全检查
         val currentBrand = _selectedBrand.value
-        if (currentBrand != "all") {
+        if (!currentBrand.isNullOrBlank() && currentBrand != "all") {
             result = result.filter { it.brand == currentBrand }
         }
 
-        // 搜索过滤
+        // HOME-001: 搜索过滤安全检查
         val currentQuery = _searchQuery.value
-        if (currentQuery.isNotEmpty()) {
+        if (!currentQuery.isNullOrEmpty()) {
             val query = currentQuery.lowercase()
             result = result.filter { preset ->
                 preset.name.lowercase().contains(query) ||
@@ -223,11 +241,16 @@ class HomeViewModel(
             }
         }
 
-        // 排序
-        result = when (_sortType.value) {
-            SortType.NEWEST -> result.sortedByDescending { it.isNew }
-            SortType.POPULAR -> result.sortedByDescending { it.downloads ?: 0 }
-            SortType.RATING -> result.sortedByDescending { it.rating ?: 0f }
+        // HOME-001: 排序安全检查
+        result = try {
+            when (_sortType.value) {
+                SortType.NEWEST -> result.sortedByDescending { it.isNew }
+                SortType.POPULAR -> result.sortedByDescending { it.downloads ?: 0 }
+                SortType.RATING -> result.sortedByDescending { it.rating ?: 0f }
+            }
+        } catch (e: Exception) {
+            // 排序失败时返回未排序列表
+            result
         }
 
         return result
