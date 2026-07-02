@@ -36,7 +36,8 @@ data class WatermarkConfig(
     val opacity: Float = 1.0f,
     val signatureImagePath: String = "",
     val xpanBarRatio: Float = 0.1f,
-    val xpanText: String = ""
+    val xpanText: String = "",
+    val xpanRatio: Float = 65f / 24f  // XPAN 宽幅比例 65:24 ≈ 2.7083
 )
 
 /**

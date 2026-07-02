@@ -6,12 +6,16 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.pow
 
 /**
  * 网络韧性管理器
@@ -21,6 +25,7 @@ import kotlinx.coroutines.flow.callbackFlow
  * - 离线缓存策略支持
  * - 网络恢复时自动重试
  * - 弱网环境降级处理
+ * - UC-19: 指数退避重试 + 网络连通性预检 + 并发同步保护
  *
  * 使用方式：
  * ```kotlin
@@ -46,6 +51,12 @@ object NetworkResilienceManager {
 
     private val _isOnline = MutableStateFlow(false)
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
+
+    /**
+     * UC-19: 并发同步保护标志——同一时刻只允许一个同步操作运行
+     * 使用 AtomicBoolean 保证多线程安全，避免重复 sync 导致 ANR
+     */
+    private val isSyncInProgress = AtomicBoolean(false)
 
     /**
      * 网络状态枚举
@@ -142,4 +153,63 @@ object NetworkResilienceManager {
      * 检查是否处于弱网环境（计费网络），建议降级策略
      */
     fun isMeteredNetwork(): Boolean = _networkState.value == NetworkState.Metered
+
+    /**
+     * UC-19: 检查网络连通性——在发起同步前调用
+     * @return true 表示有可用网络，可以发起同步
+     */
+    fun canPerformSync(): Boolean = isCurrentlyOnline()
+
+    /**
+     * UC-19: 尝试获取同步锁（防止并发重复同步）
+     * @return true 表示成功获取锁，可执行同步；false 表示已有同步在进行中
+     */
+    fun tryAcquireSyncLock(): Boolean = isSyncInProgress.compareAndSet(false, true)
+
+    /**
+     * UC-19: 释放同步锁（同步完成或失败后必须调用）
+     */
+    fun releaseSyncLock() {
+        isSyncInProgress.set(false)
+    }
+
+    /**
+     * UC-19: 带指数退避的网络请求重试
+     * 在弱网/断网环境下自动重试，避免直接在主线程阻塞导致 ANR
+     *
+     * @param maxRetries 最大重试次数
+     * @param baseDelayMs 初始延迟（毫秒）
+     * @param block 需要重试的挂起函数（必须在 IO 调度器执行）
+     * @return 成功返回结果，失败返回 null
+     */
+    suspend fun <T> retryWithExponentialBackoff(
+        maxRetries: Int = 3,
+        baseDelayMs: Long = 1000L,
+        block: suspend () -> T
+    ): T? {
+        var lastException: Throwable? = null
+
+        for (attempt in 0..maxRetries) {
+            try {
+                // 每次重试前检查网络状态
+                if (!isCurrentlyOnline()) {
+                    Log.w(TAG, "网络不可用，跳过重试 (attempt ${attempt + 1}/$maxRetries)")
+                    break
+                }
+                return block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastException = e
+                if (attempt < maxRetries) {
+                    val delayMs = baseDelayMs * (2.0.pow(attempt.toDouble())).toLong()
+                    Log.w(TAG, "请求失败，${delayMs}ms后重试 (${attempt + 1}/$maxRetries): ${e.message}")
+                    delay(delayMs)
+                }
+            }
+        }
+
+        Log.e(TAG, "请求最终失败，已重试 $maxRetries 次", lastException)
+        return null
+    }
 }

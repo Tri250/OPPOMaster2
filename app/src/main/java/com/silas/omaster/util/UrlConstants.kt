@@ -14,8 +14,33 @@ package com.silas.omaster.util
 object UrlConstants {
 
     // ===== CDN 基础 URL =====
-    /** jsDelivr CDN - OMaster 社区资源 */
-    const val CDN_JSDELIVR = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main"
+    /**
+     * UC-26: jsDelivr CDN 基础路径——可配置
+     *
+     * 默认值: https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main
+     * 可通过 setCdnBaseUrl() 在运行时覆盖，例如切换到自定义镜像或加速节点。
+     * 所有依赖此常量的 URL（预设源、LUT、示例图片等）会自动使用新值。
+     */
+    const val CDN_JSDELIVR_DEFAULT = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main"
+
+    /** 当前生效的 jsDelivr CDN 基础路径（可运行时修改） */
+    var cdnBaseUrl: String = CDN_JSDELIVR_DEFAULT
+        private set
+
+    /** UC-26: 运行时配置 CDN 基础路径 */
+    fun setCdnBaseUrl(url: String) {
+        if (url.isNotBlank() && url.lowercase().startsWith("https://")) {
+            cdnBaseUrl = url.trimEnd('/')
+        }
+    }
+
+    /** UC-26: 重置为默认 CDN 基础路径 */
+    fun resetCdnBaseUrl() {
+        cdnBaseUrl = CDN_JSDELIVR_DEFAULT
+    }
+
+    /** jsDelivr CDN - OMaster 社区资源（兼容旧代码，指向可配置值） */
+    val CDN_JSDELIVR: String get() = cdnBaseUrl
 
     /** 模型下载 CDN */
     const val CDN_MODELS = "https://releases.omaster.app/models"
@@ -41,19 +66,19 @@ object UrlConstants {
 
     // ===== 预设源 URL =====
     /** OPPO/一加 大师模式预设 */
-    const val PRESET_OPPO = "$CDN_JSDELIVR/presets/v2/oppo.json"
+    val PRESET_OPPO: String get() = "$CDN_JSDELIVR/presets/v2/oppo.json"
 
     /** realme GT 大师模式预设 */
-    const val PRESET_REALME = "$CDN_JSDELIVR/presets/v2/realme.json"
+    val PRESET_REALME: String get() = "$CDN_JSDELIVR/presets/v2/realme.json"
 
     /** vivo 蔡司自然色彩预设 */
-    const val PRESET_VIVO = "$CDN_JSDELIVR/presets/v2/vivo.json"
+    val PRESET_VIVO: String get() = "$CDN_JSDELIVR/presets/v2/vivo.json"
 
     /** 荣耀 Magic 影像预设 */
-    const val PRESET_HONOR = "$CDN_JSDELIVR/presets/v2/honor.json"
+    val PRESET_HONOR: String get() = "$CDN_JSDELIVR/presets/v2/honor.json"
 
     /** 预设源 URL 映射（品牌 -> URL） */
-    val PRESET_SOURCE_URLS: Map<String, String> = mapOf(
+    val PRESET_SOURCE_URLS: Map<String, String> get() = mapOf(
         "oppo" to PRESET_OPPO,
         "realme" to PRESET_REALME,
         "vivo" to PRESET_VIVO,
@@ -82,7 +107,7 @@ object UrlConstants {
         val url: String
     )
 
-    val PRESET_SOURCE_INFO_LIST: List<PresetSourceInfo> = listOf(
+    val PRESET_SOURCE_INFO_LIST: List<PresetSourceInfo> get() = listOf(
         PresetSourceInfo("OPPO", "一加/OPPO 大师模式官方预设", "OPPO & OnePlus 大师模式预设合集", PRESET_OPPO),
         PresetSourceInfo("realme", "realme GT 大师模式官方预设", "realme GT 系列大师模式预设", PRESET_REALME),
         PresetSourceInfo("vivo", "vivo 蔡司自然色彩官方预设", "vivo ZEISS 自然色彩预设", PRESET_VIVO),
@@ -90,10 +115,10 @@ object UrlConstants {
     )
 
     // ===== LUT 资源 CDN 路径 =====
-    const val LUT_BASE_PATH = "$CDN_JSDELIVR/luts"
+    val LUT_BASE_PATH: String get() = "$CDN_JSDELIVR/luts"
 
     // ===== 示例图片 CDN 路径 =====
-    const val SAMPLES_BASE_PATH = "$CDN_JSDELIVR/samples"
+    val SAMPLES_BASE_PATH: String get() = "$CDN_JSDELIVR/samples"
 
     /**
      * 获取 LUT 下载 URL

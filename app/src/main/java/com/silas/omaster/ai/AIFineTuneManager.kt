@@ -203,6 +203,23 @@ class AIFineTuneManager private constructor(context: Context) {
         bitmap: Bitmap,
         currentParams: Map<String, Int>
     ): AISuggestionResult = withContext(Dispatchers.Default) {
+        // UC-27: AI 微调开关禁用时，不修改 preset 参数（delta=0）
+        if (!settingsManager.isAIFineTuneEnabled) {
+            Log.d(TAG, "AI 微调已禁用，跳过推理，返回空 delta")
+            val noOpSuggestion = AISuggestion(
+                basePresetId = "none",
+                basePresetName = "AI 微调已关闭",
+                suggestions = emptyList(),
+                generatedAt = System.currentTimeMillis(),
+                isOfflineMode = true,
+                confidence = 0f,
+                sceneCategory = "无"
+            )
+            _suggestedParams.value = noOpSuggestion
+            _isProcessing.value = false
+            return@withContext AISuggestionResult.Success(noOpSuggestion, isOfflineMode = true)
+        }
+
         _isProcessing.value = true
         _errorState.value = null
 
@@ -260,6 +277,23 @@ class AIFineTuneManager private constructor(context: Context) {
      * @return AI建议结果
      */
     suspend fun generateAISuggestion(presetId: String): AISuggestionResult = withContext(Dispatchers.Default) {
+        // UC-27: AI 微调开关禁用时，不修改 preset 参数（delta=0）
+        if (!settingsManager.isAIFineTuneEnabled) {
+            Log.d(TAG, "AI 微调已禁用，跳过预设推理，返回空 delta")
+            val noOpSuggestion = AISuggestion(
+                basePresetId = "none",
+                basePresetName = "AI 微调已关闭",
+                suggestions = emptyList(),
+                generatedAt = System.currentTimeMillis(),
+                isOfflineMode = true,
+                confidence = 0f,
+                sceneCategory = "无"
+            )
+            _suggestedParams.value = noOpSuggestion
+            _isProcessing.value = false
+            return@withContext AISuggestionResult.Success(noOpSuggestion, isOfflineMode = true)
+        }
+
         _isProcessing.value = true
         _errorState.value = null
 
@@ -1042,6 +1076,87 @@ class AIFineTuneManager private constructor(context: Context) {
     }
 
     /**
+     * UC-05/06: 根据场景标签计算参数增量 (delta)。
+     *
+     * 点击"应用微调"后，将场景识别结果映射为参数增量，
+     * 叠加到当前 preset 参数上，而非直接替换。
+     *
+     * @param sceneLabel 场景标签（中文名或英文 ID 均可）
+     * @return 参数增量 Map，key 为参数名，value 为增量值（可为负数）
+     */
+    fun calculateDelta(sceneLabel: String): Map<String, Int> {
+        // UC-27: AI 微调禁用时 delta=0，不修改任何参数
+        if (!settingsManager.isAIFineTuneEnabled) {
+            Log.d(TAG, "AI 微调已禁用，calculateDelta 返回空 delta")
+            return emptyMap()
+        }
+
+        val normalized = sceneLabel.lowercase()
+        return when {
+            // 风光 / landscape → saturation↑ sharpness↑ clarity↑
+            normalized.contains("风光") || normalized.contains("landscape") -> mapOf(
+                "saturation" to 15,
+                "sharpness" to 10,
+                "clarity" to 8
+            )
+            // 人像 / portrait → saturation↓ sharpness↓ skinSmooth↑
+            normalized.contains("人像") || normalized.contains("portrait") -> mapOf(
+                "saturation" to -5,
+                "sharpness" to -3,
+                "skinSmooth" to 15
+            )
+            // 街拍 / street → contrast↑ sharpness↑ saturation↑
+            normalized.contains("街拍") || normalized.contains("street") -> mapOf(
+                "contrast" to 10,
+                "sharpness" to 8,
+                "saturation" to 5
+            )
+            // 美食 / food → saturation↑ warmth↑ clarity↑
+            normalized.contains("美食") || normalized.contains("food") -> mapOf(
+                "saturation" to 12,
+                "warmth" to 8,
+                "clarity" to 5
+            )
+            // 夜景 / night → contrast↑ highlights↓ shadows↑
+            normalized.contains("夜景") || normalized.contains("night") -> mapOf(
+                "contrast" to 15,
+                "highlights" to -20,
+                "shadows" to 25
+            )
+            else -> emptyMap()
+        }
+    }
+
+    /**
+     * UC-05/06: 将 delta 增量应用到当前预设参数。
+     *
+     * @param delta 由 [calculateDelta] 计算的参数增量
+     * @return 应用 delta 后的新 AdjustmentParams
+     */
+    fun applyDeltaToCurrentPreset(delta: Map<String, Int>): AdjustmentParams {
+        if (delta.isEmpty()) return _currentAdjustments.value
+
+        val current = _currentAdjustments.value
+        val updated = current.copy(
+            saturation = (current.saturation + (delta["saturation"] ?: 0)).coerceIn(-100, 100),
+            contrast = (current.contrast + (delta["contrast"] ?: 0)).coerceIn(-100, 100),
+            brightness = (current.brightness + (delta["brightness"] ?: 0)).coerceIn(-100, 100),
+            warmth = (current.warmth + (delta["warmth"] ?: 0)).coerceIn(-100, 100),
+            sharpness = (current.sharpness + (delta["sharpness"] ?: 0)).coerceIn(0, 100),
+            clarity = (current.clarity + (delta["clarity"] ?: 0)).coerceIn(0, 100),
+            highlights = (current.highlights + (delta["highlights"] ?: 0)).coerceIn(-100, 100),
+            shadows = (current.shadows + (delta["shadows"] ?: 0)).coerceIn(-100, 100),
+            noiseReduction = (current.noiseReduction + (delta["noiseReduction"] ?: 0)).coerceIn(0, 100),
+            skinSmooth = (current.skinSmooth + (delta["skinSmooth"] ?: 0)).coerceIn(0, 100),
+            detail = (current.detail + (delta["detail"] ?: 0)).coerceIn(0, 100),
+            vignette = (current.vignette + (delta["vignette"] ?: 0)).coerceIn(0, 100)
+        )
+        _currentAdjustments.value = updated
+        Log.d(TAG, "应用 delta 到当前 preset: delta=$delta, 结果=$updated")
+        return updated
+    }
+
+    /**
      * FT-002: 获取参数对比表
      */
     fun getParamComparison(): List<ParamComparison> {
@@ -1059,8 +1174,15 @@ class AIFineTuneManager private constructor(context: Context) {
 
     /**
      * FT-002: 应用选中的建议参数
+     * UC-27: AI 微调禁用时不修改任何参数
      */
     fun applySelectedSuggestions(selectedFields: Set<String>) {
+        // UC-27: AI 微调禁用时，不应用任何建议参数
+        if (!settingsManager.isAIFineTuneEnabled) {
+            Log.d(TAG, "AI 微调已禁用，不应用建议参数")
+            return
+        }
+
         val suggestion = _suggestedParams.value ?: return
         val current = _currentAdjustments.value
 

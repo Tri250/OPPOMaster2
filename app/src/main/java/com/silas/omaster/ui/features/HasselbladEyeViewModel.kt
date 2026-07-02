@@ -148,6 +148,14 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     private val _aiUnavailableMessage = MutableStateFlow<String?>(null)
     val aiUnavailableMessage: StateFlow<String?> = _aiUnavailableMessage.asStateFlow()
 
+    // UC-15: 相机可用性状态
+    private val _isCameraAvailable = MutableStateFlow(true)
+    val isCameraAvailable: StateFlow<Boolean> = _isCameraAvailable.asStateFlow()
+
+    // UC-15: 相机不可用原因提示（权限拒绝、无硬件等）
+    private val _cameraUnavailableMessage = MutableStateFlow<String?>(null)
+    val cameraUnavailableMessage: StateFlow<String?> = _cameraUnavailableMessage.asStateFlow()
+
     private val _analysisProgress = MutableStateFlow(0f)
     val analysisProgress: StateFlow<Float> = _analysisProgress.asStateFlow()
 
@@ -1003,7 +1011,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                             when (format) {
                                 ExportFormat.JPEG -> {
                                     val filename = buildExportFilename(format)
-                                    saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 95, filename, "image/jpeg")
+                                    saveJpegWithExif(context, scaled, filename)
                                 }
                                 ExportFormat.PNG -> {
                                     val filename = buildExportFilename(format)
@@ -1027,7 +1035,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                                     } else {
                                         // Android Q 及以下：无原生 HEIF 编码能力，回退为高质量 JPEG
                                         val filename = buildExportFilename(ExportFormat.JPEG)
-                                        saveToMediaStore(context, scaled, Bitmap.CompressFormat.JPEG, 98, filename, "image/jpeg")
+                                        saveJpegWithExif(context, scaled, filename)
                                     }
                                 }
                             }
@@ -1050,6 +1058,27 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 _operationError.value = "保存失败，请检查存储权限或可用空间后重试"
             }
         }
+    }
+
+    /**
+     * 使用 ExifPreserver 保存 JPEG 并写入自定义设备型号（UC-09）
+     */
+    private fun saveJpegWithExif(
+        context: Context,
+        bitmap: Bitmap,
+        filename: String
+    ): Uri? {
+        val customModel = com.silas.omaster.data.local.SettingsManager
+            .getInstance(context).customDeviceModel
+            .ifBlank { null }
+        return com.silas.omaster.util.ExifPreserver.saveWithExif(
+            context = context,
+            bitmap = bitmap,
+            sourceUri = null,
+            targetFileName = filename,
+            targetRelativePath = Environment.DIRECTORY_PICTURES + "/OMaster/Hasselblad",
+            customDeviceModel = customModel
+        )
     }
 
     /**
@@ -1446,6 +1475,75 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    // ================== UC-15: 相机可用性检查与权限降级 ==================
+
+    /**
+     * UC-15: 检查相机硬件是否可用。
+     *
+     * 检查逻辑：
+     * 1. 设备是否有后置相机硬件
+     * 2. 通过 PackageManager 判断
+     *
+     * @return true 表示设备具备相机硬件
+     */
+    fun checkCameraHardware(context: Context): Boolean {
+        val hasCamera = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_ANY)
+        if (!hasCamera) {
+            _isCameraAvailable.value = false
+            _cameraUnavailableMessage.value = "设备无相机硬件"
+            Log.w(TAG, "UC-15: 设备无相机硬件")
+        }
+        return hasCamera
+    }
+
+    /**
+     * UC-15: 检查相机权限是否已授予。
+     *
+     * @return true 表示已授予相机权限
+     */
+    fun checkCameraPermission(context: Context): Boolean {
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.CAMERA
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            _isCameraAvailable.value = false
+            _cameraUnavailableMessage.value = "相机权限未授予，请前往设置开启权限后使用相机功能"
+            Log.w(TAG, "UC-15: 相机权限未授予")
+        } else if (context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_ANY)) {
+            // 权限授予且有硬件 → 相机可用
+            _isCameraAvailable.value = true
+            _cameraUnavailableMessage.value = null
+        }
+        return granted
+    }
+
+    /**
+     * UC-15: 相机权限请求结果回调。
+     *
+     * 权限被拒绝时不会崩溃，仅更新状态让 UI 层展示提示，
+     * 相册选择路径不受影响。
+     */
+    fun onCameraPermissionResult(granted: Boolean, context: Context) {
+        if (granted) {
+            val hasHardware = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_ANY)
+            if (hasHardware) {
+                _isCameraAvailable.value = true
+                _cameraUnavailableMessage.value = null
+                Log.i(TAG, "UC-15: 相机权限已授予，相机可用")
+            } else {
+                _isCameraAvailable.value = false
+                _cameraUnavailableMessage.value = "设备无相机硬件，请使用相册选择图片"
+                Log.w(TAG, "UC-15: 权限已授予但设备无相机硬件")
+            }
+        } else {
+            _isCameraAvailable.value = false
+            _cameraUnavailableMessage.value = "相机权限被拒绝，请使用相册选择图片或在系统设置中开启权限"
+            Log.w(TAG, "UC-15: 相机权限被拒绝，降级到相册路径")
+        }
+    }
+
     /**
      * 重置所有状态，并释放持有的 Bitmap 防止内存泄漏。
      */
@@ -1467,6 +1565,8 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         _analysisError.value = null
         _isAIAvailable.value = true
         _aiUnavailableMessage.value = null
+        // UC-15: 不重置相机可用性状态（它取决于设备硬件和权限，不随工作流清除）
+        // 相机可用性在下次 SetupContent 渲染时由 LaunchedEffect 重新检查
         _analysisProgress.value = 0f
         _analysisMessage.value = "正在读取光影信息..."
         _analysisSteps.value = defaultAnalysisSteps()

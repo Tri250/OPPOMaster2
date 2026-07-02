@@ -115,7 +115,14 @@ data class RenderParameters(
         const val RANGE_MAX = 100f
         const val RANGE_POSITIVE_MIN = 0f
         const val RANGE_POSITIVE_MAX = 100f
-        
+
+        /**
+         * 安全浮点值：NaN / Infinite 替换为 0f，其余 clamp 到 [min, max]
+         */
+        fun safeFloat(value: Float, min: Float, max: Float): Float {
+            return if (value.isNaN() || value.isInfinite()) 0f else value.coerceIn(min, max)
+        }
+
         // 默认参数（无调整）
         val DEFAULT = RenderParameters()
 
@@ -274,7 +281,74 @@ data class RenderParameters(
     fun nonZeroCount(): Int {
         return toMap().values.count { it != 0f }
     }
-    
+
+    /**
+     * 返回一份所有参数均被钳制到合法范围、NaN/Infinite 已替换为 0f 的副本。
+     * 曲线 LUT 每个采样点钳制到 [0,1]。
+     */
+    fun clamped(): RenderParameters {
+        val s = { v: Float, min: Float, max: Float -> safeFloat(v, min, max) }
+        return RenderParameters(
+            saturation    = s(saturation, RANGE_MIN, RANGE_MAX),
+            contrast      = s(contrast, RANGE_MIN, RANGE_MAX),
+            brightness    = s(brightness, RANGE_MIN, RANGE_MAX),
+            warmth        = s(warmth, RANGE_MIN, RANGE_MAX),
+            sharpness     = s(sharpness, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            clarity       = s(clarity, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            texture       = s(texture, RANGE_MIN, RANGE_MAX),
+            vibrance      = s(vibrance, RANGE_MIN, RANGE_MAX),
+            highlights    = s(highlights, RANGE_MIN, RANGE_MAX),
+            shadows       = s(shadows, RANGE_MIN, RANGE_MAX),
+            whites        = s(whites, RANGE_MIN, RANGE_MAX),
+            blacks        = s(blacks, RANGE_MIN, RANGE_MAX),
+            exposure      = s(exposure, RANGE_MIN, RANGE_MAX),
+            grain         = s(grain, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            fade          = s(fade, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            dehaze        = s(dehaze, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            denoise       = s(denoise, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            skinSmooth    = s(skinSmooth, RANGE_POSITIVE_MIN, RANGE_POSITIVE_MAX),
+            // HSL 8 通道
+            hslRedHue        = s(hslRedHue, -180f, 180f),
+            hslRedSaturation = s(hslRedSaturation, RANGE_MIN, RANGE_MAX),
+            hslRedLuminance  = s(hslRedLuminance, RANGE_MIN, RANGE_MAX),
+            hslOrangeHue        = s(hslOrangeHue, -180f, 180f),
+            hslOrangeSaturation = s(hslOrangeSaturation, RANGE_MIN, RANGE_MAX),
+            hslOrangeLuminance  = s(hslOrangeLuminance, RANGE_MIN, RANGE_MAX),
+            hslYellowHue        = s(hslYellowHue, -180f, 180f),
+            hslYellowSaturation = s(hslYellowSaturation, RANGE_MIN, RANGE_MAX),
+            hslYellowLuminance  = s(hslYellowLuminance, RANGE_MIN, RANGE_MAX),
+            hslGreenHue        = s(hslGreenHue, -180f, 180f),
+            hslGreenSaturation = s(hslGreenSaturation, RANGE_MIN, RANGE_MAX),
+            hslGreenLuminance  = s(hslGreenLuminance, RANGE_MIN, RANGE_MAX),
+            hslCyanHue        = s(hslCyanHue, -180f, 180f),
+            hslCyanSaturation = s(hslCyanSaturation, RANGE_MIN, RANGE_MAX),
+            hslCyanLuminance  = s(hslCyanLuminance, RANGE_MIN, RANGE_MAX),
+            hslBlueHue        = s(hslBlueHue, -180f, 180f),
+            hslBlueSaturation = s(hslBlueSaturation, RANGE_MIN, RANGE_MAX),
+            hslBlueLuminance  = s(hslBlueLuminance, RANGE_MIN, RANGE_MAX),
+            hslPurpleHue        = s(hslPurpleHue, -180f, 180f),
+            hslPurpleSaturation = s(hslPurpleSaturation, RANGE_MIN, RANGE_MAX),
+            hslPurpleLuminance  = s(hslPurpleLuminance, RANGE_MIN, RANGE_MAX),
+            hslMagentaHue        = s(hslMagentaHue, -180f, 180f),
+            hslMagentaSaturation = s(hslMagentaSaturation, RANGE_MIN, RANGE_MAX),
+            hslMagentaLuminance  = s(hslMagentaLuminance, RANGE_MIN, RANGE_MAX),
+            // 曲线 LUT
+            curveRgbLut   = FloatArray(256) { safeFloat(curveRgbLut[it], 0f, 1f) },
+            curveRedLut   = FloatArray(256) { safeFloat(curveRedLut[it], 0f, 1f) },
+            curveGreenLut = FloatArray(256) { safeFloat(curveGreenLut[it], 0f, 1f) },
+            curveBlueLut  = FloatArray(256) { safeFloat(curveBlueLut[it], 0f, 1f) },
+            // LUT 3D
+            lutTextureId = lutTextureId,
+            lutSize      = lutSize,
+            lutStrength  = s(lutStrength, 0f, 1f),
+            lutEnabled   = lutEnabled,
+            // HNCS 3.0
+            hncsEnabled            = hncsEnabled,
+            hncsSkinToneProtection = s(hncsSkinToneProtection, 0f, 1f),
+            hncsSoftContrast       = s(hncsSoftContrast, 0f, 1f)
+        )
+    }
+
     /**
      * 合并两个参数配置（当前参数覆盖默认参数）
      */

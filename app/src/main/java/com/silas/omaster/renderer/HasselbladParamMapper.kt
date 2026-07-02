@@ -121,8 +121,17 @@ object HasselbladParamMapper {
             rp.copy(hncsEnabled = false)
         }
 
-        Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${rp.exposure}, contrast=${rp.contrast}, saturation=${rp.saturation}, hncsEnabled=${rp.hncsEnabled}")
-        return rp
+        // 极端值钳制：ISO 和快门速度不可产生 NaN / 除零 / 越界
+        val clampedRp = rp.clamped().let { crp ->
+            // ISO 合法范围 [50, 25600]，映射为曝光偏移量钳制
+            crp.copy(
+                exposure = crp.exposure.coerceIn(-100f, 100f),
+                sharpness = crp.sharpness.coerceIn(0f, 100f)
+            )
+        }
+
+        Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${clampedRp.exposure}, contrast=${clampedRp.contrast}, saturation=${clampedRp.saturation}, hncsEnabled=${clampedRp.hncsEnabled}")
+        return clampedRp
     }
 
     /**

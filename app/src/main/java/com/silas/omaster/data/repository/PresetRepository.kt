@@ -71,6 +71,11 @@ class PresetRepository private constructor(context: Context) {
      */
     private val forceReloadLock = Mutex()
 
+    /**
+     * UC-12: 网络同步操作专用锁，防止并发 sync / loadFromNetwork 导致数据竞态
+     */
+    private val syncLock = Mutex()
+
     // 设备型号（WM-003）
     private var deviceModel: String = Build.MODEL
 
@@ -893,35 +898,48 @@ class PresetRepository private constructor(context: Context) {
      * 从网络加载预设
      * 遍历 SubscriptionManager 中所有已启用的订阅源，
      * 通过 PresetRemoteManager 拉取远端 JSON 并转换为 PresetItem
+     *
+     * UC-12: 使用 syncLock 防止并发同步
+     * UC-13: 每个预设解析包裹在 try-catch 中，缺失字段时跳过而非导致整批失败
      */
     private suspend fun loadFromNetwork(): List<PresetItem> = withContext(Dispatchers.IO) {
-        val enabledSubscriptions = subscriptionManager.subscriptionsFlow.value.filter { it.isEnabled }
-        if (enabledSubscriptions.isEmpty()) {
-            Log.d(TAG, "无已启用的订阅源，跳过网络加载")
-            return@withContext emptyList<PresetItem>()
-        }
-
-        val remotePresets = mutableListOf<PresetItem>()
-        for (subscription in enabledSubscriptions) {
-            try {
-                val result = PresetRemoteManager.fetchAndSave(appContext, subscription.url)
-                if (result.isSuccess) {
-                    val presetList = result.getOrNull()
-                    if (presetList != null) {
-                        val brand = presetList.name?.lowercase() ?: "hasselblad"
-                        val items = presetList.presets.map { it.toRepositoryPreset(brand = brand) }
-                        remotePresets.addAll(items)
-                        Log.d(TAG, "从网络加载订阅 [${subscription.name}] 成功: ${items.size} 条")
-                    }
-                } else {
-                    Log.w(TAG, "从网络加载订阅 [${subscription.name}] 失败: ${result.exceptionOrNull()?.message}")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "从网络加载订阅 [${subscription.name}] 异常", e)
+        syncLock.withLock {
+            val enabledSubscriptions = subscriptionManager.subscriptionsFlow.value.filter { it.isEnabled }
+            if (enabledSubscriptions.isEmpty()) {
+                Log.d(TAG, "无已启用的订阅源，跳过网络加载")
+                return@withContext emptyList<PresetItem>()
             }
+
+            val remotePresets = mutableListOf<PresetItem>()
+            for (subscription in enabledSubscriptions) {
+                try {
+                    val result = PresetRemoteManager.fetchAndSave(appContext, subscription.url)
+                    if (result.isSuccess) {
+                        val presetList = result.getOrNull()
+                        if (presetList != null) {
+                            val brand = presetList.name?.lowercase() ?: "hasselblad"
+                            // UC-13: 逐条解析预设，缺失字段时跳过该条而非整批失败
+                            for ((index, masterPreset) in presetList.presets.withIndex()) {
+                                try {
+                                    val item = masterPreset.toRepositoryPreset(brand = brand)
+                                    remotePresets.add(item)
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "预设解析失败，跳过第${index + 1}条 [${masterPreset.name}]: ${e.message}")
+                                }
+                            }
+                            Log.d(TAG, "从网络加载订阅 [${subscription.name}] 成功: ${presetList.presets.size} 条")
+                        }
+                    } else {
+                        val errorMsg = result.exceptionOrNull()?.message ?: "未知错误"
+                        Log.w(TAG, "从网络加载订阅 [${subscription.name}] 失败: $errorMsg")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "从网络加载订阅 [${subscription.name}] 异常", e)
+                }
+            }
+            Log.d(TAG, "网络加载完成，共获取 ${remotePresets.size} 条预设")
+            remotePresets
         }
-        Log.d(TAG, "网络加载完成，共获取 ${remotePresets.size} 条预设")
-        remotePresets
     }
 
     /**
@@ -1401,7 +1419,12 @@ data class PresetItem(
     val exposureCompensation: String? = null,
     val whiteBalance: String? = null,
     val colorTone: String? = null,
-    val deletedAt: Long? = null  // 软删除时间戳
+    val deletedAt: Long? = null,  // 软删除时间戳
+    // 品牌专属参数
+    val filmSimulation: String? = null,  // 富士：胶片模拟
+    val creativeLook: String? = null,    // 索尼：创意外观
+    val sLog: String? = null,            // 索尼：S-Log
+    val leicaTone: String? = null        // 徕卡：徕卡色调
 ) {
     fun toExportModel() = ExportPresetModel(
         name = name,
@@ -1453,7 +1476,11 @@ data class PresetItem(
             shutterSpeed = shutterSpeed,
             whiteBalance = whiteBalance,
             colorTone = colorTone,
-            deletedAt = deletedAt
+            deletedAt = deletedAt,
+            filmSimulation = filmSimulation,
+            creativeLook = creativeLook,
+            sLog = sLog,
+            leicaTone = leicaTone
         )
     }
 }
@@ -1578,7 +1605,12 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         shutterSpeed = this.shutterSpeed,
         exposureCompensation = this.exposureCompensation,
         whiteBalance = this.whiteBalance,
-        colorTone = this.colorTone
+        colorTone = this.colorTone,
+        // 品牌专属参数
+        filmSimulation = this.filmSimulation,
+        creativeLook = this.creativeLook,
+        sLog = this.sLog,
+        leicaTone = this.leicaTone
     )
 }
 

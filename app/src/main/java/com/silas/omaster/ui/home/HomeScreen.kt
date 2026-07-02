@@ -295,6 +295,13 @@ fun HomeScreen(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
+            // UC-21: 胶片推荐区域（横向滚动卡片）
+            FilmRecommendationSection(
+                presets = allPresets,
+                onNavigateToDetail = onNavigateToDetail,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+
             // 搜索栏（对齐Web端）
             SearchBar(
                 query = searchQuery,
@@ -795,24 +802,29 @@ private fun BrandAndSortFilter(
         "leica" to stringResource(R.string.brand_leica)
     )
 
-    // PM-02: 风格标签列表
+    // PM-02: 风格标签列表（UC-01: 补充产品规格要求的 复古、清新 标签）
     val styleTags = listOf(
         "all" to stringResource(R.string.style_all),
         "胶片" to stringResource(R.string.style_film),
         "人像" to stringResource(R.string.style_portrait),
         "风景" to stringResource(R.string.style_landscape),
         "街拍" to stringResource(R.string.style_street),
-        "黑白" to stringResource(R.string.style_bw)
+        "黑白" to stringResource(R.string.style_bw),
+        "复古" to stringResource(R.string.style_retro),
+        "清新" to stringResource(R.string.style_fresh)
     )
 
-    // PM-02: 场景标签列表
+    // PM-02: 场景标签列表（UC-01: 补充产品规格要求的 人像、风光、街拍 标签）
     val sceneTags = listOf(
         "all" to stringResource(R.string.scene_all),
         "室内" to stringResource(R.string.scene_indoor),
         "户外" to stringResource(R.string.scene_outdoor),
         "夜景" to stringResource(R.string.scene_night),
         "逆光" to stringResource(R.string.scene_backlight),
-        "阴天" to stringResource(R.string.scene_overcast)
+        "阴天" to stringResource(R.string.scene_overcast),
+        "人像" to stringResource(R.string.scene_portrait),
+        "风光" to stringResource(R.string.scene_scenery),
+        "街拍" to stringResource(R.string.scene_street)
     )
 
     val sortOptions = listOf(
@@ -1539,6 +1551,146 @@ private fun QuickFeatureCard(
             maxLines = 1,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/**
+ * UC-21: 胶片推荐区域（横向滚动卡片）
+ * 筛选胶片风格预设，横向展示推荐卡片，点击跳转预设详情
+ */
+@Composable
+private fun FilmRecommendationSection(
+    presets: List<MasterPreset>,
+    onNavigateToDetail: (MasterPreset) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+
+    // 筛选胶片风格预设（标签含 胶片/film，或 filter 为胶片相关）
+    val filmPresets = remember(presets) {
+        presets.filter { preset ->
+            val tags = preset.tags ?: emptyList()
+            val isFilmTag = tags.any { tag ->
+                tag.contains("胶片", ignoreCase = true) ||
+                tag.contains("film", ignoreCase = true) ||
+                tag.contains("NC", ignoreCase = false) ||
+                tag.contains("CC", ignoreCase = false)
+            }
+            val isFilmFilter = preset.filter?.let { filter ->
+                filter.contains("胶片", ignoreCase = true) ||
+                filter.contains("film", ignoreCase = true)
+            } ?: false
+            isFilmTag || isFilmFilter
+        }.take(10) // 最多展示10个推荐
+    }
+
+    if (filmPresets.isEmpty()) return
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // 标题行
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.film_recommendation_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = stringResource(R.string.film_recommendation_more),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+            )
+        }
+
+        // 横向滚动卡片
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(filmPresets) { preset ->
+                FilmRecommendationCard(
+                    preset = preset,
+                    onClick = {
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        onNavigateToDetail(preset)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * UC-21: 胶片推荐卡片
+ */
+@Composable
+private fun FilmRecommendationCard(
+    preset: MasterPreset,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .width(140.dp)
+            .hapticClickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.04f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // 胶片图标区域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                HasselbladOrange.copy(alpha = 0.2f),
+                                WarningYellow.copy(alpha = 0.15f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ColorLens,
+                    contentDescription = preset.name,
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // 预设名称
+            Text(
+                text = preset.name,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1
+            )
+
+            // 作者
+            Text(
+                text = preset.author,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                maxLines = 1
+            )
+        }
     }
 }
 

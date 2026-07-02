@@ -118,6 +118,15 @@ fun OMasterTheme(
             windowInsetsController.isAppearanceLightStatusBars = !darkTheme
             // 配置导航栏图标颜色
             windowInsetsController.isAppearanceLightNavigationBars = !darkTheme
+
+            // UC-22: 同步 Window 背景色，防止主题切换时出现白闪
+            // 深色主题设为纯黑，浅色主题设为白色，与 Surface colorScheme.background 保持一致
+            window.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(
+                    if (darkTheme) android.graphics.Color.BLACK
+                    else android.graphics.Color.WHITE
+                )
+            )
         }
     }
 

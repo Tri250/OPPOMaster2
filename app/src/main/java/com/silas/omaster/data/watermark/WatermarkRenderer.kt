@@ -28,8 +28,48 @@ object WatermarkRenderer {
         return when (config.type) {
             WatermarkType.BRAND -> renderBrandWatermark(bitmap, config)
             WatermarkType.MASTER_MARK -> renderMasterMarkWatermark(bitmap, config)
-            WatermarkType.XPAN -> renderXpanWatermark(bitmap, config)
+            WatermarkType.XPAN -> renderXpanWatermark(bitmap, config, null)
         }
+    }
+
+    /**
+     * 渲染组合水印 - 支持同时应用多种水印类型
+     * 自动处理 XPAN + BRAND 的组合场景，品牌水印位置基于 XPAN 画布重新计算
+     *
+     * @param bitmap 原始图片（不会被修改）
+     * @param configs 水印配置列表
+     * @return 带水印的新 Bitmap
+     */
+    fun renderCombinedWatermark(bitmap: Bitmap, configs: List<WatermarkConfig>): Bitmap {
+        if (configs.isEmpty()) return bitmap
+
+        // 检测是否同时包含 XPAN 和 BRAND
+        val xpanConfig = configs.find { it.type == WatermarkType.XPAN }
+        val brandConfig = configs.find { it.type == WatermarkType.BRAND }
+
+        var result = bitmap
+
+        // XPAN + BRAND 组合：在 XPAN 画布上重新计算品牌水印位置
+        if (xpanConfig != null && brandConfig != null) {
+            result = renderXpanWatermark(result, xpanConfig, brandConfig)
+            // 处理其余水印（排除已处理的 XPAN 和 BRAND）
+            for (config in configs) {
+                if (config.type == WatermarkType.MASTER_MARK) {
+                    result = renderMasterMarkWatermark(result, config)
+                }
+            }
+        } else {
+            // 普通情况：依次叠加
+            for (config in configs) {
+                result = when (config.type) {
+                    WatermarkType.BRAND -> renderBrandWatermark(result, config)
+                    WatermarkType.MASTER_MARK -> renderMasterMarkWatermark(result, config)
+                    WatermarkType.XPAN -> renderXpanWatermark(result, config, null)
+                }
+            }
+        }
+
+        return result
     }
 
     /**
@@ -127,14 +167,19 @@ object WatermarkRenderer {
 
     /**
      * 渲染 XPAN 宽幅水印
-     * 在图片上下添加黑边条，保持宽幅比例（约 2.7:1），并在底部黑边上叠加文字
+     * 在图片上下添加黑边条，保持宽幅比例（65:24），并在底部黑边上叠加文字
+     * 如果同时启用了品牌水印，则品牌水印位置会基于 XPAN 画布尺寸重新计算
+     *
+     * @param bitmap 原始图片（不会被修改）
+     * @param config XPAN 水印配置
+     * @param brandConfig 可选的品牌水印配置，同时启用时在 XPAN 画布上重新计算位置
      */
-    private fun renderXpanWatermark(bitmap: Bitmap, config: WatermarkConfig): Bitmap {
+    private fun renderXpanWatermark(bitmap: Bitmap, config: WatermarkConfig, brandConfig: WatermarkConfig?): Bitmap {
         val barRatio = config.xpanBarRatio.coerceIn(0.02f, 0.3f)
         val barHeight = (bitmap.height * barRatio).toInt()
 
-        // XPAN 宽幅比例目标：2.7:1
-        val targetRatio = 2.7f
+        // XPAN 宽幅比例目标：65:24 ≈ 2.7083（使用配置中的 xpanRatio）
+        val targetRatio = config.xpanRatio
         val currentRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
 
         // 计算目标宽度（保持高度不变，调整宽度到宽幅比例）
@@ -152,7 +197,7 @@ object WatermarkRenderer {
         val offsetX = (finalWidth - bitmap.width) / 2f
         canvas.drawBitmap(bitmap, offsetX, barHeight.toFloat(), null)
 
-        // 底部黑边上绘制文字
+        // 底部黑边上绘制 XPAN 文字
         val text = config.xpanText.ifEmpty { "XPAN" }
         val paint = Paint().apply {
             color = Color.WHITE
@@ -168,6 +213,41 @@ object WatermarkRenderer {
         val textY = barHeight + bitmap.height + barHeight / 2f - (paint.descent() + paint.ascent()) / 2f
 
         canvas.drawText(text, textX, textY, paint)
+
+        // 如果同时存在品牌水印配置，基于 XPAN 画布尺寸重新计算并渲染品牌水印
+        if (brandConfig != null) {
+            val brandText = brandConfig.text.ifEmpty { return result }
+            val brandPaint = Paint().apply {
+                color = brandConfig.color.toInt()
+                alpha = (brandConfig.opacity * 255).toInt().coerceIn(0, 255)
+                textSize = brandConfig.fontSize.toFloat()
+                typeface = resolveTypeface(brandConfig.fontName)
+                isAntiAlias = true
+                isFilterBitmap = true
+            }
+
+            val brandTextWidth = brandPaint.measureText(brandText)
+            val brandFontMetrics = brandPaint.fontMetrics
+            val brandTextHeight = brandFontMetrics.descent - brandFontMetrics.ascent
+
+            // 基于 XPAN 画布尺寸（finalWidth x totalHeight，包含黑边）重新计算品牌水印位置
+            val (bx, by) = calculatePosition(
+                canvasWidth = finalWidth,
+                canvasHeight = totalHeight,
+                textWidth = brandTextWidth,
+                textHeight = brandTextHeight,
+                fontMetrics = brandFontMetrics,
+                position = brandConfig.position,
+                padding = (brandConfig.fontSize * 0.8f)
+            )
+
+            val brandShadowPaint = Paint(brandPaint).apply {
+                color = Color.BLACK
+                alpha = (brandConfig.opacity * 128).toInt().coerceIn(0, 255)
+            }
+            canvas.drawText(brandText, bx + 1f, by + 1f, brandShadowPaint)
+            canvas.drawText(brandText, bx, by, brandPaint)
+        }
 
         return result
     }

@@ -279,7 +279,7 @@ class HomeViewModel(
     }
 
     /**
-     * PM-02: 风格标签匹配
+     * PM-02: 风格标签匹配（UC-01: 新增 复古、清新 匹配逻辑）
      */
     private fun matchesStyleTag(style: String, tags: List<String>): Boolean {
         val styleKeywords = when (style) {
@@ -288,6 +288,8 @@ class HomeViewModel(
             "风景" -> listOf("风景", "landscape")
             "街拍" -> listOf("街拍", "street")
             "黑白" -> listOf("黑白", "BW", "mono")
+            "复古" -> listOf("复古", "retro", "vintage")
+            "清新" -> listOf("清新", "fresh", "clear")
             else -> emptyList()
         }
         return tags.any { tag ->
@@ -298,7 +300,7 @@ class HomeViewModel(
     }
 
     /**
-     * PM-02: 场景标签匹配
+     * PM-02: 场景标签匹配（UC-01: 新增 人像、风光、街拍 匹配逻辑）
      */
     private fun matchesSceneTag(scene: String, tags: List<String>): Boolean {
         val sceneKeywords = when (scene) {
@@ -307,6 +309,9 @@ class HomeViewModel(
             "夜景" -> listOf("夜景", "night")
             "逆光" -> listOf("逆光", "backlight")
             "阴天" -> listOf("阴天", "overcast")
+            "人像" -> listOf("人像", "portrait")
+            "风光" -> listOf("风光", "landscape", "风景")
+            "街拍" -> listOf("街拍", "street")
             else -> emptyList()
         }
         return tags.any { tag ->

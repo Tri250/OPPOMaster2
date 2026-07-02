@@ -41,6 +41,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -116,6 +119,9 @@ fun SettingsScreen(
     // 新增设置项
     var darkMode by remember { mutableStateOf(settingsManager.darkMode) }
     var showDarkModeDialog by remember { mutableStateOf(false) }
+
+    // 自定义设备型号（UC-09 / UC-28）
+    var customDeviceModel by remember { mutableStateOf(settingsManager.customDeviceModel) }
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -462,6 +468,91 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.api_config_desc),
                 onClick = { onNavigateToApiConfig?.invoke() }
             )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+
+            // 自定义设备型号（UC-09 / UC-28）
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DashboardCustomize,
+                            contentDescription = "图标",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "自定义设备型号",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            haptic.perform(HapticFeedbackType.LongPress)
+                            settingsManager.resetCustomDeviceModel()
+                            customDeviceModel = ""
+                            Toast.makeText(context, "已重置为设备真实型号", Toast.LENGTH_SHORT).show()
+                        },
+                        enabled = customDeviceModel.isNotEmpty()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Restore,
+                            contentDescription = "重置",
+                            modifier = Modifier.size(18.dp),
+                            tint = if (customDeviceModel.isNotEmpty())
+                                MaterialTheme.colorScheme.primary
+                            else Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "重置",
+                            color = if (customDeviceModel.isNotEmpty())
+                                MaterialTheme.colorScheme.primary
+                            else Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = customDeviceModel,
+                    onValueChange = { newValue ->
+                        customDeviceModel = newValue
+                        settingsManager.customDeviceModel = newValue
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            text = "留空则使用设备真实型号",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
         }
 
         // Clear Cache Confirmation Dialog

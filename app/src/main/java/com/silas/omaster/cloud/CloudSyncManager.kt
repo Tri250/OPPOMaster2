@@ -3,6 +3,7 @@ package com.silas.omaster.cloud
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.silas.omaster.network.NetworkResilienceManager
 import com.silas.omaster.util.SecurityCrypto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
@@ -161,6 +163,11 @@ class CloudSyncManager private constructor(private val context: Context) {
 
     // ==================== 同步核心逻辑 ====================
 
+    /**
+     * UC-12: pull-to-refresh 超时限制，防止无限转圈
+     * UC-19: 网络预检 + 并发同步保护
+     * UC-20: 404/非JSON → "订阅源不可用"
+     */
     private suspend fun performSync() {
         val provider = _currentProvider.value
         if (provider == null) {
@@ -168,27 +175,58 @@ class CloudSyncManager private constructor(private val context: Context) {
             return
         }
 
-        _syncStatus.value = SyncStatus.Syncing
-
-        val result = retryWithBackoff(maxRetries = 3) {
-            when (provider) {
-                is CloudProvider.WebDAV -> syncWithWebDAV(provider)
-                is CloudProvider.GoogleDrive -> syncWithGoogleDrive(provider)
-            }
+        // UC-19: 并发同步保护——如果已有同步操作在运行，直接返回
+        if (!NetworkResilienceManager.tryAcquireSyncLock()) {
+            Log.w(TAG, "同步操作正在进行中，跳过本次请求")
+            return
         }
 
-        when (result) {
-            is Result.Success -> {
-                val now = System.currentTimeMillis()
-                _lastSyncTime.value = now
-                prefs.edit().putLong(KEY_LAST_SYNC_TIME, now).apply()
-                _syncStatus.value = SyncStatus.Success(now)
-                _isConnected.value = true
+        try {
+            // UC-19: 网络连通性预检——无网络时直接返回错误，不进入 Syncing 状态
+            if (!NetworkResilienceManager.canPerformSync()) {
+                _syncStatus.value = SyncStatus.Error("网络不可用，请检查网络连接")
+                return
             }
-            is Result.Failure -> {
-                _syncStatus.value = SyncStatus.Error(result.message)
-                _isConnected.value = false
+
+            _syncStatus.value = SyncStatus.Syncing
+
+            // UC-12: 为同步操作设置超时上限，防止 pull-to-refresh 无限转圈
+            val result = withTimeoutOrNull(SYNC_TIMEOUT_MS) {
+                retryWithBackoff(maxRetries = 3) {
+                    when (provider) {
+                        is CloudProvider.WebDAV -> syncWithWebDAV(provider)
+                        is CloudProvider.GoogleDrive -> syncWithGoogleDrive(provider)
+                    }
+                }
+            } ?: run {
+                // 超时后返回超时错误
+                Result.Failure("同步超时，请稍后重试")
             }
+
+            when (result) {
+                is Result.Success -> {
+                    val now = System.currentTimeMillis()
+                    _lastSyncTime.value = now
+                    prefs.edit().putLong(KEY_LAST_SYNC_TIME, now).apply()
+                    _syncStatus.value = SyncStatus.Success(now)
+                    _isConnected.value = true
+                }
+                is Result.Failure -> {
+                    // UC-20: 根据错误信息判断是否为"订阅源不可用"
+                    val msg = result.message
+                    val displayMsg = when {
+                        msg.contains("404") || msg.contains("Not Found") -> "订阅源不可用"
+                        msg.contains("订阅源不可用") -> msg
+                        msg.contains("HTTP 4") -> "订阅源不可用 ($msg)"
+                        else -> msg
+                    }
+                    _syncStatus.value = SyncStatus.Error(displayMsg)
+                    _isConnected.value = false
+                }
+            }
+        } finally {
+            // UC-19: 释放同步锁
+            NetworkResilienceManager.releaseSyncLock()
         }
     }
 
@@ -680,6 +718,8 @@ class CloudSyncManager private constructor(private val context: Context) {
         private const val DEBOUNCE_MS = 3000L
         private const val INITIAL_RETRY_DELAY_MS = 1000L
         private const val MAX_RETRY_DELAY_MS = 30_000L
+        /** UC-12: 同步操作超时上限（60秒），防止 pull-to-refresh 无限转圈 */
+        private const val SYNC_TIMEOUT_MS = 60_000L
 
         private val DEVICE_ID = android.provider.Settings.Secure.ANDROID_ID
 

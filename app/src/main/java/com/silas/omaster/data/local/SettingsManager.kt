@@ -323,6 +323,14 @@ class SettingsManager private constructor(private val context: Context) {
             setDataSync(KEY_CUSTOM_DEVICE_MODEL, value)
         }
 
+    /**
+     * 重置自定义设备型号（UC-28）
+     * 清空自定义型号后，导出时 EXIF 将恢复为设备真实型号
+     */
+    fun resetCustomDeviceModel() {
+        customDeviceModel = ""
+    }
+
     // 预设版本映射（JSON 字符串），用于云端增量更新对比
     var presetVersionMapJson: String
         get() = getDataSync(KEY_PRESET_VERSION_MAP, "")

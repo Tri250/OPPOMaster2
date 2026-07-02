@@ -710,11 +710,14 @@ class GPURenderManager private constructor(private val context: Context) {
         quality: RenderQuality = RenderQuality.STANDARD,
         resultCallback: ((RenderResult) -> Unit)? = null
     ): String {
+        // UC-16: 大图内存保护 - 100MP+ DNG 自动降采样到安全尺寸
+        val safeBitmap = downsampleIfTooLarge(inputBitmap)
+
         val requestId = generateRequestId()
         
         val request = RenderRequest(
             id = requestId,
-            inputBitmap = inputBitmap,
+            inputBitmap = safeBitmap,
             params = params,
             quality = quality,
             resultCallback = resultCallback
@@ -737,11 +740,13 @@ class GPURenderManager private constructor(private val context: Context) {
         params: RenderParameters,
         quality: RenderQuality = RenderQuality.STANDARD
     ): RenderResult {
+        // UC-16: 大图内存保护 - 100MP+ DNG 自动降采样到安全尺寸
+        val safeBitmap = downsampleIfTooLarge(inputBitmap)
         return withTimeoutOrNull(RENDER_TIMEOUT_MS) {
             if (_isGpuAvailable.value) {
-                renderWithGPU(RenderRequest("", inputBitmap, params, quality, null))
+                renderWithGPU(RenderRequest("", safeBitmap, params, quality, null))
             } else {
-                renderWithCPU(RenderRequest("", inputBitmap, params, quality, null))
+                renderWithCPU(RenderRequest("", safeBitmap, params, quality, null))
             }
         } ?: RenderResult.Error("Render timeout")
     }
@@ -905,6 +910,27 @@ class GPURenderManager private constructor(private val context: Context) {
     private fun generateRequestId(): String {
         val counter = requestIdCounter.incrementAndGet()
         return "render_${System.currentTimeMillis()}_$counter"
+    }
+
+    /**
+     * UC-16: 大图内存保护
+     * 对 100MP+ DNG 等超大图片自动降采样，防止 OOM
+     * 目标: PSS 峰值 ≤ 设备 RAM 40%
+     */
+    private fun downsampleIfTooLarge(bitmap: Bitmap): Bitmap {
+        val totalPixels = bitmap.width.toLong() * bitmap.height.toLong()
+        // 100MP 阈值: 约 10000×10000
+        val MAX_PIXELS = 100_000_000L
+        // 安全上限: 50MP (约 7000×7000)，确保 PSS 不超设备 RAM 40%
+        val SAFE_PIXELS = 50_000_000L
+
+        if (totalPixels <= SAFE_PIXELS) return bitmap
+
+        val scaleFactor = kotlin.math.sqrt(SAFE_PIXELS.toDouble() / totalPixels.toDouble())
+        val newWidth = (bitmap.width * scaleFactor).toInt().coerceAtLeast(1)
+        val newHeight = (bitmap.height * scaleFactor).toInt().coerceAtLeast(1)
+
+        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
     
     /**

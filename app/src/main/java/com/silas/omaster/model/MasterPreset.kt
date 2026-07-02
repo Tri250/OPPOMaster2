@@ -227,6 +227,11 @@ data class MasterPreset(
     val comments: List<PresetComment>? = null, // 评论列表
     // ========== HNCS 认证相关 ==========
     val isHncs: Boolean = false,          // 是否 HNCS 认证预设
+    // ========== 品牌专属参数 ==========
+    val filmSimulation: String? = null,   // 富士：胶片模拟，如 PROVIA/Velvia/ASTIA/Classic Chrome/Classic Neg/ETERNA
+    val creativeLook: String? = null,     // 索尼：创意外观，如 ST/VV/VV2/FL/IN/SH
+    val sLog: String? = null,             // 索尼：S-Log，如 S-Log3
+    val leicaTone: String? = null,        // 徕卡：徕卡色调，如 Standard/Vibrant/Natural/Monochrome
     // ========== 软删除支持 ==========
     val deletedAt: Long? = null           // 软删除时间戳，非 null 表示已删除
 ) : Parcelable {
@@ -270,6 +275,10 @@ data class MasterPreset(
         isHncs = parcel.readByte() != 0.toByte(),
         params = parcel.readStringMap(),
         colorGradingParams = parcel.readStringMap(),
+        filmSimulation = parcel.readString(),
+        creativeLook = parcel.readString(),
+        sLog = parcel.readString(),
+        leicaTone = parcel.readString(),
         deletedAt = parcel.readValue(Long::class.java.classLoader) as? Long
     )
 
@@ -315,6 +324,10 @@ data class MasterPreset(
         parcel.writeByte(if (isHncs) 1 else 0)
         parcel.writeStringMap(params)
         parcel.writeStringMap(colorGradingParams)
+        parcel.writeString(filmSimulation)
+        parcel.writeString(creativeLook)
+        parcel.writeString(sLog)
+        parcel.writeString(leicaTone)
         parcel.writeValue(deletedAt)
     }
 
@@ -376,6 +389,36 @@ data class MasterPreset(
             colorItems.add(PresetItem(
                 context.getString(R.string.param_filter), 
                 PresetI18n.getLocalizedFilter(context, it), 
+                2
+            ))
+        }
+
+        // 品牌专属参数
+        filmSimulation?.let {
+            colorItems.add(PresetItem(
+                context.getString(R.string.param_film_simulation), 
+                it, 
+                2
+            ))
+        }
+        creativeLook?.let {
+            colorItems.add(PresetItem(
+                context.getString(R.string.param_creative_look), 
+                it, 
+                2
+            ))
+        }
+        sLog?.let {
+            colorItems.add(PresetItem(
+                context.getString(R.string.param_s_log), 
+                it, 
+                2
+            ))
+        }
+        leicaTone?.let {
+            colorItems.add(PresetItem(
+                context.getString(R.string.param_leica_tone), 
+                it, 
                 2
             ))
         }

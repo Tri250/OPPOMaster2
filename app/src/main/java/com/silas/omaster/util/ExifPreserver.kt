@@ -47,13 +47,24 @@ object ExifPreserver {
         bitmap: Bitmap,
         sourceUri: Uri? = null,
         targetFileName: String? = null,
-        targetRelativePath: String = Environment.DIRECTORY_PICTURES + "/OMaster"
+        targetRelativePath: String = Environment.DIRECTORY_PICTURES + "/OMaster",
+        customDeviceModel: String? = null
     ): Uri? {
         val filename = targetFileName
             ?: "OMaster_${System.currentTimeMillis()}.jpg"
 
         // 1. 提取原始 EXIF 数据
-        val exifAttributes = sourceUri?.let { extractExif(context, it) } ?: emptyMap()
+        val exifAttributes = sourceUri?.let { extractExif(context, it) } ?: mutableMapOf()
+
+        // 1.5 自定义设备型号覆盖 EXIF Model/Make（UC-09）
+        if (!customDeviceModel.isNullOrBlank()) {
+            exifAttributes[ExifInterface.TAG_MODEL] = customDeviceModel
+            // 从自定义型号提取厂商部分（如 "Hasselblad 907X" → "Hasselblad"）
+            val makePart = customDeviceModel.substringBefore(' ').trim()
+            if (makePart.isNotEmpty()) {
+                exifAttributes[ExifInterface.TAG_MAKE] = makePart
+            }
+        }
 
         // 2. 保存 Bitmap 到临时文件
         val tempFile = try {
@@ -83,7 +94,7 @@ object ExifPreserver {
     /**
      * 从 URI 提取 EXIF 属性
      */
-    private fun extractExif(context: Context, uri: Uri): Map<String, String> {
+    private fun extractExif(context: Context, uri: Uri): MutableMap<String, String> {
         val attributes = mutableMapOf<String, String>()
 
         try {

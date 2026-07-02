@@ -1,14 +1,10 @@
 package com.silas.omaster.ui.features
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
@@ -51,8 +47,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
 import kotlin.math.max
 
 /**
@@ -827,33 +821,19 @@ class AIFineTuneViewModel(
     private fun saveBitmapToGallery(context: Context, bitmap: Bitmap): Boolean {
         val filename = "omaster_ai_${System.currentTimeMillis()}.jpg"
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/OMaster")
-                }
-                val uri = context.contentResolver.insert(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues
-                )
-                uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { out ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                    }
-                    true
-                } ?: false
-            } else {
-                val dir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-                val file = File(dir, "OMaster/$filename")
-                file.parentFile?.mkdirs()
-                FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                }
-                MediaScannerConnection.scanFile(
-                    context, arrayOf(file.absolutePath), arrayOf("image/jpeg"), null
-                )
-                true
-            }
+            val customModel = com.silas.omaster.data.local.SettingsManager
+                .getInstance(context).customDeviceModel
+                .ifBlank { null }
+            val sourceUri = _selectedImageUri.value
+            val savedUri = com.silas.omaster.util.ExifPreserver.saveWithExif(
+                context = context,
+                bitmap = bitmap,
+                sourceUri = sourceUri,
+                targetFileName = filename,
+                targetRelativePath = Environment.DIRECTORY_PICTURES + "/OMaster",
+                customDeviceModel = customModel
+            )
+            savedUri != null
         } catch (e: Exception) {
             Log.e("AIFineTuneVM", "保存到相册失败", e)
             false

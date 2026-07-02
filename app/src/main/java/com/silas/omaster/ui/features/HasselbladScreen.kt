@@ -217,6 +217,10 @@ fun HasselbladScreen(
     val feedbackUploadStatus by viewModel.feedbackUploadStatus.collectAsState()
     val feedbackPendingCount by viewModel.feedbackPendingCount.collectAsState()
 
+    // UC-15: 相机可用性状态
+    val isCameraAvailable by viewModel.isCameraAvailable.collectAsState()
+    val cameraUnavailableMessage by viewModel.cameraUnavailableMessage.collectAsState()
+
     // HNCS 3.0 状态
     val hncsEnabled by viewModel.hncsEnabled.collectAsState()
     val hncsBeforeBitmap by viewModel.hncsBeforeBitmap.collectAsState()
@@ -278,6 +282,12 @@ fun HasselbladScreen(
     // 检查 LUTManager 中是否有待应用的活跃 LUT（来自风格 LUT 生成器等入口）
     val lutManager = remember { LUTManager.getInstance(context) }
     LaunchedEffect(Unit) {
+        // UC-15: 启动时检查相机硬件和权限可用性
+        viewModel.checkCameraHardware(context)
+        viewModel.checkCameraPermission(context)
+    }
+
+    LaunchedEffect(Unit) {
         val activeLUTId = lutManager.activeLUTId.value
         if (activeLUTId != null) {
             val strength = lutManager.lutStrength.value
@@ -323,6 +333,8 @@ fun HasselbladScreen(
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
+        // UC-15: 通知 ViewModel 权限结果，实现优雅降级
+        viewModel.onCameraPermissionResult(granted, context)
         if (!granted) {
             // 判断是否应该展示权限说明（用户未勾选"不再询问"）
             val rationale = activity?.let {
@@ -609,7 +621,9 @@ fun HasselbladScreen(
                                 }
                             }
                         }
-                    }
+                    },
+                    isCameraAvailable = isCameraAvailable,
+                    cameraUnavailableMessage = cameraUnavailableMessage
                 )
 
                 HasselbladEyeStage.ANALYZING -> AnalyzingContent(
@@ -1034,7 +1048,9 @@ private fun SetupContent(
     onLaunchCamera: () -> Unit,
     onPickFromGallery: () -> Unit,
     onLaunchViewfinder: () -> Unit,
-    onRecentShotClick: (Uri) -> Unit
+    onRecentShotClick: (Uri) -> Unit,
+    isCameraAvailable: Boolean = true,
+    cameraUnavailableMessage: String? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1056,7 +1072,9 @@ private fun SetupContent(
         item {
             ShutterCard(
                 onLaunchCamera = onLaunchCamera,
-                onPickFromGallery = onPickFromGallery
+                onPickFromGallery = onPickFromGallery,
+                isCameraAvailable = isCameraAvailable,
+                cameraUnavailableMessage = cameraUnavailableMessage
             )
         }
 
@@ -1794,7 +1812,9 @@ private fun ParamSlider(
 @Composable
 private fun ShutterCard(
     onLaunchCamera: () -> Unit,
-    onPickFromGallery: () -> Unit
+    onPickFromGallery: () -> Unit,
+    isCameraAvailable: Boolean = true,
+    cameraUnavailableMessage: String? = null
 ) {
     GlassCard {
         Column(
@@ -1810,29 +1830,38 @@ private fun ShutterCard(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // UC-15: 相机不可用时置灰并显示提示
             Button(
-                onClick = onLaunchCamera,
-                colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                onClick = { if (isCameraAvailable) onLaunchCamera() },
+                enabled = isCameraAvailable,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isCameraAvailable) HasselbladOrange else HasselbladOrange.copy(alpha = 0.3f),
+                    disabledContainerColor = HasselbladOrange.copy(alpha = 0.3f)
+                ),
                 shape = CircleShape,
                 modifier = Modifier
                     .size(88.dp)
-                    .graphicsLayer { shadowElevation = 20.dp.toPx() },
+                    .graphicsLayer { shadowElevation = if (isCameraAvailable) 20.dp.toPx() else 0f },
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
                     contentDescription = "拍照",
-                    tint = Color.White,
+                    tint = if (isCameraAvailable) Color.White else Color.White.copy(alpha = 0.4f),
                     modifier = Modifier.size(36.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // UC-15: 相机不可用时显示原因提示
             Text(
-                text = "点击拍照",
+                text = if (isCameraAvailable) "点击拍照" else (cameraUnavailableMessage ?: "相机不可用"),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                color = if (isCameraAvailable)
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                else
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
             )
 
             Spacer(modifier = Modifier.height(16.dp))

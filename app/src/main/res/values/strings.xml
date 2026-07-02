@@ -106,6 +106,8 @@
     <string name="style_landscape">风景</string>
     <string name="style_street">街拍</string>
     <string name="style_bw">黑白</string>
+    <string name="style_retro">复古</string>
+    <string name="style_fresh">清新</string>
 
     <!-- PM-02: 场景标签筛选 -->
     <string name="scene_all">全部场景</string>
@@ -114,6 +116,13 @@
     <string name="scene_night">夜景</string>
     <string name="scene_backlight">逆光</string>
     <string name="scene_overcast">阴天</string>
+    <string name="scene_portrait">人像</string>
+    <string name="scene_scenery">风光</string>
+    <string name="scene_street">街拍</string>
+
+    <!-- UC-21: 胶片推荐 -->
+    <string name="film_recommendation_title">胶片推荐</string>
+    <string name="film_recommendation_more">更多</string>
     
     <!-- 搜索 -->
     <string name="search_hint">搜索预设 / 作者 / 标签</string>
@@ -211,6 +220,10 @@
     <string name="param_cyan_magenta">青品</string>
     <string name="param_sharpness">锐度</string>
     <string name="param_vignette">暗角</string>
+    <string name="param_film_simulation">胶片模拟</string>
+    <string name="param_creative_look">S-Log/创意外观</string>
+    <string name="param_s_log">S-Log</string>
+    <string name="param_leica_tone">徕卡色调</string>
 
     <!-- 拍摄模式 -->
     <string name="mode_pro">Pro 模式</string>

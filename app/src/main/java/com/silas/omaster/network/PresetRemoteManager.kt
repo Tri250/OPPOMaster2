@@ -138,31 +138,77 @@ object PresetRemoteManager {
         return headers
     }
 
+    /**
+     * 订阅源拉取结果——区分「订阅源不可用」与「网络错误」
+     * UC-13: 缺失字段时返回 ParseFailed，而非崩溃
+     * UC-20: 404/非JSON返回 InvalidSource
+     */
+    sealed class FetchResult {
+        data class Success(val presetList: PresetList) : FetchResult()
+        data class InvalidSource(val message: String) : FetchResult()
+        data class ParseFailed(val message: String) : FetchResult()
+        data class NetworkError(val message: String) : FetchResult()
+    }
+
     suspend fun fetchPresets(url: String): PresetList? {
+        val result = fetchPresetsWithResult(url)
+        return when (result) {
+            is FetchResult.Success -> result.presetList
+            else -> null
+        }
+    }
+
+    /**
+     * UC-11/UC-13/UC-20: 带 error type 的拉取接口
+     * UC-11: 以 OMaster-Community 格式 (oppo.json / PresetList + sections) 解析
+     * UC-13: JSON 缺失 sections 等字段时返回 ParseFailed，不崩溃
+     * UC-20: 404/非JSON 响应返回 InvalidSource（"订阅源不可用"）
+     */
+    suspend fun fetchPresetsWithResult(url: String): FetchResult {
         Log.d("PresetRemoteManager", "Starting fetch from $url")
-        return try {
-            // SSRF防护：验证URL
-            validateUrl(url)?.let { error ->
-                Log.e("PresetRemoteManager", "URL validation failed: $error")
-                return null
-            }
-            val response: HttpResponse = client.get(url) {
-                // 添加缓存控制头
+        // SSRF防护：验证URL
+        validateUrl(url)?.let { error ->
+            Log.e("PresetRemoteManager", "URL validation failed: $error")
+            return FetchResult.InvalidSource(error)
+        }
+
+        val response: HttpResponse = try {
+            client.get(url) {
                 buildCacheHeaders().forEach { (key, value) ->
                     header(key, value)
                 }
             }
-            // Some servers (GitHub raw) may return Content-Type: text/plain; charset=utf-8
-            // which prevents Ktor's content-negotiation from selecting the JSON transformer.
-            // Read as text and decode explicitly to avoid NoTransformationFoundException.
-            val text: String = response.body()
-            val presets = json.decodeFromString(PresetList.serializer(), text)
-            Log.d("PresetRemoteManager", "Fetched ${presets.presets.size} presets")
-            presets
         } catch (e: Exception) {
-            Log.e("PresetRemoteManager", "Failed to fetch presets", e)
-            null
+            Log.e("PresetRemoteManager", "Network error fetching presets", e)
+            return FetchResult.NetworkError(e.message ?: "网络请求失败")
         }
+
+        // UC-20: 检查 HTTP 状态码，404 等非 2xx 视为「订阅源不可用」
+        val statusCode = response.status.value
+        if (statusCode !in 200..299) {
+            val msg = "HTTP $statusCode"
+            Log.e("PresetRemoteManager", "Subscription source unavailable: $msg")
+            return FetchResult.InvalidSource("订阅源不可用 ($msg)")
+        }
+
+        // 读取响应文本
+        val text: String = try {
+            response.body()
+        } catch (e: Exception) {
+            Log.e("PresetRemoteManager", "Failed to read response body", e)
+            return FetchResult.NetworkError(e.message ?: "读取响应失败")
+        }
+
+        // UC-13: JSON 解析——缺失 sections 等字段时返回 ParseFailed 而不崩溃
+        val presetList = try {
+            json.decodeFromString(PresetList.serializer(), text)
+        } catch (e: Exception) {
+            Log.e("PresetRemoteManager", "JSON parse failed for $url", e)
+            return FetchResult.ParseFailed("解析失败: ${e.message}")
+        }
+
+        Log.d("PresetRemoteManager", "Fetched ${presetList.presets.size} presets")
+        return FetchResult.Success(presetList)
     }
 
     /**
@@ -233,36 +279,43 @@ object PresetRemoteManager {
         return null
     }
 
+    /**
+     * UC-12: 仅 build 号增大时触发更新；pull-to-refresh 不会无限转圈
+     * UC-13: 缺失字段时返回 ParseFailed 而不崩溃
+     * UC-20: 404/非JSON 返回"订阅源不可用"
+     */
     suspend fun fetchAndSave(context: Context, url: String, forceUpdate: Boolean = false): Result<PresetList> {
         // URL 安全验证
         validateUrl(url)?.let { return Result.failure(SecurityException(it)) }
 
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
-            // 使用指数退避重试
-            val response = withExponentialBackoff(maxRetries = 3) {
-                client.get(url) {
-                    // 添加缓存控制头
-                    buildCacheHeaders().forEach { (key, value) ->
-                        header(key, value)
-                    }
+            // 使用带 FetchResult 的接口拉取，区分 InvalidSource / ParseFailed / NetworkError
+            val fetchResult = withExponentialBackoff(maxRetries = 3) {
+                fetchPresetsWithResult(url)
+            }
+
+            // 重试耗尽后仍为 null
+            if (fetchResult == null) {
+                return Result.failure(Exception("网络请求失败，已重试3次"))
+            }
+
+            when (fetchResult) {
+                is FetchResult.InvalidSource -> {
+                    // UC-20: 404/非JSON → "订阅源不可用"
+                    return Result.failure(Exception(fetchResult.message))
                 }
-            } ?: return Result.failure(Exception("网络请求失败，已重试3次"))
-
-            // 验证响应码
-            if (response.status.value !in 200..299) {
-                return Result.failure(Exception("HTTP ${response.status.value}"))
+                is FetchResult.ParseFailed -> {
+                    // UC-13: JSON 缺失字段 → "解析失败"
+                    return Result.failure(Exception(fetchResult.message))
+                }
+                is FetchResult.NetworkError -> {
+                    return Result.failure(Exception(fetchResult.message))
+                }
+                is FetchResult.Success -> { /* 正常继续 */ }
             }
 
-            val text: String = response.body()
-
-            // 验证 JSON 是否有效
-            val presetList = try {
-                json.decodeFromString(PresetList.serializer(), text)
-            } catch (e: Exception) {
-                Log.e("PresetRemoteManager", "Invalid JSON received", e)
-                return Result.failure(Exception("JSON 格式错误"))
-            }
+            val presetList = fetchResult.presetList
 
             // 验证必填字段
             val missingFields = mutableListOf<String>()
@@ -275,13 +328,24 @@ object PresetRemoteManager {
 
             val subManager = com.silas.omaster.data.local.SubscriptionManager.getInstance(context)
 
-            // 检查版本号是否相同
+            // UC-12: 仅远程 build > 本地 build 时才触发更新
             if (!forceUpdate) {
                 val currentSub = subManager.subscriptionsFlow.value.find { it.url == url }
-                if (currentSub != null && currentSub.build == presetList.build) {
+                if (currentSub != null && currentSub.build >= presetList.build) {
                     return Result.failure(Exception("无需更新"))
                 }
             }
+
+            // 重新拉取原始文本用于写入磁盘（fetchPresetsWithResult 只返回解析后对象）
+            val response = withExponentialBackoff(maxRetries = 2) {
+                client.get(url) {
+                    buildCacheHeaders().forEach { (key, value) ->
+                        header(key, value)
+                    }
+                }
+            } ?: return Result.failure(Exception("网络请求失败"))
+
+            val text: String = response.body()
 
             withContext(Dispatchers.IO) {
                 val fileName = subManager.getFileNameForUrl(url)
