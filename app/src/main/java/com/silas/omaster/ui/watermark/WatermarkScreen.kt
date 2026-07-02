@@ -95,14 +95,26 @@ fun WatermarkScreen(
         previewBitmap = sample
     }
 
-    // 配置变化时更新预览
+    // 配置变化时更新预览（MEM-05: 旧 Bitmap 及时 recycle）
     LaunchedEffect(config) {
         val source = previewBitmap ?: return@LaunchedEffect
         scope.launch {
             val result = withContext(Dispatchers.Default) {
                 WatermarkRenderer.renderWatermark(source, config)
             }
+            val old = watermarkedBitmap
             watermarkedBitmap = result
+            old?.recycle()
+        }
+    }
+
+    // 页面退出时释放预览 Bitmap
+    DisposableEffect(Unit) {
+        onDispose {
+            previewBitmap?.recycle()
+            previewBitmap = null
+            watermarkedBitmap?.recycle()
+            watermarkedBitmap = null
         }
     }
 

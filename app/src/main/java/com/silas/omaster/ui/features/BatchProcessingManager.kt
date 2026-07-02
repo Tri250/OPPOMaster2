@@ -150,7 +150,8 @@ class BatchProcessingManager(
                             // 阶段 2: 应用预设
                             updateImageProgress(index, ImageProgress(status = ImageStatus.PROCESSING, progress = 0.5f), onImageProgress)
 
-                            var processedBitmap = applyPreset(bitmap, params)
+                            val presetBitmap = applyPreset(bitmap, params)
+                            var processedBitmap = presetBitmap
 
                             // 阶段 2.5: 应用水印（如果配置了）
                             if (watermarkConfig != null) {
@@ -166,8 +167,9 @@ class BatchProcessingManager(
                                 exportFormat
                             )
 
-                            // 回收 Bitmap
-                            if (processedBitmap !== bitmap) processedBitmap.recycle()
+                            // 回收 Bitmap：按创建顺序逆序释放，避免中间产物泄漏 (MEM-01 / MEM-05)
+                            if (processedBitmap !== presetBitmap) processedBitmap.recycle()
+                            if (presetBitmap !== bitmap) presetBitmap.recycle()
                             bitmap.recycle()
 
                             if (savedUri != null) {
@@ -178,6 +180,11 @@ class BatchProcessingManager(
                                 updateImageProgress(index, ImageProgress(status = ImageStatus.FAILED, progress = 1f, error = "保存失败"), onImageProgress)
                             }
 
+                        } catch (e: OutOfMemoryError) {
+                            Log.e(TAG, "处理图片[$index] OOM: ${e.message}")
+                            System.gc()
+                            results[index] = BatchResult(uri, null, "内存不足，已跳过此图")
+                            updateImageProgress(index, ImageProgress(status = ImageStatus.FAILED, progress = 1f, error = "内存不足，已跳过此图"), onImageProgress)
                         } catch (e: Exception) {
                             Log.e(TAG, "处理图片[$index]失败: ${e.message}", e)
                             // F2-17: 单图错误不影响其他图片，继续处理
@@ -272,31 +279,36 @@ class BatchProcessingManager(
     }
 
     /**
-     * 加载图片 - 使用单一字节数组流避免重复打开资源
+     * 加载图片 - 流式解码避免大图全量读入内存 (MEM-01 OOM 防护)
+     * 使用 ParcelFileDescriptor 直接解码文件描述符，配合 inSampleSize 降采样。
      */
     private fun loadBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
-            // 一次性读取全部字节，避免两次打开 InputStream
-            val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
-                stream.readBytes()
-            } ?: return null
+            val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+            pfd.use { descriptor ->
+                // 第一次解码：仅获取尺寸信息
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeFileDescriptor(descriptor.fileDescriptor, null, options)
 
-            // 第一次解码：仅获取尺寸信息
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
+                // 计算采样率
+                options.inSampleSize = calculateSampleSize(
+                    options.outWidth, options.outHeight,
+                    EXPORT_MAX_DIMENSION, EXPORT_MAX_DIMENSION
+                )
+                options.inJustDecodeBounds = false
+                options.inPreferredConfig = Bitmap.Config.RGB_565
+
+                // 第二次解码：复用同一文件描述符
+                // 需要重新 seek 到开头
+                descriptor.fileDescriptor.sync()
+                BitmapFactory.decodeFileDescriptor(descriptor.fileDescriptor, null, options)
             }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-
-            // 计算采样率
-            options.inSampleSize = calculateSampleSize(
-                options.outWidth, options.outHeight,
-                EXPORT_MAX_DIMENSION, EXPORT_MAX_DIMENSION
-            )
-            options.inJustDecodeBounds = false
-            options.inPreferredConfig = Bitmap.Config.RGB_565
-
-            // 第二次解码：使用同一字节数组实际解码
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "加载图片 OOM: ${e.message}")
+            System.gc()
+            null
         } catch (e: Exception) {
             Log.e(TAG, "加载图片失败: ${e.message}", e)
             null
@@ -370,6 +382,15 @@ class BatchProcessingManager(
         format: HasselbladEyeViewModel.ExportFormat
     ): Uri? {
         return try {
+            // DB-03: 预检存储空间，避免 ENOSPC 导致部分写出文件残留
+            val stat = android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path)
+            val availBytes = stat.availableBytes
+            val estimatedSize = bitmap.byteCount.toLong()
+            if (availBytes < estimatedSize + 10 * 1024 * 1024) {
+                Log.e(TAG, "存储空间不足: 可用 ${availBytes / 1024 / 1024}MB, 需要约 ${estimatedSize / 1024 / 1024}MB")
+                return null
+            }
+
             val (compressFormat, extension) = when (format) {
                 HasselbladEyeViewModel.ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG to "jpg"
                 HasselbladEyeViewModel.ExportFormat.PNG -> Bitmap.CompressFormat.PNG to "png"
@@ -400,8 +421,12 @@ class BatchProcessingManager(
             uri?.also {
                 context.contentResolver.openOutputStream(it)?.use { out ->
                     bitmap.compress(compressFormat, 95, out)
+                    out.flush()
                 }
             }
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "保存图片 IO 错误: ${e.message}", e)
+            null
         } catch (e: Exception) {
             Log.e(TAG, "保存图片失败: ${e.message}", e)
             null

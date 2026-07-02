@@ -52,6 +52,15 @@ object XmpParser {
      */
     fun parse(inputStream: InputStream): XmpParseResult {
         return try {
+            // DB-02: 限制 XMP 输入大小，防止超大文件导致 OOM
+            val maxSize = 1024 * 1024 // 1MB
+            val limitedStream = if (inputStream.available() > maxSize) {
+                Log.w(TAG, "XMP 文件过大 (${inputStream.available()} bytes)，仅读取前 $maxSize bytes")
+                java.io.ByteArrayInputStream(inputStream.readNBytes(maxSize))
+            } else {
+                inputStream
+            }
+
             val params = mutableMapOf<String, String>()
             val hslHue = mutableMapOf<String, String>()
             val hslSaturation = mutableMapOf<String, String>()
@@ -64,7 +73,7 @@ object XmpParser {
             val factory = XmlPullParserFactory.newInstance()
             factory.isNamespaceAware = true
             val parser = factory.newPullParser()
-            parser.setInput(InputStreamReader(inputStream, "UTF-8"))
+            parser.setInput(InputStreamReader(limitedStream, "UTF-8"))
 
             var eventType = parser.eventType
             var inDescription = false

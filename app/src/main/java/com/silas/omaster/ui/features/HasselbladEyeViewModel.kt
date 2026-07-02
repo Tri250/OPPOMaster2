@@ -1196,88 +1196,99 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         }
 
         val encoder = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_VIDEO_HEVC)
-        encoder.configure(mediaFormat, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE)
-        val inputSurface = encoder.createInputSurface()
-        encoder.start()
-
-        // 使用 Surface 将 Bitmap 喂入编码器
-        val canvas = inputSurface.lockCanvas(null)
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
-        inputSurface.unlockCanvasAndPost(canvas)
-
-        // 发送 EOS 信号
-        encoder.signalEndOfInputStream()
-
-        // 创建 MediaMuxer 写入 HEIF 容器
-        val tempFile = File.createTempFile("heif_encode_", ".heic")
-        val muxer = android.media.MediaMuxer(tempFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_HEIF)
-
-        var trackIndex = -1
+        var inputSurface: android.view.Surface? = null
+        var muxer: android.media.MediaMuxer? = null
         var muxerStarted = false
-        val bufferInfo = android.media.MediaCodec.BufferInfo()
+        val tempFile = File.createTempFile("heif_encode_", ".heic")
 
-        // 循环读取编码输出
-        while (true) {
-            val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10_000)
-            when {
-                outputBufferIndex >= 0 -> {
-                    val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)
-                        ?: break
+        try {
+            encoder.configure(mediaFormat, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE)
+            inputSurface = encoder.createInputSurface()
+            encoder.start()
 
-                    if (bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
-                        // 编码器配置数据（SPS/PPS），在 start 后由 muxer 自动处理
-                        if (!muxerStarted && bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+            // 使用 Surface 将 Bitmap 喂入编码器
+            val canvas = inputSurface.lockCanvas(null)
+            canvas.drawBitmap(bitmap, 0f, 0f, null)
+            inputSurface.unlockCanvasAndPost(canvas)
+
+            // 发送 EOS 信号
+            encoder.signalEndOfInputStream()
+
+            // 创建 MediaMuxer 写入 HEIF 容器
+            muxer = android.media.MediaMuxer(tempFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_HEIF)
+
+            var trackIndex = -1
+            val bufferInfo = android.media.MediaCodec.BufferInfo()
+
+            // 循环读取编码输出
+            while (true) {
+                val outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10_000)
+                when {
+                    outputBufferIndex >= 0 -> {
+                        val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)
+                            ?: break
+
+                        if (bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+                            // 编码器配置数据（SPS/PPS），在 start 后由 muxer 自动处理
+                            if (!muxerStarted && bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+                                val format = encoder.outputFormat
+                                trackIndex = muxer.addTrack(format)
+                                muxer.start()
+                                muxerStarted = true
+                            }
+                            encoder.releaseOutputBuffer(outputBufferIndex, false)
+                            continue
+                        }
+
+                        if (muxerStarted && outputBuffer != null) {
+                            muxer.writeSampleData(trackIndex, outputBuffer, bufferInfo)
+                        }
+
+                        encoder.releaseOutputBuffer(outputBufferIndex, false)
+
+                        if (bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            break
+                        }
+                    }
+                    outputBufferIndex == android.media.MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                        if (!muxerStarted) {
                             val format = encoder.outputFormat
                             trackIndex = muxer.addTrack(format)
                             muxer.start()
                             muxerStarted = true
                         }
-                        encoder.releaseOutputBuffer(outputBufferIndex, false)
-                        continue
                     }
-
-                    if (muxerStarted && outputBuffer != null) {
-                        muxer.writeSampleData(trackIndex, outputBuffer, bufferInfo)
+                    outputBufferIndex == android.media.MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                        // 等待更多输出
                     }
-
-                    encoder.releaseOutputBuffer(outputBufferIndex, false)
-
-                    if (bufferInfo.flags and android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                        break
-                    }
-                }
-                outputBufferIndex == android.media.MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                    if (!muxerStarted) {
-                        val format = encoder.outputFormat
-                        trackIndex = muxer.addTrack(format)
-                        muxer.start()
-                        muxerStarted = true
-                    }
-                }
-                outputBufferIndex == android.media.MediaCodec.INFO_TRY_AGAIN_LATER -> {
-                    // 等待更多输出
                 }
             }
-        }
 
-        // 清理资源
-        encoder.stop()
-        encoder.release()
-        inputSurface.release()
-        if (muxerStarted) {
-            muxer.stop()
-        }
-        muxer.release()
-
-        // 将临时文件写入 outputStream
-        tempFile.inputStream().use { input ->
-            val buf = ByteArray(8192)
-            var read: Int
-            while (input.read(buf).also { read = it } != -1) {
-                outputStream.write(buf, 0, read)
+            // 清理资源
+            encoder.stop()
+            if (muxerStarted) {
+                muxer.stop()
             }
+
+            // 将临时文件写入 outputStream
+            tempFile.inputStream().use { input ->
+                val buf = ByteArray(8192)
+                var read: Int
+                while (input.read(buf).also { read = it } != -1) {
+                    outputStream.write(buf, 0, read)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "HEIF 编码失败: ${e.message}", e)
+        } finally {
+            runCatching { encoder.release() }
+            runCatching { inputSurface?.release() }
+            if (muxerStarted) {
+                runCatching { muxer?.stop() }
+            }
+            runCatching { muxer?.release() }
+            tempFile.delete()
         }
-        tempFile.delete()
     }
 
     /**
@@ -1468,6 +1479,10 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         _previewBitmap.value = null
         _thumbnailPreview.value?.recycle()
         _thumbnailPreview.value = null
+        _hncsBeforeBitmap.value?.recycle()
+        _hncsBeforeBitmap.value = null
+        _hncsAfterBitmap.value?.recycle()
+        _hncsAfterBitmap.value = null
 
         _isSaving.value = false
         _exportFormat.value = ExportFormat.JPEG
