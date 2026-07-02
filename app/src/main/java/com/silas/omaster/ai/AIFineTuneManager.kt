@@ -47,6 +47,11 @@ class AIFineTuneManager private constructor(context: Context) {
     
     // 大师推理引擎（真实AI推理）
     private val inferenceEngine = MasterInferenceEngine.getInstance(context)
+
+    /**
+     * 获取推理引擎实例，供 ViewModel 检查模型可用性。
+     */
+    fun getInferenceEngine(): MasterInferenceEngine = inferenceEngine
     
     // 启发式场景分析器（图像特征提取）
     private val sceneAnalyzer = HeuristicSceneAnalyzer.getInstance(context)

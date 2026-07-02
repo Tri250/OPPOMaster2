@@ -136,4 +136,8 @@ sealed class Screen {
     /** 2.3.0 新增：视频滤镜页面 */
     @Serializable
     data object VideoFilter : Screen()
+
+    /** 水印编辑页面 */
+    @Serializable
+    data object Watermark : Screen()
 }

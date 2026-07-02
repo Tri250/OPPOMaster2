@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.silas.omaster.ui.theme.BrandTheme
+import com.silas.omaster.data.watermark.WatermarkConfig
 import com.silas.omaster.util.SecurityCrypto
 import com.silas.omaster.util.UrlConstants
 import kotlinx.coroutines.CoroutineScope
@@ -479,6 +480,28 @@ class SettingsManager private constructor(private val context: Context) {
 
     fun setMigrationHandled(handled: Boolean) {
         setDataSync(KEY_MIGRATION_HANDLED, handled)
+    }
+
+    // ==================== 水印配置 ====================
+
+    /**
+     * 保存水印配置列表
+     */
+    fun saveWatermarkConfigs(configs: List<WatermarkConfig>) {
+        val jsonStr = Json { ignoreUnknownKeys = true }.encodeToString(configs)
+        setDataSync(KEY_WATERMARK_CONFIGS, jsonStr)
+    }
+
+    /**
+     * 加载水印配置列表
+     */
+    fun loadWatermarkConfigs(): List<WatermarkConfig> {
+        val jsonStr = getDataSyncOrNull(KEY_WATERMARK_CONFIGS) ?: return emptyList()
+        return try {
+            Json { ignoreUnknownKeys = true }.decodeFromString(jsonStr)
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
     
     // ==================== 云端API配置方法 ====================
@@ -997,6 +1020,9 @@ class SettingsManager private constructor(private val context: Context) {
 
         // 预设源配置 JSON
         private val KEY_PRESET_SOURCES_JSON = stringPreferencesKey("preset_sources_json")
+
+        // 水印配置 JSON
+        private val KEY_WATERMARK_CONFIGS = stringPreferencesKey("watermark_configs")
 
         @Volatile
         private var instance: SettingsManager? = null

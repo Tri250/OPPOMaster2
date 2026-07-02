@@ -64,6 +64,7 @@ import com.silas.omaster.ui.features.ParamAdjustScreen
 import com.silas.omaster.ui.features.SmartOptimizeScreen
 import com.silas.omaster.ui.features.StyleLUTGeneratorScreen
 import com.silas.omaster.ui.home.HomeScreen
+import com.silas.omaster.ui.watermark.WatermarkScreen
 import com.silas.omaster.ui.onboarding.OnboardingScreen
 import com.silas.omaster.ui.subscription.SubscriptionScreen
 import com.silas.omaster.ui.screens.SceneAnalysisReportScreen
@@ -226,6 +227,7 @@ fun MainApp(
                     onNavigateToParamAdjustment = { navController.navigate(Screen.ParamAdjustment) },
                     onNavigateToHasselbladEye = { navController.navigate(Screen.HasselbladColor) },
                     onNavigateToXingYingJi = { navController.navigate(Screen.XingYingJiHome) },
+                    onNavigateToWatermark = { navController.navigate(Screen.Watermark) },
                     onScrollStateChanged = { isScrollingUp -> isHomeScrollingUp = isScrollingUp },
                     refreshTrigger = refreshTrigger
                 )
@@ -716,6 +718,12 @@ fun MainApp(
 
             composable<Screen.XingYingJiAnnualReport> {
                 AnnualReportScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable<Screen.Watermark> {
+                WatermarkScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
 

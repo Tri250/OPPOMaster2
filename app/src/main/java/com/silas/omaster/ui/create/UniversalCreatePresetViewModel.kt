@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.data.xmp.XmpParser
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
@@ -329,6 +330,66 @@ class UniversalCreatePresetViewModel(
         
         return "presets/$fileName"
     }
+
+    /**
+     * 从 XMP 文件导入参数
+     *
+     * @param uri XMP 文件的 Uri
+     * @return true 表示导入成功，false 表示导入失败
+     */
+    fun importFromXmp(uri: Uri): Boolean {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+                ?: throw IOException("无法打开 XMP 文件")
+
+            val result = inputStream.use { XmpParser.parse(it) }
+
+            when (result) {
+                is XmpParser.XmpParseResult.Success -> {
+                    val currentSections = _uiState.value.sections.toMutableList()
+                    currentSections.addAll(result.sections)
+
+                    // 如果名称为空，尝试用相机型号命名
+                    val name = _uiState.value.name.ifBlank {
+                        result.cameraModel ?: "XMP 导入预设"
+                    }
+
+                    updateStateWithUndo(_uiState.value.copy(
+                        name = name,
+                        sections = currentSections,
+                        xmpImportError = null,
+                        xmpImportSuccess = true
+                    ))
+                    // 自动清除成功标记
+                    true
+                }
+                is XmpParser.XmpParseResult.Failure -> {
+                    _uiState.value = _uiState.value.copy(
+                        xmpImportError = result.errorMessage,
+                        xmpImportSuccess = false
+                    )
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("CreatePresetVM", "importFromXmp failed", e)
+            _uiState.value = _uiState.value.copy(
+                xmpImportError = e.message ?: "解析失败",
+                xmpImportSuccess = false
+            )
+            false
+        }
+    }
+
+    /**
+     * 清除 XMP 导入状态
+     */
+    fun clearXmpImportState() {
+        _uiState.value = _uiState.value.copy(
+            xmpImportError = null,
+            xmpImportSuccess = false
+        )
+    }
 }
 
 data class UniversalPresetUiState(
@@ -336,7 +397,9 @@ data class UniversalPresetUiState(
     val imageUri: Uri? = null,
     val sections: List<PresetSection> = emptyList(),
     val originalCoverPath: String? = null,
-    val isEditMode: Boolean = false
+    val isEditMode: Boolean = false,
+    val xmpImportError: String? = null,
+    val xmpImportSuccess: Boolean = false
 )
 
 class UniversalCreatePresetViewModelFactory(

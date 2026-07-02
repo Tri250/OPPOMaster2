@@ -20,6 +20,9 @@ import com.silas.omaster.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.support.common.FileUtil
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -44,6 +47,55 @@ class MasterInferenceEngine private constructor(context: Context) {
     private val context = context.applicationContext
     private val sceneAnalyzer = HeuristicSceneAnalyzer.getInstance(context)
     private val sceneMapping = SceneToHasselbladMapping
+
+    // TFLite 模型状态（用于 AI 微调增强推理）
+    private var tfliteInterpreter: Interpreter? = null
+    private val _isModelLoaded = AtomicBoolean(false)
+
+    /**
+     * 检查 TFLite 模型是否已加载。
+     * UI 层通过此方法判断是否提供 AI 增强功能，不可用时降级到启发式模式。
+     */
+    fun isModelLoaded(): Boolean = _isModelLoaded.get() && tfliteInterpreter != null
+
+    // 是否处于降级（启发式）模式
+    private val _isHeuristicMode = AtomicBoolean(false)
+
+    /**
+     * 是否处于启发式降级模式（TFLite 不可用）。
+     */
+    val isHeuristicMode: Boolean get() = _isHeuristicMode.get()
+
+    init {
+        // 后台异步初始化 TFLite 模型，失败时自动降级到启发式模式
+        Thread { initTFLiteModel() }.start()
+    }
+
+    /**
+     * 初始化 TFLite 模型用于增强推理。
+     * 模型文件不存在或加载失败时，自动降级到启发式分析器。
+     */
+    private fun initTFLiteModel() {
+        try {
+            val modelFile = FileUtil.loadMappedFile(context, "models/scene_classifier.tflite")
+            val options = Interpreter.Options().apply { numThreads = 2 }
+            tfliteInterpreter = Interpreter(modelFile, options)
+            _isModelLoaded.set(true)
+            _isHeuristicMode.set(false)
+            android.util.Log.d(TAG, "MasterInferenceEngine: TFLite 模型加载成功")
+        } catch (e: OutOfMemoryError) {
+            _isModelLoaded.set(false)
+            tfliteInterpreter = null
+            _isHeuristicMode.set(true)
+            System.gc()
+            android.util.Log.e(TAG, "MasterInferenceEngine: TFLite 模型加载 OOM，降级到启发式模式", e)
+        } catch (e: Exception) {
+            _isModelLoaded.set(false)
+            tfliteInterpreter = null
+            _isHeuristicMode.set(true)
+            android.util.Log.w(TAG, "MasterInferenceEngine: TFLite 模型不可用，降级到启发式模式: ${e.message}")
+        }
+    }
 
     // ML Kit 人脸检测器（全局单例，使用 ACCURATE 模式以获得人脸详细分类）
     private val faceDetector: FaceDetector by lazy {
@@ -599,9 +651,18 @@ class MasterInferenceEngine private constructor(context: Context) {
         } catch (_: Exception) {
             // 关闭异常忽略
         }
+        try {
+            tfliteInterpreter?.close()
+            tfliteInterpreter = null
+            _isModelLoaded.set(false)
+        } catch (_: Exception) {
+            // 关闭异常忽略
+        }
     }
 
     companion object {
+        private const val TAG = "MasterInferenceEngine"
+
         @Volatile
         private var instance: MasterInferenceEngine? = null
 

@@ -18,6 +18,7 @@ import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.ai.recipe.RecipeMatchResult
@@ -121,11 +122,31 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     private val _selectedColorParams = MutableStateFlow(emptyMap<String, Int>())
     val selectedColorParams: StateFlow<Map<String, Int>> = _selectedColorParams.asStateFlow()
 
+    // HNCS 3.0 开关状态
+    private val _hncsEnabled = MutableStateFlow(false)
+    val hncsEnabled: StateFlow<Boolean> = _hncsEnabled.asStateFlow()
+
+    // HNCS AB 对比图（关闭 HNCS 时的渲染结果）
+    private val _hncsBeforeBitmap = MutableStateFlow<Bitmap?>(null)
+    val hncsBeforeBitmap: StateFlow<Bitmap?> = _hncsBeforeBitmap.asStateFlow()
+
+    // HNCS AB 对比图（开启 HNCS 时的渲染结果）
+    private val _hncsAfterBitmap = MutableStateFlow<Bitmap?>(null)
+    val hncsAfterBitmap: StateFlow<Bitmap?> = _hncsAfterBitmap.asStateFlow()
+
     private val _analysisResult = MutableStateFlow<AnalysisResult?>(null)
     val analysisResult: StateFlow<AnalysisResult?> = _analysisResult.asStateFlow()
 
     private val _analysisError = MutableStateFlow<String?>(null)
     val analysisError: StateFlow<String?> = _analysisError.asStateFlow()
+
+    // AI 功能可用性状态
+    private val _isAIAvailable = MutableStateFlow(true)
+    val isAIAvailable: StateFlow<Boolean> = _isAIAvailable.asStateFlow()
+
+    // AI 不可用提示信息
+    private val _aiUnavailableMessage = MutableStateFlow<String?>(null)
+    val aiUnavailableMessage: StateFlow<String?> = _aiUnavailableMessage.asStateFlow()
 
     private val _analysisProgress = MutableStateFlow(0f)
     val analysisProgress: StateFlow<Float> = _analysisProgress.asStateFlow()
@@ -299,7 +320,18 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
             _originalBitmap.value = bitmap
             _analysisResult.value = null
             _analysisError.value = null
+            _aiUnavailableMessage.value = null
             _stage.value = HasselbladEyeStage.ANALYZING
+
+            // 检查 AI 可用性
+            val aiAvailable = inferenceEngine.isModelLoaded()
+            _isAIAvailable.value = aiAvailable
+            if (!aiAvailable) {
+                _aiUnavailableMessage.value = getApplication<Application>().getString(
+                    com.silas.omaster.R.string.ai_unavailable
+                )
+                Log.w(TAG, "AI 模型不可用，降级到启发式分析器")
+            }
 
             val steps = defaultAnalysisSteps().toMutableList()
 
@@ -315,7 +347,18 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 updateAnalysisProgress(20f, "色彩分析中...", steps)
 
                 val analysisDetail = withContext(Dispatchers.Default) {
-                    inferenceEngine.analyzeImageWithDetails(bitmap, imagePath = null)
+                    try {
+                        inferenceEngine.analyzeImageWithDetails(bitmap, imagePath = null)
+                    } catch (e: Exception) {
+                        // TFLite 不可用时，降级到纯启发式分析器
+                        Log.w(TAG, "推理引擎分析失败，降级到启发式分析器", e)
+                        val heuristicAnalyzer = HeuristicSceneAnalyzer.getInstance(getApplication())
+                        val heuristicResult = heuristicAnalyzer.analyze(bitmap, null, null)
+                        MasterInferenceEngine.SceneAnalysisDetail(
+                            profile = heuristicResult.primaryScene,
+                            alternatives = heuristicResult.alternativeScenes
+                        )
+                    }
                 }
                 val profile = analysisDetail.profile
 
@@ -575,6 +618,80 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+     * 切换 HNCS 3.0 开关状态。
+     */
+    fun updateHncsEnabled(enabled: Boolean) {
+        _hncsEnabled.value = enabled
+    }
+
+    /**
+     * 生成 HNCS AB 对比图：同一张图分别以 HNCS 关闭/开启渲染，用于并排对比。
+     */
+    fun generateHncsABComparison(source: Bitmap) {
+        viewModelScope.launch {
+            val currentParams = _params.value
+            val scaled = withContext(Dispatchers.Default) {
+                createThumbnail(source, maxDimension = PREVIEW_MAX_DIMENSION)
+            }
+            val beforeResult = withContext(Dispatchers.Default) {
+                renderWithGPUFallbackForHncs(scaled, currentParams, hncsEnabled = false)
+            }
+            val afterResult = withContext(Dispatchers.Default) {
+                renderWithGPUFallbackForHncs(scaled, currentParams, hncsEnabled = true)
+            }
+            _hncsBeforeBitmap.value = beforeResult
+            _hncsAfterBitmap.value = afterResult
+        }
+    }
+
+    /**
+     * GPU 渲染的 HNCS 变体：指定 hncsEnabled 标志进行渲染。
+     */
+    private suspend fun renderWithGPUFallbackForHncs(
+        source: Bitmap,
+        params: HasselbladParams,
+        hncsEnabled: Boolean
+    ): Bitmap? {
+        val manager = gpuRenderManager ?: GPURenderManager.acquire(getApplication()).also {
+            gpuRenderManager = it
+        }
+        return try {
+            val renderParams = HasselbladParamMapper.map(
+                hasselbladParams = params,
+                colorModeParams = _selectedColorParams.value + _selectedSceneParams.value,
+                active3DLUTId = _active3DLUTId.value,
+                lut3DStrength = _lut3DStrength.value,
+                hncsEnabled = hncsEnabled
+            )
+            val gpuResult = when (val renderResult = manager.renderSync(source, renderParams)) {
+                is RenderResult.Success -> renderResult.outputBitmap
+                is RenderResult.FallbackToCPU -> renderResult.outputBitmap
+                is RenderResult.Error -> null
+            }
+            if (gpuResult == null) {
+                val colorApplied = applyHasselbladColorScienceForHncs(source, params, hncsEnabled)
+                apply3DLUTToBitmap(colorApplied)
+            } else {
+                applyVignetteIfNeeded(gpuResult, params.vignette)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "HNCS AB 渲染失败", e)
+            applyHasselbladColorScienceForHncs(source, params, hncsEnabled)
+        }
+    }
+
+    /**
+     * CPU 降级路径的 HNCS 变体。
+     */
+    private fun applyHasselbladColorScienceForHncs(
+        source: Bitmap,
+        hasselbladParams: HasselbladParams,
+        hncsEnabled: Boolean
+    ): Bitmap {
+        return applyHasselbladColorEngine(source, hasselbladParams, hncsEnabled = hncsEnabled)
+    }
+
+    /**
      * 应用推荐胶片的参数到当前参数。参数被锁定时不会执行覆盖。
      */
     fun applyFilmPreset(filmId: String) {
@@ -702,7 +819,8 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
                 hasselbladParams = params,
                 colorModeParams = _selectedColorParams.value + _selectedSceneParams.value,
                 active3DLUTId = _active3DLUTId.value,
-                lut3DStrength = _lut3DStrength.value
+                lut3DStrength = _lut3DStrength.value,
+                hncsEnabled = _hncsEnabled.value
             )
             val gpuResult = when (val renderResult = manager.renderSync(source, renderParams)) {
                 is RenderResult.Success -> renderResult.outputBitmap
@@ -1336,6 +1454,8 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         _selectedColorParams.value = emptyMap()
         _analysisResult.value = null
         _analysisError.value = null
+        _isAIAvailable.value = true
+        _aiUnavailableMessage.value = null
         _analysisProgress.value = 0f
         _analysisMessage.value = "正在读取光影信息..."
         _analysisSteps.value = defaultAnalysisSteps()
@@ -1446,7 +1566,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         source: Bitmap,
         hasselbladParams: HasselbladParams
     ): Bitmap {
-        return applyHasselbladColorEngine(source, hasselbladParams)
+        return applyHasselbladColorEngine(source, hasselbladParams, hncsEnabled = _hncsEnabled.value)
     }
 
     private fun shareBitmapToUri(context: Context, bitmap: Bitmap, format: ExportFormat = ExportFormat.JPEG): Uri? {

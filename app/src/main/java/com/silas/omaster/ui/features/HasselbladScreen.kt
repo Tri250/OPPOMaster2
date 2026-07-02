@@ -141,6 +141,7 @@ import com.silas.omaster.ui.components.ApertureState
 import com.silas.omaster.ui.components.DiscardChangesDialog
 import com.silas.omaster.ui.components.SaveAsPresetDialog
 import com.silas.omaster.ui.components.defaultAnalysisSteps
+import com.silas.omaster.R
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
 import com.silas.omaster.data.repository.PresetRepository
@@ -215,6 +216,12 @@ fun HasselbladScreen(
     val intentQuery by viewModel.intentQuery.collectAsState()
     val feedbackUploadStatus by viewModel.feedbackUploadStatus.collectAsState()
     val feedbackPendingCount by viewModel.feedbackPendingCount.collectAsState()
+
+    // HNCS 3.0 状态
+    val hncsEnabled by viewModel.hncsEnabled.collectAsState()
+    val hncsBeforeBitmap by viewModel.hncsBeforeBitmap.collectAsState()
+    val hncsAfterBitmap by viewModel.hncsAfterBitmap.collectAsState()
+    var showHncsABCompare by remember { mutableStateOf(false) }
 
     // P2-1 修复：将哈苏构图引导线状态同步给上层（AppNavigation），
     // 用于跳转到 CameraXViewfinder 时通过 savedStateHandle 传递
@@ -433,6 +440,12 @@ fun HasselbladScreen(
     fun onColorModeSelected(colorMode: ColorMode) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         viewModel.updateSelectedColorMode(colorMode.id, colorMode.params)
+        // 非哈苏预设时自动关闭 HNCS
+        val isHasselblad = colorMode.id.startsWith("hasselblad-") || colorMode.id == "natural"
+        if (!isHasselblad && hncsEnabled) {
+            viewModel.updateHncsEnabled(false)
+            Toast.makeText(context, context.getString(R.string.hncs_only_hasselblad), Toast.LENGTH_SHORT).show()
+        }
         if (isParamsLocked) {
             Toast.makeText(context, "参数已锁定：色彩模式仅作参考，未覆盖当前参数", Toast.LENGTH_SHORT).show()
         }
@@ -683,6 +696,23 @@ fun HasselbladScreen(
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         // P2-5 修复：应用参数 + 联动悬浮窗服务
                         viewModel.applyToOPPOAndShowFloating(context)
+                    },
+                    hncsEnabled = hncsEnabled,
+                    isHasselbladPreset = selectedColorModeId.startsWith("hasselblad-") || selectedColorModeId == "natural",
+                    onHncsEnabledChanged = { enabled ->
+                        val isHasselblad = selectedColorModeId.startsWith("hasselblad-") || selectedColorModeId == "natural"
+                        if (!isHasselblad && enabled) {
+                            Toast.makeText(context, context.getString(R.string.hncs_only_hasselblad), Toast.LENGTH_SHORT).show()
+                        } else {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.updateHncsEnabled(enabled)
+                        }
+                    },
+                    onHncsABCompare = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val source = originalBitmap ?: return@Unit
+                        viewModel.generateHncsABComparison(source)
+                        showHncsABCompare = true
                     }
                 )
 
@@ -825,9 +855,97 @@ fun HasselbladScreen(
             }
         )
     }
-}
 
-// ==================== 辅助组件：GlassCard / ColorOS 16 动效 ====================
+    // HNCS AB 对比对话框
+    if (showHncsABCompare) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showHncsABCompare = false },
+            title = {
+                Text(
+                    text = "HNCS 对比",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (hncsBeforeBitmap != null) {
+                                    Image(
+                                        bitmap = hncsBeforeBitmap!!.asImageBitmap(),
+                                        contentDescription = "关闭 HNCS",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = HasselbladOrange)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "关闭 HNCS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (hncsAfterBitmap != null) {
+                                    Image(
+                                        bitmap = hncsAfterBitmap!!.asImageBitmap(),
+                                        contentDescription = "开启 HNCS",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = HasselbladOrange)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "开启 HNCS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HasselbladOrange
+                            )
+                        }
+                    }
+                    Text(
+                        text = "HNCS 3.0 自然色彩科学：肤色保护 · 柔和过渡 · 微暖偏移",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showHncsABCompare = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange)
+                ) {
+                    Text("关闭", color = Color.White)
+                }
+            }
+        )
+    }
+}
 
 /**
  * P2-14：ColorOS 16 风格的入场动效修饰符
@@ -1436,7 +1554,11 @@ private fun ParamsPanel(
     isParamsLocked: Boolean,
     onParamChanged: (String, Int) -> Unit,
     onParamsLockedChanged: (Boolean) -> Unit,
-    onResetParams: () -> Unit
+    onResetParams: () -> Unit,
+    hncsEnabled: Boolean = false,
+    isHasselbladPreset: Boolean = true,
+    onHncsEnabledChanged: (Boolean) -> Unit = {},
+    onHncsABCompare: () -> Unit = {}
 ) {
     GlassCard {
         Row(
@@ -1473,6 +1595,77 @@ private fun ParamsPanel(
                     checkedTrackColor = HasselbladOrange.copy(alpha = 0.5f)
                 )
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // HNCS 3.0 开关
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = "HNCS 3.0",
+                    tint = if (hncsEnabled) HasselbladOrange else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column {
+                    Text(
+                        text = "HNCS 3.0 自然色彩",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isHasselbladPreset) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                               else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                    Text(
+                        text = if (isHasselbladPreset) "哈苏自然色彩科学，肤色保护与柔和过渡"
+                               else "仅哈苏预设可用",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isHasselbladPreset) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                               else HasselbladOrange.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            Switch(
+                checked = hncsEnabled && isHasselbladPreset,
+                onCheckedChange = { checked ->
+                    if (!isHasselbladPreset) {
+                        // 非哈苏预设时显示 Toast 提示
+                        return@Switch
+                    }
+                    onHncsEnabledChanged(checked)
+                },
+                enabled = isHasselbladPreset,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = HasselbladOrange,
+                    checkedTrackColor = HasselbladOrange.copy(alpha = 0.5f),
+                    disabledThumbColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                    disabledTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                )
+            )
+        }
+
+        // HNCS AB 对比按钮
+        if (hncsEnabled && isHasselbladPreset) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onHncsABCompare,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, HasselbladOrange.copy(alpha = 0.6f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = "HNCS 对比",
+                    tint = HasselbladOrange,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "HNCS 对比", color = HasselbladOrange)
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -2054,7 +2247,11 @@ private fun ResultsContent(
     onGuideClick: (CompositionGuide) -> Unit,
     onClearComposition: () -> Unit,
     onSaveAsPreset: () -> Unit = {},
-    onApplyToOPPO: () -> Unit = {}
+    onApplyToOPPO: () -> Unit = {},
+    hncsEnabled: Boolean = false,
+    isHasselbladPreset: Boolean = true,
+    onHncsEnabledChanged: (Boolean) -> Unit = {},
+    onHncsABCompare: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -2180,7 +2377,11 @@ private fun ResultsContent(
                     isParamsLocked = isParamsLocked,
                     onParamChanged = onParamChanged,
                     onParamsLockedChanged = onParamsLockedChanged,
-                    onResetParams = onResetParams
+                    onResetParams = onResetParams,
+                    hncsEnabled = hncsEnabled,
+                    isHasselbladPreset = isHasselbladPreset,
+                    onHncsEnabledChanged = onHncsEnabledChanged,
+                    onHncsABCompare = onHncsABCompare
                 )
             }
 

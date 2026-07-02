@@ -49,8 +49,9 @@ fun applyHasselbladColorEngine(
     source: Bitmap,
     hasselbladParams: HasselbladParams,
     colorModeParams: Map<String, Int> = emptyMap(),
-    exportQuality: Int = HasselbladColorEngine.DEFAULT_EXPORT_QUALITY
-): Bitmap = HasselbladColorEngine.apply(source, hasselbladParams, colorModeParams, exportQuality)
+    exportQuality: Int = HasselbladColorEngine.DEFAULT_EXPORT_QUALITY,
+    hncsEnabled: Boolean = false
+): Bitmap = HasselbladColorEngine.apply(source, hasselbladParams, colorModeParams, exportQuality, hncsEnabled)
 
 /**
  * 在 [bitmap] 左下角添加 "HNCS 3.0 · Hasselblad Natural Color" 水印。
@@ -95,7 +96,8 @@ object HasselbladColorEngine {
         source: Bitmap,
         hasselbladParams: HasselbladParams,
         colorModeParams: Map<String, Int> = emptyMap(),
-        exportQuality: Int = DEFAULT_EXPORT_QUALITY
+        exportQuality: Int = DEFAULT_EXPORT_QUALITY,
+        hncsEnabled: Boolean = false
     ): Bitmap {
         require(exportQuality in 0..100) { "exportQuality must be in 0..100" }
 
@@ -104,6 +106,11 @@ object HasselbladColorEngine {
 
         // 1. 基础 ColorMatrix（饱和度、对比度、色温、影调、青品调、黑白）
         working = applyColorMatrix(working, buildColorMatrix(params))
+
+        // HNCS 3.0 后处理（在 ColorMatrix 之后、逐像素调整之前）
+        if (hncsEnabled) {
+            applyHNCSPostProcess(working)
+        }
 
         // 2. 高光 / 阴影 / 鲜艳度（逐像素单通道）
         applyHighlightsShadowsAndVibrance(working, params.highlights, params.shadows, params.vibrance.toFloat())
@@ -330,6 +337,81 @@ object HasselbladColorEngine {
         }
         canvas.drawBitmap(source, 0f, 0f, paint)
         return output
+    }
+
+    // ==================== HNCS 3.0 后处理 ====================
+
+    /**
+     * HNCS 3.0 自然色彩科学后处理
+     * 在 ColorMatrix 基础调整之后、逐像素调整之前执行：
+     * 1. 肤色保护：在肤色色相范围（H:15-45, S:20-70%）内减少饱和度偏移
+     * 2. 柔和中间调曲线：降低中段对比度，使过渡更自然
+     * 3. 微暖偏移：+5 warmth bias，肤色更自然
+     */
+    private fun applyHNCSPostProcess(bitmap: Bitmap) {
+        if (!bitmap.isMutable) return
+
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        for (i in pixels.indices) {
+            val color = pixels[i]
+            var r = color.red.toFloat()
+            var g = color.green.toFloat()
+            var b = color.blue.toFloat()
+
+            // 计算 HSL 近似值用于肤色检测
+            val maxC = maxOf(r, g, b)
+            val minC = minOf(r, g, b)
+            val l = (maxC + minC) / 2f
+            val delta = maxC - minC
+
+            if (delta > 0.01f) {
+                val s = if (l < 128f) delta / (maxC + minC) else delta / (510f - maxC - minC)
+                val hue = when (maxC) {
+                    r -> 60f * ((g - b) / delta) % 360f
+                    g -> 60f * ((b - r) / delta + 2f)
+                    else -> 60f * ((r - g) / delta + 4f)
+                }
+                val h = if (hue < 0) hue + 360f else hue
+
+                // 肤色保护：在肤色范围内（H:15-45, S:20-70%）减少饱和度偏移
+                if (h in 15f..45f && s in 0.2f..0.7f && l in 40f..220f) {
+                    val skinProtection = 0.7f // 保护系数 0.7
+                    val avg = (r + g + b) / 3f
+                    r = avg + (r - avg) * skinProtection
+                    g = avg + (g - avg) * skinProtection
+                    b = avg + (b - avg) * skinProtection
+                }
+            }
+
+            // 柔和中间调曲线：在中间亮度范围 (80-180) 微降对比度
+            val luminance = 0.299f * r + 0.587f * g + 0.114f * b
+            if (luminance in 80f..180f) {
+                val t = (luminance - 128f) / 128f
+                val softContrastReduction = 0.05f * (1f - t * t) // 中间最弱
+                val midFactor = 1f - softContrastReduction
+                r = 128f + (r - 128f) * midFactor
+                g = 128f + (g - 128f) * midFactor
+                b = 128f + (b - 128f) * midFactor
+            }
+
+            // 微暖偏移：+5 warmth bias (红+2, 绿+1, 蓝-1.5)
+            r = (r + 2f).coerceIn(0f, 255f)
+            g = (g + 1f).coerceIn(0f, 255f)
+            b = (b - 1.5f).coerceIn(0f, 255f)
+
+            pixels[i] = argb(
+                color.alpha,
+                r.roundToInt().coerceIn(0, 255),
+                g.roundToInt().coerceIn(0, 255),
+                b.roundToInt().coerceIn(0, 255)
+            )
+        }
+
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
     }
 
     // ==================== 高光 / 阴影 / 鲜艳度 ====================

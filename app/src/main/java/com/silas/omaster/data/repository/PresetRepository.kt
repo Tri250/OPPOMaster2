@@ -223,7 +223,9 @@ class PresetRepository private constructor(context: Context) {
         brands: Set<String>? = null,
         scenes: Set<String>? = null,
         hasHncs: Boolean? = null,
-        searchQuery: String? = null
+        searchQuery: String? = null,
+        style: String? = null,
+        scene: String? = null
     ): List<PresetItem> {
         var filtered = presets
 
@@ -235,6 +237,48 @@ class PresetRepository private constructor(context: Context) {
         // 场景筛选
         if (!scenes.isNullOrEmpty()) {
             filtered = filtered.filter { scenes.contains(it.scene) }
+        }
+
+        // PM-02: 风格标签筛选
+        if (!style.isNullOrBlank() && style != "all") {
+            val styleKeywords = when (style) {
+                "胶片" -> listOf("胶片", "film", "NC", "CC")
+                "人像" -> listOf("人像", "portrait")
+                "风景" -> listOf("风景", "landscape")
+                "街拍" -> listOf("街拍", "street")
+                "黑白" -> listOf("黑白", "BW", "mono")
+                else -> emptyList()
+            }
+            if (styleKeywords.isNotEmpty()) {
+                filtered = filtered.filter { item ->
+                    item.tags.any { tag ->
+                        styleKeywords.any { keyword ->
+                            tag.contains(keyword, ignoreCase = true)
+                        }
+                    }
+                }
+            }
+        }
+
+        // PM-02: 场景标签筛选
+        if (!scene.isNullOrBlank() && scene != "all") {
+            val sceneKeywords = when (scene) {
+                "室内" -> listOf("室内", "indoor")
+                "户外" -> listOf("户外", "outdoor")
+                "夜景" -> listOf("夜景", "night")
+                "逆光" -> listOf("逆光", "backlight")
+                "阴天" -> listOf("阴天", "overcast")
+                else -> emptyList()
+            }
+            if (sceneKeywords.isNotEmpty()) {
+                filtered = filtered.filter { item ->
+                    item.tags.any { tag ->
+                        sceneKeywords.any { keyword ->
+                            tag.contains(keyword, ignoreCase = true)
+                        }
+                    }
+                }
+            }
         }
 
         // HNCS认证筛选
@@ -829,7 +873,7 @@ class PresetRepository private constructor(context: Context) {
             }
             val presetList = json.decodeFromString(PresetList.serializer(), text)
             // assets 是官方内置预设，统一标记为系统预设
-            val items = presetList.presets.map { it.toRepositoryPreset(brand = "oppo") }
+            val items = presetList.presets.map { it.toRepositoryPreset(brand = "hasselblad") }
             Log.i(TAG, "从 assets 加载 ${items.size} 条内置预设")
             items
         } catch (e: Exception) {
@@ -864,7 +908,7 @@ class PresetRepository private constructor(context: Context) {
                 if (result.isSuccess) {
                     val presetList = result.getOrNull()
                     if (presetList != null) {
-                        val brand = presetList.name?.lowercase() ?: "oppo"
+                        val brand = presetList.name?.lowercase() ?: "hasselblad"
                         val items = presetList.presets.map { it.toRepositoryPreset(brand = brand) }
                         remotePresets.addAll(items)
                         Log.d(TAG, "从网络加载订阅 [${subscription.name}] 成功: ${items.size} 条")
@@ -1152,6 +1196,48 @@ class PresetRepository private constructor(context: Context) {
     }
 
     /**
+     * PR-04: 复制预设并应用微调参数 - 保存副本
+     * 在原始预设基础上创建副本，同时修改指定参数值
+     * 原始预设保持不变
+     */
+    suspend fun duplicatePresetWithParams(
+        presetId: String,
+        tone: Int,
+        saturation: Int,
+        colorTemperature: Int,
+        exposureCompensation: String,
+        sharpness: Int
+    ): MasterPreset? = withContext(Dispatchers.IO) {
+        val original = _presets.value.find { it.id == presetId && it.deletedAt == null }
+            ?: return@withContext null
+        val newId = UUID.randomUUID().toString()
+
+        // 更新 params map 中的参数值
+        val updatedParams = original.params.toMutableMap()
+        updatedParams["contrast"] = tone
+        updatedParams["saturation"] = saturation
+        updatedParams["color_temperature"] = colorTemperature
+        updatedParams["sharpness"] = sharpness
+
+        val duplicated = original.copy(
+            id = newId,
+            name = "${original.name} (副本)",
+            isSystem = false,
+            params = updatedParams,
+            exposureCompensation = exposureCompensation,
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
+        )
+        val current = _presets.value.toMutableList()
+        val insertIndex = _presets.value.indexOf(original) + 1
+        current.add(insertIndex, duplicated)
+        _presets.value = current
+        saveToCache()
+        Log.d(TAG, "保存副本: $presetId -> $newId, tone=$tone, saturation=$saturation, colorTemp=$colorTemperature, exposure=$exposureCompensation, sharpness=$sharpness")
+        duplicated.toMasterPreset()
+    }
+
+    /**
      * 软删除预设 - 标记为已删除状态，而非立即移除
      */
     suspend fun softDeletePreset(presetId: String) = withContext(Dispatchers.IO) {
@@ -1303,7 +1389,7 @@ data class PresetItem(
     val isNew: Boolean = false,
     val isPinned: Boolean = false,
     val mode: String? = null,  // 模式：auto或pro（对齐Web端）
-    val author: String = "@OPPO影像",  // 作者
+    val author: String = "@哈苏大师",  // 作者
     val sections: List<com.silas.omaster.model.PresetSection>? = null,  // 动态参数分组（保留原始展示数据）
     val filter: String? = null,  // 滤镜
     val softLight: String? = null,  // 柔光
@@ -1482,7 +1568,7 @@ private fun MasterPreset.toRepositoryPreset(brand: String): PresetItem {
         isNew = isNew,
         isPinned = false,
         mode = mode,
-        author = this.author ?: "@OPPO影像",
+        author = this.author ?: "@哈苏大师",
         sections = sections,  // 保留原始动态参数分组
         filter = filter,
         softLight = softLight,

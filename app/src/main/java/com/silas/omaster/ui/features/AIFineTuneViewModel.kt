@@ -114,6 +114,14 @@ class AIFineTuneViewModel(
     private val _selectedStyleId = MutableStateFlow<String?>(null)
     val selectedStyleId: StateFlow<String?> = _selectedStyleId.asStateFlow()
 
+    // AI 功能可用性状态
+    private val _isAIModelAvailable = MutableStateFlow(true)
+    val isAIModelAvailable: StateFlow<Boolean> = _isAIModelAvailable.asStateFlow()
+
+    // AI 不可用提示
+    private val _aiUnavailableMessage = MutableStateFlow<String?>(null)
+    val aiUnavailableMessage: StateFlow<String?> = _aiUnavailableMessage.asStateFlow()
+
     private val _selectedOptimizations = MutableStateFlow<Set<String>>(emptySet())
     val selectedOptimizations: StateFlow<Set<String>> = _selectedOptimizations.asStateFlow()
 
@@ -568,6 +576,18 @@ class AIFineTuneViewModel(
 
     fun performAIInference(bitmap: Bitmap?) {
         if (bitmap == null) return
+
+        // 检查 AI 可用性
+        val inferenceEngine = aiManager.getInferenceEngine()
+        if (inferenceEngine != null && !inferenceEngine.isModelLoaded()) {
+            _isAIModelAvailable.value = false
+            _aiUnavailableMessage.value = "AI 功能暂不可用"
+            _inferenceStage.value = InferenceStage.ERROR
+            _inferenceMessage.value = "AI 功能暂不可用，模型未加载"
+            _errorState.value = "AI 功能暂不可用"
+            return
+        }
+
         // 先取消旧的，防止竞态：cancel 和下面的 launch 之间 inferenceJob 为 null
         inferenceJob?.cancel()
         inferenceJob = viewModelScope.launch {
@@ -577,6 +597,8 @@ class AIFineTuneViewModel(
             _isOfflineResult.value = false
             _showSuccess.value = false
             _errorState.value = null
+            _isAIModelAvailable.value = true
+            _aiUnavailableMessage.value = null
 
             try {
                 _inferenceProgress.value = 0.3f
@@ -617,6 +639,44 @@ class AIFineTuneViewModel(
             } finally {
                 _isProcessing.value = false
             }
+        }
+    }
+
+    /**
+     * 应用 AI 微调参数到当前预设。
+     * AI 不可用时返回 false 并设置错误状态。
+     */
+    fun applyFineTune(bitmap: Bitmap?): Boolean {
+        if (bitmap == null) return false
+
+        val inferenceEngine = aiManager.getInferenceEngine()
+        if (inferenceEngine != null && !inferenceEngine.isModelLoaded()) {
+            _isAIModelAvailable.value = false
+            _aiUnavailableMessage.value = "AI 功能暂不可用"
+            _errorState.value = "AI 功能暂不可用，无法应用微调"
+            return false
+        }
+
+        return try {
+            val currentParamMap = _currentParams.value.toMap().mapValues { it.value.toInt() }
+            when (val result = aiManager.generateAISuggestion(bitmap, currentParamMap)) {
+                is AISuggestionResult.Success -> {
+                    result.suggestion.suggestions.forEach { suggestion ->
+                        if (!_lockedParams.value.contains(suggestion.field)) {
+                            updateParam(suggestion.field, suggestion.suggestedValue.toFloat())
+                        }
+                    }
+                    _showSuccess.value = true
+                    true
+                }
+                is AISuggestionResult.Error -> {
+                    _errorState.value = result.error.message
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            _errorState.value = e.message ?: "应用微调失败"
+            false
         }
     }
 

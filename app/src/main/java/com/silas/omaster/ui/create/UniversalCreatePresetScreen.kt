@@ -1,6 +1,7 @@
 package com.silas.omaster.ui.create
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,6 +54,21 @@ fun UniversalCreatePresetScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         viewModel.updateImageUri(uri)
+    }
+
+    // XMP 文件选择器
+    val xmpPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let {
+            val success = viewModel.importFromXmp(it)
+            if (!success) {
+                Toast.makeText(context, context.getString(R.string.xmp_parse_failed), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, context.getString(R.string.xmp_import_success), Toast.LENGTH_SHORT).show()
+            }
+            viewModel.clearXmpImportState()
+        }
     }
 
     // Dialog states
@@ -222,6 +239,24 @@ fun UniversalCreatePresetScreen(
                             label = { Text(stringResource(R.string.preset_name)) },
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // 导入 XMP 按钮
+                        OutlinedButton(
+                            onClick = {
+                                xmpPicker.launch(arrayOf("text/xml", "application/xml", "*/*"))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FileOpen,
+                                contentDescription = stringResource(R.string.import_xmp),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.import_xmp))
+                        }
                     }
                 }
             }

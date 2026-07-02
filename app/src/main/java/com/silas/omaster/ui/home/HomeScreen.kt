@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
@@ -132,6 +133,7 @@ fun HomeScreen(
     onNavigateToParamAdjustment: () -> Unit = {},
     onNavigateToHasselbladEye: () -> Unit = {},
     onNavigateToXingYingJi: () -> Unit = {},
+    onNavigateToWatermark: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0
@@ -148,6 +150,8 @@ fun HomeScreen(
     val customPresets by viewModel.customPresets.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
     val selectedBrand by viewModel.selectedBrand.collectAsState()
+    val selectedStyle by viewModel.selectedStyle.collectAsState()
+    val selectedScene by viewModel.selectedScene.collectAsState()
     val sortType by viewModel.sortType.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -184,7 +188,7 @@ fun HomeScreen(
     }
 
     // 获取过滤后的预设列表
-    val filteredPresets = remember(selectedTab, selectedBrand, sortType, searchQuery, allPresets) {
+    val filteredPresets = remember(selectedTab, selectedBrand, selectedStyle, selectedScene, sortType, searchQuery, allPresets) {
         viewModel.getFilteredPresets()
     }
 
@@ -287,6 +291,7 @@ fun HomeScreen(
                 onNavigateToParamAdjustment = onNavigateToParamAdjustment,
                 onNavigateToHasselbladEye = onNavigateToHasselbladEye,
                 onNavigateToXingYingJi = onNavigateToXingYingJi,
+                onNavigateToWatermark = onNavigateToWatermark,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
@@ -317,6 +322,16 @@ fun HomeScreen(
                 onBrandSelected = { brand ->
                     haptic.perform(HapticFeedbackType.LongPress)
                     viewModel.selectBrand(brand)
+                },
+                selectedStyle = selectedStyle,
+                onStyleSelected = { style ->
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    viewModel.selectStyle(style)
+                },
+                selectedScene = selectedScene,
+                onSceneSelected = { scene ->
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    viewModel.selectScene(scene)
                 },
                 sortType = sortType,
                 onSortSelected = { sort ->
@@ -757,22 +772,47 @@ private fun TabBar(
 }
 
 /**
- * 品牌筛选 + 排序筛选（对齐Web端）
+ * 品牌筛选 + 风格/场景二级筛选 + 排序筛选（对齐Web端）
+ * PM-02: 级联筛选 Brand → Style → Scene
  */
 @Composable
 private fun BrandAndSortFilter(
     selectedBrand: String,
     onBrandSelected: (String) -> Unit,
+    selectedStyle: String,
+    onStyleSelected: (String) -> Unit,
+    selectedScene: String,
+    onSceneSelected: (String) -> Unit,
     sortType: SortType,
     onSortSelected: (SortType) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val brands = listOf(
         "all" to stringResource(R.string.brand_all),
-        "OPPO" to stringResource(R.string.brand_oppo),
-        "realme" to stringResource(R.string.brand_realme),
-        "vivo" to stringResource(R.string.brand_vivo),
-        "荣耀" to stringResource(R.string.brand_honor)
+        "hasselblad" to stringResource(R.string.brand_hasselblad),
+        "fujifilm" to stringResource(R.string.brand_fujifilm),
+        "sony" to stringResource(R.string.brand_sony),
+        "leica" to stringResource(R.string.brand_leica)
+    )
+
+    // PM-02: 风格标签列表
+    val styleTags = listOf(
+        "all" to stringResource(R.string.style_all),
+        "胶片" to stringResource(R.string.style_film),
+        "人像" to stringResource(R.string.style_portrait),
+        "风景" to stringResource(R.string.style_landscape),
+        "街拍" to stringResource(R.string.style_street),
+        "黑白" to stringResource(R.string.style_bw)
+    )
+
+    // PM-02: 场景标签列表
+    val sceneTags = listOf(
+        "all" to stringResource(R.string.scene_all),
+        "室内" to stringResource(R.string.scene_indoor),
+        "户外" to stringResource(R.string.scene_outdoor),
+        "夜景" to stringResource(R.string.scene_night),
+        "逆光" to stringResource(R.string.scene_backlight),
+        "阴天" to stringResource(R.string.scene_overcast)
     )
 
     val sortOptions = listOf(
@@ -799,6 +839,40 @@ private fun BrandAndSortFilter(
                     isSelected = selectedBrand == key,
                     onClick = { onBrandSelected(key) }
                 )
+            }
+        }
+
+        // PM-02: 选中品牌后显示风格标签行
+        if (selectedBrand != "all") {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 0.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(styleTags) { (key, label) ->
+                    BrandFilterButton(
+                        label = label,
+                        isSelected = selectedStyle == key,
+                        onClick = { onStyleSelected(key) }
+                    )
+                }
+            }
+        }
+
+        // PM-02: 选中风格后显示场景标签行
+        if (selectedStyle != "all") {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 0.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(sceneTags) { (key, label) ->
+                    BrandFilterButton(
+                        label = label,
+                        isSelected = selectedScene == key,
+                        onClick = { onSceneSelected(key) }
+                    )
+                }
             }
         }
 
@@ -1356,6 +1430,7 @@ private fun QuickFeaturesSection(
     onNavigateToParamAdjustment: () -> Unit,
     onNavigateToHasselbladEye: () -> Unit,
     onNavigateToXingYingJi: () -> Unit,
+    onNavigateToWatermark: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -1411,6 +1486,16 @@ private fun QuickFeaturesSection(
                 onClick = {
                     haptic.perform(HapticFeedbackType.LongPress)
                     onNavigateToXingYingJi()
+                }
+            )
+        }
+        item {
+            QuickFeatureCard(
+                name = stringResource(R.string.watermark_quick_entry),
+                icon = Icons.Default.WaterDrop,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.LongPress)
+                    onNavigateToWatermark()
                 }
             )
         }

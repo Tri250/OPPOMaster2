@@ -105,6 +105,12 @@ class SceneRecognitionManager private constructor(context: Context) {
     private val _isModelAvailable = AtomicBoolean(false)
     val isModelAvailable: Boolean get() = _isModelAvailable.get()
 
+    /**
+     * 检查 AI 场景识别是否可用（模型已加载）。
+     * UI 层通过此方法判断是否显示 AI 功能或降级提示。
+     */
+    fun isAvailable(): Boolean = _isModelAvailable.get() && tfliteInterpreter != null
+
     init {
         // 后台异步初始化 TFLite，失败不阻塞主功能
         Thread { initTFLite() }.start()
@@ -112,7 +118,7 @@ class SceneRecognitionManager private constructor(context: Context) {
 
     /**
      * 初始化 TFLite 解释器。
-     * 优先 GPU delegate；失败则 CPU；模型不存在则标记为不可用。
+     * 优先 GPU delegate；失败则 CPU；模型不存在或 OOM 则标记为不可用。
      */
     private fun initTFLite() {
         if (isInitializing.getAndSet(true)) return
@@ -131,8 +137,14 @@ class SceneRecognitionManager private constructor(context: Context) {
             tfliteInterpreter = Interpreter(modelFile, options)
             _isModelAvailable.set(true)
             Log.d(TAG, "TFLite 场景分类模型加载成功")
+        } catch (e: OutOfMemoryError) {
+            _isModelAvailable.set(false)
+            tfliteInterpreter = null
+            System.gc()
+            Log.e(TAG, "TFLite 模型加载 OOM，将使用启发式分析器", e)
         } catch (e: Exception) {
             _isModelAvailable.set(false)
+            tfliteInterpreter = null
             Log.w(TAG, "TFLite 模型未找到或加载失败，将使用启发式分析器: ${e.message}")
         }
     }

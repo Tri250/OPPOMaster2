@@ -98,6 +98,22 @@
     <string name="sort_newest">最新</string>
     <string name="sort_popular">最热</string>
     <string name="sort_rating">评分</string>
+
+    <!-- PM-02: 风格标签筛选 -->
+    <string name="style_all">全部风格</string>
+    <string name="style_film">胶片</string>
+    <string name="style_portrait">人像</string>
+    <string name="style_landscape">风景</string>
+    <string name="style_street">街拍</string>
+    <string name="style_bw">黑白</string>
+
+    <!-- PM-02: 场景标签筛选 -->
+    <string name="scene_all">全部场景</string>
+    <string name="scene_indoor">室内</string>
+    <string name="scene_outdoor">户外</string>
+    <string name="scene_night">夜景</string>
+    <string name="scene_backlight">逆光</string>
+    <string name="scene_overcast">阴天</string>
     
     <!-- 搜索 -->
     <string name="search_hint">搜索预设 / 作者 / 标签</string>
@@ -453,6 +469,8 @@
     <string name="guide_later">以后再说</string>
 
     <!-- AI场景识别 -->
+    <string name="ai_unavailable">AI 功能暂不可用</string>
+    <string name="ai_initialization_failed">AI 模型初始化失败，请重启应用重试</string>
     <string name="analysis_failed">分析失败，请重试</string>
     <string name="ai_smart_shoot">AI 智能拍摄</string>
     <string name="scene_recognition_50plus">50+ 精细场景识别</string>
@@ -630,4 +648,51 @@
     <string name="shortcut_optimize_long">快速优化照片</string>
     <string name="shortcut_optimize_disabled">优化功能不可用</string>
 
+    <!-- HNCS 3.0 -->
+    <string name="hncs_only_hasselblad">仅哈苏预设可用</string>
+    <string name="hncs_ab_compare">HNCS 对比</string>
+    <string name="hncs_before">关闭 HNCS</string>
+    <string name="hncs_after">开启 HNCS</string>
+
+    <!-- XMP 导入 -->
+    <string name="import_xmp">导入 XMP</string>
+    <string name="xmp_parse_failed">解析失败</string>
+    <string name="xmp_import_success">XMP 导入成功</string>
+
+    <!-- 水印功能 -->
+    <string name="watermark_title">水印编辑</string>
+    <string name="watermark_preview">预览</string>
+    <string name="watermark_preview_placeholder">配置水印后实时预览</string>
+    <string name="watermark_template">预设模板</string>
+    <string name="watermark_type_label">水印类型</string>
+    <string name="watermark_type_brand">品牌水印</string>
+    <string name="watermark_type_master">大师签名</string>
+    <string name="watermark_type_xpan">XPAN 宽幅</string>
+    <string name="watermark_text">水印文字</string>
+    <string name="watermark_font">字体</string>
+    <string name="watermark_font_size">字号</string>
+    <string name="watermark_color">颜色</string>
+    <string name="watermark_position">位置</string>
+    <string name="watermark_pos_bottom_left">左下</string>
+    <string name="watermark_pos_bottom_right">右下</string>
+    <string name="watermark_pos_center">居中</string>
+    <string name="watermark_opacity">透明度</string>
+    <string name="watermark_undo">撤销</string>
+    <string name="watermark_redo">重做</string>
+    <string name="watermark_pick_signature">选择签名图片</string>
+    <string name="watermark_signature_loaded">签名图片已加载</string>
+    <string name="watermark_xpan_bar_ratio">黑边比例</string>
+    <string name="watermark_xpan_text">宽幅文字</string>
+    <string name="watermark_quick_entry">水印</string>
+
+    <!-- 参数微调 -->
+    <string name="param_fine_tune">参数微调</string>
+    <string name="param_exposure">曝光</string>
+    <string name="param_color_temp">色温</string>
+    <string name="param_contrast">对比度</string>
+    <string name="param_saturation">饱和度</string>
+    <string name="param_save_copy">保存副本</string>
+    <string name="param_reset">重置</string>
+    <string name="param_copy_saved">副本已保存</string>
+    <string name="param_reset_done">已重置</string>
 </resources>

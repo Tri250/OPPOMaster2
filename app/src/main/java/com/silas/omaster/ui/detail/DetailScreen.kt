@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -30,12 +31,15 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -425,6 +429,46 @@ fun DetailScreen(
                             sections = it.getDisplaySections(context),
                             presetName = it.name
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 参数微调区域
+                        ParamFineTuneSection(
+                            viewModel = viewModel,
+                            onReset = {
+                                haptic.perform(HapticFeedbackType.LongPress)
+                                viewModel.resetParams()
+                            },
+                            onSaveCopy = {
+                                haptic.perform(HapticFeedbackType.LongPress)
+                                viewModel.saveAsCopy()
+                            }
+                        )
+
+                        // 监听保存副本结果
+                        val saveCopyResult by viewModel.saveCopyResult.collectAsState()
+                        LaunchedEffect(saveCopyResult) {
+                            when (saveCopyResult) {
+                                is SaveCopyResult.Success -> {
+                                    Toast.makeText(context, context.getString(R.string.param_copy_saved), Toast.LENGTH_SHORT).show()
+                                    viewModel.consumeSaveCopyResult()
+                                }
+                                is SaveCopyResult.Failed -> {
+                                    Toast.makeText(context, (saveCopyResult as SaveCopyResult.Failed).message, Toast.LENGTH_SHORT).show()
+                                    viewModel.consumeSaveCopyResult()
+                                }
+                                null -> {}
+                            }
+                        }
+
+                        // 监听重置完成事件
+                        val resetDone by viewModel.resetDone.collectAsState()
+                        LaunchedEffect(resetDone) {
+                            if (resetDone) {
+                                Toast.makeText(context, context.getString(R.string.param_reset_done), Toast.LENGTH_SHORT).show()
+                                viewModel.consumeResetDone()
+                            }
+                        }
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
@@ -716,6 +760,188 @@ private fun DynamicParameters(
                 }
             }
         }
+    }
+}
+
+/**
+ * 参数微调区域（可折叠）
+ * PR-04: 滑块调整参数，保存副本创建新预设
+ * PR-05: 重置按钮恢复原始参数
+ */
+@Composable
+private fun ParamFineTuneSection(
+    viewModel: DetailViewModel,
+    onReset: () -> Unit,
+    onSaveCopy: () -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    val exposureOffset by viewModel.exposureOffset.collectAsState()
+    val colorTempOffset by viewModel.colorTempOffset.collectAsState()
+    val contrastOffset by viewModel.contrastOffset.collectAsState()
+    val saturationOffset by viewModel.saturationOffset.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(16.dp)
+    ) {
+        // 标题行（可点击展开/折叠）
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { isExpanded = !isExpanded },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = HasselbladOrange
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.param_fine_tune),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Text(
+                text = if (isExpanded) "收起" else "展开",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+        }
+
+        // 展开内容
+        if (isExpanded) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 曝光滑块 (-2.0 ~ +2.0)
+            ParamSlider(
+                label = stringResource(R.string.param_exposure),
+                value = exposureOffset,
+                valueRange = -2f..2f,
+                onValueChange = { viewModel.updateExposure(it) },
+                valueLabel = String.format("%+.1f", exposureOffset)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 色温滑块 (-100 ~ +100)
+            ParamSlider(
+                label = stringResource(R.string.param_color_temp),
+                value = colorTempOffset,
+                valueRange = -100f..100f,
+                onValueChange = { viewModel.updateColorTemp(it) },
+                valueLabel = String.format("%+d", colorTempOffset.toInt())
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 对比度滑块 (-100 ~ +100)
+            ParamSlider(
+                label = stringResource(R.string.param_contrast),
+                value = contrastOffset,
+                valueRange = -100f..100f,
+                onValueChange = { viewModel.updateContrast(it) },
+                valueLabel = String.format("%+d", contrastOffset.toInt())
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 饱和度滑块 (-100 ~ +100)
+            ParamSlider(
+                label = stringResource(R.string.param_saturation),
+                value = saturationOffset,
+                valueRange = -100f..100f,
+                onValueChange = { viewModel.updateSaturation(it) },
+                valueLabel = String.format("%+d", saturationOffset.toInt())
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 操作按钮
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 重置按钮
+                OutlinedButton(
+                    onClick = onReset,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                ) {
+                    Text(stringResource(R.string.param_reset), fontSize = 14.sp)
+                }
+
+                // 保存副本按钮
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = onSaveCopy,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = HasselbladOrange.copy(alpha = 0.15f),
+                        contentColor = HasselbladOrange
+                    )
+                ) {
+                    Text(stringResource(R.string.param_save_copy), fontSize = 14.sp)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 参数滑块组件
+ */
+@Composable
+private fun ParamSlider(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    valueLabel: String
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+            Text(
+                text = valueLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = if (value == 0f) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                        else HasselbladOrange
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                activeTrackColor = HasselbladOrange,
+                thumbColor = HasselbladOrange
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

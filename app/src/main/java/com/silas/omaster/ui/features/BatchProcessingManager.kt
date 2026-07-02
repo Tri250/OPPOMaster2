@@ -9,6 +9,8 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import com.silas.omaster.model.HasselbladParams
+import com.silas.omaster.data.watermark.WatermarkConfig
+import com.silas.omaster.data.watermark.WatermarkRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -83,6 +85,7 @@ class BatchProcessingManager(
         imageUris: List<Uri>,
         params: HasselbladParams,
         exportFormat: HasselbladEyeViewModel.ExportFormat = HasselbladEyeViewModel.ExportFormat.JPEG,
+        watermarkConfig: WatermarkConfig? = null,
         onProgress: (current: Int, total: Int, uri: Uri) -> Unit = { _, _, _ -> },
         onImageProgress: ((index: Int, progress: ImageProgress) -> Unit)? = null,
         onComplete: (results: List<BatchResult>) -> Unit = {}
@@ -147,7 +150,12 @@ class BatchProcessingManager(
                             // 阶段 2: 应用预设
                             updateImageProgress(index, ImageProgress(status = ImageStatus.PROCESSING, progress = 0.5f), onImageProgress)
 
-                            val processedBitmap = applyPreset(bitmap, params)
+                            var processedBitmap = applyPreset(bitmap, params)
+
+                            // 阶段 2.5: 应用水印（如果配置了）
+                            if (watermarkConfig != null) {
+                                processedBitmap = WatermarkRenderer.renderWatermark(processedBitmap, watermarkConfig)
+                            }
 
                             // 阶段 3: 保存图片
                             updateImageProgress(index, ImageProgress(status = ImageStatus.SAVING, progress = 0.8f), onImageProgress)

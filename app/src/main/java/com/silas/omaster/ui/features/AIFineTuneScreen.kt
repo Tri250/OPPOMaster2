@@ -62,6 +62,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -132,6 +133,8 @@ fun AIFineTuneScreen(
     val canRedo by viewModel.canRedo.collectAsState()
     val hasChanges by viewModel.hasChanges.collectAsState()
     val saveError by viewModel.saveError.collectAsState()
+    val isAIModelAvailable by viewModel.isAIModelAvailable.collectAsState()
+    val aiUnavailableMessage by viewModel.aiUnavailableMessage.collectAsState()
 
     // 放弃修改对话框
     var showDiscardDialog by remember { mutableStateOf(false) }
@@ -337,6 +340,14 @@ fun AIFineTuneScreen(
                     cameraLauncher.launch(uri)
                 },
                 onAI = { viewModel.performAIInference(sourceBitmap) },
+                onApplyFineTune = {
+                    val success = viewModel.applyFineTune(sourceBitmap)
+                    if (success) {
+                        Toast.makeText(context, "AI 微调已应用", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "AI 微调应用失败", Toast.LENGTH_SHORT).show()
+                    }
+                },
                 onExport = {
                     scope.launch {
                         val success = viewModel.exportImage(context)
@@ -349,7 +360,8 @@ fun AIFineTuneScreen(
                 },
                 onApply = { onApply(viewModel.getFinalParams()) },
                 hasImage = sourceBitmap != null,
-                isProcessing = isProcessing
+                isProcessing = isProcessing,
+                isAIModelAvailable = isAIModelAvailable
             )
         }
     ) { padding ->
@@ -388,6 +400,37 @@ fun AIFineTuneScreen(
                         message = inferenceMessage,
                         modifier = Modifier.fillMaxSize()
                     )
+                }
+            }
+
+            // AI 不可用提示横幅
+            if (!isAIModelAvailable || aiUnavailableMessage != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF332200)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = WarningYellow,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = aiUnavailableMessage ?: stringResource(id = com.silas.omaster.R.string.ai_unavailable),
+                            color = WarningYellow,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
 
@@ -1012,10 +1055,12 @@ private fun BottomActionBar(
     onGallery: () -> Unit,
     onCamera: () -> Unit,
     onAI: () -> Unit,
+    onApplyFineTune: () -> Unit,
     onExport: () -> Unit,
     onApply: () -> Unit,
     hasImage: Boolean,
-    isProcessing: Boolean
+    isProcessing: Boolean,
+    isAIModelAvailable: Boolean = true
 ) {
     Surface(
         color = MaterialTheme.colorScheme.background,
@@ -1038,9 +1083,26 @@ private fun BottomActionBar(
                 }
 
                 Button(
+                    onClick = onApplyFineTune,
+                    enabled = hasImage && !isProcessing && isAIModelAvailable,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = HasselbladOrange,
+                        disabledContainerColor = Color.Gray
+                    ),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("应用微调", fontSize = 14.sp)
+                }
+
+                Button(
                     onClick = onAI,
-                    enabled = hasImage && !isProcessing,
-                    colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),
+                    enabled = hasImage && !isProcessing && isAIModelAvailable,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = HasselbladOrange.copy(alpha = 0.7f),
+                        disabledContainerColor = Color.Gray
+                    ),
                     modifier = Modifier.weight(1f)
                 ) {
                     if (isProcessing) {

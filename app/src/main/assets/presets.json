@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "OPPO / 一加 / Realme 预设",
+  "name": "哈苏 / 富士 / 索尼 / 徕卡 预设",
   "author": "@OMaster",
   "build": 1,
   "presets": [
@@ -11,7 +11,7 @@
         "images/fsjp_02.webp",
         "images/fsjp_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -74,7 +74,7 @@
         "images/jpg_02.webp",
         "images/jpg_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -137,7 +137,7 @@
         "images/th_02.webp",
         "images/th_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -200,7 +200,7 @@
         "images/gdbhb_02.webp",
         "images/gdbhb_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -263,7 +263,7 @@
         "images/lgl_02.webp",
         "images/lgl_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -326,7 +326,7 @@
         "images/lglan_02.webp",
         "images/lglan_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -388,7 +388,7 @@
       "galleryImages": [
         "images/ldsk_02.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -451,7 +451,7 @@
         "images/mhhr_02.webp",
         "images/mhhr_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",
@@ -514,7 +514,7 @@
         "images/fsnc_02.webp",
         "images/fsnc_03.webp"
       ],
-      "author": "@OPPO影像",
+      "author": "@哈苏大师",
       "sections": [
         {
           "title": "@string/section_color_grading",

@@ -54,6 +54,14 @@ class HomeViewModel(
     private val _selectedBrand = MutableStateFlow("all")
     val selectedBrand: StateFlow<String> = _selectedBrand.asStateFlow()
 
+    // 当前选中的风格标签（PM-02: 风格/场景二级筛选）
+    private val _selectedStyle = MutableStateFlow("all")
+    val selectedStyle: StateFlow<String> = _selectedStyle.asStateFlow()
+
+    // 当前选中的场景标签（PM-02: 风格/场景二级筛选）
+    private val _selectedScene = MutableStateFlow("all")
+    val selectedScene: StateFlow<String> = _selectedScene.asStateFlow()
+
     // 当前排序方式（对齐Web端）
     private val _sortType = MutableStateFlow(SortType.NEWEST)
     val sortType: StateFlow<SortType> = _sortType.asStateFlow()
@@ -174,6 +182,25 @@ class HomeViewModel(
      */
     fun selectBrand(brand: String) {
         _selectedBrand.value = brand
+        // 品牌切换时重置风格和场景筛选
+        _selectedStyle.value = "all"
+        _selectedScene.value = "all"
+    }
+
+    /**
+     * 切换风格标签筛选（PM-02）
+     */
+    fun selectStyle(style: String) {
+        _selectedStyle.value = style
+        // 风格切换时重置场景筛选
+        _selectedScene.value = "all"
+    }
+
+    /**
+     * 切换场景标签筛选（PM-02）
+     */
+    fun selectScene(scene: String) {
+        _selectedScene.value = scene
     }
 
     /**
@@ -212,6 +239,24 @@ class HomeViewModel(
             result = result.filter { it.brand == currentBrand }
         }
 
+        // PM-02: 风格标签过滤
+        val currentStyle = _selectedStyle.value
+        if (currentStyle != "all") {
+            result = result.filter { preset ->
+                val tags = preset.tags ?: emptyList()
+                matchesStyleTag(currentStyle, tags)
+            }
+        }
+
+        // PM-02: 场景标签过滤
+        val currentScene = _selectedScene.value
+        if (currentScene != "all") {
+            result = result.filter { preset ->
+                val tags = preset.tags ?: emptyList()
+                matchesSceneTag(currentScene, tags)
+            }
+        }
+
         // 搜索过滤
         val currentQuery = _searchQuery.value
         if (currentQuery.isNotEmpty()) {
@@ -231,6 +276,44 @@ class HomeViewModel(
         }
 
         return result
+    }
+
+    /**
+     * PM-02: 风格标签匹配
+     */
+    private fun matchesStyleTag(style: String, tags: List<String>): Boolean {
+        val styleKeywords = when (style) {
+            "胶片" -> listOf("胶片", "film", "NC", "CC")
+            "人像" -> listOf("人像", "portrait")
+            "风景" -> listOf("风景", "landscape")
+            "街拍" -> listOf("街拍", "street")
+            "黑白" -> listOf("黑白", "BW", "mono")
+            else -> emptyList()
+        }
+        return tags.any { tag ->
+            styleKeywords.any { keyword ->
+                tag.contains(keyword, ignoreCase = true)
+            }
+        }
+    }
+
+    /**
+     * PM-02: 场景标签匹配
+     */
+    private fun matchesSceneTag(scene: String, tags: List<String>): Boolean {
+        val sceneKeywords = when (scene) {
+            "室内" -> listOf("室内", "indoor")
+            "户外" -> listOf("户外", "outdoor")
+            "夜景" -> listOf("夜景", "night")
+            "逆光" -> listOf("逆光", "backlight")
+            "阴天" -> listOf("阴天", "overcast")
+            else -> emptyList()
+        }
+        return tags.any { tag ->
+            sceneKeywords.any { keyword ->
+                tag.contains(keyword, ignoreCase = true)
+            }
+        }
     }
 
     /**

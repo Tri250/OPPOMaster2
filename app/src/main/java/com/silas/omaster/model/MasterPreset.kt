@@ -189,7 +189,7 @@ data class MasterPreset(
     val name: String,
     val coverPath: String,
     val galleryImages: List<String>? = null,
-    val author: String = "@OPPO影像",
+    val author: String = "@哈苏大师",
     val mode: String? = null,
     val filter: String? = null,
     val whiteBalance: String? = null,
@@ -214,7 +214,7 @@ data class MasterPreset(
     val sections: List<PresetSection>? = null,
     val tags: List<String>? = emptyList(),
     // 云同步相关字段
-    val brand: String? = null,           // 品牌: oppo/realme/vivo/honor
+    val brand: String? = null,           // 品牌: hasselblad/fujifilm/sony/leica
     val version: Int? = null,              // 版本号
     val build: Int = 1,                    // 构建号，用于增量更新
     val params: Map<String, String>? = null,           // 专业参数 (ISO/快门等)

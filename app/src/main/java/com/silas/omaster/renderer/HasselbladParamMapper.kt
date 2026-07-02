@@ -20,7 +20,8 @@ object HasselbladParamMapper {
         hasselbladParams: HasselbladParams,
         colorModeParams: Map<String, Int> = emptyMap(),
         active3DLUTId: String? = null,
-        lut3DStrength: Float = 0.0f
+        lut3DStrength: Float = 0.0f,
+        hncsEnabled: Boolean = false
     ): RenderParameters {
         val hp = hasselbladParams
 
@@ -98,7 +99,29 @@ object HasselbladParamMapper {
             else -> rp
         }
 
-        Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${rp.exposure}, contrast=${rp.contrast}, saturation=${rp.saturation}")
+        // HNCS 3.0 自然色彩科学映射
+        rp = if (hncsEnabled) {
+            rp.copy(
+                // 肤色保护：降低肤色区饱和度偏移（H:15-45, S:20-70%）→ 整体降低饱和度增益对肤色的影响
+                hncsEnabled = true,
+                hncsSkinToneProtection = 0.7f,
+                hncsSoftContrast = 0.5f,
+                // 柔和中间调：降低对比度
+                contrast = (rp.contrast - 8f).coerceIn(-100f, 100f),
+                // 自然色彩过渡：微暖偏移 +5
+                warmth = (rp.warmth + 5f).coerceIn(-100f, 100f),
+                // 清晰度降低以获得更柔和的效果
+                clarity = (rp.clarity - 5f).coerceIn(0f, 100f),
+                // HNCS 肤色区饱和度保护：降低整体饱和度增益对肤色的影响
+                hslOrangeSaturation = (rp.hslOrangeSaturation - 10f).coerceIn(-100f, 100f),
+                hslRedSaturation = (rp.hslRedSaturation - 8f).coerceIn(-100f, 100f),
+                hslYellowSaturation = (rp.hslYellowSaturation - 6f).coerceIn(-100f, 100f)
+            )
+        } else {
+            rp.copy(hncsEnabled = false)
+        }
+
+        Log.d(TAG, "Mapped HasselbladParams to RenderParameters: exposure=${rp.exposure}, contrast=${rp.contrast}, saturation=${rp.saturation}, hncsEnabled=${rp.hncsEnabled}")
         return rp
     }
 

@@ -101,7 +101,12 @@ data class RenderParameters(
     val lutTextureId: Int = 0,
     val lutSize: Int = 0,
     val lutStrength: Float = 0f,
-    val lutEnabled: Boolean = false
+    val lutEnabled: Boolean = false,
+
+    // HNCS 3.0 自然色彩科学参数
+    val hncsEnabled: Boolean = false,
+    val hncsSkinToneProtection: Float = 0f,  // [0, 1] 肤色保护强度
+    val hncsSoftContrast: Float = 0f          // [0, 1] 柔和对比度强度
 ) : Parcelable {
     
     companion object {
@@ -257,6 +262,9 @@ data class RenderParameters(
         // 3D LUT
         if (lutEnabled && lutTextureId != 0) return true
 
+        // HNCS
+        if (hncsEnabled) return true
+
         return false
     }
     
@@ -322,7 +330,11 @@ data class RenderParameters(
             lutTextureId = if (lutEnabled) lutTextureId else other.lutTextureId,
             lutSize = if (lutEnabled) lutSize else other.lutSize,
             lutStrength = if (lutEnabled) lutStrength else other.lutStrength,
-            lutEnabled = lutEnabled || other.lutEnabled
+            lutEnabled = lutEnabled || other.lutEnabled,
+            // HNCS
+            hncsEnabled = hncsEnabled || other.hncsEnabled,
+            hncsSkinToneProtection = if (hncsSkinToneProtection != 0f) hncsSkinToneProtection else other.hncsSkinToneProtection,
+            hncsSoftContrast = if (hncsSoftContrast != 0f) hncsSoftContrast else other.hncsSoftContrast
         )
     }
     
@@ -384,7 +396,11 @@ data class RenderParameters(
             lutTextureId = lutTextureId,
             lutSize = lutSize,
             lutStrength = lutStrength + (target.lutStrength - lutStrength) * clampedT,
-            lutEnabled = lutEnabled
+            lutEnabled = lutEnabled,
+            // HNCS 不插值，保留当前实例状态
+            hncsEnabled = hncsEnabled,
+            hncsSkinToneProtection = hncsSkinToneProtection,
+            hncsSoftContrast = hncsSoftContrast
         )
     }
 }
