@@ -373,6 +373,22 @@
 -dontwarn java.lang.invoke.**
 
 # ========================================
+# v2.2.6 闪退修复：Google Play Core + Firebase keep 规则
+# ========================================
+# Google Play Core（应用内更新 / 应用内评价）通过反射和 IPC 创建实例，
+# R8 混淆会导致 AppUpdateManagerFactory.create() 等调用在非 GMS 设备上崩溃。
+-keep class com.google.android.play.core.** { *; }
+-keep class com.google.android.play.** { *; }
+-dontwarn com.google.android.play.core.**
+-dontwarn com.google.android.play.**
+
+# Firebase（FCM 推送）依赖反射初始化，缺少 google-services.json 时更需保留
+-keep class com.google.firebase.** { *; }
+-keep class com.google.firebase.analytics.** { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-dontwarn com.google.firebase.**
+
+# ========================================
 # 行影集模块 ProGuard 规则
 # ========================================
 # TrailSnap 数据模型（kotlinx.serialization）

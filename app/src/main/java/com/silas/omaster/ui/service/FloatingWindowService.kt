@@ -260,16 +260,24 @@ class FloatingWindowService : Service() {
         createNotificationChannel()
         // Android 14+ (API 34+) 要求 specialUse 类型前台服务必须显式传递 FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         // 包括 Android 14 / 15 / 16 (API 34-36)，否则会抛出 ForegroundServiceTypeException 导致应用崩溃
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            buildNotification(),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            } else {
-                0
-            }
-        )
+        // v2.2.6 闪退修复：startForeground 在某些设备/Android 版本上可能抛出异常
+        // （权限缺失、类型不匹配等），包裹 try-catch 防止服务启动时崩溃
+        try {
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                buildNotification(),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else {
+                    0
+                }
+            )
+        } catch (e: Throwable) {
+            Log.e(TAG, "startForeground 失败", e)
+            stopSelf()
+            return
+        }
         instance = this
     }
 
@@ -343,7 +351,14 @@ class FloatingWindowService : Service() {
 
         val action = intent.getStringExtra(EXTRA_ACTION) ?: ACTION_SHOW
         val rawName = intent.getStringExtra(EXTRA_NAME) ?: getString(R.string.floating_preset)
-        val name = PresetI18n.getLocalizedPresetName(this, rawName)
+        // v2.2.6 闪退修复：PresetI18n 可能因资源压缩移除字符串资源而抛出
+        // Resources$NotFoundException，包裹 try-catch 使用原始名称兜底
+        val name = try {
+            PresetI18n.getLocalizedPresetName(this, rawName)
+        } catch (e: Throwable) {
+            Log.e(TAG, "getLocalizedPresetName 失败，使用原始名称", e)
+            rawName
+        }
         
         val sections = intent.getParcelableArrayListExtra<PresetSection>(EXTRA_SECTIONS) ?: arrayListOf()
 

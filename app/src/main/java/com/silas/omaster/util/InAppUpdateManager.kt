@@ -73,7 +73,14 @@ class InAppUpdateManager private constructor(context: Context) {
     }
 
     private val appContext = context.applicationContext
-    private val appUpdateManager = AppUpdateManagerFactory.create(appContext)
+    // v2.2.6 闪退修复：AppUpdateManagerFactory.create() 在非 GMS 设备（无 Google Play 服务）上
+    // 可能抛出异常。使用 try-catch 包裹，失败时置 null，后续方法通过 null 检查安全跳过。
+    private val appUpdateManager = try {
+        AppUpdateManagerFactory.create(appContext)
+    } catch (e: Throwable) {
+        Log.e(TAG, "AppUpdateManagerFactory.create 失败（可能是非 GMS 设备）", e)
+        null
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var updateAvailable = false
@@ -95,15 +102,15 @@ class InAppUpdateManager private constructor(context: Context) {
             }
             InstallStatus.INSTALLED -> {
                 Log.i(TAG, "更新已安装")
-                appUpdateManager.unregisterListener(installStateListener)
+                appUpdateManager?.unregisterListener(installStateListener)
             }
             InstallStatus.FAILED -> {
                 Log.e(TAG, "更新下载失败: errorCode=${state.installErrorCode()}")
-                appUpdateManager.unregisterListener(installStateListener)
+                appUpdateManager?.unregisterListener(installStateListener)
             }
             InstallStatus.CANCELED -> {
                 Log.i(TAG, "更新已取消")
-                appUpdateManager.unregisterListener(installStateListener)
+                appUpdateManager?.unregisterListener(installStateListener)
             }
             else -> { /* PENDING, REQUIRES_UI_CONFIRMATION 等 */ }
         }
@@ -115,7 +122,8 @@ class InAppUpdateManager private constructor(context: Context) {
     fun startUpdateCheck() {
         scope.launch {
             try {
-                val appUpdateInfo = appUpdateManager.appUpdateInfo.await()
+                val mgr = appUpdateManager ?: return@launch
+                val appUpdateInfo = mgr.appUpdateInfo.await()
 
                 updateAvailable = appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                 if (!updateAvailable) {
@@ -161,7 +169,8 @@ class InAppUpdateManager private constructor(context: Context) {
 
         scope.launch {
             try {
-                val appUpdateInfo = appUpdateManager.appUpdateInfo.await()
+                val mgr = appUpdateManager ?: return@launch
+                val appUpdateInfo = mgr.appUpdateInfo.await()
 
                 if (appUpdateInfo.updateAvailability() != UpdateAvailability.UPDATE_AVAILABLE) {
                     Log.d(TAG, "更新已不可用")
@@ -175,10 +184,10 @@ class InAppUpdateManager private constructor(context: Context) {
 
                 // 注册安装状态监听器（FLEXIBLE 模式需要）
                 if (updateType == AppUpdateType.FLEXIBLE) {
-                    appUpdateManager.registerListener(installStateListener)
+                    mgr.registerListener(installStateListener)
                 }
 
-                appUpdateManager.startUpdateFlowForResult(
+                mgr.startUpdateFlowForResult(
                     appUpdateInfo,
                     updateType,
                     activity,
@@ -216,10 +225,11 @@ class InAppUpdateManager private constructor(context: Context) {
     fun completeFlexibleUpdate() {
         scope.launch {
             try {
-                val appUpdateInfo = appUpdateManager.appUpdateInfo.await()
+                val mgr = appUpdateManager ?: return@launch
+                val appUpdateInfo = mgr.appUpdateInfo.await()
                 if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
                     Log.i(TAG, "完成灵活更新安装")
-                    appUpdateManager.completeUpdate()
+                    mgr.completeUpdate()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "完成灵活更新失败", e)
@@ -242,7 +252,7 @@ class InAppUpdateManager private constructor(context: Context) {
      */
     fun unregisterListener() {
         try {
-            appUpdateManager.unregisterListener(installStateListener)
+            appUpdateManager?.unregisterListener(installStateListener)
         } catch (_: Exception) {}
     }
 }
