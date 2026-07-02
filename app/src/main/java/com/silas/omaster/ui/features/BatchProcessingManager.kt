@@ -43,12 +43,8 @@ class BatchProcessingManager(
 ) {
     companion object {
         private const val TAG = "BatchProcessing"
-        private const val MAX_BATCH_SIZE = 50
+        private const val MAX_BATCH_SIZE = 20
         private const val EXPORT_MAX_DIMENSION = 2048
-        // 低内存设备降级阈值：内存 ≤6GB 时限制最大尺寸
-        private const val LOW_MEM_DIMENSION = 1024
-        // 低内存设备阈值（GB）
-        private const val LOW_MEM_THRESHOLD_GB = 6
     }
 
     // F2-17: 检测 CPU 核心数并创建固定线程池
@@ -75,23 +71,6 @@ class BatchProcessingManager(
 
     // 线程同步锁
     private val lock = Any()
-
-    // 低内存检测：通过 ActivityManager 获取设备总内存
-    private val isLowMemoryDevice: Boolean by lazy {
-        try {
-            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val memInfo = android.app.ActivityManager.MemoryInfo()
-            activityManager.getMemoryInfo(memInfo)
-            val totalMemGB = memInfo.totalMem / (1024 * 1024 * 1024) // bytes -> GB
-            totalMemGB <= LOW_MEM_THRESHOLD_GB
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    // 自适应最大尺寸：低内存设备降级
-    private val adaptiveMaxDimension: Int
-        get() = if (isLowMemoryDevice) LOW_MEM_DIMENSION else EXPORT_MAX_DIMENSION
 
     /**
      * 批量处理图片 - F2-17: 多核并行处理
