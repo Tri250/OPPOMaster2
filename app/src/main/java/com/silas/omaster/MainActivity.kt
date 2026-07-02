@@ -54,8 +54,14 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
 class MainActivity : ComponentActivity() {
 
     private var floatingWindowController: FloatingWindowController? = null
-    /** 通过 Deep Link 传入的预设 ID，用于导航到详情页 */
-    private var deepLinkPresetId: String? = null
+    /**
+     * 通过 Deep Link 传入的预设 ID，用于导航到详情页。
+     *
+     * 必须使用 mutableStateOf：应用在前台时收到新 Deep Link（onNewIntent）更新此值后，
+     * 需要触发 Compose 重组才能让 MainApp 内的 LaunchedEffect(deepLinkPresetId) 重新执行导航。
+     * 历史问题：曾用普通 var，onNewIntent 更新后 Compose 无法观察，前台 Deep Link 完全失效。
+     */
+    private var deepLinkPresetId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -186,6 +192,7 @@ class MainActivity : ComponentActivity() {
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         deepLinkPresetId = parseDeepLink(intent)
         // 如果 Deep Link 有效，标记需要导航
         if (deepLinkPresetId != null) {
@@ -207,12 +214,16 @@ class MainActivity : ComponentActivity() {
 
         return when {
             // 自定义 scheme: omaster://preset/{id}
+            // pathSegments 对 omaster://preset/123 为 ["123"]，对 omaster://preset/ 为 []，安全
             uri.scheme == "omaster" && uri.host == "preset" -> {
                 uri.pathSegments?.firstOrNull()
             }
             // HTTPS: https://omaster.app/preset/{id}
-            uri.scheme == "https" && uri.host == "omaster.app" && uri.path?.startsWith("/preset") == true -> {
-                uri.lastPathSegment
+            // 必须校验第二段 id 存在：/preset（无 id）时 lastPathSegment 会返回 "preset"，
+            // 被误当作 presetId 传入详情页会导致进入不存在的预设。
+            uri.scheme == "https" && uri.host == "omaster.app" &&
+                uri.pathSegments.firstOrNull() == "preset" -> {
+                uri.pathSegments.getOrNull(1)
             }
             else -> null
         }

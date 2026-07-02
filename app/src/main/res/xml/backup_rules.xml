@@ -6,8 +6,8 @@
 -->
 <full-backup-content xmlns:tools="http://schemas.android.com/tools">
     <!-- 排除订阅凭证和认证信息 -->
-    <exclude domain="sharedpref" path="omaster_subscription.xml" tools:ignore="FullBackupContent" />
-    <exclude domain="sharedpref" path="omaster_auth.xml" tools:ignore="FullBackupContent" />
+    <!-- 自检修正：实际文件名为 omaster_subscriptions.xml（复数，见 SubscriptionManager.kt） -->
+    <exclude domain="sharedpref" path="omaster_subscriptions.xml" tools:ignore="FullBackupContent" />
     <!-- 排除崩溃日志（包含潜在敏感信息） -->
     <exclude domain="file" path="crash_logs/" tools:ignore="FullBackupContent" />
     <!-- 排除临时缓存 -->
