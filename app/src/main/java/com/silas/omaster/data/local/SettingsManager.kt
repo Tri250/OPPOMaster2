@@ -164,48 +164,41 @@ class SettingsManager private constructor(private val context: Context) {
         }
 
     // 主题设置（使用 Flow）
-    private val _themeFlow: MutableStateFlow<BrandTheme>
-    val themeFlow: StateFlow<BrandTheme>
+    private val _themeFlow: MutableStateFlow<BrandTheme> = try {
+        val themeId = getDataSync(KEY_THEME_ID, BrandTheme.Hasselblad.id)
+        MutableStateFlow(BrandTheme.fromId(themeId))
+    } catch (e: Throwable) {
+        android.util.Log.e("SettingsManager", "Theme init failed, using default", e)
+        MutableStateFlow(BrandTheme.Hasselblad)
+    }
+    val themeFlow: StateFlow<BrandTheme> = _themeFlow.asStateFlow()
 
     // 深色模式（使用 Flow）
-    private val _darkModeFlow: MutableStateFlow<DarkMode>
-    val darkModeFlow: StateFlow<DarkMode>
+    private val _darkModeFlow: MutableStateFlow<DarkMode> = try {
+        val darkModeValue = getDataSync(KEY_DARK_MODE, DarkMode.DARK.name)
+        MutableStateFlow(safeValueOf(darkModeValue, DarkMode.DARK))
+    } catch (e: Throwable) {
+        android.util.Log.e("SettingsManager", "DarkMode init failed, using default", e)
+        MutableStateFlow(DarkMode.DARK)
+    }
+    val darkModeFlow: StateFlow<DarkMode> = _darkModeFlow.asStateFlow()
 
     init {
-        // 2.3.5 修复：init 块包裹 try-catch，防止 DataStore 损坏或枚举解析失败导致闪退
-        try {
-            // 异步迁移：避免在主线程阻塞导致 ANR
-            // 迁移完成后自动预加载缓存，确保后续读取零阻塞
-            settingsScope.launch {
-                try {
-                    migrateFromSharedPreferences()
-                    preloadCache()
-                    // 启动 DataStore 外部变更监听，解决多进程写入导致缓存过期的问题
-                    startCacheObserver()
-                } catch (e: Exception) {
-                    android.util.Log.w("SettingsManager", "异步迁移失败", e)
-                }
+        settingsScope.launch {
+            try {
+                migrateFromSharedPreferences()
+                preloadCache()
+                startCacheObserver()
+            } catch (e: Exception) {
+                android.util.Log.w("SettingsManager", "异步迁移失败", e)
             }
-            
-            // 初始化 Flow 使用默认值，迁移完成后通过 preloadCache 更新缓存
-            val themeId = getDataSync(KEY_THEME_ID, BrandTheme.Hasselblad.id)
-            _themeFlow = MutableStateFlow(BrandTheme.fromId(themeId))
-            themeFlow = _themeFlow.asStateFlow()
-
-            val darkModeValue = getDataSync(KEY_DARK_MODE, DarkMode.DARK.name)
-            _darkModeFlow = MutableStateFlow(safeValueOf(darkModeValue, DarkMode.DARK))
-            darkModeFlow = _darkModeFlow.asStateFlow()
-            
-            // 初始化震动设置
-            _isVibrationEnabledFlow.value = getDataSync(KEY_VIBRATION_ENABLED, true)
+        }
+        
+        _isVibrationEnabledFlow.value = try {
+            getDataSync(KEY_VIBRATION_ENABLED, true)
         } catch (e: Throwable) {
-            // 2.3.5 修复：init 块异常时使用绝对安全默认值，确保 App 不闪退
-            android.util.Log.e("SettingsManager", "SettingsManager 初始化失败，使用默认值", e)
-            _themeFlow = MutableStateFlow(BrandTheme.Hasselblad)
-            themeFlow = _themeFlow.asStateFlow()
-            _darkModeFlow = MutableStateFlow(DarkMode.DARK)
-            darkModeFlow = _darkModeFlow.asStateFlow()
-            _isVibrationEnabledFlow.value = true
+            android.util.Log.e("SettingsManager", "Vibration init failed, using default", e)
+            true
         }
     }
 

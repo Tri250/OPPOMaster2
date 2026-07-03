@@ -97,21 +97,15 @@ class MainActivity : ComponentActivity() {
                             null
                         }
                     }
-                    val currentTheme = settingsManager?.let {
-                        try {
-                            it.themeFlow.collectAsState()
-                        } catch (e: Throwable) {
-                            Log.e("MainActivity", "themeFlow 读取失败", e)
-                            null
-                        }
+                    val currentTheme = if (settingsManager != null) {
+                        settingsManager.themeFlow.collectAsState()
+                    } else {
+                        null
                     }
-                    val darkMode = settingsManager?.let {
-                        try {
-                            it.darkModeFlow.collectAsState()
-                        } catch (e: Throwable) {
-                            Log.e("MainActivity", "darkModeFlow 读取失败", e)
-                            null
-                        }
+                    val darkMode = if (settingsManager != null) {
+                        settingsManager.darkModeFlow.collectAsState()
+                    } else {
+                        null
                     }
                     // 2.2.0 闪退修复：使用 safeGetInstance 而非 getInstance
                     val hasUserAgreed = remember {
