@@ -127,9 +127,9 @@ fun WatermarkScreen(
         }
     }
 
-    // 图片选择器（用于大师签名水印）
+    // 图片选择器（用于大师签名水印，Android 16+ Photo Picker）
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let {
             // 将选中的图片复制到应用私有目录

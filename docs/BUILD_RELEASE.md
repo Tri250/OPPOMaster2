@@ -74,8 +74,8 @@ app/build/outputs/apk/release/
 
 ### 版本信息
 
-- **versionCode**: 20201
-- **versionName**: 2.2.1
+- **versionCode**: 20306
+- **versionName**: 2.3.6
 
 > 注意：版本号应与 CHANGELOG.md 和 Git Tag 保持同步
 
