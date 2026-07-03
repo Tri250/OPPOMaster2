@@ -1,3 +1,31 @@
+### v2.3.5 (2026-07-03)
+
+#### ✨ 新增
+- **Release v2.3.5 发布** - 完整构建并上传 Release APK 到 GitHub Releases
+
+#### 🐛 修复（正式版自检）
+- **LUT3DRenderer 缺失导入** - 修复 `LUT3DData`、`LUT3DParser` 缺失 import 导致编译失败的问题
+- **PixelFruitEngine/Shader 缺失导入** - 修复 `PixelFruitParams` 缺失 import 导致编译失败的问题
+- **SmartOptimizeEngine 缺失导入** - 修复 `SmartOptimizeParams`、`CurvePoint`、`ParametricCurveData`、`ColorWheelValue`、`ExportResize`、`HSLAdjustments`、`LocalMask`、`EditHistoryManager` 等缺失 import 导致编译失败的问题
+- **StyleLUTGenerator 缺失导入** - 修复 `LUT3DData` 缺失 import 导致 `lutData.data` 无法访问的问题
+- **CrashHandler 缺失导入** - 修复 `SecurityCrypto` 缺失 import 导致崩溃日志加密失败的问题
+- **AIFineTuneViewModel 包路径错误** - 修复 `AISuggestionResult` 引用包路径错误（`com.silas.omaster.ai` → `com.silas.omaster.engine`）
+- **CameraXManager/HasselbladEyeViewModel 顶层函数导入** - 修复 `applyHasselbladColorEngine`、`applyHasselbladColorEngineVignette` 顶层函数未导入导致 `Unresolved reference` 的问题
+- **Gradle Wrapper 镜像源** - 修复阿里云镜像不支持 Gradle 8.14.4 的问题，切换到官方源 `services.gradle.org`
+
+#### 📦 构建产物
+- `app-arm64-v8a-release.apk` (115MB) - ARM64 设备（推荐）
+- `app-armeabi-v7a-release.apk` (95MB) - ARM 32位设备
+- `app-universal-release.apk` (312MB) - 通用包（所有架构）
+- `app-x86-release.apk` (131MB) - x86 32位
+- `app-x86_64-release.apk` (108MB) - x86 64位
+
+#### 🔐 签名信息
+- 证书: CN=OMaster, OU=Development, O=OMaster
+- SHA-256: f3fcd4392cc2f94230fb2b93a101d0b4b09ce7b54db56c3bd48d4efe037c6caa
+
+---
+
 ### v2.1.0 (2026-06-28)
 
 #### ✨ 新增
