@@ -33,7 +33,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.engine.AIFineTuneManager
-import com.silas.omaster.ai.AISuggestionResult
+import com.silas.omaster.engine.AISuggestionResult
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.engine.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager

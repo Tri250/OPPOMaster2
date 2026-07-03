@@ -3,6 +3,7 @@ package com.silas.omaster.infrastructure.utils
 import android.content.Context
 import android.util.Log
 import com.silas.omaster.BuildConfig
+import com.silas.omaster.infrastructure.security.SecurityCrypto
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter

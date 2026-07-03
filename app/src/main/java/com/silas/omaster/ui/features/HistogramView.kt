@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
+import com.silas.omaster.engine.HistogramAnalyzer
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 /**

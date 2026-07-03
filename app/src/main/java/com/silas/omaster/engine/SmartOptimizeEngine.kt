@@ -13,6 +13,14 @@ import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
 import android.util.Log
+import com.silas.omaster.ui.features.ColorWheelValue
+import com.silas.omaster.ui.features.CurvePoint
+import com.silas.omaster.ui.features.EditHistoryManager
+import com.silas.omaster.ui.features.ExportResize
+import com.silas.omaster.ui.features.HSLAdjustments
+import com.silas.omaster.ui.features.LocalMask
+import com.silas.omaster.ui.features.ParametricCurveData
+import com.silas.omaster.ui.features.SmartOptimizeParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

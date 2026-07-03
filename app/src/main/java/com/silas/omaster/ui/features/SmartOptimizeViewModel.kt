@@ -7,6 +7,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.lut.LUTManager
+import com.silas.omaster.engine.LutProcessor
+import com.silas.omaster.engine.SmartOptimizeEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job

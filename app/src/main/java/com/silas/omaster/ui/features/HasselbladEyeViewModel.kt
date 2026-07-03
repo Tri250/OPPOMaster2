@@ -30,9 +30,12 @@ import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
 import com.silas.omaster.engine.GPURenderManager
+import com.silas.omaster.engine.HasselbladColorEngine
 import com.silas.omaster.engine.HasselbladParamMapper
 import com.silas.omaster.engine.RenderParameters
 import com.silas.omaster.engine.RenderResult
+import com.silas.omaster.engine.applyHasselbladColorEngine
+import com.silas.omaster.engine.applyHasselbladColorEngineVignette
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
 import com.silas.omaster.ui.components.ApertureState
