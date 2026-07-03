@@ -645,12 +645,12 @@ private fun sharePreset(context: android.content.Context, preset: MasterPreset) 
     preset.getDisplaySections(context).forEach { section ->
         section.title?.let { title ->
             if (title.isNotEmpty()) {
-                paramsBuilder.appendLine("【${com.silas.omaster.util.PresetI18n.resolveString(context, title)}】")
+                paramsBuilder.appendLine("【${com.silas.omaster.infrastructure.utils.PresetI18n.resolveString(context, title)}】")
             }
         }
         section.items.forEach { item ->
-            val label = com.silas.omaster.util.PresetI18n.resolveString(context, item.label)
-            val value = com.silas.omaster.util.PresetI18n.resolveValue(context, item.value)
+            val label = com.silas.omaster.infrastructure.utils.PresetI18n.resolveString(context, item.label)
+            val value = com.silas.omaster.infrastructure.utils.PresetI18n.resolveValue(context, item.value)
             paramsBuilder.appendLine("  $label: $value")
         }
     }

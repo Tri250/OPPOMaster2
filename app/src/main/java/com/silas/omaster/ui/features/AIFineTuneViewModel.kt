@@ -793,8 +793,8 @@ class AIFineTuneViewModel(
                 manager.renderSync(source, buildEffectiveParams(), RenderQuality.HIGH) // CPU fallback 已在内部处理
             }
             val output = when (result) {
-                is com.silas.omaster.renderer.RenderResult.Success -> result.outputBitmap
-                is com.silas.omaster.renderer.RenderResult.FallbackToCPU -> result.outputBitmap
+                is com.silas.omaster.engine.RenderResult.Success -> result.outputBitmap
+                is com.silas.omaster.engine.RenderResult.FallbackToCPU -> result.outputBitmap
                 else -> null
             }
             if (output == null) {
@@ -825,7 +825,7 @@ class AIFineTuneViewModel(
                 .getInstance(context).customDeviceModel
                 .ifBlank { null }
             val sourceUri = _selectedImageUri.value
-            val savedUri = com.silas.omaster.util.ExifPreserver.saveWithExif(
+            val savedUri = com.silas.omaster.infrastructure.utils.ExifPreserver.saveWithExif(
                 context = context,
                 bitmap = bitmap,
                 sourceUri = sourceUri,

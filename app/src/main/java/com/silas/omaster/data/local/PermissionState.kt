@@ -4,7 +4,7 @@ package com.silas.omaster.data.local
  * 2.2.0 新增：权限状态数据模型
  *
  * 用于在 UI 层展示权限授予情况。
- * 配合 [com.silas.omaster.util.PermissionChecker] 使用。
+ * 配合 [com.silas.omaster.infrastructure.utils.PermissionChecker] 使用。
  */
 enum class PermissionStatus {
     /** 已授予 */

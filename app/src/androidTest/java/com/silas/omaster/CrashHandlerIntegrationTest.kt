@@ -64,7 +64,7 @@ class CrashHandlerIntegrationTest {
     @Test
     fun `CrashMonitorManager 应作为监听器注册`() {
         val crashHandler = CrashHandler.getInstance()
-        val crashMonitor = com.silas.omaster.util.CrashMonitorManager
+        val crashMonitor = com.silas.omaster.infrastructure.utils.CrashMonitorManager
 
         // 验证 CrashMonitorManager 实现了 CrashListener 接口
         assertTrue(

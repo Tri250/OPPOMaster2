@@ -386,7 +386,7 @@ class OMasterApplication : Application() {
                         // 仅在本地缓存缺失时拉取，避免每次启动都产生网络请求
                         if (!cacheFile.exists()) {
                             try {
-                                val result = com.silas.omaster.network.PresetRemoteManager.fetchAndSave(
+                                val result = com.silas.omaster.infrastructure.network.PresetRemoteManager.fetchAndSave(
                                     this@OMasterApplication, sub.url, forceUpdate = false
                                 )
                                 if (result.isSuccess) {
@@ -517,7 +517,7 @@ class OMasterApplication : Application() {
         super.onTrimMemory(level)
         if (level >= TRIM_MEMORY_MODERATE) {
             try {
-                com.silas.omaster.renderer.GPURenderManager.forceReleaseAll()
+                com.silas.omaster.engine.GPURenderManager.forceReleaseAll()
                 Log.i("OMasterApplication", "onTrimMemory: GPURenderManager 强制释放完成")
             } catch (e: Exception) {
                 Log.w("OMasterApplication", "onTrimMemory: GPURenderManager 释放失败", e)
