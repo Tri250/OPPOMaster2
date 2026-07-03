@@ -35,9 +35,12 @@ import com.silas.omaster.ai.scene.SceneRecognitionManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.HistogramData
 import com.silas.omaster.engine.GPURenderManager
+import com.silas.omaster.engine.HasselbladColorEngine
 import com.silas.omaster.engine.LUTPreviewRenderer
 import com.silas.omaster.engine.RenderParameters
 import com.silas.omaster.engine.RenderQuality
+import com.silas.omaster.engine.applyHasselbladColorEngine
+import com.silas.omaster.engine.applyHasselbladColorEngineVignette
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

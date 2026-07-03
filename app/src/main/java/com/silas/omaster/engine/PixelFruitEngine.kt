@@ -2,6 +2,7 @@ package com.silas.omaster.engine
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import com.silas.omaster.ui.features.PixelFruitParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive

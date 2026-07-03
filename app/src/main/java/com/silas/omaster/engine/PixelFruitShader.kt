@@ -3,6 +3,7 @@ package com.silas.omaster.engine
 import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.GLUtils
+import com.silas.omaster.ui.features.PixelFruitParams
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
