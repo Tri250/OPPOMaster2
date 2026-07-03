@@ -509,6 +509,25 @@
 -dontwarn com.google.android.play.core.**
 
 # ========================================
+# v2.3.6 关键：Google Play Services 公共组件兜底
+# ========================================
+# Firebase / ML Kit / Play / Billing 等库均依赖 gms.common 与 gms.tasks，
+# R8 过度收缩可能导致 NoClassDefFoundError、Task 回调丢失或 native 初始化失败。
+-keep class com.google.android.gms.common.** { *; }
+-keep class com.google.android.gms.tasks.** { *; }
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.base.** { *; }
+-dontwarn com.google.android.gms.**
+
+# kotlinx-coroutines-play-services（ML Kit / Play Task.await() 扩展）
+-keep class kotlinx.coroutines.tasks.** { *; }
+-dontwarn kotlinx.coroutines.tasks.**
+
+# FileProvider：AndroidManifest 显式引用，避免 R8 收缩导致安装后无法启动
+-keep class androidx.core.content.FileProvider { *; }
+-dontwarn androidx.core.content.FileProvider
+
+# ========================================
 # v2.3.6 关键：友盟 SDK 完整保留
 # ========================================
 # 友盟 SDK 大量使用反射调用 Application/Activity 生命周期方法

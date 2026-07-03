@@ -402,11 +402,13 @@ android {
 
     // 打包配置
     packaging {
-        // Android 16 (API 36) 要求支持 16KB 页对齐，避免运行时加载 .so 失败
-        // 参见：https://developer.android.com/guide/practices/page-sizes
+        // v2.3.6 修复：与 AndroidManifest.extractNativeLibs="true" 配合，
+        // 允许系统将 .so 从 APK 提取到 /data/app/.../lib 后再加载。
+        // 相比直接从 APK 映射，这种方式兼容性更好，能显著降低部分 OEM/低内存设备
+        // 因无法直接映射压缩 so 而导致的 UnsatisfiedLinkError / Native 崩溃 / OOM 风险。
+        // 注意：提取后会占用额外磁盘空间，largeHeap=true 已同步开启以缓解内存压力。
         jniLibs {
-            // 启用 16KB 页对齐（仅影响包含 .so 的 ABI 目录）
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

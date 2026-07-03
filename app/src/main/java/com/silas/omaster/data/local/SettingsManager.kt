@@ -106,7 +106,11 @@ class SettingsManager private constructor(private val context: Context) {
     private val cache = java.util.concurrent.ConcurrentHashMap<String, Any>()
     
     // 旧版 SharedPreferences（仅用于迁移）
-    private val legacyPrefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+    // v2.3.6 修复：延迟初始化，避免在 Application.onCreate 主线程构造 SettingsManager 时
+    // 同步加载 SharedPreferences XML 文件，降低启动阻塞/ANR 风险。
+    private val legacyPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+    }
     
     // 迁移标记
     @Volatile

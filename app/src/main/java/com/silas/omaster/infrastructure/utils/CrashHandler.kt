@@ -51,6 +51,12 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     }
 
     fun install(context: Context? = null) {
+        // v2.3.6 修复：防止重复安装导致 defaultHandler 指向自身，
+        // 进而在 uncaughtException 中无限递归引发 StackOverflowError。
+        if (installed) {
+            Log.d(TAG, "CrashHandler 已安装，跳过重复安装")
+            return
+        }
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         appContext = context?.applicationContext
         Thread.setDefaultUncaughtExceptionHandler(this)
@@ -59,6 +65,18 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
     }
 
     fun isInstalled(): Boolean = installed
+
+    /**
+     * 记录普通信息到 Logcat（可由 InitializationProvider 等早期组件调用）
+     * 不抛出异常，确保启动链路不被打断。
+     */
+    fun logInfo(tag: String, message: String) {
+        try {
+            Log.i(tag, message)
+        } catch (_: Throwable) {
+            // 忽略日志失败
+        }
+    }
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         try {

@@ -290,18 +290,21 @@ class OMasterApplication : Application() {
         StartupLogger.logStep("NetworkResilienceManager初始化", SystemClock.elapsedRealtime() - step2_4Start)
 
         // 第 2.5 步: 安全完整性检查（Release 构建中执行，Debug 跳过）
-        // 检测 Root/模拟器/Hook/调试器，异常环境记录告警但不阻断启动
+        // v2.3.6 修复：移到后台协程执行。Runtime.exec 与文件检查在部分设备上可能
+        // 阻塞主线程数百毫秒，导致启动 ANR。异常环境仅记录日志，不阻断启动。
         if (!BuildConfig.DEBUG) {
             val step2_5Start = SystemClock.elapsedRealtime()
-            try {
-                val integrityResult = SecurityIntegrityChecker.performCheck(this)
-                if (!integrityResult.isSafe) {
-                    android.util.Log.w("OMasterApplication", "安全环境异常: ${integrityResult.issues}")
+            lazyScope.launch {
+                try {
+                    val integrityResult = SecurityIntegrityChecker.performCheck(this@OMasterApplication)
+                    if (!integrityResult.isSafe) {
+                        android.util.Log.w("OMasterApplication", "安全环境异常: ${integrityResult.issues}")
+                    }
+                } catch (e: Throwable) {
+                    android.util.Log.w("OMasterApplication", "安全检查失败", e)
                 }
-            } catch (e: Throwable) {
-                android.util.Log.w("OMasterApplication", "安全检查失败", e)
+                StartupLogger.logStep("安全完整性检查", SystemClock.elapsedRealtime() - step2_5Start)
             }
-            StartupLogger.logStep("安全完整性检查", SystemClock.elapsedRealtime() - step2_5Start)
         }
 
         // 第 3 步: 初始化震动设置（fail-safe 模式,使用默认值兜底）
@@ -323,31 +326,37 @@ class OMasterApplication : Application() {
         StartupLogger.logStep("触发懒加载调度", SystemClock.elapsedRealtime() - step5Start)
 
         // 第 5.5 步: 低存储检查（ST-START-04）
-        // 启动前检查可用空间，低于阈值则标记低存储模式并清理缓存
-        try {
-            val stat = android.os.StatFs(filesDir.path)
-            val availableBytes = stat.availableBytes
-            val thresholdBytes = 200L * 1024 * 1024 // 200MB
-            if (availableBytes < thresholdBytes) {
-                Log.w("OMasterApplication", "低存储警告: 可用空间 ${availableBytes / 1024 / 1024}MB < ${thresholdBytes / 1024 / 1024}MB")
-                getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
-                    .edit().putBoolean("low_storage_mode", true).apply()
-                cacheDir.listFiles()?.forEach { it.deleteRecursively() }
-            } else {
-                getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
-                    .edit().putBoolean("low_storage_mode", false).apply()
+        // v2.3.6 修复：StatFs 本身较快，但清理缓存与 SP 写入属于文件 I/O，
+        // 移到后台协程避免阻塞主线程启动流程。
+        lazyScope.launch {
+            try {
+                val stat = android.os.StatFs(filesDir.path)
+                val availableBytes = stat.availableBytes
+                val thresholdBytes = 200L * 1024 * 1024 // 200MB
+                if (availableBytes < thresholdBytes) {
+                    Log.w("OMasterApplication", "低存储警告: 可用空间 ${availableBytes / 1024 / 1024}MB < ${thresholdBytes / 1024 / 1024}MB")
+                    getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
+                        .edit().putBoolean("low_storage_mode", true).apply()
+                    cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                } else {
+                    getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
+                        .edit().putBoolean("low_storage_mode", false).apply()
+                }
+            } catch (e: Exception) {
+                Log.w("OMasterApplication", "低存储检查失败", e)
             }
-        } catch (e: Exception) {
-            Log.w("OMasterApplication", "低存储检查失败", e)
         }
 
         // 第 6 步: 调度 WorkManager 后台定期同步
-        // 不影响启动流程，异步调度
+        // v2.3.6 修复：虽然 schedule 本身通常很快，但 WorkManager 首次初始化可能触发
+        // 数据库创建等 I/O。将其移到后台协程，确保主线程 onCreate 尽快返回，降低 ANR 风险。
         if (!BuildConfig.DEBUG) {
-            try {
-                SyncWorker.schedule(this, intervalHours = 24)
-            } catch (e: Throwable) {
-                android.util.Log.w("OMasterApplication", "WorkManager 调度失败", e)
+            lazyScope.launch {
+                try {
+                    SyncWorker.schedule(this@OMasterApplication, intervalHours = 24)
+                } catch (e: Throwable) {
+                    android.util.Log.w("OMasterApplication", "WorkManager 调度失败", e)
+                }
             }
         }
 
