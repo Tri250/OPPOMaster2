@@ -1186,31 +1186,50 @@ class HeuristicSceneAnalyzer(private val context: Context) {
 /**
  * ML Kit FaceDetector 单例
  * 避免每次分析都创建销毁检测器（节省 200-500ms 初始化时间）
+ *
+ * 容错设计：
+ * - ML Kit 初始化失败时返回空列表，由调用方回退到肤色推断
+ * - 不抛出异常，确保上层调用不会崩溃
  */
 object FaceDetectorSingleton {
     private var faceDetector: com.google.mlkit.vision.face.FaceDetector? = null
+    @Volatile
+    private var initAttempted = false
+    @Volatile
+    private var initFailed = false
 
-    private fun getDetector(): com.google.mlkit.vision.face.FaceDetector {
-        if (faceDetector == null) {
-            try {
+    private fun getDetector(): com.google.mlkit.vision.face.FaceDetector? {
+        if (faceDetector != null) return faceDetector
+        if (initFailed) return null
+        if (initAttempted) return null
+
+        synchronized(this) {
+            if (faceDetector != null) return faceDetector
+            if (initFailed) return null
+
+            initAttempted = true
+            return try {
                 val options = com.google.mlkit.vision.face.FaceDetectorOptions.Builder()
                     .setPerformanceMode(com.google.mlkit.vision.face.FaceDetectorOptions.PERFORMANCE_MODE_FAST)
                     .setLandmarkMode(com.google.mlkit.vision.face.FaceDetectorOptions.LANDMARK_MODE_NONE)
                     .setClassificationMode(com.google.mlkit.vision.face.FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
                     .build()
                 faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(options)
-            } catch (e: Exception) {
-                android.util.Log.w("FaceDetectorSingleton", "ML Kit 初始化失败: ${e.message}")
-                throw e
+                android.util.Log.i("FaceDetectorSingleton", "ML Kit FaceDetector 初始化成功")
+                faceDetector
+            } catch (e: Throwable) {
+                initFailed = true
+                android.util.Log.w("FaceDetectorSingleton", "ML Kit 初始化失败，人脸检测功能将不可用: ${e.message}")
+                null
             }
         }
-        return faceDetector ?: throw IllegalStateException("FaceDetector 初始化失败，请检查 ML Kit 依赖")
     }
 
     suspend fun detect(inputImage: com.google.mlkit.vision.common.InputImage): List<com.google.mlkit.vision.face.Face> {
+        val detector = getDetector() ?: return emptyList()
         return try {
-            getDetector().process(inputImage).await()
-        } catch (e: Exception) {
+            detector.process(inputImage).await()
+        } catch (e: Throwable) {
             android.util.Log.w("FaceDetectorSingleton", "Face detection 执行失败: ${e.message}")
             emptyList()
         }
@@ -1221,7 +1240,13 @@ object FaceDetectorSingleton {
      * 应在 OMasterApplication.onTerminate 或适当生命周期调用
      */
     fun release() {
-        faceDetector?.close()
-        faceDetector = null
+        synchronized(this) {
+            try {
+                faceDetector?.close()
+            } catch (_: Throwable) {}
+            faceDetector = null
+            initAttempted = false
+            initFailed = false
+        }
     }
 }

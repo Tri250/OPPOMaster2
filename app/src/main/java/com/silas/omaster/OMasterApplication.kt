@@ -279,30 +279,12 @@ class OMasterApplication : Application() {
     fun getInstanceOrNull(): OMasterApplication? = instance
 
     /**
-     * 安全获取 Application 实例，带默认值回退
+     * 安全获取 Application 实例
      * 用于组件初始化时获取 Context，即使 Application 尚未完全初始化也能安全返回
      *
-     * 2.2.0 闪退修复：在 Application 完全未初始化时，会用 applicationContext 创建
-     * 临时实例以避免空指针，绝不返回 null
+     * 注意：不使用反射调用 ActivityThread，避免在高版本 Android 上失败
      */
-    fun safeGetInstance(): OMasterApplication? {
-        if (instance != null) return instance
-        // 兜底：从 ContentProvider 缓存中获取 applicationContext
-        return try {
-            val appContext = Class.forName("android.app.ActivityThread")
-                .getMethod("currentApplication")
-                .invoke(null)
-            if (appContext is OMasterApplication) {
-                instance = appContext
-                appContext
-            } else {
-                null
-            }
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "safeGetInstance 失败", e)
-            null
-        }
-    }
+    fun safeGetInstance(): OMasterApplication? = instance
 
     fun getPrefs(): SharedPreferences? = prefs
 
@@ -325,211 +307,153 @@ class OMasterApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
+        val startTime = SystemClock.elapsedRealtime()
         StartupLogger.markAppStart()
 
-        // v2.3.6 崩溃恢复：在启动开始时设置崩溃标记
-        // 如果应用正常退出，会在 onTerminate 或 releaseResources 中清除标记
-        // 如果应用崩溃，标记会保留，下次启动时检测到并提示用户
-        setCrashFlag(true)
+        try {
+            setCrashFlag(true)
+        } catch (_: Throwable) {}
 
-        // 第 1 步: 初始化基础变量（必须在任何访问前）
-        // 使用 synchronized 确保多进程场景下的安全
-        val step1Start = SystemClock.elapsedRealtime()
-        onApplicationCreated(this)
-        StartupLogger.logStep("基础变量初始化", SystemClock.elapsedRealtime() - step1Start)
+        try {
+            onApplicationCreated(this)
+        } catch (e: Throwable) {
+            Log.e("OMasterApplication", "基础变量初始化失败", e)
+        }
 
-        // 第 2 步: 安装全局异常处理器（如果 InitializationProvider 尚未安装）
-        // 必须传 context,CrashHandler 才能持久化日志
-        val step2Start = SystemClock.elapsedRealtime()
         try {
             if (!CrashHandler.getInstance().isInstalled()) {
                 CrashHandler.getInstance().install(applicationContext)
             }
         } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "CrashHandler安装失败", e)
+            Log.e("OMasterApplication", "CrashHandler安装失败", e)
         }
-        StartupLogger.logStep("CrashHandler安装", SystemClock.elapsedRealtime() - step2Start)
 
-        // 第 2.1 步: 初始化 Sentry 崩溃上报（必须紧接 CrashHandler 之后）
-        // 配置了 DSN 才初始化，未配置时静默跳过
-        val step2_1Start = SystemClock.elapsedRealtime()
         try {
-            if (BuildConfig.SENTRY_DSN.isNotEmpty()) {
-                SentryAndroid.init(this) { options ->
-                    options.dsn = BuildConfig.SENTRY_DSN
-                    options.isEnableUserInteractionTracing = true
-                    options.tracesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.3
-                    options.profilesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.3
-                    // 设置环境标识
-                    options.environment = if (BuildConfig.DEBUG) "development" else "production"
-                    // 设置发布版本
-                    options.release = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
-                    // 在崩溃前添加面包屑（CrashHandler 的异常信息）
-                    // v2.3.6 关键修复：beforeSend 回调加双重 try-catch，
-                    // 防止 CrashHandler 自身异常反向上抛污染 Sentry 事件链路
-                    options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
-                        try {
-                            val installed = try {
-                                CrashHandler.getInstance().isInstalled()
-                            } catch (t: Throwable) {
-                                false
-                            }
-                            event.setTag("crash_handler_installed", installed.toString())
-                        } catch (t: Throwable) {
-                            // 兜底：setTag 失败也不能影响事件正常上报
-                        }
-                        event
-                    }
-                }
-                android.util.Log.i("OMasterApplication", "Sentry 崩溃上报已初始化")
-            } else {
-                android.util.Log.d("OMasterApplication", "SENTRY_DSN 未配置，跳过 Sentry 初始化")
+            HapticSettings.enabled = try {
+                SettingsManager.getInstance(this).isVibrationEnabled
+            } catch (_: Throwable) {
+                true
             }
         } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "Sentry初始化失败", e)
-        }
-        StartupLogger.logStep("Sentry初始化", SystemClock.elapsedRealtime() - step2_1Start)
-
-        // 第 2.2 步: 启用 StrictMode 违规检测（仅 Debug 构建）
-        // 检测主线程磁盘 I/O、网络调用等，及早发现潜在 ANR 问题
-        if (BuildConfig.DEBUG) {
-            val step2_2Start = SystemClock.elapsedRealtime()
-            try {
-                android.os.StrictMode.setThreadPolicy(
-                    android.os.StrictMode.ThreadPolicy.Builder()
-                        .detectDiskReads()
-                        .detectDiskWrites()
-                        .detectNetwork()
-                        .penaltyLog()
-                        .build()
-                )
-                android.os.StrictMode.setVmPolicy(
-                    android.os.StrictMode.VmPolicy.Builder()
-                        .detectLeakedSqlLiteObjects()
-                        .detectLeakedClosableObjects()
-                        .detectActivityLeaks()
-                        .detectLeakedRegistrationObjects()
-                        .penaltyLog()
-                        .build()
-                )
-            } catch (e: Throwable) {
-                android.util.Log.e("OMasterApplication", "StrictMode设置失败", e)
-            }
-            StartupLogger.logStep("StrictMode设置", SystemClock.elapsedRealtime() - step2_2Start)
+            Log.w("OMasterApplication", "HapticSettings初始化失败", e)
         }
 
-        // 第 2.3 步: 安装 ANR 看门狗
-        val step2_3Start = SystemClock.elapsedRealtime()
-        try {
-            ANRWatchdog.install()
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "ANRWatchdog安装失败", e)
-        }
-        StartupLogger.logStep("ANRWatchdog安装", SystemClock.elapsedRealtime() - step2_3Start)
-
-        // 第 2.4 步: 初始化网络韧性管理器
-        val step2_4Start = SystemClock.elapsedRealtime()
-        try {
-            NetworkResilienceManager.init(applicationContext)
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "NetworkResilienceManager初始化失败", e)
-        }
-        StartupLogger.logStep("NetworkResilienceManager初始化", SystemClock.elapsedRealtime() - step2_4Start)
-
-        // 第 2.5 步: 安全完整性检查（Release 构建中执行，Debug 跳过）
-        // v2.3.6 修复：移到后台协程执行。Runtime.exec 与文件检查在部分设备上可能
-        // 阻塞主线程数百毫秒，导致启动 ANR。异常环境仅记录日志，不阻断启动。
-        if (!BuildConfig.DEBUG) {
-            val step2_5Start = SystemClock.elapsedRealtime()
-            lazyScope.launch {
-                try {
-                    val integrityResult = SecurityIntegrityChecker.performCheck(this@OMasterApplication)
-                    if (!integrityResult.isSafe) {
-                        android.util.Log.w("OMasterApplication", "安全环境异常: ${integrityResult.issues}")
-                    }
-                } catch (e: Throwable) {
-                    android.util.Log.w("OMasterApplication", "安全检查失败", e)
-                }
-                StartupLogger.logStep("安全完整性检查", SystemClock.elapsedRealtime() - step2_5Start)
-            }
-        }
-
-        // 第 3 步: 初始化震动设置（fail-safe 模式,使用默认值兜底）
-        val step3Start = SystemClock.elapsedRealtime()
-        try {
-            HapticSettings.enabled = SettingsManager.getInstance(this).isVibrationEnabled
-        } catch (e: Throwable) {
-            android.util.Log.w("OMasterApplication", "HapticSettings初始化失败,使用默认值", e)
-        }
-        StartupLogger.logStep("HapticSettings初始化", SystemClock.elapsedRealtime() - step3Start)
-
-        // 第 4 步: 友盟初始化推迟到用户同意隐私政策后
-        // 不在 onCreate 中预初始化，确保"未同意不采集"的合规承诺
-        // 初始化逻辑移至 initUMeng()，在用户同意隐私政策后调用
-
-        // 第 5 步: 触发非关键组件的懒加载（在后台线程预初始化，不阻塞启动）
-        val step5Start = SystemClock.elapsedRealtime()
-        triggerLazyInitialization()
-        StartupLogger.logStep("触发懒加载调度", SystemClock.elapsedRealtime() - step5Start)
-
-        // 第 5.5 步: 低存储检查（ST-START-04）
-        // v2.3.6 修复：StatFs 本身较快，但清理缓存与 SP 写入属于文件 I/O，
-        // 移到后台协程避免阻塞主线程启动流程。
         lazyScope.launch {
             try {
-                val stat = android.os.StatFs(filesDir.path)
-                val availableBytes = stat.availableBytes
-                val thresholdBytes = 200L * 1024 * 1024 // 200MB
-                if (availableBytes < thresholdBytes) {
-                    Log.w("OMasterApplication", "低存储警告: 可用空间 ${availableBytes / 1024 / 1024}MB < ${thresholdBytes / 1024 / 1024}MB")
-                    getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
-                        .edit().putBoolean("low_storage_mode", true).apply()
-                    cacheDir.listFiles()?.forEach { it.deleteRecursively() }
-                } else {
-                    getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
-                        .edit().putBoolean("low_storage_mode", false).apply()
+                initSentry()
+            } catch (e: Throwable) {
+                Log.e("OMasterApplication", "Sentry初始化失败", e)
+            }
+
+            try {
+                NetworkResilienceManager.init(applicationContext)
+            } catch (e: Throwable) {
+                Log.e("OMasterApplication", "NetworkResilienceManager初始化失败", e)
+            }
+
+            try {
+                ANRWatchdog.install()
+            } catch (e: Throwable) {
+                Log.e("OMasterApplication", "ANRWatchdog安装失败", e)
+            }
+
+            try {
+                if (!BuildConfig.DEBUG) {
+                    SecurityIntegrityChecker.performCheck(this@OMasterApplication)
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                Log.w("OMasterApplication", "安全检查失败", e)
+            }
+
+            try {
+                triggerLazyInitialization()
+            } catch (e: Throwable) {
+                Log.e("OMasterApplication", "懒加载初始化失败", e)
+            }
+
+            try {
+                checkLowStorage()
+            } catch (e: Throwable) {
                 Log.w("OMasterApplication", "低存储检查失败", e)
             }
-        }
 
-        // 第 6 步: 调度 WorkManager 后台定期同步
-        // v2.3.6 修复：虽然 schedule 本身通常很快，但 WorkManager 首次初始化可能触发
-        // 数据库创建等 I/O。将其移到后台协程，确保主线程 onCreate 尽快返回，降低 ANR 风险。
-        if (!BuildConfig.DEBUG) {
-            lazyScope.launch {
-                try {
+            try {
+                if (!BuildConfig.DEBUG) {
                     SyncWorker.schedule(this@OMasterApplication, intervalHours = 24)
+                }
+            } catch (e: Throwable) {
+                Log.w("OMasterApplication", "WorkManager 调度失败", e)
+            }
+
+            if (BuildConfig.DEBUG) {
+                try {
+                    android.os.StrictMode.setThreadPolicy(
+                        android.os.StrictMode.ThreadPolicy.Builder()
+                            .detectDiskReads()
+                            .detectDiskWrites()
+                            .detectNetwork()
+                            .penaltyLog()
+                            .build()
+                    )
+                    android.os.StrictMode.setVmPolicy(
+                        android.os.StrictMode.VmPolicy.Builder()
+                            .detectLeakedSqlLiteObjects()
+                            .detectLeakedClosableObjects()
+                            .detectActivityLeaks()
+                            .detectLeakedRegistrationObjects()
+                            .penaltyLog()
+                            .build()
+                    )
                 } catch (e: Throwable) {
-                    android.util.Log.w("OMasterApplication", "WorkManager 调度失败", e)
+                    Log.e("OMasterApplication", "StrictMode设置失败", e)
                 }
             }
+
+            StartupLogger.logStep("后台初始化完成", SystemClock.elapsedRealtime() - startTime)
+            Log.i("OMasterApplication", StartupLogger.getReport())
         }
 
-        Log.i("OMasterApplication", StartupLogger.getReport())
+        Log.i("OMasterApplication", "主线程启动完成: ${SystemClock.elapsedRealtime() - startTime}ms")
+    }
 
-        // 启动时间验证：检查是否超过阈值并输出优化建议
-        val validation = StartupLogger.validateStartupTime()
-        if (validation.exceededThreshold) {
-            Log.w("OMasterApplication", "⚠️ 启动时间验证失败: 总耗时 ${validation.totalMs}ms > 阈值 ${validation.thresholdMs}ms")
-            Log.w("OMasterApplication", "建议优化以下耗时超过100ms的步骤:")
-            validation.slowSteps.forEach { slowStep ->
-                Log.w("OMasterApplication", "  - ${slowStep.step.name}: ${slowStep.step.durationMs}ms")
-                if (slowStep.suggestion != null) {
-                    Log.w("OMasterApplication", "    💡 ${slowStep.suggestion}")
-                }
-            }
-            if (validation.suggestions.isNotEmpty()) {
-                Log.w("OMasterApplication", "总体优化建议:")
-                validation.suggestions.forEach { suggestion ->
-                    Log.w("OMasterApplication", "  • $suggestion")
-                }
-            }
-        } else {
-            Log.i("OMasterApplication", "✅ 启动时间验证通过: ${validation.totalMs}ms <= ${validation.thresholdMs}ms")
+    private fun initSentry() {
+        if (BuildConfig.SENTRY_DSN.isEmpty()) {
+            Log.d("OMasterApplication", "SENTRY_DSN 未配置，跳过 Sentry 初始化")
+            return
         }
+        SentryAndroid.init(this) { options ->
+            options.dsn = BuildConfig.SENTRY_DSN
+            options.isEnableUserInteractionTracing = true
+            options.tracesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.3
+            options.profilesSampleRate = if (BuildConfig.DEBUG) 1.0 else 0.3
+            options.environment = if (BuildConfig.DEBUG) "development" else "production"
+            options.release = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
+            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
+                try {
+                    val installed = try {
+                        CrashHandler.getInstance().isInstalled()
+                    } catch (_: Throwable) {
+                        false
+                    }
+                    event.setTag("crash_handler_installed", installed.toString())
+                } catch (_: Throwable) {}
+                event
+            }
+        }
+        Log.i("OMasterApplication", "Sentry 崩溃上报已初始化")
+    }
+
+    private fun checkLowStorage() {
+        val stat = android.os.StatFs(filesDir.path)
+        val availableBytes = stat.availableBytes
+        val thresholdBytes = 200L * 1024 * 1024
+        val isLowStorage = availableBytes < thresholdBytes
+        if (isLowStorage) {
+            Log.w("OMasterApplication", "低存储警告: 可用空间 ${availableBytes / 1024 / 1024}MB")
+            cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+        }
+        getSharedPreferences("omaster_startup", Context.MODE_PRIVATE)
+            .edit().putBoolean("low_storage_mode", isLowStorage).apply()
     }
 
     /**
@@ -540,12 +464,9 @@ class OMasterApplication : Application() {
     private val lazyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun triggerLazyInitialization() {
-        // 使用后台协程预初始化非关键组件，避免阻塞主线程启动流程
         lazyScope.launch {
+            val lazyStart = SystemClock.elapsedRealtime()
             try {
-                val lazyStart = SystemClock.elapsedRealtime()
-
-                // 预初始化 SettingsManager 缓存（减少首次访问时的阻塞）
                 try {
                     SettingsManager.getInstance(this@OMasterApplication).preloadCache()
                     StartupLogger.logStep("SettingsManager预加载", SystemClock.elapsedRealtime() - lazyStart)
@@ -553,10 +474,8 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "SettingsManager预加载失败", e)
                 }
 
-                // 预加载预设缓存：提前初始化PresetRepository，减少首屏加载时间
                 try {
                     val presetRepo = PresetRepository.getInstance(this@OMasterApplication)
-                    // 触发预设加载（从assets或本地缓存），只取第一个值
                     presetRepo.getAllPresets().first().let { presets ->
                         Log.i("OMasterApplication", "预设缓存预加载完成: ${presets.size} 条")
                     }
@@ -565,26 +484,14 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "PresetRepository预加载失败", e)
                 }
 
-                // 预初始化 FaceDetectorSingleton（非关键，触发单例创建）
-                // 实际人脸检测模型由 Google ML Kit 按需加载，无需用户配置
-                try {
-                    FaceDetectorSingleton
-                    StartupLogger.logStep("FaceDetector预初始化", SystemClock.elapsedRealtime() - lazyStart)
-                } catch (e: Throwable) {
-                    Log.w("OMasterApplication", "FaceDetector预初始化失败", e)
-                }
-
-                // 订阅动态加载：首次启动或本地缓存缺失时，拉取所有启用的订阅源
-                // 取代已删除的云同步功能，所有预设源统一由订阅管理驱动
                 try {
                     val subManager = com.silas.omaster.data.local.SubscriptionManager.getInstance(this@OMasterApplication)
                     val enabledSubs = subManager.subscriptionsFlow.value.filter { it.isEnabled }
                     var fetchedCount = 0
                     for (sub in enabledSubs) {
-                        val cacheFile = java.io.File(this@OMasterApplication.filesDir, subManager.getFileNameForUrl(sub.url))
-                        // 仅在本地缓存缺失时拉取，避免每次启动都产生网络请求
-                        if (!cacheFile.exists()) {
-                            try {
+                        try {
+                            val cacheFile = java.io.File(this@OMasterApplication.filesDir, subManager.getFileNameForUrl(sub.url))
+                            if (!cacheFile.exists()) {
                                 val result = com.silas.omaster.infrastructure.network.PresetRemoteManager.fetchAndSave(
                                     this@OMasterApplication, sub.url, forceUpdate = false
                                 )
@@ -592,9 +499,9 @@ class OMasterApplication : Application() {
                                     fetchedCount++
                                     Log.i("OMasterApplication", "订阅拉取成功: ${sub.name}")
                                 }
-                            } catch (e: Throwable) {
-                                Log.w("OMasterApplication", "订阅拉取失败: ${sub.name}", e)
                             }
+                        } catch (e: Throwable) {
+                            Log.w("OMasterApplication", "订阅拉取失败: ${sub.name}", e)
                         }
                     }
                     if (fetchedCount > 0) {
@@ -605,7 +512,6 @@ class OMasterApplication : Application() {
                     Log.w("OMasterApplication", "订阅初始拉取失败", e)
                 }
 
-                // 检查应用内更新（非阻塞，失败不影响启动）
                 try {
                     InAppUpdateManager.init(this@OMasterApplication)
                     StartupLogger.logStep("应用内更新检查", SystemClock.elapsedRealtime() - lazyStart)
