@@ -59,20 +59,7 @@ class MainActivity : ComponentActivity() {
     private var deepLinkPresetId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 2.3.5 修复：super.onCreate 必须最先调用，且包裹 try-catch 防止系统级崩溃
-        try {
-            super.onCreate(savedInstanceState)
-        } catch (e: Throwable) {
-            Log.e("MainActivity", "super.onCreate 失败，尝试恢复", e)
-            // 如果 super.onCreate 失败，尝试用默认 savedInstanceState 重试
-            try {
-                super.onCreate(null)
-            } catch (e2: Throwable) {
-                Log.e("MainActivity", "无法恢复，终止进程", e2)
-                finish()
-                return
-            }
-        }
+        super.onCreate(savedInstanceState)
 
         // 解析 Deep Link: omaster://preset/{id} 或 https://omaster.app/preset/{id}
         deepLinkPresetId = parseDeepLink(intent)
