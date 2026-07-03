@@ -162,7 +162,6 @@ class OMasterApplication : Application() {
     }
 
     fun getPrefs(): SharedPreferences? = prefs
-    }
 
     /**
      * 由 Application.onCreate 调用，设置实例并确保 SharedPreferences 已初始化
