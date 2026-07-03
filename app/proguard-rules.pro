@@ -316,12 +316,12 @@
 # ========================================
 # Release 构建日志移除
 # ========================================
-# 移除调试日志，减少 APK 体积并防止信息泄露
--assumenosideeffects class android.util.Log {
-    public static int v(...);
-    public static int d(...);
-    public static int i(...);
-}
+# 注意：不再使用 -assumenosideeffects 移除 Log 调用
+# 原因：R8 完整模式下，该规则可能导致 Log 参数中的计算代码被移除，
+# 引发运行时异常（如 StartupLogger.getReport() 等关键启动代码）。
+# 日志信息保留在 APK 中对体积影响极小（< 50KB），稳定性优先。
+# 如需移除日志，请使用 ProGuard 的 -assumenoexternalsideeffects 或
+# 在代码中使用 if (BuildConfig.DEBUG) 条件包裹。
 
 # ========================================
 # R8 缺失类兜底（第三方库仅编译期/可选依赖引用）
@@ -376,6 +376,27 @@
 -keep class com.silas.omaster.OMasterApplication { *; }
 -keep class com.silas.omaster.MainActivity { *; }
 -keep class com.silas.omaster.InitializationProvider { *; }
+
+# ========================================
+# 导航路由序列化器（Screen sealed class 的 $$serializer）
+# 必须保留，否则类型安全导航在 Release 构建中崩溃
+# ========================================
+-keep class com.silas.omaster.ui.navigation.Screen { *; }
+-keep class com.silas.omaster.ui.navigation.Screen$** { *; }
+-keep class com.silas.omaster.ui.navigation.Screen$**$$serializer { *; }
+-keepclassmembers class com.silas.omaster.ui.navigation.Screen$** {
+    *** Companion;
+}
+
+# ========================================
+# 枚举类保护（BrandTheme、DarkMode、UpdateChannel 等使用 entries.find）
+# entries 是 Kotlin 编译器生成的枚举数组，混淆后 fromId 无法匹配
+# ========================================
+-keep class com.silas.omaster.ui.theme.BrandTheme { *; }
+-keep class com.silas.omaster.data.local.DarkMode { *; }
+-keep class com.silas.omaster.data.local.UpdateChannel { *; }
+-keep class com.silas.omaster.data.local.SettingsManager { *; }
+-keep class com.silas.omaster.data.local.SettingsManager$Companion { *; }
 
 # 崩溃处理器（确保堆栈可追溯）
 -keep class com.silas.omaster.infrastructure.utils.CrashHandler { *; }

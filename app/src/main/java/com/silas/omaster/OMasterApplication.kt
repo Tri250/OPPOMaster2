@@ -182,6 +182,25 @@ class OMasterApplication : Application() {
     }
 
     override fun onCreate() {
+        // 2.3.5 修复：顶层 try-catch 确保 Application.onCreate 永不抛出异常
+        // 如果任何初始化步骤失败，记录日志并继续，绝不中断 App 启动
+        try {
+            performOnCreate()
+        } catch (e: Throwable) {
+            // 极端情况：整个初始化流程失败
+            // 确保基础实例已设置，让 App 至少能启动到欢迎页
+            try {
+                onApplicationCreated(this)
+            } catch (_: Throwable) { }
+            Log.e("OMasterApplication", "Application 初始化失败，已降级启动", e)
+        }
+    }
+
+    /**
+     * 实际执行 onCreate 初始化逻辑
+     * 抽取为独立方法，便于顶层 try-catch 包裹
+     */
+    private fun performOnCreate() {
         super.onCreate()
 
         StartupLogger.markAppStart()

@@ -59,12 +59,26 @@ class MainActivity : ComponentActivity() {
     private var deepLinkPresetId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // 2.3.5 修复：super.onCreate 必须最先调用，且包裹 try-catch 防止系统级崩溃
+        try {
+            super.onCreate(savedInstanceState)
+        } catch (e: Throwable) {
+            Log.e("MainActivity", "super.onCreate 失败，尝试恢复", e)
+            // 如果 super.onCreate 失败，尝试用默认 savedInstanceState 重试
+            try {
+                super.onCreate(null)
+            } catch (e2: Throwable) {
+                Log.e("MainActivity", "无法恢复，终止进程", e2)
+                finish()
+                return
+            }
+        }
 
         // 解析 Deep Link: omaster://preset/{id} 或 https://omaster.app/preset/{id}
         deepLinkPresetId = parseDeepLink(intent)
 
-        // 2.2.0 闪退修复：所有关键调用包 try-catch，绝不让 onCreate 抛出
+        // 2.3.5 修复：Android 15+ (API 35+) 要求 enableEdgeToEdge 在 setContent 之前调用
+        // 但需兼容旧设备，使用 try-catch 确保安全
         try {
             enableEdgeToEdge()
         } catch (e: Throwable) {
@@ -82,67 +96,108 @@ class MainActivity : ComponentActivity() {
             Log.e("MainActivity", "悬浮窗控制器初始化失败", e)
         }
 
-        setContent {
-            CompositionLocalProvider(LocalActivity provides this) {
-                val settingsManager = remember { SettingsManager.getInstance(applicationContext) }
-                val currentTheme by settingsManager.themeFlow.collectAsState()
-                val darkMode by settingsManager.darkModeFlow.collectAsState()
-                // 2.2.0 闪退修复：使用 safeGetInstance 而非 getInstance
-                val hasUserAgreed = remember {
-                    try {
-                        mutableStateOf(
-                            OMasterApplication.safeGetInstance()?.hasUserAgreed() ?: false
-                        )
-                    } catch (e: Throwable) {
-                        Log.e("MainActivity", "读取用户协议状态失败", e)
-                        mutableStateOf(false)
+        // 2.3.5 修复：setContent 包裹 try-catch，防止 Compose 初始化异常导致白屏/闪退
+        try {
+            setContent {
+                CompositionLocalProvider(LocalActivity provides this) {
+                    // 2.3.5 修复：SettingsManager 初始化包裹 try-catch，防止 DataStore 损坏导致闪退
+                    val settingsManager = remember {
+                        try {
+                            SettingsManager.getInstance(applicationContext)
+                        } catch (e: Throwable) {
+                            Log.e("MainActivity", "SettingsManager 初始化失败", e)
+                            // 返回 null，UI 层使用默认值兜底
+                            null
+                        }
                     }
-                }
-                var showWelcomeFlow by hasUserAgreed
-                val navController = rememberNavController()
+                    val currentTheme = settingsManager?.let {
+                        try {
+                            it.themeFlow.collectAsState()
+                        } catch (e: Throwable) {
+                            Log.e("MainActivity", "themeFlow 读取失败", e)
+                            null
+                        }
+                    }
+                    val darkMode = settingsManager?.let {
+                        try {
+                            it.darkModeFlow.collectAsState()
+                        } catch (e: Throwable) {
+                            Log.e("MainActivity", "darkModeFlow 读取失败", e)
+                            null
+                        }
+                    }
+                    // 2.2.0 闪退修复：使用 safeGetInstance 而非 getInstance
+                    val hasUserAgreed = remember {
+                        try {
+                            mutableStateOf(
+                                OMasterApplication.safeGetInstance()?.hasUserAgreed() ?: false
+                            )
+                        } catch (e: Throwable) {
+                            Log.e("MainActivity", "读取用户协议状态失败", e)
+                            mutableStateOf(false)
+                        }
+                    }
+                    var showWelcomeFlow by hasUserAgreed
+                    val navController = rememberNavController()
 
-                OMasterTheme(
-                    darkMode = darkMode,
-                    brandTheme = currentTheme
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                    OMasterTheme(
+                        darkMode = darkMode?.value ?: com.silas.omaster.data.local.DarkMode.DARK,
+                        brandTheme = currentTheme?.value ?: com.silas.omaster.ui.theme.BrandTheme.Hasselblad
                     ) {
-                        if (showWelcomeFlow) {
-                            WelcomeFlow(
-                                onAgree = {
-                                    try {
-                                        OMasterApplication.safeGetInstance()?.let {
-                                            it.setUserAgreed(true)
-                                            it.initUMeng()
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            if (showWelcomeFlow) {
+                                WelcomeFlow(
+                                    onAgree = {
+                                        try {
+                                            OMasterApplication.safeGetInstance()?.let {
+                                                it.setUserAgreed(true)
+                                                it.initUMeng()
+                                            }
+                                        } catch (e: Throwable) {
+                                            Log.e("MainActivity", "同意隐私政策后初始化失败", e)
                                         }
-                                    } catch (e: Throwable) {
-                                        Log.e("MainActivity", "同意隐私政策后初始化失败", e)
+                                        showWelcomeFlow = false
+                                    },
+                                    onDisagree = {
+                                        // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
+                                        try {
+                                            OMasterApplication.safeGetInstance()
+                                                ?.setUserAgreed(false)
+                                        } catch (e: Throwable) {
+                                            Log.e("MainActivity", "保存用户协议状态失败", e)
+                                        }
+                                        showWelcomeFlow = false
                                     }
-                                    showWelcomeFlow = false
-                                },
-                                onDisagree = {
-                                    // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
-                                    try {
-                                        OMasterApplication.safeGetInstance()
-                                            ?.setUserAgreed(false)
-                                    } catch (e: Throwable) {
-                                        Log.e("MainActivity", "保存用户协议状态失败", e)
-                                    }
-                                    showWelcomeFlow = false
-                                }
-                            )
-                        } else {
-                            MainApp(
-                                navController = navController,
-                                deepLinkPresetId = deepLinkPresetId
-                            )
-                            // 消费 Deep Link，避免重复导航
-                            deepLinkPresetId = null
+                                )
+                            } else {
+                                MainApp(
+                                    navController = navController,
+                                    deepLinkPresetId = deepLinkPresetId
+                                )
+                                // 消费 Deep Link，避免重复导航
+                                deepLinkPresetId = null
+                            }
                         }
                     }
                 }
+            }
+        } catch (e: Throwable) {
+            // 2.3.5 修复：setContent 本身崩溃时的兜底处理
+            Log.e("MainActivity", "setContent 初始化失败，尝试降级启动", e)
+            try {
+                // 降级：使用最简单的 Compose 内容，显示错误提示
+                setContent {
+                    androidx.compose.material3.Text(
+                        text = "应用启动失败，请重启应用。\n错误: ${e.message}",
+                        color = androidx.compose.ui.graphics.Color.White
+                    )
+                }
+            } catch (e2: Throwable) {
+                Log.e("MainActivity", "降级启动也失败", e2)
+                finish()
             }
         }
 

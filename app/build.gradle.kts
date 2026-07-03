@@ -395,11 +395,16 @@ android {
 
     // 打包配置
     packaging {
-        // Android 16 (API 36) 要求支持 16KB 页对齐，避免运行时加载 .so 失败
+        // Android 16 (API 36) 16KB 页对齐策略
         // 参见：https://developer.android.com/guide/practices/page-sizes
+        //
+        // 重要：useLegacyPackaging = true 使用 4KB 传统对齐方式
+        // 原因：TensorFlow Lite、MediaPipe、ML Kit 等第三方 AAR 中的 .so 文件
+        // 可能未按 16KB 对齐，启用 16KB 对齐会导致 APK 安装后无法启动。
+        // Android 系统会在运行时自动处理 4KB→16KB 页兼容，不影响性能。
+        // 待所有第三方库都支持 16KB 对齐后，可切换为 false。
         jniLibs {
-            // 启用 16KB 页对齐（仅影响包含 .so 的 ABI 目录）
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
