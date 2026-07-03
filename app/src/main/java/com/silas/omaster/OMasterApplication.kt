@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 /**
  * 启动初始化日志记录器
@@ -37,10 +38,33 @@ object StartupLogger {
     private val steps = mutableListOf<Step>()
     private var appStartTime: Long = 0L
 
+    // 启动时间阈值（毫秒），超过此值将输出警告
+    const val STARTUP_THRESHOLD_MS = 1500L
+
     data class Step(
         val name: String,
         val durationMs: Long,
         val timestamp: Long
+    )
+
+    /**
+     * 启动验证结果
+     */
+    data class ValidationResult(
+        val totalMs: Long,
+        val exceededThreshold: Boolean,
+        val thresholdMs: Long,
+        val slowSteps: List<StepWithSuggestion>,
+        val suggestions: List<String>
+    )
+
+    /**
+     * 带优化建议的步骤
+     */
+    data class StepWithSuggestion(
+        val step: Step,
+        val suggestion: String?,
+        val isSlow: Boolean
     )
 
     fun markAppStart() {
@@ -51,24 +75,143 @@ object StartupLogger {
         steps.add(Step(name, durationMs, SystemClock.elapsedRealtime()))
     }
 
+    /**
+     * 验证启动时间并生成优化建议
+     */
+    fun validateStartupTime(): ValidationResult {
+        val totalMs = if (appStartTime > 0) SystemClock.elapsedRealtime() - appStartTime else 0L
+        val exceededThreshold = totalMs > STARTUP_THRESHOLD_MS
+
+        // 标记慢步骤（超过100ms的步骤视为潜在瓶颈）
+        val slowThreshold = 100L
+        val stepsWithSuggestions = steps.map { step ->
+            val isSlow = step.durationMs > slowThreshold
+            val suggestion = generateStepSuggestion(step, isSlow)
+            StepWithSuggestion(step, suggestion, isSlow)
+        }
+
+        val slowSteps = stepsWithSuggestions.filter { it.isSlow }
+
+        // 生成总体优化建议
+        val suggestions = mutableListOf<String>()
+        if (exceededThreshold) {
+            suggestions.add("启动时间 ${totalMs}ms 超过阈值 ${STARTUP_THRESHOLD_MS}ms")
+            suggestions.add("建议检查耗时超过100ms的步骤")
+
+            if (slowSteps.any { it.step.name.contains("CrashHandler") }) {
+                suggestions.add("CrashHandler安装较慢，考虑延迟到后台线程初始化")
+            }
+            if (slowSteps.any { it.step.name.contains("Sentry") }) {
+                suggestions.add("Sentry初始化较慢，考虑延迟初始化或配置异步初始化")
+            }
+            if (slowSteps.any { it.step.name.contains("安全") }) {
+                suggestions.add("安全完整性检查耗时较长，已在后台协程执行")
+            }
+            if (slowSteps.any { it.step.name.contains("PresetRepository") }) {
+                suggestions.add("预设加载耗时较长，考虑按需加载")
+            }
+        }
+
+        return ValidationResult(
+            totalMs = totalMs,
+            exceededThreshold = exceededThreshold,
+            thresholdMs = STARTUP_THRESHOLD_MS,
+            slowSteps = slowSteps,
+            suggestions = suggestions
+        )
+    }
+
+    /**
+     * 为单个步骤生成优化建议
+     */
+    private fun generateStepSuggestion(step: Step, isSlow: Boolean): String? {
+        if (!isSlow) return null
+
+        return when {
+            step.name.contains("CrashHandler") -> "考虑延迟到后台线程初始化"
+            step.name.contains("Sentry") -> "可配置异步初始化或延迟上报"
+            step.name.contains("安全") -> "已在后台执行，检查内部逻辑"
+            step.name.contains("SettingsManager") -> "避免同步IO操作，使用内存缓存"
+            step.name.contains("PresetRepository") -> "考虑按需加载或延迟预加载"
+            step.name.contains("FaceDetector") -> "ML Kit模型加载较慢，考虑延迟初始化"
+            step.name.contains("WorkManager") -> "后台调度，已在协程中执行"
+            else -> "检查是否有阻塞操作可移至后台"
+        }
+    }
+
     fun getReport(): String {
         val totalMs = if (appStartTime > 0) SystemClock.elapsedRealtime() - appStartTime else 0L
         return buildString {
             appendLine("=== 启动性能报告 ===")
             appendLine("总耗时: ${totalMs}ms")
+            if (totalMs > STARTUP_THRESHOLD_MS) {
+                appendLine("⚠️ 警告: 超过阈值 ${STARTUP_THRESHOLD_MS}ms")
+            }
+            appendLine("--- 各步骤耗时 ---")
             steps.forEach { step ->
-                appendLine("  ${step.name}: ${step.durationMs}ms")
+                val marker = if (step.durationMs > 100) "🔴" else "✅"
+                appendLine("  $marker ${step.name}: ${step.durationMs}ms")
+            }
+        }
+    }
+
+    /**
+     * 获取详细性能报告（包含优化建议）
+     */
+    fun getDetailedReport(): String {
+        val validation = validateStartupTime()
+        return buildString {
+            appendLine("=== 启动性能详细报告 ===")
+            appendLine("总耗时: ${validation.totalMs}ms")
+            appendLine("目标阈值: ${validation.thresholdMs}ms")
+
+            if (validation.exceededThreshold) {
+                appendLine("状态: ⚠️ 超过阈值，需要优化")
+            } else {
+                appendLine("状态: ✅ 符合目标")
+            }
+
+            appendLine("")
+            appendLine("--- 各步骤耗时详情 ---")
+            steps.forEach { step ->
+                val slow = step.durationMs > 100
+                val marker = if (slow) "🔴" else "✅"
+                appendLine("  $marker ${step.name}: ${step.durationMs}ms")
+                if (slow) {
+                    val suggestion = generateStepSuggestion(step, true)
+                    appendLine("      💡 $suggestion")
+                }
+            }
+
+            if (validation.suggestions.isNotEmpty()) {
+                appendLine("")
+                appendLine("--- 优化建议 ---")
+                validation.suggestions.forEach { suggestion ->
+                    appendLine("  • $suggestion")
+                }
             }
         }
     }
 
     fun getSteps(): List<Step> = steps.toList()
+
+    /**
+     * 重置日志状态（用于测试）
+     */
+    fun reset() {
+        steps.clear()
+        appStartTime = 0L
+    }
 }
 
 class OMasterApplication : Application() {
     companion object {
         private const val PREFS_NAME = "omaster_prefs"
         private const val KEY_USER_AGREED = "user_agreed_to_policy"
+
+        // v2.3.6 崩溃恢复：崩溃标记存储
+        private const val KEY_CRASH_FLAG = "app_crashed_last_run"
+        private const val KEY_CRASH_TIMESTAMP = "crash_timestamp"
 
         // 从 BuildConfig 读取混淆密钥（构建时动态生成或从环境变量读取）
         // 避免硬编码密钥在代码中，增加逆向难度
@@ -184,6 +327,11 @@ class OMasterApplication : Application() {
         super.onCreate()
 
         StartupLogger.markAppStart()
+
+        // v2.3.6 崩溃恢复：在启动开始时设置崩溃标记
+        // 如果应用正常退出，会在 onTerminate 或 releaseResources 中清除标记
+        // 如果应用崩溃，标记会保留，下次启动时检测到并提示用户
+        setCrashFlag(true)
 
         // 第 1 步: 初始化基础变量（必须在任何访问前）
         // 使用 synchronized 确保多进程场景下的安全
@@ -361,6 +509,27 @@ class OMasterApplication : Application() {
         }
 
         Log.i("OMasterApplication", StartupLogger.getReport())
+
+        // 启动时间验证：检查是否超过阈值并输出优化建议
+        val validation = StartupLogger.validateStartupTime()
+        if (validation.exceededThreshold) {
+            Log.w("OMasterApplication", "⚠️ 启动时间验证失败: 总耗时 ${validation.totalMs}ms > 阈值 ${validation.thresholdMs}ms")
+            Log.w("OMasterApplication", "建议优化以下耗时超过100ms的步骤:")
+            validation.slowSteps.forEach { slowStep ->
+                Log.w("OMasterApplication", "  - ${slowStep.step.name}: ${slowStep.step.durationMs}ms")
+                if (slowStep.suggestion != null) {
+                    Log.w("OMasterApplication", "    💡 ${slowStep.suggestion}")
+                }
+            }
+            if (validation.suggestions.isNotEmpty()) {
+                Log.w("OMasterApplication", "总体优化建议:")
+                validation.suggestions.forEach { suggestion ->
+                    Log.w("OMasterApplication", "  • $suggestion")
+                }
+            }
+        } else {
+            Log.i("OMasterApplication", "✅ 启动时间验证通过: ${validation.totalMs}ms <= ${validation.thresholdMs}ms")
+        }
     }
 
     /**
@@ -382,6 +551,18 @@ class OMasterApplication : Application() {
                     StartupLogger.logStep("SettingsManager预加载", SystemClock.elapsedRealtime() - lazyStart)
                 } catch (e: Throwable) {
                     Log.w("OMasterApplication", "SettingsManager预加载失败", e)
+                }
+
+                // 预加载预设缓存：提前初始化PresetRepository，减少首屏加载时间
+                try {
+                    val presetRepo = PresetRepository.getInstance(this@OMasterApplication)
+                    // 触发预设加载（从assets或本地缓存），只取第一个值
+                    presetRepo.getAllPresets().first().let { presets ->
+                        Log.i("OMasterApplication", "预设缓存预加载完成: ${presets.size} 条")
+                    }
+                    StartupLogger.logStep("PresetRepository预加载", SystemClock.elapsedRealtime() - lazyStart)
+                } catch (e: Throwable) {
+                    Log.w("OMasterApplication", "PresetRepository预加载失败", e)
                 }
 
                 // 预初始化 FaceDetectorSingleton（非关键，触发单例创建）
@@ -491,6 +672,62 @@ class OMasterApplication : Application() {
         }
     }
 
+    // v2.3.6 崩溃恢复：崩溃标记管理方法
+    /**
+     * 设置崩溃标记
+     * @param crashed true 表示应用处于"可能崩溃"状态，false 表示正常退出
+     */
+    fun setCrashFlag(crashed: Boolean) {
+        try {
+            if (prefs == null) {
+                prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            }
+            prefs?.edit()?.apply {
+                putBoolean(KEY_CRASH_FLAG, crashed)
+                if (crashed) {
+                    putLong(KEY_CRASH_TIMESTAMP, System.currentTimeMillis())
+                }
+            }?.apply()
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "setCrashFlag 失败", e)
+        }
+    }
+
+    /**
+     * 检查上次是否崩溃
+     * @return true 表示上次启动检测到崩溃标记
+     */
+    fun hadCrashLastRun(): Boolean {
+        return try {
+            val currentPrefs = prefs ?: getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            currentPrefs.getBoolean(KEY_CRASH_FLAG, false)
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "hadCrashLastRun 失败", e)
+            false
+        }
+    }
+
+    /**
+     * 获取上次崩溃时间戳
+     * @return 崩溃时间戳（毫秒），如果无记录返回 0
+     */
+    fun getLastCrashTimestamp(): Long {
+        return try {
+            val currentPrefs = prefs ?: getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            currentPrefs.getLong(KEY_CRASH_TIMESTAMP, 0L)
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "getLastCrashTimestamp 失败", e)
+            0L
+        }
+    }
+
+    /**
+     * 清除崩溃标记（应用正常退出时调用）
+     */
+    fun clearCrashFlag() {
+        setCrashFlag(false)
+    }
+
     /**
      * 检查统计开关是否开启
      */
@@ -548,6 +785,9 @@ class OMasterApplication : Application() {
      * 推荐在组件的生命周期回调中调用，而非依赖 onTerminate
      */
     fun releaseResources() {
+        // v2.3.6 崩溃恢复：应用正常退出时清除崩溃标记
+        clearCrashFlag()
+
         // 取消懒加载协程作用域
         try {
             lazyScope.cancel()

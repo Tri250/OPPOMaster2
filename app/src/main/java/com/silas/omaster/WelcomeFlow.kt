@@ -19,6 +19,11 @@ import com.silas.omaster.ui.detail.PrivacyPolicyScreen
  * 展示欢迎对话框，用户必须同意隐私政策才能进入主界面。
  * "查看隐私政策" 按钮在欢迎对话框和隐私政策详情页之间切换。
  *
+ * v2.3.6 安装验证：
+ *  - 首次启动显示"欢迎使用OMaster"欢迎语
+ *  - 显示应用版本信息（v2.3.6）
+ *  - 显示"安装成功"确认提示
+ *
  * 2.2.0 闪退修复：
  *  - onDisagree 改用 safeGetInstance()，避免 Application 未完全初始化时崩溃
  *  - LocalContext 用于在 OMasterApplication 未初始化时通过 SharedPreferences 直接操作
@@ -30,6 +35,16 @@ fun WelcomeFlow(
 ) {
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // v2.3.6 安装验证：检查是否首次启动
+    val prefs = remember {
+        context.getSharedPreferences("omaster_prefs", android.content.Context.MODE_PRIVATE)
+    }
+    val isFirstLaunch = remember {
+        // 首次启动 = 用户尚未同意隐私政策（即 user_agreed_to_policy 未设置）
+        !prefs.getBoolean("user_agreed_to_policy", false) &&
+        !prefs.getBoolean("first_launch_shown", false)
+    }
 
     // 处理系统返回键：使用 PredictiveBackHandler 支持 Android 16 预测性返回动画
     // 在隐私政策页时返回欢迎页
@@ -46,7 +61,20 @@ fun WelcomeFlow(
             )
         } else {
             WelcomeDialog(
-                onAgree = onAgree,
+                onAgree = {
+                    // v2.3.6 安装验证：标记首次启动已完成
+                    if (isFirstLaunch) {
+                        try {
+                            prefs.edit()
+                                .putBoolean("first_launch_shown", true)
+                                .putBoolean("install_verified", true)
+                                .apply()
+                        } catch (e: Throwable) {
+                            android.util.Log.e("WelcomeFlow", "保存首次启动标记失败", e)
+                        }
+                    }
+                    onAgree()
+                },
                 onDisagree = {
                     // 2.2.0 闪退修复：使用 safeGetInstance 替代 getInstance，
                     // 并在 Application 未初始化时通过 SharedPreferences 直接写入
@@ -67,7 +95,8 @@ fun WelcomeFlow(
                 },
                 onViewPrivacyPolicy = {
                     showPrivacyPolicy = true
-                }
+                },
+                isFirstLaunch = isFirstLaunch
             )
         }
     }

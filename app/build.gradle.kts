@@ -514,6 +514,9 @@ dependencies {
     // ProfileInstaller - 启动性能优化（ART 配置文件）
     implementation(libs.androidx.profileinstaller)
 
+    // SplashScreen - Android 12+ 启动画面过渡，消除白屏
+    implementation(libs.androidx.core.splashscreen)
+
     // WorkManager - 后台定期同步
     implementation(libs.androidx.work.runtime.ktx)
 

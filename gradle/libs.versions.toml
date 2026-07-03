@@ -55,6 +55,9 @@ datastore = "1.1.1"
 # ===== ProfileInstaller =====
 profileinstaller = "1.4.1"
 
+# ===== SplashScreen (Android 12+ 启动画面) =====
+splashscreen = "1.0.1"
+
 # ===== Firebase =====
 firebase-bom = "33.1.0"
 
@@ -150,6 +153,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 
 # ===== ProfileInstaller (ART 配置文件，启动性能优化) =====
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+
+# ===== SplashScreen (Android 12+ 启动画面) =====
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 
 # ===== Firebase =====
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }

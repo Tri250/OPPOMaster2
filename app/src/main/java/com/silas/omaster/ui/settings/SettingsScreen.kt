@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.AlertDialog
@@ -86,6 +87,7 @@ import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.infrastructure.utils.HapticSettings
 import com.silas.omaster.infrastructure.utils.ImageCacheManager
 import com.silas.omaster.infrastructure.utils.perform
+import com.silas.omaster.StartupLogger
 import android.widget.Toast
 
 @Composable
@@ -122,6 +124,9 @@ fun SettingsScreen(
 
     // 自定义设备型号（UC-09 / UC-28）
     var customDeviceModel by remember { mutableStateOf(settingsManager.customDeviceModel) }
+
+    // 启动性能报告对话框
+    var showStartupReportDialog by remember { mutableStateOf(false) }
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -462,6 +467,16 @@ fun SettingsScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
 
+            // 开发者选项：启动性能报告
+            SettingsClickableItem(
+                icon = Icons.Default.Speed,
+                title = "启动性能报告",
+                subtitle = "查看启动耗时和优化建议",
+                onClick = { showStartupReportDialog = true }
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+
             SettingsClickableItem(
                 icon = Icons.Default.SettingsEthernet,
                 title = stringResource(R.string.api_config_title),
@@ -585,6 +600,13 @@ fun SettingsScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 textContentColor = MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        // Startup Performance Report Dialog
+        if (showStartupReportDialog) {
+            StartupPerformanceReportDialog(
+                onDismiss = { showStartupReportDialog = false }
             )
         }
 
@@ -967,6 +989,157 @@ fun DarkModeDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onBackground
+    )
+}
+
+/**
+ * 启动性能报告对话框
+ * 显示每个初始化步骤的耗时和优化建议
+ */
+@Composable
+private fun StartupPerformanceReportDialog(
+    onDismiss: () -> Unit
+) {
+    val validation = StartupLogger.validateStartupTime()
+    val steps = StartupLogger.getSteps()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "启动性能报告")
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // 总耗时和状态
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "总耗时: ${validation.totalMs}ms",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = if (validation.exceededThreshold) "⚠️ 超过阈值" else "✅ 符合目标",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (validation.exceededThreshold)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Text(
+                    text = "目标阈值: ${validation.thresholdMs}ms",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 各步骤耗时详情
+                Text(
+                    text = "初始化步骤详情",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                steps.forEach { step ->
+                    val isSlow = step.durationMs > 100
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = if (isSlow) "🔴" else "✅",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = step.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                        }
+                        Text(
+                            text = "${step.durationMs}ms",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isSlow)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    // 显示优化建议
+                    if (isSlow) {
+                        val suggestion = when {
+                            step.name.contains("CrashHandler") -> "建议延迟到后台线程初始化"
+                            step.name.contains("Sentry") -> "可配置异步初始化"
+                            step.name.contains("安全") -> "已在后台协程执行"
+                            step.name.contains("SettingsManager") -> "使用内存缓存避免同步IO"
+                            step.name.contains("PresetRepository") -> "考虑按需加载预设"
+                            step.name.contains("FaceDetector") -> "ML Kit模型加载较慢"
+                            step.name.contains("WorkManager") -> "后台调度，已在协程执行"
+                            else -> "检查阻塞操作"
+                        }
+                        Text(
+                            text = "💡 $suggestion",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF666666),
+                            modifier = Modifier.padding(start = 24.dp)
+                        )
+                    }
+                }
+
+                // 优化建议列表
+                if (validation.suggestions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "优化建议",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    validation.suggestions.forEach { suggestion ->
+                        Text(
+                            text = "• $suggestion",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
             }
         },
         containerColor = MaterialTheme.colorScheme.surfaceVariant,

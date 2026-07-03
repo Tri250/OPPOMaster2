@@ -429,7 +429,9 @@
 
     <!-- Welcome Dialog -->
     <string name="welcome_dialog_title">Welcome to OMaster</string>
-    <string name="welcome_version">OMaster v1.3.1</string>
+    <string name="welcome_version">OMaster v2.3.6</string>
+    <string name="install_success_title">Installation Successful</string>
+    <string name="install_success_desc">Thank you for installing OMaster, start your professional photography journey</string>
     <string name="feature_1_title">Pro Parameters</string>
     <string name="feature_1_desc">View master color grading parameters for Hasselblad, Leica, Fujifilm and more</string>
     <string name="feature_2_title">Multiple Styles</string>
@@ -441,6 +443,14 @@
     <string name="privacy_hint">Tap User Agreement &amp; Privacy Policy to view details</string>
     <string name="disagree">Disagree</string>
     <string name="agree_and_start">Agree &amp; Start</string>
+
+    <!-- Crash Recovery Dialog -->
+    <string name="crash_recovery_title">App Crashed</string>
+    <string name="crash_recovery_desc">Detected abnormal exit last time. Clearing cache and restarting is recommended</string>
+    <string name="crash_recovery_clear_cache">Clear Cache &amp; Restart</string>
+    <string name="crash_recovery_ignore">Ignore &amp; Continue</string>
+    <string name="crash_recovery_clearing">Clearing cache…</string>
+    <string name="crash_recovery_restart">Restarting app</string>
 
     <!-- Floating Window Guide Dialog -->
     <string name="floating_guide_title">Enable Floating Window</string>

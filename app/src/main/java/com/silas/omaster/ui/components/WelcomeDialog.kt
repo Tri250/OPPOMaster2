@@ -48,7 +48,8 @@ fun WelcomeDialog(
     onAgree: () -> Unit,
     onDisagree: () -> Unit,
     onViewPrivacyPolicy: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFirstLaunch: Boolean = false // v2.3.6 安装验证：首次启动标记
 ) {
     val scope = rememberCoroutineScope()
     var agreedToPolicy by remember { mutableStateOf(false) }
@@ -77,6 +78,36 @@ fun WelcomeDialog(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(modifier = Modifier.height(48.dp))
+
+                    // v2.3.6 安装验证：首次启动显示安装成功提示
+                    if (isFirstLaunch) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.install_success_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.install_success_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     Text(
                         text = stringResource(R.string.welcome_dialog_title),
