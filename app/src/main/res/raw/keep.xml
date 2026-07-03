@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- safe 模式：保留所有被代码引用的资源，仅移除确认未使用的资源 -->
+<!-- 修复 v2.3.0 闪退：strict 模式过于激进，会移除通过 getIdentifier() 动态引用的资源 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@string/*,@drawable/ic_launcher*,@drawable/ic_launcher_foreground,@drawable/ic_launcher_background,@mipmap/*,@raw/hasselblad_aperture_*,@raw/*_shader"
-    tools:discard="@string/abx_*,@string/cronet_*,@string/grpc_*,@string/flutter_*"
-    tools:shrinkMode="strict" />
+    tools:keep="@string/*,@drawable/ic_launcher*,@drawable/ic_launcher_foreground,@drawable/ic_launcher_background,@mipmap/*"
+    tools:discard="@string/abx_*,@string/cronet_*,@string/grpc_*,@string/flutter_*" />

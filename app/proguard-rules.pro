@@ -192,10 +192,19 @@
 -keepclassmembers class kotlinx.serialization.json.** { *; }
 
 # @Serializable 类的 $$serializer（编译器插件生成，反序列化入口）
+# 修复 v2.3.0 闪退：补全所有包含 @Serializable 类的包
 -keep class com.silas.omaster.model.**$$serializer { *; }
 -keep class com.silas.omaster.data.model.**$$serializer { *; }
+-keep class com.silas.omaster.data.watermark.**$$serializer { *; }
 -keep class com.silas.omaster.renderer.**$$serializer { *; }
 -keep class com.silas.omaster.watermark.**$$serializer { *; }
+-keep class com.silas.omaster.cloud.**$$serializer { *; }
+-keep class com.silas.omaster.billing.**$$serializer { *; }
+-keep class com.silas.omaster.ai.mapping.**$$serializer { *; }
+-keep class com.silas.omaster.ai.scene.**$$serializer { *; }
+-keep class com.silas.omaster.trailsnap.model.**$$serializer { *; }
+# 兜底：捕获未来新增包中的 @Serializable 类
+-keep class com.silas.omaster.**$$serializer { *; }
 
 # @Serializable 类的 Companion 对象（提供 serializer() 函数入口）
 -keepclassmembers class com.silas.omaster.model.** {
@@ -204,24 +213,34 @@
 -keepclassmembers class com.silas.omaster.data.model.** {
     *** Companion;
 }
+-keepclassmembers class com.silas.omaster.data.watermark.** {
+    *** Companion;
+}
 -keepclassmembers class com.silas.omaster.renderer.** {
     *** Companion;
 }
 -keepclassmembers class com.silas.omaster.watermark.** {
     *** Companion;
 }
+-keepclassmembers class com.silas.omaster.cloud.** {
+    *** Companion;
+}
+-keepclassmembers class com.silas.omaster.billing.** {
+    *** Companion;
+}
+-keepclassmembers class com.silas.omaster.ai.mapping.** {
+    *** Companion;
+}
+-keepclassmembers class com.silas.omaster.ai.scene.** {
+    *** Companion;
+}
+# 兜底：所有项目包中的 Companion 对象
+-keepclassmembers class com.silas.omaster.** {
+    *** Companion;
+}
 
 # 保留包含 serializer() 方法的类及其成员（确保序列化字段名不被混淆）
--keepclasseswithmembers class com.silas.omaster.model.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
--keepclasseswithmembers class com.silas.omaster.data.model.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
--keepclasseswithmembers class com.silas.omaster.renderer.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
--keepclasseswithmembers class com.silas.omaster.watermark.** {
+-keepclasseswithmembers class com.silas.omaster.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
@@ -382,6 +401,10 @@
 -keep class com.silas.omaster.video.VideoFilterEngine { *; }
 -keep class com.silas.omaster.video.VideoFilterEngine$ProcessProgress { *; }
 -keep class com.silas.omaster.video.VideoFilterEngine$ProcessResult { *; }
+
+# 悬浮窗控制器（修复 v2.3.0 闪退：反射访问 isRegistered 字段）
+-keep class com.silas.omaster.ui.service.FloatingWindowController { *; }
+-keep class com.silas.omaster.ui.service.FloatingWindowService { *; }
 
 # 注意：R8 优化配置已在上方"P2-12 修复"段落统一管理
 # 此处不再重复声明，避免 -optimizationpasses / -mergeinterfacesaggressively 冲突

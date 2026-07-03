@@ -28,6 +28,12 @@ class FloatingWindowController private constructor(private val context: Context)
     @Volatile
     private var isRegistered = false
 
+    /**
+     * 检查悬浮窗是否已注册
+     * 修复 v2.3.0 闪退：提供公开 API 替代 MainActivity 中的反射访问
+     */
+    fun isRegistered(): Boolean = isRegistered
+
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             try {
