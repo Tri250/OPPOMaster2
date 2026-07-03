@@ -1,0 +1,83 @@
+# OMaster Baseline Profile
+# 基准配置文件，用于改善应用启动和关键用户路径的性能
+#
+# 此文件定义了在安装时应预先编译（AOT）的类和方法，
+# 以减少应用启动时的JIT编译开销。
+#
+# 生成方式：使用 Macrobenchmark 库自动生成
+# 手动维护：可手动添加关键启动路径的类
+
+# === Application & Entry Points ===
+Lcom/silas/omaster/OMasterApplication
+Lcom/silas/omaster/MainActivity
+Lcom/silas/omaster/InitializationProvider
+
+# === Core Application Classes ===
+Lcom/silas/omaster/AppNavigation
+Lcom/silas/omaster/Screen
+Lcom/silas/omaster/ui/home/HomeScreen
+Lcom/silas/omaster/ui/home/HomeViewModel
+
+# === Theme & UI Core ===
+Lcom/silas/omaster/ui/theme/ThemeKt
+Lcom/silas/omaster/ui/theme/ColorKt
+Lcom/silas/omaster/ui/theme/TypeKt
+Lcom/silas/omaster/ui/theme/AppThemeKt
+
+# === Data Layer ===
+Lcom/silas/omaster/data/repository/PresetRepository
+Lcom/silas/omaster/data/settings/SettingsManager
+Lcom/silas/omaster/data/lut/LUTManager
+
+# === Utils ===
+Lcom/silas/omaster/util/CrashHandler
+Lcom/silas/omaster/util/SecurityCrypto
+Lcom/silas/omaster/util/FormatUtils
+Lcom/silas/omaster/util/PerformanceMonitor
+Lcom/silas/omaster/util/AnalyticsManager
+
+# === Compose Runtime (for faster first composition) ===
+Landroidx/compose/runtime/ComposerImpl
+Landroidx/compose/runtime/Recomposer
+Landroidx/compose/ui/platform/AndroidComposeView
+
+# === Material3 Components ===
+Landroidx/compose/material3/MaterialTheme
+Landroidx/compose/material3/Scaffold
+Landroidx/compose/material3/ButtonKt
+Landroidx/compose/material3/TextFieldKt
+Landroidx/compose/material3/CardKt
+
+# === Lifecycle ===
+Landroidx/lifecycle/viewmodel/compose/ViewModelKt
+Landroidx/lifecycle/runtime/compose/LifecycleKt
+
+# === Coroutines ===
+Lkotlinx/coroutines/android/AndroidDispatcherKt
+Lkotlinx/coroutines/CoroutineScopeKt
+
+# === Coil (Image Loading) ===
+Lcoil/ImageLoader
+Lcoil/request/ImageRequest
+Lcoil/compose/AsyncImageKt
+
+# === Ktor (Network) ===
+Lio/ktor/client/HttpClient
+Lio/ktor/client/engine/android/AndroidEngine
+
+# === Navigation ===
+Landroidx/navigation/compose/NavHostKt
+Landroidx/navigation/NavController
+
+# === Key Methods for Startup ===
+HSPLcom/silas/omaster/OMasterApplication;->onCreate()V
+HSPLcom/silas/omaster/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/silas/omaster/ui/home/HomeViewModel;-><init>()V
+
+# === Settings & Preferences ===
+Landroidx/datastore/core/DataStore
+Landroidx/datastore/preferences/core/PreferencesSerializer
+
+# === JSON & Serialization ===
+Lkotlinx/serialization/json/Json
+Lkotlinx/serialization/encoding/Decoder

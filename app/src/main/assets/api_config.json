@@ -1,0 +1,6 @@
+{
+  "aiApiEndpoint": "https://api.omaster.app/ai",
+  "presetApiEndpoint": "https://api.omaster.app/presets",
+  "authApiEndpoint": "https://api.omaster.app/auth",
+  "apiVersion": "v1"
+}

@@ -1,0 +1,503 @@
+package com.silas.omaster.ui.home
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.MasterPreset
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+
+/**
+ * 排序类型枚举（对齐Web端）
+ */
+enum class SortType {
+    NEWEST,     // 最新
+    POPULAR,    // 最热
+    RATING      // 评分
+}
+
+/**
+ * 主页 ViewModel
+ * 管理预设列表、收藏、Tab状态、品牌筛选、排序和搜索（对齐Web端）
+ *
+ * 修复：
+ * 1. 使用 Job 管理协程，避免重复收集
+ * 2. refresh() 现在会取消旧任务并重新收集
+ */
+class HomeViewModel(
+    private val repository: PresetRepository
+) : ViewModel() {
+
+    // 所有预设
+    private val _allPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
+    val allPresets: StateFlow<List<MasterPreset>> = _allPresets.asStateFlow()
+
+    // 收藏的预设
+    private val _favorites = MutableStateFlow<List<MasterPreset>>(emptyList())
+    val favorites: StateFlow<List<MasterPreset>> = _favorites.asStateFlow()
+
+    // 自定义预设（保留Android原生功能）
+    private val _customPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
+    val customPresets: StateFlow<List<MasterPreset>> = _customPresets.asStateFlow()
+
+    // 当前选中的 Tab（对齐Web端：0=发现, 1=收藏, 2=哈苏, 3=上新, 4=我的）
+    private val _selectedTab = MutableStateFlow(0)
+    val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    // 当前选中的品牌（对齐Web端）
+    private val _selectedBrand = MutableStateFlow("all")
+    val selectedBrand: StateFlow<String> = _selectedBrand.asStateFlow()
+
+    // 当前选中的风格标签（PM-02: 风格/场景二级筛选）
+    private val _selectedStyle = MutableStateFlow("all")
+    val selectedStyle: StateFlow<String> = _selectedStyle.asStateFlow()
+
+    // 当前选中的场景标签（PM-02: 风格/场景二级筛选）
+    private val _selectedScene = MutableStateFlow("all")
+    val selectedScene: StateFlow<String> = _selectedScene.asStateFlow()
+
+    // 当前排序方式（对齐Web端）
+    private val _sortType = MutableStateFlow(SortType.NEWEST)
+    val sortType: StateFlow<SortType> = _sortType.asStateFlow()
+
+    // 搜索关键词（对齐Web端）
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // 加载状态
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // 错误状态
+    private val _errorState = MutableStateFlow<String?>(null)
+    val errorState: StateFlow<String?> = _errorState.asStateFlow()
+
+    // 搜索历史
+    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+    val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
+
+    // 用于管理收集任务的 Job
+    private var allPresetsJob: Job? = null
+    private var favoritesJob: Job? = null
+    private var customPresetsJob: Job? = null
+
+    // P7: 多选批量操作
+    private val _isMultiSelectMode = MutableStateFlow(false)
+    val isMultiSelectMode: StateFlow<Boolean> = _isMultiSelectMode.asStateFlow()
+
+    private val _selectedPresetIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedPresetIds: StateFlow<Set<String>> = _selectedPresetIds.asStateFlow()
+    private var searchHistoryJob: Job? = null
+
+    init {
+        loadPresets()
+    }
+
+    /**
+     * 加载所有预设数据
+     * 修复：先取消旧任务，再启动新任务，避免重复收集
+     */
+    private fun loadPresets() {
+        // 取消之前的收集任务
+        allPresetsJob?.cancel()
+        favoritesJob?.cancel()
+        customPresetsJob?.cancel()
+        searchHistoryJob?.cancel()
+
+        _isLoading.value = true
+
+        // 启动新的收集任务
+        allPresetsJob = viewModelScope.launch {
+            try {
+                repository.getAllPresets().collect { presets ->
+                    ensureActive()
+                    _allPresets.value = presets
+                    _isLoading.value = false
+                    _errorState.value = null
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // 协程被取消时不更新状态
+                throw e
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _errorState.value = "加载失败: ${e.message}"
+            }
+        }
+
+        favoritesJob = viewModelScope.launch {
+            try {
+                repository.getFavoritePresets().collect { favorites ->
+                    ensureActive()
+                    _favorites.value = favorites
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "加载收藏失败: ${e.message}"
+            }
+        }
+
+        customPresetsJob = viewModelScope.launch {
+            try {
+                repository.getCustomPresets().collect { custom ->
+                    ensureActive()
+                    _customPresets.value = custom
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "加载自定义预设失败: ${e.message}"
+            }
+        }
+
+        searchHistoryJob = viewModelScope.launch {
+            try {
+                repository.searchHistory.collect { history ->
+                    ensureActive()
+                    _searchHistory.value = history
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 搜索历史加载失败不阻断主流程
+            }
+        }
+    }
+
+    /**
+     * 切换 Tab（对齐Web端）
+     */
+    fun selectTab(index: Int) {
+        _selectedTab.value = index
+    }
+
+    /**
+     * 切换品牌筛选（对齐Web端）
+     */
+    fun selectBrand(brand: String) {
+        _selectedBrand.value = brand
+        // 品牌切换时重置风格和场景筛选
+        _selectedStyle.value = "all"
+        _selectedScene.value = "all"
+    }
+
+    /**
+     * 切换风格标签筛选（PM-02）
+     */
+    fun selectStyle(style: String) {
+        _selectedStyle.value = style
+        // 风格切换时重置场景筛选
+        _selectedScene.value = "all"
+    }
+
+    /**
+     * 切换场景标签筛选（PM-02）
+     */
+    fun selectScene(scene: String) {
+        _selectedScene.value = scene
+    }
+
+    /**
+     * 切换排序方式（对齐Web端）
+     */
+    fun setSortType(sortType: SortType) {
+        _sortType.value = sortType
+    }
+
+    /**
+     * 设置搜索关键词（对齐Web端）
+     */
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    /**
+     * 获取过滤后的预设列表（对齐Web端）
+     * 修复：增加空安全检查，防止预设列表为null时崩溃
+     */
+    fun getFilteredPresets(): List<MasterPreset> {
+        val baseList = _allPresets.value
+        var result = baseList.toList()
+
+        // Tab 过滤
+        when (_selectedTab.value) {
+            1 -> result = result.filter { it.isFavorite } // 收藏
+            2 -> result = result.filter { it.isHncs }     // 哈苏
+            3 -> result = result.filter { it.isNew }      // 上新
+            4 -> result = _customPresets.value // 我的（自定义预设）
+        }
+
+        // 品牌过滤
+        val currentBrand = _selectedBrand.value
+        if (currentBrand != "all") {
+            result = result.filter { it.brand == currentBrand }
+        }
+
+        // PM-02: 风格标签过滤
+        val currentStyle = _selectedStyle.value
+        if (currentStyle != "all") {
+            result = result.filter { preset ->
+                val tags = preset.tags ?: emptyList()
+                matchesStyleTag(currentStyle, tags)
+            }
+        }
+
+        // PM-02: 场景标签过滤
+        val currentScene = _selectedScene.value
+        if (currentScene != "all") {
+            result = result.filter { preset ->
+                val tags = preset.tags ?: emptyList()
+                matchesSceneTag(currentScene, tags)
+            }
+        }
+
+        // 搜索过滤
+        val currentQuery = _searchQuery.value
+        if (currentQuery.isNotEmpty()) {
+            val query = currentQuery.lowercase()
+            result = result.filter { preset ->
+                preset.name.lowercase().contains(query) ||
+                preset.author.lowercase().contains(query) ||
+                preset.tags?.any { it.lowercase().contains(query) } == true
+            }
+        }
+
+        // 排序
+        result = when (_sortType.value) {
+            SortType.NEWEST -> result.sortedByDescending { it.isNew }
+            SortType.POPULAR -> result.sortedByDescending { it.downloads ?: 0 }
+            SortType.RATING -> result.sortedByDescending { it.rating ?: 0f }
+        }
+
+        return result
+    }
+
+    /**
+     * PM-02: 风格标签匹配（UC-01: 新增 复古、清新 匹配逻辑）
+     */
+    private fun matchesStyleTag(style: String, tags: List<String>): Boolean {
+        val styleKeywords = when (style) {
+            "胶片" -> listOf("胶片", "film", "NC", "CC")
+            "人像" -> listOf("人像", "portrait")
+            "风景" -> listOf("风景", "landscape")
+            "街拍" -> listOf("街拍", "street")
+            "黑白" -> listOf("黑白", "BW", "mono")
+            "复古" -> listOf("复古", "retro", "vintage")
+            "清新" -> listOf("清新", "fresh", "clear")
+            else -> emptyList()
+        }
+        return tags.any { tag ->
+            styleKeywords.any { keyword ->
+                tag.contains(keyword, ignoreCase = true)
+            }
+        }
+    }
+
+    /**
+     * PM-02: 场景标签匹配（UC-01: 新增 人像、风光、街拍 匹配逻辑）
+     */
+    private fun matchesSceneTag(scene: String, tags: List<String>): Boolean {
+        val sceneKeywords = when (scene) {
+            "室内" -> listOf("室内", "indoor")
+            "户外" -> listOf("户外", "outdoor")
+            "夜景" -> listOf("夜景", "night")
+            "逆光" -> listOf("逆光", "backlight")
+            "阴天" -> listOf("阴天", "overcast")
+            "人像" -> listOf("人像", "portrait")
+            "风光" -> listOf("风光", "landscape", "风景")
+            "街拍" -> listOf("街拍", "street")
+            else -> emptyList()
+        }
+        return tags.any { tag ->
+            sceneKeywords.any { keyword ->
+                tag.contains(keyword, ignoreCase = true)
+            }
+        }
+    }
+
+    /**
+     * 获取Tab计数（对齐Web端）
+     */
+    fun getTabCount(tabIndex: Int): Int {
+        return when (tabIndex) {
+            0 -> _allPresets.value.size      // 发现
+            1 -> _favorites.value.size       // 收藏
+            2 -> _allPresets.value.filter { it.isHncs }.size  // 哈苏
+            3 -> _allPresets.value.filter { it.isNew }.size   // 上新
+            4 -> _customPresets.value.size   // 我的
+            else -> 0
+        }
+    }
+
+    /**
+     * 切换收藏状态
+     */
+    fun toggleFavorite(presetId: String) {
+        viewModelScope.launch {
+            try {
+                repository.toggleFavorite(presetId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "操作失败: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * 删除自定义预设
+     */
+    fun deleteCustomPreset(presetId: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteCustomPreset(presetId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "删除失败: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * 清空搜索历史
+     */
+    fun clearSearchHistory() {
+        repository.clearSearchHistory()
+    }
+
+    /**
+     * 刷新数据
+     * 修复：使用 forceReloadFromFiles 强制从文件重新加载，避免内存缓存非空导致数据不更新
+     */
+    fun refresh(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.forceReloadFromFiles()
+                loadPresets()
+                _errorState.value = null
+                onComplete()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorState.value = "刷新失败: ${e.message}"
+                onComplete()
+            }
+        }
+    }
+
+    /**
+     * 重试加载
+     */
+    fun retry() {
+        _errorState.value = null
+        refresh()
+    }
+
+    // ===== 测试辅助方法（仅供单测访问，不参与生产路径） =====
+    internal fun setInternalPresets(list: List<MasterPreset>) {
+        _allPresets.value = list
+    }
+
+    internal fun setInternalFavorites(list: List<MasterPreset>) {
+        _favorites.value = list
+    }
+
+    internal fun setInternalCustomPresets(list: List<MasterPreset>) {
+        _customPresets.value = list
+    }
+
+    internal fun setInternalError(message: String?) {
+        _errorState.value = message
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // 清理时取消所有任务
+        allPresetsJob?.cancel()
+        favoritesJob?.cancel()
+        customPresetsJob?.cancel()
+        searchHistoryJob?.cancel()
+    }
+// P7: 多选批量操作方法
+
+    fun toggleMultiSelectMode() {
+        _isMultiSelectMode.value = !_isMultiSelectMode.value
+        if (!_isMultiSelectMode.value) {
+            _selectedPresetIds.value = emptySet()
+        }
+    }
+
+    fun toggleSelection(id: String) {
+        val current = _selectedPresetIds.value.toMutableSet()
+        if (current.contains(id)) {
+            current.remove(id)
+        } else {
+            current.add(id)
+        }
+        _selectedPresetIds.value = current
+    }
+
+    fun selectAll() {
+        _selectedPresetIds.value = _allPresets.value
+            .filter { !it.isCustom }
+            .mapNotNull { it.id }
+            .toSet()
+    }
+
+    fun deselectAll() {
+        _selectedPresetIds.value = emptySet()
+    }
+
+    fun batchDelete() {
+        viewModelScope.launch {
+            val ids = _selectedPresetIds.value.toList()
+            for (id in ids) {
+                repository.softDeletePreset(id)
+            }
+            _selectedPresetIds.value = emptySet()
+            _isMultiSelectMode.value = false
+        }
+    }
+
+    fun batchExport() {
+        viewModelScope.launch {
+            val ids = _selectedPresetIds.value
+            val presets = _allPresets.value.filter { it.id in ids }
+            val json = presets.joinToString(",\n") { preset ->
+                """
+                {
+                    "id": "${preset.id}",
+                    "name": "${preset.name}",
+                    "brand": "${preset.brand}",
+                    "params": ${preset.params}
+                }
+                """.trimIndent()
+            }.let { "[\n$it\n]" }
+            android.util.Log.d("HomeViewModel", "批量导出预设: $json")
+            _selectedPresetIds.value = emptySet()
+            _isMultiSelectMode.value = false
+        }
+    }
+}
+
+/**
+ * HomeViewModel 工厂
+ */
+class HomeViewModelFactory(
+    private val repository: PresetRepository
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+            return HomeViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}

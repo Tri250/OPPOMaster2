@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "files": [
+    "recipes_portrait.json",
+    "recipes_scene.json",
+    "recipes_cinematic.json",
+    "recipes_special.json"
+  ],
+  "categories": [
+    {
+      "id": "portrait",
+      "name": "人像",
+      "file": "recipes_portrait.json",
+      "count": 10,
+      "icon": "portrait"
+    },
+    {
+      "id": "environment",
+      "name": "场景",
+      "file": "recipes_scene.json",
+      "count": 10,
+      "icon": "landscape"
+    },
+    {
+      "id": "cinematic",
+      "name": "电影感",
+      "file": "recipes_cinematic.json",
+      "count": 8,
+      "icon": "movie"
+    },
+    {
+      "id": "special_optic",
+      "name": "特殊光学",
+      "file": "recipes_special.json",
+      "count": 7,
+      "icon": "flare"
+    }
+  ]
+}
