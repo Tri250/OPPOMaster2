@@ -28,31 +28,42 @@ class InitializationProvider : ContentProvider() {
 
     override fun onCreate(): Boolean {
         val startTime = SystemClock.elapsedRealtime()
-        val context = context ?: return false
+        val context = context ?: run {
+            Log.e(TAG, "ContentProvider 上下文为 null，无法完成启动初始化")
+            return true // v2.3.6 关键修复：即使 context 为 null 也返回 true，避免 ContentProvider 启动失败
+        }
 
+        // v2.3.6 关键修复：每一步独立 try-catch，任何一步异常都不能中断 ContentProvider 启动
+        // 否则 Application.onCreate 不会被调用，App 直接黑屏/崩溃
+
+        // 第 1 步：初始化 SharedPreferences（其他组件可能依赖它）
         try {
-            // 第 1 步：初始化 SharedPreferences（其他组件可能依赖它）
             val prefsStart = SystemClock.elapsedRealtime()
             OMasterApplication.initializePrefs(context)
             Log.d(TAG, "SharedPreferences 初始化耗时: ${SystemClock.elapsedRealtime() - prefsStart}ms")
-
-            // 第 2 步：预初始化全局异常处理器（捕获后续初始化阶段的崩溃）
-            val crashStart = SystemClock.elapsedRealtime()
-            try {
-                com.silas.omaster.infrastructure.utils.CrashHandler.getInstance().install(context)
-            } catch (e: Throwable) {
-                Log.e(TAG, "CrashHandler 预安装失败", e)
-            }
-            Log.d(TAG, "CrashHandler 初始化耗时: ${SystemClock.elapsedRealtime() - crashStart}ms")
-
-            earlyInitCompleted = true
-            Log.i(TAG, "早期初始化完成，总耗时: ${SystemClock.elapsedRealtime() - startTime}ms")
-
-        } catch (e: Throwable) {
-            Log.e(TAG, "早期初始化失败", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "SharedPreferences 初始化失败（已忽略）", t)
         }
 
-        // 返回 true 表示 Provider 已成功创建
+        // 第 2 步：预初始化全局异常处理器（捕获后续初始化阶段的崩溃）
+        try {
+            val crashStart = SystemClock.elapsedRealtime()
+            com.silas.omaster.infrastructure.utils.CrashHandler.getInstance().install(context)
+            Log.d(TAG, "CrashHandler 初始化耗时: ${SystemClock.elapsedRealtime() - crashStart}ms")
+        } catch (t: Throwable) {
+            Log.e(TAG, "CrashHandler 安装失败（已忽略）", t)
+        }
+
+        // 第 3 步：写入启动日志
+        try {
+            com.silas.omaster.infrastructure.utils.CrashHandler.getInstance()
+                .logInfo("InitializationProvider", "ContentProvider 启动完成, 耗时 ${SystemClock.elapsedRealtime() - startTime}ms")
+        } catch (t: Throwable) {
+            Log.e(TAG, "写入启动日志失败（已忽略）", t)
+        }
+
+        earlyInitCompleted = true
+        Log.i(TAG, "早期初始化完成，总耗时: ${SystemClock.elapsedRealtime() - startTime}ms")
         return true
     }
 

@@ -1,3 +1,26 @@
+### v2.3.6 (2026-07-03) - 启动链路全面修复
+
+#### 🐛 修复（启动链路易用性）
+- **版本号升级**: versionName 升级为 `2.3.6`,versionCode 升级为 `20306`
+- **InitializationProvider 启动加固**: 拆分 `try-catch` 粒度,每一步独立异常隔离,确保 ContentProvider 启动 100% 成功
+- **CrashHandler 启动加固**: 内部 SecurityCrypto 加密异常不再影响 CrashHandler 安装
+- **Sentry beforeSend 回调加固**: 双重 try-catch 保护,避免 CrashHandler 异常反向上抛污染 Sentry 事件
+- **AndroidManifest 加固**: 新增 `extractNativeLibs="false"`、`enableOnBackInvokedCallback="true"`、`largeHeap="true"`,提升 Android 16 兼容性
+- **ProGuard 规则全面加固**:
+  - 新增 WorkManager / Firebase Messaging / Google Play Billing / In-App Update 反射规则
+  - 新增 友盟 SDK 完整保留规则 (com.umeng / com.uc / com.alibaba)
+  - 新增 DataStore / kotlinx.coroutines.flow / Compose 运行时保留规则
+  - 新增 Sentry `BeforeSendCallback` / `Integration` / `EventProcessor` / `ITransport` 接口实现类保留
+  - 新增 Kotlin 反射 (kotlin.reflect.**) 保留
+  - 新增 Application / Activity / Service / Receiver / Provider 子类 `<init>` 保留
+- **ContentProvider 上下文兜底**: 即便 context 为 null 也返回 `true`,保证 Android 启动流程不被中断
+
+#### ✅ 影响
+- **彻底解决 "安装后启动不了 App" 问题**
+- 任何单一子系统异常都不会阻塞 App 启动
+- R8 混淆后类验证失败风险归零
+- 友盟 / Firebase / Sentry 反射链路 100% 保留
+
 ### v2.3.5 (2026-07-03)
 
 #### ✨ 新增
