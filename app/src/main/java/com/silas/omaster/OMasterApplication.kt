@@ -219,9 +219,19 @@ class OMasterApplication : Application() {
                     // 设置发布版本
                     options.release = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
                     // 在崩溃前添加面包屑（CrashHandler 的异常信息）
+                    // v2.3.6 关键修复：beforeSend 回调加双重 try-catch，
+                    // 防止 CrashHandler 自身异常反向上抛污染 Sentry 事件链路
                     options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
-                        // 标记崩溃是否已被 CrashHandler 处理
-                        event.setTag("crash_handler_installed", CrashHandler.getInstance().isInstalled().toString())
+                        try {
+                            val installed = try {
+                                CrashHandler.getInstance().isInstalled()
+                            } catch (t: Throwable) {
+                                false
+                            }
+                            event.setTag("crash_handler_installed", installed.toString())
+                        } catch (t: Throwable) {
+                            // 兜底：setTag 失败也不能影响事件正常上报
+                        }
                         event
                     }
                 }

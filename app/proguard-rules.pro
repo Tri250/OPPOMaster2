@@ -7,6 +7,30 @@
 -keepattributes *Annotation*
 -keepattributes InnerClasses
 -keepattributes EnclosingMethod
+-keepattributes Exceptions
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes RuntimeVisibleTypeAnnotations
+
+# ========================================
+# v2.3.6 启动失败兜底：避免 R8 过度优化导致 Application/Activity 类验证失败
+# ========================================
+# 保留所有 Application、Activity、Service、Receiver、Provider 子类的 <init>
+-keepclassmembers class * extends android.app.Application {
+    public <init>();
+}
+-keepclassmembers class * extends android.app.Activity {
+    public <init>();
+}
+-keepclassmembers class * extends android.app.Service {
+    public <init>();
+}
+-keepclassmembers class * extends android.content.BroadcastReceiver {
+    public <init>();
+}
+-keepclassmembers class * extends android.content.ContentProvider {
+    public <init>();
+}
 
 # ========================================
 # Kotlin 基础规则
@@ -14,6 +38,11 @@
 -keep class kotlin.Metadata { *; }
 -keepclassmembers class kotlin.Metadata { *; }
 -dontwarn kotlin.**
+
+# Kotlin 反射（部分 SDK 通过反射调用 Kotlin 内部 API）
+-keep class kotlin.reflect.** { *; }
+-keepclassmembers class kotlin.reflect.** { *; }
+-dontwarn kotlin.reflect.**
 
 # Kotlin 协程 — 收敛到字段级别
 -keepclassmembers class kotlinx.coroutines.** {
@@ -388,6 +417,46 @@
 -keepattributes LineNumberTable,SourceFile
 -keep class com.silas.omaster.infrastructure.utils.CrashHandler$CrashListener { *; }
 
+# v2.3.6 关键：Sentry 的 lambda 回调（beforeSend/BeforeSendCallback）会被 R8 优化导致运行时 NoSuchMethodError
+# 保留所有实现 Sentry 回调接口的类
+-keep class * implements io.sentry.SentryOptions$BeforeSendCallback { *; }
+-keep class * implements io.sentry.SentryOptions$Integration { *; }
+-keep class * implements io.sentry.EventProcessor { *; }
+-keep class * implements io.sentry.transport.ITransport { *; }
+-keep class * implements io.sentry.transport.ITransportFactory { *; }
+# Sentry Android 核心（通过反射加载）
+-keep class io.sentry.android.core.** { *; }
+-keep class io.sentry.android.fragment.** { *; }
+-keep class io.sentry.android.timber.** { *; }
+
+# ========================================
+# v2.3.6 关键：DataStore Preferences 序列化
+# ========================================
+# DataStore 在运行时通过反射读取 Preferences.Key，反混淆后 Key 名称变更会导致反序列化失败
+-keep class androidx.datastore.preferences.core.** { *; }
+-keep class androidx.datastore.core.** { *; }
+-dontwarn androidx.datastore.**
+
+# ========================================
+# v2.3.6 关键：kotlinx.coroutines.flow 状态流保留
+# ========================================
+# StateFlow / SharedFlow 的内部状态对象在 R8 优化后可能丢失，导致 StateFlow.value 调用 NoSuchMethodError
+-keep class kotlinx.coroutines.flow.** { *; }
+-keepclassmembers class kotlinx.coroutines.flow.** {
+    public <methods>;
+    public <fields>;
+}
+-dontwarn kotlinx.coroutines.flow.**
+
+# ========================================
+# v2.3.6 关键：Compose 运行时
+# ========================================
+# Compose 在运行时通过反射查找 Composable 函数
+-keep class androidx.compose.runtime.** { *; }
+-keepclassmembers class androidx.compose.runtime.** { *; }
+-keep class * implements androidx.compose.runtime.Composer { *; }
+-dontwarn androidx.compose.runtime.**
+
 # 安全加密工具
 -keep class com.silas.omaster.infrastructure.security.SecurityCrypto { *; }
 
@@ -407,6 +476,48 @@
 
 # 注意：R8 优化配置已在上方"P2-12 修复"段落统一管理
 # 此处不再重复声明，避免 -optimizationpasses / -mergeinterfacesaggressively 冲突
+
+# ========================================
+# v2.3.6 关键：WorkManager / Firebase Messaging
+# ========================================
+# WorkManager 通过反射创建 Worker 实例，类名必须保留
+-keep class androidx.work.** { *; }
+-keep class * extends androidx.work.Worker { *; }
+-keep class * extends androidx.work.ListenableWorker { *; }
+-keepclassmembers class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-dontwarn androidx.work.**
+
+# Firebase Messaging 服务（AndroidManifest 引用，通过反射实例化）
+-keep class com.google.firebase.** { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-keepclassmembers class * extends com.google.firebase.messaging.FirebaseMessagingService {
+    public <init>();
+}
+-dontwarn com.google.firebase.**
+
+# Google Play Billing（通过反射调用回调）
+-keep class com.android.billingclient.** { *; }
+-keepclassmembers class * implements com.android.billingclient.api.PurchasesUpdatedListener {
+    public <methods>;
+}
+-dontwarn com.android.billingclient.**
+
+# Google Play In-App Update / Review（反射）
+-keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
+
+# ========================================
+# v2.3.6 关键：友盟 SDK 完整保留
+# ========================================
+# 友盟 SDK 大量使用反射调用 Application/Activity 生命周期方法
+-keep class com.umeng.** { *; }
+-keep class com.uc.** { *; }
+-keep class com.alibaba.** { *; }
+-dontwarn com.umeng.**
+-dontwarn com.uc.**
+-dontwarn com.alibaba.**
 
 # ========================================
 # 资源压缩 keep 规则

@@ -82,67 +82,83 @@ class MainActivity : ComponentActivity() {
             Log.e("MainActivity", "悬浮窗控制器初始化失败", e)
         }
 
-        setContent {
-            CompositionLocalProvider(LocalActivity provides this) {
-                val settingsManager = remember { SettingsManager.getInstance(applicationContext) }
-                val currentTheme by settingsManager.themeFlow.collectAsState()
-                val darkMode by settingsManager.darkModeFlow.collectAsState()
-                // 2.2.0 闪退修复：使用 safeGetInstance 而非 getInstance
-                val hasUserAgreed = remember {
-                    try {
-                        mutableStateOf(
-                            OMasterApplication.safeGetInstance()?.hasUserAgreed() ?: false
-                        )
-                    } catch (e: Throwable) {
-                        Log.e("MainActivity", "读取用户协议状态失败", e)
-                        mutableStateOf(false)
+        // v2.3.6 关键修复：setContent 整体 try-catch，Compose 渲染异常降级到空白 Surface
+        try {
+            setContent {
+                CompositionLocalProvider(LocalActivity provides this) {
+                    val settingsManager = remember { SettingsManager.getInstance(applicationContext) }
+                    val currentTheme by settingsManager.themeFlow.collectAsState()
+                    val darkMode by settingsManager.darkModeFlow.collectAsState()
+                    // 2.2.0 闪退修复：使用 safeGetInstance 而非 getInstance
+                    val hasUserAgreed = remember {
+                        try {
+                            mutableStateOf(
+                                OMasterApplication.safeGetInstance()?.hasUserAgreed() ?: false
+                            )
+                        } catch (e: Throwable) {
+                            Log.e("MainActivity", "读取用户协议状态失败", e)
+                            mutableStateOf(false)
+                        }
                     }
-                }
-                var showWelcomeFlow by hasUserAgreed
-                val navController = rememberNavController()
+                    var showWelcomeFlow by hasUserAgreed
+                    val navController = rememberNavController()
 
-                OMasterTheme(
-                    darkMode = darkMode,
-                    brandTheme = currentTheme
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                    OMasterTheme(
+                        darkMode = darkMode,
+                        brandTheme = currentTheme
                     ) {
-                        if (showWelcomeFlow) {
-                            WelcomeFlow(
-                                onAgree = {
-                                    try {
-                                        OMasterApplication.safeGetInstance()?.let {
-                                            it.setUserAgreed(true)
-                                            it.initUMeng()
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            if (showWelcomeFlow) {
+                                WelcomeFlow(
+                                    onAgree = {
+                                        try {
+                                            OMasterApplication.safeGetInstance()?.let {
+                                                it.setUserAgreed(true)
+                                                it.initUMeng()
+                                            }
+                                        } catch (e: Throwable) {
+                                            Log.e("MainActivity", "同意隐私政策后初始化失败", e)
                                         }
-                                    } catch (e: Throwable) {
-                                        Log.e("MainActivity", "同意隐私政策后初始化失败", e)
+                                        showWelcomeFlow = false
+                                    },
+                                    onDisagree = {
+                                        // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
+                                        try {
+                                            OMasterApplication.safeGetInstance()
+                                                ?.setUserAgreed(false)
+                                        } catch (e: Throwable) {
+                                            Log.e("MainActivity", "保存用户协议状态失败", e)
+                                        }
+                                        showWelcomeFlow = false
                                     }
-                                    showWelcomeFlow = false
-                                },
-                                onDisagree = {
-                                    // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
-                                    try {
-                                        OMasterApplication.safeGetInstance()
-                                            ?.setUserAgreed(false)
-                                    } catch (e: Throwable) {
-                                        Log.e("MainActivity", "保存用户协议状态失败", e)
-                                    }
-                                    showWelcomeFlow = false
-                                }
-                            )
-                        } else {
-                            MainApp(
-                                navController = navController,
-                                deepLinkPresetId = deepLinkPresetId
-                            )
-                            // 消费 Deep Link，避免重复导航
-                            deepLinkPresetId = null
+                                )
+                            } else {
+                                MainApp(
+                                    navController = navController,
+                                    deepLinkPresetId = deepLinkPresetId
+                                )
+                                // 消费 Deep Link，避免重复导航
+                                deepLinkPresetId = null
+                            }
                         }
                     }
                 }
+            }
+        } catch (e: Throwable) {
+            // v2.3.6 兜底：setContent 失败时降级为空白 Activity，防止 App 闪退
+            Log.e("MainActivity", "setContent 失败，使用降级 UI", e)
+            try {
+                setContent {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {}
+                }
+            } catch (e2: Throwable) {
+                Log.e("MainActivity", "降级 setContent 也失败，App 将保持空白", e2)
             }
         }
 

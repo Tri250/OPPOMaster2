@@ -17,18 +17,25 @@ import java.util.Properties
 /**
  * 获取混淆密钥
  * 优先级：1. 环境变量 2. local.properties 3. 动态生成（随机）
+ *
+ * v2.3.6 安全加固：对来自环境变量/文件的密钥做白名单过滤，
+ * 防止不可见字符或 Java 字符串元字符（", \, 换行）破坏生成的 BuildConfig 代码
  */
 fun getObfuscationKey(localProps: Properties): String {
+    val safePattern = Regex("^[A-Za-z0-9+/=]{16,}$")
+
     // 1. 从环境变量读取（CI/CD 环境）
     System.getenv("OBFUSCATION_KEY")?.let {
-        if (it.length >= 16) return it
+        if (safePattern.matches(it)) return it
+        println("⚠️ OBFUSCATION_KEY 环境变量包含非法字符，已忽略，使用随机生成的密钥")
     }
-    
+
     // 2. 从 local.properties 读取
     localProps.getProperty("OBFUSCATION_KEY")?.let {
-        if (it.length >= 16) return it
+        if (safePattern.matches(it)) return it
+        println("⚠️ OBFUSCATION_KEY local.properties 包含非法字符，已忽略，使用随机生成的密钥")
     }
-    
+
     // 3. 动态生成随机密钥（每次构建不同，增加逆向难度）
     // 注意：这会使得同一 AppKey 在不同构建中混淆结果不同，但运行时能正确解混淆
     val random = SecureRandom()
@@ -132,11 +139,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v2.3.5
+        // 当前版本: v2.3.6
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 2.3.5 → 2*10000 + 3*100 + 5 = 20305
-        versionCode = 20305
-        versionName = "2.3.5"
+        // 2.3.6 → 2*10000 + 3*100 + 6 = 20306
+        versionCode = 20306
+        versionName = "2.3.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
