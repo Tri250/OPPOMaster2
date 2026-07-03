@@ -14,7 +14,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.watermark.WatermarkConfig
-import com.silas.omaster.infrastructure.utils.SecurityCrypto
+import com.silas.omaster.infrastructure.security.SecurityCrypto
 import com.silas.omaster.infrastructure.utils.UrlConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +33,14 @@ import java.io.File
 import kotlin.jvm.JvmName
 
 // DataStore 扩展属性
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "app_settings",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler {
+        // DataStore 文件损坏时，清空并使用空默认值，避免启动崩溃
+        android.util.Log.e("SettingsManager", "DataStore 文件损坏，已自动重建", it)
+        androidx.datastore.preferences.core.emptyPreferences()
+    }
+)
 
 /**
  * 工具函数：安全的枚举反序列化（性能优化：基于 enumConstants 缓存）

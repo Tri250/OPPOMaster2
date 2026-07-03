@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.silas.omaster.infrastructure.network.NetworkResilienceManager
-import com.silas.omaster.infrastructure.utils.SecurityCrypto
+import com.silas.omaster.infrastructure.security.SecurityCrypto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
