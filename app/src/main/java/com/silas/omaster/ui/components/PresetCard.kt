@@ -49,9 +49,9 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
 import com.silas.omaster.ui.theme.WarningYellow
-import com.silas.omaster.util.PresetI18n
-import com.silas.omaster.util.hapticClickable
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.PresetI18n
+import com.silas.omaster.infrastructure.utils.hapticClickable
+import com.silas.omaster.infrastructure.utils.perform
 
 /**
  * 统一预设卡片组件（对齐Web端样式）

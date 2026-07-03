@@ -36,8 +36,8 @@ import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
-import com.silas.omaster.util.UrlConstants
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.UrlConstants
+import com.silas.omaster.infrastructure.utils.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

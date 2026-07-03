@@ -79,8 +79,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.silas.omaster.R
 import com.silas.omaster.data.local.PermissionState
 import com.silas.omaster.data.local.PermissionStatus
-import com.silas.omaster.util.PermissionChecker
-import com.silas.omaster.util.PermissionKey
+import com.silas.omaster.infrastructure.utils.PermissionChecker
+import com.silas.omaster.infrastructure.utils.PermissionKey
 import kotlinx.coroutines.launch
 
 /**

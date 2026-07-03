@@ -3,7 +3,7 @@ package com.silas.omaster
 import com.silas.omaster.data.repository.LUTResourceRepository
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.data.model.LUTResource
-import com.silas.omaster.util.UrlConstants
+import com.silas.omaster.infrastructure.utils.UrlConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

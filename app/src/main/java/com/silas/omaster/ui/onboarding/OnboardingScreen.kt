@@ -43,7 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 import kotlinx.coroutines.launch
 
 /**

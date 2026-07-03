@@ -3,7 +3,7 @@ package com.silas.omaster.ai.scene
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.engine.MasterInferenceEngine
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.HasselbladParams

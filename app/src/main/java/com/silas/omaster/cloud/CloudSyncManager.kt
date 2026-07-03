@@ -3,8 +3,8 @@ package com.silas.omaster.cloud
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.silas.omaster.network.NetworkResilienceManager
-import com.silas.omaster.util.SecurityCrypto
+import com.silas.omaster.infrastructure.network.NetworkResilienceManager
+import com.silas.omaster.infrastructure.utils.SecurityCrypto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

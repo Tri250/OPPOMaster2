@@ -18,7 +18,7 @@ import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUT3DParser
 import com.silas.omaster.data.lut.LUTManager
 import com.silas.omaster.model.HasselbladParams
-import com.silas.omaster.ui.features.HasselbladColorEngine
+import com.silas.omaster.engine.HasselbladColorEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

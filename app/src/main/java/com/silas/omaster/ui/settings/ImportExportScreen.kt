@@ -76,7 +76,7 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.theme.ErrorRed
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.SuccessGreen
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

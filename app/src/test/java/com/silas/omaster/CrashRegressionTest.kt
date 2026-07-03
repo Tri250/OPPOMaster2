@@ -1,6 +1,6 @@
 package com.silas.omaster
 
-import com.silas.omaster.util.CrashHandler
+import com.silas.omaster.infrastructure.utils.CrashHandler
 import org.junit.Assert.*
 import org.junit.Test
 

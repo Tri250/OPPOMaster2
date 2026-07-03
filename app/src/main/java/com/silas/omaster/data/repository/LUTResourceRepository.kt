@@ -1,7 +1,7 @@
 package com.silas.omaster.data.repository
 
 import com.silas.omaster.data.model.LUTResource
-import com.silas.omaster.util.UrlConstants
+import com.silas.omaster.infrastructure.utils.UrlConstants
 
 /**
  * LUT资源仓库

@@ -33,7 +33,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.silas.omaster.R
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 
 /**
  * 通知设置页面

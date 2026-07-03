@@ -109,10 +109,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.silas.omaster.model.HasselbladParams
-import com.silas.omaster.renderer.LUTPreviewRenderer
+import com.silas.omaster.engine.LUTPreviewRenderer
 import com.silas.omaster.ai.antipattern.AntiPatternDetector
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.PermissionChecker
+import com.silas.omaster.infrastructure.utils.PermissionChecker
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch

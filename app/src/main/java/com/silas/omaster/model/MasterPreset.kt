@@ -5,8 +5,8 @@ import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.runtime.Stable
 import com.silas.omaster.R
-import com.silas.omaster.util.PresetI18n
-import com.silas.omaster.util.formatSigned
+import com.silas.omaster.infrastructure.utils.PresetI18n
+import com.silas.omaster.infrastructure.utils.formatSigned
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

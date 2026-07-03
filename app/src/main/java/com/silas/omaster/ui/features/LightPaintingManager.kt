@@ -14,7 +14,7 @@ import androidx.camera.camera2.interop.CaptureRequestOptions
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import android.hardware.camera2.CaptureRequest
 import kotlinx.coroutines.cancel
-import com.silas.omaster.renderer.BitmapPool
+import com.silas.omaster.engine.BitmapPool
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow

@@ -27,10 +27,10 @@ import androidx.core.graphics.drawable.toBitmap
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.silas.omaster.data.lut.LUTManager
-import com.silas.omaster.data.lut.LUT3DRenderer
+import com.silas.omaster.engine.LUT3DRenderer
 import com.silas.omaster.data.model.LUTResource
 import com.silas.omaster.data.repository.LUTResourceRepository
-import com.silas.omaster.Screen
+import com.silas.omaster.ui.navigation.Screen
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
