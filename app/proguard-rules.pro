@@ -197,7 +197,6 @@
 -keep class com.silas.omaster.data.model.**$$serializer { *; }
 -keep class com.silas.omaster.data.watermark.**$$serializer { *; }
 -keep class com.silas.omaster.engine.**$$serializer { *; }
--keep class com.silas.omaster.watermark.**$$serializer { *; }
 -keep class com.silas.omaster.cloud.**$$serializer { *; }
 -keep class com.silas.omaster.billing.**$$serializer { *; }
 -keep class com.silas.omaster.ai.mapping.**$$serializer { *; }
@@ -219,7 +218,7 @@
 -keepclassmembers class com.silas.omaster.engine.** {
     *** Companion;
 }
--keepclassmembers class com.silas.omaster.watermark.** {
+-keepclassmembers class com.silas.omaster.data.watermark.** {
     *** Companion;
 }
 -keepclassmembers class com.silas.omaster.cloud.** {
@@ -249,9 +248,9 @@
 -keepclassmembers enum com.silas.omaster.model.SoftLightMode { *; }
 -keepclassmembers enum com.silas.omaster.model.FilmSeries { *; }
 -keepclassmembers enum com.silas.omaster.engine.RenderQuality { *; }
--keepclassmembers enum com.silas.omaster.watermark.WatermarkLayerType { *; }
--keepclassmembers enum com.silas.omaster.watermark.ContentSource { *; }
--keepclassmembers enum com.silas.omaster.watermark.WatermarkPosition { *; }
+-keepclassmembers enum com.silas.omaster.data.watermark.WatermarkLayerType { *; }
+-keepclassmembers enum com.silas.omaster.data.watermark.ContentSource { *; }
+-keepclassmembers enum com.silas.omaster.data.watermark.WatermarkPosition { *; }
 
 # ========================================
 # Phase 1 新增模块 ProGuard 规则

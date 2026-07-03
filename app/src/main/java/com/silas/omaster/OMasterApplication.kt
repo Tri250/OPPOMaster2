@@ -12,7 +12,7 @@ import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.trailsnap.data.TrailSnapRepository
 import com.silas.omaster.infrastructure.utils.CrashHandler
 import com.silas.omaster.infrastructure.utils.HapticSettings
-import com.silas.omaster.infrastructure.utils.SecurityIntegrityChecker
+import com.silas.omaster.infrastructure.security.SecurityIntegrityChecker
 import com.silas.omaster.infrastructure.utils.ANRWatchdog
 import com.silas.omaster.infrastructure.network.NetworkResilienceManager
 import com.silas.omaster.background.SyncWorker
