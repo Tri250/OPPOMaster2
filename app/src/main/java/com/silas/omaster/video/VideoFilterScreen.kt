@@ -8,6 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,7 +94,7 @@ fun VideoFilterScreen(
 
     // 视频选择器（Android 16+ Photo Picker）
     val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(mediaType = ActivityResultContracts.PickVisualMedia.VideoOnly)
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let {
             selectedVideoUri = it
@@ -220,7 +221,9 @@ fun VideoFilterScreen(
                         Button(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                videoPicker.launch("video/*")
+                                videoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                                )
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = HasselbladOrange),

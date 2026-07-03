@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
                     var showCrashRecovery by hadCrashLastRun
 
                     // Deep Link 状态：从 StateFlow 收集，确保引导流程完成后正确处理
-                    var deepLinkPresetId by deepLinkPresetIdFlow.collectAsState()
+                    val deepLinkPresetId by deepLinkPresetIdFlow.collectAsState()
 
                     // 功能引导流程状态
                     val shouldShowFeatureGuide = remember {

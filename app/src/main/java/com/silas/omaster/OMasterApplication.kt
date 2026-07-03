@@ -322,6 +322,7 @@ class OMasterApplication : Application() {
             }
         }
     }
+    }
 
     override fun onCreate() {
         super.onCreate()

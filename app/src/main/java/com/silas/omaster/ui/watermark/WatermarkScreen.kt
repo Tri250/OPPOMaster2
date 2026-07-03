@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -223,7 +224,11 @@ fun WatermarkScreen(
                 WatermarkType.MASTER_MARK -> MasterMarkWatermarkEditor(
                     config = config,
                     onConfigChange = { viewModel.updateConfig(it) },
-                    onPickImage = { imagePickerLauncher.launch("image/*") },
+                    onPickImage = { 
+                        imagePickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)

@@ -139,11 +139,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v2.3.6
+        // 当前版本: v2.7.0
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 2.3.6 → 2*10000 + 3*100 + 6 = 20306
-        versionCode = 20306
-        versionName = "2.3.6"
+        // 2.7.0 → 2*10000 + 7*100 + 0 = 20700
+        versionCode = 20700
+        versionName = "2.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -252,13 +252,13 @@ android {
             isShrinkResources = false
         }
         release {
-            // 启用 R8 代码混淆（完整模式）
-            isMinifyEnabled = true
-            // 启用资源压缩
-            isShrinkResources = true
+            // 暂时禁用代码混淆（受限于构建环境内存）
+            isMinifyEnabled = false
+            // 禁用资源压缩
+            isShrinkResources = false
             // 启用 R8 完整模式（更激进的优化，APK 更小、运行更快）
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
+                getDefaultProguardFile("proguard-android.txt"),
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
