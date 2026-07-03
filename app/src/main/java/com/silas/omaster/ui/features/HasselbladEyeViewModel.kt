@@ -1071,7 +1071,7 @@ class HasselbladEyeViewModel(application: Application) : AndroidViewModel(applic
         val customModel = com.silas.omaster.data.local.SettingsManager
             .getInstance(context).customDeviceModel
             .ifBlank { null }
-        return com.silas.omaster.util.ExifPreserver.saveWithExif(
+        return com.silas.omaster.infrastructure.utils.ExifPreserver.saveWithExif(
             context = context,
             bitmap = bitmap,
             sourceUri = null,

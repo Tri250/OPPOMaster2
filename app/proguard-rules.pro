@@ -196,7 +196,7 @@
 -keep class com.silas.omaster.model.**$$serializer { *; }
 -keep class com.silas.omaster.data.model.**$$serializer { *; }
 -keep class com.silas.omaster.data.watermark.**$$serializer { *; }
--keep class com.silas.omaster.renderer.**$$serializer { *; }
+-keep class com.silas.omaster.engine.**$$serializer { *; }
 -keep class com.silas.omaster.watermark.**$$serializer { *; }
 -keep class com.silas.omaster.cloud.**$$serializer { *; }
 -keep class com.silas.omaster.billing.**$$serializer { *; }
@@ -216,7 +216,7 @@
 -keepclassmembers class com.silas.omaster.data.watermark.** {
     *** Companion;
 }
--keepclassmembers class com.silas.omaster.renderer.** {
+-keepclassmembers class com.silas.omaster.engine.** {
     *** Companion;
 }
 -keepclassmembers class com.silas.omaster.watermark.** {
@@ -248,7 +248,7 @@
 -keepclassmembers enum com.silas.omaster.model.SceneCategory { *; }
 -keepclassmembers enum com.silas.omaster.model.SoftLightMode { *; }
 -keepclassmembers enum com.silas.omaster.model.FilmSeries { *; }
--keepclassmembers enum com.silas.omaster.renderer.RenderQuality { *; }
+-keepclassmembers enum com.silas.omaster.engine.RenderQuality { *; }
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkLayerType { *; }
 -keepclassmembers enum com.silas.omaster.watermark.ContentSource { *; }
 -keepclassmembers enum com.silas.omaster.watermark.WatermarkPosition { *; }
@@ -379,18 +379,18 @@
 -keep class com.silas.omaster.InitializationProvider { *; }
 
 # 崩溃处理器（确保堆栈可追溯）
--keep class com.silas.omaster.util.CrashHandler { *; }
--keep class com.silas.omaster.util.CrashMonitorManager { *; }
+-keep class com.silas.omaster.infrastructure.utils.CrashHandler { *; }
+-keep class com.silas.omaster.infrastructure.utils.CrashMonitorManager { *; }
 
 # Sentry 崩溃上报
 -keep class io.sentry.** { *; }
 -dontwarn io.sentry.**
 # 保留 Sentry 需要的行号信息
 -keepattributes LineNumberTable,SourceFile
--keep class com.silas.omaster.util.CrashHandler$CrashListener { *; }
+-keep class com.silas.omaster.infrastructure.utils.CrashHandler$CrashListener { *; }
 
 # 安全加密工具
--keep class com.silas.omaster.util.SecurityCrypto { *; }
+-keep class com.silas.omaster.infrastructure.security.SecurityCrypto { *; }
 
 # 内购管理（防止服务端验证回调被混淆）
 -keep class com.silas.omaster.billing.BillingManager { *; }

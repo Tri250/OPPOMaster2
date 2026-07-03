@@ -383,7 +383,7 @@ class BillingManager private constructor(private val context: Context) {
      */
     private fun verifyPurchaseOnServer(purchase: Purchase): Boolean {
         return try {
-            val url = URL(com.silas.omaster.util.UrlConstants.API_BILLING_VERIFY)
+            val url = URL(com.silas.omaster.infrastructure.utils.UrlConstants.API_BILLING_VERIFY)
             val connection = url.openConnection() as HttpURLConnection
             try {
                 connection.requestMethod = "POST"

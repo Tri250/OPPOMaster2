@@ -39,7 +39,7 @@ class InitializationProvider : ContentProvider() {
             // 第 2 步：预初始化全局异常处理器（捕获后续初始化阶段的崩溃）
             val crashStart = SystemClock.elapsedRealtime()
             try {
-                com.silas.omaster.util.CrashHandler.getInstance().install(context)
+                com.silas.omaster.infrastructure.utils.CrashHandler.getInstance().install(context)
             } catch (e: Throwable) {
                 Log.e(TAG, "CrashHandler 预安装失败", e)
             }

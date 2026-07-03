@@ -63,21 +63,21 @@ class ApplicationStabilityTest {
     @Test
     fun `崩溃处理器应在启动时安装`() {
         // 验证 CrashHandler 已安装
-        val crashHandler = com.silas.omaster.util.CrashHandler.getInstance()
+        val crashHandler = com.silas.omaster.infrastructure.utils.CrashHandler.getInstance()
         assertTrue("CrashHandler 应在启动后安装", crashHandler.isInstalled())
     }
 
     @Test
     fun `ANR看门狗应在启动时安装`() {
         // 验证 ANRWatchdog 已安装
-        val anrCount = com.silas.omaster.util.ANRWatchdog.anrCount.value
+        val anrCount = com.silas.omaster.infrastructure.utils.ANRWatchdog.anrCount.value
         assertEquals("ANR 计数应从 0 开始", 0, anrCount)
     }
 
     @Test
     fun `崩溃监控管理器应初始化`() {
         // 验证 CrashMonitorManager 已初始化
-        val crashCount = com.silas.omaster.util.CrashMonitorManager.crashCount.value
+        val crashCount = com.silas.omaster.infrastructure.utils.CrashMonitorManager.crashCount.value
         // 崩溃计数应 >= 0（可能已有历史崩溃日志）
         assertTrue("崩溃计数应 >= 0", crashCount >= 0)
     }

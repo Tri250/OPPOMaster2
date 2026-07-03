@@ -310,7 +310,7 @@ class CrashRegressionTest {
     @Test
     fun `SecurityIntegrityChecker必须存在`() {
         try {
-            val klass = Class.forName("com.silas.omaster.util.SecurityIntegrityChecker")
+            val klass = Class.forName("com.silas.omaster.infrastructure.utils.SecurityIntegrityChecker")
             assertNotNull("SecurityIntegrityChecker 必须存在", klass)
         } catch (e: ClassNotFoundException) {
             fail("SecurityIntegrityChecker 类必须存在")

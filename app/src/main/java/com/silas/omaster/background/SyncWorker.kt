@@ -179,7 +179,7 @@ class SyncWorker(
             val enabledSubs = subManager.subscriptionsFlow.value.filter { it.isEnabled }
             for (sub in enabledSubs) {
                 try {
-                    com.silas.omaster.network.PresetRemoteManager.fetchAndSave(
+                    com.silas.omaster.infrastructure.network.PresetRemoteManager.fetchAndSave(
                         applicationContext, sub.url, forceUpdate = true
                     )
                 } catch (e: Exception) {

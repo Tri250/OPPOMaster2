@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.ui.navigation.MainApp
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.OMasterTheme
 import com.silas.omaster.infrastructure.utils.PermissionChecker

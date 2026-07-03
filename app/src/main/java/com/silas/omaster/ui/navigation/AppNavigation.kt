@@ -179,20 +179,25 @@ fun MainApp(
     }
 
     // P2 修复：使用类型安全的路由匹配，避免子页面名称巧合包含主路由名导致底部导航栏误显
-    val showBottomNav = currentRoute.isRoute("com.silas.omaster.Screen.Home") ||
-        currentRoute.isRoute("com.silas.omaster.Screen.About") ||
-        currentRoute.isRoute("com.silas.omaster.Screen.Subscription") ||
-        currentRoute.isRoute("com.silas.omaster.Screen.CoreFeatures")
+    val homeRoute = Screen.Home::class.qualifiedName ?: ""
+    val aboutRoute = Screen.About::class.qualifiedName ?: ""
+    val subscriptionRoute = Screen.Subscription::class.qualifiedName ?: ""
+    val coreFeaturesRoute = Screen.CoreFeatures::class.qualifiedName ?: ""
+
+    val showBottomNav = currentRoute.isRoute(homeRoute) ||
+        currentRoute.isRoute(aboutRoute) ||
+        currentRoute.isRoute(subscriptionRoute) ||
+        currentRoute.isRoute(coreFeaturesRoute)
 
     var isHomeScrollingUp by remember { mutableStateOf(true) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     val mainRouteList = remember {
         listOf(
-            "com.silas.omaster.Screen.Home",
-            "com.silas.omaster.Screen.Subscription",
-            "com.silas.omaster.Screen.CoreFeatures",
-            "com.silas.omaster.Screen.About"
+            homeRoute,
+            subscriptionRoute,
+            coreFeaturesRoute,
+            aboutRoute
         )
     }
     val getNavIndex: (String?) -> Int = { route ->
@@ -794,14 +799,19 @@ private fun handleBottomNav(
     route: String,
     currentRoute: String?
 ) {
+    val homeRoute = Screen.Home::class.qualifiedName ?: ""
+    val subscriptionRoute = Screen.Subscription::class.qualifiedName ?: ""
+    val coreFeaturesRoute = Screen.CoreFeatures::class.qualifiedName ?: ""
+    val aboutRoute = Screen.About::class.qualifiedName ?: ""
+
     when (route) {
         "home" -> {
-            if (!currentRoute.isRoute("com.silas.omaster.Screen.Home")) {
+            if (!currentRoute.isRoute(homeRoute)) {
                 navController.popBackStack(Screen.Home, false)
             }
         }
         "subscription" -> {
-            if (!currentRoute.isRoute("com.silas.omaster.Screen.Subscription")) {
+            if (!currentRoute.isRoute(subscriptionRoute)) {
                 navController.navigate(Screen.Subscription) {
                     popUpTo(Screen.Home) { saveState = true }
                     launchSingleTop = true
@@ -810,7 +820,7 @@ private fun handleBottomNav(
             }
         }
         "features" -> {
-            if (!currentRoute.isRoute("com.silas.omaster.Screen.CoreFeatures")) {
+            if (!currentRoute.isRoute(coreFeaturesRoute)) {
                 navController.navigate(Screen.CoreFeatures) {
                     popUpTo(Screen.Home) { saveState = true }
                     launchSingleTop = true
@@ -819,7 +829,7 @@ private fun handleBottomNav(
             }
         }
         "about" -> {
-            if (!currentRoute.isRoute("com.silas.omaster.Screen.About")) {
+            if (!currentRoute.isRoute(aboutRoute)) {
                 navController.navigate(Screen.About) {
                     popUpTo(Screen.Home) { saveState = true }
                     launchSingleTop = true
