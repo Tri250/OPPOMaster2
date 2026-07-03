@@ -83,9 +83,9 @@ import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
-import com.silas.omaster.util.HapticSettings
-import com.silas.omaster.util.ImageCacheManager
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.HapticSettings
+import com.silas.omaster.infrastructure.utils.ImageCacheManager
+import com.silas.omaster.infrastructure.utils.perform
 import android.widget.Toast
 
 @Composable

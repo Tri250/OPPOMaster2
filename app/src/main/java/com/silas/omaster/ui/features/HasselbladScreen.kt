@@ -127,7 +127,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.engine.MasterInferenceEngine
 import com.silas.omaster.ai.recipe.RecipeMatchResult
 import com.silas.omaster.ai.recipe.PhotographyRecipe
 import com.silas.omaster.model.FilmPreset
@@ -146,8 +146,8 @@ import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.HasselbladOrangeLight
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.data.lut.LUTManager
-import com.silas.omaster.util.formatSigned
-import com.silas.omaster.util.hapticClickable
+import com.silas.omaster.infrastructure.utils.formatSigned
+import com.silas.omaster.infrastructure.utils.hapticClickable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

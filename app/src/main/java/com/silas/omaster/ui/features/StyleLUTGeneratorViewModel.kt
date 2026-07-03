@@ -13,7 +13,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.lut.LUT3DData
 import com.silas.omaster.data.lut.LUTManager
-import com.silas.omaster.data.lut.StyleLUTGenerator
+import com.silas.omaster.engine.StyleLUTGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

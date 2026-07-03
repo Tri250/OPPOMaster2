@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.silas.omaster.model.Subscription
 import com.silas.omaster.model.SubscriptionList
-import com.silas.omaster.util.SecurityCrypto
-import com.silas.omaster.util.UpdateConfigManager
-import com.silas.omaster.util.UrlConstants
+import com.silas.omaster.infrastructure.utils.SecurityCrypto
+import com.silas.omaster.infrastructure.utils.UpdateConfigManager
+import com.silas.omaster.infrastructure.utils.UrlConstants
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject

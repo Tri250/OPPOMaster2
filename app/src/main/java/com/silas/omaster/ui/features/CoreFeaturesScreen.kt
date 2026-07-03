@@ -70,7 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.theme.HasselbladOrange
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 
 /**
  * 功能描述数据类

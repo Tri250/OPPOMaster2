@@ -58,9 +58,9 @@ import coil.request.CachePolicy
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.AnimationSpecs
-import com.silas.omaster.util.DownloadResult
-import com.silas.omaster.util.ImageCacheManager
-import com.silas.omaster.util.ImageDownloadCallback
+import com.silas.omaster.infrastructure.utils.DownloadResult
+import com.silas.omaster.infrastructure.utils.ImageCacheManager
+import com.silas.omaster.infrastructure.utils.ImageDownloadCallback
 import java.io.File
 
 /**

@@ -8,7 +8,7 @@ import com.silas.omaster.data.watermark.WatermarkConfig
 import com.silas.omaster.data.watermark.WatermarkTemplate
 import com.silas.omaster.data.watermark.WatermarkTemplates
 import com.silas.omaster.data.watermark.WatermarkType
-import com.silas.omaster.util.UndoRedoManager
+import com.silas.omaster.infrastructure.utils.UndoRedoManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

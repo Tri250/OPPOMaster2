@@ -61,8 +61,8 @@ import com.silas.omaster.R
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.local.SettingsManager
-import com.silas.omaster.util.VersionInfo
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.VersionInfo
+import com.silas.omaster.infrastructure.utils.perform
 
 @Composable
 fun AboutScreen(

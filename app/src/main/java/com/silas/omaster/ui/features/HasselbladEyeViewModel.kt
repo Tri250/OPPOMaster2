@@ -15,9 +15,9 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.lut.LUT3DData
-import com.silas.omaster.data.lut.LUT3DRenderer
+import com.silas.omaster.engine.LUT3DRenderer
 import com.silas.omaster.data.lut.LUTManager
-import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.engine.MasterInferenceEngine
 import com.silas.omaster.ai.analyzer.HeuristicSceneAnalyzer
 import com.silas.omaster.ai.mapping.FilmAdjustments
 import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
@@ -29,10 +29,10 @@ import com.silas.omaster.camera.OPPOCameraManager
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.SceneProfile
 import com.silas.omaster.model.SoftLightMode
-import com.silas.omaster.renderer.GPURenderManager
-import com.silas.omaster.renderer.HasselbladParamMapper
-import com.silas.omaster.renderer.RenderParameters
-import com.silas.omaster.renderer.RenderResult
+import com.silas.omaster.engine.GPURenderManager
+import com.silas.omaster.engine.HasselbladParamMapper
+import com.silas.omaster.engine.RenderParameters
+import com.silas.omaster.engine.RenderResult
 import com.silas.omaster.ui.components.AnalysisStatus
 import com.silas.omaster.ui.components.AnalysisStep
 import com.silas.omaster.ui.components.ApertureState

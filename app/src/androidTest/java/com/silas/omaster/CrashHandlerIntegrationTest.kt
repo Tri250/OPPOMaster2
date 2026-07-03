@@ -2,7 +2,7 @@ package com.silas.omaster
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.silas.omaster.util.CrashHandler
+import com.silas.omaster.infrastructure.utils.CrashHandler
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test

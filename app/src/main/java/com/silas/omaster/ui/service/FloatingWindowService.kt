@@ -36,9 +36,9 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
-import com.silas.omaster.util.PermissionChecker
-import com.silas.omaster.util.PresetI18n
-import com.silas.omaster.util.formatSigned
+import com.silas.omaster.infrastructure.utils.PermissionChecker
+import com.silas.omaster.infrastructure.utils.PresetI18n
+import com.silas.omaster.infrastructure.utils.formatSigned
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 

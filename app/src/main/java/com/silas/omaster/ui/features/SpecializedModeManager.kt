@@ -12,7 +12,7 @@ import com.silas.omaster.ai.mapping.SceneToHasselbladMapping
 import com.silas.omaster.model.HasselbladParams
 import com.silas.omaster.model.RectData
 import com.silas.omaster.model.SoftLightMode
-import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.engine.RenderParameters
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

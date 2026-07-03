@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import android.graphics.Bitmap
-import com.silas.omaster.ai.MasterInferenceEngine
+import com.silas.omaster.engine.MasterInferenceEngine
 import com.silas.omaster.model.HistogramData
 import com.silas.omaster.ui.theme.*
 import kotlinx.coroutines.Dispatchers

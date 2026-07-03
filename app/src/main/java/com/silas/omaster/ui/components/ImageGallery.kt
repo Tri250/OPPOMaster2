@@ -42,7 +42,7 @@ import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.NearBlack
-import com.silas.omaster.util.ImageCacheManager
+import com.silas.omaster.infrastructure.utils.ImageCacheManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

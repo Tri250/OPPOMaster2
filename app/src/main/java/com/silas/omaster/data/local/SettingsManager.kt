@@ -14,8 +14,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.data.watermark.WatermarkConfig
-import com.silas.omaster.util.SecurityCrypto
-import com.silas.omaster.util.UrlConstants
+import com.silas.omaster.infrastructure.utils.SecurityCrypto
+import com.silas.omaster.infrastructure.utils.UrlConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

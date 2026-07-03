@@ -56,7 +56,7 @@ import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.theme.ColorOS16Palette
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.LiquidGlassConfig
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring

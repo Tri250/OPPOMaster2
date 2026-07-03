@@ -22,8 +22,8 @@ import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
-import com.silas.omaster.renderer.GPURenderManager
-import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.engine.GPURenderManager
+import com.silas.omaster.engine.RenderParameters
 import java.nio.FloatBuffer
 import kotlin.math.abs
 import kotlin.math.hypot

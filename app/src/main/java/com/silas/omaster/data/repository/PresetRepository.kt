@@ -5,7 +5,7 @@ import android.os.Build
 import android.util.Log
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.data.local.SubscriptionManager
-import com.silas.omaster.network.PresetRemoteManager
+import com.silas.omaster.infrastructure.network.PresetRemoteManager
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetList
 import java.util.UUID

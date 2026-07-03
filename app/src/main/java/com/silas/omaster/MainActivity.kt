@@ -24,7 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.OMasterTheme
-import com.silas.omaster.util.PermissionChecker
+import com.silas.omaster.infrastructure.utils.PermissionChecker
 
 /**
  * 用于在整个 Compose 树中访问当前 Activity（悬浮窗权限申请等场景需要）

@@ -30,7 +30,7 @@ import com.silas.omaster.R
 import com.silas.omaster.data.local.SubscriptionManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.Subscription
-import com.silas.omaster.network.PresetRemoteManager
+import com.silas.omaster.infrastructure.network.PresetRemoteManager
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.CardBorderLight
 import kotlinx.coroutines.launch

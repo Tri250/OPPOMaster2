@@ -112,10 +112,10 @@ import com.silas.omaster.ui.components.ShimmerPresetGrid
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.HasselbladOrange
 import com.silas.omaster.ui.theme.WarningYellow
-import com.silas.omaster.util.hapticClickable
+import com.silas.omaster.infrastructure.utils.hapticClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 import com.silas.omaster.billing.AppReviewManager
 import kotlinx.coroutines.delay
 import androidx.compose.material.pullrefresh.PullRefreshIndicator

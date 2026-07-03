@@ -71,9 +71,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.silas.omaster.ai.AIFineTuneManager
+import com.silas.omaster.engine.AIFineTuneManager
 import com.silas.omaster.data.repository.PresetRepository
-import com.silas.omaster.renderer.RenderParameters
+import com.silas.omaster.engine.RenderParameters
 import com.silas.omaster.ui.components.DiscardChangesDialog
 import com.silas.omaster.ui.components.SaveAsPresetDialog
 import com.silas.omaster.ui.components.SaveErrorRetryDialog

@@ -82,10 +82,10 @@ import com.silas.omaster.ui.components.ApplyPresetButton
 import com.silas.omaster.ui.components.FavoriteButton
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.R
-import com.silas.omaster.util.PresetI18n
+import com.silas.omaster.infrastructure.utils.PresetI18n
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import com.silas.omaster.util.perform
+import com.silas.omaster.infrastructure.utils.perform
 import com.silas.omaster.ui.theme.HasselbladOrange
 
 @Composable

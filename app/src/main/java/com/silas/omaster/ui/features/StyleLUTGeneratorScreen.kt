@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.silas.omaster.data.lut.StyleLUTGenerator
+import com.silas.omaster.engine.StyleLUTGenerator
 import com.silas.omaster.billing.ProFeature
 import com.silas.omaster.billing.ProFeatureGate
 import com.silas.omaster.ui.theme.*
