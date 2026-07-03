@@ -56,6 +56,9 @@ output.json
 *.ap_
 *.dex
 
+# ProGuard mapping 文件（体积大，随 Release 附件分发）
+app/mapping/
+
 # 本地配置
 local.properties
 
