@@ -508,7 +508,7 @@
 
     <!-- 欢迎对话框 -->
     <string name="welcome_dialog_title">欢迎使用 OMaster</string>
-    <string name="welcome_version">OMaster v2.3.6</string>
+    <string name="welcome_version">OMaster v2.7.0</string>
     <string name="install_success_title">安装成功</string>
     <string name="install_success_desc">感谢您安装 OMaster，开始您的专业摄影之旅</string>
     <string name="feature_1_title">专业参数</string>
@@ -599,8 +599,6 @@
     <string name="annual_report_title">%1$d 年度回忆录</string>
     <string name="annual_report_subtitle">一帧一画，定格步履与温柔</string>
     <string name="view_annual_report">查看年度报告</string>
-    <string name="permission_storage_title">需要存储权限</string>
-    <string name="permission_storage_desc">行影集需要访问您的照片和视频，才能生成时间轴、相册、足迹和人物聚类。</string>
     <string name="go_to_settings">前往设置开启</string>
     <string name="request_permission_again">重新申请</string>
     <string name="grant_permission">授权访问</string>

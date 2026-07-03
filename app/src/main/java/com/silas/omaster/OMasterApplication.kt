@@ -321,6 +321,7 @@ class OMasterApplication : Application() {
                 prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             }
         }
+        }
     }
 
     override fun onCreate() {

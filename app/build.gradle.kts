@@ -139,11 +139,11 @@ android {
         // - Git Tag 格式: v{versionName}，如 v1.0.0
         // - CI 构建时会自动从 Tag 提取版本号
         //
-        // 当前版本: v2.3.6
+        // 当前版本: v2.7.0
         // 版本号计算公式: 主版本*10000 + 次版本*100 + 修订版本
-        // 2.3.6 → 2*10000 + 3*100 + 6 = 20306
-        versionCode = 20306
-        versionName = "2.3.6"
+        // 2.7.0 → 2*10000 + 7*100 + 0 = 20700
+        versionCode = 20700
+        versionName = "2.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -174,12 +174,23 @@ android {
                 finalStorePassword != "android"
 
             if (hasValidKeystore && finalStoreFile != null) {
-                // 使用真实签名配置
-                storeFile = file(finalStoreFile)
-                storePassword = finalStorePassword!!
-                keyAlias = finalKeyAlias ?: "omaster"
-                keyPassword = finalKeyPassword!!
-                println("✅ Release 签名配置已加载: $finalStoreFile")
+                val keystoreFile = file(finalStoreFile)
+                val isCI = System.getenv("CI") == "true"
+                // CI 环境：如果 keystore 文件不存在，回退到 debug 签名
+                if (!keystoreFile.exists() && isCI) {
+                    println("⚠️ CI 环境检测到，keystore 文件不存在 ($finalStoreFile)，使用 debug 签名回退")
+                    storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                } else {
+                    // 使用真实签名配置
+                    storeFile = keystoreFile
+                    storePassword = finalStorePassword!!
+                    keyAlias = finalKeyAlias ?: "omaster"
+                    keyPassword = finalKeyPassword!!
+                    println("✅ Release 签名配置已加载: $finalStoreFile")
+                }
             } else {
                 // CI 环境：使用 debug 签名回退，确保 CI 可以构建 release 包进行测试
                 // 生产发布时必须配置真实签名
