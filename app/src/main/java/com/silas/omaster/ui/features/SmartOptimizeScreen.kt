@@ -143,9 +143,9 @@ fun SmartOptimizeScreen(
         )
     }
 
-    // ========== 图片选择器 ==========
+    // ========== 图片选择器（Android 16+ Photo Picker）==========
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let { viewModel.loadImage(context, it) }
     }

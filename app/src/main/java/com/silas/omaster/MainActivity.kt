@@ -20,12 +20,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
+import com.silas.omaster.data.local.FeatureGuideManager
+import com.silas.omaster.data.local.PermissionGuideManager
 import com.silas.omaster.data.local.SettingsManager
 import com.silas.omaster.ui.navigation.MainApp
+import com.silas.omaster.ui.onboarding.FeatureGuideFlow
+import com.silas.omaster.ui.onboarding.PermissionGuideFlow
 import com.silas.omaster.ui.service.FloatingWindowController
+import com.silas.omaster.ui.components.CrashRecoveryDialog
 import com.silas.omaster.ui.theme.OMasterTheme
 import com.silas.omaster.infrastructure.utils.PermissionChecker
+import com.silas.omaster.infrastructure.utils.VersionInfo
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 用于在整个 Compose 树中访问当前 Activity（悬浮窗权限申请等场景需要）
@@ -55,14 +64,28 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
 class MainActivity : ComponentActivity() {
 
     private var floatingWindowController: FloatingWindowController? = null
-    /** 通过 Deep Link 传入的预设 ID，用于导航到详情页 */
-    private var deepLinkPresetId: String? = null
+
+    // Deep Link 状态管理：使用 StateFlow 确保跨线程安全访问和 Compose 响应式更新
+    private val _deepLinkPresetId = MutableStateFlow<String?>(null)
+    val deepLinkPresetIdFlow: StateFlow<String?> = _deepLinkPresetId
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 安装 SplashScreen，必须在 super.onCreate() 之前调用
+        // Android 12+ 使用系统 SplashScreen，低版本使用兼容库实现
+        val splashScreen = installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
+        // 设置 SplashScreen 退出条件：Compose 渲染完成后退出
+        // 使用 setKeepOnScreenCondition 确保内容准备好后再退出
+        splashScreen.setKeepOnScreenCondition {
+            // 返回 false 表示可以退出 SplashScreen
+            // Compose 渲染是异步的，setContent 后第一帧会自动触发退出
+            false
+        }
+
         // 解析 Deep Link: omaster://preset/{id} 或 https://omaster.app/preset/{id}
-        deepLinkPresetId = parseDeepLink(intent)
+        _deepLinkPresetId.value = parseDeepLink(intent)
 
         // 2.2.0 闪退修复：所有关键调用包 try-catch，绝不让 onCreate 抛出
         try {
@@ -89,6 +112,12 @@ class MainActivity : ComponentActivity() {
                     val settingsManager = remember { SettingsManager.getInstance(applicationContext) }
                     val currentTheme by settingsManager.themeFlow.collectAsState()
                     val darkMode by settingsManager.darkModeFlow.collectAsState()
+                    
+                    // 引导流程管理器
+                    val featureGuideManager = remember { FeatureGuideManager.getInstance(applicationContext) }
+                    val permissionGuideManager = remember { PermissionGuideManager.getInstance(applicationContext) }
+                    val versionCode = VersionInfo.VERSION_CODE.toLong()
+                    
                     // 2.2.0 闪退修复：使用 safeGetInstance 而非 getInstance
                     val hasUserAgreed = remember {
                         try {
@@ -101,6 +130,35 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     var showWelcomeFlow by hasUserAgreed
+
+                    // v2.3.6 崩溃恢复：检查上次崩溃标记
+                    val hadCrashLastRun = remember {
+                        try {
+                            mutableStateOf(
+                                OMasterApplication.safeGetInstance()?.hadCrashLastRun() ?: false
+                            )
+                        } catch (e: Throwable) {
+                            Log.e("MainActivity", "读取崩溃标记失败", e)
+                            mutableStateOf(false)
+                        }
+                    }
+                    var showCrashRecovery by hadCrashLastRun
+
+                    // Deep Link 状态：从 StateFlow 收集，确保引导流程完成后正确处理
+                    var deepLinkPresetId by deepLinkPresetIdFlow.collectAsState()
+
+                    // 功能引导流程状态
+                    val shouldShowFeatureGuide = remember {
+                        featureGuideManager.shouldShowFeatureGuide(versionCode)
+                    }
+                    var showFeatureGuideFlow by remember { mutableStateOf(shouldShowFeatureGuide && !showWelcomeFlow) }
+
+                    // 权限引导流程状态
+                    val shouldShowPermissionGuide = remember {
+                        permissionGuideManager.shouldShowPermissionGuide(versionCode)
+                    }
+                    var showPermissionGuideFlow by remember { mutableStateOf(shouldShowPermissionGuide && !showWelcomeFlow && !showFeatureGuideFlow) }
+
                     val navController = rememberNavController()
 
                     OMasterTheme(
@@ -111,37 +169,117 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.background
                         ) {
-                            if (showWelcomeFlow) {
-                                WelcomeFlow(
-                                    onAgree = {
-                                        try {
-                                            OMasterApplication.safeGetInstance()?.let {
-                                                it.setUserAgreed(true)
-                                                it.initUMeng()
+                            // v2.3.6 崩溃恢复：引导流程优先级调整
+                            // CrashRecoveryDialog -> WelcomeFlow -> FeatureGuideFlow -> PermissionGuideFlow -> MainApp
+                            when {
+                                // 0. 首先检查是否需要显示崩溃恢复对话框（最高优先级）
+                                showCrashRecovery -> {
+                                    CrashRecoveryDialog(
+                                        onIgnore = {
+                                            showCrashRecovery = false
+                                            // 忽略后继续正常引导流程
+                                            if (!showWelcomeFlow) {
+                                                if (featureGuideManager.shouldShowFeatureGuide(versionCode)) {
+                                                    showFeatureGuideFlow = true
+                                                } else if (permissionGuideManager.shouldShowPermissionGuide(versionCode)) {
+                                                    showPermissionGuideFlow = true
+                                                }
                                             }
-                                        } catch (e: Throwable) {
-                                            Log.e("MainActivity", "同意隐私政策后初始化失败", e)
+                                        },
+                                        onClearCacheAndRestart = {
+                                            // 此选项会在 CrashRecoveryDialog 内部重启应用
+                                            // 不需要额外处理
                                         }
-                                        showWelcomeFlow = false
-                                    },
-                                    onDisagree = {
-                                        // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
-                                        try {
-                                            OMasterApplication.safeGetInstance()
-                                                ?.setUserAgreed(false)
-                                        } catch (e: Throwable) {
-                                            Log.e("MainActivity", "保存用户协议状态失败", e)
+                                    )
+                                }
+
+                                // 1. 其次显示隐私政策欢迎页
+                                showWelcomeFlow -> {
+                                    WelcomeFlow(
+                                        onAgree = {
+                                            try {
+                                                OMasterApplication.safeGetInstance()?.let {
+                                                    it.setUserAgreed(true)
+                                                    it.initUMeng()
+                                                }
+                                            } catch (e: Throwable) {
+                                                Log.e("MainActivity", "同意隐私政策后初始化失败", e)
+                                            }
+                                            showWelcomeFlow = false
+                                            // 检查是否需要显示功能引导
+                                            if (featureGuideManager.shouldShowFeatureGuide(versionCode)) {
+                                                showFeatureGuideFlow = true
+                                            } else if (permissionGuideManager.shouldShowPermissionGuide(versionCode)) {
+                                                showPermissionGuideFlow = true
+                                            }
+                                        },
+                                        onDisagree = {
+                                            // 不同意隐私政策：禁用友盟统计和云同步，但允许使用本地功能
+                                            try {
+                                                OMasterApplication.safeGetInstance()
+                                                    ?.setUserAgreed(false)
+                                            } catch (e: Throwable) {
+                                                Log.e("MainActivity", "保存用户协议状态失败", e)
+                                            }
+                                            showWelcomeFlow = false
+                                            // 不同意也进入引导流程
+                                            if (featureGuideManager.shouldShowFeatureGuide(versionCode)) {
+                                                showFeatureGuideFlow = true
+                                            } else if (permissionGuideManager.shouldShowPermissionGuide(versionCode)) {
+                                                showPermissionGuideFlow = true
+                                            }
                                         }
-                                        showWelcomeFlow = false
+                                    )
+                                }
+                                
+                                // 2. 显示功能引导流程（5页）
+                                showFeatureGuideFlow -> {
+                                    FeatureGuideFlow(
+                                        onComplete = {
+                                            featureGuideManager.markFeatureGuideShown(versionCode)
+                                            showFeatureGuideFlow = false
+                                            // 检查是否需要显示权限引导
+                                            if (permissionGuideManager.shouldShowPermissionGuide(versionCode)) {
+                                                showPermissionGuideFlow = true
+                                            }
+                                        },
+                                        onSkip = {
+                                            featureGuideManager.skipFeatureGuide(versionCode)
+                                            showFeatureGuideFlow = false
+                                            // 检查是否需要显示权限引导
+                                            if (permissionGuideManager.shouldShowPermissionGuide(versionCode)) {
+                                                showPermissionGuideFlow = true
+                                            }
+                                        }
+                                    )
+                                }
+                                
+                                // 3. 显示权限引导流程（4页）
+                                showPermissionGuideFlow -> {
+                                    PermissionGuideFlow(
+                                        onComplete = {
+                                            permissionGuideManager.markPermissionGuideShown(versionCode)
+                                            showPermissionGuideFlow = false
+                                        },
+                                        onSkip = {
+                                            permissionGuideManager.skipPermissionGuide(versionCode)
+                                            showPermissionGuideFlow = false
+                                        }
+                                    )
+                                }
+                                
+                                // 4. 进入主应用
+                                else -> {
+                                    // Deep Link 处理：引导流程完成后才执行导航
+                                    MainApp(
+                                        navController = navController,
+                                        deepLinkPresetId = deepLinkPresetId
+                                    )
+                                    // 消费 Deep Link，避免重复导航
+                                    if (deepLinkPresetId != null) {
+                                        _deepLinkPresetId.value = null
                                     }
-                                )
-                            } else {
-                                MainApp(
-                                    navController = navController,
-                                    deepLinkPresetId = deepLinkPresetId
-                                )
-                                // 消费 Deep Link，避免重复导航
-                                deepLinkPresetId = null
+                                }
                             }
                         }
                     }
@@ -202,10 +340,11 @@ class MainActivity : ComponentActivity() {
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        deepLinkPresetId = parseDeepLink(intent)
-        // 如果 Deep Link 有效，标记需要导航
-        if (deepLinkPresetId != null) {
-            Log.d("MainActivity", "DeepLink received: presetId=$deepLinkPresetId")
+        val newDeepLinkPresetId = parseDeepLink(intent)
+        // 更新 StateFlow，Compose 会自动响应并导航
+        _deepLinkPresetId.value = newDeepLinkPresetId
+        if (newDeepLinkPresetId != null) {
+            Log.d("MainActivity", "DeepLink received in onNewIntent: presetId=$newDeepLinkPresetId")
         }
     }
 

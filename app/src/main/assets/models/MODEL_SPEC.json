@@ -8,9 +8,10 @@
     "scene_classifier": {
       "fileName": "scene_classifier.tflite",
       "displayName": "场景分类模型",
-      "description": "基于 MobileNetV3-Small 的 36 类场景分类模型",
+      "description": "基于 MobileNetV3-Small 的 36 类场景分类模型（未来规划）",
       "version": "2.2.1",
       "status": "placeholder",
+      "implementationNote": "v2.3.6 当前使用 HeuristicSceneAnalyzer 启发式引擎，无需此模型文件。真实 TFLite 模型为未来规划。",
       "architecture": {
         "type": "MobileNetV3-Small",
         "framework": "TensorFlow 2.14",

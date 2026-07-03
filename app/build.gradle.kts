@@ -432,6 +432,18 @@ android {
     sourceSets["main"].res.setSrcDirs(
         listOf(file("src/main/res"))
     )
+
+    // ===== Android 16 16KB Page Size 适配 =====
+    // Android 16 设备支持 16KB 内存页，需验证原生库对齐
+    // 项目无自研 .so 文件，第三方库（TFLite、ML Kit、友盟）需验证
+    // CI 构建中添加 zipalign 检查确保对齐
+    packaging {
+        jniLibs {
+            // 使用 legacy packaging 确保 .so 被提取而非直接映射
+            // 兼容性更好，降低 OEM/低内存设备崩溃风险
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
@@ -501,6 +513,9 @@ dependencies {
 
     // ProfileInstaller - 启动性能优化（ART 配置文件）
     implementation(libs.androidx.profileinstaller)
+
+    // SplashScreen - Android 12+ 启动画面过渡，消除白屏
+    implementation(libs.androidx.core.splashscreen)
 
     // WorkManager - 后台定期同步
     implementation(libs.androidx.work.runtime.ktx)

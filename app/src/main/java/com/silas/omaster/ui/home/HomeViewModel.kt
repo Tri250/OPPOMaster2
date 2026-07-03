@@ -23,6 +23,15 @@ enum class SortType {
 }
 
 /**
+ * 加载状态枚举
+ */
+sealed class LoadState {
+    object Loading : LoadState()
+    object Success : LoadState()
+    data class Error(val message: String) : LoadState()
+}
+
+/**
  * 主页 ViewModel
  * 管理预设列表、收藏、Tab状态、品牌筛选、排序和搜索（对齐Web端）
  *
@@ -70,11 +79,15 @@ class HomeViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // 加载状态
+    // 加载状态（旧版，保留兼容）
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // 错误状态
+    // 新版加载状态流（LoadState: Loading/Success/Error）
+    private val _loadState = MutableStateFlow<LoadState>(LoadState.Loading)
+    val loadState: StateFlow<LoadState> = _loadState.asStateFlow()
+
+    // 错误状态（旧版，保留兼容）
     private val _errorState = MutableStateFlow<String?>(null)
     val errorState: StateFlow<String?> = _errorState.asStateFlow()
 
@@ -111,6 +124,7 @@ class HomeViewModel(
         searchHistoryJob?.cancel()
 
         _isLoading.value = true
+        _loadState.value = LoadState.Loading
 
         // 启动新的收集任务
         allPresetsJob = viewModelScope.launch {
@@ -118,14 +132,18 @@ class HomeViewModel(
                 repository.getAllPresets().collect { presets ->
                     ensureActive()
                     _allPresets.value = presets
-                    _isLoading.value = false
-                    _errorState.value = null
+                    if (presets.isNotEmpty()) {
+                        _isLoading.value = false
+                        _loadState.value = LoadState.Success
+                        _errorState.value = null
+                    }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // 协程被取消时不更新状态
                 throw e
             } catch (e: Exception) {
                 _isLoading.value = false
+                _loadState.value = LoadState.Error("加载失败: ${e.message}")
                 _errorState.value = "加载失败: ${e.message}"
             }
         }
@@ -397,6 +415,7 @@ class HomeViewModel(
      */
     fun retry() {
         _errorState.value = null
+        _loadState.value = LoadState.Loading
         refresh()
     }
 

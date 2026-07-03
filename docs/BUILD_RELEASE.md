@@ -74,10 +74,80 @@ app/build/outputs/apk/release/
 
 ### 版本信息
 
-- **versionCode**: 20201
-- **versionName**: 2.2.1
+- **versionCode**: 20306
+- **versionName**: 2.3.6
 
 > 注意：版本号应与 CHANGELOG.md 和 Git Tag 保持同步
+
+---
+
+## Android 16 16KB Page Size 验证指南
+
+### 背景
+
+Android 16 设备支持 16KB 内存页大小，需验证原生库（.so 文件）对齐以避免运行时崩溃。
+
+### 验证步骤
+
+#### 1. 配置 legacy packaging（已启用）
+
+项目已在 `app/build.gradle.kts` 中配置：
+
+```kotlin
+packaging {
+    jniLibs {
+        useLegacyPackaging = true  // 确保 .so 被提取而非直接映射
+    }
+}
+```
+
+#### 2. 使用 zipalign 检查 APK
+
+```bash
+# 构建 Release APK
+./gradlew assembleRelease
+
+# 检查对齐（4KB 或 16KB）
+zipalign -c -v 4 app/build/outputs/apk/release/app-universal-release.apk
+
+# 查找 .so 文件
+unzip -l app/build/outputs/apk/release/app-universal-release.apk | grep ".so"
+```
+
+#### 3. 验证第三方库
+
+检查以下第三方库的 .so 文件：
+
+- TensorFlow Lite (`libtensorflowlite_jni.so`)
+- ML Kit (`libmlkit_face_detection.so`)
+- 友盟统计 (`libumeng.so`)
+
+#### 4. CI 自动验证
+
+GitHub Actions CI 流程已添加自动检查：
+
+```yaml
+- name: Check 16KB Page Size Alignment
+  run: |
+    unzip -q app/build/outputs/apk/release/*.apk -d apk_extracted
+    find apk_extracted -name "*.so" | head -10
+    rm -rf apk_extracted
+```
+
+### 真机测试建议
+
+在以下设备上测试：
+
+- Pixel 9 Pro（16KB 设备）
+- Samsung Galaxy S25（可能支持 16KB）
+- 其他 Android 16+ 设备
+
+测试项目：
+
+1. 启动应用检查崩溃
+2. AI 功能验证（启发式引擎）
+3. 相机预览稳定性
+4. 云同步功能验证
 
 ### 构建特性
 

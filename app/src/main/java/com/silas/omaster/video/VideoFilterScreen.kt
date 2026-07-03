@@ -91,9 +91,9 @@ fun VideoFilterScreen(
     val progress by engine.progress.collectAsState()
     var processingResult by remember { mutableStateOf<VideoFilterEngine.ProcessResult?>(null) }
 
-    // 视频选择器
+    // 视频选择器（Android 16+ Photo Picker）
     val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia(mediaType = ActivityResultContracts.PickVisualMedia.VideoOnly)
     ) { uri ->
         uri?.let {
             selectedVideoUri = it

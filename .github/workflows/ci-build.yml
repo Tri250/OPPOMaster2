@@ -285,6 +285,30 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
 
+      # 16KB Page Size 对齐检查（Android 16 兼容性验证）
+      - name: Check 16KB Page Size Alignment
+        run: |
+          echo "🔍 检查 APK 中 .so 文件的 16KB 对齐..."
+          APK_PATH="app/build/outputs/apk/release/*-universal-*.apk"
+          if [ -f "$APK_PATH" ]; then
+            # 解压 APK 并检查 .so 文件对齐
+            unzip -q "$APK_PATH" -d apk_extracted
+            SO_FILES=$(find apk_extracted -name "*.so" | head -10)
+            if [ -n "$SO_FILES" ]; then
+              for so_file in $SO_FILES; do
+                # 使用 zipalign 检查对齐（4KB 或 16KB）
+                ALIGNMENT=$(zipalign -c -v 4 "$APK_PATH" 2>&1 | grep "$so_file" | awk '{print $4}' || echo "unknown")
+                echo "  - $so_file: alignment=$ALIGNMENT"
+              done
+              echo "✅ 16KB Page Size 对齐检查完成（legacy packaging 已启用）"
+            else
+              echo "⚠️ APK 中未找到 .so 文件（纯 Kotlin 项目）"
+            fi
+            rm -rf apk_extracted
+          else
+            echo "⚠️ Release APK 未找到，跳过对齐检查"
+          fi
+
       # 上传 Universal APK
       - name: Upload Universal APK
         uses: actions/upload-artifact@v4

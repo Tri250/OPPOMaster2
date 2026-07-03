@@ -1,6 +1,12 @@
 package com.silas.omaster.ui.home
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.foundation.background
@@ -91,6 +97,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -155,6 +162,7 @@ fun HomeScreen(
     val sortType by viewModel.sortType.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val loadState by viewModel.loadState.collectAsState()
     val errorState by viewModel.errorState.collectAsState()
     val searchHistory by viewModel.searchHistory.collectAsState()
     val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
@@ -352,7 +360,7 @@ fun HomeScreen(
             PresetGrid(
                 presets = filteredPresets,
                 selectedTab = selectedTab,
-                isLoading = isLoading && allPresets.isEmpty(),
+                loadState = loadState,
                 onNavigateToDetail = onNavigateToDetail,
                 onNavigateToCreate = onNavigateToCreate,
                 onToggleFavorite = { viewModel.toggleFavorite(it) },
@@ -362,6 +370,7 @@ fun HomeScreen(
                 },
                 onScrollStateChanged = onScrollStateChanged,
                 onRefresh = { onComplete -> viewModel.refresh(onComplete) },
+                onRetry = { viewModel.retry() },
                 isMultiSelectMode = isMultiSelectMode,
                 selectedPresetIds = selectedPresetIds,
                 onToggleSelection = { viewModel.toggleSelection(it) }
@@ -1025,13 +1034,14 @@ private fun MultiSelectBottomBar(
 private fun PresetGrid(
     presets: List<MasterPreset>,
     selectedTab: Int,
-    isLoading: Boolean = false,
+    loadState: LoadState = LoadState.Success,
     onNavigateToDetail: (MasterPreset) -> Unit,
     onNavigateToCreate: () -> Unit = {},
     onToggleFavorite: (String) -> Unit,
     onDeletePreset: (String) -> Unit,
     onScrollStateChanged: (Boolean) -> Unit = {},
     onRefresh: (onComplete: () -> Unit) -> Unit = {},
+    onRetry: () -> Unit = {},
     isMultiSelectMode: Boolean = false,
     selectedPresetIds: Set<String> = emptySet(),
     onToggleSelection: (String) -> Unit = {}
@@ -1087,88 +1097,132 @@ private fun PresetGrid(
             .fillMaxSize()
             .pullRefresh(pullRefreshState)
     ) {
-        when {
-            isLoading -> {
+        when (loadState) {
+            is LoadState.Loading -> {
                 // 骨架屏加载状态
-                ShimmerPresetGrid(itemCount = 6)
-            }
-            presets.isEmpty() -> {
-                // 空状态
-                androidx.compose.foundation.lazy.LazyColumn(
+                Column(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    item {
-                        EnhancedEmptyState(
-                            tabIndex = selectedTab,
-                            onNavigateToCreate = onNavigateToCreate,
-                            onRefresh = { onRefresh {} }
+                    // 加载指示器
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "正在加载预设...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    // 骨架屏网格（显示4个占位卡片）
+                    PresetCardSkeletonGrid(itemCount = 4)
                 }
             }
-            else -> {
-            val visibleStartIndex by remember {
-                derivedStateOf {
-                    listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: 0
-                }
-            }
-
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Fixed(2),
-                state = listState,
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 8.dp,
-                    bottom = 100.dp
-                ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalItemSpacing = 12.dp,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                itemsIndexed(
-                    items = presets,
-                    key = { index, preset -> preset.id ?: "${preset.name}_$index" }
-                ) { index, preset ->
-                    val imageHeight = remember(index) {
-                        when (index % 3) {
-                            0 -> 220
-                            1 -> 180
-                            else -> 260
+            is LoadState.Error -> {
+                // 错误状态：显示ErrorCard + 重试按钮
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    ErrorCard(
+                        message = loadState.message,
+                        onRetry = {
+                            haptic.perform(HapticFeedbackType.LongPress)
+                            onRetry()
                         }
-                    }
-
-                    val delayMillis = if (visibleStartIndex == 0) {
-                        calculateStaggerDelay(index, visibleStartIndex)
-                    } else {
-                        0
-                    }
-
-                    PresetCardItem(
-                        preset = preset,
-                        index = index,
-                        imageHeight = imageHeight,
-                        delayMillis = delayMillis,
-                        onNavigateToDetail = onNavigateToDetail,
-                        onToggleFavorite = onToggleFavorite,
-                        onDeletePreset = onDeletePreset,
-                        isMultiSelectMode = isMultiSelectMode,
-                        selectedPresetIds = selectedPresetIds,
-                        onToggleSelection = onToggleSelection,
-                        modifier = Modifier.animateItem(
-                            fadeInSpec = ListItemFadeInSpec,
-                            placementSpec = ListItemPlacementSpec
-                        )
                     )
                 }
-
-                // 底部提示（对齐Web端）
-                item(span = StaggeredGridItemSpan.FullLine) {
-                    LoadingMoreTip()
-                }
             }
+            is LoadState.Success -> {
+                when {
+                    presets.isEmpty() -> {
+                        // 空状态
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            item {
+                                EnhancedEmptyState(
+                                    tabIndex = selectedTab,
+                                    onNavigateToCreate = onNavigateToCreate,
+                                    onRefresh = { onRefresh {} }
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        val visibleStartIndex by remember {
+                            derivedStateOf {
+                                listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: 0
+                            }
+                        }
+
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(2),
+                            state = listState,
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 8.dp,
+                                bottom = 100.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalItemSpacing = 12.dp,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            itemsIndexed(
+                                items = presets,
+                                key = { index, preset -> preset.id ?: "${preset.name}_$index" }
+                            ) { index, preset ->
+                                val imageHeight = remember(index) {
+                                    when (index % 3) {
+                                        0 -> 220
+                                        1 -> 180
+                                        else -> 260
+                                    }
+                                }
+
+                                val delayMillis = if (visibleStartIndex == 0) {
+                                    calculateStaggerDelay(index, visibleStartIndex)
+                                } else {
+                                    0
+                                }
+
+                                PresetCardItem(
+                                    preset = preset,
+                                    index = index,
+                                    imageHeight = imageHeight,
+                                    delayMillis = delayMillis,
+                                    onNavigateToDetail = onNavigateToDetail,
+                                    onToggleFavorite = onToggleFavorite,
+                                    onDeletePreset = onDeletePreset,
+                                    isMultiSelectMode = isMultiSelectMode,
+                                    selectedPresetIds = selectedPresetIds,
+                                    onToggleSelection = onToggleSelection,
+                                    modifier = Modifier.animateItem(
+                                        fadeInSpec = ListItemFadeInSpec,
+                                        placementSpec = ListItemPlacementSpec
+                                    )
+                                )
+                            }
+
+                            // 底部提示（对齐Web端）
+                            item(span = StaggeredGridItemSpan.FullLine) {
+                                LoadingMoreTip()
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1774,4 +1828,194 @@ private fun PermissionCheckBanner() {
             }
         }
     }
+}
+
+/**
+ * 错误状态卡片组件
+ * 用于显示加载失败时的错误信息和重试按钮
+ */
+@Composable
+private fun ErrorCard(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 错误图标
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = "加载失败",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(48.dp)
+            )
+
+            // 错误标题
+            Text(
+                text = "加载失败",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+
+            // 错误信息
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 重试按钮
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "重新加载",
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 骨架屏网格组件（双列瀑布流布局）
+ * 在预设加载完成前显示灰色占位卡片
+ */
+@Composable
+private fun PresetCardSkeletonGrid(
+    itemCount: Int = 4,
+    modifier: Modifier = Modifier
+) {
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalItemSpacing = 12.dp,
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 8.dp,
+            bottom = 100.dp
+        )
+    ) {
+        items(itemCount) { index ->
+            val imageHeight = when (index % 3) {
+                0 -> 220
+                1 -> 180
+                else -> 260
+            }
+            PresetCardSkeleton(imageHeight = imageHeight)
+        }
+    }
+}
+
+/**
+ * 骨架屏预设卡片组件
+ * 灰色占位卡片，模拟真实预设卡片的布局
+ */
+@Composable
+private fun PresetCardSkeleton(
+    imageHeight: Int = 200,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            // 图片占位区域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(imageHeight.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(shimmerBrush())
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 标题占位区域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(shimmerBrush())
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 作者占位区域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(shimmerBrush())
+            )
+        }
+    }
+}
+
+/**
+ * 闪烁动画渐变刷（用于骨架屏）
+ */
+@Composable
+private fun shimmerBrush(): Brush {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_translate"
+    )
+
+    return Brush.linearGradient(
+        colors = listOf(
+            Color.LightGray.copy(alpha = 0.2f),
+            Color.LightGray.copy(alpha = 0.4f),
+            Color.LightGray.copy(alpha = 0.2f)
+        ),
+        start = Offset(translateAnim - 200, translateAnim - 200),
+        end = Offset(translateAnim, translateAnim)
+    )
 }
