@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 应用私有外部文件目录 - 仅用于 APK 更新下载 -->
+    <external-files-path
+        name="downloads"
+        path="Download/" />
+
+    <!-- 应用私有缓存目录 - 用于相机拍照临时文件共享 -->
+    <cache-path
+        name="camera_cache"
+        path="camera/" />
+
+    <!-- 哈苏之眼拍照临时文件目录 - 修复 V1.9.3 无法创建相机临时文件问题 -->
+    <external-files-path
+        name="hasselblad_images"
+        path="Pictures/Hasselblad/" />
+
+    <!-- 预设导出临时文件目录 - 用于分享导出的 JSON 文件 -->
+    <cache-path
+        name="export_cache"
+        path="." />
+</paths>

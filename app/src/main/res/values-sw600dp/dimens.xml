@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  平板/折叠屏适配 (sw600dp)
+  当屏幕最小宽度 >= 600dp 时使用此布局（如 7 英寸+ 平板、展开态折叠屏）
+  
+  关键调整：
+  - 悬浮窗使用更大的字体和间距
+  - 预设列表使用网格布局（2-3 列）
+  - 相机预览使用更大的取景框
+-->
+<resources>
+    <!-- 悬浮窗字体大小 -->
+    <dimen name="floating_window_text_size">16sp</dimen>
+    <dimen name="floating_window_padding">12dp</dimen>
+    <dimen name="floating_window_title_size">20sp</dimen>
+
+    <!-- 预设列表网格列数 -->
+    <integer name="preset_grid_columns">3</integer>
+    
+    <!-- 相机取景框 -->
+    <dimen name="camera_viewfinder_size">360dp</dimen>
+    
+    <!-- 底部导航栏高度 -->
+    <dimen name="bottom_nav_height">72dp</dimen>
+    
+    <!-- 卡片间距 -->
+    <dimen name="card_spacing">16dp</dimen>
+    
+    <!-- 按钮最小触摸区域 -->
+    <dimen name="button_min_touch_size">56dp</dimen>
+
+    <!-- 多窗口模式最小尺寸 -->
+    <dimen name="multi_window_min_width">360dp</dimen>
+    <dimen name="multi_window_min_height">240dp</dimen>
+</resources>

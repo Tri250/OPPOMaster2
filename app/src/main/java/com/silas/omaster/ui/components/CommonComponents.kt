@@ -1,0 +1,553 @@
+package com.silas.omaster.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.request.CachePolicy
+import com.silas.omaster.R
+import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.ui.animation.AnimationSpecs
+import com.silas.omaster.infrastructure.utils.DownloadResult
+import com.silas.omaster.infrastructure.utils.ImageCacheManager
+import com.silas.omaster.infrastructure.utils.ImageDownloadCallback
+import java.io.File
+
+/**
+ * 通用顶部导航栏组件
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OMasterTopAppBar(
+    title: String,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        navigationIcon = {
+            onBack?.let {
+                IconButton(onClick = it) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            } ?: Box {}
+        },
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onBackground
+        ),
+        modifier = modifier
+    )
+}
+
+/**
+ * 功能特性卡片组件
+ */
+@Composable
+fun FeatureCard(
+    icon: String,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier,
+    iconSize: TextUnit = 32.sp
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = icon,
+                fontSize = iconSize
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 参数显示项组件
+ */
+@Composable
+fun ParameterItem(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+/**
+ * 通用卡片组件
+ */
+@Composable
+fun OMasterCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        content = content
+    )
+}
+
+/**
+ * 垂直间距组件
+ */
+@Composable
+fun VerticalSpacer(height: Dp) = Spacer(modifier = Modifier.height(height))
+
+/**
+ * 水平间距组件
+ */
+@Composable
+fun HorizontalSpacer(width: Dp) = Spacer(modifier = Modifier.width(width))
+
+/**
+ * 模式标签组件
+ * 支持显示多个标签
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ModeBadge(
+    tags: List<String>?,
+    modifier: Modifier = Modifier
+) {
+    if (tags.isNullOrEmpty()) return
+
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        tags.forEach { tag ->
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = tag,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 预设图片组件
+ * 支持 assets、内部存储和网络图片（带本地缓存）
+ * 优化：使用更短的 crossfade 动画时长，优先加载本地缓存，带下载状态
+ */
+@Composable
+fun PresetImage(
+    preset: MasterPreset,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    showDownloadIndicator: Boolean = true
+) {
+    val context = LocalContext.current
+    var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
+
+    // 使用 ImageCacheManager 获取加载路径（优先本地缓存）
+    val imageUri = ImageCacheManager.getInstance(context).getImageLoadPath(context, preset.coverPath)
+
+    // 如果是网络图片且未缓存，后台下载
+    LaunchedEffect(preset.coverPath) {
+        if (preset.coverPath.isNotBlank() && preset.coverPath.startsWith("http") &&
+            !ImageCacheManager.getInstance(context).isImageCached(context, preset.coverPath)) {
+
+            downloadState = DownloadState.Downloading
+
+            val result = ImageCacheManager.getInstance(context).downloadAndCacheImage(
+                context, preset.coverPath,
+                callback = object : ImageDownloadCallback {
+                    override fun onStart(url: String) {}
+                    override fun onProgress(url: String, bytesDownloaded: Long, totalBytes: Long) {}
+                    override fun onSuccess(url: String, file: File) {
+                        downloadState = DownloadState.Success
+                    }
+                    override fun onError(url: String, error: Throwable, retryCount: Int) {
+                        downloadState = DownloadState.Error(error.message ?: "下载失败")
+                    }
+                    override fun onRetry(url: String, attempt: Int) {}
+                }
+            )
+
+            downloadState = when (result) {
+                is DownloadResult.Success -> DownloadState.Success
+                is DownloadResult.Error -> DownloadState.Error("下载失败")
+            }
+        }
+    }
+
+    Box(modifier = modifier) {
+        if (imageUri.isBlank()) {
+            // 路径为空时显示占位图
+            ImagePlaceholder()
+        } else {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageUri)
+                    .crossfade(AnimationSpecs.FastTween.durationMillis)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .build(),
+                contentDescription = preset.name,
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize(),
+                onError = {
+                    android.util.Log.w("PresetImage", "图片加载失败: $imageUri, error: ${it.result.throwable?.message}")
+                }
+            )
+        }
+
+        // 显示加载状态
+        if (showDownloadIndicator && downloadState is DownloadState.Downloading) {
+            LoadingIndicator()
+        }
+
+        // 加载失败时显示占位图
+        if (downloadState is DownloadState.Error && imageUri.startsWith("http")) {
+            ImagePlaceholder()
+        }
+    }
+}
+
+/**
+ * 简单加载指示器 - Material 3 风格
+ */
+@Composable
+fun LoadingIndicator(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(32.dp),
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 3.dp
+        )
+    }
+}
+
+/**
+ * 图片占位图组件 - 当图片路径为空或加载失败时显示
+ */
+@Composable
+fun ImagePlaceholder(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Image,
+            contentDescription = "图标",
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+            modifier = Modifier.size(32.dp)
+        )
+    }
+}
+
+/**
+ * 下载状态
+ */
+private sealed class DownloadState {
+    object Idle : DownloadState()
+    object Downloading : DownloadState()
+    object Success : DownloadState()
+    data class Error(val message: String) : DownloadState()
+}
+
+/**
+ * 章节标题组件
+ */
+@Composable
+fun SectionTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        modifier = modifier
+    )
+}
+
+/**
+ * 带卡片的参数项组件
+ */
+@Composable
+fun ParameterCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 0.5.dp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+    }
+}
+
+/**
+ * 拍摄建议卡片组件
+ */
+@Composable
+fun ShootingTipsCard(
+    tips: String,
+    modifier: Modifier = Modifier
+) {
+    DescriptionCard(
+        title = stringResource(R.string.shooting_tips),
+        content = tips,
+        modifier = modifier
+    )
+}
+
+/**
+ * 通用描述卡片组件
+ */
+@Composable
+fun DescriptionCard(
+    title: String,
+    content: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // 标题行
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lightbulb,
+                contentDescription = "图标",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 内容
+            content.split("\n").forEach { line ->
+                if (line.isNotBlank()) {
+                    Text(
+                        text = line.trim(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
+                        lineHeight = 22.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 错误重试卡片组件
+ * 显示错误消息和重试按钮，适用于网络错误、加载失败等场景
+ */
+@Composable
+fun ErrorRetryCard(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onRetry) {
+                Text(stringResource(R.string.retry))
+            }
+        }
+    }
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Backup rules for Android 6.0 - 11
+   注意：敏感数据（订阅URL、令牌）应排除备份
+   2.2.0 增强：增加崩溃日志、应用设置备份控制
+-->
+<full-backup-content xmlns:tools="http://schemas.android.com/tools">
+    <!-- 排除订阅凭证和认证信息 -->
+    <exclude domain="sharedpref" path="omaster_subscription.xml" tools:ignore="FullBackupContent" />
+    <exclude domain="sharedpref" path="omaster_auth.xml" tools:ignore="FullBackupContent" />
+    <!-- 排除崩溃日志（包含潜在敏感信息） -->
+    <exclude domain="file" path="crash_logs/" tools:ignore="FullBackupContent" />
+    <!-- 排除临时缓存 -->
+    <exclude domain="file" path="cache/" tools:ignore="FullBackupContent" />
+    <!-- 排除动态生成的临时文件 -->
+    <exclude domain="file" path="tmp/" tools:ignore="FullBackupContent" />
+    <!-- 保留用户设置（便于换机恢复） -->
+    <include domain="sharedpref" path="omaster_prefs.xml" />
+    <include domain="sharedpref" path="onboarding_prefs.xml" />
+    <!-- 保留用户预设数据 -->
+    <include domain="file" path="presets/" />
+    <include domain="file" path="recipes/" />
+</full-backup-content>

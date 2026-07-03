@@ -1,0 +1,261 @@
+[
+  {
+    "id": "OPT-001",
+    "name": "Helios 旋焦",
+    "category": "special_optic",
+    "intentKeywords": ["旋焦", "梦幻", "Helios", "swirly", "dreamy", "bokeh"],
+    "equivalentEquipment": {
+      "camera": "Zenit TTL",
+      "lens": "Helios 44-2 58mm f/2",
+      "focalLength": "58mm",
+      "aperture": "f/2"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 2.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 8,
+      "contrast": 5,
+      "colorTemp": 5,
+      "sharpness": 5,
+      "vignette": 15,
+      "cyanMagenta": 0,
+      "softLight": "DREAMY",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "portra_400", "strength": 0.6 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "中心锐利，边缘旋涡状虚化，俄式复古风格",
+    "lightingTip": "自然光，避免过曝",
+    "avoidTips": ["高锐度", "冷调", "中心构图"]
+  },
+  {
+    "id": "OPT-002",
+    "name": "Petzval 漩涡",
+    "category": "special_optic",
+    "intentKeywords": ["漩涡", "戏剧", "Petzval", "swirl", "dramatic", "portrait"],
+    "equivalentEquipment": {
+      "camera": "Lomography Petzval",
+      "lens": "Petzval 85mm f/2.2",
+      "focalLength": "85mm",
+      "aperture": "f/2.2"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": -5,
+      "saturation": 10,
+      "contrast": 10,
+      "colorTemp": 0,
+      "sharpness": 0,
+      "vignette": 20,
+      "cyanMagenta": 0,
+      "softLight": "DREAMY",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 0
+    },
+    "lutRecommendation": { "id": "tx400", "strength": 0.7 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "中心主体清晰，边缘漩涡状虚化",
+    "lightingTip": "侧光强化主体轮廓",
+    "avoidTips": ["高锐度", "冷调", "硬光"]
+  },
+  {
+    "id": "OPT-003",
+    "name": "超长焦压缩",
+    "category": "special_optic",
+    "intentKeywords": ["长焦", "压缩", "超长焦", "telephoto", "compression", "vast"],
+    "equivalentEquipment": {
+      "camera": "Nikon Z9",
+      "lens": "NIKKOR Z 800mm f/6.3",
+      "focalLength": "800mm",
+      "aperture": "f/6.3"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 10.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 5,
+      "contrast": 15,
+      "colorTemp": 0,
+      "sharpness": 20,
+      "vignette": 0,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 10
+    },
+    "lutRecommendation": { "id": "rdp3", "strength": 0.5 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "压缩前后景关系，注意防抖",
+    "lightingTip": "任何光线均可，注意防抖",
+    "avoidTips": ["广角", "柔光", "低对比"]
+  },
+  {
+    "id": "OPT-004",
+    "name": "移轴微缩",
+    "category": "special_optic",
+    "intentKeywords": ["移轴", "微缩", "tilt-shift", "miniature", "architecture"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R5",
+      "lens": "TS-E 24mm f/3.5L II",
+      "focalLength": "24mm",
+      "aperture": "f/3.5"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": 10,
+      "contrast": 10,
+      "colorTemp": 0,
+      "sharpness": 25,
+      "vignette": -10,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 15
+    },
+    "lutRecommendation": { "id": "nc_natural", "strength": 0.5 },
+    "arGuideLine": "HORIZON",
+    "compositionTip": "倾斜焦平面，产生微缩模型效果",
+    "lightingTip": "任何光线均可，注意对焦",
+    "avoidTips": ["高暗角", "柔光", "低锐度"]
+  },
+  {
+    "id": "OPT-005",
+    "name": "红外景观",
+    "category": "special_optic",
+    "intentKeywords": ["红外", "白色", "植被", "infrared", "white", "landscape"],
+    "equivalentEquipment": {
+      "camera": "Sony A7R IV (改机)",
+      "lens": "FE 24-70mm f/2.8 GM",
+      "focalLength": "35mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 1.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.5
+    },
+    "hasselbladPreset": {
+      "tone": 10,
+      "saturation": -15,
+      "contrast": 20,
+      "colorTemp": -20,
+      "sharpness": 15,
+      "vignette": 10,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": 5,
+      "shadows": 10,
+      "clarity": 8
+    },
+    "lutRecommendation": { "id": "cool_ccd", "strength": 0.8 },
+    "arGuideLine": "THIRDS",
+    "compositionTip": "植被变白，天空变黑，形成强烈对比",
+    "lightingTip": "晴天最佳，植被反射红外最强",
+    "avoidTips": ["暖调", "高饱和", "柔光"]
+  },
+  {
+    "id": "OPT-006",
+    "name": "极近微距",
+    "category": "special_optic",
+    "intentKeywords": ["微距", "微观", "极近", "macro", "extreme", "detail"],
+    "equivalentEquipment": {
+      "camera": "Canon EOS R5",
+      "lens": "RF 100mm f/2.8L Macro",
+      "focalLength": "100mm",
+      "aperture": "f/8"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 3.0,
+      "iso": "auto",
+      "shutter": "auto",
+      "whiteBalance": "daylight",
+      "exposureCompensation": 0.3
+    },
+    "hasselbladPreset": {
+      "tone": 0,
+      "saturation": 0,
+      "contrast": 20,
+      "colorTemp": 0,
+      "sharpness": 30,
+      "vignette": -5,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -5,
+      "shadows": 5,
+      "clarity": 20
+    },
+    "lutRecommendation": { "id": "rdp3", "strength": 0.6 },
+    "arGuideLine": "CENTER_CROSS",
+    "compositionTip": "主体居中，背景完全虚化",
+    "lightingTip": "环形灯或柔光箱，避免阴影",
+    "avoidTips": ["柔光", "低锐度", "暖调"]
+  },
+  {
+    "id": "OPT-007",
+    "name": "小光圈星芒",
+    "category": "special_optic",
+    "intentKeywords": ["星芒", "夜景", "小光圈", "star burst", "night", "small aperture"],
+    "equivalentEquipment": {
+      "camera": "Nikon Z8",
+      "lens": "NIKKOR Z 14-24mm f/2.8",
+      "focalLength": "14mm",
+      "aperture": "f/16"
+    },
+    "phoneShootingGuide": {
+      "zoomRatio": 0.6,
+      "iso": "100",
+      "shutter": "auto",
+      "whiteBalance": "tungsten",
+      "exposureCompensation": 0.0
+    },
+    "hasselbladPreset": {
+      "tone": 5,
+      "saturation": 10,
+      "contrast": 15,
+      "colorTemp": -10,
+      "sharpness": 8,
+      "vignette": 15,
+      "cyanMagenta": 0,
+      "softLight": "NONE",
+      "highlights": -15,
+      "shadows": -5,
+      "clarity": 5
+    },
+    "lutRecommendation": { "id": "800t", "strength": 0.5 },
+    "arGuideLine": "HORIZON",
+    "compositionTip": "路灯或点光源位于画面边缘，星芒效果更明显",
+    "lightingTip": "三脚架必备，ISO100避免噪点",
+    "avoidTips": ["大光圈", "柔光", "高锐度"]
+  }
+]

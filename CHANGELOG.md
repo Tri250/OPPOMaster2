@@ -1,0 +1,148 @@
+### v2.3.5 (2026-07-03)
+
+#### ✨ 新增
+- **Release v2.3.5 发布** - 完整构建并上传 Release APK 到 GitHub Releases
+
+#### 🐛 修复（正式版自检）
+- **LUT3DRenderer 缺失导入** - 修复 `LUT3DData`、`LUT3DParser` 缺失 import 导致编译失败的问题
+- **PixelFruitEngine/Shader 缺失导入** - 修复 `PixelFruitParams` 缺失 import 导致编译失败的问题
+- **SmartOptimizeEngine 缺失导入** - 修复 `SmartOptimizeParams`、`CurvePoint`、`ParametricCurveData`、`ColorWheelValue`、`ExportResize`、`HSLAdjustments`、`LocalMask`、`EditHistoryManager` 等缺失 import 导致编译失败的问题
+- **StyleLUTGenerator 缺失导入** - 修复 `LUT3DData` 缺失 import 导致 `lutData.data` 无法访问的问题
+- **CrashHandler 缺失导入** - 修复 `SecurityCrypto` 缺失 import 导致崩溃日志加密失败的问题
+- **AIFineTuneViewModel 包路径错误** - 修复 `AISuggestionResult` 引用包路径错误（`com.silas.omaster.ai` → `com.silas.omaster.engine`）
+- **CameraXManager/HasselbladEyeViewModel 顶层函数导入** - 修复 `applyHasselbladColorEngine`、`applyHasselbladColorEngineVignette` 顶层函数未导入导致 `Unresolved reference` 的问题
+- **Gradle Wrapper 镜像源** - 修复阿里云镜像不支持 Gradle 8.14.4 的问题，切换到官方源 `services.gradle.org`
+
+#### 📦 构建产物
+- `app-arm64-v8a-release.apk` (115MB) - ARM64 设备（推荐）
+- `app-armeabi-v7a-release.apk` (95MB) - ARM 32位设备
+- `app-universal-release.apk` (312MB) - 通用包（所有架构）
+- `app-x86-release.apk` (131MB) - x86 32位
+- `app-x86_64-release.apk` (108MB) - x86 64位
+
+#### 🔐 签名信息
+- 证书: CN=OMaster, OU=Development, O=OMaster
+- SHA-256: f3fcd4392cc2f94230fb2b93a101d0b4b09ce7b54db56c3bd48d4efe037c6caa
+
+---
+
+### v2.1.0 (2026-06-28)
+
+#### ✨ 新增
+- **摄影配方系统** - 加载 35 条专业摄影配方，支持意图搜索与场景自动匹配，结果页展示大师器材推荐与拍摄避坑指南
+- **反模式实时检测** - 取景器实时检测顶光、广角近距面部变形、高 ISO 噪点等 10 类常见拍摄错误并给出修复建议
+- **LUT 实时预览** - 基于 OpenGL ES 3.0 实现取景器 LUT 所见即所得（WYSIWYG）实时渲染
+- **用户反馈闭环** - 完成页支持星级评分、问题标签与评论反馈，离线保存并在网络可用时自动上传
+
+#### 🔧 优化
+- **GPU 渲染主路径** - 预览生成优先走 GPU 管线（GPURenderManager），失败时自动降级到 CPU
+- **国内镜像加速** - Gradle Wrapper 与 Maven 仓库默认使用阿里云镜像，提升依赖下载速度
+- **Android SDK 安装脚本** - 新增一键安装脚本 `install-android-sdk.sh`，自动配置国内镜像与必要组件
+
+#### 🐛 修复（正式版自检）
+- **反模式检测修复按钮** - 修复取景器反模式提示条的"一键修复"按钮为空实现（TODO）的问题，现在可实际执行变焦切换、曝光补偿调整、夜景模式启用、柔光模式启用、AR 引导线切换
+- **反馈 API 配置化** - 移除反馈上传地址的硬编码 TODO，改为从 `local.properties` 的 `feedback.api.endpoint` 读取，支持开发/测试/生产环境切换
+- **LUT 实时预览 OES 纹理** - 修复 LUTPreviewRenderer 的 camera 纹理使用普通 2D 纹理（`GL_TEXTURE_2D`）而非 OES 外部纹理（`GL_TEXTURE_EXTERNAL_OES`）的问题，着色器同步改为 `samplerExternalOES`
+- **亮度分布与陀螺仪真实数据** - 修复反模式检测使用硬编码 `upperBrightnessRatio=0f` 和 `gyroscopeStable=true` 的问题，新增基于图像像素采样的上半部分亮度比例计算与基于陀螺仪角速度方差的稳定性检测
+- **实时帧回收崩溃** - 修复 `CameraXViewfinderScreen` 中旧 `processedFrame` 在下一帧回调时被立即回收，导致 `Image` composable 渲染已回收 Bitmap 崩溃的问题
+- **配方参数传递链路** - 修复从 `HasselbladScreen` 选择配方后进入 `CameraXViewfinderScreen` 时配方参数未传递、未应用的问题，现在通过 `savedStateHandle` 完整传递并在取景器实时生效
+- **反馈后台上传耗电** - 为 `FeedbackManager.startUploadWorker` 添加网络可用性检查（`ConnectivityManager`），无网络时跳过上传轮询，避免持续耗电
+- **人像肤色检测** - 升级 `PortraitModeManager.isSkinColor` 从简化 RGB 范围到 YCbCr（BT.601），覆盖更广人种（深肤色、偏黄/偏红肤色），确保磨皮/美白/红润效果真实生效
+- **StyleLUT 参考图清除** - 修复 `StyleLUTGeneratorScreen` 中参考风格图的"清除"按钮为空实现的问题，新增 `StyleLUTGeneratorViewModel.clearReferenceImage()` 方法
+- **并发重复上传** - 为 `FeedbackManager.attemptUpload` 添加 `uploadingIds` 并发保护，防止 `retryAll` 与后台工作器同时上传同一条反馈
+- **ZebraPeaking Bitmap 泄漏** - 修复 `CameraXManager.overlayZebraPeaking` 中 `source.copy()` 创建的中间 Bitmap 在 GPU 路径和直出路径下未被回收的内存泄漏
+- **保存图片缩放泄漏** - 修复 `HasselbladEyeViewModel.saveImage` 中 `createThumbnail` 产生的大 Bitmap 在保存后未立即回收的问题
+- **取景器切换摄像头** - 修复 `CameraXViewfinderScreen` 中 `ShutterBar.onSwitchCamera` 未传递 `PreviewView` 引用的问题，消除依赖默认参数的歧义
+
+---
+
+### v1.9.0 (2026-06-23)
+
+#### 🔧 Android 16 适配
+- 启用预测性返回动画 (`enableOnBackInvokedCallback`)
+- 图片选择器迁移至 `PickVisualMedia`（符合 Android 16 隐私最佳实践）
+- 云存储连接验证改为真实 HTTP 请求（Google Drive / Dropbox / WebDAV）
+- 修正 TFLite 相关误导性注释，明确当前使用启发式场景分析
+
+#### 🐛 修复
+- 修复参数调节页直方图使用伪随机数据的问题，改为基于曝光参数的确定性计算
+- 修复云存储提供商连接验证为空实现的问题
+
+---
+
+### v1.3.1 (2026-06-16)
+
+#### ✨ 新增
+- **哈苏之眼 AI 场景识别** - 智能识别 35+ 场景，自动推荐胶片配方
+- **AI 智能调参** - 根据场景自动调整哈苏参数
+- **悬浮窗快捷切换** - 支持在任意界面快速切换预设
+
+#### 🔧 修复
+- 修复 Gradle 构建配置，支持标准 CI 环境
+- 修复 Android 14+ 前台服务权限问题
+- 修复更新检查仓库地址
+- 修复 GPU 渲染 ANR 问题
+- 修复应用启动日志缺失
+
+#### ⚡ 优化
+- 优化 ProGuard 混淆规则，减小 APK 体积
+- 优化 CPU 降级渲染性能
+- 优化场景识别算法
+
+---
+
+### v1.2.0 (2026-02-22)
+
+#### ✨ 新增
+- **4 款全新预设** - 蓝调通透、晴天复古、霓虹灯、复古怀旧，作者：@屋顶橙子味
+- **预设云更新** - 支持从远程服务器获取最新预设配置
+- **震动反馈** - 交互操作新增震动反馈体验
+- **完整英文支持** - 新增预设及界面全面支持英文
+
+#### 🎨 优化
+- 视觉UI体验优化
+
+---
+
+### v1.1.1 (2026-02-14)
+
+#### ✨ 新增
+- **4 款 Aurora 预设** - 哈苏浓郁、假日清新、梦幻黑白、美味梦境
+- **预设编辑功能** - 自定义预设支持编辑修改
+- **新预设标记** - 新增预设显示 NEW 标签并置顶
+- **国内下载** - 更新检查使用 GitHub，下载跳转国内镜像
+
+#### 🎨 优化
+- UI 圆角和间距调整，视觉更现代
+- 瀑布流加载动画更流畅
+
+---
+
+### v1.1.0 (2026-02-12)
+
+#### ✨ 新增功能
+- **悬浮窗预设切换** - 悬浮窗标题栏新增左右切换按钮
+- **悬浮窗无闪动切换** - 优化切换逻辑，窗口位置保持不变
+- **删除二次确认** - 自定义预设删除时增加确认对话框
+
+#### 📸 新增预设
+- **手机徕卡** - 人文滤镜配方，作者：@盒子叔
+- **梦幻富士** - 模仿富士NC负片，作者：@盒子叔
+
+---
+
+### v1.0.2 (2026-02-11)
+
+#### 🔥 重要更新
+- **优化友盟统计 SDK 配置**，AppKey 改为构建时注入，不再硬编码
+- **友盟统计改为可选**，用户可在设置中关闭数据上报
+
+---
+
+### v1.0.1 (2026-02-11)
+
+#### ✨ 新增预设
+- **人文** - 适合人文街拍，作者：@蘭州白鴿
+- **清新** - 青橙色调，作者：@蘭州白鴿
+- **氛围雪夜** - 冷暖碰撞，作者：@派瑞特凯
+- **美味流芳** - 美食专用，作者：@ONESTEP™

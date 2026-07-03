@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMaster 隐私政策</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a2e;
+            --muted: #6b7280;
+            --accent: #e67e22;
+            --border: #e5e7eb;
+            --code-bg: #f3f4f6;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1a1a2e;
+                --text: #e5e7eb;
+                --muted: #9ca3af;
+                --accent: #f0a04b;
+                --border: #374151;
+                --code-bg: #111827;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        h1 { font-size: 2rem; margin-bottom: 8px; color: var(--accent); }
+        h2 { font-size: 1.4rem; margin-top: 40px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        p, li { margin-bottom: 12px; color: var(--text); }
+        ul { padding-left: 24px; }
+        .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 32px; }
+        .last-updated { background: var(--code-bg); padding: 8px 16px; border-radius: 8px; margin-bottom: 32px; font-size: 0.9rem; color: var(--muted); }
+        strong { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <h1>OMaster 隐私政策</h1>
+    <p class="meta">OMaster — 哈苏色调大师</p>
+    <div class="last-updated">最后更新日期：2026年7月1日</div>
+
+    <h2>一、信息收集</h2>
+    <p>OMaster 是一款<strong>本地优先</strong>的照片调色应用。我们承诺：</p>
+    <ul>
+        <li><strong>不收集</strong>您的个人照片数据。所有图像处理均在您的设备本地完成。</li>
+        <li><strong>不上传</strong>您的照片到任何服务器。AI 场景识别和图像分析完全在本地运行。</li>
+        <li><strong>不分享</strong>您的个人信息给第三方。</li>
+    </ul>
+
+    <h2>二、我们收集的数据</h2>
+    <p>为提供基本服务，我们可能收集以下<strong>非个人</strong>信息：</p>
+    <ul>
+        <li><strong>崩溃日志</strong>：当应用发生崩溃时，我们会收集崩溃堆栈信息（不包含任何个人数据或照片内容），用于改进应用稳定性。此功能需要您主动授权。</li>
+        <li><strong>使用统计</strong>：通过友盟 SDK 收集匿名使用统计数据（如功能使用频率、页面访问），用于优化用户体验。您可以在设置中关闭此功能。</li>
+        <li><strong>反馈信息</strong>：您主动提交的反馈内容（包括星级评分、问题标签和文字描述），仅用于改进产品质量。</li>
+    </ul>
+
+    <h2>三、数据存储与安全</h2>
+    <ul>
+        <li>您的预设数据、LUT 文件、应用设置等<strong>仅存储在您的设备本地</strong>。</li>
+        <li>云端预设同步功能仅在您主动添加订阅源时触发，我们不会自动同步您的数据。</li>
+        <li>应用使用 <strong>TLS 1.2+</strong> 加密传输所有网络请求，并通过证书固定防止中间人攻击。</li>
+        <li>崩溃日志中的敏感信息（如 token、key、password 等）会自动脱敏处理。</li>
+    </ul>
+
+    <h2>四、权限使用说明</h2>
+    <table style="width:100%; border-collapse:collapse; margin: 16px 0;">
+        <tr style="border-bottom: 1px solid var(--border);">
+            <th style="text-align:left; padding: 8px;">权限</th>
+            <th style="text-align:left; padding: 8px;">用途</th>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px;">相机</td>
+            <td style="padding: 8px;">取景器实时预览和色彩分析</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px;">存储</td>
+            <td style="padding: 8px;">保存和加载照片到设备</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px;">悬浮窗</td>
+            <td style="padding: 8px;">快捷取色工具，方便在其他应用中使用</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px;">网络</td>
+            <td style="padding: 8px;">云端预设同步、反馈提交、更新检查</td>
+        </tr>
+    </table>
+
+    <h2>五、第三方服务</h2>
+    <ul>
+        <li><strong>友盟+ (Umeng)</strong>：提供匿名使用统计分析。友盟隐私政策：<a href="https://www.umeng.com/policy" style="color: var(--accent);">https://www.umeng.com/policy</a></li>
+        <li><strong>Google Play Billing</strong>：处理内购支付。Google 隐私政策：<a href="https://policies.google.com/privacy" style="color: var(--accent);">https://policies.google.com/privacy</a></li>
+    </ul>
+
+    <h2>六、儿童隐私</h2>
+    <p>OMaster 不面向 13 岁以下儿童。我们不会故意收集儿童的任何个人信息。</p>
+
+    <h2>七、您的权利</h2>
+    <p>您可以在应用设置中随时：</p>
+    <ul>
+        <li>关闭匿名使用统计</li>
+        <li>清除本地缓存数据</li>
+        <li>管理云端同步订阅源</li>
+    </ul>
+    <p>由于我们不收集个人数据，因此无需提供数据导出或删除请求。</p>
+
+    <h2>八、政策更新</h2>
+    <p>我们可能会更新本隐私政策。更新后，我们会在应用内通知您，并在本页面更新生效日期。</p>
+
+    <h2>九、联系我们</h2>
+    <p>如果您对隐私政策有任何疑问，请通过以下方式联系我们：</p>
+    <ul>
+        <li>邮箱：<strong>privacy@omaster.app</strong></li>
+        <li>GitHub：<a href="https://github.com/Tri250/OPPOMaster2" style="color: var(--accent);">https://github.com/Tri250/OPPOMaster2</a></li>
+        <li>应用内反馈：设置 → 关于 → 反馈</li>
+    </ul>
+</body>
+</html>

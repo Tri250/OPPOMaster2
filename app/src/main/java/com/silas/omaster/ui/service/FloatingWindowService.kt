@@ -1,0 +1,1276 @@
+package com.silas.omaster.ui.service
+
+import android.animation.ValueAnimator
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.graphics.Color
+import android.graphics.LinearGradient
+import androidx.compose.ui.graphics.toArgb
+import android.graphics.PixelFormat
+import android.graphics.Shader
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.IBinder
+import android.util.Log
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import android.view.WindowMetrics
+import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
+import com.silas.omaster.MainActivity
+import com.silas.omaster.R
+import com.silas.omaster.data.local.SettingsManager
+import com.silas.omaster.model.PresetItem
+import com.silas.omaster.model.PresetSection
+import com.silas.omaster.infrastructure.utils.PermissionChecker
+import com.silas.omaster.infrastructure.utils.PresetI18n
+import com.silas.omaster.infrastructure.utils.formatSigned
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+/**
+ * 悬浮窗服务 - 高级美观版
+ *
+ * 优化内容：
+ * 1. 毛玻璃效果背景
+ * 2. 渐变标题栏
+ * 3. 图标化参数展示
+ * 4. 精致的收起/展开动画
+ * 5. 悬浮球采用品牌色渐变
+ * 6. 动态渲染内容（基于 sections）
+ */
+class FloatingWindowService : Service() {
+
+    private var windowManager: WindowManager? = null
+    private var floatingView: View? = null
+    private var params: WindowManager.LayoutParams? = null
+    private var isExpanded = true
+
+    // 配色方案 - 从 SettingsManager 动态读取主题色
+    private fun getPrimaryColor(context: Context): Int {
+        val theme = SettingsManager.getInstance(context).currentTheme
+        return theme.primaryColor.toArgb()
+    }
+
+    private fun getPrimaryDarkColor(context: Context): Int {
+        val primary = getPrimaryColor(context)
+        // 将主题色变暗约10%
+        val r = (Color.red(primary) * 0.9).toInt().coerceIn(0, 255)
+        val g = (Color.green(primary) * 0.9).toInt().coerceIn(0, 255)
+        val b = (Color.blue(primary) * 0.9).toInt().coerceIn(0, 255)
+        return Color.rgb(r, g, b)
+    }
+
+    private val cardBackground = Color.parseColor("#26FFFFFF")  // 卡片背景
+    private val textPrimary = Color.parseColor("#FFFFFF")       // 主文字
+    private val textSecondary = Color.parseColor("#B3FFFFFF")   // 次要文字
+    private val textMuted = Color.parseColor("#80FFFFFF")       // 弱化文字
+
+    // 背景颜色根据设置动态计算
+    private fun getBackgroundColor(context: Context): Int {
+        val opacity = SettingsManager.getInstance(context).floatingWindowOpacity
+        val alpha = (opacity * 255 / 100).coerceIn(30, 255)
+        return Color.argb(alpha, 26, 26, 26) // #1A1A1A with dynamic alpha
+    }
+
+    companion object {
+        private const val TAG = "FloatingWindowService"
+        private const val NOTIFICATION_ID = 1001
+        private const val CHANNEL_ID = "floating_window_channel"
+        private const val EXTRA_NAME = "name"
+        private const val EXTRA_SECTIONS = "sections"
+        private const val EXTRA_PRESET_ID = "preset_id"
+        private const val EXTRA_PRESET_INDEX = "preset_index"
+        private const val EXTRA_PRESET_LIST = "preset_list"
+
+        // 保存状态到 Intent 的键
+        private const val EXTRA_IS_EXPANDED = "is_expanded"
+        private const val EXTRA_POS_X = "pos_x"
+        private const val EXTRA_POS_Y = "pos_y"
+        private const val EXTRA_ACTION = "action"
+
+        // Action 类型
+        private const val ACTION_SHOW = "show"
+        private const val ACTION_UPDATE = "update"
+
+        // 广播 Action
+        const val ACTION_SWITCH_PRESET = "com.silas.omaster.SWITCH_PRESET"
+        const val EXTRA_SWITCH_DIRECTION = "switch_direction" // "prev" or "next"
+
+        // SharedPreferences 键 - 用于 START_STICKY 重启后恢复状态
+        private const val PREFS_NAME = "floating_window_state"
+        private const val KEY_LAST_NAME = "last_name"
+        private const val KEY_LAST_SECTIONS_JSON = "last_sections_json"
+        private const val KEY_LAST_PRESET_INDEX = "last_preset_index"
+        private const val KEY_LAST_PRESET_LIST_JSON = "last_preset_list_json"
+        private const val KEY_LAST_IS_EXPANDED = "last_is_expanded"
+        private const val KEY_LAST_POS_X = "last_pos_x"
+        private const val KEY_LAST_POS_Y = "last_pos_y"
+
+        // JSON 序列化器
+        private val stateJson = Json { ignoreUnknownKeys = true }
+
+        // 服务实例（用于更新内容）
+        @Volatile
+        private var instance: FloatingWindowService? = null
+
+        /**
+         * 检查是否有悬浮窗权限（Android 6.0+）
+         */
+        fun canDrawOverlays(context: Context): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.provider.Settings.canDrawOverlays(context)
+            } else {
+                true
+            }
+        }
+
+        /**
+         * 引导用户去设置开启悬浮窗权限
+         */
+        fun requestOverlayPermission(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val intent = Intent(
+                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:${context.packageName}")
+                )
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+        }
+
+        fun show(context: Context, preset: com.silas.omaster.model.MasterPreset, presetIndex: Int = 0, presetIds: List<String> = emptyList()) {
+            // 2.2.0：使用 PermissionChecker 二次校验，避免漏检导致启动失败
+            if (!PermissionChecker.canStartFloatingService(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                if (!canDrawOverlays(context)) {
+                    requestOverlayPermission(context)
+                }
+                return
+            }
+            if (!canDrawOverlays(context)) {
+                // 兜底二次确认（PermissionChecker 内部已检查）
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                requestOverlayPermission(context)
+                return
+            }
+            val intent = Intent(context, FloatingWindowService::class.java).apply {
+                putExtra(EXTRA_ACTION, ACTION_SHOW)
+                putExtra(EXTRA_NAME, preset.name)
+                // 获取动态生成的 sections
+                val sections = preset.getDisplaySections(context)
+                putParcelableArrayListExtra(EXTRA_SECTIONS, ArrayList(sections))
+
+                putExtra(EXTRA_PRESET_ID, preset.id ?: "")
+                putExtra(EXTRA_PRESET_INDEX, presetIndex)
+                putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
+                putExtra(EXTRA_IS_EXPANDED, true)
+            }
+            safeStartForegroundService(context, intent)
+        }
+
+        /**
+         * 更新悬浮窗内容（不重启服务，避免闪动）
+         */
+        fun update(context: Context, preset: com.silas.omaster.model.MasterPreset, presetIndex: Int = 0, presetIds: List<String> = emptyList()) {
+            // 2.2.0：update 前也校验权限
+            if (!PermissionChecker.canStartFloatingService(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                if (!canDrawOverlays(context)) {
+                    requestOverlayPermission(context)
+                }
+                return
+            }
+            if (!canDrawOverlays(context)) {
+                android.widget.Toast.makeText(context, "请先开启悬浮窗权限", android.widget.Toast.LENGTH_LONG).show()
+                requestOverlayPermission(context)
+                return
+            }
+            val intent = Intent(context, FloatingWindowService::class.java).apply {
+                putExtra(EXTRA_ACTION, ACTION_UPDATE)
+                putExtra(EXTRA_NAME, preset.name)
+                val sections = preset.getDisplaySections(context)
+                putParcelableArrayListExtra(EXTRA_SECTIONS, ArrayList(sections))
+
+                putExtra(EXTRA_PRESET_ID, preset.id ?: "")
+                putExtra(EXTRA_PRESET_INDEX, presetIndex)
+                putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
+                putExtra(EXTRA_IS_EXPANDED, instance?.isExpanded ?: true)
+            }
+            safeStartForegroundService(context, intent)
+        }
+
+        /**
+         * Android 12+ (API 31+) 后台启动前台服务限制防护。
+         * 若应用处于后台，startForegroundService 会抛出 ForegroundServiceStartNotAllowedException。
+         * 捕获后降级为普通启动或提示用户。
+         */
+        private fun safeStartForegroundService(context: Context, intent: Intent) {
+            try {
+                ContextCompat.startForegroundService(context, intent)
+            } catch (e: IllegalStateException) {
+                // Android 12+ 后台启动限制
+                Log.w(TAG, "startForegroundService failed, app may be in background", e)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    e is android.app.ForegroundServiceStartNotAllowedException
+                ) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "悬浮窗需在应用前台启动，请打开应用后再试",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    // 降级尝试：普通 startService（无通知，可能被系统限制）
+                    try {
+                        context.startService(intent)
+                    } catch (e2: Exception) {
+                        Log.e(TAG, "startService also failed", e2)
+                    }
+                }
+            }
+        }
+
+        fun hide(context: Context) {
+            context.stopService(Intent(context, FloatingWindowService::class.java))
+        }
+
+        /**
+         * 检查服务是否正在运行
+         */
+        fun isRunning(): Boolean = instance != null
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        createNotificationChannel()
+        // Android 14+ (API 34+) 要求 specialUse 类型前台服务必须显式传递 FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        // 包括 Android 14 / 15 / 16 (API 34-36)，否则会抛出 ForegroundServiceTypeException 导致应用崩溃
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            buildNotification(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                0
+            }
+        )
+        instance = this
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Android 16 (API 36) 要求前台服务通知渠道使用更高的优先级，确保用户可见
+            val importance = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+                NotificationManager.IMPORTANCE_DEFAULT
+            } else {
+                NotificationManager.IMPORTANCE_LOW
+            }
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "悬浮窗服务",
+                importance
+            ).apply {
+                description = "用于在后台显示悬浮窗"
+                setSound(null, null)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(): Notification {
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("OMaster 悬浮窗")
+            .setContentText("预设参数悬浮窗正在运行")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .build()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        removeWindow()
+        instance = null
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 确保 instance 始终被设置（覆盖 onCreate 未调用的情况，如 START_STICKY 重启）
+        instance = this
+
+        if (intent == null) {
+            // START_STICKY 重启：从 SharedPreferences 恢复上次状态
+            if (floatingView == null) {
+                val restored = restoreStateFromPrefs()
+                if (restored != null) {
+                    val (name, sections, presetIndex, presetList, expanded, posX, posY) = restored
+                    isExpanded = expanded
+                    if (isExpanded) {
+                        showExpandedWindow(name, sections, posX, posY, presetIndex, presetList.size)
+                    } else {
+                        showCollapsedWindow(name, sections, posX, posY)
+                    }
+                } else {
+                    // 无保存状态，停止服务
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+            }
+            return START_STICKY
+        }
+
+        val action = intent.getStringExtra(EXTRA_ACTION) ?: ACTION_SHOW
+        val rawName = intent.getStringExtra(EXTRA_NAME) ?: getString(R.string.floating_preset)
+        val name = PresetI18n.getLocalizedPresetName(this, rawName)
+        
+        val sections = intent.getParcelableArrayListExtra<PresetSection>(EXTRA_SECTIONS) ?: arrayListOf()
+
+        isExpanded = intent.getBooleanExtra(EXTRA_IS_EXPANDED, true)
+        val savedX = intent.getIntExtra(EXTRA_POS_X, -1)
+        val savedY = intent.getIntExtra(EXTRA_POS_Y, -1)
+        val currentIndex = intent.getIntExtra(EXTRA_PRESET_INDEX, 0)
+        val presetList = intent.getStringArrayListExtra(EXTRA_PRESET_LIST) ?: arrayListOf()
+        val totalCount = presetList.size
+
+        // 保存当前状态到 SharedPreferences，用于 START_STICKY 重启后恢复
+        saveStateToPrefs(name, sections, currentIndex, presetList, isExpanded, savedX, savedY)
+
+        when (action) {
+            ACTION_UPDATE -> {
+                // 更新模式：只更新内容，不移除窗口（避免闪动）
+                updateWindowContent(
+                    name, sections, currentIndex, totalCount
+                )
+            }
+            else -> {
+                // 显示模式：重新创建窗口
+                removeWindow()
+                if (isExpanded) {
+                    showExpandedWindow(
+                        name, sections, savedX, savedY,
+                        currentIndex, totalCount
+                    )
+                } else {
+                    showCollapsedWindow(
+                        name, sections, savedX, savedY
+                    )
+                }
+            }
+        }
+
+        return START_STICKY
+    }
+
+    /**
+     * 保存当前状态到 SharedPreferences，用于服务被系统杀死后通过 START_STICKY 恢复
+     */
+    private fun saveStateToPrefs(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        presetIndex: Int,
+        presetList: ArrayList<String>,
+        isExpanded: Boolean,
+        posX: Int,
+        posY: Int
+    ) {
+        try {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val sectionsJson = stateJson.encodeToString(sections.toList())
+            val presetListJson = stateJson.encodeToString(presetList.toList())
+            prefs.edit()
+                .putString(KEY_LAST_NAME, name)
+                .putString(KEY_LAST_SECTIONS_JSON, sectionsJson)
+                .putInt(KEY_LAST_PRESET_INDEX, presetIndex)
+                .putString(KEY_LAST_PRESET_LIST_JSON, presetListJson)
+                .putBoolean(KEY_LAST_IS_EXPANDED, isExpanded)
+                .putInt(KEY_LAST_POS_X, posX)
+                .putInt(KEY_LAST_POS_Y, posY)
+                .apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save state to prefs", e)
+        }
+    }
+
+    /**
+     * 从 SharedPreferences 恢复上次保存的状态
+     * @return 恢复的数据元组，如果恢复失败则返回 null
+     */
+    private fun restoreStateFromPrefs(): StateData? {
+        return try {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val name = prefs.getString(KEY_LAST_NAME, null) ?: return null
+            val sectionsJson = prefs.getString(KEY_LAST_SECTIONS_JSON, null) ?: return null
+            val presetListJson = prefs.getString(KEY_LAST_PRESET_LIST_JSON, null) ?: return null
+            val presetIndex = prefs.getInt(KEY_LAST_PRESET_INDEX, 0)
+            val isExpanded = prefs.getBoolean(KEY_LAST_IS_EXPANDED, true)
+            val posX = prefs.getInt(KEY_LAST_POS_X, 50)
+            val posY = prefs.getInt(KEY_LAST_POS_Y, 300)
+
+            val sections: List<PresetSection> = stateJson.decodeFromString(sectionsJson)
+            val presetList: List<String> = stateJson.decodeFromString(presetListJson)
+
+            StateData(
+                name = name,
+                sections = ArrayList(sections),
+                presetIndex = presetIndex,
+                presetList = ArrayList(presetList),
+                isExpanded = isExpanded,
+                posX = posX,
+                posY = posY
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to restore state from prefs", e)
+            null
+        }
+    }
+
+    /**
+     * 恢复的状态数据
+     */
+    private data class StateData(
+        val name: String,
+        val sections: ArrayList<PresetSection>,
+        val presetIndex: Int,
+        val presetList: ArrayList<String>,
+        val isExpanded: Boolean,
+        val posX: Int,
+        val posY: Int
+    )
+
+    // 保存视图引用，用于更新内容
+    private var mainContainer: LinearLayout? = null
+    private var titleTextView: TextView? = null
+
+    /**
+     * 更新窗口内容（不重新创建窗口，避免闪动）
+     */
+    private fun updateWindowContent(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        currentIndex: Int,
+        totalCount: Int
+    ) {
+        // 如果窗口不存在，直接创建新窗口
+        if (floatingView == null || mainContainer == null) {
+            showExpandedWindow(
+                name, sections, 50, 300,
+                currentIndex, totalCount
+            )
+            return
+        }
+
+        try {
+            // 更新标题
+            titleTextView?.text = name
+
+            // 尝试直接更新视图内容，避免重建视图
+            val contentContainer = mainContainer?.findViewWithTag<LinearLayout>("content_container")
+            
+            // 简单起见，直接重建内容区域，因为 sections 结构可能变化
+            // 移除旧内容并添加新内容
+            contentContainer?.let { container ->
+                // 使用 post 确保在 UI 线程执行
+                container.post {
+                    container.removeAllViews()
+                    container.addView(createContentArea(sections))
+                    // 请求重新布局
+                    container.requestLayout()
+                    floatingView?.requestLayout()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "updateWindowContent failed", e)
+            // 如果更新失败，重新创建窗口
+            showExpandedWindow(
+                name, sections, params?.x ?: 50, params?.y ?: 300,
+                currentIndex, totalCount
+            )
+        }
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun showExpandedWindow(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        savedX: Int = -1,
+        savedY: Int = -1,
+        currentIndex: Int = 0,
+        totalCount: Int = 1
+    ) {
+        try {
+            val wm = windowManager ?: return
+
+            params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = if (savedX >= 0) savedX else 50
+                y = if (savedY >= 0) savedY else 300
+            }
+
+            val rootLayout = createExpandedView(
+                name, sections, currentIndex, totalCount
+            ) { collapseToBubble(name, sections) }
+
+            floatingView = rootLayout
+            wm.addView(floatingView, params)
+            setupDrag(wm)
+            
+            // 初始显示时自动贴边
+            floatingView?.post { snapToEdge(wm) }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "showExpandedWindow failed", e)
+            stopSelf()
+        }
+    }
+
+    private fun showCollapsedWindow(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        savedX: Int = -1,
+        savedY: Int = -1
+    ) {
+        try {
+            val wm = windowManager ?: return
+
+            params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = if (savedX >= 0) savedX else 50
+                y = if (savedY >= 0) savedY else 300
+            }
+
+            val miniButton = createCollapsedView(name) {
+                val intent = Intent(this, FloatingWindowService::class.java).apply {
+                    putExtra(EXTRA_NAME, name)
+                    putParcelableArrayListExtra(EXTRA_SECTIONS, sections)
+                    putExtra(EXTRA_IS_EXPANDED, true)
+                    putExtra(EXTRA_POS_X, params?.x ?: 50)
+                    putExtra(EXTRA_POS_Y, params?.y ?: 300)
+                }
+                startService(intent)
+            }
+
+            floatingView = miniButton
+            wm.addView(floatingView, params)
+            setupDrag(wm)
+            
+            // 初始显示时自动贴边
+            floatingView?.post { snapToEdge(wm) }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "showCollapsedWindow failed", e)
+        }
+    }
+
+    /**
+     * 创建展开视图 - 高级美观设计
+     */
+    private fun createExpandedView(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        currentIndex: Int = 0,
+        totalCount: Int = 1,
+        onCollapse: () -> Unit
+    ): FrameLayout {
+        val windowWidth = getWindowWidth()
+
+        return FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                windowWidth,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+
+            // 主容器 - 毛玻璃效果，固定宽度
+            val container = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    windowWidth,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                background = createGlassmorphismBackground(context)
+                setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(20))
+            }
+            mainContainer = container
+
+            // 渐变标题栏（带切换按钮）
+            val header = createGradientHeader(name, onCollapse, currentIndex, totalCount)
+            container.addView(header)
+
+            // 保存标题TextView引用
+            titleTextView = (header as? LinearLayout)?.findViewWithTag<TextView>("title_text")
+
+            // 内容容器（带tag，用于更新时查找）
+            val contentContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                tag = "content_container"
+            }
+
+            // 添加内容
+            contentContainer.addView(createContentArea(sections))
+
+            container.addView(contentContainer)
+            addView(container)
+        }
+    }
+
+    /**
+     * 创建内容区域（可复用） - 动态渲染
+     */
+    private fun createContentArea(sections: List<PresetSection>): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+
+            sections.forEach { section ->
+                // Section Title
+                section.title?.let { title ->
+                    addView(createSectionTitle(title))
+                }
+
+                // Section Items
+                val items = section.items
+                var i = 0
+                while (i < items.size) {
+                    val item = items[i]
+                    if (item.span == 2) {
+                        // Full width item (highlighted)
+                        val icon = getIconForLabel(item.label)
+                        val localizedValue = PresetI18n.resolveValue(this@FloatingWindowService, item.value)
+                        addView(createHighlightedParam(icon, item.label, localizedValue))
+                        i++
+                    } else {
+                        // Half width item
+                        val left = item
+                        var right: PresetItem? = null
+                        if (i + 1 < items.size && items[i+1].span == 1) {
+                            right = items[i+1]
+                            i++
+                        }
+                        
+                        val leftIcon = getIconForLabel(left.label)
+                        val leftLocalizedValue = PresetI18n.resolveValue(this@FloatingWindowService, left.value)
+                        val leftView = createSmallParamItem(leftIcon, left.label, leftLocalizedValue)
+                        
+                        val rightView = right?.let {
+                            val rightIcon = getIconForLabel(it.label)
+                            val rightLocalizedValue = PresetI18n.resolveValue(this@FloatingWindowService, it.value)
+                            createSmallParamItem(rightIcon, it.label, rightLocalizedValue)
+                        }
+                        
+                        addView(createParamRow(leftView, rightView))
+                        i++
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * 根据标签获取对应图标
+     */
+    private fun getIconForLabel(label: String): String {
+        return when {
+            label.contains("滤镜") || label.contains("Filter") -> getString(R.string.floating_filter_icon)
+            label.contains("柔光") || label.contains("Soft") -> getString(R.string.floating_soft_icon)
+            label.contains("影调") || label.contains("Tone") -> getString(R.string.floating_tone_icon)
+            label.contains("饱和") || label.contains("Saturation") -> getString(R.string.floating_saturation_icon)
+            label.contains("冷暖") || label.contains("Warm") -> getString(R.string.floating_warm_icon)
+            label.contains("青品") || label.contains("Cyan") -> getString(R.string.floating_cyan_icon)
+            label.contains("锐度") || label.contains("Sharpness") -> getString(R.string.floating_sharpness_icon)
+            label.contains("暗角") || label.contains("Vignette") -> getString(R.string.floating_vignette_icon)
+            label.contains("白平衡") || label.contains("WB") -> "🌡️"
+            label.contains("曝光") || label.contains("EV") -> "☀️"
+            label.contains("ISO") -> "📸"
+            label.contains("快门") || label.contains("Shutter") -> "⏱️"
+            label.contains("建议") || label.contains("Tips") -> "💡"
+            else -> "⚙️"
+        }
+    }
+
+    /**
+     * 创建收起视图 - 圆形应用图标
+     */
+    private fun createCollapsedView(
+        name: String,
+        onExpand: () -> Unit
+    ): FrameLayout {
+        val size = dpToPx(56)
+
+        return FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(size, size)
+
+            // 外发光效果 - 品牌色外溢
+            val glowView = View(context).apply {
+                layoutParams = FrameLayout.LayoutParams(size, size)
+                background = createGlowBackground(context)
+            }
+
+            // 主按钮容器 - 圆形边框
+            val button = FrameLayout(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    dpToPx(48),
+                    dpToPx(48)
+                ).apply {
+                    gravity = Gravity.CENTER
+                }
+                
+                // 圆形黑色底色（防止图标透明部分看到背景）
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.BLACK)
+                    setStroke(dpToPx(1), Color.parseColor("#1A000000")) // 极淡的描边增加立体感
+                }
+
+                // 应用图标
+                val iconView = ImageView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    ).apply {
+                        val margin = dpToPx(1) // 留一点边距，显示底色的圆边
+                        setMargins(margin, margin, margin, margin)
+                    }
+                    setImageResource(R.mipmap.ic_launcher_round)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }
+                
+                addView(iconView)
+            }
+
+            addView(glowView)
+            addView(button)
+
+            // 整个容器可点击
+            setOnClickListener { onExpand() }
+        }
+    }
+
+    /**
+     * 创建毛玻璃背景
+     */
+    private fun createGlassmorphismBackground(context: Context): GradientDrawable {
+        return GradientDrawable().apply {
+            cornerRadius = dpToPx(24).toFloat()
+            setColor(getBackgroundColor(context))
+            // 添加边框效果
+            setStroke(dpToPx(1), Color.parseColor("#33FFFFFF"))
+        }
+    }
+
+    /**
+     * 创建渐变标题栏（带切换预设按钮）
+     */
+    private fun createGradientHeader(
+        name: String,
+        onCollapse: () -> Unit,
+        currentIndex: Int = 0,
+        totalCount: Int = 1
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(12))
+
+            // 上一个预设按钮
+            val prevBtn = createIconButton("◀", { sendPresetSwitchBroadcast("prev") }, "上一个预设")
+            addView(prevBtn)
+            addView(createSpacing(dpToPx(6)))
+
+            // 预设名称 - 带渐变效果
+            val titleView = TextView(context).apply {
+                text = name
+                textSize = if (name.length > 8) 15f else 18f
+                val primary = getPrimaryColor(context)
+                val lighter = Color.rgb(
+                    (Color.red(primary) + 60).coerceAtMost(255),
+                    (Color.green(primary) + 60).coerceAtMost(255),
+                    (Color.blue(primary) + 60).coerceAtMost(255)
+                )
+                paint.shader = LinearGradient(
+                    0f, 0f, 200f, 0f,
+                    primary,
+                    lighter,
+                    Shader.TileMode.CLAMP
+                )
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                gravity = Gravity.CENTER
+                tag = "title_text"
+            }
+            this@FloatingWindowService.titleTextView = titleView
+
+            addView(titleView)
+
+            // 下一个预设按钮
+            addView(createSpacing(dpToPx(6)))
+            val nextBtn = createIconButton("▶", { sendPresetSwitchBroadcast("next") }, "下一个预设")
+            addView(nextBtn)
+
+            addView(createSpacing(dpToPx(6)))
+
+            // 收起按钮
+            val collapseBtn = createIconButton("▼", { onCollapse() }, "收起悬浮窗")
+            addView(collapseBtn)
+
+            addView(createSpacing(dpToPx(6)))
+
+            // 关闭按钮
+            val closeBtn = createIconButton("✕", { stopSelf() }, "关闭悬浮窗")
+            addView(closeBtn)
+        }
+    }
+
+    /**
+     * 发送切换预设广播
+     */
+    private fun sendPresetSwitchBroadcast(direction: String) {
+        val intent = Intent(ACTION_SWITCH_PRESET).apply {
+            putExtra(EXTRA_SWITCH_DIRECTION, direction)
+            setPackage(packageName)
+        }
+        sendBroadcast(intent)
+    }
+
+    /**
+     * 创建图标按钮
+     */
+    private fun createIconButton(icon: String, onClick: () -> Unit, contentDescription: String = icon): TextView {
+        return TextView(this).apply {
+            text = icon
+            textSize = 14f
+            setTextColor(textSecondary)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32))
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(8).toFloat()
+                setColor(cardBackground)
+            }
+            setOnClickListener { onClick() }
+            this.contentDescription = contentDescription
+        }
+    }
+
+    /**
+     * 创建区域标题
+     */
+    private fun createSectionTitle(title: String): TextView {
+        return TextView(this).apply {
+            text = title
+            textSize = 11f
+            setTextColor(textMuted)
+            setPadding(0, dpToPx(12), 0, dpToPx(8))
+        }
+    }
+
+    /**
+     * 创建高亮参数项（滤镜专用）
+     */
+    private fun createHighlightedParam(icon: String, label: String, value: String, valueTag: String? = null): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(12).toFloat()
+                val primary = getPrimaryColor(context)
+                setColor(Color.argb(32, Color.red(primary), Color.green(primary), Color.blue(primary)))
+                setStroke(dpToPx(1), Color.argb(64, Color.red(primary), Color.green(primary), Color.blue(primary)))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, 0, dpToPx(8))
+            }
+
+            // 图标
+            addView(TextView(context).apply {
+                text = icon
+                textSize = 16f
+                setTextColor(getPrimaryColor(context))
+            })
+
+            addView(createSpacing(dpToPx(8)))
+
+            // 标签
+            addView(TextView(context).apply {
+                text = label
+                textSize = 13f
+                setTextColor(textSecondary)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+
+            // 值
+            addView(TextView(context).apply {
+                text = value
+                textSize = 14f
+                val primary = getPrimaryColor(context)
+                setTextColor(primary)
+                setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
+                background = GradientDrawable().apply {
+                    cornerRadius = dpToPx(6).toFloat()
+                    setColor(Color.argb(48, Color.red(primary), Color.green(primary), Color.blue(primary)))
+                }
+                // 设置 Tag 方便查找更新
+                if (valueTag != null) {
+                    tag = valueTag
+                }
+            })
+        }
+    }
+
+    /**
+     * 创建小型参数项（用于网格）
+     */
+    private fun createSmallParamItem(icon: String, label: String, value: String, valueTag: String? = null): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(8), dpToPx(6), dpToPx(8), dpToPx(6))
+            background = GradientDrawable().apply {
+                cornerRadius = dpToPx(8).toFloat()
+                setColor(cardBackground)
+            }
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(0, 0, dpToPx(4), 0)
+            }
+
+            addView(TextView(context).apply {
+                text = icon
+                textSize = 12f
+                setTextColor(getPrimaryColor(context))
+            })
+
+            addView(createSpacing(dpToPx(4)))
+
+            addView(TextView(context).apply {
+                text = "$label "
+                textSize = 11f
+                setTextColor(textMuted)
+            })
+
+            addView(TextView(context).apply {
+                text = value
+                textSize = 12f
+                setTextColor(textPrimary)
+                // 设置 Tag 方便查找更新
+                if (valueTag != null) {
+                    tag = valueTag
+                }
+            })
+        }
+    }
+
+    /**
+     * 创建参数行（两个参数并排）
+     */
+    private fun createParamRow(left: LinearLayout, right: LinearLayout?): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dpToPx(4), 0, 0)
+
+            addView(left)
+            if (right != null) {
+                right.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(dpToPx(4), 0, 0, 0)
+                }
+                addView(right)
+            } else {
+                // 占位：当无右侧参数时，添加空 View 占据 weight 空间，使左侧参数填满整行
+                addView(View(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
+                })
+            }
+        }
+    }
+
+    /**
+     * 创建渐变圆形背景（收起按钮）
+     */
+    private fun createGradientCircleBackground(context: Context): GradientDrawable {
+        val primary = getPrimaryColor(context)
+        val dark = getPrimaryDarkColor(context)
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            colors = intArrayOf(primary, dark)
+            gradientType = GradientDrawable.RADIAL_GRADIENT
+            gradientRadius = dpToPx(24).toFloat()
+        }
+    }
+
+    /**
+     * 创建外发光效果
+     */
+    private fun createGlowBackground(context: Context): GradientDrawable {
+        val primary = getPrimaryColor(context)
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            colors = intArrayOf(
+                Color.argb(64, Color.red(primary), Color.green(primary), Color.blue(primary)),
+                Color.argb(32, Color.red(primary), Color.green(primary), Color.blue(primary)),
+                Color.TRANSPARENT
+            )
+            gradientType = GradientDrawable.RADIAL_GRADIENT
+            gradientRadius = dpToPx(28).toFloat()
+        }
+    }
+
+    /**
+     * 创建间距
+     */
+    private fun createSpacing(size: Int): View {
+        return View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(size, size)
+        }
+    }
+
+    private fun collapseToBubble(
+        name: String,
+        sections: ArrayList<PresetSection>
+    ) {
+        try {
+            val currentX = params?.x ?: 50
+            val currentY = params?.y ?: 300
+
+            removeWindow()
+            isExpanded = false
+
+            val intent = Intent(this, FloatingWindowService::class.java).apply {
+                putExtra(EXTRA_NAME, name)
+                putParcelableArrayListExtra(EXTRA_SECTIONS, sections)
+                putExtra(EXTRA_IS_EXPANDED, false)
+                putExtra(EXTRA_POS_X, currentX)
+                putExtra(EXTRA_POS_Y, currentY)
+            }
+            startService(intent)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "collapseToBubble failed", e)
+        }
+    }
+
+    /**
+     * 悬浮窗宽度 - 固定 280dp
+     * 无论横竖屏都使用相同的小宽度，确保不会铺满屏幕
+     */
+    private fun getWindowWidth(): Int {
+        return dpToPx(280)
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
+    }
+
+    private fun setupDrag(wm: WindowManager) {
+        floatingView?.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX = 0
+            private var initialY = 0
+            private var touchX = 0f
+            private var touchY = 0f
+            private var isClick = false
+            private val clickThreshold = 20f
+            
+            // 修复 P2-4: 添加 throttle 防止高频调用 updateViewLayout
+            private var lastUpdateTime = 0L
+            private val updateIntervalMs = 16L // 约 60fps
+            private var pendingX = 0
+            private var pendingY = 0
+            private var hasPendingUpdate = false
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params?.x ?: 0
+                        initialY = params?.y ?: 0
+                        touchX = event.rawX
+                        touchY = event.rawY
+                        isClick = true
+                        hasPendingUpdate = false
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = event.rawX - touchX
+                        val dy = event.rawY - touchY
+                        if (kotlin.math.abs(dx) > clickThreshold || kotlin.math.abs(dy) > clickThreshold) {
+                            isClick = false
+                        }
+
+                        // 使用 WindowMetrics API 替代废弃的 DisplayMetrics (API 30+)
+                        val screenHeight = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            val windowMetrics: WindowMetrics = wm.currentWindowMetrics
+                            windowMetrics.bounds.height()
+                        } else {
+                            @Suppress("DEPRECATION")
+                            wm.defaultDisplay.height
+                        }
+
+                        pendingX = initialX + dx.toInt()
+
+                        // 垂直方向限制，防止超出屏幕
+                        val newY = initialY + dy.toInt()
+                        val maxY = screenHeight - (floatingView?.height ?: 0)
+                        pendingY = newY.coerceIn(0, maxY)
+
+                        hasPendingUpdate = true
+
+                        // Throttle: 限制 updateViewLayout 调用频率
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastUpdateTime >= updateIntervalMs) {
+                            applyPendingUpdate(wm)
+                        }
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        // 确保最后的更新被应用
+                        if (hasPendingUpdate) {
+                            applyPendingUpdate(wm)
+                        }
+                        if (!isClick) {
+                            // 实现贴边收纳逻辑
+                            snapToEdge(wm)
+                        }
+                    }
+                }
+                return false
+            }
+            
+            private fun applyPendingUpdate(wm: WindowManager) {
+                if (!hasPendingUpdate) return
+                
+                params?.x = pendingX
+                params?.y = pendingY
+                
+                floatingView?.let { view ->
+                    params?.let { p ->
+                        try {
+                            wm.updateViewLayout(view, p)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "updateViewLayout failed", e)
+                        }
+                    }
+                }
+                
+                lastUpdateTime = System.currentTimeMillis()
+                hasPendingUpdate = false
+            }
+        })
+    }
+
+    /**
+     * 将悬浮窗平滑移动至屏幕边缘
+     */
+    private fun snapToEdge(wm: WindowManager) {
+        val view = floatingView ?: return
+        val p = params ?: return
+        
+        // 使用 WindowMetrics API 替代废弃的 DisplayMetrics (API 30+)
+        val screenWidth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowMetrics: WindowMetrics = wm.currentWindowMetrics
+            windowMetrics.bounds.width()
+        } else {
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.width
+        }
+        val viewWidth = view.width
+
+        // 计算目标位置：左边(0)或右边(screenWidth - viewWidth)
+        // 如果是收起状态，可以进一步实现"半收纳"效果，即只露出一半图标
+        val targetX = if (p.x + viewWidth / 2 < screenWidth / 2) {
+            if (!isExpanded) -viewWidth / 2 else 0
+        } else {
+            if (!isExpanded) screenWidth - viewWidth / 2 else screenWidth - viewWidth
+        }
+
+        // 使用动画平滑移动
+        val animator = ValueAnimator.ofInt(p.x, targetX)
+        animator.duration = 300
+        animator.interpolator = DecelerateInterpolator()
+        animator.addUpdateListener { animation ->
+            val currentView = floatingView
+            if (currentView != null && currentView.isAttachedToWindow) {
+                p.x = (animation.animatedValue as Number).toInt()
+                try {
+                    wm.updateViewLayout(currentView, p)
+                } catch (e: Exception) {
+                    Log.w(TAG, "snapToEdge updateViewLayout failed", e)
+                    animator.cancel()
+                }
+            } else {
+                animator.cancel()
+            }
+        }
+        // 监听动画结束/取消，确保即使动画被取消，位置也保持到最后一个有效值
+        animator.addListener(object : android.animation.Animator.AnimatorListener {
+            override fun onAnimationStart(animation: android.animation.Animator) {}
+            override fun onAnimationEnd(animation: android.animation.Animator) {
+                // 动画正常结束，保存最终位置
+                val currentView = floatingView
+                if (currentView != null && currentView.isAttachedToWindow) {
+                    try {
+                        wm.updateViewLayout(currentView, p)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "snapToEdge onAnimationEnd updateViewLayout failed", e)
+                    }
+                }
+            }
+            override fun onAnimationCancel(animation: android.animation.Animator) {
+                // 动画被取消时，确保位置已更新到当前帧的值
+                // ValueAnimator 取消时 animatedValue 停留在被取消时的值，无需额外处理
+            }
+            override fun onAnimationRepeat(animation: android.animation.Animator) {}
+        })
+        animator.start()
+    }
+
+    private fun removeWindow() {
+        val view = floatingView ?: return
+        try {
+            windowManager?.removeView(view)
+        } catch (e: Exception) {
+            Log.e(TAG, "removeWindow failed", e)
+        } finally {
+            // 无论如何都将引用置空，避免持有已失效的 View
+            floatingView = null
+        }
+    }
+}
