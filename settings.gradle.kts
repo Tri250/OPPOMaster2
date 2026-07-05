@@ -5,13 +5,9 @@
 pluginManagement {
     repositories {
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
-        // 阿里云镜像（国内 CI 加速）
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        // 官方仓库（兜底，确保镜像缺失时仍可解析）
-        google()
+        // 沙箱/当前环境阿里云镜像连接不稳定，优先使用 mavenCentral 与官方仓库
         mavenCentral()
+        google()
         gradlePluginPortal()
     }
 }
@@ -20,10 +16,8 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         maven { url = uri("${rootProject.projectDir}/local-maven-repo") }
-        // 阿里云镜像（国内 CI 加速）
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
+        // 沙箱/当前环境阿里云镜像连接不稳定，优先使用 mavenCentral
+        mavenCentral()
         // 友盟 SDK 仓库（限定 group 避免误命中 404）
         maven {
             url = uri("https://developer.umeng.com/sdk/repo")
@@ -32,9 +26,7 @@ dependencyResolutionManagement {
             }
         }
         maven { url = uri("https://jitpack.io") }
-        // 官方仓库（兜底，确保镜像缺失时仍可解析）
         google()
-        mavenCentral()
     }
 }
 
