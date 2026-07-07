@@ -222,6 +222,14 @@ class OMasterApplication : Application() {
         private var instance: OMasterApplication? = null
         private var prefs: SharedPreferences? = null
 
+        // v2.3.7 关键修复：分离"上次启动是否崩溃"与"本次启动标记"
+        // 原实现：onCreate 中 setCrashFlag(true) → hadCrashLastRun() 读到 true →
+        //         每次启动（含安装后首次启动）都弹出 CrashRecoveryDialog，阻塞主 UI。
+        // 现实现：onCreate 中先读取并缓存 previousRunCrashed，再 setCrashFlag(true)；
+        //         hadCrashLastRun() 返回缓存值，与本次运行标记解耦。
+        @Volatile
+        private var previousRunCrashed: Boolean = false
+
         /**
          * 由 InitializationProvider 在早期阶段调用，初始化 SharedPreferences
          */
@@ -328,16 +336,30 @@ class OMasterApplication : Application() {
 
         StartupLogger.markAppStart()
 
-        // v2.3.6 崩溃恢复：在启动开始时设置崩溃标记
-        // 如果应用正常退出，会在 onTerminate 或 releaseResources 中清除标记
-        // 如果应用崩溃，标记会保留，下次启动时检测到并提示用户
-        setCrashFlag(true)
-
         // 第 1 步: 初始化基础变量（必须在任何访问前）
         // 使用 synchronized 确保多进程场景下的安全
         val step1Start = SystemClock.elapsedRealtime()
         onApplicationCreated(this)
         StartupLogger.logStep("基础变量初始化", SystemClock.elapsedRealtime() - step1Start)
+
+        // v2.3.7 关键修复：崩溃恢复标记时序修复
+        // 原实现：setCrashFlag(true) 在 onCreate 最开始调用，
+        //         MainActivity 随后通过 hadCrashLastRun() 读到 true，
+        //         导致每次启动（含安装后首次启动）都弹出 CrashRecoveryDialog。
+        // 现实现：
+        //   1) 先读取并缓存"上次运行是否崩溃"（previousRunCrashed）
+        //   2) 再写入"本次运行标记" setCrashFlag(true)
+        //   3) hadCrashLastRun() 返回 previousRunCrashed，与本次标记解耦
+        //   4) 正常退出时（releaseResources）清除标记；崩溃则标记保留
+        previousRunCrashed = try {
+            val p = prefs ?: getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            p.getBoolean(KEY_CRASH_FLAG, false)
+        } catch (e: Throwable) {
+            android.util.Log.e("OMasterApplication", "读取上次崩溃标记失败", e)
+            false
+        }
+        // 写入"本次运行可能崩溃"标记；正常退出时清除，崩溃则保留供下次启动检测
+        setCrashFlag(true)
 
         // 第 2 步: 安装全局异常处理器（如果 InitializationProvider 尚未安装）
         // 必须传 context,CrashHandler 才能持久化日志
@@ -696,15 +718,13 @@ class OMasterApplication : Application() {
     /**
      * 检查上次是否崩溃
      * @return true 表示上次启动检测到崩溃标记
+     *
+     * v2.3.7 修复：返回 onCreate 阶段缓存的 previousRunCrashed，
+     * 而非实时读取 KEY_CRASH_FLAG（后者在 onCreate 中已被 setCrashFlag(true) 改写）。
+     * 这避免了"本次启动标记"被误判为"上次启动崩溃"的逻辑错误。
      */
     fun hadCrashLastRun(): Boolean {
-        return try {
-            val currentPrefs = prefs ?: getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            currentPrefs.getBoolean(KEY_CRASH_FLAG, false)
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "hadCrashLastRun 失败", e)
-            false
-        }
+        return previousRunCrashed
     }
 
     /**
@@ -723,8 +743,12 @@ class OMasterApplication : Application() {
 
     /**
      * 清除崩溃标记（应用正常退出时调用）
+     *
+     * v2.3.7 修复：同步清除内存缓存 previousRunCrashed，
+     * 防止用户在 CrashRecoveryDialog 点击"忽略"后，因配置变更导致 Activity 重建再次弹出对话框。
      */
     fun clearCrashFlag() {
+        previousRunCrashed = false
         setCrashFlag(false)
     }
 

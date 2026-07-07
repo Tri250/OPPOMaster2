@@ -2,6 +2,7 @@
 <resources>
 
     <!-- UC-22: 使用深色主题作为冷启动窗口背景，防止白闪 -->
+    <!-- 注意：Android 15+ (API 35+) 已废弃 statusBarColor/navigationBarColor，由 enableEdgeToEdge() 接管 -->
     <style name="Theme.OMaster" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:statusBarColor">@android:color/black</item>
@@ -11,8 +12,11 @@
     <!-- SplashScreen 主题：Android 12+ 启动画面过渡 -->
     <!-- 继承 Theme.SplashScreen 以支持 androidx.core.splashscreen 库 -->
     <style name="Theme.OMaster.SplashScreen" parent="Theme.SplashScreen">
-        <!-- 启动画面显示的图标，使用应用图标 -->
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- v2.3.7 修复：使用 drawable 前景资源替代 mipmap adaptive icon -->
+        <!-- Android 12+ SplashScreen 规范要求 windowSplashScreenAnimatedIcon 为 drawable， -->
+        <!-- 引用 adaptive icon (mipmap-anydpi-v26) 在部分 OEM/Android 15-16 设备上渲染异常， -->
+        <!-- 改用 ic_launcher_foreground 确保图标在启动画面中正确居中显示。 -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <!-- 启动画面动画持续时间 200ms -->
         <item name="windowSplashScreenAnimationDuration">200</item>
         <!-- 启动画面结束后切换到应用主题 -->
