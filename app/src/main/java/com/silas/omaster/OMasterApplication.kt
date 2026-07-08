@@ -281,38 +281,39 @@ class OMasterApplication : Application() {
         }
 
         /**
-     * 安全获取 Application 实例（可能返回 null）
-     * 推荐在不确定初始化状态时使用此方法
-     */
-    fun getInstanceOrNull(): OMasterApplication? = instance
+         * 安全获取 Application 实例（可能返回 null）
+         * 推荐在不确定初始化状态时使用此方法
+         */
+        fun getInstanceOrNull(): OMasterApplication? = instance
 
-    /**
-     * 安全获取 Application 实例，带默认值回退
-     * 用于组件初始化时获取 Context，即使 Application 尚未完全初始化也能安全返回
-     *
-     * 2.2.0 闪退修复：在 Application 完全未初始化时，会用 applicationContext 创建
-     * 临时实例以避免空指针，绝不返回 null
-     */
-    fun safeGetInstance(): OMasterApplication? {
-        if (instance != null) return instance
-        // 兜底：从 ContentProvider 缓存中获取 applicationContext
-        return try {
-            val appContext = Class.forName("android.app.ActivityThread")
-                .getMethod("currentApplication")
-                .invoke(null)
-            if (appContext is OMasterApplication) {
-                instance = appContext
-                appContext
-            } else {
+        /**
+         * 安全获取 Application 实例，带默认值回退
+         * 用于组件初始化时获取 Context，即使 Application 尚未完全初始化也能安全返回
+         *
+         * 2.2.0 闪退修复：在 Application 完全未初始化时，会用 applicationContext 创建
+         * 临时实例以避免空指针，绝不返回 null
+         */
+        fun safeGetInstance(): OMasterApplication? {
+            if (instance != null) return instance
+            // 兜底：从 ContentProvider 缓存中获取 applicationContext
+            return try {
+                val appContext = Class.forName("android.app.ActivityThread")
+                    .getMethod("currentApplication")
+                    .invoke(null)
+                if (appContext is OMasterApplication) {
+                    instance = appContext
+                    appContext
+                } else {
+                    null
+                }
+            } catch (e: Throwable) {
+                android.util.Log.e("OMasterApplication", "safeGetInstance 失败", e)
                 null
             }
-        } catch (e: Throwable) {
-            android.util.Log.e("OMasterApplication", "safeGetInstance 失败", e)
-            null
         }
-    }
 
-    fun getPrefs(): SharedPreferences? = prefs
+        fun getPrefs(): SharedPreferences? = prefs
+    }
 
     /**
      * 由 Application.onCreate 调用，设置实例并确保 SharedPreferences 已初始化

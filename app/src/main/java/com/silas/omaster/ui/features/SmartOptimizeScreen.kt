@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -254,7 +255,7 @@ fun SmartOptimizeScreen(
                 if (originalBitmap == null) {
                     // 空白状态 - 引导选择图片
                     ImportPlaceholder(
-                        onImport = { imagePicker.launch("image/*") }
+                        onImport = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                     )
                 } else {
                     val currentDisplayBitmap = if (showBefore) originalBitmap else processedBitmap
