@@ -23,7 +23,7 @@ navigationCompose = "2.8.5"
 # ===== Networking =====
 coil = "2.7.0"
 ktor = "3.0.3"
-gson = "2.11.0"
+gson = "2.14.0"
 
 # ===== Serialization =====
 kotlinxSerialization = "1.8.0"
