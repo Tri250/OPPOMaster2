@@ -109,7 +109,7 @@ jobs:
 
       # 上传测试报告
       - name: Upload Test Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: unit-test-reports
@@ -161,7 +161,7 @@ jobs:
 
       # 上传覆盖率报告
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-reports
@@ -222,7 +222,7 @@ jobs:
 
       # 上传 Universal APK
       - name: Upload Universal APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debug-apk-universal
           path: app/build/outputs/apk/debug/*-universal-*.apk
@@ -230,14 +230,14 @@ jobs:
 
       # 上传各架构 APK
       - name: Upload armeabi-v7a APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debug-apk-armeabi-v7a
           path: app/build/outputs/apk/debug/*-armeabi-v7a-*.apk
           retention-days: 7
 
       - name: Upload arm64-v8a APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debug-apk-arm64-v8a
           path: app/build/outputs/apk/debug/*-arm64-v8a-*.apk
@@ -287,7 +287,7 @@ jobs:
 
       # 上传 Universal APK
       - name: Upload Universal APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-universal
           path: app/build/outputs/apk/release/*-universal-*.apk
@@ -295,7 +295,7 @@ jobs:
 
       # 上传各架构 APK
       - name: Upload arm64-v8a APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-arm64-v8a
           path: app/build/outputs/apk/release/*-arm64-v8a-*.apk
@@ -346,7 +346,7 @@ jobs:
         run: ./gradlew dependencies --configuration releaseRuntimeClasspath --no-daemon > dependencies.txt
 
       - name: Upload Dependencies Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dependencies-report
           path: dependencies.txt

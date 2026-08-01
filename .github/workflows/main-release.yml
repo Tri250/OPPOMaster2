@@ -147,7 +147,7 @@ jobs:
 
       # 上传 Universal APK
       - name: Upload Universal APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-universal
           path: app/build/outputs/apk/release/*-universal-*.apk
@@ -155,28 +155,28 @@ jobs:
 
       # 上传各架构 APK
       - name: Upload armeabi-v7a APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-armeabi-v7a
           path: app/build/outputs/apk/release/*-armeabi-v7a-*.apk
           retention-days: 30
 
       - name: Upload arm64-v8a APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-arm64-v8a
           path: app/build/outputs/apk/release/*-arm64-v8a-*.apk
           retention-days: 30
 
       - name: Upload x86 APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-x86
           path: app/build/outputs/apk/release/*-x86-*.apk
           retention-days: 30
 
       - name: Upload x86_64 APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-apk-x86_64
           path: app/build/outputs/apk/release/*-x86_64-*.apk
@@ -184,7 +184,7 @@ jobs:
 
       # 上传构建报告
       - name: Upload Build Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-reports
           path: |
@@ -340,7 +340,7 @@ jobs:
           cat build-report.md
 
       - name: Upload Build Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-build-report
           path: build-report.md
