@@ -52,16 +52,16 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 
 <header>
 <h1>OMaster 2.0 · 功能模块深度升级方案</h1>
-<div class="hero-sub">基于全量功能模块清单（13 组 / 60 文件）的逐模块 2.0 升级规划与功能架构升级 · v1.0 · 2026-10-13</div>
-<span class="badge">基线：master = 41c42a7（CI 全绿，51 用例）</span>
+<div class="hero-sub">基于全量功能模块清单（13 组 / 60 文件）的逐模块 + 逐子功能 2.0 升级规划与功能架构升级 · v1.1 · 2026-10-13</div>
+<span class="badge">基线：master = fd99bc7（CI 全绿，54 用例，Gson 已移除）</span>
 <span class="badge">约束：不做商业化</span>
 <span class="badge">平台：ColorOS 17 / Find X10 适配</span>
 
 <div class="stats">
 <div class="stat"><div class="n">13</div><div class="l">模块组全量覆盖</div></div>
 <div class="stat"><div class="n">35</div><div class="l">模块级动作 MU-xx</div></div>
-<div class="stat"><div class="n">3</div><div class="l">里程碑批次</div></div>
-<div class="stat"><div class="n">5</div><div class="l">架构红线</div></div>
+<div class="stat"><div class="n">64</div><div class="l">子功能全量规划</div></div>
+<div class="stat"><div class="n">8</div><div class="l">专家自检发现</div></div>
 </div>
 </header>
 
@@ -308,8 +308,91 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <div class="kv"><b>红线复核（每里程碑）</b>：依赖方向 · 统一校验管道 · 只读展示 · 开关约束 · 平台差异下沉——五条在 code review 中零违反</div>
 </div>
 
+<h2>八、子功能模块全量升级规划（64 项）</h2>
+<p class="desc">将 MU 动作下沉到子功能粒度，逐项标注现状与 2.0 处置（✅ 已完成 / ▲ 增强 / ⬤ 重构 / ● 保持 / ◇ 新增）。处置口径：只动「影响目标用户旅程」的子功能，其余保持。</p>
+
+<table>
+<tr><th>模块组</th><th>子功能（处置）</th><th>2.0 动作要点</th></tr>
+<tr><td rowspan="3"><b>1 入口全局</b></td><td>合规同意流（●）/ 主题切换（●）/ 语言切换（●）</td><td>保持；语言切换随 MU-28 日语补齐回归</td></tr>
+<tr><td>导航栏（▲）</td><td>MU-23 inset 适配 ✅ 已完成</td></tr>
+<tr><td>动效体系（●）</td><td>保持 AnimationSpecs 全局规范</td></tr>
+<tr><td rowspan="4"><b>2 首页预设库</b></td><td>网格浏览 / 空态（●）</td><td>保持轻投入</td></tr>
+<tr><td>搜索 / 收藏（▲）</td><td>MU-14 校准排序与可用性走查（M3）</td></tr>
+<tr><td>悬浮窗快捷入口（●）</td><td>保持</td></tr>
+<tr><td>首页设计语言（◇）</td><td>MU-01 流体设计对齐，仅令牌级（Q5）</td></tr>
+<tr><td rowspan="8"><b>3 创建与导入</b></td><td>校验管道（▲）</td><td>MU-05 v2 ✅（未知字段告警 + deviceProfile 前向兼容）</td></tr>
+<tr><td>粘贴导入 / 文件导入 / 分享接入（◇）</td><td>FD-01a/b/c ✅ 已完成，汇入统一管道</td></tr>
+<tr><td>对照录入（◇）</td><td>MU-06（M2 真机；DoD 拆纯逻辑层可测，见自检 F5）</td></tr>
+<tr><td>万能创建表单（▲）</td><td>MU-09 二期：Schema v2 字段 + deviceProfile 声明</td></tr>
+<tr><td>自定义库管理（▲）</td><td>MU-10 编辑/删除流程；MU-22 增删改流程校验</td></tr>
+<tr><td>预设导出（◇）</td><td>MU-07 导出 JSON → 系统分享（M2）</td></tr>
+<tr><td>导入组件化（⬤）</td><td>MU-08 三对话框合流（M2，真机回归就绪后）</td></tr>
+<tr><td>i18n 覆盖（▲）</td><td>MU-28 日语 ≥95%（M2）</td></tr>
+<tr><td rowspan="5"><b>4 预设详情</b></td><td>参数展示 / 样片画廊（●）</td><td>保持</td></tr>
+<tr><td>收藏 / 悬浮窗启动（●）</td><td>保持</td></tr>
+<tr><td>隐私政策（▲）</td><td>MU-26 ✅ 透明化重写已完成</td></tr>
+<tr><td>开源许可页（▲）</td><td>MU-18 收尾 ✅ 依赖清单与实际引用一致</td></tr>
+<tr><td>关于页 QQ 提示（▲）</td><td>i18n 补齐（随真机回归批次）</td></tr>
+<tr><td rowspan="7"><b>5 悬浮窗</b></td><td>参数映射（⬤）</td><td>MU-12 ✅ 提取 PresetParamMapper + 4 用例</td></tr>
+<tr><td>展开 / 收起 / 紧凑三态（⬤）</td><td>MU-11② 视图构建器拆分（M2 真机就绪后）</td></tr>
+<tr><td>拖拽吸附 / 切换广播（▲）</td><td>MU-12② 交互逻辑提取可测（M2）</td></tr>
+<tr><td>品牌特判下沉（⬤）</td><td>MU-11③ → ColorOS17Adapter（M2/M3）</td></tr>
+<tr><td>权限引导（▲）</td><td>MU-26 ✅ 日志化已完成</td></tr>
+<tr><td>叠加层触摸合规（◇）</td><td>MU-24 ✅ FLAG_NOT_TOUCHABLE 排查已完成</td></tr>
+<tr><td>流体云胶囊（◇）</td><td>MU-34 Q5 门控（M2 末真机验证）</td></tr>
+<tr><td rowspan="7"><b>6 相框出片</b></td><td>调色板（▲）</td><td>MU-13 存量发布（M1 首项，P0）</td></tr>
+<tr><td>模板选择 / 图片选择 / 预览（●）</td><td>保持</td></tr>
+<tr><td>导出保存 / EXIF（▲）</td><td>MU-16② ProXDR 色彩导出验证（Q5）</td></tr>
+<tr><td>色卡库（▲）</td><td>MU-15 体积治理：样片转 WebP + 按需化（M2）</td></tr>
+<tr><td>Find X10 影调模板（◇）</td><td>MU-32 LUMO × 哈苏影调色卡组（Q5）</td></tr>
+<tr><td>XPAN 画幅（◇）</td><td>MU-16 XPAN 模板（M3）</td></tr>
+<tr><td>投稿闭环（◇）</td><td>MU-17 导出即投稿（无后端口径，M3）</td></tr>
+<tr><td rowspan="7"><b>7 订阅中心</b></td><td>添加 / 编辑 / 删除 / 列表（▲）</td><td>MU-19 流程加固 ✅（回退保护 + 增删改测试）</td></tr>
+<tr><td>目录预览（◇）</td><td>FD-02① ✅ + CatalogReader 3 用例</td></tr>
+<tr><td>单源立即更新（◇）</td><td>FD-02② ✅ + URL 去重防抖</td></tr>
+<tr><td>自动更新 / 回退保护（▲）</td><td>MU-19 / R-1 ✅ 已完成</td></tr>
+<tr><td>目录页（◇）</td><td>MU-16（规划文档口径，M3 可点击跳详情）</td></tr>
+<tr><td>内置首发源（◇）</td><td>MU-33 Find X10 大师预设源（Q5 / M2 末）</td></tr>
+<tr><td>Toast i18n（▲）</td><td>链路自检 ✅ sub_added_ok / sub_updated_ok 三语言</td></tr>
+<tr><td rowspan="4"><b>8 发现社区</b></td><td>扫街记录 / 画廊（●）</td><td>保持（MU-20/21/25 JSON 统一 ✅）</td></tr>
+<tr><td>打卡日历（●）</td><td>保持</td></tr>
+<tr><td>社区入口（◇）</td><td>MU-17② 独立入口（M3）</td></tr>
+<tr><td>意图卡片位（◇）</td><td>MU-01② AIOS 预留（Q5）</td></tr>
+<tr><td rowspan="4"><b>9 设置</b></td><td>主题 / 语言 / 缓存清理（●）</td><td>保持</td></tr>
+<tr><td>自动更新开关（▲）</td><td>MU-02 ✅ 正式化（含合规开关约束）</td></tr>
+<tr><td>崩溃日志导出（▲）</td><td>MU-26 ✅ 透明化已完成</td></tr>
+<tr><td>应用内更新（▲）</td><td>MU-27 更新源可用性验证（M1 实测项）</td></tr>
+<tr><td rowspan="4"><b>10 数据持久层</b></td><td>ConfigCenter / 迁移（●）</td><td>保持；MU-22 观察点</td></tr>
+<tr><td>自定义库（▲）</td><td>MU-22 ✅ Gson→kotlinx + 兼容用例</td></tr>
+<tr><td>各域 Manager（▲）</td><td>MU-20/21/25 ✅ 全部迁 kotlinx（Gson 依赖已移除）</td></tr>
+<tr><td>存储引擎决策（●）</td><td>不做 Room 迁移（500 预设重评检查点）</td></tr>
+<tr><td rowspan="3"><b>11 网络工具</b></td><td>订阅拉取（▲）</td><td>MU-18 ✅ 超时 + 10MB 上限</td></tr>
+<tr><td>图片缓存 / 应用更新（●）</td><td>自检确认超时已覆盖（连接 15s / 读取 30s）</td></tr>
+<tr><td>i18n 工具（▲）</td><td>MU-28 日语补齐（M2）</td></tr>
+<tr><td rowspan="3"><b>12 UI 基础</b></td><td>导航（▲）</td><td>MU-23 ✅ inset 适配</td></tr>
+<tr><td>玻璃拟态组件（●）</td><td>保持</td></tr>
+<tr><td>对话框组件（⬤）</td><td>MU-08 合流（M2）</td></tr>
+<tr><td rowspan="3"><b>13 CI/CD</b></td><td>质量门禁（▲）</td><td>MU-30 ✅ 54 用例 + lint 基线锁定</td></tr>
+<tr><td>发布流水线（▲）</td><td>MU-31 签名体系 ✅；release job 尾步待排障（见 F8）</td></tr>
+<tr><td>lint 基线瘦身（▲）</td><td>每里程碑消化 ≥50 项（M2/M3）</td></tr>
+</table>
+
+<h2>九、专家级自检与优化（PM 视角 · 8 项发现）</h2>
+<p class="desc">以资深产品经理视角对本方案与文档链做完整性审查：覆盖度、一致性、依赖可行性、口径可测性、风险盲点。每项发现给出处置，已直接落入本版文档。</p>
+
+<div class="grid2">
+<div class="kv"><b>F1 基线过期</b>：原文档基线 41c42a7/51 用例，仓库已演进至 fd99bc7/54 用例且 Gson 已移除 → <b>已修正</b>徽章、统计与受影响 MU 状态（MU-05/12/18/19/20/21/22/23/24/25/26 标 ✅）</div>
+<div class="kv"><b>F2 完成态未标注</b>：35 个 MU 中 14 个已交付但文档无状态列 → 第八章子功能表新增处置标记，完成态可审计</div>
+<div class="kv"><b>F3 依赖矛盾</b>：MU-11②（悬浮窗拆分②）排 M2 且出口要求 Service ≤700 行，但依赖真机回归；真机不可得则 M2 无法验收 → <b>补充降级出口</b>：真机不可得时 M2 允许「拆分完成 + 单测全绿」先行，真机回归顺延至 M3 前置</div>
+<div class="kv"><b>F4 口径缺实测</b>：APK ≤15MB 出口无当前基线值（31MB 样片资产未治理）→ M1 出口增加「先测当前 release 包体积并归档」作为治理基线</div>
+<div class="kv"><b>F5 DoD 不可自动化</b>：MU-06 对照录入 DoD 仅「真机走通」→ 拆为纯逻辑层（截图文本 → 参数提取 → 校验管道，可单测）+ UI 层真机验收，保证 CI 可测</div>
+<div class="kv"><b>F6 文档链漂移</b>：4 份文档 MU/FD/ED 编号存在双头维护风险 → 规定第六章追踪矩阵为<b>唯一事实源</b>，状态变更只改矩阵并同步文档链版本号</div>
+<div class="kv"><b>F7 旅程映射缺口</b>：旅程③「投稿到收录」隐含后端依赖，与「无后端」矛盾 → 明确口径：<b>导出即投稿</b>（MU-17 产出标准 JSON 包 + 引导页说明社区收录流程），不承诺平台侧收录时效</div>
+<div class="kv"><b>F8 状态虚报风险</b>：MU-31「发布链路走通」在 release job 尾步失败期间不得勾选 → 状态如实标注「签名体系 ✅ / 发布尾步待排障」，M1 出口 DoD 以 Actions 实跑记录为准</div>
+</div>
+
 <footer>
-OMaster 2.0 功能模块深度升级方案 · 基线 master=41c42a7（CI 全绿 51 用例）· 与《2.0 完整升级规划与功能架构》《交付升级方案》《交付审计》构成文档链 · 不做商业化
+OMaster 2.0 功能模块深度升级方案 v1.1 · 基线 master=fd99bc7（CI 全绿 54 用例，Gson 已移除）· 与《2.0 完整升级规划与功能架构》《交付升级方案》《交付审计》构成文档链 · 第六章矩阵为编号唯一事实源 · 不做商业化
 </footer>
 </div>
 </body>
