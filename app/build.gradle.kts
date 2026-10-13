@@ -87,6 +87,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // ED-08：java.time（YearMonth/LocalDate 等）需 API 26+，minSdk 23 通过 desugaring 支持
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -102,6 +104,8 @@ android {
 }
 
 dependencies {
+    // core library desugaring（java.time 支持，配合 isCoreLibraryDesugaringEnabled）
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // 核心依赖（已使用 catalog，保持不变）
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
