@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -102,6 +103,8 @@ fun PillNavBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                // ED-08：edge-to-edge（targetSdk 36 强制）下让出导航栏 inset，避免被手势条遮挡
+                .navigationBarsPadding()
                 .padding(bottom = 32.dp),
             contentAlignment = Alignment.Center
         ) {
