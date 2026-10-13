@@ -3,6 +3,7 @@ package com.silas.omaster.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import android.icu.util.ChineseCalendar
+import android.os.Build
 import com.silas.omaster.R
 import java.time.LocalDate
 import kotlin.random.Random
@@ -24,13 +25,41 @@ class HolidayGreetingManager(context: Context) {
     private val resources = context.resources
 
     fun getTodayHoliday(): HolidayGreeting? {
+        // android.icu.util.ChineseCalendar 需 API 24+（lint NewApi）：
+        // API 23 设备跳过农历节日判定，公历节日不受影响
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return getSolarHolidayOnly()
+        }
         val today = LocalDate.now()
         val chineseCalendar = ChineseCalendar()
         chineseCalendar.timeInMillis = System.currentTimeMillis()
         val lunarMonth = chineseCalendar.get(ChineseCalendar.MONTH) + 1
         val lunarDay = chineseCalendar.get(ChineseCalendar.DAY_OF_MONTH)
         val isLeap = chineseCalendar.get(ChineseCalendar.IS_LEAP_MONTH) == 1
+        return getHoliday(today, lunarMonth, lunarDay, isLeap)
+    }
 
+    /** API 23 设备：仅判定公历节日 */
+    private fun getSolarHolidayOnly(): HolidayGreeting? {
+        val today = LocalDate.now()
+        for (holiday in SOLAR_HOLIDAYS) {
+            if (holiday.matchSolar(today.monthValue, today.dayOfMonth)) {
+                val greeting = buildHolidayGreeting(holiday)
+                val year = today.year
+                if (!hasShownToday(greeting.holidayKey, year)) {
+                    return greeting
+                }
+            }
+        }
+        return null
+    }
+
+    private fun getHoliday(
+        today: LocalDate,
+        lunarMonth: Int,
+        lunarDay: Int,
+        isLeap: Boolean
+    ): HolidayGreeting? {
         for (holiday in SOLAR_HOLIDAYS) {
             if (holiday.matchSolar(today.monthValue, today.dayOfMonth)) {
                 val greeting = buildHolidayGreeting(holiday)
