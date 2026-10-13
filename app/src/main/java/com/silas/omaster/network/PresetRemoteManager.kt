@@ -27,11 +27,9 @@ object PresetRemoteManager {
             json(Json { ignoreUnknownKeys = true })
         }
         // MU-18 网络加固：超时上限，避免订阅更新无限挂起
-        engine {
-            connectTimeout = 15_000
-            socketTimeout = 30_000
-        }
         install(io.ktor.client.plugins.HttpTimeout) {
+            connectTimeoutMillis = 15_000
+            socketTimeoutMillis = 30_000
             requestTimeoutMillis = 45_000
         }
     }
