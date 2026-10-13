@@ -155,6 +155,9 @@ dependencies {
 
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)
+    // ED-03：Robolectric 持久层测试（SharedPreferences 读写无需真机）
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
