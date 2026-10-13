@@ -604,6 +604,10 @@
     <!-- FD-01b 貼り付けインポート -->
     <string name="paste_import">貼り付けインポート</string>
     <string name="file_import">ファイルからインポート</string>
+    <!-- FD-02① サブスクリプション目録 -->
+    <string name="sub_catalog">プリセット一覧</string>
+    <string name="sub_catalog_empty">未ダウンロードまたは解析失敗です。更新後に表示されます</string>
+    <string name="sub_catalog_more">… 全部で %1$d 件のプリセット</string>
     <string name="paste_import_hint">プリセットJSONをここに貼り付け（単体・配列・サブスクリプション内容に対応）</string>
     <string name="paste_import_result">解析成功：%1$d 件のプリセットを追加しました</string>
     <string name="paste_import_error_empty">内容が空です。先にプリセットJSONを貼り付けてください</string>

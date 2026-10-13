@@ -82,4 +82,22 @@ class CustomPresetManagerTest {
     fun `查询不存在的 id 返回 null`() {
         assertNull(manager.getPresetById("不存在"))
     }
+
+    @Test
+    fun `兼容 Gson 时期写入的旧格式数据`() {
+        // ED-04：升级用户的数据由 Gson 写入（可能缺字段 / 带显式 null），必须可读回
+        context.getSharedPreferences("omaster_custom_presets", Context.MODE_PRIVATE)
+            .edit()
+            .putString(
+                "custom_presets",
+                """[{"id":"g1","name":"旧数据","coverPath":"","isCustom":true,"galleryImages":null}]"""
+            )
+            .commit()
+        val reloaded = CustomPresetManager(context)
+
+        val preset = reloaded.getPresetById("g1")
+        assertNotNull(preset)
+        assertEquals("旧数据", preset!!.name)
+        assertTrue(preset.isCustom)
+    }
 }

@@ -805,6 +805,10 @@
     <!-- FD-01b Paste import -->
     <string name="paste_import">Paste import</string>
     <string name="file_import">Import from file</string>
+    <!-- FD-02① Subscription catalog -->
+    <string name="sub_catalog">Preset catalog</string>
+    <string name="sub_catalog_empty">Not downloaded yet or parse failed. Update the subscription to view</string>
+    <string name="sub_catalog_more">… %1$d presets in total</string>
     <string name="paste_import_hint">Paste preset JSON here (single preset, array, or full subscription)</string>
     <string name="paste_import_result">Parsed successfully: %1$d presets added to your custom presets</string>
     <string name="paste_import_error_empty">Nothing to import. Paste preset JSON first</string>

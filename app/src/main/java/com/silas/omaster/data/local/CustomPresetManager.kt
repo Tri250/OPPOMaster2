@@ -3,10 +3,10 @@ package com.silas.omaster.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import com.silas.omaster.model.MasterPreset
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.UUID
 
@@ -36,7 +36,8 @@ class CustomPresetManager(context: Context) {
         PREFS_NAME,
         Context.MODE_PRIVATE
     )
-    private val gson = Gson()
+    // ED-04：Gson → kotlinx.serialization 统一（显式 null 宽容解码，兼容 Gson 时期写入的数据）
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     private val _customPresetsFlow = MutableStateFlow<List<MasterPreset>>(emptyList())
     val customPresetsFlow: StateFlow<List<MasterPreset>> = _customPresetsFlow
@@ -140,20 +141,19 @@ class CustomPresetManager(context: Context) {
      * 
      * 【关键逻辑】
      * 1. 读取 KEY_CUSTOM_PRESETS 键对应的 JSON 字符串
-     * 2. 使用 Gson 解析为 MasterPreset 对象列表
+     * 2. 使用 kotlinx.serialization 解析为 MasterPreset 对象列表
      * 3. 如果解析失败，返回空列表（不会崩溃）
-     * 
+     *
      * 【兼容性考虑】
      * - 如果用户从旧版本升级，JSON 结构可能缺少新字段
-     * - Gson 会自动将缺失字段设为 null 或默认值
+     * - 缺失字段取 MasterPreset 中的默认值；显式 null 一律宽容处理（explicitNulls = false）
      * - 新增字段需要有默认值（在 MasterPreset 中定义）
      */
     private fun loadCustomPresets() {
-        val json = prefs.getString(KEY_CUSTOM_PRESETS, null)
-        val presets = if (json != null) {
+        val raw = prefs.getString(KEY_CUSTOM_PRESETS, null)
+        val presets = if (raw != null) {
             try {
-                val type = object : TypeToken<List<MasterPreset>>() {}.type
-                gson.fromJson<List<MasterPreset>>(json, type) ?: emptyList()
+                json.decodeFromString<List<MasterPreset>>(raw)
             } catch (e: Exception) {
                 // 【错误处理】如果 JSON 损坏，记录错误并返回空列表
                 // 这会导致用户数据丢失，但 App 不会崩溃
@@ -181,8 +181,8 @@ class CustomPresetManager(context: Context) {
      * - 数据量大时可能会有短暂延迟
      */
     private fun saveCustomPresets(presets: List<MasterPreset>) {
-        val json = gson.toJson(presets)
-        prefs.edit().putString(KEY_CUSTOM_PRESETS, json).apply()
+        val serialized = json.encodeToString(presets)
+        prefs.edit().putString(KEY_CUSTOM_PRESETS, serialized).apply()
         _customPresetsFlow.value = presets
     }
 

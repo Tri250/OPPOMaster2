@@ -806,6 +806,10 @@
     <!-- FD-01b 粘贴导入 -->
     <string name="paste_import">粘贴导入</string>
     <string name="file_import">从文件导入</string>
+    <!-- FD-02① 订阅目录预览 -->
+    <string name="sub_catalog">预设目录</string>
+    <string name="sub_catalog_empty">尚未下载或解析失败，更新订阅后可见</string>
+    <string name="sub_catalog_more">… 共 %1$d 个预设</string>
     <string name="paste_import_hint">在此粘贴预设 JSON（支持单个预设、预设数组或完整订阅内容）</string>
     <string name="paste_import_result">解析成功：%1$d 个预设，已加入自定义预设</string>
     <string name="paste_import_error_empty">内容为空，请先粘贴预设 JSON</string>

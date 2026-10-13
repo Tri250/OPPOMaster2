@@ -178,7 +178,7 @@ class FloatingWindowService : Service() {
         val configMode = ConfigCenter.getInstance(this).floatingWindowMode
         
         // Realme 预设强制使用标准悬浮窗（新版悬浮窗图标不适配 Realme 相机 UI）
-        val mode = if (isRealmePreset(sections)) {
+        val mode = if (PresetParamMapper.isRealmePreset(sections)) {
             FloatingWindowMode.STANDARD
         } else {
             configMode
@@ -321,7 +321,7 @@ class FloatingWindowService : Service() {
      * 根据实际存在的参数数量动态更新
      */
     private fun updateCompactContent(sections: List<PresetSection>) {
-        val paramData = extractDynamicParams(sections)
+        val paramData = PresetParamMapper.extractDynamicParams(this, sections)
 
         // 动态更新参数值 - 只更新实际存在的参数
         paramData.forEachIndexed { index, (value, _) ->
@@ -619,7 +619,7 @@ class FloatingWindowService : Service() {
      */
     private fun createCompactContentArea(sections: List<PresetSection>): LinearLayout {
         // 提取实际存在的参数（过滤掉无效的"-"）
-        val paramData = extractDynamicParams(sections)
+        val paramData = PresetParamMapper.extractDynamicParams(this, sections)
         val actualParamCount = paramData.size
 
         return LinearLayout(this).apply {
@@ -680,211 +680,6 @@ class FloatingWindowService : Service() {
      * 只返回实际存在的参数，不包含空白占位符
      * 返回: List<Pair<参数值, 图标编码>>
      */
-    private fun extractDynamicParams(sections: List<PresetSection>): List<Pair<String, String>> {
-        val result = mutableListOf<Pair<String, String>>()
-
-        // 检查是否有Realme特有参数
-        var hasRealmeParams = false
-        var hasRealmeExtendedParams = false
-        sections.forEach { section ->
-            section.items.forEach { item ->
-                if (item.label.contains("对比度（亮部）") || item.label.contains("对比度（暗部）")) {
-                    hasRealmeParams = true
-                }
-                // Realme 扩展参数检测（不包含"对比度"，因为OPPO预设也可能有对比度）
-                if (item.label.contains("清晰") || item.label.contains("褪色") || 
-                    item.label.contains("颗粒") || item.label.contains("颗粒强度")) {
-                    hasRealmeExtendedParams = true
-                }
-            }
-        }
-
-        // 根据预设类型选择参数映射
-        val labelToIcon = if (hasRealmeParams) {
-            // Realme GR预设：12个参数，全部使用文字
-            // 参数顺序：滤镜、饱和度、色相、影调、对比度、对比度(亮)、对比度(暗)、锐度、明暗、清晰、颗粒强度、颗粒尺寸
-            listOf(
-                listOf("滤镜", "Filter") to IconFont.FILTER_TEXT,
-                listOf("饱和", "Saturation") to IconFont.SATURATION_TEXT,
-                listOf("色相", "Hue") to IconFont.HUE_TEXT,
-                listOf("影调", "Tone") to IconFont.TONE_TEXT,
-                listOf("对比度", "Contrast") to IconFont.CONTRAST,
-                listOf("对比度（亮部）", "对比度（亮）", "contrast_highlight") to IconFont.CONTRAST_HIGHLIGHT_TEXT,
-                listOf("对比度（暗部）", "对比度（暗）", "contrast_shadow") to IconFont.CONTRAST_SHADOW_TEXT,
-                listOf("锐度", "Sharpness") to IconFont.SHARPNESS_TEXT,
-                listOf("明暗", "Brightness") to IconFont.BRIGHTNESS_TEXT,
-                listOf("清晰", "Clarity") to IconFont.CLARITY,
-                listOf("颗粒", "颗粒强度", "Grain", "grain_intensity") to IconFont.GRAIN_INTENSITY_TEXT,
-                listOf("颗粒尺寸", "grain_size") to IconFont.GRAIN_SIZE_TEXT
-            )
-        } else if (hasRealmeExtendedParams) {
-            // Realme预设（老版本）：全部使用文字
-            listOf(
-                // 基础8参数 - 文字
-                listOf("滤镜", "Filter") to IconFont.FILTER_TEXT,
-                listOf("柔光", "Soft") to IconFont.SOFT_LIGHT_TEXT,
-                listOf("影调", "Tone") to IconFont.TONE_TEXT,
-                listOf("饱和", "Saturation") to IconFont.SATURATION_TEXT,
-                listOf("冷暖", "Warm") to IconFont.WARM_COOL_TEXT,
-                listOf("青品", "Cyan") to IconFont.CYAN_TEXT,
-                listOf("锐度", "Sharpness") to IconFont.SHARPNESS_TEXT,
-                listOf("暗角", "Vignette") to IconFont.VIGNETTE_TEXT,
-                // 扩展3参数 - 文字
-                listOf("清晰", "Clarity") to IconFont.CLARITY,
-                listOf("对比度", "褪色", "Contrast", "Fade") to IconFont.CONTRAST,
-                listOf("颗粒", "颗粒强度", "Grain") to IconFont.GRAIN
-            )
-        } else {
-            // OPPO/一加预设：使用图标
-            listOf(
-                // 基础8参数 - 图标
-                listOf("滤镜", "Filter") to IconFont.FILTER,
-                listOf("柔光", "Soft") to IconFont.SOFT_LIGHT,
-                listOf("影调", "Tone") to IconFont.TONE,
-                listOf("饱和", "Saturation") to IconFont.SATURATION,
-                listOf("冷暖", "Warm") to IconFont.WARM_COOL,
-                listOf("青品", "Cyan") to IconFont.CYAN,
-                listOf("锐度", "Sharpness") to IconFont.SHARPNESS,
-                listOf("暗角", "Vignette") to IconFont.VIGNETTE,
-                // 扩展3参数 - 文字
-                listOf("清晰", "Clarity") to IconFont.CLARITY,
-                listOf("对比度", "褪色", "Contrast", "Fade") to IconFont.CONTRAST,
-                listOf("颗粒", "颗粒强度", "Grain") to IconFont.GRAIN
-            )
-        }
-
-        // 按顺序检查每个参数是否存在
-        labelToIcon.forEach { (labels, icon) ->
-            var found = false
-            var value = "-"
-
-            sections.forEach { section ->
-                section.items.forEach { item ->
-                    labels.forEach { label ->
-                        if (!found && item.label.contains(label)) {
-                            value = PresetI18n.resolveValue(this, item.value)
-                            found = true
-                        }
-                    }
-                }
-            }
-
-            // 只添加实际存在的参数（值不为"-"）
-            if (found && value != "-") {
-                result.add(value to icon)
-            }
-        }
-
-        return result
-    }
-
-    /**
-     * 检测是否为 Realme 预设
-     * Realme 预设特有参数：对比度（亮部）、对比度（暗部）
-     */
-    private fun isRealmePreset(sections: List<PresetSection>): Boolean {
-        sections.forEach { section ->
-            section.items.forEach { item ->
-                if (item.label.contains("对比度（亮部）") || item.label.contains("对比度（暗部）")) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    /**
-     * 从 sections 中提取11个参数值（支持真我理光GR等11参数预设）
-     * 用于更新模式，保持固定11个位置
-     */
-    private fun extract11Params(sections: List<PresetSection>): List<String> {
-        // 检测是否为 Realme GR 预设
-        val isRealmeGR = sections.any { section ->
-            section.items.any { item ->
-                item.label.contains("对比度（亮部）") || item.label.contains("对比度（暗部）")
-            }
-        }
-        
-        return if (isRealmeGR) {
-            extractRealmeGRParams(sections)
-        } else {
-            extractStandard11Params(sections)
-        }
-    }
-    
-    /**
-     * 提取 Realme GR 预设的12个参数
-     * Realme GR 参数顺序：
-     * 0.滤镜、1.饱和度、2.色相(青品)、3.影调、4.对比度、5.对比度(亮)、6.对比度(暗)、
-     * 7.锐度、8.明暗(冷暖)、9.清晰、10.颗粒强度、11.颗粒尺寸
-     */
-    private fun extractRealmeGRParams(sections: List<PresetSection>): List<String> {
-        val result = MutableList(12) { "-" }
-        
-        // Realme GR 专用参数映射（12参数）
-        val labelToIndex = mapOf(
-            "滤镜" to 0, "Filter" to 0,
-            "饱和" to 1, "Saturation" to 1,
-            "色相" to 2, "Hue" to 2,
-            "影调" to 3, "Tone" to 3,
-            "对比度" to 4, "Contrast" to 4,
-            "对比度（亮部）" to 5, "对比度（亮）" to 5, "contrast_highlight" to 5,
-            "对比度（暗部）" to 6, "对比度（暗）" to 6, "contrast_shadow" to 6,
-            "锐度" to 7, "Sharpness" to 7,
-            "明暗" to 8, "Brightness" to 8,
-            "清晰" to 9, "Clarity" to 9,
-            "颗粒" to 10, "颗粒强度" to 10, "Grain" to 10, "grain_intensity" to 10,
-            "颗粒尺寸" to 11, "grain_size" to 11
-        )
-        
-        sections.forEach { section ->
-            section.items.forEach { item ->
-                labelToIndex.forEach { (label, index) ->
-                    if (item.label.contains(label)) {
-                        result[index] = PresetI18n.resolveValue(this, item.value)
-                    }
-                }
-            }
-        }
-        
-        return result
-    }
-    
-    /**
-     * 提取标准11参数（OPPO/一加/Realme老版本）
-     * 标准参数顺序：滤镜、柔光、影调、饱和、冷暖、青品、锐度、暗角、清晰、对比度、颗粒
-     */
-    private fun extractStandard11Params(sections: List<PresetSection>): List<String> {
-        val result = MutableList(11) { "-" }
-
-        // 标准参数标签到索引的映射
-        val labelToIndex = mapOf(
-            "滤镜" to 0, "Filter" to 0,
-            "柔光" to 1, "Soft" to 1,
-            "影调" to 2, "Tone" to 2,
-            "饱和" to 3, "Saturation" to 3,
-            "冷暖" to 4, "Warm" to 4,
-            "青品" to 5, "Cyan" to 5,
-            "锐度" to 6, "Sharpness" to 6,
-            "暗角" to 7, "Vignette" to 7,
-            "清晰" to 8, "Clarity" to 8,
-            "对比度" to 9, "褪色" to 9, "Contrast" to 9, "Fade" to 9,
-            "颗粒" to 10, "Grain" to 10, "颗粒强度" to 10
-        )
-
-        sections.forEach { section ->
-            section.items.forEach { item ->
-                labelToIndex.forEach { (label, index) ->
-                    if (item.label.contains(label)) {
-                        result[index] = PresetI18n.resolveValue(this, item.value)
-                    }
-                }
-            }
-        }
-
-        return result
-    }
-
     /**
      * 创建紧凑参数值单元格（带 Tag 用于更新）
      */
@@ -1004,7 +799,7 @@ class FloatingWindowService : Service() {
                     val item = items[i]
                     if (item.span == 2) {
                         // Full width item (highlighted)
-                        val icon = getIconForLabel(item.label)
+                        val icon = PresetParamMapper.getIconForLabel(item.label)
                         val localizedValue = PresetI18n.resolveValue(this@FloatingWindowService, item.value)
                         addView(createHighlightedParam(icon, item.label, localizedValue))
                         i++
@@ -1017,12 +812,12 @@ class FloatingWindowService : Service() {
                             i++
                         }
                         
-                        val leftIcon = getIconForLabel(left.label)
+                        val leftIcon = PresetParamMapper.getIconForLabel(left.label)
                         val leftLocalizedValue = PresetI18n.resolveValue(this@FloatingWindowService, left.value)
                         val leftView = createSmallParamItem(leftIcon, left.label, leftLocalizedValue)
                         
                         val rightView = right?.let {
-                            val rightIcon = getIconForLabel(it.label)
+                            val rightIcon = PresetParamMapper.getIconForLabel(it.label)
                             val rightLocalizedValue = PresetI18n.resolveValue(this@FloatingWindowService, it.value)
                             createSmallParamItem(rightIcon, it.label, rightLocalizedValue)
                         }
@@ -1035,28 +830,6 @@ class FloatingWindowService : Service() {
         }
     }
     
-    /**
-     * 根据标签获取对应图标（使用 Iconfont）
-     */
-    private fun getIconForLabel(label: String): String {
-        return when {
-            label.contains("滤镜") || label.contains("Filter") -> IconFont.FILTER
-            label.contains("柔光") || label.contains("Soft") -> IconFont.SOFT_LIGHT
-            label.contains("影调") || label.contains("Tone") -> IconFont.TONE
-            label.contains("饱和") || label.contains("Saturation") -> IconFont.SATURATION
-            label.contains("冷暖") || label.contains("Warm") -> IconFont.WARM_COOL
-            label.contains("青品") || label.contains("Cyan") -> IconFont.CYAN
-            label.contains("锐度") || label.contains("Sharpness") -> IconFont.SHARPNESS
-            label.contains("暗角") || label.contains("Vignette") -> IconFont.VIGNETTE
-            label.contains("白平衡") || label.contains("WB") -> "🌡️"
-            label.contains("曝光") || label.contains("EV") -> "☀️"
-            label.contains("ISO") -> "📸"
-            label.contains("快门") || label.contains("Shutter") -> "⏱️"
-            label.contains("建议") || label.contains("Tips") -> "💡"
-            else -> "⚙️"
-        }
-    }
-
     /**
      * 创建收起视图 - 圆形应用图标
      */

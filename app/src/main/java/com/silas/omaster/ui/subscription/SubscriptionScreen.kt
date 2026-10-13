@@ -18,6 +18,7 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -498,6 +499,55 @@ fun SubscriptionDetailBottomSheet(
                     }
                     
                     DetailRow(label = "链接", value = sub.url, isLink = true)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // FD-02① 源内预设目录预览
+            val context = LocalContext.current
+            var catalogNames by remember { mutableStateOf<List<String>>(emptyList()) }
+            LaunchedEffect(sub.url) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.silas.omaster.data.local.SubscriptionCatalogReader.readPresetNames(context, sub.url)
+                }.let { catalogNames = it }
+            }
+
+            Text(
+                text = stringResource(R.string.sub_catalog),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = themedBackground().copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (catalogNames.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.sub_catalog_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = themedTextSecondary(),
+                        modifier = Modifier.padding(16.dp)
+                    )
+                } else {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        catalogNames.forEach { name ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("·", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(name, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        if (sub.presetCount > catalogNames.size) {
+                            Text(
+                                text = stringResource(R.string.sub_catalog_more, sub.presetCount),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = themedTextSecondary()
+                            )
+                        }
+                    }
                 }
             }
 
