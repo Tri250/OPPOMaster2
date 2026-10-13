@@ -802,4 +802,13 @@
     <!-- User Submission -->
     <string name="survey_title">Submit Your Preset</string>
     <string name="survey_desc">Share your filter parameters and samples, help the community grow</string>
+    <!-- FD-01b Paste import -->
+    <string name="paste_import">Paste import</string>
+    <string name="paste_import_hint">Paste preset JSON here (single preset, array, or full subscription)</string>
+    <string name="paste_import_result">Parsed successfully: %1$d presets added to your custom presets</string>
+    <string name="paste_import_error_empty">Nothing to import. Paste preset JSON first</string>
+    <string name="paste_import_error_invalid">Unrecognized content: not valid preset JSON</string>
+    <string name="paste_import_error_too_large">Content exceeds the size limit</string>
+    <string name="paste_import_error_no_valid">No valid preset found (a non-empty \"name\" field is required)</string>
+    <string name="paste_import_error_too_many">Preset count exceeds the per-import limit</string>
 </resources>

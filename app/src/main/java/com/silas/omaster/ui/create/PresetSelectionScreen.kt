@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,7 +31,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +56,8 @@ fun PresetSelectionScreen(
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     val presets by repository.getAllPresets().collectAsState(initial = emptyList())
+    // FD-01b 粘贴导入入口
+    var showImportDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -102,6 +107,38 @@ fun PresetSelectionScreen(
                 }
             }
 
+            Spacer(Modifier.height(AppDesign.ItemSpacing))
+
+            // FD-01b：粘贴预设 JSON 导入（经 R-3 校验管道入库）
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showImportDialog = true },
+                shape = RoundedCornerShape(AppDesign.MediumRadius),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.ContentPaste, null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.paste_import),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
             Spacer(Modifier.height(AppDesign.SectionSpacing))
 
             Text(
@@ -126,6 +163,12 @@ fun PresetSelectionScreen(
                     )
                 }
             }
+        }
+
+        if (showImportDialog) {
+            ClipboardImportDialog(
+                onDismiss = { showImportDialog = false }
+            )
         }
     }
 }
