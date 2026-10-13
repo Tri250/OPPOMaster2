@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.serializer
 
 /**
  * FD-01a/01b/01c 粘贴导入校验器（纯 JVM，ED-03 单测覆盖）。
@@ -27,14 +28,27 @@ object PresetImportValidator {
     enum class ErrorCode { EMPTY, TOO_LARGE, INVALID_JSON, NO_VALID_PRESET, TOO_MANY_PRESETS }
 
     sealed class ImportResult {
-        data class Success(val presets: List<MasterPreset>) : ImportResult()
+        data class Success(
+            val presets: List<MasterPreset>,
+            /** MU-05 校验 v2：预设索引 → 未识别字段名列表（Schema v2 前向兼容提示，UI 可选展示） */
+            val unknownFields: Map<Int, List<String>> = emptyMap()
+        ) : ImportResult()
         data class Failure(val code: ErrorCode) : ImportResult()
     }
 
     const val MAX_TEXT_LENGTH: Int = 200_000
     const val MAX_PRESET_COUNT: Int = 200
 
+    /** Schema v2 扩展字段白名单：作为元数据声明合法存在，不计入未知字段 */
+    private val knownExtensionFields = setOf("deviceProfile")
+
     private val json = Json { ignoreUnknownKeys = true }
+
+    /** MasterPreset 已知字段集合（从 serializer descriptor 取，随模型自动更新） */
+    private val masterPresetFieldNames: Set<String> by lazy {
+        val d = serializer<MasterPreset>().descriptor
+        (0 until d.elementsCount).map { d.getElementName(it) }.toSet()
+    }
 
     fun parse(text: String?): ImportResult {
         if (text.isNullOrBlank()) return ImportResult.Failure(ErrorCode.EMPTY)
@@ -54,7 +68,7 @@ object PresetImportValidator {
             else -> return ImportResult.Failure(ErrorCode.INVALID_JSON)
         }
 
-        val presets = elements.mapNotNull { element ->
+        val decoded = elements.mapNotNull { element ->
             runCatching {
                 val obj = element as? JsonObject ?: return@runCatching null
                 // coverPath 为模型必填字段：粘贴内容允许缺省，注入空串走占位图
@@ -63,13 +77,24 @@ object PresetImportValidator {
                 } else {
                     JsonObject(obj + ("coverPath" to JsonPrimitive("")))
                 }
-                json.decodeFromJsonElement<MasterPreset>(normalized)
+                val preset = json.decodeFromJsonElement<MasterPreset>(normalized)
+                if (preset.name.isBlank()) return@runCatching null
+                // MU-05 校验 v2：收集未知字段（解码照常忽略，仅告警）；deviceProfile 需为对象声明
+                val unknown = obj.keys - masterPresetFieldNames - knownExtensionFields +
+                    listOfNotNull("deviceProfile".takeIf {
+                        obj.containsKey("deviceProfile") && obj["deviceProfile"] !is JsonObject
+                    })
+                preset to unknown
             }.getOrNull()
         }
 
-        val valid = presets.filter { !it.name.isBlank() }
+        val valid = decoded.map { it.first }
         if (valid.isEmpty()) return ImportResult.Failure(ErrorCode.NO_VALID_PRESET)
         if (valid.size > MAX_PRESET_COUNT) return ImportResult.Failure(ErrorCode.TOO_MANY_PRESETS)
-        return ImportResult.Success(valid)
+        val warnings = mutableMapOf<Int, List<String>>()
+        decoded.forEachIndexed { index, (_, unknown) ->
+            if (unknown.isNotEmpty()) warnings[index] = unknown.distinct()
+        }
+        return ImportResult.Success(valid, warnings)
     }
 }

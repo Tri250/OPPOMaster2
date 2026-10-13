@@ -138,7 +138,7 @@ dependencies {
     implementation(libs.coil.compose)
 
     // Gson（已使用 catalog）
-    implementation(libs.gson)
+    // Gson 已移除（ED-04/MU-25：JSON 双栈统一为 kotlinx.serialization）
 
     // Room 数据库已移除，使用 SharedPreferences 替代
 

@@ -2,14 +2,16 @@ package com.silas.omaster.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
  * 打卡记录数据类
  */
+@Serializable
 data class CheckInRecord(
     val date: String,
     val hasDrawnCard: Boolean = false,
@@ -26,7 +28,8 @@ data class CheckInRecord(
 class CheckInManager(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val gson = Gson()
+    // MU-20 Gson→kotlinx（宽容解码，兼容 Gson 时期写入的数据）
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     companion object {
         private const val PREFS_NAME = "check_in_prefs"
@@ -42,17 +45,17 @@ class CheckInManager(context: Context) {
      * 获取所有打卡记录
      */
     fun getAllRecords(): Map<String, CheckInRecord> {
-        val json = prefs.getString(KEY_CHECK_IN_RECORDS, null) ?: return emptyMap()
-        val type = object : TypeToken<Map<String, CheckInRecord>>() {}.type
-        return gson.fromJson(json, type) ?: emptyMap()
+        val raw = prefs.getString(KEY_CHECK_IN_RECORDS, null) ?: return emptyMap()
+        return runCatching { json.decodeFromString<Map<String, CheckInRecord>>(raw) }
+            .getOrDefault(emptyMap())
     }
 
     /**
      * 保存打卡记录
      */
     private fun saveRecords(records: Map<String, CheckInRecord>) {
-        val json = gson.toJson(records)
-        prefs.edit().putString(KEY_CHECK_IN_RECORDS, json).apply()
+        val serialized = json.encodeToString(records)
+        prefs.edit().putString(KEY_CHECK_IN_RECORDS, serialized).apply()
     }
 
     /**

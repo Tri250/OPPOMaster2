@@ -109,10 +109,8 @@ class SubscriptionManager private constructor(context: Context) {
         return try {
             appContext.assets.open("presets.json").use { inputStream ->
                 InputStreamReader(inputStream).use { reader ->
-                    val presetListType = object : com.google.gson.reflect.TypeToken<com.silas.omaster.model.PresetList>() {}.type
-                    val presetList: com.silas.omaster.model.PresetList? = 
-                        com.google.gson.Gson().fromJson(reader, presetListType)
-                    presetList?.presets?.size ?: 0
+                    val presetList = json.decodeFromString<com.silas.omaster.model.PresetList>(reader.readText())
+                    presetList.presets.size
                 }
             }
         } catch (e: Exception) {

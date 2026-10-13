@@ -19,9 +19,20 @@ import java.io.File
 
 object PresetRemoteManager {
 
+    /** MU-18：订阅文件响应体大小上限 10MB */
+    private const val MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
+        }
+        // MU-18 网络加固：超时上限，避免订阅更新无限挂起
+        engine {
+            connectTimeout = 15_000
+            socketTimeout = 30_000
+        }
+        install(io.ktor.client.plugins.HttpTimeout) {
+            requestTimeoutMillis = 45_000
         }
     }
 
@@ -46,7 +57,12 @@ object PresetRemoteManager {
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
             val response: HttpResponse = client.get(url)
-            val text: String = response.body()
+            // MU-18 网络加固：响应体大小上限（10MB），防恶意超大文件写满存储
+            val bytes: ByteArray = response.body()
+            if (bytes.size > MAX_RESPONSE_BYTES) {
+                return Result.failure(Exception("订阅文件过大（${bytes.size / 1024 / 1024}MB > 10MB 上限）"))
+            }
+            val text: String = bytes.toString(Charsets.UTF_8)
             
             // 验证 JSON 是否有效
             val presetList = try {

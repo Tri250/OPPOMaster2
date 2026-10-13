@@ -91,4 +91,25 @@ class PresetImportValidatorTest {
             (r as PresetImportValidator.ImportResult.Failure).code
         )
     }
+
+    @Test
+    fun `MU-05 未知字段计入告警映射`() {
+        val r = v.parse("""{"name":"A","hack_field":"x","future_knob":1}""")
+        val s = r as PresetImportValidator.ImportResult.Success
+        assertEquals(listOf("hack_field", "future_knob"), s.unknownFields[0])
+    }
+
+    @Test
+    fun `MU-05 deviceProfile 对象声明不计入告警`() {
+        val r = v.parse("""{"name":"A","deviceProfile":{"brand":"OPPO","models":["Find X10"]}}""")
+        val s = r as PresetImportValidator.ImportResult.Success
+        assertTrue(s.unknownFields.isEmpty())
+    }
+
+    @Test
+    fun `MU-05 deviceProfile 类型非法计入告警`() {
+        val r = v.parse("""{"name":"A","deviceProfile":"OPPO"}""")
+        val s = r as PresetImportValidator.ImportResult.Success
+        assertEquals(listOf("deviceProfile"), s.unknownFields[0])
+    }
 }

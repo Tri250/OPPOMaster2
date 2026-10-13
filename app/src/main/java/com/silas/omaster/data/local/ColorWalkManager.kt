@@ -2,8 +2,9 @@ package com.silas.omaster.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.silas.omaster.data.ColorCardLibrary
 import com.silas.omaster.model.ColorCard
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +29,8 @@ class ColorWalkManager(context: Context) {
         PREFS_NAME,
         Context.MODE_PRIVATE
     )
-    private val gson = Gson()
+    // MU-20 Gson→kotlinx（宽容解码，兼容 Gson 时期写入的数据）
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     private val _todayCardFlow: MutableStateFlow<ColorCard?>
     val todayCardFlow: StateFlow<ColorCard?>
@@ -174,8 +176,8 @@ class ColorWalkManager(context: Context) {
             history.removeAt(history.size - 1)
         }
 
-        val json = gson.toJson(history)
-        prefs.edit().putString(KEY_HISTORY, json).apply()
+        val serialized = json.encodeToString(history)
+        prefs.edit().putString(KEY_HISTORY, serialized).apply()
         _historyFlow.value = history
     }
 
@@ -183,9 +185,8 @@ class ColorWalkManager(context: Context) {
 
     private fun loadHistory(): List<ColorCardHistory> {
         val raw = prefs.getString(KEY_HISTORY, null) ?: return emptyList()
-        val type = object : TypeToken<List<ColorCardHistory>>() {}.type
         return try {
-            gson.fromJson(raw, type) ?: emptyList()
+            json.decodeFromString<List<ColorCardHistory>>(raw)
         } catch (e: Exception) {
             try {
                 val legacy = raw.split(",").mapNotNull { entry ->
@@ -193,7 +194,7 @@ class ColorWalkManager(context: Context) {
                     if (parts.size == 2) ColorCardHistory(parts[0], parts[1]) else null
                 }
                 if (legacy.isNotEmpty()) {
-                    val newJson = gson.toJson(legacy)
+                    val newJson = json.encodeToString(legacy)
                     prefs.edit().putString(KEY_HISTORY, newJson).apply()
                 }
                 legacy
@@ -234,6 +235,7 @@ class ColorWalkManager(context: Context) {
 /**
  * 色卡历史记录
  */
+@Serializable
 data class ColorCardHistory(
     val cardId: String,
     val date: String
