@@ -65,6 +65,7 @@ fun SubscriptionScreen(
     var showEditDialog by remember { mutableStateOf<Subscription?>(null) }
     var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var updatingUrls by remember { mutableStateOf(setOf<String>()) }
     val autoUpdateEnabled by config.autoUpdateSubscriptionFlow.collectAsState()
     
     val sheetState = rememberModalBottomSheetState()
@@ -278,7 +279,37 @@ fun SubscriptionScreen(
                     onDelete = {
                         config.removeSubscription(sub.url)
                         showBottomSheet = false
-                    }
+                    },
+                    onUpdateClick = {
+                        scope.launch {
+                            updatingUrls = updatingUrls + sub.url
+                            Logger.i("SubscriptionScreen", "单源立即更新: ${sub.name} (${sub.url})")
+                            PresetRemoteManager.fetchAndSave(context, sub.url, forceUpdate = true).fold(
+                                onSuccess = { list ->
+                                    config.updateSubscriptionStatus(sub.url, list.presets.size, System.currentTimeMillis())
+                                    PresetRepository.getInstance(context).reloadDefaultPresets()
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.sub_update_done, list.presets.size),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                onFailure = { e ->
+                                    Logger.w("SubscriptionScreen", "单源更新失败: ${e.message}")
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(
+                                            if (e.message == "无需更新") R.string.sub_update_uptodate
+                                            else R.string.sub_update_fail
+                                        ),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                            updatingUrls = updatingUrls - sub.url
+                        }
+                    },
+                    updating = sub.url in updatingUrls
                 )
             }
         }
@@ -456,7 +487,9 @@ fun SubscriptionDetailBottomSheet(
     onDismiss: () -> Unit,
     sheetState: SheetState,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onUpdateClick: () -> Unit = {},
+    updating: Boolean = false
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -552,6 +585,27 @@ fun SubscriptionDetailBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            // FD-02② 单源立即更新
+            Button(
+                onClick = onUpdateClick,
+                enabled = !updating,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (updating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(stringResource(if (updating) R.string.sub_updating else R.string.sub_update_now))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Actions
             Row(
