@@ -22,15 +22,18 @@ import com.silas.omaster.data.imports.PresetImportValidator.ImportResult
 import com.silas.omaster.data.local.CustomPresetManager
 
 /**
- * FD-01b 粘贴导入对话框：文本粘贴 → R-3 校验管道（PresetImportValidator）→
+ * FD-01b/01a/01c 粘贴导入对话框：文本 → R-3 校验管道（PresetImportValidator）→
  * 统一经 CustomPresetManager 入库（架构红线：外部内容不绕过校验管道）。
+ *
+ * @param initialText 预填文本（文件导入 FD-01a / 系统分享 FD-01c 复用同一对话框）
  */
 @Composable
 fun ClipboardImportDialog(
+    initialText: String = "",
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(initialText) }
     var result by remember { mutableStateOf<ImportResult?>(null) }
 
     AlertDialog(

@@ -66,18 +66,28 @@ object PresetRemoteManager {
             }
 
             val config = ConfigCenter.getInstance(context)
+            val currentSub = config.subscriptionsFlow.value.find { it.url == url }
 
             // 检查版本号是否相同（判定规则见 SubscriptionUpdatePolicy，ED-03 有单测覆盖）
-            if (!forceUpdate) {
-                val currentSub = config.subscriptionsFlow.value.find { it.url == url }
-                if (SubscriptionUpdatePolicy.shouldSkipUpdate(
-                        remoteBuild = presetList.build,
-                        localBuild = currentSub?.build,
-                        forceUpdate = forceUpdate
-                    )
-                ) {
-                    return Result.failure(Exception("无需更新"))
-                }
+            if (SubscriptionUpdatePolicy.shouldSkipUpdate(
+                    remoteBuild = presetList.build,
+                    localBuild = currentSub?.build,
+                    forceUpdate = forceUpdate
+                )
+            ) {
+                return Result.failure(Exception("无需更新"))
+            }
+
+            // FD-02③ 回退保护：远端 build 低于本地时拒绝写入，保留本地「最后已知良好」数据
+            if (SubscriptionUpdatePolicy.shouldRejectRegression(
+                    remoteBuild = presetList.build,
+                    localBuild = currentSub?.build,
+                    forceUpdate = forceUpdate
+                )
+            ) {
+                return Result.failure(
+                    Exception("远端版本回退（build ${presetList.build} < ${currentSub!!.build}），已保留本地数据")
+                )
             }
 
             withContext(Dispatchers.IO) {

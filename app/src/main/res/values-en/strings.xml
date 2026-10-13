@@ -804,6 +804,7 @@
     <string name="survey_desc">Share your filter parameters and samples, help the community grow</string>
     <!-- FD-01b Paste import -->
     <string name="paste_import">Paste import</string>
+    <string name="file_import">Import from file</string>
     <string name="paste_import_hint">Paste preset JSON here (single preset, array, or full subscription)</string>
     <string name="paste_import_result">Parsed successfully: %1$d presets added to your custom presets</string>
     <string name="paste_import_error_empty">Nothing to import. Paste preset JSON first</string>

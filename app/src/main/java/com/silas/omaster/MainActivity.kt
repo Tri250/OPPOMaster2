@@ -144,6 +144,9 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var floatingWindowController: FloatingWindowController
 
+    // FD-01c：系统分享接入 —— 外部分享的预设文本，导入完成后置空
+    private var pendingSharedText by androidx.compose.runtime.mutableStateOf<String?>(null)
+
     override fun attachBaseContext(newBase: Context?) {
         // 在 Activity 创建前应用语言设置
         val context = newBase?.let { LanguageUtil.applyLanguage(it) }
@@ -153,6 +156,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // FD-01c：接收系统分享的预设 JSON 文本
+        if (intent?.action == android.content.Intent.ACTION_SEND) {
+            pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+        }
 
         // 初始化并注册全局悬浮窗控制器
         floatingWindowController = FloatingWindowController.getInstance(this)
@@ -202,6 +210,14 @@ class MainActivity : ComponentActivity() {
                                 navController = navController,
                                 config = config
                             )
+
+                            // FD-01c：外部分享的预设文本直接进入统一导入对话框
+                            pendingSharedText?.let { shared ->
+                                com.silas.omaster.ui.create.ClipboardImportDialog(
+                                    initialText = shared,
+                                    onDismiss = { pendingSharedText = null }
+                                )
+                            }
                         }
                     }
                 }

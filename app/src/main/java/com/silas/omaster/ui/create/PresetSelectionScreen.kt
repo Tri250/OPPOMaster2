@@ -1,5 +1,7 @@
 package com.silas.omaster.ui.create
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,8 +59,24 @@ fun PresetSelectionScreen(
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     val presets by repository.getAllPresets().collectAsState(initial = emptyList())
-    // FD-01b 粘贴导入入口
+    // FD-01b 粘贴导入入口；FD-01a 文件导入入口
     var showImportDialog by remember { mutableStateOf(false) }
+    var importText by remember { mutableStateOf("") }
+
+    // FD-01a：SAF 选择预设 JSON 文件，读取文本后复用导入对话框
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val content = runCatching {
+                context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+            }.getOrNull()
+            if (content != null) {
+                importText = content
+                showImportDialog = true
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -139,6 +158,40 @@ fun PresetSelectionScreen(
                 }
             }
 
+            Spacer(Modifier.height(AppDesign.ItemSpacing))
+
+            // FD-01a：从文件导入预设 JSON
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        filePicker.launch(arrayOf("application/json", "text/plain"))
+                    },
+                shape = RoundedCornerShape(AppDesign.MediumRadius),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Description, null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.file_import),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
             Spacer(Modifier.height(AppDesign.SectionSpacing))
 
             Text(
@@ -167,7 +220,11 @@ fun PresetSelectionScreen(
 
         if (showImportDialog) {
             ClipboardImportDialog(
-                onDismiss = { showImportDialog = false }
+                initialText = importText,
+                onDismiss = {
+                    showImportDialog = false
+                    importText = ""
+                }
             )
         }
     }

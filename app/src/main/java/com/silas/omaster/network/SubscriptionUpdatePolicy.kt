@@ -22,4 +22,16 @@ object SubscriptionUpdatePolicy {
         if (forceUpdate) return false
         return localBuild != null && localBuild == remoteBuild
     }
+
+    /**
+     * FD-02③ 回退保护：远端 build 低于本地时拒绝写入，
+     * 防止源被回滚 / 破坏后覆盖本地「最后已知良好」的预设数据。
+     * forceUpdate 为用户显式越权，允许覆盖。
+     *
+     * @return true 表示拒绝本次写入
+     */
+    fun shouldRejectRegression(remoteBuild: Int, localBuild: Int?, forceUpdate: Boolean): Boolean {
+        if (forceUpdate) return false
+        return localBuild != null && remoteBuild < localBuild
+    }
 }

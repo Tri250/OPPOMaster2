@@ -805,6 +805,7 @@
     <string name="survey_desc">分享你的滤镜参数和样片，帮助社区成长</string>
     <!-- FD-01b 粘贴导入 -->
     <string name="paste_import">粘贴导入</string>
+    <string name="file_import">从文件导入</string>
     <string name="paste_import_hint">在此粘贴预设 JSON（支持单个预设、预设数组或完整订阅内容）</string>
     <string name="paste_import_result">解析成功：%1$d 个预设，已加入自定义预设</string>
     <string name="paste_import_error_empty">内容为空，请先粘贴预设 JSON</string>

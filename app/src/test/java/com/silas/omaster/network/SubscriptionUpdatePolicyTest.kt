@@ -53,4 +53,45 @@ class SubscriptionUpdatePolicyTest {
             )
         )
     }
+
+    @Test
+    fun `回退保护 拒绝低于本地的写入`() {
+        assertTrue(
+            SubscriptionUpdatePolicy.shouldRejectRegression(
+                remoteBuild = 2, localBuild = 3, forceUpdate = false
+            )
+        )
+    }
+
+    @Test
+    fun `回退保护 远端更新或同 build 不拒绝`() {
+        assertFalse(
+            SubscriptionUpdatePolicy.shouldRejectRegression(
+                remoteBuild = 4, localBuild = 3, forceUpdate = false
+            )
+        )
+        assertFalse(
+            SubscriptionUpdatePolicy.shouldRejectRegression(
+                remoteBuild = 3, localBuild = 3, forceUpdate = false
+            )
+        )
+    }
+
+    @Test
+    fun `回退保护 本地无订阅不拒绝`() {
+        assertFalse(
+            SubscriptionUpdatePolicy.shouldRejectRegression(
+                remoteBuild = 2, localBuild = null, forceUpdate = false
+            )
+        )
+    }
+
+    @Test
+    fun `回退保护 强制更新越权放行`() {
+        assertFalse(
+            SubscriptionUpdatePolicy.shouldRejectRegression(
+                remoteBuild = 2, localBuild = 3, forceUpdate = true
+            )
+        )
+    }
 }
