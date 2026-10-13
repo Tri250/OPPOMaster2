@@ -278,11 +278,6 @@ private fun OpenSourceLibraryList() {
             link = "https://coil-kt.github.io/coil/"
         ),
         LibraryInfo(
-            name = "Gson",
-            license = "Apache License 2.0",
-            link = "https://github.com/google/gson"
-        ),
-        LibraryInfo(
             name = "Kotlinx Serialization",
             license = "Apache License 2.0",
             link = "https://github.com/Kotlin/kotlinx.serialization"

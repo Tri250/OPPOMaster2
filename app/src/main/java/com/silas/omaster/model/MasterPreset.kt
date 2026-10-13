@@ -377,7 +377,7 @@ data class MasterPreset(
 
 /**
  * 预设列表包装类
- * 用于 Gson 解析 JSON 数据
+ * 用于 kotlinx.serialization 解析订阅/预设 JSON 数据
  */
 @Serializable
 data class PresetList(
