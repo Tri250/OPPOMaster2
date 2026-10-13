@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 预设投稿 / 订阅源
+    url: https://github.com/iCurrer/OMaster-Community
+    about: 预设 JSON、样片与订阅源请投稿到社区仓库，本仓库不接受内容投稿

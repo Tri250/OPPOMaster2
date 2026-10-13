@@ -1,0 +1,54 @@
+name: 🐞 问题反馈
+description: 报告 OMaster 使用中遇到的问题
+labels: [ "bug" ]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: 问题分类
+      options:
+        - 预设导入（文件 / 剪贴板 / 分享 / 对照录入）
+        - 订阅源
+        - 悬浮窗
+        - 相框出片
+        - 打卡 / 扫街
+        - 更新 / 安装
+        - 界面显示
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本
+      placeholder: 例如 v1.5.1（设置 → 关于 中可查）
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: 机型与系统
+      placeholder: 例如 OPPO Find X8 Pro / ColorOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 进入…
+        2. 点击…
+        3. 出现…
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: 预期与实际
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 导入类问题请附预设来源与失败提示原文；涉及 JSON 的请脱敏后粘贴片段。崩溃类问题如方便请导出日志（设置 → 导出日志）。
