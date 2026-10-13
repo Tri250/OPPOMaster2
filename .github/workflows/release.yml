@@ -1,0 +1,299 @@
+name: Release
+
+# ED-02 CI 质量门禁 + ED-01 签名发布流水线
+# - 所有 push / PR：先跑 testDebugUnitTest + lint 门禁，任一失败阻断
+# - tag 推送（vX.Y.Z）或手动 dispatch 勾选创建 Release：门禁通过后构建签名 Release 并创建草稿 Release
+# - 版本一致性（G-3）：tag 必须与 versionName 一致；versionCode 由 CI 按提交数注入
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: '创建 Release (勾选后需填写标签)'
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Release 标签 (例如: v1.5.1)'
+        required: false
+        type: string
+      release_name:
+        description: 'Release 名称 (留空则使用标签)'
+        required: false
+        type: string
+      prerelease:
+        description: '标记为预发布版本'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Quality gate (unit tests + lint)
+        run: ./gradlew testDebugUnitTest lint --no-daemon
+
+      - name: Upload test & lint reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+          retention-days: 14
+
+  build:
+    needs: quality
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.variant.outputs.IS_RELEASE }}
+    env:
+      OMASTER_KEYSTORE_BASE64: ${{ secrets.OMASTER_KEYSTORE_BASE64 }}
+      OMASTER_KEYSTORE_PASSWORD: ${{ secrets.OMASTER_KEYSTORE_PASSWORD }}
+      OMASTER_KEYSTORE_ALIAS: ${{ secrets.OMASTER_KEYSTORE_ALIAS }}
+      OMASTER_KEY_PASSWORD: ${{ secrets.OMASTER_KEY_PASSWORD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine Build Variant
+        id: variant
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]] || [[ "${{ github.event.inputs.create_release }}" == "true" ]]; then
+            echo "IS_RELEASE=true" >> "$GITHUB_OUTPUT"
+            echo "BUILD_TASK=assembleRelease" >> "$GITHUB_ENV"
+            echo "APK_PATH=app/build/outputs/apk/release" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=release-apk" >> "$GITHUB_ENV"
+          else
+            echo "IS_RELEASE=false" >> "$GITHUB_OUTPUT"
+            echo "BUILD_TASK=assembleDebug" >> "$GITHUB_ENV"
+            echo "APK_PATH=app/build/outputs/apk/debug" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=debug-apk" >> "$GITHUB_ENV"
+          fi
+
+      # G-2：正式构建必须可签名。密钥未配置时直接失败，杜绝产出不可安装的 Release APK。
+      - name: Verify signing secrets (release only)
+        if: steps.variant.outputs.IS_RELEASE == 'true'
+        run: |
+          if [ -z "$OMASTER_KEYSTORE_BASE64" ] || [ -z "$OMASTER_KEYSTORE_PASSWORD" ]; then
+            echo "❌ 缺少签名密钥 Secrets：OMASTER_KEYSTORE_BASE64 / OMASTER_KEYSTORE_PASSWORD"
+            echo "   请在仓库 Settings → Secrets → Actions 配置（见 CONTRIBUTING.md 发布章节，ED-01）。"
+            exit 1
+          fi
+
+      # G-3：tag 必须与 versionName 一致（五者一致性由本检查 + git-cliff + Release 说明保障）
+      - name: Verify tag / versionName consistency (tag push only)
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          TAG="${{ github.ref_name }}"
+          if [ "v$VERSION_NAME" != "$TAG" ]; then
+            echo "❌ 版本不一致：tag=$TAG 但 versionName=$VERSION_NAME"
+            echo "   请修正 tag 或 app/build.gradle.kts 中的 versionName 后重试。"
+            exit 1
+          fi
+          echo "✅ tag 与 versionName 一致：$TAG"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build APK
+        run: |
+          # versionCode 由 CI 注入：提交数 + 100 偏移，保证高于历史手填值且单调递增
+          VERSION_CODE=$(( $(git rev-list --count HEAD) + 100 ))
+          echo "构建 ${{ env.BUILD_TASK }}，versionCode=$VERSION_CODE"
+          ./gradlew ${{ env.BUILD_TASK }} -PciVersionCode=$VERSION_CODE --no-daemon
+
+      - name: Check release APK signed
+        if: steps.variant.outputs.IS_RELEASE == 'true'
+        run: |
+          for apk in ${{ env.APK_PATH }}/*.apk; do
+            if unzip -l "$apk" | grep -q "META-INF/.*\.(RSA|DSA|EC)"; then
+              echo "✅ 已签名: $apk"
+            else
+              echo "❌ 未签名产物: $apk"; exit 1
+            fi
+          done
+
+      - name: Upload Universal APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-universal
+          path: ${{ env.APK_PATH }}/*-universal-*.apk
+          retention-days: 30
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-armeabi-v7a
+          path: ${{ env.APK_PATH }}/*-armeabi-v7a-*.apk
+          retention-days: 30
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-arm64-v8a
+          path: ${{ env.APK_PATH }}/*-arm64-v8a-*.apk
+          retention-days: 30
+
+      - name: Upload x86 APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-x86
+          path: ${{ env.APK_PATH }}/*-x86-*.apk
+          retention-days: 30
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-x86_64
+          path: ${{ env.APK_PATH }}/*-x86_64-*.apk
+          retention-days: 30
+
+  release:
+    needs: build
+    if: >-
+      github.ref_type == 'tag' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # 需要推送标签和创建 Release
+
+    steps:
+      - name: Checkout repository (with full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate / resolve release tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ github.event.inputs.release_tag }}"
+          fi
+          if [[ -z "$TAG" ]]; then
+            echo "❌ 错误: 创建 Release 时必须提供 release_tag"; exit 1
+          fi
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "❌ 错误: 标签格式不正确，请使用 vX.Y.Z 格式（例如 v1.5.1）"; exit 1
+          fi
+          if git tag --list | grep -q "^${TAG}$"; then
+            echo "❌ 错误: 标签 $TAG 已存在"; exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Create and push tag (manual dispatch only)
+        if: github.ref_type != 'tag'
+        run: |
+          git tag ${{ steps.tag.outputs.TAG }}
+          git push origin ${{ steps.tag.outputs.TAG }}
+
+      - name: Generate release notes (from previous tag to HEAD)
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sed -n '2p')
+          HEAD_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "📝 首个版本，生成所有提交的更新日志"
+            git-cliff --unreleased --output RELEASE_NOTES.md
+          else
+            echo "📝 生成从 $PREVIOUS_TAG 到 $HEAD_TAG 的更新日志"
+            git-cliff ${PREVIOUS_TAG}..${HEAD_TAG} --unreleased --output RELEASE_NOTES.md
+          fi
+          echo "📋 生成的 Release 说明："
+          cat RELEASE_NOTES.md
+
+      - name: Update CHANGELOG.md
+        run: |
+          git-cliff --output CHANGELOG.md
+          if [ -n "$(git status --porcelain CHANGELOG.md)" ]; then
+            git add CHANGELOG.md
+            git commit -m "docs: 更新 CHANGELOG.md 为 ${{ steps.tag.outputs.TAG }}"
+            git push origin HEAD:${GITHUB_REF#refs/heads/}
+            echo "✅ CHANGELOG.md 已更新并推送"
+          else
+            echo "ℹ️ CHANGELOG.md 无变化，跳过提交"
+          fi
+
+      - name: Download APK artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: ./apk
+          merge-multiple: true
+
+      - name: Create GitHub Release (draft)
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: ${{ github.event.inputs.release_name || steps.tag.outputs.TAG }}
+          body_path: RELEASE_NOTES.md
+          draft: true
+          prerelease: ${{ github.event.inputs.prerelease == 'true' || contains(steps.tag.outputs.TAG, 'beta') }}
+          files: ./apk/**/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          echo "🎉 Release 草稿创建成功！"
+          echo "  标签: ${{ steps.tag.outputs.TAG }}"
+          echo "🔗 查看地址: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.TAG }}"
+          echo "⚠️ 请维护者真机验收后手动发布草稿，并同步蒲公英 / 蓝奏云镜像（6.3 发布流程）。"

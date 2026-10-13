@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -20,7 +22,9 @@ android {
         // versionName: 对外显示版本号，格式 主.次.修订
         // 正式版: 1.0, 1.0.1, 1.1.0, 2.0.0
         // 测试版: 1.0.0-beta1, 1.0.0-beta2
-        versionCode = 13
+        // versionCode 由 CI 在发布构建时通过 -PciVersionCode 注入（基于提交数单调递增，ED-02）；
+        // 本地开发缺省 13，禁止手填递增
+        versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 13
         versionName = "1.5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -30,10 +34,33 @@ android {
         baseline = file("lint-baseline.xml")
     }
 
+    // ED-01 签名体系：CI 通过环境变量注入 keystore（见 .github/workflows/release.yml）。
+    // 本地未设置环境变量时不创建签名配置，debug 构建不受影响；
+    // 密钥文件落盘到 .signing/（已加入 .gitignore，禁止入库）。
+    val keystoreBase64 = System.getenv("OMASTER_KEYSTORE_BASE64")
+    val keystorePassword = System.getenv("OMASTER_KEYSTORE_PASSWORD")
+
+    signingConfigs {
+        if (!keystoreBase64.isNullOrBlank() && !keystorePassword.isNullOrBlank()) {
+            create("release") {
+                val ksFile = rootProject.file(".signing/omaster-release.keystore")
+                if (!ksFile.exists()) {
+                    ksFile.parentFile.mkdirs()
+                    ksFile.writeBytes(Base64.getDecoder().decode(keystoreBase64))
+                }
+                storeFile = ksFile
+                storePassword = keystorePassword
+                keyAlias = System.getenv("OMASTER_KEYSTORE_ALIAS") ?: "omaster"
+                keyPassword = System.getenv("OMASTER_KEY_PASSWORD") ?: keystorePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
