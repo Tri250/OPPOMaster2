@@ -83,6 +83,7 @@
   <li><a href="#b1">B. 2.0 背景与目标</a></li>
   <li><a href="#b2">B. 2.0 定位与主题</a></li>
   <li><a href="#b3">B. 2.0 范围</a></li>
+  <li><a href="#b35">B. 功能模块升级规划</a></li>
   <li><a href="#b4">B. 功能需求（核心）</a></li>
   <li><a href="#b5">B. 共享规则与异常</a></li>
   <li><a href="#b6">B. 非功能需求</a></li>
@@ -231,9 +232,90 @@
   <tr><td><span class="tag t-p2">P2</span></td><td>数据层迁移（DataStore/Room）、DI 框架引入、上帝类拆分——作为 2.0 内并行重构，不阻塞发布</td></tr>
   <tr><td><span class="tag t-info">非目标</span></td><td>付费/广告商业化；iOS 版；云端账号体系；AI 参数推荐 <span class="small">[假设，待定：2.0 聚焦生态与质量，商业化另行规划]</span></td></tr>
 </table>
+<p class="small">上述能力的模块级落点（现状证据 / 1.x 遗留问题 / 升级动作 / 依赖关系）详见第十章「功能模块升级规划」。</p>
 
 <!-- ============================================================ -->
-<h2 id="b4">十、功能需求（核心）</h2>
+<h2 id="b35">十、功能模块升级规划</h2>
+<p>以下按代码实际存在的功能模块逐一给出 2.0 升级规划：模块现状（含证据）→ 1.x 遗留问题 → 2.0 升级动作 → 依赖关系。模块动作等级与第九章范围（P0/P1/P2）及第十一章功能需求（FR）互相引用、保持一致。</p>
+
+<h3>10.1 模块健康度总览</h3>
+<table>
+  <tr><th style="width:32px">#</th><th style="width:150px">模块</th><th>主要文件与规模</th><th>现状评估</th><th style="width:150px">2.0 动作</th></tr>
+  <tr><td>1</td><td>预设库 · 首页</td><td>HomeScreen.kt 679 行 + PresetCard / PresetRepository</td><td>闭环完整：瀑布流、分类筛选、收藏、NEW 置顶</td><td><span class="tag t-p2">保持</span>小步优化</td></tr>
+  <tr><td>2</td><td>预设详情</td><td>DetailScreen.kt 370 行 + ImageGallery</td><td>参数分组 + 样片轮播完整；样片图内置拖累体积</td><td><span class="tag t-p1">P1</span>样片外置</td></tr>
+  <tr><td>3</td><td>悬浮窗</td><td>FloatingWindowService.kt <b>1617 行</b> + Controller / 引导弹窗</td><td>核心卖点、全项目最重单文件；传统 View 体系、三形态并存、品牌特判硬编码</td><td><span class="tag t-p1">P1</span>体验增强 + 架构拆分</td></tr>
+  <tr><td>4</td><td>预设导入与创建</td><td>UniversalCreatePresetScreen.kt 622 行 + ViewModel</td><td>仅支持从零手动创建/编辑；<b>无任何导入路径</b>（用户呼声最高）</td><td><span class="tag t-p0">P0</span>导入体系落点</td></tr>
+  <tr><td>5</td><td>订阅中心</td><td>SubscriptionScreen.kt 645 行 + SubscriptionConfig / PresetRemoteManager</td><td>源增删启停可用；自动更新在 master 未发布；无目录页、无失败降级</td><td><span class="tag t-p0">P0</span>正式化 + 目录页</td></tr>
+  <tr><td>6</td><td>发现页 · 打卡</td><td>DiscoverScreen.kt 421 行 + CheckInCalendar 365 行</td><td>打卡日历完整；存在「敬请期待」占位卡</td><td><span class="tag t-p2">P2</span>收编占位</td></tr>
+  <tr><td>7</td><td>发现页 · 扫街</td><td>ColorWalk 系列 6 个文件约 1100 行</td><td>记录 / 历史 / 引导齐备，自成闭环</td><td><span class="tag t-p2">保持</span></td></tr>
+  <tr><td>8</td><td>相框出片</td><td>PhotoFrameScreen.kt 539 行 + FrameRenderer / ColorExtractor / ExifReader</td><td>EXIF、主色提取、渲染导出齐备；调色板为 master 未发布功能</td><td><span class="tag t-p1">P1</span>正式化发布</td></tr>
+  <tr><td>9</td><td>应用内更新</td><td>UpdateChecker.kt 321 行 + UpdateConfigManager / DownloadCompleteReceiver</td><td>GITEE / GITHUB 双渠道 + 国内镜像跳转；下载→安装链路依赖签名包</td><td><span class="tag t-p0">P0</span>随工程基线验证</td></tr>
+  <tr><td>10</td><td>设置</td><td>SettingsScreen.kt <b>1458 行</b></td><td>单文件聚合全部设置项；仅更新设置区就占约 364 行</td><td><span class="tag t-p1">P1</span>拆分重构</td></tr>
+  <tr><td>11</td><td>数据 / 配置层</td><td>ConfigCenter.kt 458 行 + 8 个本地 Manager</td><td>ConfigCenter 是质量范本；其余全为 SharedPreferences 直读写</td><td><span class="tag t-p2">P2</span>DataStore 评估</td></tr>
+  <tr><td>12</td><td>隐私合规 / i18n</td><td>PrivacyPolicy 组件 + WelcomeDialog + LanguageUtil / PresetI18n</td><td>同意流程完整；日语缺口约 26%、14 处硬编码中文</td><td><span class="tag t-p1">P1</span>补齐对齐</td></tr>
+</table>
+
+<h3>10.2 重点模块升级卡片</h3>
+
+<div class="card">
+<h4>模块卡 A ｜ 悬浮窗（P1 · 体验增强 + 架构拆分）</h4>
+<p><b>现状（证据）：</b>三种窗口形态（展开 / 收起 / 紧凑）+ 左右切换 + 透明度 30–70 可调 + 动态参数提取 + Realme 品牌特判（<code>isRealmePreset</code>、<code>extract11Params</code>）+ 悬浮球引导；实现为传统 View 体系（LinearLayout / TextView / 递归 <code>findViewWithTag</code>），与主 App 的 Compose 双轨并存。</p>
+<p><b>1.x 遗留问题：</b>1617 行单类同时承载窗口生命周期、视图构建、参数解析三个职责；视觉与交互规则在 View / Compose 两处维护；品牌差异以硬编码写死在核心类，每支持一个新品牌都要改核心逻辑。</p>
+<p><b>2.0 升级动作：</b></p>
+<ol>
+  <li>职责三分：<b>WindowController</b>（生命周期与权限）+ <b>PresetParamMapper</b>（预设 → 展示模型）+ <b>WindowRenderer</b>（渲染），PresetParamMapper 可单测（归入 FR-02c 测试基线）；</li>
+  <li>品牌特判数据化：窗口布局差异改为预设 JSON 元数据声明（如 <code>layout</code> 字段），新增品牌不再改代码；</li>
+  <li>体验增强：跟拍场景「一键置顶 + 防误触锁定」，紧凑模式支持参数轮播；</li>
+  <li>与导入体系打通：悬浮窗可直接切换到「我的导入」自定义预设（FR-01），形成「导入 → 跟拍」闭环。</li>
+</ol>
+<p class="small">依赖：R-1 预设状态机、FR-04 订阅数据、ConfigCenter 既有的透明度/模式配置。</p>
+</div>
+
+<div class="card">
+<h4>模块卡 B ｜ 预设导入与创建（P0 · FR-01 的模块落点）</h4>
+<p><b>现状（证据）：</b>UniversalCreatePresetScreen 支持从零创建与编辑自定义预设；无文件 / 剪贴板 / 分享任何导入路径——这正是 Issue #48、#22、#20 三个开放诉求的空缺。</p>
+<p><b>2.0 升级动作：</b>FR-01 五条路径全部落在本模块：文件导入（01a）、剪贴板口令（01b）、分享接入（01c）为新增入口；「对照录入」（01d）直接复用现有创建表单，左侧截图右侧表单；Root/自动化提取（01e）为实验开关。导入成功统一写入 CustomPresetManager，与手动创建的预设同一状态机（R-1）。</p>
+<p class="small">依赖：R-3 导入校验规则（与订阅共用）、分区存储的 SAF 文件选择。</p>
+</div>
+
+<div class="card">
+<h4>模块卡 C ｜ 订阅中心（P0 正式化 + P1 目录页 · FR-04 的模块落点）</h4>
+<p><b>现状（证据）：</b>源添加 / 删除 / 启停 / URL 编辑齐备；build 号比较判定更新；每日自动更新判定已在 master 实现但未随 Release 发布；Ktor 客户端无超时、无内容校验。</p>
+<p><b>1.x 遗留问题：</b>订阅散落在设置深层，无目录页与发现入口；自动更新失败无重试、无静默降级；解析失败的远程内容存在覆盖本地缓存的理论风险。</p>
+<p><b>2.0 升级动作：</b>目录页（FR-04a）+ 自动更新正式化（FR-04b，失败保留「最后已知良好」数据）+ 内容可信校验（FR-04c，minAppVersion / sha256 / R-3 规则）；同时把 PresetRemoteManager 改造为统一超时与重试的共享网络入口。</p>
+</div>
+
+<div class="card">
+<h4>模块卡 D ｜ 相框出片（P1 · 正式化发布）</h4>
+<p><b>现状（证据）：</b>EXIF 读取、Palette 主色提取、相框渲染、图片导出分享链路齐备；「相框调色板选择」为 master 最新提交新增、尚未随任何 Release 发布。</p>
+<p><b>2.0 升级动作：</b>随 v1.5.1 清库存 / 2.0 正式发布给存量用户；明确导出分辨率与水印策略（<span class="small">[假设，待定：当前以默认策略发布]</span>）；与打卡 / 扫街打通——相框作品可一键生成本日打卡，提升发现页活跃闭环。</p>
+</div>
+
+<div class="card">
+<h4>模块卡 E ｜ 发现页 · 打卡 / 扫街（P2 · 轻投入）</h4>
+<p><b>现状（证据）：</b>打卡日历、打卡详情、扫街记录 / 历史 / 引导完整；DiscoverScreen 存在 <code>ComingSoonCard</code>「敬请期待」占位卡。</p>
+<p><b>2.0 升级动作：</b>占位卡要么兑现要么移除（正式版不保留空承诺）；打卡与相框出片联动（见模块卡 D）；<b>2.0 不在本模块新增大功能</b>，把工程预算让给导入与质量基线。</p>
+</div>
+
+<div class="card">
+<h4>模块卡 F ｜ 应用内更新 + 设置（P0/P1 · 随工程基线联动）</h4>
+<p><b>现状（证据）：</b>更新系统支持 GITEE（默认）/ GITHUB 双渠道 + 国内镜像下载跳转 + 下载完成广播；SettingsScreen 1458 行单文件，其中更新设置区约 364 行、主题/Tab 选择对话框内嵌。</p>
+<p><b>2.0 升级动作：</b>①更新链路随 FR-02 签名方案做全链路安装验证（下载 → 广播 → 安装器拉起）；②SettingsScreen 拆分为「设置骨架 + 独立设置区块组件」，更新区独立成 UpdateSettingsSection，为 2.0 新增设置项（导入行为、订阅自动更新、隐私开关）预留挂载位；③版本一致性由 FR-03 的 CI 校验兜底。</p>
+</div>
+
+<h3>10.3 模块 → 需求映射速查</h3>
+<table>
+  <tr><th>模块动作</th><th>对应 FR / 规则</th><th>所在里程碑</th></tr>
+  <tr><td>悬浮窗拆分与体验增强</td><td>FR-02c（Mapper 单测）、R-1</td><td>M2 开始拆分，M3 收尾</td></tr>
+  <tr><td>导入体系</td><td>FR-01a–e、R-3</td><td>M2</td></tr>
+  <tr><td>订阅中心</td><td>FR-04a–c、R-2 / R-4</td><td>M2</td></tr>
+  <tr><td>相框出片正式化</td><td>随 v1.5.1（M1）与 v2.0（M3）发布</td><td>M1 / M3</td></tr>
+  <tr><td>更新系统与设置重构</td><td>FR-02a/d、FR-03</td><td>M1 起持续</td></tr>
+  <tr><td>样片外置 / i18n / 隐私对齐</td><td>FR-05、FR-06、FR-07</td><td>M3</td></tr>
+  <tr><td>DataStore / DI / 上帝类收尾</td><td>P2 并行重构</td><td>2.0 内并行，不阻塞发布</td></tr>
+</table>
+
+<h2 id="b4">十一、功能需求（核心）</h2>
 
 <h3>FR-01 <span class="tag t-p0">P0</span> 一键导入体系</h3>
 <p><b>目的：</b>让用户把外部渠道获得的预设（他人分享的截图/口令/文件/其他 App 的参数）在数秒内转为 OMaster 可用预设，替代逐项手抄。直接响应 Issue #48、#22、#20。</p>
@@ -297,7 +379,7 @@
 </ul>
 
 <!-- ============================================================ -->
-<h2 id="b5">十一、共享规则与异常</h2>
+<h2 id="b5">十二、共享规则与异常</h2>
 <table>
   <tr><th style="width:90px">规则</th><th>定义（全文唯一出处）</th></tr>
   <tr><td class="fr-id">R-1 预设状态机</td><td>预设仅有四态：<b>内置</b>（随 APK/内置 JSON，不可删除）、<b>订阅</b>（来自订阅源，随源更新，不可单删，可随源停用）、<b>自定义</b>（用户创建/导入，可编辑可删除，删除需二次确认）、<b>收藏</b>（任何状态的预设都可收藏，收藏关系存于 FavoriteManager）。新预设标记（NEW）只对内置与订阅预设生效。</td></tr>
@@ -309,7 +391,7 @@
 <p><b>关键异常路径：</b>导入失败（原因明示，见 R-3）｜订阅源不可达（保留上次数据 + 标记失败，见 FR-04c）｜悬浮窗权限被系统限制（沿用现有引导弹窗 + 品牌已知问题文档）｜更新包下载失败（保留 REQUEST_INSTALL_PACKAGES 流程的失败重试入口）。</p>
 
 <!-- ============================================================ -->
-<h2 id="b6">十二、非功能需求</h2>
+<h2 id="b6">十三、非功能需求</h2>
 <table>
   <tr><th style="width:110px">编号</th><th>要求</th></tr>
   <tr><td class="fr-id">NFR-1 体积</td><td>2.0 正式版 universal APK 目标 ≤ 15MB（1.x 现状约 31MB+，主要来自内置样片）；单 ABI APK 目标 ≤ 10MB。<span class="small">[假设，待定：目标值基于样片外置后的体量估算，M1 结束时复核]</span></td></tr>
@@ -319,7 +401,7 @@
 </table>
 
 <!-- ============================================================ -->
-<h2 id="b7">十三、里程碑</h2>
+<h2 id="b7">十四、里程碑</h2>
 <table>
   <tr><th style="width:90px">阶段</th><th>内容与出口标准</th></tr>
   <tr><td class="fr-id">M1 质量基线</td><td>解决全部 P0：签名方案落地、CI 门禁（测试+lint）生效、版本/CHANGELOG 一致性修复、发布 v1.5.1 正式版清空存量。<b>出口：v1.5.1 Release 五者一致，CI 全绿。</b></td></tr>
@@ -329,7 +411,7 @@
 <p class="small">M1 → M2 串行（基线不就绪不做功能）；M3 内各项可并行。不设具体日期，以出口标准验收。</p>
 
 <!-- ============================================================ -->
-<h2 id="b8">十四、风险与开放问题</h2>
+<h2 id="b8">十五、风险与开放问题</h2>
 <table>
   <tr><th style="width:60px">编号</th><th>开放问题 / 风险</th><th>影响</th></tr>
   <tr><td class="fr-id">Q1 <span class="tag t-tbd">TBD</span></td><td>签名密钥托管方式：GitHub Secrets 注入 vs 维护者本地签名后上传？</td><td>决定 FR-02a 的 CI 自动化程度与密钥安全边界。需维护者决策。</td></tr>
