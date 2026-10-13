@@ -61,12 +61,17 @@ class PresetParamMapperTest {
         assertFalse(PresetParamMapper.isRealmePreset(oppoSections()))
 
         val params = PresetParamMapper.extractDynamicParams(context, realmeGRSections())
-        // Realme GR 全部使用文字标签："对比度（亮部）"先命中"对比度"条目 → CONTRAST
-        assertTrue(params.all {
-            it.second == IconFont.FILTER_TEXT ||
-                it.second == IconFont.CONTRAST ||
-                it.second == IconFont.GRAIN_SIZE_TEXT
-        })
+        // 映射表按条目独立匹配："对比度（亮部）"同时命中"对比度"与"对比度（亮部）"两条，
+        // "颗粒尺寸"同时命中"颗粒"与"颗粒尺寸"两条 → 预期 5 项且全部为文字标签
+        assertEquals(5, params.size)
+        val expectedIcons = setOf(
+            IconFont.FILTER_TEXT,
+            IconFont.CONTRAST,
+            IconFont.CONTRAST_HIGHLIGHT_TEXT,
+            IconFont.GRAIN_INTENSITY_TEXT,
+            IconFont.GRAIN_SIZE_TEXT
+        )
+        assertTrue(params.all { it.second in expectedIcons })
     }
 
     @Test
