@@ -32,6 +32,15 @@ class PresetImportValidatorTest {
     }
 
     @Test
+    fun `缺失 coverPath 自动注入空串导入成功`() {
+        val r = v.parse("""{"name":"无封面","iso":"100"}""")
+        assertTrue(r is PresetImportValidator.ImportResult.Success)
+        val p = (r as PresetImportValidator.ImportResult.Success).presets[0]
+        assertEquals("", p.coverPath)
+        assertEquals("100", p.iso)
+    }
+
+    @Test
     fun `预设数组导入成功`() {
         val r = v.parse("""[{"name":"A"},{"name":"B"}]""")
         assertTrue(r is PresetImportValidator.ImportResult.Success)
