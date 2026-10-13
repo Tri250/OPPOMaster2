@@ -63,12 +63,12 @@ object ScreenCaptureParser {
             if (line.isEmpty()) return@forEach
 
             var matched = false
+            // 逐行匹配所有规则（单行可含多个参数，如「ISO100 快门 1/60 EV+2 WB 5000K」）
             for ((regex, field) in tokenRules) {
                 val m = regex.find(line) ?: continue
                 // 同字段首见优先（截图可能含重复行）
                 fields.putIfAbsent(field, m.groupValues[1])
                 matched = true
-                break
             }
             if (!matched && name == null) {
                 // 首个非参数行作为名称（限长，去装饰符）
