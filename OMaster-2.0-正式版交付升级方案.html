@@ -71,7 +71,7 @@
 <ul>
   <li><b>交付主线</b>：M1 质量基线（发布 v1.5.1 清存量）→ M2 生态能力（一键导入 + 订阅中心，v2.0-beta）→ M3 正式发布（v2.0）；</li>
   <li><b>文档配套</b>：审计证据链见《OMaster 正式版交付审计 &amp; 2.0 升级规划》，本方案不重复论证，直接给执行动作与验收标准；</li>
-  <li><b>验收原则</b>：所有里程碑不设日期，以第十章「正式版验收清单」的出口标准（DoD）逐项验收。</li>
+  <li><b>验收原则</b>：所有里程碑不设日期，以第十一章「正式版验收清单」的出口标准（DoD）逐项验收。</li>
 </ul>
 </div>
 
@@ -166,7 +166,7 @@
   <tr><td class="fr-id">FD-01d</td><td>对照录入：左截图右表单，复用现有创建表单</td><td>录入过程随时保存草稿；完成后与手动创建预设行为一致（R-1）</td></tr>
   <tr><td class="fr-id">FD-01e</td><td>Root / 自动化提取（实验开关，默认关闭，二次确认）</td><td><span class="small">[假设，待定：以 M2 主流机型实测可用率决定保留或移出 2.0]</span></td></tr>
 </table>
-<p><b>依赖：</b>R-1 预设状态机、R-3 校验规则（与订阅共用）、CustomPresetManager 存储通道。<b>里程碑：</b>M2（a–c 全量，d 随行，e 实验）。</p>
+<p><b>依赖：</b>R-1 预设状态机、R-3 校验规则（与订阅共用）、CustomPresetManager 存储通道。<b>里程碑：</b>M2（a–c 全量，d 随行，e 实验）。ColorOS 17 生态触点（小布记忆 / 闪记 / 侧边栏）见第七章 FD-09。</p>
 </div>
 
 <div class="card">
@@ -204,7 +204,70 @@
 </div>
 
 <!-- ============ 7 工程交付方案 ============ -->
-<h2 id="s7">七、工程交付方案（ED）</h2>
+<h2 id="s65">七、ColorOS 17 · Find X10 专项适配方案</h2>
+<p class="small">事实快照（2026-10-13 联网调研）：ColorOS 17 于 2026-09-17 ODC26 正式发布，Find X10 系列于 2026-10-21 全球发布并首发搭载 ColorOS 17.0，OPPO / 一加 / realme 三品牌首批升级。本章所有适配动作并入第十章里程碑与第十一章验收清单。</p>
+
+<h3>7.1 平台事实底座与影响判断</h3>
+<table>
+  <tr><th style="width:210px">特性（来源）</th><th>官方口径要点</th><th>对 OMaster 的直接影响</th></tr>
+  <tr><td><b>哈苏大师模式</b>（Find X10 / Pro Max）</td><td>原生相机内置经典哈苏影调与颗粒质感，「一拍就有风格」；首发哈苏超清原相机</td><td>原生参数库与相机内置风格重叠；预设 schema 需覆盖影调 / 颗粒档位，社区源需首发 Find X10 参数集</td></tr>
+  <tr><td><b>LUMO 调色盘</b>（Find X10 系列）</td><td>16 款人像风格效果，原生质感肤色</td><td>预设库分类与参数集新增 LUMO 风格枚举</td></tr>
+  <tr><td><b>哈苏 XPAN 模式</b></td><td>XPAN 超宽画幅</td><td>预设与相框出片需支持画幅维度</td></tr>
+  <tr><td><b>ProXDR / 全焦段 8K / 17 档 HDR</b></td><td>三 2 亿镜头群（Pro Max）、1/1.3" 大底 F1.5、CIPA 6.5</td><td>样片与详情页需适配高动态范围显示观感；参数集扩展（HDR 档位）</td></tr>
+  <tr><td><b>流体设计语言</b>（ColorOS 17）</td><td>凝光视效、流体动效、柔性反馈贯穿系统全局</td><td>UI 观感与触感反馈对齐（现有 Glass 质感体系具备基础）</td></tr>
+  <tr><td><b>AIOS · 小布体系</b>（ColorOS 17）</td><td>小布记忆（三指上滑闪记、跨平台收纳、智能归类）、AI 一键闪记（侧边快捷键、意图推荐）、小布建议（40+ 三方服务合作）</td><td>直接支撑 Issue #48 诉求：预设经小布记忆 / 闪记进入 OMaster 的新导入触点</td></tr>
+  <tr><td><b>AI 流体云</b>（ColorOS 14+ 开放 API）</td><td>系统级胶囊通知形态，三方应用可接入</td><td>悬浮窗的轻量替代形态候选（探索项）</td></tr>
+  <tr><td><b>智能侧边栏</b>（ColorOS 全系）</td><td>侧边浮标呼出，支持三方应用快捷入口与小窗</td><td>悬浮窗一键呼出的系统级入口</td></tr>
+  <tr><td><b>AI 相册影集 / 相册无感直连</b>（ColorOS 17）</td><td>自动生成影集 Plog；与三方相机 / NAS 无缝互联不占本地存储</td><td>相框出片导出对接影集素材场景；图片缓存策略可借鉴直连理念</td></tr>
+  <tr><td><b>Android 16/17 行为变更</b>（OPPO 开放平台适配指南）</td><td>targetSdk 36 触发 edge-to-edge 强制与大屏 Adaptive Apps（≥600dp 忽略方向 / 宽高比限制）；叠加层不可信触摸事件阻断（<code>TYPE_APPLICATION_OVERLAY</code> + <code>FLAG_NOT_TOUCHABLE</code>）；Android 17 开发者预览已开放（Find X9 Pro / 一加 15）</td><td>OMaster targetSdk 已是 36：全局边距适配、悬浮窗触摸标志排查为 M1 必修项；建立 Android 17 跟踪机制</td></tr>
+</table>
+
+<div class="callout">
+  <div class="ttl">7.2 战略判断（产品决策）</div>
+  <p>Find X10 原生相机已内置风格化能力（哈苏大师模式影调 + 颗粒、LUMO 16 款、XPAN 画幅），OMaster 的价值重心应从「教用户调参数」正式迁移到三件事：<b>① 跨品牌 / 跨生态预设聚合与一键导入；② 社区共创的预设源生态（Find X10 参数集首发）；③ 悬浮窗跟拍 + 相框出片的拍摄工作流</b>。Find X10 / ColorOS 17 既是首批适配目标，也是新的参数源与用户入口——适配做得越早，先发优势越大。</p>
+</div>
+
+<h3>7.3 模块适配矩阵</h3>
+<table>
+  <tr><th style="width:130px">模块</th><th style="width:250px">相关平台特性</th><th>适配动作</th><th style="width:80px">级别</th></tr>
+  <tr><td>预设库 / 详情</td><td>哈苏大师模式影调 + 颗粒、LUMO 16 款、XPAN、HDR 档位</td><td>预设 Schema v2（见 FD-08）：新增 <code>deviceProfile</code> 机型参数集声明、影调 / 颗粒档位、LUMO 风格枚举、XPAN 画幅标记；旧订阅源无新字段时按默认渲染（向后兼容）</td><td><span class="tag t-p0">P0</span></td></tr>
+  <tr><td>悬浮窗</td><td>叠加层触摸阻断、流体云、智能侧边栏、流体设计</td><td>①排查 <code>FLAG_NOT_TOUCHABLE</code> 使用点并按 Android 16+ 策略改造；②ColorOS 17 / Find X10 真机兼容矩阵（相机上层显示 + 三形态）；③流体云胶囊形态作为紧凑模式候选（探索）；④智能侧边栏快捷入口注册</td><td><span class="tag t-p0">P0</span></td></tr>
+  <tr><td>导入与创建</td><td>小布记忆、AI 一键闪记（侧键）、意图推荐</td><td>小布记忆联动导入路径：预设内容 / 截图存入记忆合集 → OMaster 侧「从记忆导入」；闪记的参数截图直通 FD-01d 对照录入（见 FD-09）</td><td><span class="tag t-p0">P0</span></td></tr>
+  <tr><td>订阅中心</td><td>Find X10 首发参数集</td><td>社区源首发「Find X10 大师预设」订阅源；订阅 JSON 携带 <code>deviceProfile</code>，详情页 / 悬浮窗按机型过滤展示</td><td><span class="tag t-p1">P1</span></td></tr>
+  <tr><td>相框出片</td><td>AI 相册影集（Plog）、XPAN</td><td>导出图进入影集素材场景；新增 XPAN 宽画幅相框模板</td><td><span class="tag t-p1">P1</span></td></tr>
+  <tr><td>发现页 · 打卡 / 扫街</td><td>AI 回忆画廊</td><td>打卡作品与系统回忆画廊联动（导出到影集场景）；不做深度集成</td><td><span class="tag t-p2">P2</span></td></tr>
+  <tr><td>设置 / 主题</td><td>流体设计（凝光视效、柔性反馈）</td><td>触感反馈与动效曲线对齐 ColorOS 17 观感（HapticExt 已有基础）；深色模式跟随系统策略复核</td><td><span class="tag t-p2">P2</span></td></tr>
+  <tr><td>数据 / 合规</td><td>AIOS 端侧处理理念、相册无感直连</td><td>隐私说明补充「小布记忆联动数据流仅本地处理」；图片缓存策略评估直连协同</td><td><span class="tag t-p1">P1</span></td></tr>
+</table>
+
+<h3>7.4 新增交付项</h3>
+
+<div class="card">
+<h3>FD-08 <span class="tag t-p0">P0</span> Find X10 参数集与预设 Schema v2</h3>
+<p><b>交付内容：</b>①预设 JSON Schema 升级 v2：新增 <code>deviceProfile</code>（机型 / OS 参数集声明）、影调与颗粒档位、LUMO 风格枚举、XPAN 画幅标记；②v1 源向后兼容规则（缺省字段默认渲染，R-2 版本判定扩展 <code>schemaVersion</code>）；③OMaster-Community 首发订阅源：「Find X10 大师预设」；④详情页与悬浮窗对 v2 字段的渲染适配。</p>
+<p><b>验收标准：</b>v1 旧源全部正常加载（回归不破坏）；v2 字段在详情页 / 悬浮窗正确呈现；Find X10 源在真机上端到端可用。<b>依赖：</b>FD-02 订阅链路、R-2 / R-3。<b>里程碑：</b>M2。</p>
+</div>
+
+<div class="card">
+<h3>FD-09 <span class="tag t-p0">P0</span> ColorOS 17 生态联动导入</h3>
+<p><b>交付内容：</b>①「从记忆导入」入口：用户在小布记忆中保存的预设 JSON / 参数截图，可在 OMaster 内选取并进入导入预览（文本走 FD-01b 校验链，截图走 FD-01d 对照录入）；②AI 一键闪记联动：侧键闪记的参数截图作为对照录入素材直通；③智能侧边栏注册 OMaster 快捷入口（呼出悬浮窗 / 快速导入）。</p>
+<p><b>验收标准：</b>在 ColorOS 17 真机上三条触点端到端可用（或按 7.5 的 API 可用性结论明确降级说明）；隐私说明覆盖该数据流（仅本地处理，不做商业化）。<b>依赖：</b>FD-01、OPPO 开放平台能力接入 <span class="tag t-tbd">TBD Q5</span>。<b>里程碑：</b>M2（侧边栏入口）/ M3（记忆联动，视 API 开放程度）。</p>
+</div>
+
+<div class="card">
+<h3>ED-08 <span class="tag t-p0">P0</span> Android 16/17 系统基线适配</h3>
+<ul>
+  <li><b>edge-to-edge 强制修复</b>（targetSdk 36 已触发）：全局 WindowInsets 适配，修复顶栏 / 底栏 / 弹窗被系统栏遮挡（M1 必修）；</li>
+  <li><b>叠加层触摸排查</b>：审计悬浮窗对 <code>FLAG_NOT_TOUCHABLE</code> 的使用，按 Android 16+ 不可信触摸阻断策略改造；</li>
+  <li><b>大屏 Adaptive Apps</b>：targetSdk 36 在 ≥600dp 屏幕上忽略方向 / 宽高比限制——声明自适应布局，避免 Find 系列大屏 / 折叠展开场景显示异常；</li>
+  <li><b>Android 17 跟踪机制</b>：跟踪 OPPO Android 17 开发者预览适配指南，评估 targetSdk 37 升级路线，纳入 2.1 规划输入。</li>
+</ul>
+</div>
+
+<h3>7.5 平台能力开放程度（待验证）</h3>
+<p class="small">小布记忆 / 一键闪记对三方应用的开放 API 与接入方式（OPPO 开放平台）需在 M1 期间完成验证 <span class="tag t-tbd">TBD Q5</span>：若开放程度不足以支撑 FD-09 全链路，则降级方案为「分享接入（FD-01c）+ 侧边栏快捷入口」组合，并在发布说明中明示。AI 流体云胶囊形态同理：API 可用则作为悬浮窗紧凑模式候选（M3 结论），不可用则不阻塞发布。</p>
+
+<h2 id="s7">八、工程交付方案（ED）</h2>
 <p class="small">ED = Engineering Deliverable。工程项是正式版的门槛条件，与功能项同等验收。</p>
 
 <div class="card">
@@ -275,7 +338,7 @@
 </div>
 
 <!-- ============ 8 质量保障 ============ -->
-<h2 id="s8">八、质量保障方案</h2>
+<h2 id="s8">九、质量保障方案</h2>
 
 <h3>8.1 测试分层</h3>
 <table>
@@ -297,32 +360,32 @@
 <p class="small">破坏性变更（样片外置、设置重构、存储迁移）必须在 beta 期完成迁移与降级验证。</p>
 
 <!-- ============ 9 里程碑 ============ -->
-<h2 id="s9">九、里程碑与交付物</h2>
+<h2 id="s9">十、里程碑与交付物</h2>
 <table>
   <tr><th style="width:110px">里程碑</th><th>交付内容</th><th>交付物清单</th><th>出口标准（DoD）</th></tr>
   <tr>
     <td class="fr-id">M1<br>质量基线<br><span class="tag t-p0">P0</span></td>
     <td>解决全部 P0 工程债，发布 v1.5.1 清空存量</td>
-    <td>ED-01 签名；ED-02 门禁；ED-03 三类单测；ED-05 合规文档；ED-07 一致性修复；FD-04① 存量功能发布</td>
+    <td>ED-01 签名；ED-02 门禁；ED-03 三类单测；ED-05 合规文档；ED-07 一致性修复；FD-04① 存量功能发布；ED-08 Android 16/17 基线适配（edge-to-edge、叠加层触摸、大屏声明）；7.5 小布记忆 / 流体云 API 开放程度验证（Q5）</td>
     <td><b>v1.5.1 正式版发布且五者一致；CI 全绿（测试+lint+版本校验）；签名 APK 真机安装通过</b></td>
   </tr>
   <tr>
     <td class="fr-id">M2<br>生态能力<br><span class="tag t-p0">P0</span></td>
     <td>一键导入 + 订阅中心 + 体积治理</td>
-    <td>FD-01（a–c 全量、d 随行、e 实验）；FD-02；FD-03（拆分启动）；FD-06（重构）；ED-04 外置；导入 Issue 反馈模板</td>
+    <td>FD-01（a–c 全量、d 随行、e 实验）；FD-02；FD-08 Find X10 参数集与 Schema v2；FD-09 生态联动导入（侧边栏入口 + 视 Q5 结论的记忆联动）；FD-03（拆分启动）；FD-06（重构）；ED-04 外置；导入 Issue 反馈模板</td>
     <td><b>v2.0-beta 发布；FD-01 三条标准路径验收通过；三种订阅异常场景本地数据完好；universal APK 达标（G-5）</b></td>
   </tr>
   <tr>
     <td class="fr-id">M3<br>正式发布<br><span class="tag t-p1">P1</span></td>
     <td>补全与收尾，转正 v2.0</td>
-    <td>FD-03 收尾；FD-04②③；FD-05；FD-06 新设置项；FD-07 i18n；ED-06 崩溃上报；ED-07 文档齐备、PR 清零</td>
-    <td><b>第十章验收清单全项通过，v2.0.0 正式发布并同步镜像</b></td>
+    <td>FD-03 收尾；FD-04②③；FD-05；FD-06 新设置项；FD-07 i18n；FD-09 记忆联动收尾（Q5 结论）；ED-06 崩溃上报；ED-07 文档齐备、PR 清零；流体云胶囊形态探索结论（7.5）</td>
+    <td><b>第十一章验收清单全项通过，v2.0.0 正式发布并同步镜像</b></td>
   </tr>
 </table>
 <p class="small">M1 → M2 串行（基线不就绪不做功能）；M3 内各项可并行。不设日期，以 DoD 验收。2.0 内并行重构（DataStore / DI 评估）不阻塞发布。</p>
 
 <!-- ============ 10 验收清单 ============ -->
-<h2 id="s10">十、正式版验收清单（DoD）</h2>
+<h2 id="s10">十一、正式版验收清单（DoD）</h2>
 <table>
   <tr><th style="width:110px">维度</th><th>验收项</th><th style="width:70px">状态</th></tr>
   <tr><td rowspan="2">可安装</td><td>CI 产出的 5 个 ABI APK 均已签名，真机安装成功</td><td class="fr-id">□</td></tr>
@@ -339,10 +402,13 @@
   <tr><td>无商业化元素：无付费、无广告、无数据变现路径（第四章约束复核）</td><td class="fr-id">□</td></tr>
   <tr><td rowspan="2">文档</td><td>CONTRIBUTING / SECURITY / Issue 模板齐备；README FAQ 品牌已知问题化</td><td class="fr-id">□</td></tr>
   <tr><td>滞留 PR 清零；分支数收敛（master + 活跃开发分支）</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="3">平台适配</td><td>ColorOS 17 / Find X10 真机兼容矩阵通过（悬浮窗三形态在相机上层显示、edge-to-edge 无遮挡）</td><td class="fr-id">□</td></tr>
+  <tr><td>预设 Schema v2 旧源兼容验证：全部 v1 订阅源与内置预设正常加载</td><td class="fr-id">□</td></tr>
+  <tr><td>ColorOS 生态导入触点结论明确：FD-09 全链路可用，或按 Q5 结论给出降级说明</td><td class="fr-id">□</td></tr>
 </table>
 
 <!-- ============ 11 协作 ============ -->
-<h2 id="s11">十一、组织与协作</h2>
+<h2 id="s11">十二、组织与协作</h2>
 <p class="small">按现有 2 位核心维护者 + 社区贡献者的真实结构给出最小分工建议，不引入新增角色。</p>
 <table>
   <tr><th style="width:150px">角色</th><th>2.0 期间职责建议</th></tr>
@@ -353,16 +419,18 @@
 <p>协作机制：PR 与 Issue 模板上线后强制使用；每个里程碑一个跟踪 Issue，勾选 DoD；beta 期反馈按模板分类（崩溃 / 功能异常 / 建议）。</p>
 
 <!-- ============ 12 风险 ============ -->
-<h2 id="s12">十二、风险与决策清单</h2>
+<h2 id="s12">十三、风险与决策清单</h2>
 <table>
   <tr><th style="width:110px">编号</th><th>内容</th><th>应对</th></tr>
   <tr><td class="fr-id">Q1 <span class="tag t-tbd">TBD</span></td><td>签名密钥托管：GitHub Secrets vs 本地签名</td><td>建议 Secrets 注入；拒绝则走本地签名降级流程（ED-01），M1 出口不受阻</td></tr>
   <tr><td class="fr-id">Q2 <span class="tag t-tbd">TBD</span></td><td>FD-01e Root/自动化提取的主流机型可用率</td><td>M2 实测决定保留 / 降级 / 移出；默认按实验开关交付</td></tr>
   <tr><td class="fr-id">Q3 <span class="tag t-tbd">TBD</span></td><td>分发渠道是否进入应用商店</td><td>2.0 维持 GitHub + 蒲公英 + 蓝奏云（与不做商业化、非商业协议一致）；预留商店版变体开关</td></tr>
   <tr><td class="fr-id">Q4 <span class="tag t-tbd">TBD</span></td><td>崩溃上报选型：友盟 crash vs Crashlytics</td><td>倾向友盟（复用现有 SDK、增量小）；M3 前决策</td></tr>
+  <tr><td class="fr-id">Q5 <span class="tag t-tbd">TBD</span></td><td>小布记忆 / 一键闪记 / 流体云对三方应用的开放 API 与接入方式（OPPO 开放平台）</td><td>M1 期间验证；不足以支撑 FD-09 全链路则降级为「分享接入 + 侧边栏入口」组合（7.5）</td></tr>
   <tr><td class="fr-id">RISK-1</td><td>样片外置后依赖社区仓库托管，仓库带宽 / 速率影响详情页体验</td><td>图片为增强而非必需（R-4 降级原则）；必要时引入 CDN 或过渡期内置压缩版</td></tr>
   <tr><td class="fr-id">RISK-2</td><td>2.0 改动订阅与导入链路，可能出现「升级后预设丢失」级回归</td><td>R-4 最后已知良好策略 + ED-03 测试基线 + beta 期迁移验证三重对冲</td></tr>
   <tr><td class="fr-id">RISK-3</td><td>2 人维护产能有限，范围全量推进可能再度「开发领先发布」</td><td>里程碑按 DoD 验收、版本全自动化；必要时收窄 FD-01e 与 FD-05</td></tr>
+  <tr><td class="fr-id">RISK-4</td><td>Find X10 原生相机已内置哈苏大师模式影调 / LUMO 调色盘等风格化能力，与 OMaster 原生参数库部分重叠</td><td>按 7.2 战略判断执行差异化：跨品牌聚合、社区共创源、悬浮窗跟拍工作流；并以 Schema v2 + Find X10 首发源承接新机型流量而非与其内建功能同质竞争</td></tr>
 </table>
 
 <!-- ============ 13 附录 ============ -->
