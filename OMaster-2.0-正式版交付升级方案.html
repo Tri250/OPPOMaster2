@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OMaster 2.0 正式版交付升级方案</title>
+<style>
+  :root{
+    --ink:#1a1d23; --ink-2:#4a5060; --ink-3:#8a90a0;
+    --line:#e4e7ee; --bg:#f6f7fa; --card:#ffffff;
+    --red:#d93025; --red-bg:#fdeceb;
+    --orange:#e8710a; --orange-bg:#fef3e6;
+    --blue:#1a73e8; --blue-bg:#e8f0fe;
+    --green:#188038; --green-bg:#e6f4ea;
+    --purple:#7b1fa2; --purple-bg:#f3e5f5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.75;font-size:15px}
+  .wrap{max-width:960px;margin:0 auto;padding:48px 28px 80px}
+  h1{font-size:30px;letter-spacing:.5px;line-height:1.3}
+  h2{font-size:22px;margin:56px 0 8px;padding-top:24px;border-top:3px solid var(--ink)}
+  h3{font-size:17px;margin:32px 0 10px}
+  h4{font-size:15px;margin:20px 0 8px}
+  p{margin:10px 0}
+  ul,ol{padding-left:22px;margin:8px 0}
+  li{margin:5px 0}
+  code{font-family:"SF Mono",Consolas,Menlo,monospace;font-size:13px;background:#eef0f4;
+    padding:2px 6px;border-radius:4px;color:#c7254e}
+  .meta{color:var(--ink-3);font-size:13px;margin-top:10px}
+  .lead{font-size:16px;color:var(--ink-2);margin-top:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin:16px 0}
+  .tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 10px;border-radius:99px;margin-right:6px;vertical-align:1px}
+  .t-p0{background:var(--red-bg);color:var(--red)}
+  .t-p1{background:var(--orange-bg);color:var(--orange)}
+  .t-p2{background:var(--blue-bg);color:var(--blue)}
+  .t-ok{background:var(--green-bg);color:var(--green)}
+  .t-info{background:#eef0f4;color:var(--ink-2)}
+  .t-tbd{background:var(--purple-bg);color:var(--purple)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;background:var(--card)}
+  th{background:#f0f2f6;text-align:left;font-weight:600;white-space:nowrap}
+  th,td{border:1px solid var(--line);padding:9px 12px;vertical-align:top}
+  tr:nth-child(even) td{background:#fafbfd}
+  .fr-id{font-family:monospace;font-weight:700;color:var(--blue);white-space:nowrap}
+  .small{font-size:13px;color:var(--ink-3)}
+  .callout{border-left:4px solid var(--blue);background:var(--blue-bg);border-radius:0 8px 8px 0;
+    padding:14px 18px;margin:14px 0}
+  .callout .ttl{font-weight:700;margin-bottom:4px}
+  .callout.red{border-color:var(--red);background:var(--red-bg)}
+  .callout.green{border-color:var(--green);background:var(--green-bg)}
+  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0}
+  .flow .step{background:#fff;border:1.5px solid var(--ink-2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600}
+  .flow .arr{color:var(--ink-3);font-weight:700}
+  .footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px}
+  @media print{body{background:#fff}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>OMaster 2.0 正式版交付升级方案</h1>
+  <p class="lead">本方案是 OMaster 从 v1.5.x 升级至 v2.0 正式版的完整交付执行方案：版本策略、功能交付、工程交付、质量保障、里程碑与验收标准，一次讲清，按出口标准验收。</p>
+  <p class="meta">编制依据：《OMaster 正式版交付审计 &amp; 2.0 升级规划》（2026-10-13，审计快照 master@8873942）｜ 方案状态：待维护者评审</p>
+</header>
+
+<!-- ============ 1 概述 ============ -->
+<h2 id="s1">一、方案概述</h2>
+<div class="card">
+<p>OMaster v1.5.x 功能闭环完整、迭代活跃（5 个月 10 个版本、243 stars），但按正式版交付标准衡量存在 4 项 P0 阻断（发布产物签名缺失、零测试无门禁、版本三方脱节、敏感权限合规）与多项 P1 工程债。本方案以 <b>「不做商业化」为既定前提</b>，分三个里程碑完成质量基线偿还与生态能力建设，交付一个<b>可安装、可回归、可追溯、合规透明</b>的 v2.0 正式版。</p>
+<ul>
+  <li><b>交付主线</b>：M1 质量基线（发布 v1.5.1 清存量）→ M2 生态能力（一键导入 + 订阅中心，v2.0-beta）→ M3 正式发布（v2.0）；</li>
+  <li><b>文档配套</b>：审计证据链见《OMaster 正式版交付审计 &amp; 2.0 升级规划》，本方案不重复论证，直接给执行动作与验收标准；</li>
+  <li><b>验收原则</b>：所有里程碑不设日期，以第十章「正式版验收清单」的出口标准（DoD）逐项验收。</li>
+</ul>
+</div>
+
+<!-- ============ 2 现状结论 ============ -->
+<h2 id="s2">二、现状结论（审计摘要）</h2>
+<table>
+  <tr><th style="width:90px">等级</th><th>结论</th><th>本方案对应动作</th></tr>
+  <tr><td><span class="tag t-p0">P0</span></td><td>Release APK 无签名配置，CI 产物可能不可安装</td><td>ED-01 签名体系</td></tr>
+  <tr><td><span class="tag t-p0">P0</span></td><td>零有效测试，CI 无 test / lint 门禁</td><td>ED-02 门禁、ED-03 测试基线</td></tr>
+  <tr><td><span class="tag t-p0">P0</span></td><td>versionName / Release / CHANGELOG 三方脱节（1.5.1 未发布、CHANGELOG 停在 v1.3.0、v1.0.2 记载失实）</td><td>ED-04 版本一致性 + M1 发布 v1.5.1</td></tr>
+  <tr><td><span class="tag t-p0">P0</span></td><td>敏感权限组合（READ_PHONE_STATE / 自更新）与隐私文档不符</td><td>ED-05 合规透明</td></tr>
+  <tr><td><span class="tag t-p1">P1</span></td><td>APK 内置 31MB 样片；1500+ 行上帝类；SP 持久层；网络无超时校验；双 JSON 栈；9 PR 滞留；无崩溃上报</td><td>ED-06 体积、FD-03 / FD-06 重构、ED-07 可观测、FD-02 订阅</td></tr>
+  <tr><td><span class="tag t-p1">P1</span></td><td>用户最高呼声（一键导入）未排期：3 个开放 Issue 全部指向该能力</td><td>FD-01 一键导入体系</td></tr>
+</table>
+<p class="small">完整证据链（文件、行号、数据）见审计报告第一至六章。</p>
+
+<!-- ============ 3 目标 ============ -->
+<h2 id="s3">三、交付目标与成功标准</h2>
+<table>
+  <tr><th style="width:60px">编号</th><th>目标</th><th>成功标准（可观测）</th></tr>
+  <tr><td class="fr-id">G-1</td><td>一键导入：用户可把外部预设快速转为可用预设</td><td>至少 3 条导入路径可用（文件 / 剪贴板 / 分享接入）；Issue #48、#22、#20 关闭或给出明确路径说明</td></tr>
+  <tr><td class="fr-id">G-2</td><td>发布产物可直接安装</td><td>CI 产出的 Release APK 全部签名，真机安装通过；未签名构建在 CI 直接失败</td></tr>
+  <tr><td class="fr-id">G-3</td><td>发布可追溯</td><td>tag ↔ versionCode ↔ versionName ↔ Release ↔ CHANGELOG 五者一致，由 CI 自动校验</td></tr>
+  <tr><td class="fr-id">G-4</td><td>质量可回归</td><td>三类核心逻辑具备单元测试；CI 测试或 lint 失败时阻断合并与发布</td></tr>
+  <tr><td class="fr-id">G-5</td><td>体积达标</td><td>v2.0 universal APK ≤ 15MB、单 ABI APK ≤ 10MB <span class="small">[假设，待定：基于样片外置后的估算，M1 末复核]</span></td></tr>
+  <tr><td class="fr-id">G-6</td><td>合规透明</td><td>隐私说明与 Manifest 权限、SDK 清单一一对应；崩溃上报受用户开关约束</td></tr>
+</table>
+
+<!-- ============ 4 约束 ============ -->
+<h2 id="s4">四、明确约束与边界（不做商业化）</h2>
+<div class="callout">
+  <div class="ttl">本方案既定约束：2.0 不做任何商业化</div>
+  <p>以下条款为方案级约束，所有功能与工程决策不得与之冲突：</p>
+  <ul>
+    <li><b>无付费与广告</b>：不引入付费墙、订阅付费、广告位、开屏推广、应用内购买；「订阅」一词仅指免费的预设源订阅（RSS 式内容分发），不涉及支付；</li>
+    <li><b>无数据变现</b>：统计 SDK（友盟）仅用于质量与用量分析，受 <code>isAnalyticsEnabled</code> 总开关约束（默认遵循现状），不采集用于推荐/广告画像的数据，不与第三方共享变现；</li>
+    <li><b>内容生态非商业</b>：预设源与样片由 OMaster-Community 社区仓库免费分发，投稿者署名致谢（沿用现有 README 致谢机制）；</li>
+    <li><b>协议保持</b>：仓库继续以 CC BY-NC-SA 4.0 分发（BY 署名 / NC 非商业 / SA 相同方式共享），与应用内不做商业化的约束一致；</li>
+    <li><b>范围边界</b>：平台仅 Android；不做 iOS、不做云端账号体系、不做 AI 参数推荐（2.1+ 另议）。</li>
+  </ul>
+</div>
+
+<!-- ============ 5 版本与发布策略 ============ -->
+<h2 id="s5">五、版本与发布策略</h2>
+
+<h3>5.1 版本号规范</h3>
+<ul>
+  <li><code>versionName</code>：主.次.修订（semver 口径）；正式版如 <code>2.0.0</code>，测试版 <code>2.0.0-beta1</code>；</li>
+  <li><code>versionCode</code>：由 CI 依据构建流水号自动生成，禁止手填，杜绝多渠道倒挂；</li>
+  <li>Tag：<code>vX.Y.Z</code>（如 <code>v2.0.0</code>），beta 加后缀 <code>v2.0.0-beta1</code>；</li>
+  <li>五者一致性（tag / versionCode / versionName / Release / CHANGELOG）由 CI 校验，不匹配即失败（G-3）。</li>
+</ul>
+
+<h3>5.2 发布通道</h3>
+<table>
+  <tr><th style="width:130px">通道</th><th>内容</th><th>用途</th></tr>
+  <tr><td>GitHub Release（prerelease）</td><td>beta 全量 APK（5 ABI）</td><td>公测收集反馈，Issue 反馈模板驱动</td></tr>
+  <tr><td>GitHub Release（正式）</td><td>正式版全量 APK + git-cliff 生成的更新说明</td><td>主分发渠道</td></tr>
+  <tr><td>蒲公英 / 蓝奏云镜像</td><td>与 GitHub 正式版同包同步</td><td>国内可达性（沿用现有镜像体系，README 口径不变）</td></tr>
+</table>
+
+<h3>5.3 发布流程</h3>
+<div class="flow">
+  <span class="step">推送 tag</span><span class="arr">→</span>
+  <span class="step">CI 门禁（测试 + lint + 版本校验）</span><span class="arr">→</span>
+  <span class="step">assembleRelease + 签名</span><span class="arr">→</span>
+  <span class="step">草稿 Release（附 APK + Release Notes）</span><span class="arr">→</span>
+  <span class="step">维护者真机验收</span><span class="arr">→</span>
+  <span class="step">发布 + 同步 CHANGELOG / 镜像</span>
+</div>
+<p>任一门禁失败流程终止；草稿 Release 为人工复核点（沿用现有 <code>softprops/action-gh-release</code> 草稿机制）。手工 dispatch 仅作兜底入口。</p>
+
+<h3>5.4 回滚与数据安全</h3>
+<ul>
+  <li><b>版本回退</b>：Release 页保留历史版本 APK 可随时下载；自更新检查不删除旧版本产物；</li>
+  <li><b>数据兼容</b>：遵循审计报告 R-4 底线——订阅 / 导入内容写入前完成校验，本地数据损坏时回退内置 presets.json，<b>任何升级路径不允许出现「升级后预设库丢失」</b>；自定义预设与收藏的存储结构变更必须带迁移（沿用 ConfigMigration 机制）；</li>
+  <li><b>beta 缓冲</b>：破坏性存储变更必须在 beta 期完成迁移验证，才允许进入正式版。</li>
+</ul>
+
+<!-- ============ 6 功能交付方案 ============ -->
+<h2 id="s6">六、功能交付方案（FD）</h2>
+<p class="small">FD = Feature Deliverable。每项含交付内容、验收标准、依赖。优先级沿用审计报告 P0/P1/P2 口径；模块级证据见审计报告第十章模块卡 A–F。</p>
+
+<div class="card">
+<h3>FD-01 <span class="tag t-p0">P0</span> 一键导入体系（2.0 旗舰功能）</h3>
+<p><b>交付内容：</b>在「导入与创建」模块新增四条标准路径 + 一条实验路径：</p>
+<table>
+  <tr><th style="width:80px">路径</th><th>交付内容</th><th>验收标准</th></tr>
+  <tr><td class="fr-id">FD-01a</td><td>文件导入：SAF 选择 .json / .omaster，解析校验后入库</td><td>合法文件 3 步内完成导入；重复导入出现「已存在同名预设」，提供覆盖 / 另存；非法文件给出具体原因（R-3）</td></tr>
+  <tr><td class="fr-id">FD-01b</td><td>剪贴板口令导入：检测可导入文本 → 顶部胶囊 → 预览确认</td><td>遵循系统剪贴板读取提示，无后台静默读取；确认前不写入任何数据</td></tr>
+  <tr><td class="fr-id">FD-01c</td><td>分享接入：<code>ACTION_SEND</code> 接收 text / json 分享</td><td>从微信 / QQ / 网盘分享 JSON 可直达导入预览页</td></tr>
+  <tr><td class="fr-id">FD-01d</td><td>对照录入：左截图右表单，复用现有创建表单</td><td>录入过程随时保存草稿；完成后与手动创建预设行为一致（R-1）</td></tr>
+  <tr><td class="fr-id">FD-01e</td><td>Root / 自动化提取（实验开关，默认关闭，二次确认）</td><td><span class="small">[假设，待定：以 M2 主流机型实测可用率决定保留或移出 2.0]</span></td></tr>
+</table>
+<p><b>依赖：</b>R-1 预设状态机、R-3 校验规则（与订阅共用）、CustomPresetManager 存储通道。<b>里程碑：</b>M2（a–c 全量，d 随行，e 实验）。</p>
+</div>
+
+<div class="card">
+<h3>FD-02 <span class="tag t-p0">P0</span> 订阅中心升级</h3>
+<p><b>交付内容：</b>①订阅目录页（官方源 + 自建源列表：名称 / 作者 / 预设数 / build / 上次更新时间，空态引导投稿）；②自动更新正式化（沿用 master 已实现的每日判定，失败静默降级 + 订阅页标记「上次同步失败」，绝不覆盖本地可用数据）；③内容可信（<code>minAppVersion</code> 兼容字段、可选 <code>sha256</code>、R-3 校验、Ktor 统一超时重试）。</p>
+<p><b>验收标准：</b>断网 / 半截 JSON / 超构建号的源三种异常下，本地预设库均完整可用并展示明确状态；自动更新失败不影响任何已缓存内容。<b>依赖：</b>PresetRemoteManager 网络改造。<b>里程碑：</b>M2。</p>
+</div>
+
+<div class="card">
+<h3>FD-03 <span class="tag t-p1">P1</span> 悬浮窗重构与体验增强</h3>
+<p><b>交付内容：</b>①1617 行 FloatingWindowService 拆分为 WindowController（生命周期）/ PresetParamMapper（预设→展示模型）/ WindowRenderer（渲染）；②品牌特判（Realme 等）数据化为预设 JSON 元数据 <code>layout</code> 声明；③体验增强：一键置顶、防误触锁定、紧凑模式参数轮播；④可直接切换「我的导入」自定义预设，形成「导入 → 跟拍」闭环。</p>
+<p><b>验收标准：</b>PresetParamMapper 单测全绿（归入 ED-03）；三窗口形态在回归清单中行为与 1.x 一致；新增品牌布局不再需要修改核心类。<b>里程碑：</b>M2 启动拆分，M3 收尾（拆分与增强不互相阻塞）。</p>
+</div>
+
+<div class="card">
+<h3>FD-04 <span class="tag t-p1">P1</span> 相框出片正式化与打卡联动</h3>
+<p><b>交付内容：</b>①相框调色板等 master 存量功能随 M1 v1.5.1 / M3 v2.0 正式发布给存量用户；②明确导出分辨率与水印策略 <span class="small">[假设，待定：默认策略发布，beta 期收集反馈]</span>；③相框作品一键生成本日打卡，打通「拍 → 框 → 打卡」闭环。</p>
+<p><b>验收标准：</b>存量用户升级后相框功能可用无回归；打卡联动路径端到端可走通。<b>里程碑：</b>M1 / M3。</p>
+</div>
+
+<div class="card">
+<h3>FD-05 <span class="tag t-p2">P2</span> 发现页收编</h3>
+<p><b>交付内容：</b>「敬请期待」占位卡（ComingSoonCard）要么兑现要么移除，正式版不保留空承诺；打卡与相框联动（见 FD-04）。<b>边界：</b>2.0 不在打卡 / 扫街模块新增大功能。验收标准：发现页无占位卡。<b>里程碑：</b>M3。</p>
+</div>
+
+<div class="card">
+<h3>FD-06 <span class="tag t-p1">P1</span> 设置重构与新设置项</h3>
+<p><b>交付内容：</b>SettingsScreen（1458 行）拆分为「设置骨架 + 独立区块组件」；更新设置区独立为 UpdateSettingsSection；为 2.0 新增设置项预留挂载位：导入行为、订阅自动更新、隐私开关（总开关 R-5 既有）、实验功能开关。</p>
+<p><b>验收标准：</b>拆分后所有设置项读写行为与 1.x 一致（ConfigCenter 流不变）；新增设置项均可在对应区块找到。<b>里程碑：</b>M2–M3。</p>
+</div>
+
+<div class="card">
+<h3>FD-07 <span class="tag t-p1">P1</span> 国际化补全</h3>
+<p><b>交付内容：</b>日语 strings 由 499 条补齐至与中文（676 条）对齐；清理 UI 代码 14 处硬编码中文；CI 增加三语数量差校验（阈值 5%，超差告警）。<b>验收标准：</b>日语界面无回退中文的关键路径；CI 告警生效。<b>里程碑：</b>M3。</p>
+</div>
+
+<!-- ============ 7 工程交付方案 ============ -->
+<h2 id="s7">七、工程交付方案（ED）</h2>
+<p class="small">ED = Engineering Deliverable。工程项是正式版的门槛条件，与功能项同等验收。</p>
+
+<div class="card">
+<h3>ED-01 <span class="tag t-p0">P0</span> 签名体系</h3>
+<ul>
+  <li>建立 release 签名配置（signingConfig），密钥注入方式<b>建议 GitHub Secrets（keystore + 密码 base64 注入）</b> <span class="tag t-tbd">TBD Q1</span>：若维护者不接受云端托管，则降级为「维护者本地签名后上传，CI 产 unsigned 包仅作内部验证」并在流程中显式标注；</li>
+  <li>核实历史 Release（v1.0.0–v1.5.0）线上 APK 的签名状态；若为未签名包，在 v1.5.1 Release 说明中向用户说明并引导换装；</li>
+  <li>CI 中 release 构建未配置签名即失败；产物统一命名 <code>OMaster-vX.Y.Z-{abi}.apk</code>。</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>ED-02 <span class="tag t-p0">P0</span> CI 质量门禁</h3>
+<ul>
+  <li>构建前强制执行 <code>testDebugUnitTest</code> + <code>lint</code>，任一失败阻断 merge 与发布；</li>
+  <li>补齐缺失的 <code>lint-baseline.xml</code>（当前 build.gradle.kts 引用了一个不存在的文件），或移除该引用并保持 lint 零报错；</li>
+  <li>版本一致性校验（G-3）以脚本实现并纳入 workflow；</li>
+  <li>workflow 改名 <code>release.yml</code>，tag 推送触发自动发布，手动 dispatch 兜底；</li>
+  <li>启用被注释的 git-cliff CHANGELOG 自动提交步骤。</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>ED-03 <span class="tag t-p0">P0</span> 测试基线（三类单测）</h3>
+<ul>
+  <li><b>预设解析与校验</b>：合法 / 缺字段 / 超上限 / 非法 JSON（R-3 全分支）；</li>
+  <li><b>ConfigCenter</b>：读写、默认值、<code>dark_mode_v2</code> 迁移、<code>resetInstance()</code> 隔离；</li>
+  <li><b>订阅更新判定</b>：build 号比较、每日判定、失败保留「最后已知良好」；</li>
+  <li>延伸：悬浮窗 PresetParamMapper（随 FD-03 落地）。UI 自动化不在 2.0 范围。</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>ED-04 <span class="tag t-p1">P1</span> 体积治理</h3>
+<ul>
+  <li>预设样片（assets/images 31MB，单图最大 3.4MB）迁出 APK：托管于 OMaster-Community 仓库，详情页按需下载 + ImageCacheManager 本地缓存；</li>
+  <li>降级原则：无网 / 下载失败时显示占位卡片，<b>参数文本永远本地可用，图片只是增强</b>（R-4）；</li>
+  <li>过渡兜底：若外置方案受阻，最低限度全量重压缩（单图 ≤ 500KB）并复核 NFR 目标；</li>
+  <li>统一 JSON 栈至 kotlinx.serialization，移除 Gson；合并 toml 中重复的 material3 声明。</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>ED-05 <span class="tag t-p0">P0</span> 合规透明</h3>
+<ul>
+  <li>重写隐私说明：与 Manifest 权限、SDK 清单一一对应（现 README 仅三行，不满足正式版要求）；</li>
+  <li>评估移除 <code>READ_PHONE_STATE</code>（友盟 asms 可降级配置则移除，保留则在隐私政策中逐项说明用途）；</li>
+  <li>应用内自更新（REQUEST_INSTALL_PACKAGES）在隐私政策明示；预留「商店版」构建变体开关（关闭自更新），当前不启用上架 <span class="tag t-tbd">TBD Q3</span>；</li>
+  <li>README FAQ 移除玩笑式表述，改为品牌已知问题列表；统一 minSdk 口径（<span class="small">[假设，待定]</span> 建议 minSdk 保持 23 + README 明示「悬浮窗完整体验建议 Android 13+」）。</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>ED-06 <span class="tag t-p1">P1</span> 崩溃可观测</h3>
+<ul>
+  <li>接入崩溃收集，选型二选一：友盟 crash（复用现有 SDK，增量小）或 Crashlytics（README 曾失实宣称，需正式引入） <span class="tag t-tbd">TBD Q4</span>；</li>
+  <li>崩溃上报与统计共用 <code>isAnalyticsEnabled</code> 总开关（R-5），拒绝即完全静默——与「不做商业化」约束一致，崩溃数据仅用于质量修复。</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>ED-07 <span class="tag t-p1">P1</span> 版本与文档一致性 + 社区协作通道</h3>
+<ul>
+  <li>M1 发布 v1.5.1 清空存量（订阅自动更新、节日问候、相框调色板）；CHANGELOG 补齐 v1.4.0 / v1.4.1 / v1.5.0 / v1.5.1，修正 v1.0.2「移除友盟 / 集成 Firebase」的失实记载；</li>
+  <li>补充 CONTRIBUTING.md（预设走社区仓库的指引已有基础）、SECURITY.md、Issue / PR 模板（导入问题反馈模板随 M2 上线）；</li>
+  <li>9 个滞留 PR（多为 dependabot）批量验证后合并或关闭，13 个分支瘦身。</li>
+</ul>
+</div>
+
+<!-- ============ 8 质量保障 ============ -->
+<h2 id="s8">八、质量保障方案</h2>
+
+<h3>8.1 测试分层</h3>
+<table>
+  <tr><th style="width:140px">层级</th><th>内容</th><th>执行时机</th></tr>
+  <tr><td>单元测试</td><td>ED-03 三类 + PresetParamMapper；覆盖导入 / 订阅 / 配置的全部判定分支</td><td>每次提交（CI 门禁）</td></tr>
+  <tr><td>Lint / 静态检查</td><td>Android Lint（基线治理后零新增告警）+ i18n 数量差校验</td><td>每次提交（CI 门禁）</td></tr>
+  <tr><td>手动回归清单</td><td>预设浏览 / 详情 / 悬浮窗三形态 / 导入四路径 / 订阅增删改查与异常 / 相框导出 / 更新链路 / 语言切换</td><td>每个 beta 与正式版发布前</td></tr>
+  <tr><td>兼容性矩阵</td><td>Android 13+（主力）与 minSdk 下限各一台真机；ColorOS / OxygenOS 悬浮窗受限场景按 README 已知问题逐项验证</td><td>每个发布前</td></tr>
+</table>
+
+<h3>8.2 Beta 验收流程</h3>
+<div class="flow">
+  <span class="step">v2.0-beta 发布（prerelease）</span><span class="arr">→</span>
+  <span class="step">Issue 模板收集反馈</span><span class="arr">→</span>
+  <span class="step">按回归清单复核</span><span class="arr">→</span>
+  <span class="step">存储迁移验证通过</span><span class="arr">→</span>
+  <span class="step">转正 v2.0.0</span>
+</div>
+<p class="small">破坏性变更（样片外置、设置重构、存储迁移）必须在 beta 期完成迁移与降级验证。</p>
+
+<!-- ============ 9 里程碑 ============ -->
+<h2 id="s9">九、里程碑与交付物</h2>
+<table>
+  <tr><th style="width:110px">里程碑</th><th>交付内容</th><th>交付物清单</th><th>出口标准（DoD）</th></tr>
+  <tr>
+    <td class="fr-id">M1<br>质量基线<br><span class="tag t-p0">P0</span></td>
+    <td>解决全部 P0 工程债，发布 v1.5.1 清空存量</td>
+    <td>ED-01 签名；ED-02 门禁；ED-03 三类单测；ED-05 合规文档；ED-07 一致性修复；FD-04① 存量功能发布</td>
+    <td><b>v1.5.1 正式版发布且五者一致；CI 全绿（测试+lint+版本校验）；签名 APK 真机安装通过</b></td>
+  </tr>
+  <tr>
+    <td class="fr-id">M2<br>生态能力<br><span class="tag t-p0">P0</span></td>
+    <td>一键导入 + 订阅中心 + 体积治理</td>
+    <td>FD-01（a–c 全量、d 随行、e 实验）；FD-02；FD-03（拆分启动）；FD-06（重构）；ED-04 外置；导入 Issue 反馈模板</td>
+    <td><b>v2.0-beta 发布；FD-01 三条标准路径验收通过；三种订阅异常场景本地数据完好；universal APK 达标（G-5）</b></td>
+  </tr>
+  <tr>
+    <td class="fr-id">M3<br>正式发布<br><span class="tag t-p1">P1</span></td>
+    <td>补全与收尾，转正 v2.0</td>
+    <td>FD-03 收尾；FD-04②③；FD-05；FD-06 新设置项；FD-07 i18n；ED-06 崩溃上报；ED-07 文档齐备、PR 清零</td>
+    <td><b>第十章验收清单全项通过，v2.0.0 正式发布并同步镜像</b></td>
+  </tr>
+</table>
+<p class="small">M1 → M2 串行（基线不就绪不做功能）；M3 内各项可并行。不设日期，以 DoD 验收。2.0 内并行重构（DataStore / DI 评估）不阻塞发布。</p>
+
+<!-- ============ 10 验收清单 ============ -->
+<h2 id="s10">十、正式版验收清单（DoD）</h2>
+<table>
+  <tr><th style="width:110px">维度</th><th>验收项</th><th style="width:70px">状态</th></tr>
+  <tr><td rowspan="2">可安装</td><td>CI 产出的 5 个 ABI APK 均已签名，真机安装成功</td><td class="fr-id">□</td></tr>
+  <tr><td>应用内更新链路（检查 → 下载 → 广播 → 安装器）端到端走通</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="2">可回归</td><td>单元测试 + lint 门禁全绿，覆盖 ED-03 全部分支</td><td class="fr-id">□</td></tr>
+  <tr><td>手动回归清单全项通过（含兼容性矩阵）</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="2">可追溯</td><td>tag / versionCode / versionName / Release / CHANGELOG 五者一致</td><td class="fr-id">□</td></tr>
+  <tr><td>CHANGELOG 与实际功能变更相符（无失实记载）</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="2">功能</td><td>FD-01 导入路径 ≥ 3 条可用，Issue #48 / #22 / #20 关闭或回应</td><td class="fr-id">□</td></tr>
+  <tr><td>FD-02 订阅异常三场景本地数据完好；发现页无占位卡</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="2">质量</td><td>体积：universal ≤ 15MB、单 ABI ≤ 10MB（或 M1 末复核后的修订值）</td><td class="fr-id">□</td></tr>
+  <tr><td>升级路径验证：v1.5.x → v2.0 预设 / 收藏 / 订阅数据完整迁移</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="2">合规</td><td>隐私说明与 Manifest 权限、SDK 清单一一对应；崩溃上报受开关约束</td><td class="fr-id">□</td></tr>
+  <tr><td>无商业化元素：无付费、无广告、无数据变现路径（第四章约束复核）</td><td class="fr-id">□</td></tr>
+  <tr><td rowspan="2">文档</td><td>CONTRIBUTING / SECURITY / Issue 模板齐备；README FAQ 品牌已知问题化</td><td class="fr-id">□</td></tr>
+  <tr><td>滞留 PR 清零；分支数收敛（master + 活跃开发分支）</td><td class="fr-id">□</td></tr>
+</table>
+
+<!-- ============ 11 协作 ============ -->
+<h2 id="s11">十一、组织与协作</h2>
+<p class="small">按现有 2 位核心维护者 + 社区贡献者的真实结构给出最小分工建议，不引入新增角色。</p>
+<table>
+  <tr><th style="width:150px">角色</th><th>2.0 期间职责建议</th></tr>
+  <tr><td>维护者 A（发布责任人）</td><td>ED-01 签名与密钥托管决策、ED-02 CI、M1/M2/M3 发布操作、镜像同步</td></tr>
+  <tr><td>维护者 B（功能责任人）</td><td>FD-01 导入、FD-02 订阅、ED-04 外置方案与社区仓库托管</td></tr>
+  <tr><td>社区 / dependabot</td><td>依赖升级 PR 批量验证（维护者复核后合并）、beta 反馈收集、预设与样片投稿（走社区仓库）</td></tr>
+</table>
+<p>协作机制：PR 与 Issue 模板上线后强制使用；每个里程碑一个跟踪 Issue，勾选 DoD；beta 期反馈按模板分类（崩溃 / 功能异常 / 建议）。</p>
+
+<!-- ============ 12 风险 ============ -->
+<h2 id="s12">十二、风险与决策清单</h2>
+<table>
+  <tr><th style="width:110px">编号</th><th>内容</th><th>应对</th></tr>
+  <tr><td class="fr-id">Q1 <span class="tag t-tbd">TBD</span></td><td>签名密钥托管：GitHub Secrets vs 本地签名</td><td>建议 Secrets 注入；拒绝则走本地签名降级流程（ED-01），M1 出口不受阻</td></tr>
+  <tr><td class="fr-id">Q2 <span class="tag t-tbd">TBD</span></td><td>FD-01e Root/自动化提取的主流机型可用率</td><td>M2 实测决定保留 / 降级 / 移出；默认按实验开关交付</td></tr>
+  <tr><td class="fr-id">Q3 <span class="tag t-tbd">TBD</span></td><td>分发渠道是否进入应用商店</td><td>2.0 维持 GitHub + 蒲公英 + 蓝奏云（与不做商业化、非商业协议一致）；预留商店版变体开关</td></tr>
+  <tr><td class="fr-id">Q4 <span class="tag t-tbd">TBD</span></td><td>崩溃上报选型：友盟 crash vs Crashlytics</td><td>倾向友盟（复用现有 SDK、增量小）；M3 前决策</td></tr>
+  <tr><td class="fr-id">RISK-1</td><td>样片外置后依赖社区仓库托管，仓库带宽 / 速率影响详情页体验</td><td>图片为增强而非必需（R-4 降级原则）；必要时引入 CDN 或过渡期内置压缩版</td></tr>
+  <tr><td class="fr-id">RISK-2</td><td>2.0 改动订阅与导入链路，可能出现「升级后预设丢失」级回归</td><td>R-4 最后已知良好策略 + ED-03 测试基线 + beta 期迁移验证三重对冲</td></tr>
+  <tr><td class="fr-id">RISK-3</td><td>2 人维护产能有限，范围全量推进可能再度「开发领先发布」</td><td>里程碑按 DoD 验收、版本全自动化；必要时收窄 FD-01e 与 FD-05</td></tr>
+</table>
+
+<!-- ============ 13 附录 ============ -->
+<h2 id="s13">附录：审计问题 → 交付项追踪表</h2>
+<table>
+  <tr><th style="width:80px">审计编号</th><th>问题摘要</th><th>交付项</th><th>里程碑</th></tr>
+  <tr><td>P0-1</td><td>Release APK 无签名</td><td>ED-01</td><td>M1</td></tr>
+  <tr><td>P0-2</td><td>零测试、CI 无门禁</td><td>ED-02 / ED-03</td><td>M1</td></tr>
+  <tr><td>P0-3</td><td>版本三方脱节</td><td>ED-07 + 5.1 版本规范</td><td>M1</td></tr>
+  <tr><td>P0-4</td><td>敏感权限与隐私文档</td><td>ED-05</td><td>M1 / M3</td></tr>
+  <tr><td>P1-1</td><td>31MB 内置样片</td><td>ED-04 / NFR-1</td><td>M2</td></tr>
+  <tr><td>P1-2</td><td>上帝类（悬浮窗 / 设置 / About）</td><td>FD-03 / FD-06</td><td>M2–M3</td></tr>
+  <tr><td>P1-3</td><td>SP 持久层</td><td>并行重构评估（不阻塞）</td><td>2.0 内并行</td></tr>
+  <tr><td>P1-4</td><td>网络无超时校验</td><td>FD-02③</td><td>M2</td></tr>
+  <tr><td>P1-5</td><td>双 JSON 栈</td><td>ED-04</td><td>M2</td></tr>
+  <tr><td>P1-6</td><td>PR 滞留、协作文档缺失</td><td>ED-07</td><td>M1 / M3</td></tr>
+  <tr><td>P1-7</td><td>无崩溃上报</td><td>ED-06</td><td>M3</td></tr>
+  <tr><td>P1-8</td><td>minSdk 口径不一致</td><td>ED-05</td><td>M1</td></tr>
+  <tr><td>P2 各项</td><td>i18n 缺口 / FAQ / 冗余依赖 / CI 命名等</td><td>FD-07 / ED-02 / ED-05</td><td>M3</td></tr>
+</table>
+
+<div class="footer">
+  <p>OMaster 2.0 正式版交付升级方案 ｜ 前置文档：《OMaster 正式版交付审计 &amp; 2.0 升级规划》（审计快照 master@8873942）｜ 编制日期：2026-10-13</p>
+  <p>带 <span class="tag t-tbd">TBD</span> 标记的 4 项决策（Q1–Q4）需维护者确认后锁定；带 <span class="small">[假设，待定]</span> 标记的内容为编制期推断，随里程碑复核收敛。本方案全程遵循第四章「不做商业化」约束。</p>
+</div>
+
+</div>
+</body>
+</html>
