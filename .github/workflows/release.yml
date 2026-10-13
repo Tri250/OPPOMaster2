@@ -153,11 +153,14 @@ jobs:
       - name: Check release APK signed
         if: steps.variant.outputs.IS_RELEASE == 'true'
         run: |
+          # v2/v3 签名位于 ZIP Signing Block，unzip 不可见，必须用 apksigner 校验
+          APK_SIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           for apk in ${{ env.APK_PATH }}/*.apk; do
-            if unzip -l "$apk" | grep -q "META-INF/.*\.(RSA|DSA|EC)"; then
+            if "$APK_SIGNER" verify "$apk" >/dev/null 2>&1; then
               echo "✅ 已签名: $apk"
             else
-              echo "❌ 未签名产物: $apk"; exit 1
+              echo "❌ 未签名或签名校验失败: $apk"
+              exit 1
             fi
           done
 
