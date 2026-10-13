@@ -23,8 +23,11 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.local.FloatingWindowGuideManager
+import com.silas.omaster.data.exports.ExportPresetService
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.DescriptionCard
@@ -155,6 +159,40 @@ fun DetailScreen(
                         contentDescription = stringResource(R.string.edit),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
+                    }
+                }
+
+                // MU-07 预设导出（导出即投稿：JSON 可回导 / 文本可读）
+                if (preset != null) {
+                    var showExportMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = {
+                        haptic.perform(HapticFeedbackType.Confirm)
+                        showExportMenu = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = stringResource(R.string.detail_export),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(expanded = showExportMenu, onDismissRequest = { showExportMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_as_json)) },
+                            onClick = {
+                                showExportMenu = false
+                                val text = ExportPresetService.toJson(preset!!)
+                                if (text is com.silas.omaster.data.exports.ExportPresetService.ExportResult.Success) {
+                                    sharePlainText(context, text.text)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.export_as_text)) },
+                            onClick = {
+                                showExportMenu = false
+                                sharePlainText(context, ExportPresetService.toShareText(preset!!))
+                            }
+                        )
                     }
                 }
 
@@ -367,4 +405,13 @@ private fun DynamicParameters(
     }
 }
 
+/** MU-07：系统分享纯文本（导出即投稿，无后端） */
+internal fun sharePlainText(context: android.content.Context, text: String) {
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_TEXT, text)
+        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(android.content.Intent.createChooser(intent, null))
+}
 

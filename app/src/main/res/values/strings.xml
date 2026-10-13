@@ -43,6 +43,10 @@
     <string name="sub_no_name">未命名订阅</string>
     <string name="sub_added_ok">订阅添加成功</string>
     <string name="sub_updated_ok">订阅更新成功</string>
+    <!-- MU-07 预设导出 -->
+    <string name="detail_export">导出</string>
+    <string name="export_as_json">分享 JSON（可再次导入）</string>
+    <string name="export_as_text">分享参数文本</string>
 
     <!-- 设置 -->
     <string name="settings_title">设置</string>

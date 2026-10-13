@@ -43,6 +43,9 @@
     <string name="sub_no_name">Untitled subscription</string>
     <string name="sub_added_ok">Subscription added</string>
     <string name="sub_updated_ok">Subscription updated</string>
+    <string name="detail_export">Export</string>
+    <string name="export_as_json">Share JSON (re-importable)</string>
+    <string name="export_as_text">Share as text</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

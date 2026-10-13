@@ -43,6 +43,9 @@
     <string name="sub_no_name">名前なしサブスクリプション</string>
     <string name="sub_added_ok">サブスクリプションを追加しました</string>
     <string name="sub_updated_ok">サブスクリプションを更新しました</string>
+    <string name="detail_export">エクスポート</string>
+    <string name="export_as_json">JSON を共有（再インポート可）</string>
+    <string name="export_as_text">テキストで共有</string>
 
     <!-- 設定 -->
     <string name="settings_title">設定</string>

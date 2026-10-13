@@ -1227,7 +1227,7 @@ class FloatingWindowService : Service() {
                     MotionEvent.ACTION_MOVE -> {
                         val dx = event.rawX - touchX
                         val dy = event.rawY - touchY
-                        if (Math.abs(dx) > clickThreshold || Math.abs(dy) > clickThreshold) {
+                        if (FloatingWindowGestureMath.isBeyondClickThreshold(dx, dy, clickThreshold)) {
                             isClick = false
                             isDragging = true  // ✅ 标记为拖动中
                         }
@@ -1242,8 +1242,7 @@ class FloatingWindowService : Service() {
                             // 垂直方向限制，防止超出屏幕
                             val newY = initialY + dy.toInt()
                             val viewHeight = floatingView?.height ?: dpToPx(56)
-                            val maxY = metrics.heightPixels - viewHeight
-                            params?.y = newY.coerceIn(0, maxY.coerceAtLeast(0))
+                            params?.y = FloatingWindowGestureMath.clampY(newY, metrics.heightPixels, viewHeight)
 
                             floatingView?.let { view ->
                                 params?.let { p ->
