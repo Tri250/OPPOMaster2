@@ -59,7 +59,7 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 
 <div class="stats">
 <div class="stat"><div class="n">13</div><div class="l">模块组全量覆盖</div></div>
-<div class="stat"><div class="n">34</div><div class="l">模块级动作 MU-xx</div></div>
+<div class="stat"><div class="n">35</div><div class="l">模块级动作 MU-xx</div></div>
 <div class="stat"><div class="n">3</div><div class="l">里程碑批次</div></div>
 <div class="stat"><div class="n">5</div><div class="l">架构红线</div></div>
 </div>
@@ -101,14 +101,46 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 </ul>
 </div>
 
-<!-- ═══════════ 三、逐模块深度方案 ═══════════ -->
-<h2>三、逐模块深度升级方案（13 组）</h2>
+<!-- ═══════════ 三、目标用户体验 ═══════════ -->
+<h2>三、目标用户体验画像 × ColorOS 17 / Find X10 融合</h2>
+<p class="desc">2.0 的用户体验锚点：原生相机已内置风格化（哈苏大师影调、LUMO 调色盘、XPAN），OMaster 的差异化价值在<b>跨品牌预设聚合、社区共创源、悬浮窗跟拍工作流</b>。三类目标用户的平台级旅程如下：</p>
+
+<div class="grid2">
+<div class="card"><h4>① 跟拍师（悬浮窗用户）</h4>
+<ul class="tight">
+<li>Find X10 开街拍摄 → <b>AI 一键闪记侧键</b>截下大师模式参数截图 → 分享进 OMaster 对照录入</li>
+<li>悬浮窗常驻跟拍 → 参数微调 → <b>流体云胶囊</b>候选展示当前预设（ColorOS 17 优先级排序）</li>
+<li>体验目标：从看到参数到可用预设 ≤ 3 分钟</li>
+</ul></div>
+<div class="card"><h4>② 预设收藏家（订阅用户）</h4>
+<ul class="tight">
+<li>小布记忆「三指上滑闪记」存下博主配方 → OMaster <b>从记忆导入</b></li>
+<li>订阅「Find X10 大师预设源」（哈苏影调/LUMO 索引），目录页直达详情</li>
+<li>体验目标：新源从发现到入列 ≤ 1 分钟，回退永不变砖</li>
+</ul></div>
+<div class="card"><h4>③ 创作者（社区用户）</h4>
+<ul class="tight">
+<li>用哈苏大师影调 + LUMO 调色盘出片 → 相框 XPAN 模板装裱 → 一键导出预设 JSON + 样片投稿</li>
+<li>出片社区 Issue 表单链路（无后端），被收录进官方预设源形成闭环</li>
+<li>体验目标：投稿到收录全流程 ≤ 10 分钟</li>
+</ul></div>
+<div class="card"><h4>平台能力 → 模块映射</h4>
+<ul class="tight">
+<li>小布记忆/闪记 → 组 3 导入（MU-06、MU-33）</li>
+<li>流体云/AIOS 意图 → 组 5 悬浮窗（MU-34）</li>
+<li>哈苏影调/LUMO/XPAN → 组 6 相框 + 组 7 订阅源（MU-14、MU-32、FD-08）</li>
+<li>凝光视效/流体设计 → 组 1 主题（MU-01）</li>
+</ul></div>
+</div>
+
+<!-- ═══════════ 四、逐模块深度方案 ═══════════ -->
+<h2>四、逐模块深度升级方案（13 组）</h2>
 
 <h3>组 1 · 入口与全局</h3>
 <table>
 <tr><th>模块</th><th>现状</th><th>2.0 动作</th><th>级别</th><th>里程碑</th></tr>
 <tr><td>应用入口</td><td>稳定；友盟初始化合规</td><td><span class="tag keep">保持</span>仅随冷启动性能治理做启动路径梳理（异步化非关键初始化）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
-<tr><td>主题系统</td><td>深浅色完备；导航栏 inset 已适配</td><td><span class="tag ref">MU-01</span>凝光视效分级：低端机（RAM&lt;8G）自动降级模糊/玻璃拟态，配置进 ColorOS17Adapter；<span class="tag gov">MU-02</span>Color.kt 色值去重（存在近似重复定义）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
+<tr><td>主题系统</td><td>深浅色完备；导航栏 inset 已适配</td><td><span class="tag ref">MU-01</span>凝光视效分级 + <b>ColorOS 17 流体设计语言对齐</b>（卡片圆角/动效曲线向系统规范靠拢，AIOS 意图推荐卡片位预留）；低端机自动降级；<span class="tag gov">MU-02</span>Color.kt 色值去重</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 </table>
 
 <h3>组 2 · 首页 · 预设库</h3>
@@ -125,7 +157,8 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <tr><td>粘贴导入</td><td>FD-01b 已交付（三种形态）</td><td><span class="tag keep">保持</span>MU-05 覆盖增强</td><td class="p1">P1</td><td class="m2">M2</td></tr>
 <tr><td>文件导入</td><td>FD-01a 已交付（SAF）</td><td><span class="tag keep">保持</span>真机回归清单</td><td class="p1">P1</td><td class="m1">M1</td></tr>
 <tr><td>系统分享接入</td><td>FD-01c 已交付</td><td><span class="tag keep">保持</span>真机回归清单（微信/QQ/网盘实测）</td><td class="p1">P1</td><td class="m1">M1</td></tr>
-<tr><td>对照录入</td><td>未实现（Issue #20）</td><td><span class="tag new">MU-06</span>截图对照录入：选截图 → 左右分屏（截图 vs 表单）→ OCR 参数预填（ML Kit，需 Q6 决策）→ 校验管道入库；依赖真机联调</td><td class="p1">P1</td><td class="m2">M2</td></tr>
+<tr><td>对照录入</td><td>未实现（Issue #20）</td><td><span class="tag new">MU-06</span>截图对照录入：选截图 → 左右分屏（截图 vs 表单）→ OCR 参数预填（ML Kit，需 Q6 决策）→ 校验管道入库；<b>优先接通 ColorOS「AI 一键闪记」侧键截图</b>作为默认素材来源，依赖真机联调</td><td class="p1">P1</td><td class="m2">M2</td></tr>
+<tr><td>记忆导入</td><td>不存在</td><td><span class="tag new">MU-33</span>从记忆导入：读取小布记忆「三指上滑闪记」分享内容（文本/截图）直通对照录入或粘贴导入；Q5 验证记忆数据开放程度，不可达则降级为「闪记截图分享」路径</td><td class="p2">P2</td><td class="m2">M2 验证 / M3 落地</td></tr>
 <tr><td>预设导出</td><td>不存在（导入体系的对称缺口）</td><td><span class="tag new">MU-07</span>预设导出：单预设/多选 → 标准预设 JSON（Schema v2）→ 系统分享/存文件；从详情页与首页长按菜单进入</td><td class="p1">P1</td><td class="m2">M2</td></tr>
 <tr><td>万能创建</td><td>~1500 行单文件，表单完整</td><td><span class="tag ref">MU-08</span>参数编辑器组件化：抽出 <code>ParamEditorSection</code> 通用组件供创建/对照录入复用；行为不变重构 + 真机回归</td><td class="p1">P1</td><td class="m2">M2</td></tr>
 </table>
@@ -143,13 +176,14 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <tr><td>参数映射</td><td>PresetParamMapper 已提取（4 用例）</td><td><span class="tag keep">保持</span>映射表条目独立匹配行为已用测试固化</td><td class="p1">P1</td><td class="m1">完成</td></tr>
 <tr><td>渲染服务</td><td>1617→约 1310 行；三形态；拖拽吸附</td><td><span class="tag ref">MU-11</span>拆分第二步：视图构建器分离（ExpandedViewBuilder / CompactViewBuilder / CollapsedViewBuilder 三类，Service 仅保留生命周期与窗口管理）；<span class="tag ref">MU-12</span>品牌特判下沉：<code>isRealmePreset</code> 消费方改走 PresetParamMapper，硬编码 Realme 分支迁移为预设元数据声明（Schema v2 deviceProfile）</td><td class="p0">P0</td><td class="m2">M2</td></tr>
 <tr><td>控制器/引导</td><td>单例门面 + 引导弹窗</td><td><span class="tag keep">保持</span>真机回归：ColorOS 17 叠加层触摸阻断排查（FLAG_NOT_TOUCHABLE 零使用已确认）</td><td class="p0">P0</td><td class="m1">M1</td></tr>
+<tr><td>流体云联动</td><td>不存在</td><td><span class="tag new">MU-34</span>流体云胶囊候选（Q5 验证）：跟拍中将当前预设名/参数摘要以胶囊形式展示于状态栏，点击回 App；不可达则降级为常驻通知渠道（现有能力增强）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 </table>
 
 <h3>组 6 · 相框出片</h3>
 <table>
 <tr><th>模块</th><th>现状</th><th>2.0 动作</th><th>级别</th><th>里程碑</th></tr>
 <tr><td>相框界面</td><td>调色板功能在 master 沉淀未发布</td><td><span class="tag new">MU-13</span>随 v1.5.1 存量发布解锁调色板；真机回归 3 档相框模板</td><td class="p0">P0</td><td class="m1">M1</td></tr>
-<tr><td>渲染引擎</td><td>画布合成稳定；EXIF 读取</td><td><span class="tag new">MU-14</span>XPAN 宽幅模板：65:24 画幅 + 边框刻字样式（Find X10 呼应，纯 Canvas 实现无新依赖）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
+<tr><td>渲染引擎</td><td>画布合成稳定；EXIF 读取</td><td><span class="tag new">MU-14</span>XPAN 宽幅模板：65:24 画幅 + 边框刻字样式（Find X10 呼应，纯 Canvas 实现无新依赖）；<span class="tag new">MU-32</span><b>哈苏大师影调 × LUMO 预设包</b>：内置「Find X10 影调对照」色卡模板组（16 款 LUMO 风格对应预览图），样片走 WebP 治理通道不增加包体</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 <tr><td>色卡库</td><td>31MB 内置图片资产</td><td><span class="tag gov">MU-15</span>体积治理：全部样片重压缩（WebP，目标 31MB→≤8MB，APK 总目标 ≤15MB，对应 ED-04）；色卡数据与图片分离评估</td><td class="p1">P1</td><td class="m2">M2</td></tr>
 <tr><td>导出</td><td>保存/分享稳定</td><td><span class="tag keep">保持</span>导出规格注明分辨率与压缩率（隐私透明化）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 </table>
@@ -157,7 +191,7 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <h3>组 7 · 订阅中心（2.0 已完成主体）</h3>
 <table>
 <tr><th>模块</th><th>现状</th><th>2.0 动作</th><th>级别</th><th>里程碑</th></tr>
-<tr><td>订阅页面</td><td>目录预览 ✓ 单源更新 ✓ 回退保护 ✓ 自动更新开关 ✓</td><td><span class="tag new">MU-16</span>目录预览升级为目录页：预设名 → 点击直接跳详情（需 CatalogIndexBuilder 建立源文件内 id 索引）；<span class="tag gov">MU-17</span>SubscriptionManager(Deprecated) 残留逻辑（3 处迁移分支）并入 ConfigCenter 后删除</td><td class="p2">P2</td><td class="m3">M3</td></tr>
+<tr><td>订阅页面</td><td>目录预览 ✓ 单源更新 ✓ 回退保护 ✓ 自动更新开关 ✓</td><td><span class="tag new">MU-16</span>目录预览升级为目录页：预设名 → 点击直接跳详情（需 CatalogIndexBuilder 建立源文件内 id 索引）；<b>首发内置「Find X10 大师预设源」</b>（哈苏影调/LUMO 索引，FD-08 Schema v2 deviceProfile 声明机型）；<span class="tag gov">MU-17</span>SubscriptionManager(Deprecated) 残留逻辑并入 ConfigCenter 后删除</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 <tr><td>远程更新</td><td>fetchAndSave + 超时缺失</td><td><span class="tag ref">MU-18</span>Ktor 请求补超时（连接 15s/读取 30s）+ 响应体大小上限（防恶意大文件，安全加固 ED 对应项）</td><td class="p1">P1</td><td class="m2">M2</td></tr>
 <tr><td>更新策略</td><td>纯函数 + 9 用例</td><td><span class="tag keep">保持</span>回退保护行为已固化</td><td class="p0">P0</td><td class="m1">完成</td></tr>
 <tr><td>目录读取</td><td>SubscriptionCatalogReader + 3 用例</td><td><span class="tag keep">保持</span>MU-16 覆盖</td><td class="p2">P2</td><td class="m3">M3</td></tr>
@@ -210,8 +244,8 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <tr><td>测试资产</td><td>7 测试类 51 用例</td><td><span class="tag keep">保持</span>随 MU-05/06/07 增补对应用例</td><td class="p1">P1</td><td class="m2">M2</td></tr>
 </table>
 
-<!-- ═══════════ 四、里程碑重排 ═══════════ -->
-<h2>四、里程碑重排（MU 驱动）</h2>
+<!-- ═══════════ 五、里程碑重排 ═══════════ -->
+<h2>五、里程碑重排（MU 驱动）</h2>
 
 <div class="card">
 <h4>M1 · 质量与存量收官（当前所处批次）</h4>
@@ -224,20 +258,20 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <div class="card">
 <h4>M2 · 生态能力（v2.0-beta）</h4>
 <ul class="tight">
-<li><b>MU-05/06/07/08</b> 导入体系 v2（Schema v2、对照录入、导出、组件化）· <b>MU-11/12</b> 悬浮窗拆分②与特判下沉 · <b>MU-15</b> 体积治理 · <b>MU-18</b> 网络加固 · <b>MU-20/21/25</b> Gson 收尾 · <b>MU-28</b> 日语补齐 · <b>MU-09</b> 详情扩展</li>
+<li><b>MU-05/06/07/08/33</b> 导入体系 v2（Schema v2、对照录入、记忆导入验证、导出、组件化）· <b>MU-11/12</b> 悬浮窗拆分②与特判下沉 · <b>MU-15</b> 体积治理 · <b>MU-18</b> 网络加固 · <b>MU-20/21/25</b> Gson 收尾 · <b>MU-28</b> 日语补齐 · <b>MU-09</b> 详情扩展 · <b>Q5 真机验证</b>（记忆/流体云/系统接口开放度）</li>
 </ul>
 </div>
 
 <div class="card">
 <h4>M3 · 正式发布（v2.0 正式版）</h4>
 <ul class="tight">
-<li><b>MU-16/17</b> 目录页与遗留清理 · <b>MU-14/19</b> XPAN 与出片社区 · <b>MU-22/23</b> 设置升级 · <b>MU-01/02/03/04/10/24/26/29</b> 体验与治理 · Find X10 兼容矩阵全过 · 正式版 DoD 验收</li>
+<li><b>MU-16/17</b> 目录页与遗留清理 · <b>MU-14/19</b> XPAN 与出片社区 · <b>MU-32/33/34</b> 平台体验落地（按 Q5 验证结果）· <b>MU-22/23</b> 设置升级 · <b>MU-01/02/03/04/10/24/26/29</b> 体验与治理 · Find X10 兼容矩阵全过 · 正式版 DoD 验收</li>
 </ul>
 </div>
 
-<!-- ═══════════ 五、追踪矩阵 ═══════════ -->
-<h2>五、MU × FD/ED 追踪矩阵</h2>
-<p class="desc">34 个模块动作中：12 个映射既有 FD/ED 交付项（直接沿用其验收标准），9 个为本次新增能力，13 个为治理/保持项。</p>
+<!-- ═══════════ 六、追踪矩阵 ═══════════ -->
+<h2>六、MU × FD/ED 追踪矩阵</h2>
+<p class="desc">35 个模块动作中：12 个映射既有 FD/ED 交付项（直接沿用其验收标准），12 个为本次新增能力，11 个为治理/保持项。平台类动作（MU-33/34、MU-05 deviceProfile）统一受 <b>Q5（OPPO API 开放程度）</b>门控，M1 末真机验证后锁定降级或全量方案。</p>
 <table>
 <tr><th>MU</th><th>动作</th><th>类型</th><th>映射/新增</th><th>优先级</th><th>里程碑</th></tr>
 <tr><td>MU-01/02</td><td>视效分级 / 色值去重</td><td>治理</td><td>新增（ColorOS 专项延伸）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
@@ -259,11 +293,14 @@ code{background:var(--card2);border-radius:5px;padding:1px 7px;font-size:12.5px;
 <tr><td>MU-24/26</td><td>Flow 热点审计 / 不做 Room 决策</td><td>治理</td><td>新增（架构决策）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 <tr><td>MU-27</td><td>更新源合并策略实测</td><td>重构</td><td>FD-04（发布基线）</td><td class="p1">P1</td><td class="m1">M1</td></tr>
 <tr><td>MU-28</td><td>日语补齐</td><td>重构</td><td>ED 项（i18n）</td><td class="p1">P1</td><td class="m2">M2</td></tr>
+<tr><td>MU-32</td><td>哈苏影调 × LUMO 预设包</td><td>新增</td><td>ColorOS/Find X10 专项（FD-08 延伸）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
+<tr><td>MU-33</td><td>从记忆导入（小布记忆）</td><td>新增</td><td>ColorOS 专项（Q5 门控）</td><td class="p2">P2</td><td class="m2">M2 验证 / M3</td></tr>
+<tr><td>MU-34</td><td>流体云胶囊候选</td><td>新增</td><td>ColorOS 专项（Q5 门控）</td><td class="p2">P2</td><td class="m3">M3</td></tr>
 <tr><td>MU-30/31</td><td>lint 基线瘦身 / 发布链路走通</td><td>治理</td><td>ED-02 / FD-04</td><td class="p0">P0</td><td class="m1">M1</td></tr>
 </table>
 
-<!-- ═══════════ 六、验收 ═══════════ -->
-<h2>六、验收与 DoD 增补</h2>
+<!-- ═══════════ 七、验收 ═══════════ -->
+<h2>七、验收与 DoD 增补</h2>
 <div class="grid2">
 <div class="kv"><b>M1 出口（增补）</b>：MU-13 调色板在 Release 包可用；MU-31 自动发布链路产出签名正式包；MU-27 双源更新实测记录归档</div>
 <div class="kv"><b>M2 出口（增补）</b>：导出→分享→另一台设备导入全链路通；悬浮窗 Service ≤ 700 行且品牌分支零硬编码；APK ≤ 15MB；Gson 依赖移除或仅剩白名单；日语覆盖率 ≥ 95%</div>
