@@ -10,7 +10,9 @@ plugins {
 android {
     namespace = "com.silas.omaster"
     compileSdk {
-        version = release(36)
+        // ED-08：compileSdk 升至 37（Android 17 API 面，ColorOS 17 / Find X10 适配基线）；
+        // targetSdk 维持 36，运行时行为变更延后到 M2/M3 评估
+        version = release(37)
     }
 
     defaultConfig {

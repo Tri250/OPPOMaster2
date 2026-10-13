@@ -1,11 +1,6 @@
 pluginManagement {
     repositories {
-        // 阿里云镜像（优先使用）
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-
-        // 原有仓库（保留作为后备）
+        // 官方仓库优先（GitHub CI 等国际网络环境直连最稳定；阿里云镜像只作后备）
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -15,6 +10,11 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+
+        // 阿里云镜像（后备，国内本地构建加速）
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
     }
 }
 plugins {
@@ -23,14 +23,13 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 阿里云镜像
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-
-        // 官方仓库（后备）
+        // 官方仓库优先（阿里云镜像 502 曾导致 CI 全线失败；国内本地构建仍可从后备镜像加速）
         google()
         mavenCentral()
-        maven { url = uri("https://repo1.maven.org/maven2/") }
+
+        // 阿里云镜像（后备）
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
     }
 }
 
