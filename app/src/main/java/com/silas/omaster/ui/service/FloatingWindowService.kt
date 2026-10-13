@@ -58,6 +58,18 @@ class FloatingWindowService : Service() {
     private val textPrimary = Color.parseColor("#FFFFFF")       // 主文字
     private val textSecondary = Color.parseColor("#B3FFFFFF")   // 次要文字
     private val textMuted = Color.parseColor("#80FFFFFF")       // 弱化文字
+
+    // MU-11②：共享参数控件族迁移至独立工厂（行为等价）
+    private val widgets = FloatingWindowWidgetFactory(
+        context = this,
+        dp = { dpToPx(it) },
+        primaryColor = primaryColor,
+        primaryDark = primaryDark,
+        cardBackground = cardBackground,
+        textPrimary = textPrimary,
+        textSecondary = textSecondary,
+        textMuted = textMuted
+    )
     
     // 背景颜色根据设置动态计算
     private fun getBackgroundColor(context: Context): Int {
@@ -545,7 +557,7 @@ class FloatingWindowService : Service() {
             }
             addView(prevBtn)
 
-            addView(createSpacing(dpToPx(8)))
+            addView(widgets.createSpacing(dpToPx(8)))
 
             // 预设名称
             val titleView = TextView(context).apply {
@@ -560,7 +572,7 @@ class FloatingWindowService : Service() {
             titleTextView = titleView
             addView(titleView)
 
-            addView(createSpacing(dpToPx(8)))
+            addView(widgets.createSpacing(dpToPx(8)))
 
             // 下一个预设按钮
             val nextBtn = createCompactIconButton("▶") {
@@ -568,13 +580,13 @@ class FloatingWindowService : Service() {
             }
             addView(nextBtn)
 
-            addView(createSpacing(dpToPx(8)))
+            addView(widgets.createSpacing(dpToPx(8)))
 
             // 收起按钮
             val collapseBtn = createCompactIconButton("▼") { onCollapse() }
             addView(collapseBtn)
 
-            addView(createSpacing(dpToPx(4)))
+            addView(widgets.createSpacing(dpToPx(4)))
 
             // 关闭按钮
             val closeBtn = createCompactIconButton("✕") { stopSelf() }
@@ -789,7 +801,7 @@ class FloatingWindowService : Service() {
             sections.forEach { section ->
                 // Section Title
                 section.title?.let { title ->
-                    addView(createSectionTitle(title))
+                    addView(widgets.createSectionTitle(title))
                 }
 
                 // Section Items
@@ -801,7 +813,7 @@ class FloatingWindowService : Service() {
                         // Full width item (highlighted)
                         val icon = PresetParamMapper.getIconForLabel(item.label)
                         val localizedValue = PresetI18n.resolveValue(this@FloatingWindowService, item.value)
-                        addView(createHighlightedParam(icon, item.label, localizedValue))
+                        addView(widgets.createHighlightedParam(icon, item.label, localizedValue))
                         i++
                     } else {
                         // Half width item
@@ -814,15 +826,15 @@ class FloatingWindowService : Service() {
                         
                         val leftIcon = PresetParamMapper.getIconForLabel(left.label)
                         val leftLocalizedValue = PresetI18n.resolveValue(this@FloatingWindowService, left.value)
-                        val leftView = createSmallParamItem(leftIcon, left.label, leftLocalizedValue)
+                        val leftView = widgets.createSmallParamItem(leftIcon, left.label, leftLocalizedValue)
                         
                         val rightView = right?.let {
                             val rightIcon = PresetParamMapper.getIconForLabel(it.label)
                             val rightLocalizedValue = PresetI18n.resolveValue(this@FloatingWindowService, it.value)
-                            createSmallParamItem(rightIcon, it.label, rightLocalizedValue)
+                            widgets.createSmallParamItem(rightIcon, it.label, rightLocalizedValue)
                         }
                         
-                        addView(createParamRow(leftView, rightView))
+                        addView(widgets.createParamRow(leftView, rightView))
                         i++
                     }
                 }
@@ -845,7 +857,7 @@ class FloatingWindowService : Service() {
             // 外发光效果 - 品牌色外溢
             val glowView = View(context).apply {
                 layoutParams = FrameLayout.LayoutParams(size, size)
-                background = createGlowBackground()
+                background = widgets.createGlowBackground()
             }
 
             // 主按钮容器 - 圆形边框
@@ -924,11 +936,11 @@ class FloatingWindowService : Service() {
             setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(12))
 
             // 上一个预设按钮
-            val prevBtn = createIconButton("◀") {
+            val prevBtn = widgets.createIconButton("◀") {
                 sendPresetSwitchBroadcast("prev")
             }
             addView(prevBtn)
-            addView(createSpacing(dpToPx(6)))
+            addView(widgets.createSpacing(dpToPx(6)))
 
             // 预设名称 - 带渐变效果
             val titleView = TextView(context).apply {
@@ -949,22 +961,22 @@ class FloatingWindowService : Service() {
             addView(titleView)
 
             // 下一个预设按钮
-            addView(createSpacing(dpToPx(6)))
-            val nextBtn = createIconButton("▶") {
+            addView(widgets.createSpacing(dpToPx(6)))
+            val nextBtn = widgets.createIconButton("▶") {
                 sendPresetSwitchBroadcast("next")
             }
             addView(nextBtn)
 
-            addView(createSpacing(dpToPx(6)))
+            addView(widgets.createSpacing(dpToPx(6)))
 
             // 收起按钮
-            val collapseBtn = createIconButton("▼") { onCollapse() }
+            val collapseBtn = widgets.createIconButton("▼") { onCollapse() }
             addView(collapseBtn)
 
-            addView(createSpacing(dpToPx(6)))
+            addView(widgets.createSpacing(dpToPx(6)))
 
             // 关闭按钮
-            val closeBtn = createIconButton("✕") { stopSelf() }
+            val closeBtn = widgets.createIconButton("✕") { stopSelf() }
             addView(closeBtn)
         }
     }
@@ -980,192 +992,7 @@ class FloatingWindowService : Service() {
         sendBroadcast(intent)
     }
 
-    /**
-     * 创建图标按钮
-     */
-    private fun createIconButton(icon: String, onClick: () -> Unit): TextView {
-        return TextView(this).apply {
-            text = icon
-            textSize = 14f
-            setTextColor(textSecondary)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32))
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(8).toFloat()
-                setColor(cardBackground)
-            }
-            setOnClickListener { onClick() }
-        }
-    }
-
-    /**
-     * 创建区域标题
-     */
-    private fun createSectionTitle(title: String): TextView {
-        return TextView(this).apply {
-            text = title
-            textSize = 11f
-            setTextColor(textMuted)
-            setPadding(0, dpToPx(12), 0, dpToPx(8))
-        }
-    }
-
-    /**
-     * 创建高亮参数项（滤镜专用）- 带唯一 Tag
-     */
-    private fun createHighlightedParam(icon: String, label: String, value: String, valueTag: String? = null): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(12).toFloat()
-                setColor(Color.parseColor("#20FF6B35"))
-                setStroke(dpToPx(1), Color.parseColor("#40FF6B35"))
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, 0, 0, dpToPx(8))
-            }
-
-            // 图标（使用 Iconfont）
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 18f
-                setTextColor(primaryColor)
-                typeface = IconFont.getTypeface(this@FloatingWindowService)
-            })
-
-            addView(createSpacing(dpToPx(8)))
-
-            // 标签
-            addView(TextView(context).apply {
-                text = label
-                textSize = 13f
-                setTextColor(textSecondary)
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            })
-
-            // 值 - ✅ 添加唯一 Tag 用于数据刷新
-            addView(TextView(context).apply {
-                text = value
-                textSize = 14f
-                setTextColor(primaryColor)
-                setPadding(dpToPx(8), dpToPx(2), dpToPx(8), dpToPx(2))
-                background = GradientDrawable().apply {
-                    cornerRadius = dpToPx(6).toFloat()
-                    setColor(Color.parseColor("#30FF6B35"))
-                }
-                // 使用 label + span 作为唯一标识
-                tag = "value_${label}_2"
-            })
-        }
-    }
-
-    /**
-     * 创建小型参数项（用于网格）- 带唯一 Tag
-     */
-    private fun createSmallParamItem(icon: String, label: String, value: String, valueTag: String? = null): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(8), dpToPx(6), dpToPx(8), dpToPx(6))
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(8).toFloat()
-                setColor(cardBackground)
-            }
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                setMargins(0, 0, dpToPx(4), 0)
-            }
-
-            // 图标（使用 Iconfont）
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 14f
-                setTextColor(primaryColor)
-                typeface = IconFont.getTypeface(this@FloatingWindowService)
-            })
-
-            addView(createSpacing(dpToPx(4)))
-
-            addView(TextView(context).apply {
-                text = "$label "
-                textSize = 11f
-                setTextColor(textMuted)
-            })
-
-            // 值 - ✅ 添加唯一 Tag 用于数据刷新
-            addView(TextView(context).apply {
-                text = value
-                textSize = 12f
-                setTextColor(textPrimary)
-                // 使用 label + span 作为唯一标识
-                tag = "value_${label}_1"
-            })
-        }
-    }
-
-    /**
-     * 创建参数行（两个参数并排）
-     */
-    private fun createParamRow(left: LinearLayout, right: LinearLayout?): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dpToPx(4), 0, 0)
-
-            addView(left)
-            if (right != null) {
-                right.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    setMargins(dpToPx(4), 0, 0, 0)
-                }
-                addView(right)
-            } else {
-                // 占位
-                addView(View(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
-                })
-            }
-        }
-    }
-
-    /**
-     * 创建渐变圆形背景（收起按钮）
-     */
-    private fun createGradientCircleBackground(): GradientDrawable {
-        return GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            colors = intArrayOf(primaryColor, primaryDark)
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = dpToPx(24).toFloat()
-        }
-    }
-
-    /**
-     * 创建外发光效果
-     */
-    private fun createGlowBackground(): GradientDrawable {
-        return GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            colors = intArrayOf(
-                Color.parseColor("#40FF6B35"),
-                Color.parseColor("#20FF6B35"),
-                Color.TRANSPARENT
-            )
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            gradientRadius = dpToPx(28).toFloat()
-        }
-    }
-
-    /**
-     * 创建间距
-     */
-    private fun createSpacing(size: Int): View {
-        return View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(size, size)
-        }
-    }
+    // （共享参数控件族已迁移至 FloatingWindowWidgetFactory，MU-11②）
 
     private fun collapseToBubble(
         name: String,
