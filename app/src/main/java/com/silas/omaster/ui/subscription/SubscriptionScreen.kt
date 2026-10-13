@@ -316,6 +316,8 @@ fun SubscriptionScreen(
         }
 
         if (showAddDialog) {
+            // 链路自检修复：Toast 文案改走资源（原为硬编码中文，i18n 泄漏）
+            val addedMsg = stringResource(R.string.sub_added_ok)
             AddSubscriptionDialog(
                 onDismiss = { showAddDialog = false },
                 onConfirm = { url ->
@@ -340,7 +342,7 @@ fun SubscriptionScreen(
                                 build = presetList.build
                             )
                             PresetRepository.getInstance(context).reloadDefaultPresets()
-                            Toast.makeText(context, "订阅添加成功", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, addedMsg, Toast.LENGTH_SHORT).show()
                         }.onFailure { error ->
                             errorMsg = error.message ?: "导入失败"
                         }
@@ -350,6 +352,7 @@ fun SubscriptionScreen(
         }
 
         if (showEditDialog != null) {
+            val updatedMsg = stringResource(R.string.sub_updated_ok)
             EditSubscriptionDialog(
                 sub = showEditDialog!!,
                 onDismiss = { showEditDialog = null },
@@ -369,7 +372,7 @@ fun SubscriptionScreen(
                                 build = presetList.build
                             )
                             PresetRepository.getInstance(context).reloadDefaultPresets()
-                            Toast.makeText(context, "订阅更新成功", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, updatedMsg, Toast.LENGTH_SHORT).show()
                         }.onFailure { error ->
                             errorMsg = error.message ?: "更新失败"
                         }

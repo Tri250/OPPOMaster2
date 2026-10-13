@@ -41,6 +41,8 @@
     <string name="sub_preset_count">プリセット数: %1$d</string>
     <string name="sub_last_update">更新日時: %1$s</string>
     <string name="sub_no_name">名前なしサブスクリプション</string>
+    <string name="sub_added_ok">サブスクリプションを追加しました</string>
+    <string name="sub_updated_ok">サブスクリプションを更新しました</string>
 
     <!-- 設定 -->
     <string name="settings_title">設定</string>
