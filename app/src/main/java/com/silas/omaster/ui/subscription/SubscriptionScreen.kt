@@ -66,6 +66,10 @@ fun SubscriptionScreen(
     var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var updatingUrls by remember { mutableStateOf(setOf<String>()) }
+    // FD-02②：组合期解析文案（lint LocalContextGetResourceValueCall——回调内禁用 context.getString）
+    val updateDoneTemplate = stringResource(R.string.sub_update_done)
+    val updateUptodateMsg = stringResource(R.string.sub_update_uptodate)
+    val updateFailMsg = stringResource(R.string.sub_update_fail)
     val autoUpdateEnabled by config.autoUpdateSubscriptionFlow.collectAsState()
     
     val sheetState = rememberModalBottomSheetState()
@@ -290,7 +294,7 @@ fun SubscriptionScreen(
                                     PresetRepository.getInstance(context).reloadDefaultPresets()
                                     Toast.makeText(
                                         context,
-                                        context.getString(R.string.sub_update_done, list.presets.size),
+                                        updateDoneTemplate.format(list.presets.size),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 },
@@ -298,10 +302,7 @@ fun SubscriptionScreen(
                                     Logger.w("SubscriptionScreen", "单源更新失败: ${e.message}")
                                     Toast.makeText(
                                         context,
-                                        context.getString(
-                                            if (e.message == "无需更新") R.string.sub_update_uptodate
-                                            else R.string.sub_update_fail
-                                        ),
+                                        if (e.message == "无需更新") updateUptodateMsg else updateFailMsg,
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
