@@ -229,7 +229,8 @@ jobs:
           if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             echo "❌ 错误: 标签格式不正确，请使用 vX.Y.Z 格式（例如 v1.5.1）"; exit 1
           fi
-          if git tag --list | grep -q "^${TAG}$"; then
+          # tag 推送触发时该标签必然已存在于远端，仅在手动 dispatch 时做重复检查
+          if [[ "${{ github.ref_type }}" != "tag" ]] && git tag --list | grep -q "^${TAG}$"; then
             echo "❌ 错误: 标签 $TAG 已存在"; exit 1
           fi
           echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
@@ -270,7 +271,7 @@ jobs:
           if [ -n "$(git status --porcelain CHANGELOG.md)" ]; then
             git add CHANGELOG.md
             git commit -m "docs: 更新 CHANGELOG.md 为 ${{ steps.tag.outputs.TAG }}"
-            git push origin HEAD:${GITHUB_REF#refs/heads/}
+            git push origin HEAD:main
             echo "✅ CHANGELOG.md 已更新并推送"
           else
             echo "ℹ️ CHANGELOG.md 无变化，跳过提交"
