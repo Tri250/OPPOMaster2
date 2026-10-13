@@ -67,10 +67,15 @@ object PresetRemoteManager {
 
             val config = ConfigCenter.getInstance(context)
 
-            // 检查版本号是否相同
+            // 检查版本号是否相同（判定规则见 SubscriptionUpdatePolicy，ED-03 有单测覆盖）
             if (!forceUpdate) {
                 val currentSub = config.subscriptionsFlow.value.find { it.url == url }
-                if (currentSub != null && currentSub.build == presetList.build) {
+                if (SubscriptionUpdatePolicy.shouldSkipUpdate(
+                        remoteBuild = presetList.build,
+                        localBuild = currentSub?.build,
+                        forceUpdate = forceUpdate
+                    )
+                ) {
                     return Result.failure(Exception("无需更新"))
                 }
             }
