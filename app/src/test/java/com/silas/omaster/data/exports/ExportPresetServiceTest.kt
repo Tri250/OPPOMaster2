@@ -43,7 +43,7 @@ class ExportPresetServiceTest {
 
     @Test
     fun `empty list export fails with reason`() {
-        val result = ExportPresetService.toJson(emptyList<MasterPreset>())
+        val result = ExportPresetService.toJson(emptyList<MasterPreset>(), ExportPresetService.Format.ARRAY)
         assertTrue(result is ExportPresetService.ExportResult.Failure)
     }
 
