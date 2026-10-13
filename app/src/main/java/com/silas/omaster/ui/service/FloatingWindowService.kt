@@ -70,6 +70,17 @@ class FloatingWindowService : Service() {
         textSecondary = textSecondary,
         textMuted = textMuted
     )
+
+    // MU-11②：紧凑视图（参数条）构建族迁移至独立工厂（行为等价）
+    private val compactFactory = FloatingWindowCompactFactory(
+        context = this,
+        dp = { dpToPx(it) },
+        primaryColor = primaryColor,
+        cardBackground = cardBackground,
+        textPrimary = textPrimary,
+        textSecondary = textSecondary,
+        getBackgroundColor = { getBackgroundColor(it) }
+    )
     
     // 背景颜色根据设置动态计算
     private fun getBackgroundColor(context: Context): Int {
@@ -476,9 +487,15 @@ class FloatingWindowService : Service() {
                 y = if (savedY >= 0) savedY else metrics.heightPixels - dpToPx(300)
             }
 
-            val rootLayout = createCompactView(
-                name, sections, currentIndex, totalCount, windowWidth
-            ) { collapseToBubble(name, sections) }
+            val rootLayout = compactFactory.createCompactView(
+                name, sections, currentIndex, totalCount, windowWidth,
+                onCollapse = { collapseToBubble(name, sections) },
+                onSwitchPreset = { sendPresetSwitchBroadcast(it) },
+                onClose = { stopSelf() }
+            )
+            // 构建产物引用回传（数据刷新逻辑依赖这两个字段）
+            mainContainer = compactFactory.mainContainerRef
+            titleTextView = compactFactory.titleViewRef
 
             floatingView = rootLayout
             wm.addView(floatingView, params)
@@ -490,255 +507,7 @@ class FloatingWindowService : Service() {
         }
     }
 
-    /**
-     * 创建紧凑视图 - 新版参数条样式
-     */
-    private fun createCompactView(
-        name: String,
-        sections: ArrayList<PresetSection>,
-        currentIndex: Int = 0,
-        totalCount: Int = 1,
-        windowWidth: Int,
-        onCollapse: () -> Unit
-    ): FrameLayout {
-        return FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                windowWidth,
-                dpToPx(120)
-            )
-
-            // 主容器
-            val container = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    windowWidth,
-                    dpToPx(120)
-                )
-                background = createCompactBackground(context)
-            }
-            mainContainer = container
-
-            // 添加标题栏（预设名称 + 切换按钮 + 收起按钮）
-            container.addView(createCompactHeader(name, onCollapse, currentIndex, totalCount))
-
-            // 内容容器（带tag，用于更新时查找）
-            val contentContainer = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                tag = "content_container"
-            }
-            contentContainer.addView(createCompactContentArea(sections))
-            container.addView(contentContainer)
-
-            addView(container)
-        }
-    }
-
-    /**
-     * 创建紧凑标题栏
-     */
-    private fun createCompactHeader(
-        name: String,
-        onCollapse: () -> Unit,
-        currentIndex: Int = 0,
-        totalCount: Int = 1
-    ): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(40)
-            )
-            setPadding(dpToPx(12), dpToPx(4), dpToPx(12), dpToPx(4))
-
-            // 上一个预设按钮
-            val prevBtn = createCompactIconButton("◀") {
-                sendPresetSwitchBroadcast("prev")
-            }
-            addView(prevBtn)
-
-            addView(widgets.createSpacing(dpToPx(8)))
-
-            // 预设名称
-            val titleView = TextView(context).apply {
-                text = name
-                textSize = 14f
-                setTextColor(primaryColor)
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-            }
-            titleTextView = titleView
-            addView(titleView)
-
-            addView(widgets.createSpacing(dpToPx(8)))
-
-            // 下一个预设按钮
-            val nextBtn = createCompactIconButton("▶") {
-                sendPresetSwitchBroadcast("next")
-            }
-            addView(nextBtn)
-
-            addView(widgets.createSpacing(dpToPx(8)))
-
-            // 收起按钮
-            val collapseBtn = createCompactIconButton("▼") { onCollapse() }
-            addView(collapseBtn)
-
-            addView(widgets.createSpacing(dpToPx(4)))
-
-            // 关闭按钮
-            val closeBtn = createCompactIconButton("✕") { stopSelf() }
-            addView(closeBtn)
-        }
-    }
-
-    /**
-     * 创建紧凑图标按钮
-     */
-    private fun createCompactIconButton(icon: String, onClick: () -> Unit): TextView {
-        return TextView(this).apply {
-            text = icon
-            textSize = 12f
-            setTextColor(textSecondary)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(dpToPx(28), dpToPx(28))
-            background = GradientDrawable().apply {
-                cornerRadius = dpToPx(6).toFloat()
-                setColor(cardBackground)
-            }
-            // 禁用父视图拦截按钮的触摸事件
-            setOnTouchListener { _, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        // 请求父视图不要拦截此事件
-                        parent.requestDisallowInterceptTouchEvent(true)
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        parent.requestDisallowInterceptTouchEvent(false)
-                    }
-                }
-                false // 继续传递给 onClickListener
-            }
-            setOnClickListener { onClick() }
-        }
-    }
-
-    /**
-     * 创建紧凑内容区域 - 动态适配参数数量（支持8-11参数）
-     * 根据实际传入的 sections 中的参数数量动态显示，避免空白占位符
-     */
-    private fun createCompactContentArea(sections: List<PresetSection>): LinearLayout {
-        // 提取实际存在的参数（过滤掉无效的"-"）
-        val paramData = PresetParamMapper.extractDynamicParams(this, sections)
-        val actualParamCount = paramData.size
-
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(80) // 参数区域高度保持 80dp
-            )
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
-
-            // 第一行：参数值（带索引 Tag）
-            val valuesRow = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    1f
-                )
-                gravity = Gravity.CENTER_VERTICAL
-
-                // 只显示实际存在的参数值
-                paramData.forEachIndexed { index, (value, _) ->
-                    addView(createCompactValueCell(value, index))
-                }
-            }
-            addView(valuesRow)
-
-            // 分割线
-            addView(View(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dpToPx(1)
-                )
-                setBackgroundColor(Color.parseColor("#20FFFFFF"))
-            })
-
-            // 第二行：图标（使用 Iconfont 或文字标签）
-            val iconsRow = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    1f
-                )
-                gravity = Gravity.CENTER_VERTICAL
-
-                // 只显示实际存在的参数对应的图标
-                paramData.forEach { (_, iconCode) ->
-                    addView(createCompactIconCell(iconCode))
-                }
-            }
-            addView(iconsRow)
-        }
-    }
-
-    /**
-     * 从 sections 中动态提取参数（支持8-11参数）
-     * 只返回实际存在的参数，不包含空白占位符
-     * 返回: List<Pair<参数值, 图标编码>>
-     */
-    /**
-     * 创建紧凑参数值单元格（带 Tag 用于更新）
-     */
-    private fun createCompactValueCell(value: String, index: Int = 0): TextView {
-        return TextView(this).apply {
-            text = value
-            textSize = 10f  // 11列时减小字体，避免溢出
-            setTextColor(textPrimary)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setPadding(0, dpToPx(2), 0, dpToPx(2))
-            // ✅ 添加唯一 Tag 用于数据刷新
-            tag = "compact_value_$index"
-        }
-    }
-
-    /**
-     * 创建紧凑图标单元格（支持 Iconfont 和文字标签）
-     */
-    private fun createCompactIconCell(iconCode: String): TextView {
-        return TextView(this).apply {
-            text = iconCode
-            textSize = 14f  // 11列时减小图标，保持美观
-            setTextColor(primaryColor)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            setPadding(0, dpToPx(2), 0, dpToPx(2))
-            // 判断是否为 Iconfont 图标（Unicode 编码字符）
-            // 如果是文字标签（如"清晰"、"褪色"、"颗粒"），使用默认字体
-            if (iconCode.startsWith("\\u") || iconCode.length == 1 && iconCode[0].code >= 0xE600) {
-                typeface = IconFont.getTypeface(this@FloatingWindowService)
-            } else {
-                typeface = Typeface.DEFAULT  // 文字标签使用默认字体
-            }
-        }
-    }
-
-    /**
-     * 创建紧凑背景
-     */
-    private fun createCompactBackground(context: Context): GradientDrawable {
-        return GradientDrawable().apply {
-            cornerRadius = dpToPx(16).toFloat()
-            setColor(getBackgroundColor(context))
-            setStroke(dpToPx(1), Color.parseColor("#33FFFFFF"))
-        }
-    }
+    // （紧凑视图构建族已迁移至 FloatingWindowCompactFactory，MU-11②）
 
     /**
      * 创建展开视图 - 高级美观设计
