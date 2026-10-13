@@ -240,10 +240,20 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Install git-cliff
-        uses: taiki-e/install-action@v2
-        with:
-          tool: git-cliff
+      - name: Generate release notes (from previous tag to HEAD)
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sed -n '2p')
+          {
+            if [ -n "$PREVIOUS_TAG" ]; then
+              echo "## 自 $PREVIOUS_TAG 以来的变更"
+              git log --no-merges --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..HEAD"
+            else
+              echo "## 全部变更"
+              git log --no-merges --pretty=format:"- %s (%h)"
+            fi
+          } > RELEASE_NOTES.md
+          echo "📋 生成的 Release 说明："
+          cat RELEASE_NOTES.md
 
       - name: Create and push tag (manual dispatch only)
         if: github.ref_type != 'tag'
@@ -265,17 +275,7 @@ jobs:
           echo "📋 生成的 Release 说明："
           cat RELEASE_NOTES.md
 
-      - name: Update CHANGELOG.md
-        run: |
-          git-cliff --output CHANGELOG.md
-          if [ -n "$(git status --porcelain CHANGELOG.md)" ]; then
-            git add CHANGELOG.md
-            git commit -m "docs: 更新 CHANGELOG.md 为 ${{ steps.tag.outputs.TAG }}"
-            git push origin HEAD:main
-            echo "✅ CHANGELOG.md 已更新并推送"
-          else
-            echo "ℹ️ CHANGELOG.md 无变化，跳过提交"
-          fi
+      # CHANGELOG.md 由维护者随版本提交维护，不在此自动生成
 
       - name: Download APK artifacts
         uses: actions/download-artifact@v8
