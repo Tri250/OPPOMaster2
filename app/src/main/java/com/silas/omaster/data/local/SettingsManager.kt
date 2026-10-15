@@ -16,11 +16,12 @@ enum class UpdateChannel {
 }
 
 /**
- * 悬浮窗模式枚举
+ * 悬浮窗模式枚举（MU-27 扩展）
  */
 enum class FloatingWindowMode {
-    STANDARD,   // 标准模式（卡片式）
-    COMPACT     // 新版紧凑参数条
+    STANDARD,   // 标准模式（卡片式，MU-11 重构前原版）
+    COMPACT,    // 紧凑参数条（屏幕底部，宽度 = 屏宽 - 32dp）
+    FRAMING     // ⭐ v1.6 新增：取景框跟随模式 — 自动避位，不遮挡相机取景区域
 }
 
 /**

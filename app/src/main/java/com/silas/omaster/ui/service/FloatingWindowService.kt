@@ -27,6 +27,7 @@ import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.FloatingWindowMode
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.util.CameraFramingAvoidance
 import com.silas.omaster.util.IconFont
 import com.silas.omaster.util.Logger
 import com.silas.omaster.util.PresetI18n
@@ -199,12 +200,20 @@ class FloatingWindowService : Service() {
 
         // 读取悬浮窗模式设置
         val configMode = ConfigCenter.getInstance(this).floatingWindowMode
-        
-        // Realme 预设强制使用标准悬浮窗（新版悬浮窗图标不适配 Realme 相机 UI）
-        val mode = if (PresetParamMapper.isRealmePreset(sections)) {
-            FloatingWindowMode.STANDARD
-        } else {
-            configMode
+
+        // ═══════════════════════════════════════════════════════════
+        // MU-27 / v1.6：悬浮窗模式解析链（高 → 低）
+        // ① Realme 预设 → STANDARD（Realme 相机 UI 与新版悬浮窗图标不兼容）
+        // ② followCameraFraming=true && ColorOS ≥ 17 → FRAMING（取景框避位）
+        // ③ 否则 → configMode（用户在设置里选的模式）
+        // ═══════════════════════════════════════════════════════════
+        val c2 = ConfigCenter.getInstance(this)
+        val shouldFrame = c2.isFollowCameraFramingEnabled &&
+                com.silas.omaster.util.DeviceDetector.isColorOsAtLeast(this, 17)
+        val mode = when {
+            PresetParamMapper.isRealmePreset(sections) -> FloatingWindowMode.STANDARD
+            shouldFrame -> FloatingWindowMode.FRAMING
+            else -> configMode
         }
 
         when (action) {
@@ -224,6 +233,11 @@ class FloatingWindowService : Service() {
                             currentIndex, totalCount
                         )
                         FloatingWindowMode.COMPACT -> showCompactWindow(
+                            name, sections, savedX, savedY,
+                            currentIndex, totalCount
+                        )
+                        // MU-27：FRAMING 取景框避位模式 — 在相机取景区域安全区放置悬浮窗
+                        FloatingWindowMode.FRAMING -> showFramingWindow(
                             name, sections, savedX, savedY,
                             currentIndex, totalCount
                         )
@@ -447,6 +461,169 @@ class FloatingWindowService : Service() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    /**
+     * MU-27 FRAMING 取景框避位模式（v1.6 新增）
+     *
+     * 行为：复用 COMPACT 参数条样式，但通过 CameraFramingAvoidance 策略
+     * 自动避开 OPPO/一加/Realme 相机取景区域（底部控件栏 + 顶部状态栏 + 取景框主体）。
+     *
+     * 用户拖动后，窗口会被 clamp 回安全区域，确保永不遮挡取景。
+     * 不自动贴边（保留用户期望的位置但受限），用户手动收起后才悬浮球化。
+     */
+    private fun showFramingWindow(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        savedX: Int = -1,
+        savedY: Int = -1,
+        currentIndex: Int = 0,
+        totalCount: Int = 1
+    ) {
+        try {
+            val wm = windowManager ?: return
+
+            val metrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealMetrics(metrics)
+            val screenWidth = metrics.widthPixels
+            val screenHeight = metrics.heightPixels
+            val windowWidth = screenWidth - dpToPx(32)  // 同 COMPACT：屏宽 - 32dp
+            val windowHeight = dpToPx(120)
+
+            // 1. 计算相机取景安全区域
+            val safeArea = CameraFramingAvoidance.computeSafeArea(
+                context = this,
+                viewWidth = windowWidth, viewHeight = windowHeight,
+                screenWidth = screenWidth, screenHeight = screenHeight
+            )
+
+            // 2. 坐标选择：优先用 savedX/savedY（用户上次拖动到的位置），没有则让 CameraFramingAvoidance 自动挑右下锚点
+            val (anchorX, anchorY) = if (savedX >= 0 && savedY >= 0) {
+                CameraFramingAvoidance.clampToSafeArea(
+                    savedX, savedY, windowWidth, windowHeight, safeArea
+                )
+            } else {
+                CameraFramingAvoidance.pickAnchor(safeArea, windowWidth, windowHeight)
+            }
+
+            params = WindowManager.LayoutParams(
+                windowWidth, windowHeight,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = anchorX
+                y = anchorY
+            }
+
+            // 3. 构建 COMPACT 样式的参数条视图（复用工厂）
+            val rootLayout = compactFactory.createCompactView(
+                name, sections, currentIndex, totalCount, windowWidth,
+                onCollapse = { collapseToBubble(name, sections) },
+                onSwitchPreset = { sendPresetSwitchBroadcast(it) },
+                onClose = { stopSelf() }
+            )
+            mainContainer = compactFactory.mainContainerRef
+            titleTextView = compactFactory.titleViewRef
+
+            floatingView = rootLayout
+            wm.addView(floatingView, params)
+
+            // 4. 绑定拖动：拖动结束后 clampToSafeArea（不 snapToEdge），始终保持在安全区
+            setupFramingDrag(wm, windowWidth, windowHeight, safeArea)
+
+            Logger.i("FloatingWindow", "FRAMING 模式启动: 安全区(${safeArea.left},${safeArea.top}-${safeArea.right},${safeArea.bottom}), 初始位置(${params?.x},${params?.y})")
+
+        } catch (e: Exception) {
+            Logger.e("FloatingWindow", "showFramingWindow 启动失败", e)
+            // MU-27 降级保护：FRAMING 任何异常降级为 COMPACT 模式
+            showCompactWindow(name, sections, savedX, savedY, currentIndex, totalCount)
+        }
+    }
+
+    /**
+     * FRAMING 模式专用拖动逻辑 —— 拖动后 clampToSafeArea，避免用户拖到取景区。
+     * 不调用 snapToEdge（保留用户位置选择但不越界）。
+     */
+    private fun setupFramingDrag(
+        wm: WindowManager,
+        viewWidth: Int,
+        viewHeight: Int,
+        safeArea: CameraFramingAvoidance.SafeArea
+    ) {
+        floatingView?.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX = 0
+            private var initialY = 0
+            private var touchX = 0f
+            private var touchY = 0f
+            private var isClick = false
+            private val clickThreshold = 20f
+            private var isDragging = false
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params?.x ?: 0
+                        initialY = params?.y ?: 0
+                        touchX = event.rawX
+                        touchY = event.rawY
+                        isClick = true
+                        isDragging = false
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = event.rawX - touchX
+                        val dy = event.rawY - touchY
+                        if (FloatingWindowGestureMath.isBeyondClickThreshold(dx, dy, clickThreshold)) {
+                            isClick = false
+                            isDragging = true
+                        }
+                        if (isDragging) {
+                            val newX = initialX + dx.toInt()
+                            val newY = FloatingWindowGestureMath.clampY(
+                                initialY + dy.toInt(),
+                                safeArea.bottom,
+                                viewHeight
+                            )
+                            // 实时 clamp 到安全区域边界
+                            val (clampedX, clampedY) = CameraFramingAvoidance.clampToSafeArea(
+                                newX, newY, viewWidth, viewHeight, safeArea
+                            )
+                            params?.x = clampedX
+                            params?.y = clampedY
+                            floatingView?.let { view ->
+                                params?.let { p ->
+                                    runCatching { wm.updateViewLayout(view, p) }
+                                }
+                            }
+                        }
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (isDragging) {
+                            // 再次 clamp（松手时最终安全确认）
+                            val finalPos = CameraFramingAvoidance.clampToSafeArea(
+                                params?.x ?: 0, params?.y ?: 0,
+                                viewWidth, viewHeight, safeArea
+                            )
+                            params?.x = finalPos.first
+                            params?.y = finalPos.second
+                            floatingView?.let { view ->
+                                runCatching { wm.updateViewLayout(view, params) }
+                            }
+                        }
+                        isDragging = false
+                        return !isClick
+                    }
+                }
+                return isDragging && event.action == MotionEvent.ACTION_MOVE
+            }
+        })
     }
 
     /**

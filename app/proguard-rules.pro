@@ -78,3 +78,38 @@
 
 # 忽略 SLF4J 静态绑定器缺失警告
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# ═══════════════════════════════════════════════════════════
+# MU-29 / v1.6：APK 体积 & 性能加固
+# ═══════════════════════════════════════════════════════════
+
+# Glance widget（MU-28）保持反射类不被混淆
+-keep class androidx.glance.** { *; }
+-keep class androidx.glance.appwidget.** { *; }
+
+# Kotlin Serialization：已加 plugin，显式兜底 keep（防止 AGP 版本差异）
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+# Coil：图片加载性能 —— 允许 R8 去掉 DEBUG 级日志
+-assumenosideeffects class coil.Coil {
+    public static void setDefaultImageLoader(...);
+}
+
+# 悬浮窗工厂（MU-11 / MU-27）：反射构建 TextView 时 keep 构造器
+# 避免 ProGuard 把被反射调用的构造器移除
+-keep class com.silas.omaster.ui.service.FloatingWindowWidgetFactory {
+    public android.widget.TextView createIconButton(...);
+    public android.widget.LinearLayout createBackground(...);
+}
+-keep class com.silas.omaster.ui.service.FloatingWindowCompactFactory { *; }
+
+# 预设 JSON schema 版本兼容（ED-03 历史版本迁移）
+# 所有 @Serializable 的 MasterPreset / PresetSection / PresetItem 保留类名
+# 否则运行时反射取字段名会失败
+-keep class com.silas.omaster.model.** { *; }
+
+# DeviceDetector / CameraFramingAvoidance 反射 Build.HARDWARE
+-keepclassmembers class * {
+    @androidx.annotation.Keep *;
+}

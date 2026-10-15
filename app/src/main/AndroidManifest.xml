@@ -26,9 +26,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OMaster">
 
+        <!--
+            ED-08 / MU-25：Android 17 API 37 合规
+            foregroundServiceType="specialUse" — 悬浮窗 Service 用途为"显示在其他应用上层的特殊辅助"，
+            匹配 Android 17 ForegroundService 类型要求（targetSdk 36 下声明不影响运行时行为，但保证未来升级无隐患）。
+            stopWithTask="false" — 用户手动杀掉相机任务时悬浮窗不被连带销毁（跨任务持续）。
+            exported="false" — 非系统绑定，内部 startService/stopService。
+         -->
         <service
             android:name=".ui.service.FloatingWindowService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false" />
 
         <activity
             android:name=".MainActivity"
@@ -40,13 +49,27 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- FD-01c：接收系统分享的预设 JSON 文本（微信 / QQ 等分享到 OMaster） -->
+            <!-- FD-01c：接收系统分享的预设 JSON 文本（微信 / QQ / 浏览器分享到 OMaster） -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
 
                 <category android:name="android.intent.category.DEFAULT" />
 
                 <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!--
+                FD-06 / ColorOS 17 AI 一键闪记：
+                接收 ColorOS 17 AI 闪记（侧边键长按）截图的系统分享图片。
+                用户在相机参数页触发 AI 闪记 → 系统生成 OCR 文本 + 原图 →
+                分享到 OMaster 时走 ACTION_SEND_IMAGE → 由 MainActivity 分发给
+                ImportPipeline.Source.OCR_IMAGE 入口（ScreenCaptureParser.parse + OCR fallback）。
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
 
@@ -68,6 +91,37 @@
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
             </intent-filter>
         </receiver>
+
+        <!-- MU-24 / v1.6：ColorOS 17 侧边键快捷键支持 -->
+        <!-- shortcut meta-data（静态 shortcut 资源） -->
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
+
+        <!-- MU-24：悬浮窗快捷方式广播接收器（ACTION_SHOW_FLOATING_WINDOW） -->
+        <!-- 当用户在 ColorOS 17 设置把侧边键映射到 OMaster 悬浮窗 shortcut 时， -->
+        <!-- 系统发送此 action，广播接收器转发给 FloatingWindowService 显示悬浮窗 -->
+        <receiver
+            android:name=".ui.service.ShortcutBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.silas.omaster.action.ACTION_SHOW_FLOATING_WINDOW" />
+            </intent-filter>
+        </receiver>
+
+        <!-- MU-28 / v1.6：AndroidX Glance 桌面小组件 -->
+        <receiver
+            android:name=".widget.TodayWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+    
     </application>
 
 </manifest>

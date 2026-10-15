@@ -39,8 +39,12 @@ object PresetImportValidator {
     const val MAX_TEXT_LENGTH: Int = 200_000
     const val MAX_PRESET_COUNT: Int = 200
 
-    /** Schema v2 扩展字段白名单：作为元数据声明合法存在，不计入未知字段 */
-    private val knownExtensionFields = setOf("deviceProfile")
+    /**
+     * Schema 扩展字段白名单（v2 / v3）：作为元数据声明合法存在，不计入未知字段告警。
+     * v2: deviceProfile — 机型档案对象
+     * v3: deviceSupport — 机型兼容列表（List<String>）
+     */
+    private val knownExtensionFields = setOf("deviceProfile", "deviceSupport")
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -79,10 +83,14 @@ object PresetImportValidator {
                 }
                 val preset = json.decodeFromJsonElement<MasterPreset>(normalized)
                 if (preset.name.isBlank()) return@runCatching null
-                // MU-05 校验 v2：收集未知字段（解码照常忽略，仅告警）；deviceProfile 需为对象声明
+                // MU-05 校验 v2：收集未知字段（解码照常忽略，仅告警）；
+                // deviceProfile 需为对象声明，deviceSupport 需为数组（v3 新增）
                 val unknown = obj.keys - masterPresetFieldNames - knownExtensionFields +
                     listOfNotNull("deviceProfile".takeIf {
                         obj.containsKey("deviceProfile") && obj["deviceProfile"] !is JsonObject
+                    }) +
+                    listOfNotNull("deviceSupport".takeIf {
+                        obj.containsKey("deviceSupport") && obj["deviceSupport"] !is JsonArray
                     })
                 preset to unknown
             }.getOrNull()

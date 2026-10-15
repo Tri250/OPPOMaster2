@@ -3,6 +3,7 @@ package com.silas.omaster.ui.home
 import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Surface
 import androidx.compose.foundation.background
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
@@ -34,7 +37,10 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,6 +64,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,8 +85,22 @@ import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedTextSecondary
+import com.silas.omaster.util.DeviceDetector
 import com.silas.omaster.util.hapticClickable
 import com.silas.omaster.util.perform
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -105,7 +126,18 @@ fun HomeScreen(
     val favorites by viewModel.favorites.collectAsState()
     val customPresets by viewModel.customPresets.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
-    
+
+    // ═══════════════════════════════════════════════════════════
+    // FD-10 / v1.6：多维筛选 + 搜索 + 排序 状态
+    // Tab 0（全部预设）使用 filteredPresets；Tab 1/2 保持原样
+    // ═══════════════════════════════════════════════════════════
+    val filteredPresets by viewModel.filteredPresets.collectAsState()
+    val availableFilters by viewModel.availableFilters.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedFilters by viewModel.selectedFilters.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsState()
+    val showNewOnly by viewModel.showNewOnly.collectAsState()
     // 当 refreshTrigger 变化时刷新数据
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) {
@@ -190,7 +222,53 @@ fun HomeScreen(
                 )
             )
 
+            // ═══════════════════════════════════════════════════════════
+            // FD-04 / MU-21 v1.6：机型感知精选 Banner
+            // 当远程订阅里有预设声明 deviceProfile 并匹配当前设备时显示。
+            // 例如 Find X10 用户看到"为 Find X10 · 哈苏 2亿像素 精选"。
+            // 无匹配预设时 Banner 隐藏（不占位）。
+            // ═══════════════════════════════════════════════════════════
+            val recommended by viewModel.deviceRecommendedPresets.collectAsState()
+            val deviceDp = DeviceDetector.getCurrentDevice(LocalContext.current)
+            // 精选展示条件：预设里至少有 3 个是当前设备专属（有 deviceProfile 匹配）
+            val deviceSpecificCount = recommended.count { preset ->
+                preset.deviceProfile != null || !preset.deviceSupport.isNullOrEmpty()
+            }
+            if (deviceSpecificCount >= 3) {
+                DeviceRecommendedBanner(
+                    deviceDisplayName = viewModel.deviceDisplayName,
+                    is200Mp = deviceDp.has200Mp,
+                    hasProImaging = deviceDp.isProImaging,
+                    presets = recommended,
+                    onPresetClick = onNavigateToDetail,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // ═══════════════════════════════════════════════════════════
+            // FD-10 / v1.6：首页多维筛选栏
+            // 搜索 + 风格 ChipGroup（多选 OR）+ 排序下拉 + 收藏/新预设 Toggle
+            // 只在 Tab 0（全部预设）显示；Tab 切换时状态保留
+            // ═══════════════════════════════════════════════════════════
+            if (selectedTab == 0) {
+                SearchFilterBar(
+                    searchQuery = searchQuery,
+                    onSearchChange = { viewModel.updateSearchQuery(it) },
+                    availableFilters = availableFilters,
+                    selectedFilters = selectedFilters,
+                    onToggleFilter = { viewModel.toggleFilter(it) },
+                    sortOrder = sortOrder,
+                    onSortChange = { viewModel.setSortOrder(it) },
+                    showFavoritesOnly = showFavoritesOnly,
+                    onToggleFavoritesOnly = { viewModel.toggleShowFavoritesOnly() },
+                    showNewOnly = showNewOnly,
+                    onToggleNewOnly = { viewModel.toggleShowNewOnly() },
+                    presetCount = filteredPresets.size,
+                    onClearAll = { viewModel.clearAllFilters() }
+                )
+            }
 
             HorizontalPager(
                 state = pagerState,
@@ -200,7 +278,7 @@ fun HomeScreen(
                 androidx.compose.runtime.key(page) {
                     when (page) {
                         0 -> PresetGrid(
-                            presets = allPresets,
+                            presets = filteredPresets,
                             tabIndex = 0,
                             onNavigateToDetail = onNavigateToDetail,
                             onToggleFavorite = { viewModel.toggleFavorite(it) },
@@ -310,6 +388,141 @@ fun HomeScreen(
                 }
             }
         )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// FD-04 / MU-21 v1.6：机型感知精选 Banner（可横滑）
+// 标题动态组合：设备展示名 + 特色标签（哈苏/2亿像素/理光/徕卡）
+// 缩略图使用主色方块 + 预设名，避免加载网络图片
+// ═══════════════════════════════════════════════════════════
+
+@Composable
+private fun DeviceRecommendedBanner(
+    deviceDisplayName: String,
+    is200Mp: Boolean,
+    hasProImaging: Boolean,
+    presets: List<MasterPreset>,
+    onPresetClick: (MasterPreset) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val chipTexts = buildList {
+        if (hasProImaging) add("专业影像")
+        if (is200Mp) add("2亿像素")
+        add("精选预设")
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // 标题行
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "为 $deviceDisplayName 精选",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 特色标签
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                chipTexts.take(3).forEach { chip ->
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                    ) {
+                        Text(
+                            text = chip,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 横滑预设列表
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(presets.take(10)) { preset ->
+                    RecommendedPresetChip(
+                        preset = preset,
+                        onClick = { onPresetClick(preset) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedPresetChip(
+    preset: MasterPreset,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .width(96.dp)
+                .padding(8.dp)
+        ) {
+            // 主色方块占位（避免加载远程图）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(
+                        preset.deviceProfile?.let {
+                            if (it.isProImaging) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            else MaterialTheme.colorScheme.secondaryContainer
+                        } ?: MaterialTheme.colorScheme.secondaryContainer,
+                        RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = preset.name.take(1),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = preset.name,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            preset.filter?.let { filter ->
+                Text(
+                    text = filter,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -674,6 +887,237 @@ private fun LoadingMoreTip() {
                         )
                     )
             )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// FD-10 / v1.6：搜索 + 多维筛选 + 排序 一体化栏
+// 位置：HomeTabRow → DeviceRecommendedBanner → SearchFilterBar → HorizontalPager
+// Tab 0 专属；Tab 切换时状态保留（不重建 Composable，只是条件渲染）
+// ═══════════════════════════════════════════════════════════
+
+@Composable
+private fun SearchFilterBar(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    availableFilters: List<String>,
+    selectedFilters: Set<String>,
+    onToggleFilter: (String) -> Unit,
+    sortOrder: HomeViewModel.SortOrder,
+    onSortChange: (HomeViewModel.SortOrder) -> Unit,
+    showFavoritesOnly: Boolean,
+    onToggleFavoritesOnly: () -> Unit,
+    showNewOnly: Boolean,
+    onToggleNewOnly: () -> Unit,
+    presetCount: Int,
+    onClearAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    var sortExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppDesign.ContentPadding),
+        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+        shape = AppDesign.CardShape
+    ) {
+        Column(modifier = Modifier.padding(AppDesign.ContentPadding)) {
+
+            // ① 搜索框
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(stringResource(R.string.search_preset_placeholder)) },
+                singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = themedTextSecondary()
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { onSearchChange("") }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.clear),
+                                tint = themedTextSecondary()
+                            )
+                        }
+                    }
+                },
+                shape = AppDesign.ButtonShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = themedBackground(),
+                    unfocusedContainerColor = themedBackground(),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    unfocusedBorderColor = themedTextSecondary().copy(alpha = 0.2f)
+                )
+            )
+
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // ② 风格 ChipGroup（多选，滚动横排）
+            if (availableFilters.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(AppDesign.ItemSpacing / 2)
+                ) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(AppDesign.ItemSpacing / 2),
+                        contentPadding = PaddingValues(vertical = 2.dp)
+                    ) {
+                        items(availableFilters) { label ->
+                            val selected = label in selectedFilters
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    haptic.perform(HapticFeedbackType.ToggleOn)
+                                    onToggleFilter(label)
+                                },
+                                label = { Text(label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                    selectedLabelColor = Color.White,
+                                    containerColor = themedCardBackground(),
+                                    labelColor = themedTextPrimary()
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // ③ 排序下拉 + 快捷 Toggle + 计数
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 排序小下拉按钮
+                    Box {
+                        TextButton(
+                            onClick = { sortExpanded = true },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = stringResource(R.string.sort_default),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = when (sortOrder) {
+                                    HomeViewModel.SortOrder.DEFAULT -> stringResource(R.string.sort_default)
+                                    HomeViewModel.SortOrder.NEW_FIRST -> stringResource(R.string.sort_new_first)
+                                    HomeViewModel.SortOrder.FAVORITE_FIRST -> stringResource(R.string.sort_favorite_first)
+                                    HomeViewModel.SortOrder.NAME_A_Z -> stringResource(R.string.sort_name_a_z)
+                                },
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = sortExpanded,
+                            onDismissRequest = { sortExpanded = false }
+                        ) {
+                            HomeViewModel.SortOrder.values().forEach { order ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            when (order) {
+                                                HomeViewModel.SortOrder.DEFAULT -> stringResource(R.string.sort_default)
+                                                HomeViewModel.SortOrder.NEW_FIRST -> stringResource(R.string.sort_new_first)
+                                                HomeViewModel.SortOrder.FAVORITE_FIRST -> stringResource(R.string.sort_favorite_first)
+                                                HomeViewModel.SortOrder.NAME_A_Z -> stringResource(R.string.sort_name_a_z)
+                                            }
+                                        )
+                                    },
+                                    onClick = {
+                                        haptic.perform(HapticFeedbackType.SegmentTick)
+                                        onSortChange(order)
+                                        sortExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // 收藏 Toggle（Pill）
+                    val favChipColor = if (showFavoritesOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
+                    val favTextColor = if (showFavoritesOnly) Color.White else themedTextPrimary()
+                    Surface(
+                        shape = AppDesign.PillShape,
+                        color = favChipColor,
+                        shadowElevation = 0.dp,
+                        modifier = Modifier.clickable {
+                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            onToggleFavoritesOnly()
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.filter_favorites_only),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = favTextColor
+                        )
+                    }
+
+                    // 新预设 Toggle
+                    val newChipColor = if (showNewOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
+                    val newTextColor = if (showNewOnly) Color.White else themedTextPrimary()
+                    Surface(
+                        shape = AppDesign.PillShape,
+                        color = newChipColor,
+                        shadowElevation = 0.dp,
+                        modifier = Modifier.clickable {
+                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            onToggleNewOnly()
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.filter_new_only),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = newTextColor
+                        )
+                    }
+                }
+
+                // 右侧：数量 + 一键清除
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val hasActiveFilter = searchQuery.isNotBlank() || selectedFilters.isNotEmpty() ||
+                            showFavoritesOnly || showNewOnly || sortOrder != HomeViewModel.SortOrder.DEFAULT
+                    Text(
+                        text = context.getString(R.string.filter_result_count, presetCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = themedTextSecondary()
+                    )
+                    if (hasActiveFilter) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(
+                            onClick = { onClearAll() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.clear_all),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

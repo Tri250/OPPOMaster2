@@ -63,6 +63,8 @@ fun SubscriptionScreen(
     var refreshing by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<Subscription?>(null) }
+    // FD-11 / v1.6：订阅更新变更预览
+    var showChangelogDialog by remember { mutableStateOf<PresetRemoteManager.DeltaResult?>(null) }
     var selectedSubscription by remember { mutableStateOf<Subscription?>(null) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var updatingUrls by remember { mutableStateOf(setOf<String>()) }
@@ -105,6 +107,37 @@ fun SubscriptionScreen(
             }
         }
     )
+
+        if (showChangelogDialog != null) {
+            val cl = showChangelogDialog!!
+            AlertDialog(
+                onDismissRequest = { showChangelogDialog = null },
+                title = { Text(stringResource(R.string.sub_changelog_title)) },
+                text = {
+                    Column {
+                        if (cl.added.isNotEmpty()) {
+                            Text(stringResource(R.string.sub_changelog_added, cl.added.size), style = MaterialTheme.typography.titleMedium)
+                            cl.added.take(5).forEach { Text("  · ${it.name}") }
+                            if (cl.added.size > 5) Text("  ... +${cl.added.size - 5}")
+                        }
+                        if (cl.modified.isNotEmpty()) {
+                            Text(stringResource(R.string.sub_changelog_modified, cl.modified.size), style = MaterialTheme.typography.titleMedium)
+                            cl.modified.take(5).forEach { Text("  · ${it.name}") }
+                        }
+                        if (cl.removedIds.isNotEmpty()) {
+                            Text(stringResource(R.string.sub_changelog_removed, cl.removedIds.size), style = MaterialTheme.typography.titleMedium)
+                            cl.removedIds.take(5).forEach { Text("  · $it") }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showChangelogDialog = null }) {
+                        Text(stringResource(R.string.ok))
+                    }
+                },
+                containerColor = themedCardBackground()
+            )
+        }
 
     Box(
         modifier = Modifier
@@ -290,13 +323,18 @@ fun SubscriptionScreen(
                             Logger.i("SubscriptionScreen", "单源立即更新: ${sub.name} (${sub.url})")
                             PresetRemoteManager.fetchAndSave(context, sub.url, forceUpdate = true).fold(
                                 onSuccess = { list ->
-                                    config.updateSubscriptionStatus(sub.url, list.presets.size, System.currentTimeMillis())
+                                    config.updateSubscriptionStatus(sub.url, list.presetList.presets.size, System.currentTimeMillis())
                                     PresetRepository.getInstance(context).reloadDefaultPresets()
-                                    Toast.makeText(
-                                        context,
-                                        updateDoneTemplate.format(list.presets.size),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    // FD-11 / v1.6：有变更时弹预览弹窗
+                                    if (list.changelog.hasChanges) {
+                                        showChangelogDialog = list.changelog
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            updateDoneTemplate.format(list.presetList.presets.size),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 },
                                 onFailure = { e ->
                                     Logger.w("SubscriptionScreen", "单源更新失败: ${e.message}")
@@ -328,18 +366,18 @@ fun SubscriptionScreen(
                         result.onSuccess { presetList ->
                             config.addSubscription(
                                 url = url,
-                                name = presetList.name ?: "",
-                                author = presetList.author ?: "",
-                                build = presetList.build
+                                name = presetList.presetList.name ?: "",
+                                author = presetList.presetList.author ?: "",
+                                build = presetList.presetList.build
                             )
                             // 再次更新状态，确保 presetCount 等信息正确（因为 fetchAndSave 时可能还没 add）
                             config.updateSubscriptionStatus(
                                 url = url,
-                                presetCount = presetList.presets.size,
+                                presetCount = presetList.presetList.presets.size,
                                 lastUpdateTime = System.currentTimeMillis(),
-                                name = presetList.name,
-                                author = presetList.author,
-                                build = presetList.build
+                                name = presetList.presetList.name,
+                                author = presetList.presetList.author,
+                                build = presetList.presetList.build
                             )
                             PresetRepository.getInstance(context).reloadDefaultPresets()
                             Toast.makeText(context, addedMsg, Toast.LENGTH_SHORT).show()
@@ -365,11 +403,11 @@ fun SubscriptionScreen(
                         result.onSuccess { presetList ->
                             config.updateSubscriptionStatus(
                                 url = newUrl,
-                                presetCount = presetList.presets.size,
+                                presetCount = presetList.presetList.presets.size,
                                 lastUpdateTime = System.currentTimeMillis(),
-                                name = presetList.name,
-                                author = presetList.author,
-                                build = presetList.build
+                                name = presetList.presetList.name,
+                                author = presetList.presetList.author,
+                                build = presetList.presetList.build
                             )
                             PresetRepository.getInstance(context).reloadDefaultPresets()
                             Toast.makeText(context, updatedMsg, Toast.LENGTH_SHORT).show()

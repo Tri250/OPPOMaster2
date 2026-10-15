@@ -29,6 +29,9 @@ class OMasterApplication : Application() {
         // 初始化日志系统
         Logger.init(this)
 
+        // MU-24 / v1.6：注册 ColorOS 17 侧边键快捷键（Find X10 额外注册 AI 闪记）
+        com.silas.omaster.util.ShortcutRegistrar.refresh(this)
+
         // 初始化震动设置
         HapticSettings.enabled = ConfigCenter.getInstance(this).isVibrationEnabled
 

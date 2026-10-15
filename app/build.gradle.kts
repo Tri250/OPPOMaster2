@@ -125,6 +125,10 @@ dependencies {
     // 导航组件（已使用 catalog）
     implementation(libs.androidx.navigation.compose)
 
+    // MU-28 / v1.6：AndroidX Glance 桌面小组件（今日推荐预设）
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
     // Kotlin Serialization（已使用 catalog）
     implementation(libs.kotlinx.serialization.json)
 

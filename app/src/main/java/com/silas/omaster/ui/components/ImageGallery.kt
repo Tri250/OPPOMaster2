@@ -222,7 +222,7 @@ private fun GalleryNavigationButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = '翻页',
             modifier = Modifier.size(24.dp)
         )
     }

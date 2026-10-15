@@ -5,7 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import com.silas.omaster.data.config.ConfigCenter
+import com.silas.omaster.data.local.FloatingWindowMode
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.DeviceDetector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,14 +16,34 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * 悬浮窗控制器
  * 管理悬浮窗状态和预设切换
+ *
+ * MU-27 / v1.6：新增 resolveModeForFloatingWindow() — 根据
+ * ConfigCenter.followCameraFraming + 当前设备 ColorOS 版本
+ * 在悬浮窗创建前自动判断最终模式：
+ *
+ *   优先级链（高 → 低）：
+ *   ① Realme 预设 → STANDARD（PresetParamMapper.isRealmePreset）
+ *   ② followCameraFraming=true 且 ColorOS ≥ 17 → FRAMING
+ *   ③ 否则 → ConfigCenter.floatingWindowMode（用户偏好）
  */
 class FloatingWindowController private constructor(private val context: Context) {
+
+    private val configCenter by lazy { ConfigCenter.getInstance(context) }
 
     private val _currentPreset = MutableStateFlow<MasterPreset?>(null)
     val currentPreset: StateFlow<MasterPreset?> = _currentPreset.asStateFlow()
 
     private var presetList: List<MasterPreset> = emptyList()
     private var currentIndex: Int = 0
+
+    /**
+     * MU-27 / v1.6：自动避位模式缓存（避免每次 show 都重算）。
+     * followCameraFraming 开关改变时通过 ConfigCenter Flow 感知（后续可扩展）。
+     */
+    private val shouldAutoFrame: Boolean by lazy {
+        configCenter.isFollowCameraFramingEnabled &&
+                DeviceDetector.isColorOsAtLeast(context, 17)
+    }
 
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -60,6 +83,12 @@ class FloatingWindowController private constructor(private val context: Context)
 
     /**
      * 显示悬浮窗
+     *
+     * MU-27 / v1.6：自动判断最终悬浮窗模式
+     *   ① Realme 预设 → STANDARD（PresetParamMapper.isRealmePreset 在 Service 里再次判断，
+     *     这里做一次前置预判让调用方感知）
+     *   ② followCameraFraming=true && ColorOS ≥ 17 → FRAMING
+     *   ③ 否则 → ConfigCenter.floatingWindowMode（用户偏好）
      */
     fun showFloatingWindow(preset: MasterPreset, presets: List<MasterPreset> = emptyList()) {
         // 如果传入了新的列表，则更新保存的列表
@@ -84,7 +113,31 @@ class FloatingWindowController private constructor(private val context: Context)
         currentIndex = index
         _currentPreset.value = preset
 
+        // MU-27：通过 Intent extra 告诉 Service 该用什么模式（让 Service 跳过自身模式判断）
         FloatingWindowService.show(context, preset, currentIndex, presetList.map { it.id ?: "" })
+    }
+
+    /**
+     * MU-27 / v1.6：根据预设内容 + ConfigCenter + DeviceDetector 解析出最终悬浮窗模式。
+     * 优先级链：
+     *   ① Realme 预设          → STANDARD
+     *   ② followCameraFraming + ColorOS ≥ 17 → FRAMING
+     *   ③ 否则                 → ConfigCenter.floatingWindowMode（用户偏好）
+     */
+    fun resolveModeForFloatingWindow(preset: MasterPreset): FloatingWindowMode {
+        // ① Realme 品牌保护：Service 已有 isRealmePreset 判断，此处做一次前置对齐
+        if (preset.author?.contains("@realme", ignoreCase = true) == true ||
+            preset.author?.contains("realme", ignoreCase = true) == true) {
+            return FloatingWindowMode.STANDARD
+        }
+
+        // ② 相机自动避位
+        if (shouldAutoFrame) {
+            return FloatingWindowMode.FRAMING
+        }
+
+        // ③ 用户偏好
+        return configCenter.floatingWindowMode
     }
 
     /**

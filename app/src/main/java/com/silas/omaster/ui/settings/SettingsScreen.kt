@@ -131,6 +131,8 @@ fun SettingsScreen() {
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var floatingWindowMode by remember { mutableStateOf(config.floatingWindowMode) }
     var showFloatingModeDialog by remember { mutableStateOf(false) }
+    // MU-27 / v1.6：相机应用自动避位 Follow Camera Framing
+    var followCameraFraming by remember { mutableStateOf(config.isFollowCameraFramingEnabled) }
     var appLanguage by remember { mutableStateOf(config.appLanguage) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var logSize by remember { mutableStateOf(LogExporter.getFormattedLogSize()) }
@@ -356,6 +358,8 @@ fun SettingsScreen() {
                 subtitle = when (floatingWindowMode) {
                     FloatingWindowMode.STANDARD -> stringResource(R.string.floating_window_mode_standard)
                     FloatingWindowMode.COMPACT -> stringResource(R.string.floating_window_mode_compact)
+                    // MU-27 / v1.6：取景框避位模式
+                    FloatingWindowMode.FRAMING -> stringResource(R.string.floating_window_mode_framing)
                 },
                 onClick = { showFloatingModeDialog = true }
             )
@@ -369,6 +373,46 @@ fun SettingsScreen() {
                     .fillMaxWidth()
                     .padding(horizontal = AppDesign.ContentPadding, vertical = 8.dp)
             )
+
+            HorizontalDivider(color = themedTextSecondary().copy(alpha = 0.1f))
+
+            // ═══════════════════════════════════════════════════════════
+            // MU-27 / v1.6：相机应用自动避位 Follow Camera Framing
+            // 当开启时，相机应用前台显示期间悬浮窗会自动切换为 FRAMING 模式
+            // 并通过 CameraFramingAvoidance 策略避开取景区域
+            // ═══════════════════════════════════════════════════════════
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppDesign.ContentPadding, vertical = AppDesign.ItemSpacing),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.follow_camera_framing),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = themedTextPrimary()
+                    )
+                    Text(
+                        text = stringResource(R.string.follow_camera_framing_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = themedTextSecondary()
+                    )
+                }
+                Switch(
+                    checked = followCameraFraming,
+                    onCheckedChange = { newValue ->
+                        followCameraFraming = newValue
+                        config.isFollowCameraFramingEnabled = newValue
+                        haptic.perform(HapticFeedbackType.SegmentTick)
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        checkedThumbColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
 
             HorizontalDivider(color = themedTextSecondary().copy(alpha = 0.1f))
 
@@ -1319,6 +1363,8 @@ fun FloatingWindowModeDialog(
                                 text = when (mode) {
                                     FloatingWindowMode.STANDARD -> context.getString(R.string.floating_window_mode_standard)
                                     FloatingWindowMode.COMPACT -> context.getString(R.string.floating_window_mode_compact)
+                                    // MU-27 / v1.6：取景框避位模式
+                                    FloatingWindowMode.FRAMING -> context.getString(R.string.floating_window_mode_framing)
                                 },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = themedTextPrimary()
@@ -1327,6 +1373,8 @@ fun FloatingWindowModeDialog(
                                 text = when (mode) {
                                     FloatingWindowMode.STANDARD -> context.getString(R.string.floating_window_mode_standard_desc)
                                     FloatingWindowMode.COMPACT -> context.getString(R.string.floating_window_mode_compact_desc)
+                                    // MU-27 / v1.6：取景框避位描述
+                                    FloatingWindowMode.FRAMING -> context.getString(R.string.floating_window_mode_framing_desc)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = themedTextSecondary()

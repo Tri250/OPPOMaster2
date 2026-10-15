@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+MU-24 / v1.6：ColorOS 17 侧边键快捷键入口
+OMaster 声明 3 个静态 shortcut，系统设置（ColorOS 17 侧边键 / 长按 / 桌面长按）可直接映射
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ① 直接打开悬浮窗（到最后一次选的预设） -->
+    <shortcut
+        android:shortcutId="floating_window_show"
+        android:enabled="true"
+        android:icon="@drawable/ic_omaster_launcher"
+        android:shortcutShortLabel="@string/shortcut_floating_show_short"
+        android:shortcutLongLabel="@string/shortcut_floating_show_long"
+        android:shortcutDisabledMessage="@string/shortcut_floating_disabled">
+        <intent
+            android:action="com.silas.omaster.action.ACTION_SHOW_FLOATING_WINDOW"
+            android:targetPackage="com.silas.omaster" />
+    </shortcut>
+
+    <!-- ② 打开首页（默认入口） -->
+    <shortcut
+        android:shortcutId="open_home"
+        android:enabled="true"
+        android:icon="@drawable/ic_omaster_launcher"
+        android:shortcutShortLabel="@string/shortcut_open_home_short"
+        android:shortcutLongLabel="@string/shortcut_open_home_long"
+        android:shortcutDisabledMessage="@string/shortcut_open_home_disabled">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.silas.omaster" />
+    </shortcut>
+
+</shortcuts>

@@ -7,10 +7,15 @@ import com.silas.omaster.ui.theme.BrandTheme
 
 /**
  * 悬浮窗完整配置
+ *
+ * MU-27 / v1.6 扩展：
+ * - mode              STANDARD | COMPACT | FRAMING（取景框避位）
+ * - followCameraFraming  是否在相机应用前台时自动切 FRAMING 模式（默认 true，ColorOS 17 / Find X10 推荐开启）
  */
 data class FloatingWindowConfig(
     val opacity: Int = 56,
-    val mode: FloatingWindowMode = FloatingWindowMode.STANDARD
+    val mode: FloatingWindowMode = FloatingWindowMode.COMPACT,
+    val followCameraFraming: Boolean = true
 )
 
 /**

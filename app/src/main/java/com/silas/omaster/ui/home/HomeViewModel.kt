@@ -9,9 +9,11 @@ import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.network.PresetRemoteManager
+import com.silas.omaster.util.DeviceDetector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,6 +26,10 @@ import kotlinx.coroutines.delay
  * 1. 使用 Job 管理协程，避免重复收集
  * 2. refresh() 现在会取消旧任务并重新收集
  * 3. refresh() 现在会从远程获取最新预设
+ *
+ * MU-21 / FD-04 v1.6 新增：
+ * 4. deviceRecommendedPresets — 机型感知精选预设（deviceProfile 匹配当前设备）
+ * 5. deviceDisplayName — 当前设备展示名，用于 Banner 标题
  */
 class HomeViewModel(
     application: Application,
@@ -44,9 +50,170 @@ class HomeViewModel(
     private val _customPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
     val customPresets: StateFlow<List<MasterPreset>> = _customPresets.asStateFlow()
 
+    // ═══════════════════════════════════════════════════════════
+    // FD-04：机型感知精选预设（v1.6 新增）
+    // 从 allPresets 中筛选 deviceProfile / deviceSupport 匹配当前设备的预设
+    // 若设备无匹配预设则发出 emptyList，UI 层据此隐藏 Banner
+    // ═══════════════════════════════════════════════════════════
+    val deviceDisplayName: String by lazy {
+        val dp = DeviceDetector.getCurrentDevice(appContext)
+        dp.displayNameZh.ifBlank { dp.model }
+    }
+    val isFindX10Series: Boolean by lazy { DeviceDetector.isFindX10Series(appContext) }
+
+    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = allPresets.asStateFlow().combine(
+        MutableStateFlow(DeviceDetector.getCurrentDevice(appContext))
+    ) { presets, deviceProfile ->
+        // 筛选匹配：deviceProfile.deviceKey 匹配 或 brandTag 匹配 或 deviceSupport 包含 deviceKey
+        presets.filter { preset ->
+            val presetDp = preset.deviceProfile
+            val keyMatched = presetDp == null ||
+                    presetDp.deviceKey == com.silas.omaster.model.DeviceProfile.ALL ||
+                    presetDp.deviceKey == deviceProfile.deviceKey
+            val brandMatched = presetDp == null ||
+                    presetDp.brandTag == com.silas.omaster.model.DeviceProfile.BRAND_ALL ||
+                    presetDp.brandTag.equals(deviceProfile.brandTag, ignoreCase = true)
+            val supportMatched = preset.deviceSupport == null ||
+                    preset.deviceSupport.isEmpty() ||
+                    preset.deviceSupport.contains(deviceProfile.deviceKey) ||
+                    preset.deviceSupport.contains(com.silas.omaster.model.DeviceProfile.ALL)
+            // 只要预设声明了 deviceProfile 且匹配当前设备 — 精选；没有声明的预设也通过（作为通配）
+            val presetIsDeviceSpecific = presetDp != null || !preset.deviceSupport.isNullOrEmpty()
+            // 精选只展示有 deviceProfile 且匹配的预设；或所有通配预设（如果设备专属预设为空）
+            if (presetIsDeviceSpecific) keyMatched && brandMatched && supportMatched else true
+        }
+    }.let { flow ->
+        MutableStateFlow<List<MasterPreset>>(emptyList()).also { holder ->
+            viewModelScope.launch { flow.collect { holder.value = it } }
+        }.asStateFlow()
+    }
+
     // 当前选中的 Tab
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    // ═══════════════════════════════════════════════════════════
+    // FD-10 / v1.6：多维筛选 + 搜索 + 排序
+    // ═══════════════════════════════════════════════════════════
+
+    /** 搜索关键字（空则不过滤） */
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /** 多选筛选 —— 风格标签（对应 MasterPreset.filter 字段） */
+    private val _selectedFilters = MutableStateFlow<Set<String>>(emptySet())
+    val selectedFilters: StateFlow<Set<String>> = _selectedFilters.asStateFlow()
+
+    /** 排序方式 */
+    private val _sortOrder = MutableStateFlow(SortOrder.DEFAULT)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    /** 是否只看收藏 */
+    private val _showFavoritesOnly = MutableStateFlow(false)
+    val showFavoritesOnly: StateFlow<Boolean> = _showFavoritesOnly.asStateFlow()
+
+    /** 是否只看新预设 */
+    private val _showNewOnly = MutableStateFlow(false)
+    val showNewOnly: StateFlow<Boolean> = _showNewOnly.asStateFlow()
+
+    /**
+     * 可用风格标签枚举 —— 从 allPresets 自动收集 MasterPreset.filter 字段去重
+     */
+    val availableFilters: StateFlow<List<String>> = allPresets.asStateFlow().combine(
+        // 用一个固定的 trigger 让它立即发射；后续 allPresets 更新时重新计算
+        MutableStateFlow(Unit)
+    ) { presets, _ ->
+        presets.mapNotNull { it.filter }.distinct().sorted()
+    }.let { flow ->
+        MutableStateFlow<List<String>>(emptyList()).also { holder ->
+            viewModelScope.launch { flow.collect { holder.value = it } }
+        }.asStateFlow()
+    }
+
+    /**
+     * FD-10 主管线：搜索 AND 风格筛选 AND 收藏/新预设过滤 → 排序 → 最终可见列表
+     */
+    val filteredPresets: StateFlow<List<MasterPreset>> = combine(
+        allPresets,
+        favorites,
+        _searchQuery,
+        _selectedFilters,
+        _sortOrder,
+        _showFavoritesOnly,
+        _showNewOnly
+    ) { all, favs, query, filters, sort, favOnly, newOnly ->
+        val favIds = favs.map { it.id }.toSet()
+
+        var result = all.asSequence()
+
+        // ① 搜索：name / filter / tags 任一命中
+        if (query.isNotBlank()) {
+            val q = query.trim().lowercase()
+            result = result.filter { p ->
+                p.name.lowercase().contains(q) ||
+                        (p.filter?.lowercase()?.contains(q) == true) ||
+                        (p.tags?.any { it.lowercase().contains(q) } == true)
+            }
+        }
+
+        // ② 风格筛选：多选 AND（用户可以同时选"胶片+黑白"，但一个预设只要命中任一选中标签就算通过）
+        if (filters.isNotEmpty()) {
+            result = result.filter { p ->
+                (p.filter != null && p.filter in filters) ||
+                        (p.tags?.any { it in filters } == true)
+            }
+        }
+
+        // ③ 收藏 / 新预设开关
+        if (favOnly) result = result.filter { favIds.contains(it.id) }
+        if (newOnly) result = result.filter { it.isNew }
+
+        // ④ 排序
+        val sorted = when (sort) {
+            SortOrder.DEFAULT -> result.toList()
+            SortOrder.NEW_FIRST -> result.sortedByDescending { it.isNew }.toList()
+            SortOrder.FAVORITE_FIRST -> result.sortedByDescending { favIds.contains(it.id) }.toList()
+            SortOrder.NAME_A_Z -> result.sortedBy { it.name }.toList()
+        }
+
+        sorted
+    }.let { flow ->
+        MutableStateFlow<List<MasterPreset>>(emptyList()).also { holder ->
+            viewModelScope.launch { flow.collect { holder.value = it } }
+        }.asStateFlow()
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FD-10 公开动作
+    // ═══════════════════════════════════════════════════════════
+
+    fun updateSearchQuery(q: String) { _searchQuery.value = q }
+
+    fun toggleFilter(label: String) {
+        val current = _selectedFilters.value
+        _selectedFilters.value = if (label in current) current - label else current + label
+    }
+
+    fun setSortOrder(order: SortOrder) { _sortOrder.value = order }
+
+    fun toggleShowFavoritesOnly() { _showFavoritesOnly.value = !_showFavoritesOnly.value }
+
+    fun toggleShowNewOnly() { _showNewOnly.value = !_showNewOnly.value }
+
+    fun clearAllFilters() {
+        _searchQuery.value = ""
+        _selectedFilters.value = emptySet()
+        _showFavoritesOnly.value = false
+        _showNewOnly.value = false
+        _sortOrder.value = SortOrder.DEFAULT
+    }
+
+    enum class SortOrder {
+        DEFAULT,        // 仓库默认顺序
+        NEW_FIRST,      // 新预设置顶
+        FAVORITE_FIRST, // 收藏置顶
+        NAME_A_Z        // 按名称 A → Z
+    }
 
     // 用于管理收集任务的 Job
     private var allPresetsJob: Job? = null

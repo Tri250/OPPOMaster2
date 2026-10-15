@@ -187,6 +187,28 @@ class ConfigCenter private constructor(context: Context) {
             prefs.edit().putString(KEY_FLOATING_WINDOW_MODE, value.name).apply()
         }
 
+    // ═══════════════════════════════════════════════════════════
+    // MU-27：相机应用自动避位（v1.6 新增）
+    // ═══════════════════════════════════════════════════════════
+    private val _followCameraFramingFlow = MutableStateFlow(loadFollowCameraFraming())
+    val followCameraFramingFlow: StateFlow<Boolean> = _followCameraFramingFlow.asStateFlow()
+
+    var isFollowCameraFramingEnabled: Boolean
+        get() = _followCameraFramingFlow.value
+        set(value) {
+            _followCameraFramingFlow.value = value
+            prefs.edit().putBoolean(KEY_FOLLOW_CAMERA_FRAMING, value).apply()
+        }
+
+    private fun loadFollowCameraFraming(): Boolean {
+        // ColorOS 17 / Find X10 设备默认开启避位；其他设备读取已存值或默认 true（安全回退）
+        val stored = prefs.getString(KEY_FOLLOW_CAMERA_FRAMING, null)
+        if (stored != null) return stored == "true"
+        val dp = com.silas.omaster.util.DeviceDetector.getCurrentDevice(appContext)
+        // 出厂默认：哈苏/专业影像设备默认 true，其他也默认 true（避位是安全行为）
+        return true
+    }
+
     private fun loadFloatingMode(): FloatingWindowMode {
         val value = prefs.getString(KEY_FLOATING_WINDOW_MODE, FloatingWindowMode.COMPACT.name)
         return try {
@@ -365,13 +387,14 @@ class ConfigCenter private constructor(context: Context) {
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * 悬浮窗完整配置（透明度 + 模式）
+     * 悬浮窗完整配置（透明度 + 模式 + 相机避位）
      */
     val floatingWindowConfigFlow: Flow<FloatingWindowConfig> = combine(
         floatingWindowOpacityFlow,
-        floatingWindowModeFlow
-    ) { opacity, mode ->
-        FloatingWindowConfig(opacity, mode)
+        floatingWindowModeFlow,
+        followCameraFramingFlow
+    ) { opacity, mode, followFraming ->
+        FloatingWindowConfig(opacity, mode, followFraming)
     }
 
     /**
@@ -422,6 +445,7 @@ class ConfigCenter private constructor(context: Context) {
         private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
         private const val KEY_FLOATING_WINDOW_OPACITY = "floating_window_opacity"
         private const val KEY_FLOATING_WINDOW_MODE = "floating_window_mode"
+        private const val KEY_FOLLOW_CAMERA_FRAMING = "follow_camera_framing"
         private const val KEY_DEFAULT_START_TAB = "default_start_tab"
         private const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
         private const val KEY_PREMIUM_GLASS_ENABLED = "premium_glass_enabled"

@@ -1,6 +1,31 @@
 <resources>
     <!-- 应用名称 -->
     <string name="app_name">OMaster</string>
+    <!-- MU-24 / v1.6：ColorOS 17 侧边键快捷键 -->
+    <string name="shortcut_floating_show_short">悬浮窗</string>
+    <string name="shortcut_floating_show_long">打开 OMaster 悬浮窗</string>
+    <string name="shortcut_floating_disabled">悬浮窗暂时不可用</string>
+    <string name="shortcut_open_home_short">首页</string>
+    <string name="shortcut_open_home_long">打开 OMaster</string>
+    <string name="shortcut_open_home_disabled">OMaster 暂时不可用</string>
+    <string name="shortcut_ai_snap_short">AI 闪记导入</string>
+    <string name="shortcut_ai_snap_long">用 AI 闪记截取相机参数 → OMaster 自动生成预设</string>
+    <string name="shortcut_request_pinned">把 OMaster 添到侧边键</string>
+    <!-- MU-28 / v1.6：桌面小组件 -->
+    <string name="widget_label">OMaster 今日预设</string>
+    <string name="widget_desc">显示今日推荐预设，点击打开 OMaster</string>
+    <string name="widget_today_title">为 %1$s · 精选</string>
+    <string name="widget_empty">暂无预设，打开 OMaster 订阅更多</string>
+    <string name="widget_loading">加载中…</string>
+
+    <!-- FD-11 / v1.6：订阅 v2 变更预览弹窗 -->
+    <string name="sub_changelog_title">订阅已更新</string>
+    <string name="sub_changelog_added">新增 %d 个预设</string>
+    <string name="sub_changelog_modified">修改 %d 个预设</string>
+    <string name="sub_changelog_removed">删除 %d 个预设</string>
+    <string name="ok">好的</string>
+
+
     <string name="app_slogan">大师模式调色参数库</string>
 
     <!-- 通用按钮 -->
@@ -110,6 +135,17 @@
     <!-- Tab 名称 -->
     <string name="tab_all">全部</string>
     <string name="tab_favorites">收藏</string>
+    <!-- FD-10 / v1.6：首页搜索 → 筛选 → 排序 一体化栏 -->
+    <string name="search_preset_placeholder">搜索预设、风格、标签…</string>
+    <string name="sort_default">默认</string>
+    <string name="sort_new_first">新预设优先</string>
+    <string name="sort_favorite_first">收藏优先</string>
+    <string name="sort_name_a_z">名称 A → Z</string>
+    <string name="filter_favorites_only">仅收藏</string>
+    <string name="filter_new_only">仅新预设</string>
+    <string name="filter_result_count">%d 个预设</string>
+    <string name="clear_all">清除筛选</string>
+
     <string name="tab_my">我的</string>
 
     <!-- 更新渠道描述 -->
@@ -525,10 +561,16 @@
     <string name="floating_window_mode">悬浮窗模式</string>
     <string name="floating_window_mode_standard">标准</string>
     <string name="floating_window_mode_compact">新版悬浮窗</string>
+    <!-- MU-27 / v1.6：取景框避位模式（FRAMING）— Find X10 / ColorOS 17 推荐 -->
+    <string name="floating_window_mode_framing">取景框避位</string>
     <string name="floating_window_mode_standard_desc">卡片式布局，信息完整</string>
     <string name="floating_window_mode_compact_desc">紧凑参数条，仿原生样式</string>
+    <string name="floating_window_mode_framing_desc">自动避开相机取景区域，悬浮窗永不遮挡取景框 · ColorOS 17 / Find X10 推荐</string>
     <string name="floating_window_mode_dialog_title">选择悬浮窗模式</string>
     <string name="floating_window_realme_tip">提示：Realme 预设将自动使用标准悬浮窗（新版悬浮窗图标不适配 Realme 相机 UI）</string>
+    <!-- MU-27 / v1.6：相机应用自动避位 Follow Camera Framing -->
+    <string name="follow_camera_framing">相机自动避位</string>
+    <string name="follow_camera_framing_desc">打开相机时悬浮窗自动切换为取景框避位模式，永不遮挡取景框</string>
 
     <!-- 发现页 -->
     <string name="discover_title">发现</string>

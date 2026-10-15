@@ -10,6 +10,7 @@ kotlin = "2.3.21"
 composeBom = "2026.04.01"
 # 新增依赖版本
 coil = "2.7.0"
+glance = "1.1.1"
 navigationCompose = "2.9.8"
 kotlinxSerialization = "1.11.0"
 # material = "1.10.6" 被 BOM 覆盖
@@ -41,6 +42,8 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 # 新增依赖库
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 # ===== 新增硬编码依赖 =====
 # Compose Material（用于 pull-to-refresh）
