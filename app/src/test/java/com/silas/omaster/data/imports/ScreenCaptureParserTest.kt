@@ -69,7 +69,7 @@ class ScreenCaptureParserTest {
     @Test
     fun `toPreset builds custom preset with placeholder cover and name`() {
         val capture = ScreenCaptureParser.parse("ISO 64\n快门 1/120\n白平衡 4800K\n色调风格 自然")!!
-        val preset = ScreenCaptureParser.toPreset(capture)
+        val preset = capture.toPreset()
         assertTrue(preset.isCustom)
         assertEquals("", preset.coverPath)
         assertEquals("对照录入", preset.name) // 无名称行 → 占位名
@@ -84,7 +84,7 @@ class ScreenCaptureParserTest {
     fun `toPreset output roundtrips through import validator`() {
         // 导出/解析产物必须能通过统一校验管道（R-3 全链路一致性）
         val capture = ScreenCaptureParser.parse("ISO 50\nEV -1.0\n滤镜 醇黑")!!
-        val preset = ScreenCaptureParser.toPreset(capture)
+        val preset = capture.toPreset()
         val json = com.silas.omaster.data.exports.ExportPresetService.toJson(preset)
         assertTrue(json is com.silas.omaster.data.exports.ExportPresetService.ExportResult.Success)
         val result = PresetImportValidator.parse((json as com.silas.omaster.data.exports.ExportPresetService.ExportResult.Success).text)
