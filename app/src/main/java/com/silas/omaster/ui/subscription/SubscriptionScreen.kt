@@ -108,37 +108,6 @@ fun SubscriptionScreen(
         }
     )
 
-        if (showChangelogDialog != null) {
-            val cl = showChangelogDialog!!
-            AlertDialog(
-                onDismissRequest = { showChangelogDialog = null },
-                title = { Text(stringResource(R.string.sub_changelog_title)) },
-                text = {
-                    Column {
-                        if (cl.added.isNotEmpty()) {
-                            Text(stringResource(R.string.sub_changelog_added, cl.added.size), style = MaterialTheme.typography.titleMedium)
-                            cl.added.take(5).forEach { Text("  · ${it.name}") }
-                            if (cl.added.size > 5) Text("  ... +${cl.added.size - 5}")
-                        }
-                        if (cl.modified.isNotEmpty()) {
-                            Text(stringResource(R.string.sub_changelog_modified, cl.modified.size), style = MaterialTheme.typography.titleMedium)
-                            cl.modified.take(5).forEach { Text("  · ${it.name}") }
-                        }
-                        if (cl.removedIds.isNotEmpty()) {
-                            Text(stringResource(R.string.sub_changelog_removed, cl.removedIds.size), style = MaterialTheme.typography.titleMedium)
-                            cl.removedIds.take(5).forEach { Text("  · $it") }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showChangelogDialog = null }) {
-                        Text(stringResource(R.string.ok))
-                    }
-                },
-                containerColor = themedCardBackground()
-            )
-        }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -416,6 +385,37 @@ fun SubscriptionScreen(
                         }
                     }
                 }
+            )
+        }
+
+        if (showChangelogDialog != null) {
+            val cl = showChangelogDialog!!
+            AlertDialog(
+                onDismissRequest = { showChangelogDialog = null },
+                title = { Text(stringResource(R.string.sub_changelog_title)) },
+                text = {
+                    Column {
+                        if (cl.added.isNotEmpty()) {
+                            Text(stringResource(R.string.sub_changelog_added, cl.added.size), style = MaterialTheme.typography.titleMedium)
+                            cl.added.take(5).forEach { Text("  · ${it.name}") }
+                            if (cl.added.size > 5) Text("  ... +${cl.added.size - 5}")
+                        }
+                        if (cl.modified.isNotEmpty()) {
+                            Text(stringResource(R.string.sub_changelog_modified, cl.modified.size), style = MaterialTheme.typography.titleMedium)
+                            cl.modified.take(5).forEach { Text("  · ${it.name}") }
+                        }
+                        if (cl.removedIds.isNotEmpty()) {
+                            Text(stringResource(R.string.sub_changelog_removed, cl.removedIds.size), style = MaterialTheme.typography.titleMedium)
+                            cl.removedIds.take(5).forEach { Text("  · $it") }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showChangelogDialog = null }) {
+                        Text(stringResource(R.string.ok))
+                    }
+                },
+                containerColor = themedCardBackground()
             )
         }
 
