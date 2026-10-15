@@ -20,6 +20,7 @@ import com.silas.omaster.MainActivity
 import com.silas.omaster.R
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.DeviceDetector
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 /**

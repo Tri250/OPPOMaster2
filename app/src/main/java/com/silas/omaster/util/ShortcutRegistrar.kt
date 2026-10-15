@@ -3,6 +3,7 @@ package com.silas.omaster.util
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
+import com.silas.omaster.R
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.os.Build
@@ -54,7 +55,6 @@ object ShortcutRegistrar {
             .setIcon(Icon.createWithResource(context, R.mipmap.ic_launcher_round))
             .setIntent(intent)
             .setRank(1)
-            .setEnabled(true)
             .build()
     }
 
