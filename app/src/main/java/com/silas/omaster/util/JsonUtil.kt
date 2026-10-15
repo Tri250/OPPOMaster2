@@ -28,6 +28,39 @@ import java.util.Locale
  */
 object JsonUtil {
 
+
+    /** 解析订阅仓库返回的预设列表 JSON */
+    fun parsePresetList(json: String): com.silas.omaster.model.PresetList {
+        return kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }.decodeFromString(json)
+    }
+
+    /** 解析单个预设 JSON */
+    fun parsePreset(json: String): com.silas.omaster.model.MasterPreset {
+        return kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }.decodeFromString(json)
+    }
+
+
+    /** 解析订阅仓库返回的预设列表 JSON */
+    fun parsePresetList(json: String): com.silas.omaster.model.PresetList {
+        return kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }.decodeFromString(json)
+    }
+
+    /** 解析单个预设 JSON */
+    fun parsePreset(json: String): com.silas.omaster.model.MasterPreset {
+        return kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }.decodeFromString(json)
+    }
     private val json = Json { ignoreUnknownKeys = true }
     
     /**
