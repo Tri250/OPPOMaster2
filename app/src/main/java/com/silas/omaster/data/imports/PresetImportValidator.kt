@@ -83,17 +83,29 @@ object PresetImportValidator {
                 }
                 val preset = json.decodeFromJsonElement<MasterPreset>(normalized)
                 if (preset.name.isBlank()) return@runCatching null
+                preset to normalized
+            }.recoverCatching {
+                // MU-21 兜底：deviceProfile / deviceSupport 是 Schema v2/v3 扩展字段
+                // 可能因类型不匹配（如 DeviceProfile 必填字段缺失）导致解码失败
+                // 剥离扩展字段后重试，主预设解码不受影响
+                val obj = element as? JsonObject ?: return@recoverCatching null
+                val stripped = JsonObject(obj.filter { it.key !in knownExtensionFields } +
+                    ("coverPath" to JsonPrimitive("")))
+                val preset = json.decodeFromJsonElement<MasterPreset>(stripped)
+                if (preset.name.isBlank()) return@recoverCatching null
+                preset to obj // 用原始 obj 做 unknown 字段分析
+            }.getOrNull()?.let { (preset, sourceObj) ->
                 // MU-05 校验 v2：收集未知字段（解码照常忽略，仅告警）；
                 // deviceProfile 需为对象声明，deviceSupport 需为数组（v3 新增）
-                val unknown = obj.keys - masterPresetFieldNames - knownExtensionFields +
+                val unknown = sourceObj.keys - masterPresetFieldNames - knownExtensionFields +
                     listOfNotNull("deviceProfile".takeIf {
-                        obj.containsKey("deviceProfile") && obj["deviceProfile"] !is JsonObject
+                        sourceObj.containsKey("deviceProfile") && sourceObj["deviceProfile"] !is JsonObject
                     }) +
                     listOfNotNull("deviceSupport".takeIf {
-                        obj.containsKey("deviceSupport") && obj["deviceSupport"] !is JsonArray
+                        sourceObj.containsKey("deviceSupport") && sourceObj["deviceSupport"] !is JsonArray
                     })
                 preset to unknown
-            }.getOrNull()
+            }
         }
 
         val valid = decoded.map { it.first }
