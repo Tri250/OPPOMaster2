@@ -57,32 +57,37 @@ class HomeViewModel(
     // FD-04：机型感知精选预设（v1.6 新增）
     // 从 allPresets 中筛选 deviceProfile / deviceSupport 匹配当前设备的预设
     // 若设备无匹配预设则发出 emptyList，UI 层据此隐藏 Banner
+    // 注意：设备身份在运行时不变，deviceProfile 用 lazy 缓存一次即可
     // ═══════════════════════════════════════════════════════════
+    private val currentDeviceProfile: DeviceProfile by lazy {
+        DeviceDetector.getCurrentDevice(appContext)
+    }
     val deviceDisplayName: String by lazy {
-        val dp = DeviceDetector.getCurrentDevice(appContext)
-        dp.displayNameZh.ifBlank { dp.model }
+        currentDeviceProfile.displayNameZh.ifBlank { currentDeviceProfile.model }
     }
     val isFindX10Series: Boolean by lazy { DeviceDetector.isFindX10Series(appContext) }
 
-
-    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = combine(
-        allPresets.asStateFlow(),
-        MutableStateFlow(DeviceDetector.getCurrentDevice(appContext))
-    ) { presets, deviceProfile ->
-        val key = deviceProfile.deviceKey
-        val brand = deviceProfile.brandTag
-        val dp_all = DeviceProfile.ALL
-        presets.filter { preset ->
-            val presetDp = preset.deviceProfile
-            val support = preset.deviceSupport
-            val presetIsDeviceSpecific = presetDp != null || !support.isNullOrEmpty()
-            if (!presetIsDeviceSpecific) return@filter true
-            val keyMatch = presetDp == null || presetDp.deviceKey == dp_all || presetDp.deviceKey == key
-            val brandMatch = presetDp == null || presetDp.brandTag == DeviceProfile.BRAND_ALL || presetDp.brandTag.equals(brand, true)
-            val supportMatch = support == null || support.isEmpty() || support.contains(key) || support.contains(dp_all)
-            keyMatch && brandMatch && supportMatch
-        }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    /**
+     * 机型匹配精选预设 —— 仅依赖 allPresets 的变化，deviceProfile 用 lazy 固定
+     * 避免 combine 2-arg vs vararg 重载歧义导致的类型推断失败
+     */
+    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = allPresets.asStateFlow()
+        .map { presets ->
+            val dp = currentDeviceProfile
+            val key = dp.deviceKey
+            val brand = dp.brandTag
+            val dp_all = DeviceProfile.ALL
+            presets.filter { preset ->
+                val presetDp = preset.deviceProfile
+                val support = preset.deviceSupport
+                val presetIsDeviceSpecific = presetDp != null || !support.isNullOrEmpty()
+                if (!presetIsDeviceSpecific) return@filter true
+                val keyMatch = presetDp == null || presetDp.deviceKey == dp_all || presetDp.deviceKey == key
+                val brandMatch = presetDp == null || presetDp.brandTag == DeviceProfile.BRAND_ALL || presetDp.brandTag.equals(brand, true)
+                val supportMatch = support == null || support.isEmpty() || support.contains(key) || support.contains(dp_all)
+                keyMatch && brandMatch && supportMatch
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // 当前选中的 Tab
     private val _selectedTab = MutableStateFlow(0)
