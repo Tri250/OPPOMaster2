@@ -9,7 +9,7 @@ OMaster 声明 3 个静态 shortcut，系统设置（ColorOS 17 侧边键 / 长�
     <shortcut
         android:shortcutId="floating_window_show"
         android:enabled="true"
-        android:icon="@drawable/ic_omaster_launcher"
+        android:icon="@mipmap/ic_launcher_round"
         android:shortcutShortLabel="@string/shortcut_floating_show_short"
         android:shortcutLongLabel="@string/shortcut_floating_show_long"
         android:shortcutDisabledMessage="@string/shortcut_floating_disabled">
@@ -22,7 +22,7 @@ OMaster 声明 3 个静态 shortcut，系统设置（ColorOS 17 侧边键 / 长�
     <shortcut
         android:shortcutId="open_home"
         android:enabled="true"
-        android:icon="@drawable/ic_omaster_launcher"
+        android:icon="@mipmap/ic_launcher_round"
         android:shortcutShortLabel="@string/shortcut_open_home_short"
         android:shortcutLongLabel="@string/shortcut_open_home_long"
         android:shortcutDisabledMessage="@string/shortcut_open_home_disabled">

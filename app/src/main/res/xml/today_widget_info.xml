@@ -10,7 +10,7 @@
     android:maxHeight="250dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/today_widget_loading"
-    android:previewImage="@drawable/ic_omaster_launcher"
+    android:previewImage="@mipmap/ic_launcher_round"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_desc" />

@@ -48,7 +48,7 @@ object ShortcutRegistrar {
         return ShortcutInfo.Builder(context, DYNAMIC_SHORTCUT_AI_SNAP)
             .setShortLabel(context.getString(R.string.shortcut_ai_snap_short))
             .setLongLabel(context.getString(R.string.shortcut_ai_snap_long))
-            .setIcon(Icon.createWithResource(context, R.drawable.ic_omaster_launcher))
+            .setIcon(Icon.createWithResource(context, R.mipmap.ic_launcher_round))
             .setIntent(intent)
             .setRank(1)
             .setEnabled(true)
