@@ -152,7 +152,7 @@ object PresetRemoteManager {
                     Log.w("PresetRemoteManager", "Failed to invalidate JsonUtil cache", e)
                 }
             }
-            Result.success(presetList)
+            Result.success(FetchResult(presetList, changelog))
         } catch (e: Exception) {
             Log.e("PresetRemoteManager", "Failed to save presets", e)
             Result.failure(e)
