@@ -91,6 +91,37 @@
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
             </intent-filter>
         </receiver>
+
+        <!-- MU-24 / v1.6：ColorOS 17 侧边键快捷键支持 -->
+        <!-- shortcut meta-data（静态 shortcut 资源） -->
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
+
+        <!-- MU-24：悬浮窗快捷方式广播接收器（ACTION_SHOW_FLOATING_WINDOW） -->
+        <!-- 当用户在 ColorOS 17 设置把侧边键映射到 OMaster 悬浮窗 shortcut 时， -->
+        <!-- 系统发送此 action，广播接收器转发给 FloatingWindowService 显示悬浮窗 -->
+        <receiver
+            android:name=".ui.service.ShortcutBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.silas.omaster.action.ACTION_SHOW_FLOATING_WINDOW" />
+            </intent-filter>
+        </receiver>
+
+        <!-- MU-28 / v1.6：AndroidX Glance 桌面小组件 -->
+        <receiver
+            android:name=".widget.TodayWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+    
     </application>
 
 </manifest>

@@ -19,6 +19,26 @@ import java.io.File
 
 object PresetRemoteManager {
 
+    // ═══════════════════════════════════════════════════════════
+    // FD-11 / v1.6：订阅 v2 — 增量 diff 计算 + 变更预览
+    // 客户端自主计算：本地已有预设 vs 新拉到的预设 → added/removed/modified
+    // 不需要订阅仓库改 JSON Schema，向后兼容
+    // ═══════════════════════════════════════════════════════════
+
+    data class DeltaResult(
+        val added: List<com.silas.omaster.model.MasterPreset>,
+        val removedIds: List<String>,
+        val modified: List<com.silas.omaster.model.MasterPreset>
+    ) {
+        val hasChanges get() = added.isNotEmpty() || removedIds.isNotEmpty() || modified.isNotEmpty()
+        val totalDiff get() = added.size + removedIds.size + modified.size
+    }
+
+    data class FetchResult(
+        val presetList: com.silas.omaster.model.PresetList,
+        val changelog: DeltaResult
+    )
+
     /** MU-18：订阅文件响应体大小上限 10MB */
     private const val MAX_RESPONSE_BYTES = 10 * 1024 * 1024
 
@@ -51,7 +71,7 @@ object PresetRemoteManager {
         }
     }
 
-    suspend fun fetchAndSave(context: Context, url: String, forceUpdate: Boolean = false): Result<PresetList> {
+    suspend fun fetchAndSave(context: Context, url: String, forceUpdate: Boolean = false): Result<FetchResult> {
         Log.d("PresetRemoteManager", "Starting fetch from $url")
         return try {
             val response: HttpResponse = client.get(url)
@@ -104,7 +124,12 @@ object PresetRemoteManager {
                 )
             }
 
+
+            // FD-11：计算本次更新的增量 diff（本地已有预设 vs 新拉到的）
+            val changelog = computeDelta(context, url, presetList)
+
             withContext(Dispatchers.IO) {
+
                 val fileName = config.getSubscriptionFileName(url)
                 val file = File(context.filesDir, fileName)
                 file.writeText(text)
@@ -133,4 +158,44 @@ object PresetRemoteManager {
             Result.failure(e)
         }
     }
+
+    /**
+     * FD-11 / v1.6：计算订阅增量 diff
+     * 读取本地已有 JSON 文件（如果存在），比较新旧 MasterPreset 列表 → added/removed/modified
+     * 用 MasterPreset.id 匹配；modified 检查 name/filter/author 核心字段变化
+     */
+    private fun computeDelta(context: Context, url: String, newList: com.silas.omaster.model.PresetList): DeltaResult {
+        return try {
+            val config = com.silas.omaster.data.config.ConfigCenter.getInstance(context)
+            val fileName = config.getSubscriptionFileName(url)
+            val file = java.io.File(context.filesDir, fileName)
+
+            if (!file.exists()) {
+                // 首次拉取 → 全部算 added
+                return DeltaResult(added = newList.presets, removedIds = emptyList(), modified = emptyList())
+            }
+
+            val oldList: com.silas.omaster.model.PresetList = com.silas.omaster.util.JsonUtil.parsePresetList(file.readText())
+            val oldById = oldList.presets.filter { !it.id.isNullOrBlank() }.associateBy { it.id!! }
+            val newById = newList.presets.filter { !it.id.isNullOrBlank() }.associateBy { it.id!! }
+
+            val oldIds = oldById.keys
+            val newIds = newById.keys
+
+            val added = newIds.subtract(oldIds).mapNotNull { newById[it] }
+            val removed = oldIds.subtract(newIds).toList()
+            val modified = oldIds.intersect(newIds).mapNotNull { id ->
+                val old = oldById[id] ?: return@mapNotNull null
+                val new = newById[id] ?: return@mapNotNull null
+                if (old.name != new.name || old.filter != new.filter || old.author != new.author) new else null
+            }
+
+            DeltaResult(added = added, removedIds = removed, modified = modified)
+        } catch (e: Exception) {
+            // diff 计算失败静默降级为全部 added（保守策略：不会漏变更）
+            com.silas.omaster.util.Logger.e("PresetRemoteManager", "delta 计算失败", e)
+            DeltaResult(added = newList.presets, removedIds = emptyList(), modified = emptyList())
+        }
+    }
+
 }

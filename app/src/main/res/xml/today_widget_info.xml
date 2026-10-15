@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MU-28 / v1.6：OMaster 桌面小组件 provider 配置 -->
+<!-- 最小尺寸 1×1，目标尺寸 1×4 横排，最大 4×4 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:maxWidth="250dp"
+    android:maxHeight="250dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/today_widget_loading"
+    android:previewImage="@drawable/ic_omaster_launcher"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_desc" />

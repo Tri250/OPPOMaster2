@@ -92,6 +92,129 @@ class HomeViewModel(
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
 
+    // ═══════════════════════════════════════════════════════════
+    // FD-10 / v1.6：多维筛选 + 搜索 + 排序
+    // ═══════════════════════════════════════════════════════════
+
+    /** 搜索关键字（空则不过滤） */
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /** 多选筛选 —— 风格标签（对应 MasterPreset.filter 字段） */
+    private val _selectedFilters = MutableStateFlow<Set<String>>(emptySet())
+    val selectedFilters: StateFlow<Set<String>> = _selectedFilters.asStateFlow()
+
+    /** 排序方式 */
+    private val _sortOrder = MutableStateFlow(SortOrder.DEFAULT)
+    val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
+
+    /** 是否只看收藏 */
+    private val _showFavoritesOnly = MutableStateFlow(false)
+    val showFavoritesOnly: StateFlow<Boolean> = _showFavoritesOnly.asStateFlow()
+
+    /** 是否只看新预设 */
+    private val _showNewOnly = MutableStateFlow(false)
+    val showNewOnly: StateFlow<Boolean> = _showNewOnly.asStateFlow()
+
+    /**
+     * 可用风格标签枚举 —— 从 allPresets 自动收集 MasterPreset.filter 字段去重
+     */
+    val availableFilters: StateFlow<List<String>> = allPresets.asStateFlow().combine(
+        // 用一个固定的 trigger 让它立即发射；后续 allPresets 更新时重新计算
+        MutableStateFlow(Unit)
+    ) { presets, _ ->
+        presets.mapNotNull { it.filter }.distinct().sorted()
+    }.let { flow ->
+        MutableStateFlow<List<String>>(emptyList()).also { holder ->
+            viewModelScope.launch { flow.collect { holder.value = it } }
+        }.asStateFlow()
+    }
+
+    /**
+     * FD-10 主管线：搜索 AND 风格筛选 AND 收藏/新预设过滤 → 排序 → 最终可见列表
+     */
+    val filteredPresets: StateFlow<List<MasterPreset>> = combine(
+        allPresets,
+        favorites,
+        _searchQuery,
+        _selectedFilters,
+        _sortOrder,
+        _showFavoritesOnly,
+        _showNewOnly
+    ) { all, favs, query, filters, sort, favOnly, newOnly ->
+        val favIds = favs.map { it.id }.toSet()
+
+        var result = all.asSequence()
+
+        // ① 搜索：name / filter / tags 任一命中
+        if (query.isNotBlank()) {
+            val q = query.trim().lowercase()
+            result = result.filter { p ->
+                p.name.lowercase().contains(q) ||
+                        (p.filter?.lowercase()?.contains(q) == true) ||
+                        (p.tags?.any { it.lowercase().contains(q) } == true)
+            }
+        }
+
+        // ② 风格筛选：多选 AND（用户可以同时选"胶片+黑白"，但一个预设只要命中任一选中标签就算通过）
+        if (filters.isNotEmpty()) {
+            result = result.filter { p ->
+                (p.filter != null && p.filter in filters) ||
+                        (p.tags?.any { it in filters } == true)
+            }
+        }
+
+        // ③ 收藏 / 新预设开关
+        if (favOnly) result = result.filter { favIds.contains(it.id) }
+        if (newOnly) result = result.filter { it.isNew }
+
+        // ④ 排序
+        val sorted = when (sort) {
+            SortOrder.DEFAULT -> result.toList()
+            SortOrder.NEW_FIRST -> result.sortedByDescending { it.isNew }.toList()
+            SortOrder.FAVORITE_FIRST -> result.sortedByDescending { favIds.contains(it.id) }.toList()
+            SortOrder.NAME_A_Z -> result.sortedBy { it.name }.toList()
+        }
+
+        sorted
+    }.let { flow ->
+        MutableStateFlow<List<MasterPreset>>(emptyList()).also { holder ->
+            viewModelScope.launch { flow.collect { holder.value = it } }
+        }.asStateFlow()
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FD-10 公开动作
+    // ═══════════════════════════════════════════════════════════
+
+    fun updateSearchQuery(q: String) { _searchQuery.value = q }
+
+    fun toggleFilter(label: String) {
+        val current = _selectedFilters.value
+        _selectedFilters.value = if (label in current) current - label else current + label
+    }
+
+    fun setSortOrder(order: SortOrder) { _sortOrder.value = order }
+
+    fun toggleShowFavoritesOnly() { _showFavoritesOnly.value = !_showFavoritesOnly.value }
+
+    fun toggleShowNewOnly() { _showNewOnly.value = !_showNewOnly.value }
+
+    fun clearAllFilters() {
+        _searchQuery.value = ""
+        _selectedFilters.value = emptySet()
+        _showFavoritesOnly.value = false
+        _showNewOnly.value = false
+        _sortOrder.value = SortOrder.DEFAULT
+    }
+
+    enum class SortOrder {
+        DEFAULT,        // 仓库默认顺序
+        NEW_FIRST,      // 新预设置顶
+        FAVORITE_FIRST, // 收藏置顶
+        NAME_A_Z        // 按名称 A → Z
+    }
+
     // 用于管理收集任务的 Job
     private var allPresetsJob: Job? = null
     private var favoritesJob: Job? = null
