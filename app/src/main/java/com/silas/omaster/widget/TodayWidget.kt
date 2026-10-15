@@ -3,13 +3,13 @@ package com.silas.omaster.widget
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.provideGlance
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -23,81 +23,80 @@ import androidx.glance.unit.ColorProvider
 import com.silas.omaster.MainActivity
 import com.silas.omaster.R
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.util.DeviceDetector
+import kotlinx.coroutines.runBlocking
 
 /**
- * MU-28 / v1.6：OMaster 桌面小组件
- * 尺寸：1×4 小尺寸，显示今日推荐预设 + 设备展示名
- * 点击任意位置 → 打开 OMaster 首页
+ * MU-28 / v1.6：OMaster 桌面小组件（AndroidX Glance API）
  *
- * 布局：
- * ┌─────────────────────────────┐
- * │ 📷 为 Find X10 · 精选       │  标题栏
- * │ ───────────────────────────  │
- * │ 哈苏 2亿像素   胶片风       │  2 条推荐预设横排
- * │ 专业色彩        复古        │
- * └─────────────────────────────┘
+ * Glance Widget 注意事项：
+ * - 不能用 androidx.compose.material3.Text（要用 androidx.glance.material3.Text）
+ * - 不能用 Row(spacing = ...)（spacing 是 Compose Row 的参数，Glance Row 没有）
+ * - provideContent 是一次性渲染入口，里面不能 collect Flow / 不能 runBlocking
+ * - 同步数据获取必须在 provideGlance 的外层 suspend 函数里完成
  */
 class TodayWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        // 在这个 suspend 上下文里同步获取数据（Glance 框架允许）
+        val deviceName = DeviceDetector.getCurrentDevice(context).displayNameZh
+
+        // 同步读 StateFlow 初始值（Repository 底层是 StateFlow，runBlocking + first 安全）
+        val presets: List<MasterPreset> = runCatching {
+            runBlocking { PresetRepository.getInstance(context).getAllPresets().first() }
+        }.getOrDefault(emptyList())
+        val recommended = presets.take(4)
+
         provideContent {
-            WidgetContent(context)
+            WidgetContent(
+                deviceName = deviceName,
+                presets = recommended,
+                context = context
+            )
         }
     }
 
     @Composable
-    private fun WidgetContent(context: Context) {
-        // 读当前设备展示名（Find X10 用户看到"为 Find X10 精选"）
-        val deviceName = DeviceDetector.getCurrentDevice(context).displayNameZh
-        // 读精选预设（最多取 4 条，按 deviceProfile 匹配）
-        val repository = PresetRepository.getInstance(context)
-        // 同步读 StateFlow 值（Widget 是广播 Context）
-        val all = runCatching { repository.getAllPresetsDirectSync() }.getOrDefault(emptyList())
-        val recommended = all.take(4)
-
-        GlanceAppWidget(
+    private fun WidgetContent(
+        deviceName: String,
+        presets: List<MasterPreset>,
+        context: Context
+    ) {
+        Column(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(ColorProvider(0xFF141414.toInt()))
                 .padding(12.dp),
-            onClick = actionStartActivity<MainActivity>()
+            verticalAlignment = Alignment.Vertical.CenterVertically,
+            horizontalAlignment = Alignment.Horizontal.Start
         ) {
-            Column(
-                modifier = GlanceModifier.fillMaxSize(),
-                verticalAlignment = Alignment.Vertical.CenterVertically,
-                horizontalAlignment = Alignment.Horizontal.Start
-            ) {
-                // 标题
-                Text(
-                    text = context.getString(R.string.widget_today_title, deviceName),
-                    fontSize = 12.sp,
-                    color = ColorProvider(0xFFAAAAAA.toInt()),
-                    modifier = GlanceModifier.padding(bottom = 6.dp)
-                )
+            // 标题
+            Text(
+                text = context.getString(R.string.widget_today_title, deviceName),
+                fontSize = 12f,
+                color = ColorProvider(0xFFAAAAAA.toInt()),
+                modifier = GlanceModifier.padding(bottom = 6.dp)
+            )
 
-                if (recommended.isNotEmpty()) {
-                    // 预设横排
-                    Row(
-                        modifier = GlanceModifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Horizontal.spacedBy(6.dp)
-                    ) {
-                        recommended.forEach { preset ->
-                            Text(
-                                text = preset.name,
-                                fontSize = 13.sp,
-                                color = ColorProvider(0xFFFFFFFF.toInt()),
-                                modifier = GlanceModifier.width(80.dp)
-                            )
-                        }
-                    }
-                } else {
+            if (presets.isNotEmpty()) {
+                // 预设横排（Glance Row 没有 spacing 参数 → 用多个 Row + padding）
+                presets.forEachIndexed { index, preset ->
                     Text(
-                        text = context.getString(R.string.widget_empty),
-                        fontSize = 12.sp,
-                        color = ColorProvider(0xFF666666.toInt())
+                        text = "• ${preset.name}",
+                        fontSize = 13f,
+                        color = ColorProvider(0xFFFFFFFF.toInt()),
+                        modifier = GlanceModifier
+                            .fillMaxWidth()
+                            .padding(bottom = if (index == presets.lastIndex) 0.dp else 2.dp)
                     )
                 }
+            } else {
+                Text(
+                    text = context.getString(R.string.widget_empty),
+                    fontSize = 12f,
+                    color = ColorProvider(0xFF666666.toInt())
+                )
             }
         }
     }
@@ -105,15 +104,4 @@ class TodayWidget : GlanceAppWidget() {
 
 class TodayWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = TodayWidget()
-}
-
-/**
- * PresetRepository 同步读取（Widget 场景不适用 Flow）
- * 在 Repository 里作为扩展函数提供，不破坏现有 API
- */
-private fun PresetRepository.getAllPresetsDirectSync(): List<com.silas.omaster.model.MasterPreset> {
-    return runCatching {
-        // 用 runBlocking 读 StateFlow 初始值（Repository 底层是 StateFlow，first() 立即返回）
-        kotlinx.coroutines.runBlocking { getAllPresets().first() }
-    }.getOrDefault(emptyList())
 }
