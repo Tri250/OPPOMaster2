@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -82,7 +83,6 @@ class HomeViewModel(
             keyMatch && brandMatch && supportMatch
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-   }
 
     // 当前选中的 Tab
     private val _selectedTab = MutableStateFlow(0)
@@ -114,17 +114,11 @@ class HomeViewModel(
 
     /**
      * 可用风格标签枚举 —— 从 allPresets 自动收集 MasterPreset.filter 字段去重
+     * 使用 stateIn 直接转换为 StateFlow，避免嵌套 launch/collect anti-pattern
      */
-    val availableFilters: StateFlow<List<String>> = allPresets.asStateFlow().combine(
-        // 用一个固定的 trigger 让它立即发射；后续 allPresets 更新时重新计算
-        MutableStateFlow(Unit)
-    ) { presets, _ ->
-        presets.mapNotNull { it.filter }.distinct().sorted()
-    }.let { flow ->
-        MutableStateFlow<List<String>>(emptyList()).also { holder ->
-            viewModelScope.launch { flow.collect { holder.value = it } }
-        }.asStateFlow()
-    }
+    val availableFilters: StateFlow<List<String>> = allPresets.asStateFlow()
+        .map { presets -> presets.mapNotNull { it.filter }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
      * FD-10 主管线：搜索 AND 风格筛选 AND 收藏/新预设过滤 → 排序 → 最终可见列表

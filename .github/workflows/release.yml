@@ -240,20 +240,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Generate release notes (from previous tag to HEAD)
-        run: |
-          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sed -n '2p')
-          {
-            if [ -n "$PREVIOUS_TAG" ]; then
-              echo "## 自 $PREVIOUS_TAG 以来的变更"
-              git log --no-merges --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..HEAD"
-            else
-              echo "## 全部变更"
-              git log --no-merges --pretty=format:"- %s (%h)"
-            fi
-          } > RELEASE_NOTES.md
-          echo "📋 生成的 Release 说明："
-          cat RELEASE_NOTES.md
+      # 安装 git-cliff（GitHub Actions runner 不自带）
+      - name: Install git-cliff
+        uses: dtolnay/install-git-cliff@v0.1.2
 
       - name: Create and push tag (manual dispatch only)
         if: github.ref_type != 'tag'
