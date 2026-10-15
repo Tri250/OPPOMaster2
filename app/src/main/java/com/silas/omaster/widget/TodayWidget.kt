@@ -15,6 +15,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.unit.ColorProvider
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.MainActivity
 import com.silas.omaster.R
@@ -72,7 +73,7 @@ private fun WidgetContent(
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(0xFF141414))
+            .background(ColorProvider(Color(0xFF141414.toInt())))
             .padding(12.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.Start
