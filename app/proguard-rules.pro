@@ -83,6 +83,18 @@
 # MU-29 / v1.6：APK 体积 & 性能加固
 # ═══════════════════════════════════════════════════════════
 
+# ── AndroidManifest 组件保活（release-only 闪退根因，v1.6.1 修复）──────────
+# R8 full mode 不保留 Manifest 声明、但无代码显式 new 的组件类。
+# 冷启动时系统按 Manifest 类名反射实例化，类被删/改名即 ClassNotFoundException 闪退。
+# Application / Activity / Service / Receiver 全部显式 keep 类名 + 成员。
+-keep class com.silas.omaster.OMasterApplication { *; }
+-keep class com.silas.omaster.MainActivity { *; }
+-keep class com.silas.omaster.ui.service.FloatingWindowService { *; }
+-keep class com.silas.omaster.ui.service.ShortcutBroadcastReceiver { *; }
+-keep class com.silas.omaster.util.DownloadCompleteReceiver { *; }
+-keep class com.silas.omaster.widget.TodayWidget { *; }
+-keep class com.silas.omaster.widget.TodayWidgetReceiver { *; }
+
 # Glance widget（MU-28）保持反射类不被混淆
 -keep class androidx.glance.** { *; }
 -keep class androidx.glance.appwidget.** { *; }
