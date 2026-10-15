@@ -3,6 +3,7 @@ package com.silas.omaster.ui.home
 import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Surface
 import androidx.compose.foundation.background
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
@@ -34,7 +37,10 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,6 +64,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,6 +85,7 @@ import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedTextSecondary
+import com.silas.omaster.util.DeviceDetector
 import com.silas.omaster.util.hapticClickable
 import com.silas.omaster.util.perform
 import kotlinx.coroutines.delay
@@ -189,6 +197,29 @@ fun HomeScreen(
                     stringResource(R.string.tab_my) to customPresets.size
                 )
             )
+
+            // ═══════════════════════════════════════════════════════════
+            // FD-04 / MU-21 v1.6：机型感知精选 Banner
+            // 当远程订阅里有预设声明 deviceProfile 并匹配当前设备时显示。
+            // 例如 Find X10 用户看到"为 Find X10 · 哈苏 2亿像素 精选"。
+            // 无匹配预设时 Banner 隐藏（不占位）。
+            // ═══════════════════════════════════════════════════════════
+            val recommended by viewModel.deviceRecommendedPresets.collectAsState()
+            val deviceDp = DeviceDetector.getCurrentDevice(LocalContext.current)
+            // 精选展示条件：预设里至少有 3 个是当前设备专属（有 deviceProfile 匹配）
+            val deviceSpecificCount = recommended.count { preset ->
+                preset.deviceProfile != null || !preset.deviceSupport.isNullOrEmpty()
+            }
+            if (deviceSpecificCount >= 3) {
+                DeviceRecommendedBanner(
+                    deviceDisplayName = viewModel.deviceDisplayName,
+                    is200Mp = deviceDp.has200Mp,
+                    hasProImaging = deviceDp.isProImaging,
+                    presets = recommended,
+                    onPresetClick = onNavigateToDetail,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
@@ -310,6 +341,141 @@ fun HomeScreen(
                 }
             }
         )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// FD-04 / MU-21 v1.6：机型感知精选 Banner（可横滑）
+// 标题动态组合：设备展示名 + 特色标签（哈苏/2亿像素/理光/徕卡）
+// 缩略图使用主色方块 + 预设名，避免加载网络图片
+// ═══════════════════════════════════════════════════════════
+
+@Composable
+private fun DeviceRecommendedBanner(
+    deviceDisplayName: String,
+    is200Mp: Boolean,
+    hasProImaging: Boolean,
+    presets: List<MasterPreset>,
+    onPresetClick: (MasterPreset) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val chipTexts = buildList {
+        if (hasProImaging) add("专业影像")
+        if (is200Mp) add("2亿像素")
+        add("精选预设")
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // 标题行
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "为 $deviceDisplayName 精选",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 特色标签
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                chipTexts.take(3).forEach { chip ->
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                    ) {
+                        Text(
+                            text = chip,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 横滑预设列表
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(presets.take(10)) { preset ->
+                    RecommendedPresetChip(
+                        preset = preset,
+                        onClick = { onPresetClick(preset) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedPresetChip(
+    preset: MasterPreset,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .width(96.dp)
+                .padding(8.dp)
+        ) {
+            // 主色方块占位（避免加载远程图）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(
+                        preset.deviceProfile?.let {
+                            if (it.isProImaging) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            else MaterialTheme.colorScheme.secondaryContainer
+                        } ?: MaterialTheme.colorScheme.secondaryContainer,
+                        RoundedCornerShape(8.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = preset.name.take(1),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = preset.name,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            preset.filter?.let { filter ->
+                Text(
+                    text = filter,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

@@ -137,6 +137,15 @@ data class MasterPreset(
     val coverPath: String,
     val galleryImages: List<String>? = null,
     val author: String = "@OPPO影像",
+
+    // ═══════════════════════════════════════════════════════════
+    // MU-21 / FD-04 Schema v3 扩展：机型感知（可选，不强制）
+    // deviceProfile 用于声明该预设"特别适配"的机型；
+    // deviceSupport 用于声明"兼容"的 deviceKey 列表；
+    // 两者缺省时视为"全机型通用"。
+    // ═══════════════════════════════════════════════════════════
+    val deviceProfile: DeviceProfile? = null,
+    val deviceSupport: List<String>? = null,
     val mode: String? = null,
     val filter: String? = null,
     val whiteBalance: String? = null,

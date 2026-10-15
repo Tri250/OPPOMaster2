@@ -9,9 +9,11 @@ import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.network.PresetRemoteManager
+import com.silas.omaster.util.DeviceDetector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,6 +26,10 @@ import kotlinx.coroutines.delay
  * 1. 使用 Job 管理协程，避免重复收集
  * 2. refresh() 现在会取消旧任务并重新收集
  * 3. refresh() 现在会从远程获取最新预设
+ *
+ * MU-21 / FD-04 v1.6 新增：
+ * 4. deviceRecommendedPresets — 机型感知精选预设（deviceProfile 匹配当前设备）
+ * 5. deviceDisplayName — 当前设备展示名，用于 Banner 标题
  */
 class HomeViewModel(
     application: Application,
@@ -43,6 +49,44 @@ class HomeViewModel(
     // 自定义预设
     private val _customPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
     val customPresets: StateFlow<List<MasterPreset>> = _customPresets.asStateFlow()
+
+    // ═══════════════════════════════════════════════════════════
+    // FD-04：机型感知精选预设（v1.6 新增）
+    // 从 allPresets 中筛选 deviceProfile / deviceSupport 匹配当前设备的预设
+    // 若设备无匹配预设则发出 emptyList，UI 层据此隐藏 Banner
+    // ═══════════════════════════════════════════════════════════
+    val deviceDisplayName: String by lazy {
+        val dp = DeviceDetector.getCurrentDevice(appContext)
+        dp.displayNameZh.ifBlank { dp.model }
+    }
+    val isFindX10Series: Boolean by lazy { DeviceDetector.isFindX10Series(appContext) }
+
+    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = allPresets.asStateFlow().combine(
+        MutableStateFlow(DeviceDetector.getCurrentDevice(appContext))
+    ) { presets, deviceProfile ->
+        // 筛选匹配：deviceProfile.deviceKey 匹配 或 brandTag 匹配 或 deviceSupport 包含 deviceKey
+        presets.filter { preset ->
+            val presetDp = preset.deviceProfile
+            val keyMatched = presetDp == null ||
+                    presetDp.deviceKey == com.silas.omaster.model.DeviceProfile.ALL ||
+                    presetDp.deviceKey == deviceProfile.deviceKey
+            val brandMatched = presetDp == null ||
+                    presetDp.brandTag == com.silas.omaster.model.DeviceProfile.BRAND_ALL ||
+                    presetDp.brandTag.equals(deviceProfile.brandTag, ignoreCase = true)
+            val supportMatched = preset.deviceSupport == null ||
+                    preset.deviceSupport.isEmpty() ||
+                    preset.deviceSupport.contains(deviceProfile.deviceKey) ||
+                    preset.deviceSupport.contains(com.silas.omaster.model.DeviceProfile.ALL)
+            // 只要预设声明了 deviceProfile 且匹配当前设备 — 精选；没有声明的预设也通过（作为通配）
+            val presetIsDeviceSpecific = presetDp != null || !preset.deviceSupport.isNullOrEmpty()
+            // 精选只展示有 deviceProfile 且匹配的预设；或所有通配预设（如果设备专属预设为空）
+            if (presetIsDeviceSpecific) keyMatched && brandMatched && supportMatched else true
+        }
+    }.let { flow ->
+        MutableStateFlow<List<MasterPreset>>(emptyList()).also { holder ->
+            viewModelScope.launch { flow.collect { holder.value = it } }
+        }.asStateFlow()
+    }
 
     // 当前选中的 Tab
     private val _selectedTab = MutableStateFlow(0)
