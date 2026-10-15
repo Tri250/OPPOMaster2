@@ -242,7 +242,9 @@ jobs:
 
       # 安装 git-cliff（GitHub Actions runner 不自带）
       - name: Install git-cliff
-        uses: dtolnay/install-git-cliff@v0.1.2
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
 
       - name: Create and push tag (manual dispatch only)
         if: github.ref_type != 'tag'
