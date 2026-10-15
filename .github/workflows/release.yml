@@ -61,14 +61,14 @@ jobs:
       - name: Quality gate (unit tests + lint)
         run: ./gradlew testDebugUnitTest lint --no-daemon
 
-      - name: Upload test & lint reports (on failure)
-        if: failure()
+      - name: Upload test & lint reports
         uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: quality-reports
           path: |
             app/build/reports/tests/
-            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.*
           retention-days: 14
 
   build:
