@@ -48,10 +48,17 @@ class OMasterApplication : Application() {
      * 预初始化友盟
      * 不会采集设备信息，也不会上报数据
      * 必须在 Application.onCreate 中调用
+     *
+     * 【v1.6.0 启动闪退修复】友盟 SDK 为外部依赖，其 preInit 在极少数 ROM / 混淆边界下
+     * 可能抛异常；该调用位于启动路径且不被 UI 依赖，故降级为可失败，绝不连带阻断冷启动。
      */
     private fun preInitUMeng() {
-        UMConfigure.setLogEnabled(false)
-        UMConfigure.preInit(this, "698938eb9a7f3764885bbdaa", "default")
+        try {
+            UMConfigure.setLogEnabled(false)
+            UMConfigure.preInit(this, "698938eb9a7f3764885bbdaa", "default")
+        } catch (e: Throwable) {
+            Logger.w("OMaster", "UMeng preInit failed (non-fatal): ${e.message}")
+        }
     }
 
     /**

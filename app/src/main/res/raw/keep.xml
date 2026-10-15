@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  【v1.6.0 启动闪退修复】release 包开启 shrinkResources=true。
+
+  内置预设 app/src/main/assets/presets.json 中的参数标题使用 "@string/xxx" 形式，
+  运行时由 PresetI18n.resolveString() -> Resources.getIdentifier() 反射解析
+  （见 util/PresetI18n.kt）。资源压缩器只扫描代码字符串常量，不扫描 assets，
+  因此这些字符串会被判定为"未使用"并在 release 包中删除，
+  导致预设参数标题显示为 "@string/xxx" 原文。
+
+  safe 模式下必须通过 tools:keep 显式声明，下列名字来自 assets/presets.json
+  全部 @string/ 引用（修改 presets.json 时需同步维护）。
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/section_color_grading,@string/param_filter,@string/param_soft_light,@string/param_tone_curve,@string/param_saturation,@string/param_warm_cool,@string/param_cyan_magenta,@string/param_sharpness,@string/param_vignette,@string/param_brightness,@string/param_clarity,@string/param_color_temp,@string/param_contrast,@string/param_contrast_highlight,@string/param_contrast_shadow,@string/param_exposure,@string/param_grain,@string/param_grain_size,@string/param_hue,@string/param_iso,@string/param_pro_adjust,@string/param_shutter,@string/param_tone" />
