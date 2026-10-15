@@ -43,7 +43,7 @@ class HomeViewModel(
 
     // 所有预设
     private val _allPresets = MutableStateFlow<List<MasterPreset>>(emptyList())
-    val allPresets: StateFlow<List<MasterPreset>> = _allPresets.asStateFlow()
+    val allPresets: StateFlow<List<MasterPreset>> = _allPresets
 
     // 收藏的预设
     private val _favorites = MutableStateFlow<List<MasterPreset>>(emptyList())
@@ -71,7 +71,7 @@ class HomeViewModel(
      * 机型匹配精选预设 —— 仅依赖 allPresets 的变化，deviceProfile 用 lazy 固定
      * 避免 combine 2-arg vs vararg 重载歧义导致的类型推断失败
      */
-    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = allPresets.asStateFlow()
+    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = allPresets
         .map { presets ->
             val dp = currentDeviceProfile
             val key = dp.deviceKey
@@ -121,7 +121,7 @@ class HomeViewModel(
      * 可用风格标签枚举 —— 从 allPresets 自动收集 MasterPreset.filter 字段去重
      * 使用 stateIn 直接转换为 StateFlow，避免嵌套 launch/collect anti-pattern
      */
-    val availableFilters: StateFlow<List<String>> = allPresets.asStateFlow()
+    val availableFilters: StateFlow<List<String>> = allPresets
         .map { presets -> presets.mapNotNull { it.filter }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -131,7 +131,7 @@ class HomeViewModel(
      */
     val filteredPresets: StateFlow<List<MasterPreset>> = combine(
         combine(
-            allPresets.asStateFlow(),
+            allPresets,
             favorites,
             _searchQuery,
             _selectedFilters
