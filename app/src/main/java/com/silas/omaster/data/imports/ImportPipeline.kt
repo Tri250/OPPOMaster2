@@ -1,6 +1,7 @@
 package com.silas.omaster.data.imports
 
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.data.imports.toPreset
 
 /**
  * FD-09 统一导入管道 v2 — 所有外部预设内容的唯一入口。

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.network.PresetRemoteManager
 import com.silas.omaster.util.DeviceDetector
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -61,32 +63,26 @@ class HomeViewModel(
     }
     val isFindX10Series: Boolean by lazy { DeviceDetector.isFindX10Series(appContext) }
 
-    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = allPresets.asStateFlow().combine(
+
+    val deviceRecommendedPresets: StateFlow<List<MasterPreset>> = combine(
+        allPresets.asStateFlow(),
         MutableStateFlow(DeviceDetector.getCurrentDevice(appContext))
     ) { presets, deviceProfile ->
-        // 筛选匹配：deviceProfile.deviceKey 匹配 或 brandTag 匹配 或 deviceSupport 包含 deviceKey
+        val key = deviceProfile.deviceKey
+        val brand = deviceProfile.brandTag
+        val dp_all = DeviceProfile.ALL
         presets.filter { preset ->
             val presetDp = preset.deviceProfile
-            val keyMatched = presetDp == null ||
-                    presetDp.deviceKey == com.silas.omaster.model.DeviceProfile.ALL ||
-                    presetDp.deviceKey == deviceProfile.deviceKey
-            val brandMatched = presetDp == null ||
-                    presetDp.brandTag == com.silas.omaster.model.DeviceProfile.BRAND_ALL ||
-                    presetDp.brandTag.equals(deviceProfile.brandTag, ignoreCase = true)
-            val supportMatched = preset.deviceSupport == null ||
-                    preset.deviceSupport.isEmpty() ||
-                    preset.deviceSupport.contains(deviceProfile.deviceKey) ||
-                    preset.deviceSupport.contains(com.silas.omaster.model.DeviceProfile.ALL)
-            // 只要预设声明了 deviceProfile 且匹配当前设备 — 精选；没有声明的预设也通过（作为通配）
-            val presetIsDeviceSpecific = presetDp != null || !preset.deviceSupport.isNullOrEmpty()
-            // 精选只展示有 deviceProfile 且匹配的预设；或所有通配预设（如果设备专属预设为空）
-            if (presetIsDeviceSpecific) keyMatched && brandMatched && supportMatched else true
+            val support = preset.deviceSupport
+            val presetIsDeviceSpecific = presetDp != null || !support.isNullOrEmpty()
+            if (!presetIsDeviceSpecific) return@filter true
+            val keyMatch = presetDp == null || presetDp.deviceKey == dp_all || presetDp.deviceKey == key
+            val brandMatch = presetDp == null || presetDp.brandTag == DeviceProfile.BRAND_ALL || presetDp.brandTag.equals(brand, true)
+            val supportMatch = support == null || support.isEmpty() || support.contains(key) || support.contains(dp_all)
+            keyMatch && brandMatch && supportMatch
         }
-    }.let { flow ->
-        MutableStateFlow<List<MasterPreset>>(emptyList()).also { holder ->
-            viewModelScope.launch { flow.collect { holder.value = it } }
-        }.asStateFlow()
-    }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+   }
 
     // 当前选中的 Tab
     private val _selectedTab = MutableStateFlow(0)
@@ -134,7 +130,7 @@ class HomeViewModel(
      * FD-10 主管线：搜索 AND 风格筛选 AND 收藏/新预设过滤 → 排序 → 最终可见列表
      */
     val filteredPresets: StateFlow<List<MasterPreset>> = combine(
-        allPresets,
+        allPresets.asStateFlow(),
         favorites,
         _searchQuery,
         _selectedFilters,
@@ -143,10 +139,8 @@ class HomeViewModel(
         _showNewOnly
     ) { all, favs, query, filters, sort, favOnly, newOnly ->
         val favIds = favs.map { it.id }.toSet()
-
         var result = all.asSequence()
 
-        // ① 搜索：name / filter / tags 任一命中
         if (query.isNotBlank()) {
             val q = query.trim().lowercase()
             result = result.filter { p ->
@@ -156,7 +150,6 @@ class HomeViewModel(
             }
         }
 
-        // ② 风格筛选：多选 AND（用户可以同时选"胶片+黑白"，但一个预设只要命中任一选中标签就算通过）
         if (filters.isNotEmpty()) {
             result = result.filter { p ->
                 (p.filter != null && p.filter in filters) ||
@@ -164,24 +157,17 @@ class HomeViewModel(
             }
         }
 
-        // ③ 收藏 / 新预设开关
         if (favOnly) result = result.filter { favIds.contains(it.id) }
         if (newOnly) result = result.filter { it.isNew }
 
-        // ④ 排序
         val sorted = when (sort) {
             SortOrder.DEFAULT -> result.toList()
             SortOrder.NEW_FIRST -> result.sortedByDescending { it.isNew }.toList()
             SortOrder.FAVORITE_FIRST -> result.sortedByDescending { favIds.contains(it.id) }.toList()
             SortOrder.NAME_A_Z -> result.sortedBy { it.name }.toList()
         }
-
         sorted
-    }.let { flow ->
-        MutableStateFlow<List<MasterPreset>>(emptyList()).also { holder ->
-            viewModelScope.launch { flow.collect { holder.value = it } }
-        }.asStateFlow()
-    }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // ═══════════════════════════════════════════════════════════
     // FD-10 公开动作

@@ -1,6 +1,7 @@
 package com.silas.omaster.util
 
 import android.content.Context
+import android.os.Build
 import android.view.Choreographer
 import com.silas.omaster.ui.animation.AnimationSpecs
 
@@ -32,10 +33,12 @@ object FramerateOptimizer {
         synchronized(this) {
             cached?.let { return it }
             val choreographer = Choreographer.getInstance()
-            // Choreographer.frameDelayNanos 在 Android 12+ 可用；之前的系统用默认 60fps
-            val frameDelay = runCatching {
-                choreographer.frameDelayNanos
-            }.getOrDefault(16_666_667L) // 60fps 基准
+            // frameDelayNanos 是 API 33；低版本用 postFrameCallback 估算
+            val frameDelay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                runCatching { choreographer.frameDelayNanos }.getOrDefault(16_666_667L)
+            } else {
+                16_666_667L  // 60fps 基准
+            } // 60fps 基准
 
             val fps = NANOS_PER_SECOND.toFloat() / frameDelay
             val multiplier = (BASELINE_FPS.toFloat() / fps).coerceIn(0.5f, 1.0f)
