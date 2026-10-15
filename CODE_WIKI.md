@@ -27,14 +27,14 @@
 | **项目名称** | OMaster |
 | **包名** | `com.silas.omaster` |
 | **开发语言** | Kotlin |
-| **最低SDK** | Android 13 (API 33) |
-| **目标SDK** | Android 14 (API 36) |
-| **编译SDK** | API 36 |
-| **版本号** | 1.5.0 (versionCode: 12) |
+| **最低SDK** | Android 6.0 (API 23) |
+| **目标SDK** | Android 16 (API 36) |
+| **编译SDK** | Android 17 (API 37) |
+| **版本号** | 1.6.0 (versionCode: 13，发布时由 CI 注入) |
 | **UI框架** | Jetpack Compose |
 | **架构模式** | MVVM + Repository |
 | **开源协议** | CC BY-NC-SA 4.0 |
-| **Java版本** | Java 11 |
+| **Java版本** | Java 17 |
 
 ### 1.2 核心功能
 
@@ -42,9 +42,10 @@
 - **多品牌主题** — 支持哈苏、蔡司、徕卡、理光、富士、佳能、尼康、索尼、Phase One 共9种品牌主题配色
 - **配置云更新** — 支持从云端获取最新配置，支持自定义订阅源
 - **收藏管理** — 一键收藏喜欢的预设，本地存储无需网络
-- **自定义预设** — 支持创建、编辑和删除自定义预设
-- **悬浮窗模式** — 拍照时可悬浮显示参数，支持标准/紧凑两种模式，左右滑动切换预设
-- **多语言支持** — 支持中文和英文
+- **自定义预设** — 支持创建、编辑和删除自定义预设；支持截图取景参数识别导入与预设导出
+- **悬浮窗模式** — 拍照时可悬浮显示参数，支持标准/紧凑/取景框跟随三种模式，左右滑动切换预设
+- **桌面小组件** — 今日推荐预设（Glance 实现）
+- **多语言支持** — 支持简体中文、English、日本語三种语言
 - **照片相框** — 支持图片边框和主色调提取
 - **色彩漫步** — 色彩卡片浏览功能
 - **自动更新** — 支持 GitHub/Gitee 双渠道检查更新，应用内下载安装
@@ -147,35 +148,52 @@
 app/src/main/
 ├── AndroidManifest.xml                 # 清单文件（权限、组件声明）
 ├── assets/
-│   ├── presets.json                    # 内置预设数据
-│   └── iconfont.ttf                    # 图标字体
+│   └── presets.json                    # 内置预设数据（其中 @string/xxx 由 PresetI18n 反射解析）
 ├── java/com/silas/omaster/
-│   ├── MainActivity.kt                 # 主Activity，导航入口，欢迎流程
+│   ├── MainActivity.kt                 # 主Activity，NavHost 装配，欢迎流程
 │   ├── OMasterApplication.kt           # Application类，全局初始化
+│   │
+│   ├── navigation/                     # 路由契约层
+│   │   └── Screen.kt                   # @Serializable 类型安全路由（NavHost 反射解析点，混淆敏感）
 │   │
 │   ├── model/                          # 数据模型层
 │   │   ├── MasterPreset.kt            # 预设数据模型（核心）
 │   │   ├── ColorCard.kt               # 色彩卡片模型
+│   │   ├── DeviceProfile.kt           # 机型档案（机型感知推荐）
 │   │   └── Subscription.kt            # 订阅配置模型
 │   │
 │   ├── data/                          # 数据层
-│   │   ├── config/                    # 配置管理
-│   │   │   ├── ConfigCenter.kt        # 配置中心（主题、语言等）
-│   │   │   ├── ConfigMigration.kt     # 配置迁移
-│   │   │   └── SubscriptionConfig.kt  # 订阅配置子模块
+│   │   ├── config/                    # 配置中心（v1.6 统一配置源）
+│   │   │   ├── ConfigCenter.kt        # 配置中心单例（主题/语言/深色/悬浮窗/震动…）
+│   │   │   ├── ConfigModels.kt        # 配置数据类
+│   │   │   ├── ConfigMigration.kt     # 旧版存储迁移（app_settings / omaster_update_prefs）
+│   │   │   └── SubscriptionConfig.kt  # 订阅配置子模块（含旧 omaster_subscriptions 迁移）
 │   │   ├── local/                     # 本地数据管理
 │   │   │   ├── FavoriteManager.kt     # 收藏管理
 │   │   │   ├── CustomPresetManager.kt # 自定义预设管理
-│   │   │   ├── FloatingWindowMode.kt  # 悬浮窗模式枚举
-│   │   │   ├── DarkMode.kt            # 深色模式枚举
-│   │   │   ├── AppLanguage.kt         # 语言枚举
-│   │   │   └── UpdateChannel.kt       # 更新渠道枚举
+│   │   │   ├── NewPresetManager.kt    # 订阅新预设提示
+│   │   │   ├── FloatingWindowGuideManager.kt # 悬浮窗引导
+│   │   │   ├── SubscriptionCatalogReader.kt  # 订阅目录读取
+│   │   │   ├── CheckInManager.kt      # 打卡数据
+│   │   │   ├── ColorWalkManager.kt    # 色彩漫步数据
+│   │   │   ├── HolidayGreetingManager.kt # 节日问候
+│   │   │   └── ConfigEnums.kt         # DarkMode/AppLanguage/UpdateChannel/FloatingWindowMode 枚举
+│   │   ├── imports/                   # 导入管线（v1.6）
+│   │   │   ├── ImportPipeline.kt      # 统一入库管线
+│   │   │   ├── PresetImportValidator.kt
+│   │   │   └── ScreenCaptureParser.kt # 截图取景参数识别
+│   │   ├── exports/                   # 导出（v1.6）
+│   │   │   └── ExportPresetService.kt
 │   │   ├── repository/                # 数据仓库
-│   │   │   └── PresetRepository.kt    # 预设数据仓库
+│   │   │   └── PresetRepository.kt    # 预设数据仓库（进程级单例）
 │   │   └── ColorCardLibrary.kt        # 色彩卡片库
 │   │
 │   ├── network/                       # 网络层
-│   │   └── PresetRemoteManager.kt     # 远程预设获取（Ktor）
+│   │   ├── PresetRemoteManager.kt     # 远程预设获取（Ktor）
+│   │   └── SubscriptionUpdatePolicy.kt # 订阅更新策略（v1.6）
+│   │
+│   ├── widget/                        # 桌面小组件（v1.6）
+│   │   └── TodayWidget.kt             # Glance 小组件 + TodayWidgetReceiver
 │   │
 │   ├── ui/                            # UI层
 │   │   ├── home/                      # 首页
@@ -183,53 +201,73 @@ app/src/main/
 │   │   │   └── HomeViewModel.kt       # 首页ViewModel
 │   │   ├── detail/                    # 详情与个人中心
 │   │   │   ├── DetailScreen.kt        # 预设详情页
-│   │   │   ├── ProfileScreen.kt       # 个人中心（关于页）
+│   │   │   ├── DetailViewModel.kt
+│   │   │   ├── AboutScreen.kt         # 关于页（ProfileScreen 定义于此）
 │   │   │   ├── OpenSourceLicenseScreen.kt
 │   │   │   └── PrivacyPolicyScreen.kt
 │   │   ├── create/                    # 创建/编辑预设
 │   │   │   ├── UniversalCreatePresetScreen.kt
 │   │   │   ├── UniversalCreatePresetViewModel.kt
-│   │   │   └── PresetSelectionScreen.kt
-│   │   ├── discover/                  # 发现页
+│   │   │   ├── PresetSelectionScreen.kt
+│   │   │   └── ClipboardImportDialog.kt
+│   │   ├── discover/                  # 发现页 / 色彩漫步 / 打卡
 │   │   │   ├── DiscoverScreen.kt
-│   │   │   ├── ColorWalkScreen.kt
-│   │   └── frame/                     # 照片相框
-│   │   │   └── PhotoFrameScreen.kt
+│   │   │   ├── ColorWalkScreen.kt / ColorWalkViewModel.kt
+│   │   │   ├── ColorWalkCard.kt / ColorWalkComponents.kt / ColorWalkHistory.kt
+│   │   │   ├── CheckInCalendar.kt / CheckInDetailDialog.kt
+│   │   │   └── ...
+│   │   ├── frame/                     # 照片相框
+│   │   │   ├── PhotoFrameScreen.kt
+│   │   │   └── FrameViewModel.kt
 │   │   ├── subscription/              # 订阅管理
 │   │   │   └── SubscriptionScreen.kt
 │   │   ├── settings/                  # 设置页
 │   │   │   └── SettingsScreen.kt
 │   │   ├── service/                   # 悬浮窗服务
-│   │   │   ├── FloatingWindowService.kt  # 系统悬浮窗Service
-│   │   │   └── FloatingWindowController.kt  # 悬浮窗控制器
+│   │   │   ├── FloatingWindowService.kt      # 系统悬浮窗Service
+│   │   │   ├── FloatingWindowController.kt   # 悬浮窗控制器
+│   │   │   ├── FloatingWindowWidgetFactory.kt
+│   │   │   ├── FloatingWindowCompactFactory.kt
+│   │   │   ├── FloatingWindowGestureMath.kt
+│   │   │   ├── PresetParamMapper.kt
+│   │   │   └── ShortcutBroadcastReceiver.kt  # 侧边键快捷方式广播
 │   │   ├── components/                # 通用UI组件
-│   │   │   ├── PresetCard.kt
-│   │   │   ├── PillNavBar.kt
-│   │   │   ├── ImageGallery.kt
+│   │   │   ├── PresetCard.kt / PillNavBar.kt / ImageGallery.kt
+│   │   │   ├── GlassButton 等 glass/ 毛玻璃组件
+│   │   │   ├── WelcomeDialog.kt / HolidayGreetingDialog.kt
 │   │   │   └── ...
 │   │   ├── theme/                     # 主题配置
 │   │   │   ├── Theme.kt               # Compose主题
 │   │   │   ├── AppTheme.kt            # 品牌主题枚举
 │   │   │   ├── Color.kt               # 颜色定义
-│   │   │   └── Typography.kt          # 字体定义
+│   │   │   ├── AppDesign.kt           # 设计常量（间距/圆角等）
+│   │   │   └── Type.kt                # 字体定义
 │   │   └── animation/                 # 动画配置
-│   │       ├── AnimationSpecs.kt
-│   │       └── ...
+│   │       └── AnimationSpecs.kt
 │   │
 │   └── util/                          # 工具类
 │       ├── JsonUtil.kt                # JSON解析与预设加载
-│       ├── PresetI18n.kt              # 国际化本地化
-│       ├── UpdateChecker.kt           # 应用更新检查
-│       ├── Logger.kt                  # 日志管理器
+│       ├── PresetI18n.kt              # assets 侧 @string 反射本地化
 │       ├── LanguageUtil.kt            # 语言切换
-│       ├── HapticSettings.kt          # 震动设置
+│       ├── UpdateChecker.kt           # 应用更新检查（含 DownloadCompleteReceiver）
+│       ├── Logger.kt / LogExporter.kt # 日志与日志导出
+│       ├── HapticExt.kt               # 震动设置（HapticSettings 定义于此）与扩展
+│       ├── DeviceDetector.kt          # 设备识别
+│       ├── CameraFramingAvoidance.kt  # 取景框避位
+│       ├── ShortcutRegistrar.kt       # 快捷方式动态注册
+│       ├── IconFont.kt                # 图标字体（加载 res/font/iconfont.ttf）
+│       ├── FrameRenderer.kt / ImageExporter.kt / ColorExtractor.kt / ImageCacheManager.kt
+│       ├── ExifReader.kt / FormatUtils.kt / PermissionUtil.kt / FramerateOptimizer.kt
 │       ├── VersionInfo.kt             # 版本信息
-│       ├── IconFont.kt                # 图标字体
 │       └── ...
 ├── res/                               # 资源文件
-│   ├── values/strings.xml             # 中文字符串
-│   ├── values-en/strings.xml          # 英文字符串
-│   ├── values/colors.xml
+│   ├── font/iconfont.ttf              # 图标字体（不在 assets 目录）
+│   ├── layout/today_widget_loading.xml # 小组件加载布局
+│   ├── raw/keep.xml                   # 资源压缩保护（assets 侧反射引用的 @string）
+│   ├── xml/                           # shortcuts.xml / today_widget_info.xml
+│   ├── values/strings.xml             # 简体中文
+│   ├── values-en/strings.xml          # English
+│   ├── values-ja/strings.xml          # 日本語
 │   └── ...
 └── ic_launcher-playstore.png          # 应用图标
 ```
@@ -791,8 +829,7 @@ MainActivity
 │   └── coil_cache/                        # Coil图片缓存
 │
 └── assets/
-    ├── presets.json                       # 内置预设数据
-    └── iconfont.ttf                       # 图标字体
+    └── presets.json                       # 内置预设数据（@string/xxx 由 PresetI18n 反射解析）
 ```
 
 ---
@@ -804,10 +841,11 @@ MainActivity
 | 工具 | 版本要求 |
 |------|----------|
 | Android Studio | 最新稳定版 |
-| JDK | 11 |
-| Gradle | 8.0+ |
-| Kotlin | 2.3.10 |
-| Android SDK | API 33-36 |
+| JDK | 17 |
+| Gradle | 9.5 |
+| Kotlin | 2.3.21 |
+| AGP | 9.2.0 |
+| Android SDK | API 23–37 |
 
 ### 7.2 构建命令
 
@@ -836,7 +874,7 @@ MainActivity
 
 1. **打开项目**: 使用 Android Studio 打开项目根目录
 2. **同步Gradle**: 点击 "Sync Now" 同步依赖
-3. **选择设备**: 连接 Android 13+ 设备或启动模拟器
+3. **选择设备**: 连接 Android 6.0+ 设备或启动模拟器
 4. **运行**: 点击运行按钮或按 `Shift+F10`
 
 ### 7.4 权限要求
@@ -861,10 +899,15 @@ MainActivity
 | `MainActivity` | 主入口Activity，`exported=true` |
 | `FileProvider` | APK安装文件共享 |
 | `DownloadCompleteReceiver` | 下载完成广播接收器 |
+| `ShortcutBroadcastReceiver` | 侧边键悬浮窗快捷方式广播接收器（`ui.service`） |
+| `TodayWidgetReceiver` | Glance 桌面小组件接收器（`widget`），继承 `GlanceAppWidgetReceiver` |
+
+> ⚠️ 以上静态注册组件由系统按清单中的类名反射实例化，release 混淆下必须显式保留构造器
+> （见 `app/proguard-rules.pro`），并由 CI 产物冒烟门禁反查 dex 中类是否存活。
 
 ### 7.5 系统要求
 
-- Android 13 (API 33) 及以上
+- Android 6.0 (API 23) 及以上
 - 系统允许浮窗显示在相机应用上方
 
 ---
@@ -876,14 +919,15 @@ MainActivity
 ```kotlin
 android {
     namespace = "com.silas.omaster"
-    compileSdk { version = release(36) }
+    compileSdk { version = release(37) }
 
     defaultConfig {
         applicationId = "com.silas.omaster"
-        minSdk = 33       // Android 13
-        targetSdk = 36    // Android 14
-        versionCode = 12
-        versionName = "1.5.0"
+        minSdk = 23       // Android 6.0
+        targetSdk = 36    // Android 16
+        // 发布时由 CI 通过 -PciVersionCode 注入（基于提交数单调递增）
+        versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 13
+        versionName = "1.6.0"
     }
 
     buildTypes {
@@ -904,8 +948,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -920,27 +964,34 @@ android {
 [proguard-rules.pro](file:///workspace/app/proguard-rules.pro) 包含以下关键规则:
 
 - 保留 Compose 相关类
-- 保留 Gson 序列化相关类
 - 保留 ViewModel
 - 保留 Parcelable/Serializable
 - 保留友盟 SDK
 - 保留 Coil 图片加载
-- 保留 Kotlin Serialization
-- 保留数据模型 (`com.silas.omaster.model.**`)
+- 保留 Glance 小组件（`androidx.glance.**`）
+- 保留 Kotlin Serialization 运行时（`kotlinx.serialization.**`）
+- **条件保留 `@Serializable` 类的 `Companion` / `$serializer` / `INSTANCE`**（类型安全导航反射解析兜底）
+- **保留 App 自有包 `com.silas.omaster.**$$serializer` 与 `Companion`**（Screen 路由、data.local 管理器）
+- 保留数据模型（`com.silas.omaster.model.**`）
 - 保留资源ID（Realme预设反射获取资源需要）
+- **保留静态注册组件构造器**：`TodayWidgetReceiver` / `DownloadCompleteReceiver` / `ShortcutBroadcastReceiver`
+- 移除 `-mergeinterfacesaggressively`（避免 release 下 `AbstractMethodError`）
 - 忽略 Ktor 调试和 SLF4J 警告
+
+> 配套资源保护：[res/raw/keep.xml](file:///workspace/app/src/main/res/raw/keep.xml)
+> 声明了 assets 侧 `@string/xxx` 被反射引用的资源名，防止 `shrinkResources` 误删。
 
 ### 8.3 版本 Catalog (libs.versions.toml)
 
 依赖版本集中管理，包含:
-- Android Gradle Plugin 9.1.0
-- Kotlin 2.3.10
-- Compose BOM 2026.03.01
-- Ktor 3.4.2
-- Coil 2.7.0
-- Gson 2.13.2
-- Navigation Compose 2.9.7
-- Kotlinx Serialization 1.10.0
+- Android Gradle Plugin 9.2.0
+- Kotlin 2.3.21
+- Compose BOM 2026.04.01
+- Ktor 3.4.3
+- Navigation Compose 2.9.8
+- Kotlinx Serialization 1.11.0
+- Glance 1.1.1
+- Robolectric 4.17
 
 ### 8.4 Maven 仓库配置
 
@@ -962,6 +1013,29 @@ dependencyResolutionManagement:
   4. mavenCentral()
   5. repo1.maven.org/maven2/
 ```
+
+### 8.5 Release 保留契约与产物冒烟门禁
+
+release 构建启用 `isMinifyEnabled=true` + `isShrinkResources=true`，因此存在三类
+"编译期可见、运行期可达、但静态分析不可见" 的依赖，必须显式声明保留：
+
+| 依赖类型 | 举例 | 保护手段 |
+|---------|------|---------|
+| 反射解析的序列化器 | `Screen.Home / Detail / EditPreset …`（类型安全导航） | `proguard-rules.pro` 的 kotlinx.serialization 条件保留规则 |
+| 清单静态注册的组件 | `TodayWidgetReceiver`、`DownloadCompleteReceiver`、`ShortcutBroadcastReceiver` | 显式保留构造器 |
+| assets 内反射引用的资源 | `presets.json` 中的 `@string/param_*`、`@string/section_*` | [res/raw/keep.xml](file:///workspace/app/src/main/res/raw/keep.xml) |
+
+对应验证：
+
+1. **单元测试**（`./gradlew testDebugUnitTest`）：
+   [ScreenRouteSerializationTest](file:///workspace/app/src/test/java/com/silas/omaster/navigation/ScreenRouteSerializationTest.kt)
+   锁定每条路由的序列化往返；[ConfigMigrationTest](file:///workspace/app/src/test/java/com/silas/omaster/data/config/ConfigMigrationTest.kt)
+   锁定配置/订阅迁移边界。
+2. **产物冒烟门禁**（CI `release.yml`）：构建完成后直接反查最终 dex 字符串池，
+   确认上述关键类型存活，从流水线层面杜绝"能打包但装到手机上闪退"。
+
+> 历史背景：v1.6.0 首发版本因缺少上述保留契约，release 包在 `NavHost` 建图时
+> 抛 `SerializationException` 导致冷启动闪退（debug 包不混淆，故仅在正式包复现）。
 
 ---
 

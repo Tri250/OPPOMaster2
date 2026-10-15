@@ -25,10 +25,10 @@ object ConfigMigration {
         val editor = targetPrefs.edit()
         var hasData = false
 
-        // 1. 迁移 SettingsManager 数据
+        // 1. 迁移旧版设置存储（SharedPreferences "app_settings"）
         val settingsPrefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         if (settingsPrefs.all.isNotEmpty()) {
-            android.util.Log.d(ConfigLog.TAG, "[Migration] Migrating SettingsManager data...")
+            android.util.Log.d(ConfigLog.TAG, "[Migration] Migrating legacy app_settings...")
 
             // 主题
             settingsPrefs.getString("theme_id", null)?.let {
@@ -83,10 +83,10 @@ object ConfigMigration {
             }
         }
 
-        // 2. 迁移 UpdateConfigManager 数据
+        // 2. 迁移旧版预设更新地址（SharedPreferences "omaster_update_prefs"）
         val updatePrefs = context.getSharedPreferences("omaster_update_prefs", Context.MODE_PRIVATE)
         if (updatePrefs.all.isNotEmpty()) {
-            android.util.Log.d(ConfigLog.TAG, "[Migration] Migrating UpdateConfigManager data...")
+            android.util.Log.d(ConfigLog.TAG, "[Migration] Migrating legacy update prefs...")
 
             updatePrefs.getString("preset_update_url", null)?.let { url ->
                 // 推断更新渠道
@@ -108,7 +108,9 @@ object ConfigMigration {
     }
 
     /**
-     * 清理旧版数据（可选，建议在确认迁移成功后调用）
+     * 清理旧版数据（在确认迁移成功后调用）
+     * 注意：订阅存储 "omaster_subscriptions" 由 SubscriptionConfig 在构造时自行迁移，
+     * 此处一并清理，确保旧版残留数据不再占用存储。
      */
     fun cleanupLegacyData(context: Context) {
         android.util.Log.d(ConfigLog.TAG, "[Migration] Cleaning up legacy data...")
@@ -117,6 +119,8 @@ object ConfigMigration {
         context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
             .edit().clear().apply()
         context.getSharedPreferences("omaster_update_prefs", Context.MODE_PRIVATE)
+            .edit().clear().apply()
+        context.getSharedPreferences("omaster_subscriptions", Context.MODE_PRIVATE)
             .edit().clear().apply()
 
         android.util.Log.d(ConfigLog.TAG, "[Migration] Legacy data cleaned up")

@@ -346,12 +346,12 @@ class HomeViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        // 清理时取消所有任务
+        // 只取消本 ViewModel 自己的收集任务
         allPresetsJob?.cancel()
         favoritesJob?.cancel()
         customPresetsJob?.cancel()
-        // 清理 Repository 的协程作用域，避免内存泄漏
-        repository.cleanup()
+        // 注意：repository 是进程级单例，其 scope 与 Application 同生命周期，
+        // 不可在此取消（否则订阅变更监听会被永久中断）。
     }
 }
 

@@ -56,8 +56,10 @@ class ConfigCenter private constructor(context: Context) {
     private val subscriptionConfig = SubscriptionConfig(appContext)
 
     init {
-        // 执行数据迁移
-        ConfigMigration.migrate(appContext, prefs)
+        // 执行数据迁移（迁移成功后清理旧版存储）
+        if (ConfigMigration.migrate(appContext, prefs)) {
+            ConfigMigration.cleanupLegacyData(appContext)
+        }
     }
 
     // ═══════════════════════════════════════════════════════════

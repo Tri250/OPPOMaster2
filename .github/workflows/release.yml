@@ -1,8 +1,9 @@
 name: Release
 
-# ED-02 CI 质量门禁 + ED-01 签名发布流水线
+# ED-02 CI 质量门禁 + ED-01 签名发布流水线 + ED-05 产物冒烟门禁
 # - 所有 push / PR：先跑 testDebugUnitTest + lint 门禁，任一失败阻断
 # - tag 推送（vX.Y.Z）或手动 dispatch 勾选创建 Release：门禁通过后构建签名 Release 并创建草稿 Release
+# - Release 构建后：反查 dex 中必须存活的反序列化/组件类，杜绝"能打包但装到手机上闪退"
 # - 版本一致性（G-3）：tag 必须与 versionName 一致；versionCode 由 CI 按提交数注入
 on:
   push:
@@ -163,6 +164,48 @@ jobs:
               exit 1
             fi
           done
+
+      # ED-05：release 产物冒烟门禁 —— 防止 R8 误删运行期反射依赖
+      # v1.6.0 冷启动闪退根因：类型安全导航的 kotlinx Serializer / 静态注册组件
+      # 在导航库内部通过反射解析，R8 静态分析看不到调用点而将其移除。
+      # 此处直接在最终 dex 中反查这些类型是否存活，把"能否启动"纳入发布门禁。
+      - name: Smoke gate - verify R8 retained runtime-critical classes (release only)
+        if: steps.variant.outputs.IS_RELEASE == 'true'
+        run: |
+          APK=$(ls ${{ env.APK_PATH }}/*-universal-*.apk 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            APK=$(ls ${{ env.APK_PATH }}/*.apk | head -1)
+          fi
+          echo "🔎 冒烟检查产物: $APK"
+
+          # dex 的字符串池完整保留类型描述符，直接反查即可
+          unzip -p "$APK" 'classes*.dex' > /tmp/omaster-all.dex
+
+          REQUIRED=(
+            'Lcom/silas/omaster/navigation/Screen$Home$$serializer;'
+            'Lcom/silas/omaster/navigation/Screen$Detail$$serializer;'
+            'Lcom/silas/omaster/navigation/Screen$EditPreset$$serializer;'
+            'Lcom/silas/omaster/navigation/Screen$CreatePreset$$serializer;'
+            'Lcom/silas/omaster/widget/TodayWidgetReceiver;'
+            'Lcom/silas/omaster/util/DownloadCompleteReceiver;'
+            'Lcom/silas/omaster/ui/service/ShortcutBroadcastReceiver;'
+          )
+
+          MISSING=0
+          for cls in "${REQUIRED[@]}"; do
+            if grep -a -q -F "$cls" /tmp/omaster-all.dex; then
+              echo "  ✅ $cls"
+            else
+              echo "  ❌ 缺失 $cls —— 运行期反射依赖被 R8 移除，将导致启动闪退"
+              MISSING=1
+            fi
+          done
+
+          if [ "$MISSING" -ne 0 ]; then
+            echo "❌ Release 产物冒烟门禁失败：请检查 app/proguard-rules.pro 的 keep 规则。"
+            exit 1
+          fi
+          echo "✅ Release 产物冒烟门禁通过"
 
       - name: Upload Universal APK
         uses: actions/upload-artifact@v7

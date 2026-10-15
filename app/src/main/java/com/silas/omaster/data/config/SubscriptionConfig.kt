@@ -31,6 +31,9 @@ internal class SubscriptionConfig(private val context: Context) {
 
         private const val PREFS_NAME = "omaster_config_subscriptions"
         private const val KEY_SUBSCRIPTIONS = "subscriptions_list"
+
+        /** 旧版 SubscriptionManager 使用的存储名（仅用于一次性迁移） */
+        private const val LEGACY_PREFS_NAME = "omaster_subscriptions"
     }
 
     init {
@@ -48,8 +51,75 @@ internal class SubscriptionConfig(private val context: Context) {
                 _subscriptionsFlow.value = emptyList()
             }
         } else {
-            createDefaultSubscriptions()
+            // 首启：优先迁移 v1.5 及以前的旧订阅存储，避免升级用户的自定义订阅丢失；
+            // 仅当确实没有旧数据时才写入出厂默认订阅。
+            if (migrateFromLegacy()) {
+                saveSubscriptions()
+            } else {
+                createDefaultSubscriptions()
+            }
         }
+    }
+
+    /**
+     * 迁移旧 SubscriptionManager 的订阅存储（SharedPreferences "omaster_subscriptions"）。
+     * 保留用户自定义订阅，并补齐官方 / Realme 默认订阅（与旧版迁移语义一致）。
+     * @return true 表示迁移到了旧数据
+     */
+    private fun migrateFromLegacy(): Boolean {
+        val legacyJson = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_SUBSCRIPTIONS, null)
+            ?: return false
+
+        val legacy = try {
+            json.decodeFromString<SubscriptionList>(legacyJson).subscriptions
+        } catch (e: Exception) {
+            android.util.Log.e(ConfigLog.TAG, "[Subscription] Failed to migrate legacy subscriptions", e)
+            return false
+        }
+        if (legacy.isEmpty()) return false
+
+        // 1) 旧版「官方内置预设」URL 归一化
+        var migrated = legacy.map { sub ->
+            if (sub.name == "官方内置预设" && sub.url != DEFAULT_PRESET_URL) {
+                sub.copy(url = DEFAULT_PRESET_URL)
+            } else {
+                sub
+            }
+        }
+        // 2) 补齐官方预设（用户可能只订阅了第三方源）
+        if (migrated.none { it.url == DEFAULT_PRESET_URL }) {
+            migrated = listOf(
+                Subscription(
+                    url = DEFAULT_PRESET_URL,
+                    name = "OPPO / 一加 大师预设",
+                    author = "@OMaster",
+                    build = 4,
+                    isEnabled = true,
+                    presetCount = 0,
+                    lastUpdateTime = System.currentTimeMillis()
+                )
+            ) + migrated
+        }
+        // 3) 补齐 Realme 预设（默认关闭，与旧版一致）
+        if (migrated.none { it.url == REALME_PRESET_URL }) {
+            migrated = migrated + Subscription(
+                url = REALME_PRESET_URL,
+                name = "Realme GR预设",
+                author = "@OMaster",
+                build = 1,
+                isEnabled = false,
+                presetCount = 0,
+                lastUpdateTime = 0
+            )
+        }
+
+        _subscriptionsFlow.value = migrated
+        android.util.Log.d(
+            ConfigLog.TAG,
+            "[Subscription] Migrated ${migrated.size} subscriptions from legacy store"
+        )
+        return true
     }
 
     private fun createDefaultSubscriptions() {

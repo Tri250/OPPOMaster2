@@ -56,6 +56,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.navigation.Screen
 import com.silas.omaster.ui.components.PillNavBar
 import com.silas.omaster.ui.components.WelcomeDialog
 import com.silas.omaster.ui.create.PresetSelectionScreen
@@ -77,7 +78,6 @@ import com.silas.omaster.util.LanguageUtil
 import com.silas.omaster.util.VersionInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.network.PresetRemoteManager
@@ -93,50 +93,6 @@ import kotlinx.coroutines.delay
 
 
 val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided") }
-
-sealed class Screen {
-    @Serializable
-    data object Home : Screen()
-
-    @Serializable
-    data class Detail(val presetId: String) : Screen()
-
-    @Serializable
-    data object PresetSelection : Screen()
-
-    @Serializable
-    data class CreatePreset(val templateId: String? = null) : Screen()
-
-    @Serializable
-    data class EditPreset(val presetId: String) : Screen()
-
-    @Serializable
-    data object Settings : Screen()
-
-    @Serializable
-    data object Profile : Screen()
-
-    @Serializable
-    data object About : Screen()
-
-    @Serializable
-    data object Discover : Screen()
-
-    @Serializable
-    data object ColorWalk : Screen()
-
-    @Serializable
-    data object Subscription : Screen()
-
-    @Serializable
-    data object PrivacyPolicy : Screen()
-
-    @Serializable
-    data object OpenSourceLicense : Screen()
-
-    @Serializable
-    data object PhotoFrame : Screen()
-}
 
 private const val SURVEY_URL = "https://www.wjx.cn/vm/your_survey_id.aspx"
 

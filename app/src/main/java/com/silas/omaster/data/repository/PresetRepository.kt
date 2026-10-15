@@ -9,7 +9,6 @@ import com.silas.omaster.util.JsonUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -56,8 +55,9 @@ class PresetRepository(
 
     /**
      * 【协程作用域】
-     * 使用自定义 Scope 管理协程生命周期
-     * 避免使用 GlobalScope 导致内存泄漏
+     * 本仓库是进程级单例，scope 与 Application 同生命周期。
+     * 仅用于长期监听订阅变更（见 init 块），不得由 ViewModel 取消——
+     * 否则首个 HomeViewModel 销毁后，订阅变更监听会被永久中断。
      */
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -77,16 +77,6 @@ class PresetRepository(
                 reloadDefaultPresets()
             }
         }
-    }
-
-    /**
-     * 【清理方法】
-     * 取消所有协程，释放资源
-     * 应在 ViewModel 销毁时调用
-     */
-    fun cleanup() {
-        android.util.Log.d("PresetRepository", "Cleaning up repository scope")
-        repositoryScope.cancel()
     }
 
     /**
