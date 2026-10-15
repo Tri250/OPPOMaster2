@@ -278,6 +278,10 @@ class FloatingWindowService : Service() {
                     name, sections, 50, 300,
                     currentIndex, totalCount
                 )
+                FloatingWindowMode.FRAMING -> showFramingWindow(
+                    name, sections, 50, 300,
+                    currentIndex, totalCount
+                )
             }
             return
         }
@@ -293,6 +297,11 @@ class FloatingWindowService : Service() {
                     when (mode) {
                         FloatingWindowMode.STANDARD -> updateStandardContent(sections)
                         FloatingWindowMode.COMPACT -> updateCompactContent(sections)
+                        // FRAMING 模式无专用 updateContent —— 降级重建
+                        FloatingWindowMode.FRAMING -> showFramingWindow(
+                            name, sections, params?.x ?: 50, params?.y ?: 300,
+                            currentIndex, totalCount
+                        )
                     }
                 }
             }
@@ -305,6 +314,10 @@ class FloatingWindowService : Service() {
                     currentIndex, totalCount
                 )
                 FloatingWindowMode.COMPACT -> showCompactWindow(
+                    name, sections, params?.x ?: 50, params?.y ?: 300,
+                    currentIndex, totalCount
+                )
+                FloatingWindowMode.FRAMING -> showFramingWindow(
                     name, sections, params?.x ?: 50, params?.y ?: 300,
                     currentIndex, totalCount
                 )

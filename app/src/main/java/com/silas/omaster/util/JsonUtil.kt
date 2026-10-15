@@ -28,6 +28,12 @@ import java.util.Locale
  */
 object JsonUtil {
 
+    // MU-29 / v1.6：统一 Json 实例（ignoreUnknownKeys 保护未来 schema 演进）
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        prettyPrint = false
+    }
 
     /** 解析订阅仓库返回的预设列表 JSON */
     fun parsePresetList(json: String): com.silas.omaster.model.PresetList {

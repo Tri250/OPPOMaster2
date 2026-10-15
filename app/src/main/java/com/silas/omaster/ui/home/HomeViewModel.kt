@@ -122,16 +122,31 @@ class HomeViewModel(
 
     /**
      * FD-10 主管线：搜索 AND 风格筛选 AND 收藏/新预设过滤 → 排序 → 最终可见列表
+     * 注意：kotlinx.coroutines 的 combine 最多 5 个 flow，7 个需嵌套
      */
     val filteredPresets: StateFlow<List<MasterPreset>> = combine(
-        allPresets.asStateFlow(),
-        favorites,
-        _searchQuery,
-        _selectedFilters,
-        _sortOrder,
-        _showFavoritesOnly,
-        _showNewOnly
-    ) { all, favs, query, filters, sort, favOnly, newOnly ->
+        combine(
+            allPresets.asStateFlow(),
+            favorites,
+            _searchQuery,
+            _selectedFilters
+        ) { all, favs, query, filters ->
+            listOf(all, favs, query, filters)
+        },
+        combine(
+            _sortOrder,
+            _showFavoritesOnly,
+            _showNewOnly
+        ) { sort, favOnly, newOnly ->
+            Triple(sort, favOnly, newOnly)
+        }
+    ) { combined, triple ->
+        val all = combined[0] as List<MasterPreset>
+        val favs = combined[1] as List<MasterPreset>
+        val query = combined[2] as String
+        val filters = combined[3] as Set<String>
+        val (sort, favOnly, newOnly) = triple
+
         val favIds = favs.map { it.id }.toSet()
         var result = all.asSequence()
 

@@ -93,7 +93,9 @@ object ExifReader {
     // ═══════════════════════════════════════════════════════════
 
     private fun readAperture(exif: ExifInterface): String? {
-        val raw = exif.getAttribute(ExifInterface.TAG_APERTURE)
+        // TAG_APERTURE 在 androidx.exifinterface < 1.5.0 中不存在（我们用的 1.4.1），
+        // 直接用 EXIF 标准标签字符串 "ApertureValue"（所有 ExifInterface 版本都支持字符串）
+        val raw = exif.getAttribute("ApertureValue")
         return runCatching {
             raw?.toFloatOrNull()?.let { "f/${String.format(Locale.getDefault(), "%.1f", it)}" }
         }.getOrNull()

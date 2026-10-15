@@ -41,8 +41,11 @@ object ShortcutRegistrar {
 
     @RequiresApi(Build.VERSION_CODES.N_MR1)
     private fun aiSnapShortcut(context: Context): ShortcutInfo {
-        val intent = Intent(Intent.ACTION_SEND_IMAGE).apply {
+        // 注意：Android 没有 ACTION_SEND_IMAGE 常量，使用 ACTION_SEND 配合 mime image/*
+        // AndroidManifest.xml 中已声明 MAIN + SEND + image/* intent-filter 接收此请求
+        val intent = Intent(Intent.ACTION_SEND).apply {
             setClassName(context, "com.silas.omaster.MainActivity")
+            type = "image/*"
             putExtra("from_shortcut", DYNAMIC_SHORTCUT_AI_SNAP)
         }
         return ShortcutInfo.Builder(context, DYNAMIC_SHORTCUT_AI_SNAP)
