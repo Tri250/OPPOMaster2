@@ -79,29 +79,32 @@ object ScreenCaptureParser {
         if (fields.isEmpty()) return null
         return ParsedCapture(name, fields)
     }
+}
 
-    /** 解析结果 → MasterPreset（默认值兜底，name 缺省给「对照录入」占位名） */
-    fun toPreset(capture: ParsedCapture): MasterPreset {
-        val f = capture.fields
-        return MasterPreset(
-            name = capture.name?.takeIf { it.isNotBlank() } ?: "对照录入",
-            coverPath = "",
-            author = "@对照录入",
-            filter = f["filter"],
-            whiteBalance = f["colorTemperature"]?.let { "${it}K" },
-            colorTone = f["colorTone"],
-            exposureCompensation = f["exposureCompensation"],
-            colorTemperature = f["colorTemperature"]?.toIntOrNull(),
-            iso = f["iso"],
-            shutterSpeed = f["shutterSpeed"],
-            softLight = f["softLight"],
-            tone = f["tone"]?.toIntOrNull(),
-            saturation = f["saturation"]?.toIntOrNull(),
-            warmCool = f["warmCool"]?.toIntOrNull(),
-            cyanMagenta = f["cyanMagenta"]?.toIntOrNull(),
-            sharpness = f["sharpness"]?.toIntOrNull(),
-            vignette = f["vignette"],
-            isCustom = true
-        )
-    }
+/**
+ * 解析结果 → MasterPreset 扩展函数（包级，方便跨文件直接调用 capture.toPreset()）
+ * 默认值兜底，name 缺省给「对照录入」占位名
+ */
+fun ScreenCaptureParser.ParsedCapture.toPreset(): MasterPreset {
+    val f = this.fields
+    return MasterPreset(
+        name = this.name?.takeIf { it.isNotBlank() } ?: "对照录入",
+        coverPath = "",
+        author = "@对照录入",
+        filter = f["filter"],
+        whiteBalance = f["colorTemperature"]?.let { "${it}K" },
+        colorTone = f["colorTone"],
+        exposureCompensation = f["exposureCompensation"],
+        colorTemperature = f["colorTemperature"]?.toIntOrNull(),
+        iso = f["iso"],
+        shutterSpeed = f["shutterSpeed"],
+        softLight = f["softLight"],
+        tone = f["tone"]?.toIntOrNull(),
+        saturation = f["saturation"]?.toIntOrNull(),
+        warmCool = f["warmCool"]?.toIntOrNull(),
+        cyanMagenta = f["cyanMagenta"]?.toIntOrNull(),
+        sharpness = f["sharpness"]?.toIntOrNull(),
+        vignette = f["vignette"],
+        isCustom = true
+    )
 }
