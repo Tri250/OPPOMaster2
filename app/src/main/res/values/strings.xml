@@ -525,10 +525,16 @@
     <string name="floating_window_mode">悬浮窗模式</string>
     <string name="floating_window_mode_standard">标准</string>
     <string name="floating_window_mode_compact">新版悬浮窗</string>
+    <!-- MU-27 / v1.6：取景框避位模式（FRAMING）— Find X10 / ColorOS 17 推荐 -->
+    <string name="floating_window_mode_framing">取景框避位</string>
     <string name="floating_window_mode_standard_desc">卡片式布局，信息完整</string>
     <string name="floating_window_mode_compact_desc">紧凑参数条，仿原生样式</string>
+    <string name="floating_window_mode_framing_desc">自动避开相机取景区域，悬浮窗永不遮挡取景框 · ColorOS 17 / Find X10 推荐</string>
     <string name="floating_window_mode_dialog_title">选择悬浮窗模式</string>
     <string name="floating_window_realme_tip">提示：Realme 预设将自动使用标准悬浮窗（新版悬浮窗图标不适配 Realme 相机 UI）</string>
+    <!-- MU-27 / v1.6：相机应用自动避位 Follow Camera Framing -->
+    <string name="follow_camera_framing">相机自动避位</string>
+    <string name="follow_camera_framing_desc">打开相机时悬浮窗自动切换为取景框避位模式，永不遮挡取景框</string>
 
     <!-- 发现页 -->
     <string name="discover_title">发现</string>

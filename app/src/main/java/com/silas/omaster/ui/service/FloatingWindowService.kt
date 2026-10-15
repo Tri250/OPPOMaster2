@@ -200,12 +200,20 @@ class FloatingWindowService : Service() {
 
         // 读取悬浮窗模式设置
         val configMode = ConfigCenter.getInstance(this).floatingWindowMode
-        
-        // Realme 预设强制使用标准悬浮窗（新版悬浮窗图标不适配 Realme 相机 UI）
-        val mode = if (PresetParamMapper.isRealmePreset(sections)) {
-            FloatingWindowMode.STANDARD
-        } else {
-            configMode
+
+        // ═══════════════════════════════════════════════════════════
+        // MU-27 / v1.6：悬浮窗模式解析链（高 → 低）
+        // ① Realme 预设 → STANDARD（Realme 相机 UI 与新版悬浮窗图标不兼容）
+        // ② followCameraFraming=true && ColorOS ≥ 17 → FRAMING（取景框避位）
+        // ③ 否则 → configMode（用户在设置里选的模式）
+        // ═══════════════════════════════════════════════════════════
+        val c2 = ConfigCenter.getInstance(this)
+        val shouldFrame = c2.isFollowCameraFramingEnabled &&
+                com.silas.omaster.util.DeviceDetector.isColorOsAtLeast(this, 17)
+        val mode = when {
+            PresetParamMapper.isRealmePreset(sections) -> FloatingWindowMode.STANDARD
+            shouldFrame -> FloatingWindowMode.FRAMING
+            else -> configMode
         }
 
         when (action) {
