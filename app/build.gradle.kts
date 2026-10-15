@@ -34,6 +34,9 @@ android {
 
     lint {
         baseline = file("lint-baseline.xml")
+        // 临时禁用中断以生成完整 lint XML 报告用于更新 baseline（CI 运行后恢复）
+        abortOnError = false
+        warningsAsErrors = false
     }
 
     // ED-01 签名体系：CI 通过环境变量注入 keystore（见 .github/workflows/release.yml）。
