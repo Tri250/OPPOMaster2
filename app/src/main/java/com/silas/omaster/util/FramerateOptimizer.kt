@@ -35,7 +35,20 @@ object FramerateOptimizer {
             val choreographer = Choreographer.getInstance()
             // frameDelayNanos 是 API 33；低版本用 postFrameCallback 估算
             val frameDelay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                runCatching { choreographer.frameDelayNanos }.getOrDefault(16_666_667L)
+                // frameDelayNanos 是 API 33 (TIRAMISU) 的公开字段
+                // compileSdk 37 可直接访问；用反射兜底以防 AGP/Kotlin 编译器版本差异
+                runCatching {
+                    try {
+                        // 直接字段访问
+                        val field = Choreographer::class.java.getDeclaredField("frameDelayNanos")
+                        field.isAccessible = true
+                        field.getLong(choreographer)
+                    } catch (_: Throwable) {
+                        // 反射 getter
+                        val method = Choreographer::class.java.getMethod("getFrameDelayNanos")
+                        method.invoke(choreographer) as Long
+                    }
+                }.getOrDefault(16_666_667L)
             } else {
                 16_666_667L  // 60fps 基准
             } // 60fps 基准

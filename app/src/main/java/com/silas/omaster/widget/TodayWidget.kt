@@ -27,7 +27,8 @@ import kotlinx.coroutines.runBlocking
  *
  * Glance 1.1.x API 要点：
  * - GlanceAppWidget 只有一个可 override 的 suspend fun: provideContent(context, id)
- *   （没有 provideGlance！provideGlance 是早期试验性 API，1.0+ 已移除）
+ *   （正确入口是 provideGlance（override）
+ // provideContent 是内部 builder DSL）
  * - 在 provideContent 内调用 Glance 版 provideContent { ... } 作为 Composable builder
  * - androidx.glance.material3.Text 仅在 Glance Material3 模块存在，
  *   为避免依赖版本不兼容，用 androidx.glance.text.Text（基础 Text）
@@ -35,7 +36,9 @@ import kotlinx.coroutines.runBlocking
  */
 class TodayWidget : GlanceAppWidget() {
 
-    override suspend fun provideContent(context: Context, id: GlanceId) {
+    // Glance 1.x 正确入口是 provideGlance（不是 provideContent）
+    // provideContent 是 provideGlance 内部调用的 Composable builder
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
         // provideContent 是 suspend 函数，可以安全地获取数据
         val deviceName = DeviceDetector.getCurrentDevice(context).displayNameZh
 
