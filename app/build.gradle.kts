@@ -27,7 +27,7 @@ android {
         // versionCode 由 CI 在发布构建时通过 -PciVersionCode 注入（基于提交数单调递增，ED-02）；
         // 本地开发缺省 13，禁止手填递增
         versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 13
-        versionName = "1.6.6"
+        versionName = "1.6.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
