@@ -204,6 +204,11 @@
     <string name="detail_load_failed">プリセットデータの読み込みに失敗しました</string>
     <string name="floating_window">フローティングウィンドウ</string>
 
+    <!-- フローティングウィンドウのフォアグラウンドサービス通知（Android 8+ 必須） -->
+    <string name="floating_window_channel_name">フローティングウィンドウ</string>
+    <string name="floating_window_notification_title">OMaster フローティングウィンドウ実行中</string>
+    <string name="floating_window_notification_text">タップでアプリに戻る；オーバーレイはカメラ上に表示中</string>
+
     <!-- プロパラメータ -->
     <string name="param_iso">ISO</string>
     <string name="param_shutter">シャッター</string>

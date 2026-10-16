@@ -1,9 +1,14 @@
 package com.silas.omaster.ui.service
 
 import android.animation.ValueAnimator
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.PixelFormat
@@ -22,6 +27,9 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.FloatingWindowMode
@@ -51,6 +59,7 @@ class FloatingWindowService : Service() {
     private var params: WindowManager.LayoutParams? = null
     private var isExpanded = true
     private var edgeAnimator: ValueAnimator? = null  // ✅ 新增：保存动画引用用于生命周期管理
+    private var isForeground = false  // ED-08：是否已提升为前台服务
 
     // 配色方案
     private val primaryColor = Color.parseColor("#FF6B35")      // 品牌橙色
@@ -111,6 +120,10 @@ class FloatingWindowService : Service() {
         const val ACTION_SWITCH_PRESET = "com.silas.omaster.SWITCH_PRESET"
         const val EXTRA_SWITCH_DIRECTION = "switch_direction" // "prev" or "next"
 
+        // ED-08：前台服务通知常量
+        private const val CHANNEL_ID = "omaster_floating_window"
+        private const val NOTIFICATION_ID = 1001
+
         // 服务实例（用于更新内容）
         @Volatile
         private var instance: FloatingWindowService? = null
@@ -129,7 +142,8 @@ class FloatingWindowService : Service() {
                 putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
                 putExtra(EXTRA_IS_EXPANDED, true)
             }
-            context.startService(intent)
+            // ED-08：前台服务方式启动，兼容 Android 8+ 后台启动限制
+            ContextCompat.startForegroundService(context, intent)
         }
 
         /**
@@ -148,7 +162,7 @@ class FloatingWindowService : Service() {
                 putStringArrayListExtra(EXTRA_PRESET_LIST, ArrayList(presetIds))
                 putExtra(EXTRA_IS_EXPANDED, instance?.isExpanded ?: true)
             }
-            context.startService(intent)
+            ContextCompat.startForegroundService(context, intent)
         }
 
         fun hide(context: Context) {
@@ -177,6 +191,66 @@ class FloatingWindowService : Service() {
         instance = null
     }
 
+    /**
+     * ED-08：将服务提升为前台服务。
+     *
+     * 悬浮窗需跨任务在相机等第三方应用之上持续显示，且可能由后台广播（侧边键快捷方式）
+     * 触发。Android 8.0(API 26) 起后台 startService 会被限制，必须走前台服务。
+     * 幂等：重复调用仅首次生效，避免重复创建通知。
+     */
+    private fun promoteToForeground() {
+        if (isForeground) return
+        try {
+            ensureNotificationChannel()
+            // API 34+ 必须显式传入类型；低于 34 传 0，由 manifest 声明的类型生效
+            val type = if (Build.VERSION.SDK_INT >= 34) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                0
+            }
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(), type)
+            isForeground = true
+        } catch (e: Exception) {
+            // 前台提升失败不应中断悬浮窗功能（部分 ROM 可能限制），降级为普通服务
+            Logger.e("FloatingWindowService", "startForeground 失败，降级为普通服务", e)
+        }
+    }
+
+    private fun ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.floating_window_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(R.string.floating_window_notification_text)
+            setShowBadge(false)
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun buildNotification(): Notification {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+        val contentIntent = launchIntent?.let {
+            PendingIntent.getActivity(
+                this,
+                0,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(getString(R.string.floating_window_notification_title))
+            .setContentText(getString(R.string.floating_window_notification_text))
+            .setSmallIcon(R.mipmap.ic_launcher_round)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .apply { contentIntent?.let { setContentIntent(it) } }
+            .build()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null) {
             if (floatingView == null) {
@@ -184,6 +258,9 @@ class FloatingWindowService : Service() {
             }
             return START_NOT_STICKY
         }
+
+        // ED-08：必须在校验/构建窗口前完成前台提升，满足 startForegroundService 的 5s 时限
+        promoteToForeground()
 
         val action = intent.getStringExtra(EXTRA_ACTION) ?: ACTION_SHOW
         val rawName = intent.getStringExtra(EXTRA_NAME) ?: getString(R.string.floating_preset)
@@ -461,7 +538,7 @@ class FloatingWindowService : Service() {
                     putExtra(EXTRA_POS_X, params?.x ?: 50)
                     putExtra(EXTRA_POS_Y, params?.y ?: 300)
                 }
-                startService(intent)
+                ContextCompat.startForegroundService(this, intent)
             }
 
             floatingView = miniButton
@@ -971,7 +1048,7 @@ class FloatingWindowService : Service() {
                 putExtra(EXTRA_POS_X, currentX)
                 putExtra(EXTRA_POS_Y, currentY)
             }
-            startService(intent)
+            ContextCompat.startForegroundService(this, intent)
 
         } catch (e: Exception) {
             e.printStackTrace()

@@ -191,6 +191,11 @@
     <string name="detail_load_failed">Failed to load preset data</string>
     <string name="floating_window">Floating Window</string>
 
+    <!-- Floating window foreground service notification (required on Android 8+) -->
+    <string name="floating_window_channel_name">Floating Window</string>
+    <string name="floating_window_notification_title">OMaster floating window is running</string>
+    <string name="floating_window_notification_text">Tap to return to the app; the overlay is shown above the camera</string>
+
     <!-- Professional Parameters -->
     <string name="param_iso">ISO</string>
     <string name="param_shutter">Shutter</string>

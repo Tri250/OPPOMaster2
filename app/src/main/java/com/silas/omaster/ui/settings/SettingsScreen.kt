@@ -70,6 +70,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,7 +129,9 @@ fun SettingsScreen() {
     var showChannelDialog by remember { mutableStateOf(false) }
     var autoCheckUpdate by remember { mutableStateOf(config.isAutoCheckUpdateEnabled) }
     var analyticsEnabled by remember { mutableStateOf(config.isAnalyticsEnabled) }
-    var cacheSize by remember { mutableStateOf(ImageCacheManager.getCacheSize(context)) }
+    // 性能优化：缓存/日志大小为磁盘扫描结果，初值先置空，改在 IO 线程惰性计算，
+    // 避免进入设置页首帧在主线程 walkTopDown 造成卡顿
+    var cacheSize by remember { mutableStateOf(0.0) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var floatingWindowMode by remember { mutableStateOf(config.floatingWindowMode) }
     var showFloatingModeDialog by remember { mutableStateOf(false) }
@@ -135,10 +139,16 @@ fun SettingsScreen() {
     var followCameraFraming by remember { mutableStateOf(config.isFollowCameraFramingEnabled) }
     var appLanguage by remember { mutableStateOf(config.appLanguage) }
     var showLanguageDialog by remember { mutableStateOf(false) }
-    var logSize by remember { mutableStateOf(LogExporter.getFormattedLogSize()) }
+    var logSize by remember { mutableStateOf("") }
     var showClearLogDialog by remember { mutableStateOf(false) }
     var premiumGlassEnabled by remember { mutableStateOf(config.isPremiumGlassEnabled) }
     val haptic = LocalHapticFeedback.current
+
+    // 惰性在 IO 线程计算磁盘占用（原实现于组合期同步扫描主线程）
+    LaunchedEffect(Unit) {
+        cacheSize = withContext(Dispatchers.IO) { ImageCacheManager.getCacheSize(context) }
+        logSize = withContext(Dispatchers.IO) { LogExporter.getFormattedLogSize() }
+    }
 
     if (showThemeDialog) {
         ThemeSelectionDialog(

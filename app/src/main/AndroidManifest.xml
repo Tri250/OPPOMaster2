@@ -9,6 +9,15 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
 
+    <!--
+        ED-08：悬浮窗需在相机等第三方前台应用之上持续显示，必须作为前台服务运行，
+        否则 Android 8.0(API 26) 起从后台（侧边键快捷方式广播）启动会抛
+        IllegalStateException: Not allowed to start service ... app is in background。
+        Android 14(API 34) 起还需声明类型专属权限 FOREGROUND_SERVICE_SPECIAL_USE。
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- 声明QQ包可见性，用于检测QQ是否安装 -->
     <queries>
         <package android:name="com.tencent.mobileqq" />
@@ -37,7 +46,15 @@
             android:name=".ui.service.FloatingWindowService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
-            android:stopWithTask="false" />
+            android:stopWithTask="false">
+            <!--
+                ED-08：Android 14(API 34) 起，foregroundServiceType="specialUse" 必须在 manifest
+                声明用途 property，否则 startForeground 抛 MissingForegroundServiceTypeException。
+            -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating_camera_preset_overlay" />
+        </service>
 
         <activity
             android:name=".MainActivity"

@@ -509,7 +509,7 @@ private fun ProjectCard(context: android.content.Context) {
         ),
         shape = RoundedCornerShape(16.dp),
         onClick = {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/iCurrer/OMaster"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Tri250/OPPOMaster2"))
             context.startActivity(intent)
         }
     ) {
@@ -549,7 +549,7 @@ private fun ProjectCard(context: android.content.Context) {
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "GitHub - iCurrer/OMaster",
+                        text = "GitHub - Tri250/OPPOMaster2",
                         style = MaterialTheme.typography.bodySmall,
                         color = themedTextSecondary().copy(alpha = 0.6f)
                     )

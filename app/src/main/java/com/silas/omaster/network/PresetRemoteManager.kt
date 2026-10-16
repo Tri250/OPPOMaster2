@@ -120,7 +120,7 @@ object PresetRemoteManager {
                 )
             ) {
                 return Result.failure(
-                    Exception("远端版本回退（build ${presetList.build} < ${currentSub!!.build}），已保留本地数据")
+                    Exception("远端版本回退（build ${presetList.build} < ${currentSub?.build}），已保留本地数据")
                 )
             }
 

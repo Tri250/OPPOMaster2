@@ -26,9 +26,14 @@ object UpdateChecker {
 
     private const val TAG = "UpdateChecker"
 
+    /** 更新 APK 固定文件名（与 CI 产物名、下载目标目录一致，用于下载完成校验） */
+    const val UPDATE_APK_NAME = "app-universal-release.apk"
+
     // GitHub 配置
-    private const val GITHUB_OWNER = "iCurrer"
-    private const val GITHUB_REPO = "OMaster"
+    // 必须与本仓库 CI 发布 Release 的仓库一致（.github/workflows/release.yml 将签名 APK
+    // 发布到 github.repository）。若指向其他仓库，将下载到签名不匹配的 APK 导致安装失败。
+    private const val GITHUB_OWNER = "Tri250"
+    private const val GITHUB_REPO = "OPPOMaster2"
     private const val GITHUB_API_URL = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
 
     // Gitee 配置
@@ -143,7 +148,7 @@ object UpdateChecker {
      * @return 下载任务 ID，用于查询进度
      */
     fun downloadAndInstall(context: Context, downloadUrl: String, versionName: String): Long {
-        val fileName = "app-universal-release.apk"
+        val fileName = UPDATE_APK_NAME
 
         // 清理旧文件
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -235,8 +240,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 val apkFile = if (localUriString != null) {
                     val localUri = Uri.parse(localUriString)
                     if (localUri.scheme == "file") {
-                        // 直接是文件路径
-                        File(localUri.path!!)
+                        // 直接是文件路径（path 理论上非空，仍做空安全兜底）
+                        localUri.path?.let { File(it) }
                     } else {
                         // content:// URI，尝试通过 ContentResolver 获取真实路径
                         getFileFromContentUri(context, localUri)
@@ -244,13 +249,14 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 } else {
                     // 备用方案：直接找已知文件名
                     val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                    File(downloadDir, "app-universal-release.apk")
+                    File(downloadDir, UpdateChecker.UPDATE_APK_NAME)
                 }
 
-                if (apkFile != null && apkFile.exists()) {
+                // 归属校验：仅安装本应用的更新 APK，避免响应其他 App 下载完成广播而误装任意文件
+                if (apkFile != null && apkFile.exists() && isOurUpdateApk(context, apkFile)) {
                     installApk(context, apkFile)
                 } else {
-                    Log.e("DownloadReceiver", "APK 文件不存在")
+                    Log.d("DownloadReceiver", "忽略非本应用更新下载: ${apkFile?.absolutePath}")
                 }
             } else if (status == DownloadManager.STATUS_FAILED) {
                 val reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
@@ -288,17 +294,33 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         }
     }
 
+    /**
+     * 校验下载完成文件是否为本应用的更新 APK：
+     * 文件名匹配固定产物名，且位于本应用私有外部存储 Download 目录。
+     * 避免静态广播接收器响应其他应用下载完成事件时误装任意 APK。
+     */
+    private fun isOurUpdateApk(context: Context, file: File): Boolean {
+        if (file.name != UpdateChecker.UPDATE_APK_NAME) return false
+        val expectedDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        return if (expectedDir != null) {
+            file.parentFile?.absolutePath == expectedDir.absolutePath
+        } else {
+            // 无法解析目录时退化为文件名匹配
+            true
+        }
+    }
+
     private fun installApk(context: Context, apkFile: File) {
         try {
             Log.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
 
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
-                } else {
-                    Uri.fromFile(apkFile)
-                }
+            val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+            } else {
+                Uri.fromFile(apkFile)
+            }
 
+            val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
 
@@ -307,12 +329,13 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 }
             }
 
-            // 检查是否有应用可以处理这个 intent
-            if (intent.resolveActivity(context.packageManager) != null) {
+            // Android 11(API 30)+ 包可见性会使 resolveActivity 对系统安装器返回 null，
+            // 故不再以其作为门禁，直接启动并捕获 ActivityNotFoundException。
+            try {
                 context.startActivity(intent)
                 Log.d("DownloadReceiver", "已启动安装界面")
-            } else {
-                Log.e("DownloadReceiver", "没有找到可以处理安装的应用")
+            } catch (e: android.content.ActivityNotFoundException) {
+                Log.e("DownloadReceiver", "没有找到可以处理安装的应用", e)
             }
         } catch (e: Exception) {
             Log.e("DownloadReceiver", "安装失败: ${e.message}", e)

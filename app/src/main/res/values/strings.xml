@@ -239,6 +239,11 @@
     <string name="detail_load_failed">预设数据加载失败</string>
     <string name="floating_window">悬浮窗</string>
 
+    <!-- 悬浮窗前台服务通知（Android 8+ 前台服务必需） -->
+    <string name="floating_window_channel_name">悬浮窗</string>
+    <string name="floating_window_notification_title">OMaster 悬浮窗运行中</string>
+    <string name="floating_window_notification_text">点击返回应用；悬浮窗已在相机上层显示</string>
+
     <!-- 专业参数 -->
     <string name="param_iso">ISO</string>
     <string name="param_shutter">快门</string>

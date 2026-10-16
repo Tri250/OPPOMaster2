@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 /**
@@ -43,10 +42,11 @@ class ShortcutBroadcastReceiver : BroadcastReceiver() {
         val controller = FloatingWindowController.getInstance(context)
         val repository = PresetRepository.getInstance(context)
 
-        // IO dispatcher 里 runBlocking 取一次 Flow 初始值（Repository 底层是 StateFlow，first() 立即返回）
+        // 已是 suspend 上下文（外层的 withContext(Dispatchers.IO)），直接 first() 取初始值即可；
+        // Repository 底层是 StateFlow，first() 立即返回，无需 runBlocking
         val preset: MasterPreset? = withContext(Dispatchers.IO) {
-            val favs = runBlocking { repository.getFavoritePresets().first() }
-            favs.firstOrNull() ?: runBlocking { repository.getAllPresets().first() }.firstOrNull()
+            val favs = repository.getFavoritePresets().first()
+            favs.firstOrNull() ?: repository.getAllPresets().first().firstOrNull()
         }
 
         if (preset != null) {

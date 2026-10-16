@@ -35,20 +35,14 @@ object JsonUtil {
         prettyPrint = false
     }
 
-    /** 解析订阅仓库返回的预设列表 JSON */
-    fun parsePresetList(json: String): com.silas.omaster.model.PresetList {
-        return kotlinx.serialization.json.Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }.decodeFromString(json)
+    /** 解析订阅仓库返回的预设列表 JSON（复用共享 Json 实例，避免每次调用重建 Json 配置） */
+    fun parsePresetList(text: String): com.silas.omaster.model.PresetList {
+        return json.decodeFromString(PresetList.serializer(), text)
     }
 
-    /** 解析单个预设 JSON */
-    fun parsePreset(json: String): com.silas.omaster.model.MasterPreset {
-        return kotlinx.serialization.json.Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }.decodeFromString(json)
+    /** 解析单个预设 JSON（复用共享 Json 实例） */
+    fun parsePreset(text: String): com.silas.omaster.model.MasterPreset {
+        return json.decodeFromString(MasterPreset.serializer(), text)
     }
 
     
@@ -136,7 +130,7 @@ object JsonUtil {
                     try {
                         val text = subFile.readText()
                         val presetList = json.decodeFromString(PresetList.serializer(), text)
-                        val processed = processPresets(presetList.presets ?: emptyList(), sub.url)
+                        val processed = processPresets(presetList.presets, sub.url)
                         allPresets.addAll(processed)
                     } catch (e: Exception) {
                         Logger.e("JsonUtil", "Failed to load sub file: ${sub.url}", e)
@@ -147,7 +141,7 @@ object JsonUtil {
                         val text = context.assets.open(fileName).bufferedReader().use { it.readText() }
                         val presetList = json.decodeFromString(PresetList.serializer(), text)
                         currentPresetsVersion = presetList.version
-                        val processed = processPresets(presetList.presets ?: emptyList(), "asset")
+                        val processed = processPresets(presetList.presets, "asset")
                         allPresets.addAll(processed)
                     } catch (e: Exception) {
                         Logger.e("JsonUtil", "Failed to load presets from assets", e)

@@ -71,35 +71,27 @@ object ImportPipeline {
             return Result.Failure(ErrorCode.TOO_LARGE, source, "文本过长，最多 ${PresetImportValidator.MAX_TEXT_LENGTH} 字符")
         }
 
-        // 1. 优先尝试 JSON 解析（所有来源都可能带 JSON）
-        runCatching {
-            val jsonResult = PresetImportValidator.parse(text)
-            if (jsonResult is PresetImportValidator.ImportResult.Success) {
-                return Result.Success(
-                    presets = jsonResult.presets,
-                    unknownFields = jsonResult.unknownFields,
-                    source = source,
-                    parseMethod = ParseMethod.JSON
-                )
-            }
+        // 1. JSON 解析（仅解析一次，避免重复解析带来的额外开销）；失败时继续尝试对照录入
+        val jsonResult = runCatching { PresetImportValidator.parse(text) }.getOrNull()
+        if (jsonResult is PresetImportValidator.ImportResult.Success) {
+            return Result.Success(
+                presets = jsonResult.presets,
+                unknownFields = jsonResult.unknownFields,
+                source = source,
+                parseMethod = ParseMethod.JSON
+            )
         }
-        // JSON 解析失败不立即返回，继续尝试对照录入（OCR / CAPTURE / PASTE 都可能是参数文本）
-        val isJsonError = runCatching {
-            val jsonResult = PresetImportValidator.parse(text)
-            jsonResult is PresetImportValidator.ImportResult.Failure
-        }.getOrDefault(false)
 
-        // 2. 对照录入（OCR / CAPTURE 专属入口直接走这里；其他入口 JSON 失败时降级尝试）
+        // 2. 对照录入（OCR / CAPTURE 专属入口直接走这里；文本粘贴在 JSON 解析未成功时降级尝试）
         val shouldTryCapture = source == Source.OCR_TEXT || source == Source.CAPTURE_TEXT ||
-                (source == Source.TEXT_PASTE && isJsonError)
+                source == Source.TEXT_PASTE
 
         if (shouldTryCapture) {
             val capture = ScreenCaptureParser.parse(text)
             if (capture != null && capture.fields.isNotEmpty()) {
                 // ScreenCaptureParser 产出的 ParsedCapture → toPreset → MasterPreset
-                val preset = capture.toPreset()
                 return Result.Success(
-                    presets = listOf(preset),
+                    presets = listOf(capture.toPreset()),
                     unknownFields = emptyMap(),
                     source = source,
                     parseMethod = ParseMethod.CAPTURE
@@ -111,22 +103,19 @@ object ImportPipeline {
             }
         }
 
-        // 3. 兜底：返回原始 JSON 解析错误
-        val jsonResult = PresetImportValidator.parse(text)
+        // 3. 兜底：返回 JSON 解析错误（jsonResult 为 null 说明解析过程抛出异常）
         return when (jsonResult) {
-            is PresetImportValidator.ImportResult.Success ->
-                Result.Success(jsonResult.presets, jsonResult.unknownFields, source, ParseMethod.JSON)
-            is PresetImportValidator.ImportResult.Failure ->
-                Result.Failure(
-                    when (jsonResult.code) {
-                        PresetImportValidator.ErrorCode.EMPTY -> ErrorCode.EMPTY
-                        PresetImportValidator.ErrorCode.TOO_LARGE -> ErrorCode.TOO_LARGE
-                        PresetImportValidator.ErrorCode.INVALID_JSON -> ErrorCode.INVALID_JSON
-                        PresetImportValidator.ErrorCode.NO_VALID_PRESET -> ErrorCode.NO_VALID_PRESET
-                        PresetImportValidator.ErrorCode.TOO_MANY_PRESETS -> ErrorCode.TOO_MANY_PRESETS
-                    },
-                    source
-                )
+            null -> Result.Failure(ErrorCode.INVALID_JSON, source)
+            is PresetImportValidator.ImportResult.Failure -> Result.Failure(
+                when (jsonResult.code) {
+                    PresetImportValidator.ErrorCode.EMPTY -> ErrorCode.EMPTY
+                    PresetImportValidator.ErrorCode.TOO_LARGE -> ErrorCode.TOO_LARGE
+                    PresetImportValidator.ErrorCode.INVALID_JSON -> ErrorCode.INVALID_JSON
+                    PresetImportValidator.ErrorCode.NO_VALID_PRESET -> ErrorCode.NO_VALID_PRESET
+                    PresetImportValidator.ErrorCode.TOO_MANY_PRESETS -> ErrorCode.TOO_MANY_PRESETS
+                },
+                source
+            )
         }
     }
 

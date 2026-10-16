@@ -22,7 +22,6 @@ import com.silas.omaster.R
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.DeviceDetector
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 /**
  * MU-28 / v1.6：OMaster 桌面小组件（AndroidX Glance API）
@@ -44,9 +43,10 @@ class TodayWidget : GlanceAppWidget() {
         // provideContent 是 suspend 函数，可以安全地获取数据
         val deviceName = DeviceDetector.getCurrentDevice(context).displayNameZh
 
-        // 同步读 StateFlow 初始值：runBlocking + first() 在 suspend 上下文内是安全的
+        // provideGlance 本身即为 suspend 上下文；StateFlow 首次收集立即返回当前值，
+        // 直接 first() 即可，无需 runBlocking（后者在协程内属于反模式，可能阻塞 Glance 工作线程）
         val presets: List<com.silas.omaster.model.MasterPreset> = runCatching {
-            runBlocking { PresetRepository.getInstance(context).getAllPresets().first() }
+            PresetRepository.getInstance(context).getAllPresets().first()
         }.getOrDefault(emptyList())
         val recommended = presets.take(4)
 

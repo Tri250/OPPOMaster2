@@ -78,8 +78,8 @@ object ExportPresetService {
         preset.saturation?.let { appendLine("饱和度 $it") }
         preset.warmCool?.let { appendLine("冷暖 $it") }
         preset.sharpness?.let { appendLine("锐度 $it") }
-        if (preset.tags?.isNotEmpty() == true) {
-            appendLine(preset.tags!!.joinToString(" ") { "#$it" })
+        preset.tags?.takeIf { it.isNotEmpty() }?.let {
+            appendLine(it.joinToString(" ") { tag -> "#$tag" })
         }
         appendLine("—— 由 OMaster 2.0 导出，粘贴回「创建」页即可导入")
     }.trimEnd()
