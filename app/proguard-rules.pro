@@ -132,6 +132,15 @@
     *** Companion;
 }
 
+# ⑤ 类型安全导航路由包：整包显式保留（com.silas.omaster.navigation 体量极小）
+#    背景（经 release dex 实测确认）：
+#    - data class 路由（Screen.Detail / EditPreset / CreatePreset）会生成 `Screen$Xxx$$serializer`，
+#      该实现类一旦被 R8 移除，NavHost 建图即抛 SerializationException → 冷启动闪退；
+#    - data object 路由（Screen.Home / PresetSelection 等）**不会**生成 `$$serializer` 类，
+#      其序列化器由 serializer() 方法内联构造，因此必须保证路由对象类与其 serializer() 方法存活。
+#    整包保留同时锁定类名，确保 CI 产物冒烟门禁（release.yml ED-05）可稳定反查。
+-keep class com.silas.omaster.navigation.** { *; }
+
 # 悬浮窗工厂（MU-11 / MU-27）：反射构建 TextView 时 keep 构造器
 # 避免 ProGuard 把被反射调用的构造器移除
 -keep class com.silas.omaster.ui.service.FloatingWindowWidgetFactory {

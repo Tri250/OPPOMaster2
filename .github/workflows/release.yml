@@ -169,6 +169,11 @@ jobs:
       # v1.6.0 冷启动闪退根因：类型安全导航的 kotlinx Serializer / 静态注册组件
       # 在导航库内部通过反射解析，R8 静态分析看不到调用点而将其移除。
       # 此处直接在最终 dex 中反查这些类型是否存活，把"能否启动"纳入发布门禁。
+      #
+      # ⚠️ 类名与代码生成的对应关系（务必以此为准，避免误报门禁）：
+      #   - data class 路由（Detail / EditPreset / CreatePreset）→ 生成 `Screen$Xxx$$serializer`
+      #   - data object 路由（Home / PresetSelection 等）→ 不生成 `$$serializer`，
+      #     其序列化器由 serializer() 方法内联构造；因此只能反查路由对象类本身（Screen$Xxx）。
       - name: Smoke gate - verify R8 retained runtime-critical classes (release only)
         if: steps.variant.outputs.IS_RELEASE == 'true'
         run: |
@@ -182,7 +187,8 @@ jobs:
           unzip -p "$APK" 'classes*.dex' > /tmp/omaster-all.dex
 
           REQUIRED=(
-            'Lcom/silas/omaster/navigation/Screen$Home$$serializer;'
+            'Lcom/silas/omaster/navigation/Screen$Home;'
+            'Lcom/silas/omaster/navigation/Screen$PresetSelection;'
             'Lcom/silas/omaster/navigation/Screen$Detail$$serializer;'
             'Lcom/silas/omaster/navigation/Screen$EditPreset$$serializer;'
             'Lcom/silas/omaster/navigation/Screen$CreatePreset$$serializer;'
