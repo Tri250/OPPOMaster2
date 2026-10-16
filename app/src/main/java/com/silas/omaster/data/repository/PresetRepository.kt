@@ -12,7 +12,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 【数据仓库层 - 统一数据访问入口】
@@ -70,9 +72,11 @@ class PresetRepository(
         loadDefaultPresets()
 
         // 监听订阅状态变化，自动重新加载预设
-        // 注意：这里使用 Flow 的特性，只有当订阅列表内容真正发生变化时才触发重载
+        // 注意：这里使用 Flow 的特性，只有当订阅列表内容真正发生变化时才触发重载。
+        // drop(1) 跳过 StateFlow 订阅时立即回放的当前值：该值与上方 loadDefaultPresets()
+        // 刚加载的完全一致，若不过滤会在冷启动主线程重复解析一次 presets.json（性能损耗）。
         repositoryScope.launch {
-            ConfigCenter.getInstance(appContext).subscriptionsFlow.collect { subs ->
+            ConfigCenter.getInstance(appContext).subscriptionsFlow.drop(1).collect { _ ->
                 android.util.Log.d("PresetRepository", "Subscription status changed via ConfigCenter, reloading...")
                 reloadDefaultPresets()
             }
@@ -93,13 +97,18 @@ class PresetRepository(
 
     /**
      * 重新从 JsonUtil（会优先读取远程保存文件）加载内置预设
+     *
+     * 【性能】解析 presets.json 属于磁盘 IO + JSON 反序列化，改为在 IO 线程执行，
+     * 避免在订阅变更 / 用户操作时阻塞主线程（调用方均通过 Flow 观察结果，异步更新无副作用）。
      */
     fun reloadDefaultPresets() {
-        android.util.Log.d("PresetRepository", "Reloading default presets from JsonUtil")
-        JsonUtil.invalidateCache() // 必须先清除 JsonUtil 的内存缓存
-        val presets = JsonUtil.loadPresets(appContext)
-        _defaultPresets.value = presets
-        android.util.Log.d("PresetRepository", "Reloaded ${presets.size} default presets")
+        repositoryScope.launch {
+            android.util.Log.d("PresetRepository", "Reloading default presets from JsonUtil")
+            JsonUtil.invalidateCache() // 必须先清除 JsonUtil 的内存缓存
+            val presets = withContext(Dispatchers.IO) { JsonUtil.loadPresets(appContext) }
+            _defaultPresets.value = presets
+            android.util.Log.d("PresetRepository", "Reloaded ${presets.size} default presets")
+        }
     }
 
     /**

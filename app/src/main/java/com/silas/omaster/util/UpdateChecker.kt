@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.silas.omaster.data.local.UpdateChannel
@@ -90,10 +91,9 @@ object UpdateChecker {
         apiUrl: String,
         isGitee: Boolean
     ): UpdateInfo? {
-        try {
-            val url = URL(apiUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.apply {
+        var connection: HttpURLConnection? = null
+        return try {
+            val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = 15000
                 readTimeout = 15000
@@ -102,9 +102,10 @@ object UpdateChecker {
                     setRequestProperty("Accept", "application/vnd.github.v3+json")
                 }
             }
+            connection = conn
 
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                val response = conn.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
 
                 val tagName = json.getString("tag_name")
@@ -126,7 +127,7 @@ object UpdateChecker {
 
                 val releaseNotes = json.optString("body", context.getString(R.string.no_release_notes))
 
-                return UpdateInfo(
+                UpdateInfo(
                     versionName = versionName,
                     versionCode = versionCode,
                     downloadUrl = downloadUrl,
@@ -134,13 +135,44 @@ object UpdateChecker {
                     isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
                 )
             } else {
-                Log.e(TAG, "检查更新失败，HTTP 状态码: ${connection.responseCode}")
-                return null
+                Log.e(TAG, "检查更新失败，HTTP 状态码: ${conn.responseCode}")
+                null
             }
         } catch (e: Exception) {
             Log.e(TAG, "检查更新出错 [${if (isGitee) "Gitee" else "GitHub"}]", e)
-            return null
+            null
+        } finally {
+            // 释放底层连接：频繁自动检查更新时若不 disconnect，会持续占用文件描述符/TCP 连接
+            connection?.disconnect()
         }
+    }
+
+    /**
+     * 是否已获得"安装未知应用"权限。
+     *
+     * Android 8.0(API 26) 起 REQUEST_INSTALL_PACKAGES 属于需用户在系统设置中手动授予的特殊权限，
+     * 未授予时系统安装器不会响应 ACTION_VIEW(apk)，表现为"下载完成后无任何反应、无法安装"。
+     */
+    fun canRequestInstall(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.packageManager.canRequestPackageInstalls()
+        } else {
+            true
+        }
+    }
+
+    /**
+     * 跳转到本应用的"安装未知应用"授权页，引导用户开启安装权限。
+     */
+    fun openInstallPermissionSettings(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                    .setData(Uri.parse("package:${context.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }.onFailure { Log.e(TAG, "打开安装未知应用设置失败", it) }
     }
 
     /**
@@ -149,6 +181,12 @@ object UpdateChecker {
      */
     fun downloadAndInstall(context: Context, downloadUrl: String, versionName: String): Long {
         val fileName = UPDATE_APK_NAME
+
+        // 安装前置：Android 8.0+ 未授予"安装未知应用"权限时，系统安装器不会响应安装 Intent。
+        // 在下载开始前引导用户开启（下载在后台继续，授权完成后即可正常拉起安装界面）。
+        if (!canRequestInstall(context)) {
+            openInstallPermissionSettings(context)
+        }
 
         // 清理旧文件
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -311,6 +349,11 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
     }
 
     private fun installApk(context: Context, apkFile: File) {
+        // 未授予"安装未知应用"权限时系统安装器不会响应安装 Intent，直接跳过避免无效操作。
+        if (!UpdateChecker.canRequestInstall(context)) {
+            Log.w("DownloadReceiver", "缺少安装未知应用权限，跳过自动安装（已在下载前引导用户授权）")
+            return
+        }
         try {
             Log.d("DownloadReceiver", "准备安装 APK: ${apkFile.absolutePath}, 大小: ${apkFile.length()}")
 

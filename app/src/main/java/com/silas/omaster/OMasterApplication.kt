@@ -35,12 +35,35 @@ class OMasterApplication : Application() {
         // 初始化震动设置
         HapticSettings.enabled = ConfigCenter.getInstance(this).isVibrationEnabled
 
+        // 冷启动性能：后台线程预热预设缓存。
+        // 解析 assets/presets.json 属磁盘 IO + JSON 反序列化，首个界面（PresetRepository.init）
+        // 会在主线程首次读取；此处提前在后台解析并填充缓存，使主线程读取命中缓存、不再阻塞。
+        warmUpPresetCache()
+
         // 每次冷启动都调用预初始化（不采集数据）
         preInitUMeng()
 
         // 如果用户已同意隐私政策且统计开关开启，则调用正式初始化
         if (hasUserAgreed() && isAnalyticsEnabled()) {
             initUMeng()
+        }
+    }
+
+    /**
+     * 冷启动性能预热：后台解析预设 JSON 并填充 JsonUtil 内存缓存。
+     * 失败不影响启动（缓存缺失时会退回主线程解析，仅性能退化）。
+     */
+    private fun warmUpPresetCache() {
+        try {
+            Thread {
+                runCatching { com.silas.omaster.util.JsonUtil.loadPresets(this) }
+                    .onFailure { Logger.w("OMaster", "preset cache warm-up failed: ${it.message}") }
+            }.apply {
+                isDaemon = true
+                name = "preset-cache-warmup"
+            }.start()
+        } catch (e: Throwable) {
+            Logger.w("OMaster", "preset cache warm-up skipped: ${e.message}")
         }
     }
 

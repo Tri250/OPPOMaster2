@@ -7,7 +7,9 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <!-- MU-25 / v1.6.6：移除 android.permission.DOWNLOAD_WITHOUT_NOTIFICATION。
+         更新下载使用 DownloadManager + VISIBILITY_VISIBLE_NOTIFY_COMPLETED（显式展示通知），
+         该权限仅在需要"静默下载（不显示通知）"时才必要，此处属多余声明，移除以减少安装期权限面。 -->
 
     <!--
         ED-08：悬浮窗需在相机等第三方前台应用之上持续显示，必须作为前台服务运行，

@@ -206,8 +206,8 @@ class ConfigCenter private constructor(context: Context) {
         // ColorOS 17 / Find X10 设备默认开启避位；其他设备读取已存值或默认 true（安全回退）
         val stored = prefs.getString(KEY_FOLLOW_CAMERA_FRAMING, null)
         if (stored != null) return stored == "true"
-        val dp = com.silas.omaster.util.DeviceDetector.getCurrentDevice(appContext)
-        // 出厂默认：哈苏/专业影像设备默认 true，其他也默认 true（避位是安全行为）
+        // 未存储时出厂默认 true（避位是安全行为）。此处不再无谓调用 DeviceDetector，
+        // 避免冷启动主线程构造阶段的额外机型识别开销。
         return true
     }
 

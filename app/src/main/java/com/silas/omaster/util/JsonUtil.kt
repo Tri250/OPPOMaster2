@@ -50,13 +50,17 @@ object JsonUtil {
      * 【内存缓存】
      * 缓存已加载的预设列表，避免重复解析 JSON
      * 注意：App 重启后缓存会清空，需要重新加载
+     *
+     * @Volatile：缓存可能由后台预热线程写入、由主线程读取，需保证跨线程可见性。
      */
+    @Volatile
     private var cachedPresets: List<MasterPreset>? = null
 
     /**
      * 当前加载的预设版本
      * 默认为 2 (当前版本)
      */
+    @Volatile
     var currentPresetsVersion: Int = 2
         private set
 

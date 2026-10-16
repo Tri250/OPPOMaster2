@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 图片下载回调接口
@@ -57,8 +58,9 @@ object ImageCacheManager {
         }
     }
 
-    // 记录失败的下载，用于后台重试
-    private val failedDownloads = mutableSetOf<String>()
+    // 记录失败的下载，用于后台重试。
+    // 使用并发集合：多个预取/重试协程可能在不同 IO 线程并发读写。
+    private val failedDownloads: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * 获取图片的本地缓存路径
@@ -146,7 +148,11 @@ object ImageCacheManager {
                     // 使用临时文件写入，成功后重命名（原子操作）
                     val tempFile = File(localFile.absolutePath + ".tmp")
                     tempFile.writeBytes(bytes)
-                    tempFile.renameTo(localFile)
+                    if (!tempFile.renameTo(localFile)) {
+                        // 部分文件系统同目录 rename 可能失败：退化为复制，确保缓存落地并清理临时文件
+                        tempFile.copyTo(localFile, overwrite = true)
+                        tempFile.delete()
+                    }
 
                     // 下载成功
                     failedDownloads.remove(url)
