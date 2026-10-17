@@ -100,6 +100,16 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var floatingWindowController: FloatingWindowController
 
+    /**
+     * 【v1.6.9 兼容性】Android 13+ 通知权限请求器。
+     * 悬浮窗前台服务的常驻通知依赖 POST_NOTIFICATIONS；未授权时系统静默丢弃通知
+     * （前台服务仍可运行，但用户看不到悬浮窗控制入口）。在用户同意隐私政策后请求一次。
+     */
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+        ) { /* 结果不改变业务逻辑：未授权时前台服务优雅降级 */ }
+
     // FD-01c：系统分享接入 —— 外部分享的预设文本，导入完成后置空
     private var pendingSharedText by androidx.compose.runtime.mutableStateOf<String?>(null)
 
@@ -162,6 +172,7 @@ class MainActivity : ComponentActivity() {
                                 onAgree = {
                                     OMasterApplication.getInstance().setUserAgreed(true)
                                     OMasterApplication.getInstance().initUMeng()
+                                    requestNotificationPermissionIfNeeded()
                                     showWelcomeFlow = false
                                 },
                                 onDisagree = {
@@ -192,6 +203,19 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         // 注销悬浮窗控制器
         floatingWindowController.unregister()
+    }
+
+    /**
+     * 【v1.6.9 兼容性】Android 13+ 请求通知权限（悬浮窗前台服务通知依赖）。
+     * 仅在用户同意隐私政策后调用；低版本或无需要时直接跳过，失败静默（前台服务可降级运行）。
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT < 33) return
+        val perm = android.Manifest.permission.POST_NOTIFICATIONS
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(this, perm) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        runCatching { notificationPermissionLauncher.launch(perm) }
     }
 }
 

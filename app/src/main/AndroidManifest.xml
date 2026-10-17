@@ -20,6 +20,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <!--
+        ED-08 / v1.6.9：Android 13(API 33) 起通知需运行时授权。
+        悬浮窗前台服务的常驻通知依赖 POST_NOTIFICATIONS；未声明/未授权时系统静默丢弃通知
+        （前台服务仍合法运行，但用户失去悬浮窗的常驻控制入口）。此处声明并在用户同意隐私政策后请求。
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- 声明QQ包可见性，用于检测QQ是否安装 -->
     <queries>
         <package android:name="com.tencent.mobileqq" />
