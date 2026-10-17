@@ -105,7 +105,14 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context?) {
         // 在 Activity 创建前应用语言设置
-        val context = newBase?.let { LanguageUtil.applyLanguage(it) }
+        // 【v1.6 启动闪退诊断】语言资源重建在极少数 ROM / 混淆边界下可能抛异常，
+        // 该点位于 UI 出现前，一旦抛出即冷启动闪退；失败时回退原始 Context，保证启动不中断。
+        val context = try {
+            newBase?.let { LanguageUtil.applyLanguage(it) }
+        } catch (e: Throwable) {
+            android.util.Log.e("OMaster", "applyLanguage failed, fallback to base context", e)
+            newBase
+        }
         super.attachBaseContext(context)
     }
 

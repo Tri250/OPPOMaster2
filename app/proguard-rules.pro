@@ -12,9 +12,13 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ═══════════════════════════════════════════════════════════
+# 【v1.6 启动闪退诊断】保留行号信息（此前被注释，是根因无法定位的关键）
+# ═══════════════════════════════════════════════════════════
+# 背景：该指令此前被注释，release 包崩溃堆栈全部显示为 `a.b.c(Unknown Source)`，
+# 导致真机 release-only 闪退根因长期无法定位（多次盲改 keep 规则仍未命中）。
+# 保留 SourceFile + LineNumberTable 后，线上/真机崩溃堆栈可还原到具体文件与行号。
+-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
@@ -57,6 +61,19 @@
 
 # 保留数据模型
 -keep class com.silas.omaster.model.** { *; }
+
+# ═══════════════════════════════════════════════════════════
+# 【v1.6 启动闪退诊断】配置枚举保留原名
+# ═══════════════════════════════════════════════════════════
+# ConfigCenter 通过 Enum.valueOf(name) 从字符串还原配置
+# （DarkMode / AppLanguage / FloatingWindowMode / UpdateChannel）。
+# 这些枚举位于 com.silas.omaster.data.local，未被上面的 model 包规则覆盖；
+# 缺 keep 时 R8 会重命名枚举常量，导致 valueOf 抛 IllegalArgumentException
+# → 冷启动读取配置即崩溃。
+-keep class com.silas.omaster.data.local.UpdateChannel { *; }
+-keep class com.silas.omaster.data.local.FloatingWindowMode { *; }
+-keep class com.silas.omaster.data.local.DarkMode { *; }
+-keep class com.silas.omaster.data.local.AppLanguage { *; }
 
 # 【关键】保留资源 ID 不被混淆，确保 getIdentifier() 正常工作
 # Realme 预设使用 @string/xxx 格式通过反射获取资源
