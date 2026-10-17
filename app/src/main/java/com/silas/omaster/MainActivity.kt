@@ -104,8 +104,16 @@ class MainActivity : ComponentActivity() {
     private var pendingSharedText by androidx.compose.runtime.mutableStateOf<String?>(null)
 
     override fun attachBaseContext(newBase: Context?) {
-        // 在 Activity 创建前应用语言设置
-        val context = newBase?.let { LanguageUtil.applyLanguage(it) }
+        // 在 Activity 创建前应用语言设置。
+        // 【v1.6 启动闪退修复】语言资源重建（ConfigCenter 读取 + createConfigurationContext）
+        // 位于冷启动最早期，一旦失败会直接导致 Activity 启动崩溃；
+        // 此处降级为"失败回退原始 Context"，保证启动不被非关键配置阻断。
+        val context = try {
+            newBase?.let { LanguageUtil.applyLanguage(it) } ?: newBase
+        } catch (e: Throwable) {
+            com.silas.omaster.util.Logger.w("OMaster", "applyLanguage failed, fallback to base context: ${e.message}")
+            newBase
+        }
         super.attachBaseContext(context)
     }
 

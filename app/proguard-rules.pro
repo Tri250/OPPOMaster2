@@ -12,13 +12,14 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ═══════════════════════════════════════════════════════════
+# 【v1.6 启动闪退诊断】保留行号信息
+# ═══════════════════════════════════════════════════════════
+# 背景：此前该指令被注释，release 包的崩溃堆栈全部显示为
+# `a.b.c(Unknown Source)`，导致真机闪退根因长期无法定位（多次盲改 keep 规则仍未命中）。
+# 保留 SourceFile + LineNumberTable 后，线上崩溃堆栈可还原到具体文件与行号，
+# 是定位 release-only 闪退的关键前提（体积影响可忽略）。
+-keepattributes SourceFile,LineNumberTable
 
 # 优化配置 - 减小 APK 体积
 
@@ -170,4 +171,51 @@
 -keep class com.silas.omaster.ui.service.ShortcutBroadcastReceiver {
     <init>(...);
 }
+
+# ═══════════════════════════════════════════════════════════
+# 【v1.6 启动闪退修复】枚举 / 路由 / 友盟 兜底 keep
+# ═══════════════════════════════════════════════════════════
+
+# ① 枚举通过 Enum.valueOf(String) 反射还原（配置持久化读取路径，位于冷启动链路）：
+#    DarkMode / AppLanguage / FloatingWindowMode / UpdateChannel 等。
+#    R8 full mode 的枚举优化可能移除"看似未使用"的常量，导致 valueOf 抛
+#    IllegalArgumentException（虽已有 catch 兜底，但保留可彻底消除风险面）。
+-keep,allowoptimization enum com.silas.omaster.data.local.** { *; }
+-keep,allowoptimization enum com.silas.omaster.ui.theme.** { *; }
+
+# ② 类型安全导航路由（Screen sealed + 各 @Serializable 子类及 $serializer）
+#    显式整包保留，双保险覆盖 `-if` 条件规则，杜绝 release 建图期序列化失败。
+-keep class com.silas.omaster.navigation.** { *; }
+
+# ③ ViewModel 工厂（反射 create 实例化）
+-keep class com.silas.omaster.**.*ViewModelFactory { *; }
+-keep class com.silas.omaster.**.*Factory { *; }
+
+# ④ 友盟 SDK 及其阿里 / 淘宝 / UC 传递依赖
+#    友盟 asms（阿里安全）内部大量使用反射与类名校验，release 混淆后易在冷启动
+#    （preInit / init 触发的生命周期回调与后台线程）崩溃。补齐官方建议 keep 规则。
+-keep class com.umeng.** { *; }
+-keep class com.ta.** { *; }
+-keep class com.taobao.** { *; }
+-keep class com.alibaba.** { *; }
+-keep class com.alipay.** { *; }
+-keep class com.ut.** { *; }
+-keep class com.uc.** { *; }
+-keep class com.efs.** { *; }
+-keep class org.android.** { *; }
+-dontwarn com.umeng.**
+-dontwarn com.ta.**
+-dontwarn com.taobao.**
+-dontwarn com.alibaba.**
+-dontwarn com.alipay.**
+-dontwarn com.ut.**
+-dontwarn com.uc.**
+-dontwarn com.efs.**
+-dontwarn org.android.**
+
+# ⑤ AndroidX Startup / Emoji2 / ProfileInstaller 初始化的反射兜底
+#    这些 Initializer 由 androidx.startup 反射实例化，shrinkResources 下若被裁剪
+#    会在冷启动抛 ClassNotFoundException。保留其构造器。
+-keep class * implements androidx.startup.Initializer { *; }
+-dontwarn androidx.startup.**
 
