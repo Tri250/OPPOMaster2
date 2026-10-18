@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,12 +25,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,12 +57,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import com.silas.omaster.data.local.CheckInManager
+import com.silas.omaster.data.local.ColorWalkManager
+import com.silas.omaster.data.local.FavoriteManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.components.OMasterTopAppBar
@@ -72,10 +83,12 @@ import java.time.LocalDate
 
 /**
  * 发现页 — v1.6.10 Find X10 / ColorOS 17 对齐改版：
- * 1) Bento 分栏布局：Color Walk / 相框出片 双列磁贴，层次更清晰
- * 2) 新增「每日灵感」卡片：按日期从预设库轮换精选，点击直达参数详情
- * 3) 快门日记卡片：已打卡状态徽章（绿勾）+ 连续记录天数
- * 4) 卡片统一 20dp 大圆角，对齐 ColorOS 17 视觉语言
+ * 1) 每日灵感卡：「换一换」手动轮换 + 收藏状态星标 + 作者标识（ColorOS 17 AI 灵感体验）
+ * 2) Bento 分栏磁贴：Color Walk / 相框出片，磁贴支持动态状态徽章
+ *    （Color Walk 联动抽取状态：待抽取 / 剩余次数 / 已完成）
+ * 3) 快门日记卡：连击火焰徽章 / 打卡绿勾徽章 + 累计·最长统计
+ * 4) AI 灵感实验室预告卡：Find X10 特色功能前瞻（AI 滤镜 / 哈苏大师通道 / 流体云参数卡）
+ * 5) 全卡片 O-Haptics 触感反馈，对齐 ColorOS 17 触感引擎；20dp 大圆角统一视觉
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +100,7 @@ fun DiscoverScreen(
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val checkInManager = remember { CheckInManager(context) }
     val scrollState = rememberScrollState()
     var previousScrollValue by remember { mutableIntStateOf(0) }
@@ -96,18 +110,40 @@ fun DiscoverScreen(
     var sheetDetailDate by remember { mutableStateOf<LocalDate?>(null) }
 
     val currentStreak = checkInManager.getCurrentStreak()
+    val longestStreak = checkInManager.getLongestStreak()
+    val totalDays = checkInManager.getAllRecords().size
     val todayRecord = remember { checkInManager.getTodayRecord() }
 
     // ═══════════════════════════════════════════════════════════
     // v1.6.10 每日灵感：按日期从全部预设中稳定轮换
-    // 同一天内结果固定，每天自动更换；与主页数据源一致（内置 + 订阅 + 自定义）
+    // 同一天内结果固定，每天自动更换；「换一换」手动偏移切换
+    // 与主页数据源一致（内置 + 订阅 + 自定义）
     // ═══════════════════════════════════════════════════════════
     val repository = remember { PresetRepository.getInstance(context) }
     val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
-    val dailyPreset = remember(allPresets) {
+    var dailyOffset by remember { mutableIntStateOf(0) }
+    val dailyPreset = remember(allPresets, dailyOffset) {
         val pool = allPresets.filter { it.id != null }
         if (pool.isEmpty()) null
-        else pool[LocalDate.now().dayOfYear % pool.size]
+        else pool[Math.floorMod(LocalDate.now().dayOfYear + dailyOffset, pool.size)]
+    }
+
+    // v1.6.10 每日灵感收藏状态（联动 FavoriteManager）
+    val favoriteManager = remember { FavoriteManager(context) }
+    val favorites by favoriteManager.favoritesFlow.collectAsState()
+    val isDailyFavorite = dailyPreset?.id?.let { it in favorites } ?: false
+
+    // v1.6.10 Color Walk 动态状态徽章（联动抽取状态）
+    val colorWalkManager = remember { ColorWalkManager(context) }
+    val colorWalkBadge = if (!colorWalkManager.hasDrawnToday()) {
+        stringResource(R.string.discover_colorwalk_badge_todo)
+    } else {
+        val remaining = colorWalkManager.getRemainingDraws()
+        if (remaining > 0) {
+            stringResource(R.string.discover_colorwalk_badge_ready, remaining)
+        } else {
+            stringResource(R.string.discover_colorwalk_badge_done)
+        }
     }
 
     LaunchedEffect(scrollState.value) {
@@ -139,16 +175,24 @@ fun DiscoverScreen(
                 .padding(AppDesign.ScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ① 每日灵感（宽卡，点击直达详情）
+            // ① 每日灵感（宽卡，点击直达详情；支持换一换 / 收藏标识）
             DailyInspirationCard(
                 preset = dailyPreset,
-                onClick = { dailyPreset?.id?.let(onNavigateToPresetDetail) },
+                isFavorite = isDailyFavorite,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    dailyPreset?.id?.let(onNavigateToPresetDetail)
+                },
+                onShuffle = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    dailyOffset++
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            // ② Color Walk / 相框出片 双列磁贴
+            // ② Color Walk / 相框出片 双列磁贴（含动态状态徽章）
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -160,7 +204,11 @@ fun DiscoverScreen(
                     title = stringResource(R.string.colorwalk_card_title),
                     description = stringResource(R.string.colorwalk_card_desc),
                     gradient = listOf(Color(0xFFFF7E5F), Color(0xFFFEB47B)),
-                    onClick = onNavigateToColorWalk,
+                    badge = colorWalkBadge,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onNavigateToColorWalk()
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 FeatureTileCard(
@@ -168,31 +216,44 @@ fun DiscoverScreen(
                     title = stringResource(R.string.photoframe_card_title),
                     description = stringResource(R.string.photoframe_card_desc),
                     gradient = listOf(Color(0xFF4FACFE), Color(0xFF00F2FE)),
-                    onClick = onNavigateToPhotoFrame,
+                    badge = null,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onNavigateToPhotoFrame()
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            // ③ 快门日记（含打卡状态徽章）
+            // ③ 快门日记（连击火焰徽章 / 打卡绿勾徽章 + 累计统计）
             CheckInEntryCard(
                 currentStreak = currentStreak,
+                longestStreak = longestStreak,
+                totalDays = totalDays,
                 hasCheckedInToday = todayRecord != null,
-                onClick = { showCheckInSheet = true },
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showCheckInSheet = true
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(AppDesign.SectionSpacing))
 
             SurveyEntryCard(
-                onClick = onNavigateToSurvey,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onNavigateToSurvey()
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            ComingSoonCard(modifier = Modifier.fillMaxWidth())
+            // ④ AI 灵感实验室（Find X10 / ColorOS 17 特色功能预告）
+            AiLabPreviewCard(modifier = Modifier.fillMaxWidth())
 
             Spacer(modifier = Modifier.height(48.dp))
         }
@@ -227,13 +288,16 @@ fun DiscoverScreen(
 
 // ═══════════════════════════════════════════════════════════
 // v1.6.10：每日灵感卡
-// 封面（真实预设图）+ 名称 + 滤镜，按日期轮换；点击进入预设详情
+// 封面（真实预设图）+ 名称 + 滤镜·作者，按日期轮换；
+// 右上「换一换」手动轮换（触感反馈）；已收藏显示金星标识
 // ═══════════════════════════════════════════════════════════
 
 @Composable
 private fun DailyInspirationCard(
     preset: MasterPreset?,
+    isFavorite: Boolean,
     onClick: () -> Unit,
+    onShuffle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (preset == null) return
@@ -266,10 +330,10 @@ private fun DailyInspirationCard(
             Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // 栏目标签
+                // 栏目标签 + 换一换
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
                         Icons.Outlined.Star, null,
@@ -282,22 +346,63 @@ private fun DailyInspirationCard(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    Spacer(modifier = Modifier.weight(1f))
+                    // v1.6.10 换一换（AI 灵感，同日手动切换）
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .clickable(onClick = onShuffle)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh, null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            stringResource(R.string.discover_daily_refresh),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = preset.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = themedTextPrimary(),
-                    maxLines = 1
-                )
-                preset.filter?.let { filter ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = preset.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = themedTextPrimary(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isFavorite) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = stringResource(R.string.discover_daily_favorited),
+                            tint = Color(0xFFFFB300),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+                // 滤镜 · 作者
+                val metaLine = listOfNotNull(
+                    preset.filter,
+                    preset.author.takeIf { it.isNotBlank() }
+                ).joinToString(" · ")
+                if (metaLine.isNotBlank()) {
                     Spacer(modifier = Modifier.height(1.dp))
                     Text(
-                        text = filter,
+                        text = metaLine,
                         style = MaterialTheme.typography.bodySmall,
                         color = themedTextSecondary(),
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Spacer(modifier = Modifier.height(3.dp))
@@ -308,19 +413,13 @@ private fun DailyInspirationCard(
                     maxLines = 1
                 )
             }
-
-            Icon(
-                Icons.Default.ChevronRight, null,
-                tint = themedTextSecondary().copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }
 
 // ═══════════════════════════════════════════════════════════
 // v1.6.10：双列功能磁贴（Bento 布局）
-// 渐变图标块置顶 + 标题 + 描述，等高等宽
+// 渐变图标块置顶 + 可选动态状态徽章 + 标题 + 描述，等高等宽
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -329,6 +428,7 @@ private fun FeatureTileCard(
     title: String,
     description: String,
     gradient: List<Color>,
+    badge: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -339,21 +439,44 @@ private fun FeatureTileCard(
         onClick = onClick
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Brush.linearGradient(gradient)),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.15f)),
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(gradient)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                }
+                // v1.6.10 动态状态徽章（如 Color Walk 剩余抽取次数）
+                if (badge != null) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = badge,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
 
@@ -387,10 +510,10 @@ private fun SurveyEntryCard(
             .border(
                 width = 1.dp,
                 color = themedBorderLight(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         onClick = onClick
     ) {
         Row(
@@ -440,12 +563,15 @@ private fun SurveyEntryCard(
 
 // ═══════════════════════════════════════════════════════════
 // v1.6.10：快门日记入口卡
-// 已打卡 → 尾部绿色对勾徽章；未打卡 → 引导箭头
+// 已打卡 → 绿色对勾徽章；有连击 → 火焰天数徽章；未打卡 → 引导箭头
+// 副标题追加累计天数 / 最长连击统计
 // ═══════════════════════════════════════════════════════════
 
 @Composable
 private fun CheckInEntryCard(
     currentStreak: Int,
+    longestStreak: Int,
+    totalDays: Int,
     hasCheckedInToday: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -474,7 +600,7 @@ private fun CheckInEntryCard(
                         .background(Color.White.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.CameraAlt, null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
             }
 
@@ -487,28 +613,46 @@ private fun CheckInEntryCard(
                     color = themedTextPrimary(),
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = if (currentStreak > 0) {
-                        stringResource(R.string.discover_checkin_subtitle_active, currentStreak)
-                    } else if (!hasCheckedInToday) {
-                        stringResource(R.string.discover_checkin_not_today)
-                    } else {
-                        stringResource(R.string.discover_checkin_subtitle)
+                    text = when {
+                        currentStreak > 0 -> stringResource(R.string.discover_checkin_subtitle_active, currentStreak)
+                        !hasCheckedInToday -> stringResource(R.string.discover_checkin_not_today)
+                        else -> stringResource(R.string.discover_checkin_subtitle)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = themedTextSecondary(),
                     maxLines = 1
                 )
+                // v1.6.10 累计统计（ColorOS 17 数据磁贴风格）
+                if (totalDays > 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.discover_checkin_stat_line, totalDays, longestStreak),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = themedTextSecondary().copy(alpha = 0.6f),
+                        maxLines = 1
+                    )
+                }
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
             if (hasCheckedInToday) {
-                // 今日已打卡徽章
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = stringResource(R.string.checkin_done_today),
-                    tint = Color(0xFF38EF7D),
-                    modifier = Modifier.size(22.dp)
+                // 今日已打卡徽章（绿勾 pill）
+                StatusBadgePill(
+                    icon = Icons.Default.CheckCircle,
+                    text = stringResource(R.string.checkin_done_today),
+                    contentColor = Color(0xFF11998E),
+                    containerColor = Color(0xFF11998E).copy(alpha = 0.1f)
+                )
+            } else if (currentStreak > 0) {
+                // 连击火焰徽章
+                StatusBadgePill(
+                    icon = Icons.Default.LocalFireDepartment,
+                    text = stringResource(R.string.discover_checkin_streak_badge, currentStreak),
+                    contentColor = Color(0xFFFF6B35),
+                    containerColor = Color(0xFFFF6B35).copy(alpha = 0.1f)
                 )
             } else {
                 Icon(
@@ -521,46 +665,124 @@ private fun CheckInEntryCard(
     }
 }
 
+// ═══════════════════════════════════════════════════════════
+// v1.6.10：状态徽章 pill（图标 + 文本，圆角胶囊）
+// ═══════════════════════════════════════════════════════════
+
 @Composable
-private fun ComingSoonCard(modifier: Modifier = Modifier) {
+private fun StatusBadgePill(
+    icon: ImageVector,
+    text: String,
+    contentColor: Color,
+    containerColor: Color
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(containerColor)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Icon(icon, null, tint = contentColor, modifier = Modifier.size(13.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = contentColor,
+            maxLines = 1
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// v1.6.10：AI 灵感实验室预告卡（替代"敬请期待"）
+// Find X10 / ColorOS 17 影像特色功能前瞻：
+// AI 灵感滤镜 / 哈苏大师通道 / 流体云参数卡
+// ═══════════════════════════════════════════════════════════
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AiLabPreviewCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    Icons.Outlined.Star, null,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF7F5CFF), Color(0xFF4FACFE))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome, null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.discover_lab_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = themedTextPrimary()
+                    )
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Text(
+                        stringResource(R.string.discover_lab_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = themedTextSecondary().copy(alpha = 0.6f),
+                        maxLines = 1
+                    )
+                }
             }
 
-            Column {
-                Text(
-                    stringResource(R.string.discover_more_coming),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = themedTextSecondary(),
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    stringResource(R.string.discover_stay_tuned),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = themedTextSecondary().copy(alpha = 0.6f)
-                )
+            // 特色功能 pill 标签
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                LabFeaturePill(stringResource(R.string.discover_lab_feature_ai))
+                LabFeaturePill(stringResource(R.string.discover_lab_feature_hasselblad))
+                LabFeaturePill(stringResource(R.string.discover_lab_feature_fluid))
             }
         }
+    }
+}
+
+@Composable
+private fun LabFeaturePill(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(50)
+            )
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
     }
 }

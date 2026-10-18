@@ -788,6 +788,19 @@
     <string name="discover_checkin_subtitle">每一次快门，都是你的独家记忆</string>
     <string name="discover_checkin_not_today">今天还没打卡，快来记录吧</string>
     <string name="discover_checkin_subtitle_active">已连续记录 %1$d 天</string>
+    <!-- v1.6.10 发现页增强 -->
+    <string name="discover_daily_refresh">换一换</string>
+    <string name="discover_daily_favorited">已收藏</string>
+    <string name="discover_colorwalk_badge_todo">今日待抽取</string>
+    <string name="discover_colorwalk_badge_ready">剩 %1$d 次机会</string>
+    <string name="discover_colorwalk_badge_done">今日已完成</string>
+    <string name="discover_checkin_stat_line">累计 %1$d 天 · 最长连击 %2$d 天</string>
+    <string name="discover_checkin_streak_badge">连续 %1$d 天</string>
+    <string name="discover_lab_title">AI 灵感实验室</string>
+    <string name="discover_lab_desc">ColorOS 17 × Find X10 影像新特性预研中</string>
+    <string name="discover_lab_feature_ai">AI 灵感滤镜</string>
+    <string name="discover_lab_feature_hasselblad">哈苏大师通道</string>
+    <string name="discover_lab_feature_fluid">流体云参数卡</string>
     <string name="checkin_sheet_title">快门日记</string>
     <string name="checkin_current_streak">当前连续</string>
     <string name="checkin_longest_streak">历史最长</string>

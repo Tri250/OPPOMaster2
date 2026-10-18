@@ -416,6 +416,31 @@
     <string name="discover_daily_title">毎日のインスピレーション</string>
     <string name="discover_daily_desc">毎日ひとつのおすすめプリセット。タップしてパラメータを表示</string>
     <string name="checkin_done_today">今日すでに記録済み</string>
+    <!-- v1.6.10 発見ページ強化 -->
+    <string name="discover_title">発見</string>
+    <string name="discover_daily_refresh">シャッフル</string>
+    <string name="discover_daily_favorited">お気に入り済み</string>
+    <string name="discover_colorwalk_badge_todo">本日まだ抽選なし</string>
+    <string name="discover_colorwalk_badge_ready">残り %1$d 回</string>
+    <string name="discover_colorwalk_badge_done">本日完了</string>
+    <string name="discover_checkin_title">シャッター日記</string>
+    <string name="discover_checkin_subtitle">すべてのシャッターがあなたの特別な記録に</string>
+    <string name="discover_checkin_not_today">今日まだ記録していません、残しましょう</string>
+    <string name="discover_checkin_subtitle_active">%1$d 日連続で記録中</string>
+    <string name="discover_checkin_stat_line">累計 %1$d 日 · 最長 %2$d 日</string>
+    <string name="discover_checkin_streak_badge">連続 %1$d 日</string>
+    <string name="discover_lab_title">AI インスピレーションラボ</string>
+    <string name="discover_lab_desc">ColorOS 17 × Find X10 の撮影新機能を研究中</string>
+    <string name="discover_lab_feature_ai">AIフィルター</string>
+    <string name="discover_lab_feature_hasselblad">ハッセルブラッドch</string>
+    <string name="discover_lab_feature_fluid">Fluid Cloudカード</string>
+    <string name="colorwalk_card_title">Color Walk</string>
+    <string name="colorwalk_card_desc">毎日のカラーチャレンジで、色から街の美しさを発見</string>
+    <string name="checkin_sheet_title">シャッター日記</string>
+    <string name="checkin_current_streak">現在の連続</string>
+    <string name="checkin_longest_streak">最長記録</string>
+    <string name="checkin_month_total">今月の記録</string>
+    <string name="checkin_days_unit">%1$d 日</string>
     <string name="about_device_coloros">ColorOS %1$d</string>
     <string name="about_view_changelog">更新履歴</string>
     <string name="about_project_title">プロジェクト</string>
@@ -518,7 +543,7 @@
 
     <string name="checkin_calendar_title">カレンダー</string>
     <string name="checkin_calendar_close">閉じる</string>
-    <string name="checkin_calendar_prev_month">前月</string>
+    <string name="checkin_calendar_previous_month">前月</string>
     <string name="checkin_calendar_next_month">翌月</string>
     <string name="checkin_no_record">この日の記録はまだありません。</string>
     <string name="checkin_activity_draw">カラーカードを描画</string>

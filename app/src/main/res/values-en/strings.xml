@@ -730,6 +730,19 @@
     <string name="discover_checkin_subtitle">Every shutter click, your exclusive memory</string>
     <string name="discover_checkin_not_today">Haven\'t checked in yet today</string>
     <string name="discover_checkin_subtitle_active">Active for %1$d days in a row</string>
+    <!-- v1.6.10 Discover enhancements -->
+    <string name="discover_daily_refresh">Shuffle</string>
+    <string name="discover_daily_favorited">Favorited</string>
+    <string name="discover_colorwalk_badge_todo">Awaiting today\'s draw</string>
+    <string name="discover_colorwalk_badge_ready">%1$d draws left</string>
+    <string name="discover_colorwalk_badge_done">Done for today</string>
+    <string name="discover_checkin_stat_line">%1$d days total · best streak %2$d</string>
+    <string name="discover_checkin_streak_badge">%1$d-day streak</string>
+    <string name="discover_lab_title">AI Inspiration Lab</string>
+    <string name="discover_lab_desc">ColorOS 17 × Find X10 imaging features in the works</string>
+    <string name="discover_lab_feature_ai">AI filters</string>
+    <string name="discover_lab_feature_hasselblad">Hasselblad channel</string>
+    <string name="discover_lab_feature_fluid">Fluid Cloud cards</string>
     <string name="checkin_sheet_title">Shutter Diary</string>
     <string name="checkin_current_streak">Current Streak</string>
     <string name="checkin_longest_streak">Best Streak</string>
