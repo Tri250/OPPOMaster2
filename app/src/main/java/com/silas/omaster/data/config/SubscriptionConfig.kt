@@ -28,12 +28,23 @@ internal class SubscriptionConfig(private val context: Context) {
     companion object {
         const val DEFAULT_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json"
         const val REALME_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json"
+        // 【v1.6.13】vivo / HONOR 社区预设源（默认启用，启动自动刷新拉取）
+        const val VIVO_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/vivo.json"
+        const val HONOR_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/honor.json"
 
         private const val PREFS_NAME = "omaster_config_subscriptions"
         private const val KEY_SUBSCRIPTIONS = "subscriptions_list"
 
         /** 旧版 SubscriptionManager 使用的存储名（仅用于一次性迁移） */
         private const val LEGACY_PREFS_NAME = "omaster_subscriptions"
+
+        /**
+         * 【v1.6.13】默认订阅种子版本：
+         * 1 = oppo 出厂源；2 = +realme；3 = +vivo / HONOR（本次追加）。
+         * 版本落后时幂等补齐一次；用户随后删除不会被再次补回。
+         */
+        private const val KEY_DEFAULT_SEED_VERSION = "default_seed_version"
+        private const val DEFAULT_SEED_VERSION = 3
     }
 
     init {
@@ -46,6 +57,8 @@ internal class SubscriptionConfig(private val context: Context) {
             try {
                 val list = json.decodeFromString<SubscriptionList>(jsonStr)
                 _subscriptionsFlow.value = list.subscriptions
+                // 【v1.6.13】存量用户升级后幂等补齐新增默认源（vivo / HONOR）
+                seedDefaultSubscriptions()
             } catch (e: Exception) {
                 android.util.Log.e(ConfigLog.TAG, "[Subscription] Failed to load subscriptions", e)
                 _subscriptionsFlow.value = emptyList()
@@ -115,11 +128,57 @@ internal class SubscriptionConfig(private val context: Context) {
         }
 
         _subscriptionsFlow.value = migrated
+        // 【v1.6.13】迁移后同样补齐新增默认源（vivo / HONOR）
+        seedDefaultSubscriptions()
         android.util.Log.d(
             ConfigLog.TAG,
-            "[Subscription] Migrated ${migrated.size} subscriptions from legacy store"
+            "[Subscription] Migrated ${_subscriptionsFlow.value.size} subscriptions from legacy store"
         )
         return true
+    }
+
+    /**
+     * 【v1.6.13】默认订阅种子补齐（幂等）：为存量订阅列表追加 vivo / HONOR 社区预设源。
+     * 新源默认启用（isEnabled = true），启动时自动刷新机制（每日一次）会立即拉取；
+     * 仅在种子版本落后时执行，写入版本后用户删除不会被再次补回。
+     */
+    private fun seedDefaultSubscriptions() {
+        val currentSeed = prefs.getInt(KEY_DEFAULT_SEED_VERSION, 1)
+        if (currentSeed >= DEFAULT_SEED_VERSION) return
+
+        val current = _subscriptionsFlow.value
+        var changed = false
+        var migrated = current
+        if (migrated.none { it.url == VIVO_PRESET_URL }) {
+            migrated = migrated + Subscription(
+                url = VIVO_PRESET_URL,
+                name = "vivo 大师预设",
+                author = "@OMaster",
+                build = 1,
+                isEnabled = true,
+                presetCount = 0,
+                lastUpdateTime = 0
+            )
+            changed = true
+        }
+        if (migrated.none { it.url == HONOR_PRESET_URL }) {
+            migrated = migrated + Subscription(
+                url = HONOR_PRESET_URL,
+                name = "HONOR 大师预设",
+                author = "@OMaster",
+                build = 1,
+                isEnabled = true,
+                presetCount = 0,
+                lastUpdateTime = 0
+            )
+            changed = true
+        }
+        if (changed) {
+            _subscriptionsFlow.value = migrated
+            saveSubscriptions()
+            android.util.Log.d(ConfigLog.TAG, "[Subscription] Seeded vivo/HONOR default subscriptions")
+        }
+        prefs.edit().putInt(KEY_DEFAULT_SEED_VERSION, DEFAULT_SEED_VERSION).apply()
     }
 
     private fun createDefaultSubscriptions() {
@@ -141,10 +200,30 @@ internal class SubscriptionConfig(private val context: Context) {
                 isEnabled = false,
                 presetCount = 0,
                 lastUpdateTime = 0
+            ),
+            // 【v1.6.13】vivo / HONOR 社区源（默认启用，启动自动刷新拉取）
+            Subscription(
+                url = VIVO_PRESET_URL,
+                name = "vivo 大师预设",
+                author = "@OMaster",
+                build = 1,
+                isEnabled = true,
+                presetCount = 0,
+                lastUpdateTime = 0
+            ),
+            Subscription(
+                url = HONOR_PRESET_URL,
+                name = "HONOR 大师预设",
+                author = "@OMaster",
+                build = 1,
+                isEnabled = true,
+                presetCount = 0,
+                lastUpdateTime = 0
             )
         )
         _subscriptionsFlow.value = defaultSubs
         saveSubscriptions()
+        prefs.edit().putInt(KEY_DEFAULT_SEED_VERSION, DEFAULT_SEED_VERSION).apply()
     }
 
     fun addSubscription(url: String, name: String = "", author: String = "", build: Int = 1) {
