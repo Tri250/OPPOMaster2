@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -575,6 +576,9 @@ private fun PresetGrid(
 
     // Pull-to-refresh state
     var refreshing by remember { mutableStateOf(false) }
+    // 【v1.6.13 lint 修复】组合内通过 LocalResources 访问资源，回调内直接使用
+    // (LocalContextGetResourceValueCall: 禁止经 LocalContext.current 查询资源)
+    val resources = LocalResources.current
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
         refreshing = true
         onRefresh { result ->
@@ -582,13 +586,13 @@ private fun PresetGrid(
             // 【v1.6.13】刷新结果 Toast 多语言化（修复硬编码中文）
             val message = when (result) {
                 is HomeViewModel.RefreshResult.Success ->
-                    context.getString(R.string.refresh_success, result.count)
+                    resources.getString(R.string.refresh_success, result.count)
                 is HomeViewModel.RefreshResult.PartialUpdate ->
-                    context.getString(R.string.refresh_partial, result.updated, result.upToDate)
+                    resources.getString(R.string.refresh_partial, result.updated, result.upToDate)
                 is HomeViewModel.RefreshResult.UpToDate ->
-                    context.getString(R.string.refresh_up_to_date)
+                    resources.getString(R.string.refresh_up_to_date)
                 is HomeViewModel.RefreshResult.Failed ->
-                    context.getString(R.string.refresh_failed)
+                    resources.getString(R.string.refresh_failed)
                 is HomeViewModel.RefreshResult.NoSubscriptions -> ""
             }
             if (message.isNotEmpty()) {
@@ -1214,7 +1218,7 @@ private fun SearchFilterBar(
                 val hasActiveFilter = searchQuery.isNotBlank() || selectedFilters.isNotEmpty() ||
                         showFavoritesOnly || showNewOnly || sortOrder != HomeViewModel.SortOrder.DEFAULT
                 Text(
-                    text = context.getString(R.string.filter_result_count, presetCount),
+                    text = stringResource(R.string.filter_result_count, presetCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = themedTextSecondary()
                 )

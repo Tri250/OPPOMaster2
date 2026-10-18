@@ -854,6 +854,13 @@
     <string name="refresh_partial">Updated %1$d, %2$d already up to date</string>
     <string name="refresh_up_to_date">All subscriptions are up to date</string>
     <string name="refresh_failed">Update failed, check your network</string>
+    <!-- App shortcuts -->
+    <string name="shortcut_ai_snap_long">Snap camera settings with AI Flash Note → OMaster generates the preset</string>
+    <string name="shortcut_create_preset_short">New preset</string>
+    <string name="shortcut_create_preset_long">Start creating from a template in one tap</string>
+    <string name="shortcut_discover_short">Discover</string>
+    <string name="shortcut_discover_long">Browse the latest preset ideas and inspirations</string>
+    <string name="shortcut_request_pinned">Add OMaster to the side key</string>
     <!-- Discover -->
     <string name="greeting_morning">Good morning</string>
     <string name="greeting_afternoon">Good afternoon</string>

@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -131,6 +132,8 @@ fun ProfileScreen(
     val config = remember { ConfigCenter.getInstance(context) }
     val updateChannel by config.updateChannelFlow.collectAsState()
     val scope = rememberCoroutineScope()
+    // 【v1.6.13 lint 修复】LocalResources 组合内资源访问（替代 context.getString）
+    val resources = LocalResources.current
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var pendingUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
 
@@ -145,12 +148,12 @@ fun ProfileScreen(
                         pendingUpdate = result
                         haptic.perform(HapticFeedbackType.Confirm)
                     } else if (result != null) {
-                        Toast.makeText(context, context.getString(R.string.version_is_latest), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, resources.getString(R.string.version_is_latest), Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, context.getString(R.string.version_check_failed), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, resources.getString(R.string.version_check_failed), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.version_check_failed), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, resources.getString(R.string.version_check_failed), Toast.LENGTH_SHORT).show()
                 } finally {
                     isCheckingUpdate = false
                 }
