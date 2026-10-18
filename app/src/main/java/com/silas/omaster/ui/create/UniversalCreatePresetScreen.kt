@@ -100,10 +100,10 @@ fun UniversalCreatePresetScreen(
                     }
                 },
                 actions = {
-                    val isSaveEnabled = uiState.name.isNotBlank() && (uiState.imageUri != null || uiState.originalCoverPath != null)
-                    
+                    val isSaveEnabled = uiState.name.isNotBlank() && (uiState.imageUri != null || uiState.originalCoverPath != null) && !uiState.isSaving
+
                     // Show validation hint when save is disabled
-                    if (!isSaveEnabled && uiState.name.isNotBlank()) {
+                    if (!isSaveEnabled && uiState.name.isNotBlank() && !uiState.isSaving) {
                         Text(
                             text = "请上传封面图片",
                             style = MaterialTheme.typography.bodySmall,
@@ -111,11 +111,14 @@ fun UniversalCreatePresetScreen(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                     }
-                    
+
                     TextButton(
                         onClick = {
-                            if (viewModel.savePreset()) {
-                                onSave()
+                            // 【v1.6.11】保存改为异步，结果回调通知；保存期间按钮因 isSaving 置灰防重复提交
+                            viewModel.savePreset { success ->
+                                if (success) {
+                                    onSave()
+                                }
                             }
                         },
                         enabled = isSaveEnabled

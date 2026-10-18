@@ -186,19 +186,21 @@ class PresetRepository(
      * 内置预设的 ID 是基于名称生成的（如 fuji_film_0）
      * 两者不会冲突
      */
-    suspend fun getPresetById(presetId: String): MasterPreset? {
+    suspend fun getPresetById(presetId: String): MasterPreset? = withContext(Dispatchers.IO) {
         // 先查找默认预设
+        // 【v1.6.11 修复】loadPresets 含磁盘 IO + JSON 反序列化，原实现虽为 suspend
+        // 却仍运行在调用方（主线程）调度器上，创建/编辑页加载模板时会卡主线程。
         val defaultPreset = JsonUtil.loadPresets(appContext)
             .find { it.id == presetId }
         if (defaultPreset != null) {
-            return defaultPreset.id?.let { id ->
+            return@withContext defaultPreset.id?.let { id ->
                 defaultPreset.copy(isFavorite = favoriteManager.isFavorite(id))
             }
         }
 
         // 再查找自定义预设
         val customPreset = customPresetManager.getPresetById(presetId)
-        return customPreset?.copy(
+        customPreset?.copy(
             isFavorite = favoriteManager.isFavorite(presetId),
             isCustom = true
         )

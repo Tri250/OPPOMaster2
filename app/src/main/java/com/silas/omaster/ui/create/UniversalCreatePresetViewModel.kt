@@ -11,10 +11,12 @@ import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
 import com.silas.omaster.util.PresetI18n
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -81,9 +83,11 @@ class UniversalCreatePresetViewModel(
                 
                 // ✅ 解析资源 ID 为中文，让用户看到人话
                 val resolvedSections = resolveSectionResources(sections)
-                
+
+                // 【v1.6.11】防竞态：若用户在模板异步加载完成前已输入名称，保留用户输入
+                val defaultName = if (preset.isCustom) preset.name else "${preset.name} (Copy)"
                 _uiState.value = UniversalPresetUiState(
-                    name = if (preset.isCustom) preset.name else "${preset.name} (Copy)",
+                    name = if (_uiState.value.name.isNotBlank()) _uiState.value.name else defaultName,
                     sections = resolvedSections,
                     // Template mode: require new image
                     imageUri = null,
@@ -182,45 +186,66 @@ class UniversalCreatePresetViewModel(
         }
     }
 
-    fun savePreset(): Boolean {
+    /**
+     * 保存预设。
+     * 【v1.6.11 修复】原先同步执行：图片拷贝（contentResolver 流复制）与 SharedPreferences
+     * 写入均发生在主线程（viewModelScope 默认 Main），保存大图时造成明显卡顿。
+     * 现改为 IO 线程异步执行，结果通过 onResult 回调（主线程）通知调用方；
+     * isSaving 状态防重复提交（按钮置灰 + 重入直接拒绝）。
+     */
+    fun savePreset(onResult: (Boolean) -> Unit = {}) {
         val state = _uiState.value
-        if (state.name.isBlank()) return false
-        
+        if (state.isSaving) {
+            onResult(false)
+            return
+        }
+        if (state.name.isBlank()) {
+            onResult(false)
+            return
+        }
+
         // Validation:
         // - Create mode: must have imageUri
         // - Edit mode: must have imageUri OR originalCoverPath
-        if (state.imageUri == null && state.originalCoverPath == null) return false
+        if (state.imageUri == null && state.originalCoverPath == null) {
+            onResult(false)
+            return
+        }
 
         // Set saving state
         _uiState.value = state.copy(isSaving = true)
 
-        return try {
-            val coverPath = if (state.imageUri != null) {
-                saveImageToInternalStorage(state.imageUri)
-            } else {
-                state.originalCoverPath!!
+        viewModelScope.launch {
+            val success = try {
+                val coverPath = withContext(Dispatchers.IO) {
+                    if (state.imageUri != null) {
+                        saveImageToInternalStorage(state.imageUri)
+                    } else {
+                        state.originalCoverPath!!
+                    }
+                }
+
+                val preset = MasterPreset(
+                    id = editingPresetId ?: UUID.randomUUID().toString(),
+                    name = state.name,
+                    coverPath = coverPath,
+                    author = "@用户自定义",
+                    sections = state.sections,
+                    isCustom = true
+                )
+
+                if (editingPresetId != null) {
+                    repository.updateCustomPreset(preset)
+                } else {
+                    repository.addCustomPreset(preset)
+                }
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
             }
-            
-            val preset = MasterPreset(
-                id = editingPresetId ?: UUID.randomUUID().toString(),
-                name = state.name,
-                coverPath = coverPath,
-                author = "@用户自定义",
-                sections = state.sections,
-                isCustom = true
-            )
-            
-            if (editingPresetId != null) {
-                repository.updateCustomPreset(preset)
-            } else {
-                repository.addCustomPreset(preset)
-            }
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        } finally {
             _uiState.value = _uiState.value.copy(isSaving = false)
+            onResult(success)
         }
     }
 
