@@ -91,9 +91,35 @@ class ConfigMigrationTest {
         val config = SubscriptionConfig(context)
 
         val subs = config.subscriptionsFlow.value
-        assertEquals(2, subs.size)
-        assertTrue(subs.any { it.url == SubscriptionConfig.DEFAULT_PRESET_URL })
-        assertTrue(subs.any { it.url == SubscriptionConfig.REALME_PRESET_URL })
+        // v1.6.13：官方 + Realme + vivo + HONOR 共 4 条出厂默认订阅
+        assertEquals(4, subs.size)
+        assertTrue(subs.any { it.url == SubscriptionConfig.DEFAULT_PRESET_URL && it.isEnabled })
+        assertTrue(subs.any { it.url == SubscriptionConfig.REALME_PRESET_URL && !it.isEnabled })
+        // vivo / HONOR 社区源：默认启用，启动自动刷新拉取
+        assertTrue(subs.any { it.url == SubscriptionConfig.VIVO_PRESET_URL && it.isEnabled })
+        assertTrue(subs.any { it.url == SubscriptionConfig.HONOR_PRESET_URL && it.isEnabled })
+    }
+
+    @Test
+    fun `存量订阅升级后幂等补齐新增默认源`() {
+        // 模拟 v1.6.12 存量用户：仅有官方源，种子版本停留在 1
+        val legacy = SubscriptionList(
+            listOf(Subscription(url = SubscriptionConfig.DEFAULT_PRESET_URL, name = "官方内置预设"))
+        )
+        prefs("omaster_config_subscriptions").edit()
+            .putString("subscriptions_list", json.encodeToString(SubscriptionList.serializer(), legacy))
+            .commit()
+
+        val config = SubscriptionConfig(context)
+        val subs = config.subscriptionsFlow.value
+
+        // vivo / HONOR 补齐且默认启用
+        assertTrue(subs.any { it.url == SubscriptionConfig.VIVO_PRESET_URL && it.isEnabled })
+        assertTrue(subs.any { it.url == SubscriptionConfig.HONOR_PRESET_URL && it.isEnabled })
+        // 补齐结果落盘，且二次实例化（重启）后种子版本已达标，不会重复追加
+        assertNotNull(prefs("omaster_config_subscriptions").getString("subscriptions_list", null))
+        val reloaded = SubscriptionConfig(context)
+        assertEquals(subs.size, reloaded.subscriptionsFlow.value.size)
     }
 
     @Test
