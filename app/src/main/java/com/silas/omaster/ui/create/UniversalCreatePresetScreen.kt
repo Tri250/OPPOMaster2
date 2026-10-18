@@ -100,6 +100,7 @@ fun UniversalCreatePresetScreen(
                     }
                 },
                 actions = {
+                    val view = androidx.compose.ui.platform.LocalView.current
                     val isSaveEnabled = uiState.name.isNotBlank() && (uiState.imageUri != null || uiState.originalCoverPath != null) && !uiState.isSaving
 
                     // Show validation hint when save is disabled
@@ -115,9 +116,13 @@ fun UniversalCreatePresetScreen(
                     TextButton(
                         onClick = {
                             // 【v1.6.11】保存改为异步，结果回调通知；保存期间按钮因 isSaving 置灰防重复提交
+                            // 【v1.6.12】结果接 ColorOS 17 O-Haptics：成功 CONFIRM / 失败 REJECT
                             viewModel.savePreset { success ->
                                 if (success) {
+                                    com.silas.omaster.util.OsHaptics.confirm(view)
                                     onSave()
+                                } else {
+                                    com.silas.omaster.util.OsHaptics.reject(view)
                                 }
                             }
                         },

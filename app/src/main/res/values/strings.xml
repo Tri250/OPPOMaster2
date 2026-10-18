@@ -10,6 +10,11 @@
     <string name="shortcut_open_home_disabled">OMaster 暂时不可用</string>
     <string name="shortcut_ai_snap_short">AI 闪记导入</string>
     <string name="shortcut_ai_snap_long">用 AI 闪记截取相机参数 → OMaster 自动生成预设</string>
+    <!-- v1.6.12：ColorOS 17 侧边键快捷方式扩展（Find X10） -->
+    <string name="shortcut_create_preset_short">新建预设</string>
+    <string name="shortcut_create_preset_long">从模板一键进入预设创作</string>
+    <string name="shortcut_discover_short">发现广场</string>
+    <string name="shortcut_discover_long">浏览最新预设灵感与玩法</string>
     <string name="shortcut_request_pinned">把 OMaster 添到侧边键</string>
     <!-- MU-28 / v1.6：桌面小组件 -->
     <string name="widget_label">OMaster 今日预设</string>

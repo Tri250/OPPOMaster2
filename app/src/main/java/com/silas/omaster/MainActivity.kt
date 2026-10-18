@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -98,6 +100,10 @@ val LocalActivity = compositionLocalOf<Activity> { error("No Activity provided")
 
 private const val SURVEY_URL = "https://www.wjx.cn/vm/your_survey_id.aspx"
 
+// 【v1.6.12】ColorOS 17 水生动效：低刚度弹簧曲线，回弹细腻不夸张（对齐系统转场手感）
+private val fluidSlideSpec = spring<IntOffset>(dampingRatio = 0.92f, stiffness = 380f)
+private val fluidFadeSpec = spring<Float>(dampingRatio = 0.92f, stiffness = 380f)
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var floatingWindowController: FloatingWindowController
@@ -114,6 +120,9 @@ class MainActivity : ComponentActivity() {
 
     // FD-01c：系统分享接入 —— 外部分享的预设文本，导入完成后置空
     private var pendingSharedText by androidx.compose.runtime.mutableStateOf<String?>(null)
+
+    // 【v1.6.12】ColorOS 17 侧边键快捷方式路由 —— 导航完成后置空（消费一次）
+    internal var pendingShortcutAction by androidx.compose.runtime.mutableStateOf<String?>(null)
 
     override fun attachBaseContext(newBase: Context?) {
         // 在 Activity 创建前应用语言设置
@@ -136,6 +145,13 @@ class MainActivity : ComponentActivity() {
         // FD-01c：接收系统分享的预设 JSON 文本
         if (intent?.action == android.content.Intent.ACTION_SEND) {
             pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+        }
+
+        // 【v1.6.12】接收侧边键快捷方式路由（Find X10 长按图标：新建预设 / 发现广场）
+        if (pendingShortcutAction == null) {
+            intent?.getStringExtra(com.silas.omaster.util.ShortcutRegistrar.EXTRA_SHORTCUT_ACTION)?.let {
+                pendingShortcutAction = it
+            }
         }
 
         // 初始化并注册全局悬浮窗控制器
@@ -368,6 +384,21 @@ fun MainApp(
     val repository = remember { PresetRepository.getInstance(context) }
     var showMigrationDialog by remember { mutableStateOf(false) }
 
+    // 【v1.6.12】消费侧边键快捷方式路由（Find X10 + ColorOS 17 长按图标直达）
+    LaunchedEffect(Unit) {
+        val mainActivity = LocalActivity.current as? MainActivity ?: return@LaunchedEffect
+        when (mainActivity.pendingShortcutAction) {
+            com.silas.omaster.util.ShortcutRegistrar.ACTION_CREATE -> {
+                navController.navigate(Screen.PresetSelection)
+                mainActivity.pendingShortcutAction = null
+            }
+            com.silas.omaster.util.ShortcutRegistrar.ACTION_DISCOVER -> {
+                navController.navigate(Screen.Discover)
+                mainActivity.pendingShortcutAction = null
+            }
+        }
+    }
+
     // 检查是否需要数据迁移
     LaunchedEffect(Unit) {
         // 先触发 loadPresets 来正确检测版本
@@ -502,8 +533,8 @@ fun MainApp(
                 
                 slideIntoContainer(
                     towards = direction,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+                    animationSpec = fluidSlideSpec
+                ) + fadeIn(animationSpec = fluidFadeSpec)
             },
             exitTransition = {
                 val initialIndex = getNavIndex(initialState.destination.route)
@@ -523,8 +554,8 @@ fun MainApp(
 
                 slideOutOfContainer(
                     towards = direction,
-                    animationSpec = tween(300)
-                ) + fadeOut(animationSpec = tween(300))
+                    animationSpec = fluidSlideSpec
+                ) + fadeOut(animationSpec = fluidFadeSpec)
             },
             popEnterTransition = {
                 val initialIndex = getNavIndex(initialState.destination.route)
@@ -544,8 +575,8 @@ fun MainApp(
 
                 slideIntoContainer(
                     towards = direction,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+                    animationSpec = fluidSlideSpec
+                ) + fadeIn(animationSpec = fluidFadeSpec)
             },
             popExitTransition = {
                 val initialIndex = getNavIndex(initialState.destination.route)
@@ -565,8 +596,8 @@ fun MainApp(
 
                 slideOutOfContainer(
                     towards = direction,
-                    animationSpec = tween(300)
-                ) + fadeOut(animationSpec = tween(300))
+                    animationSpec = fluidSlideSpec
+                ) + fadeOut(animationSpec = fluidFadeSpec)
             }
         ) {
             composable<Screen.Home> {

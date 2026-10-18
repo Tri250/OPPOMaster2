@@ -71,3 +71,35 @@ fun rememberScrollHaptics(scrollState: ScrollState) {
         }
     }
 }
+
+/**
+ * 【v1.6.12】ColorOS 17 场景化线性马达触感（O-Haptics 风格）
+ *
+ * API 30+ 使用语义化 HapticFeedbackConstants（CONFIRM 成功 / REJECT 失败），
+ * 由系统（含 ColorOS 17）按场景映射精细马达波形；低版本自动降级 VIRTUAL_KEY。
+ * 受全局震感开关 HapticSettings 约束，与设置页"震动反馈"一致。
+ */
+object OsHaptics {
+
+    /** 操作成功（保存预设成功、收藏成功等） */
+    fun confirm(view: android.view.View) =
+        perform(view, android.view.HapticFeedbackConstants.CONFIRM)
+
+    /** 操作失败（校验不通过、保存失败等） */
+    fun reject(view: android.view.View) =
+        perform(view, android.view.HapticFeedbackConstants.REJECT)
+
+    /** 普通点按 */
+    fun click(view: android.view.View) =
+        perform(view, android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+
+    private fun perform(view: android.view.View, api30Constant: Int) {
+        if (!HapticSettings.enabled) return
+        val constant = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            api30Constant
+        } else {
+            android.view.HapticFeedbackConstants.VIRTUAL_KEY
+        }
+        runCatching { view.performHapticFeedback(constant) }
+    }
+}
