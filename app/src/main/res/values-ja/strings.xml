@@ -405,6 +405,24 @@
     <string name="feature_safe_title">安全で信頼性が高い</string>
     <string name="feature_safe_desc">ローカルストレージ優先、ユーザーのプライバシーを保護</string>
 
+    <!-- v1.6.10 Find X10 / ColorOS 17 デバイス対応 -->
+    <string name="feature_device_title">デバイス最適化</string>
+    <string name="feature_device_desc">Find X10 など ColorOS 17 端末向けの専用プリセット提案</string>
+    <string name="home_banner_title_for_device">%1$s におすすめ</string>
+    <string name="home_banner_chip_pro_imaging">ハッセルブラッド撮影</string>
+    <string name="home_banner_chip_200mp">2億ピクセル</string>
+    <string name="home_banner_chip_coloros">ColorOS %1$d 最適化</string>
+    <string name="home_banner_chip_curated">厳選プリセット</string>
+    <string name="discover_daily_title">毎日のインスピレーション</string>
+    <string name="discover_daily_desc">毎日ひとつのおすすめプリセット。タップしてパラメータを表示</string>
+    <string name="checkin_done_today">今日すでに記録済み</string>
+    <string name="about_device_coloros">ColorOS %1$d</string>
+    <string name="about_view_changelog">更新履歴</string>
+    <string name="about_project_title">プロジェクト</string>
+    <string name="about_qq_title">QQグループに参加</string>
+    <string name="about_qq_number">グループ番号: %1$s</string>
+    <string name="about_qq_failed">QQグループを開けません。QQがインストールされているか確認してください</string>
+
     <!-- クレジット -->
     <string name="credits_title">クレジット</string>
     <string name="developer">開発者</string>
@@ -498,35 +516,6 @@
     <string name="colorwalk_no_challenge">今日のチャレンジはありません、まずカードを引いてください</string>
     <string name="colorwalk_public_palette">公開パレット</string>
 
-    <!-- シャッターダイアリー -->
-    <string name="shutter_diary_title">Shutter Diary</string>
-    <string name="shutter_diary_subtitle">あなたの撮影習慣を記録</string>
-    <string name="shutter_diary_today_status">今日のステータス</string>
-    <string name="shutter_diary_check_in">チェックイン</string>
-    <string name="shutter_diary_checked_in">チェックイン済み</string>
-    <string name="shutter_diary_consecutive_days">連続 %1$d 日</string>
-    <string name="shutter_diary_total_days">累計 %1$d 日</string>
-    <string name="shutter_diary_weekly_stats">週間統計</string>
-    <string name="shutter_diary_monthly_calendar">月間カレンダー</string>
-    <string name="shutter_diary_no_records">まだ記録がありません</string>
-    <string name="shutter_diary_start_hint">今日のチェックインから始めて、撮影習慣を育てましょう</string>
-    <string name="shutter_diary_activity_draw">カラーカードを描画</string>
-    <string name="shutter_diary_activity_challenge">チャレンジを完了</string>
-    <string name="shutter_diary_activity_favorite">インスピレーションを保存</string>
-    <string name="shutter_diary_activity_visit">チェックイン</string>
-    <string name="shutter_diary_view_detail">詳細を表示</string>
-    <string name="shutter_diary_mark_complete">完了としてマーク</string>
-    <string name="shutter_diary_marked">マーク済み</string>
-    <string name="shutter_diary_achievement">実績</string>
-    <string name="shutter_diary_achievement_collector">コレクター</string>
-    <string name="shutter_diary_achievement_collector_desc">7日間の記録を完了</string>
-    <string name="shutter_diary_achievement_enthusiast">愛好家</string>
-    <string name="shutter_diary_achievement_enthusiast_desc">30日間の記録を完了</string>
-    <string name="shutter_diary_achievement_master">マスター</string>
-    <string name="shutter_diary_achievement_master_desc">100日間の記録を完了</string>
-    <string name="shutter_diary_share">シェア</string>
-    <string name="shutter_diary_share_title">私のShutter Diary</string>
-    <string name="shutter_diary_share_text">OMasterで %1$d 日間の撮影習慣を記録しました！一緒に始めましょう！</string>
     <string name="checkin_calendar_title">カレンダー</string>
     <string name="checkin_calendar_close">閉じる</string>
     <string name="checkin_calendar_prev_month">前月</string>

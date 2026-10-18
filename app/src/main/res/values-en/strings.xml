@@ -393,6 +393,24 @@
     <string name="feature_safe_title">Safe &amp; Reliable</string>
     <string name="feature_safe_desc">Local storage first, protecting user privacy</string>
 
+    <!-- v1.6.10 Find X10 / ColorOS 17 device-aware -->
+    <string name="feature_device_title">Device Tuning</string>
+    <string name="feature_device_desc">Exclusive preset picks for Find X10 and ColorOS 17 devices</string>
+    <string name="home_banner_title_for_device">Curated for %1$s</string>
+    <string name="home_banner_chip_pro_imaging">Hasselblad Imaging</string>
+    <string name="home_banner_chip_200mp">200MP</string>
+    <string name="home_banner_chip_coloros">Tuned for ColorOS %1$d</string>
+    <string name="home_banner_chip_curated">Curated Presets</string>
+    <string name="discover_daily_title">Daily Inspiration</string>
+    <string name="discover_daily_desc">A curated preset every day. Tap to view parameters</string>
+    <string name="checkin_done_today">Checked in today</string>
+    <string name="about_device_coloros">ColorOS %1$d</string>
+    <string name="about_view_changelog">Changelog</string>
+    <string name="about_project_title">Project</string>
+    <string name="about_qq_title">Join QQ Group</string>
+    <string name="about_qq_number">Group: %1$s</string>
+    <string name="about_qq_failed">Couldn\'t open QQ. Please make sure QQ is installed</string>
+
     <!-- Credits -->
     <string name="credits_title">Credits</string>
     <string name="developer">Developer</string>

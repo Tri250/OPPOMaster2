@@ -385,8 +385,10 @@ fun MainApp(
     var showMigrationDialog by remember { mutableStateOf(false) }
 
     // 【v1.6.12】消费侧边键快捷方式路由（Find X10 + ColorOS 17 长按图标直达）
+    // 注意：LocalActivity.current 必须在组合上下文中读取，不能放进 LaunchedEffect
+    val shortcutHost = LocalActivity.current as? MainActivity
     LaunchedEffect(Unit) {
-        val mainActivity = LocalActivity.current as? MainActivity ?: return@LaunchedEffect
+        val mainActivity = shortcutHost ?: return@LaunchedEffect
         when (mainActivity.pendingShortcutAction) {
             com.silas.omaster.util.ShortcutRegistrar.ACTION_CREATE -> {
                 navController.navigate(Screen.PresetSelection)
@@ -741,6 +743,9 @@ fun MainApp(
                     },
                     onNavigateToSurvey = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SURVEY_URL)))
+                    },
+                    onNavigateToPresetDetail = { presetId ->
+                        navController.navigate(Screen.Detail(presetId))
                     },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp

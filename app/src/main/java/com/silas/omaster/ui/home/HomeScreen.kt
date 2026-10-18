@@ -9,6 +9,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -58,12 +60,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -81,6 +85,7 @@ import com.silas.omaster.ui.animation.calculateStaggerDelay
 import com.silas.omaster.ui.components.HomeTabRow
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.PresetCard
+import com.silas.omaster.ui.components.PresetImage
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.themedBackground
@@ -92,6 +97,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -229,6 +235,7 @@ fun HomeScreen(
             // 当远程订阅里有预设声明 deviceProfile 并匹配当前设备时显示。
             // 例如 Find X10 用户看到"为 Find X10 · 哈苏 2亿像素 精选"。
             // 无匹配预设时 Banner 隐藏（不占位）。
+            // v1.6.10：哈苏影像 / ColorOS 17 适配徽章 + 真实封面图 + 多语言
             // ═══════════════════════════════════════════════════════════
             val recommended by viewModel.deviceRecommendedPresets.collectAsState()
             val deviceDp = DeviceDetector.getCurrentDevice(LocalContext.current)
@@ -241,6 +248,7 @@ fun HomeScreen(
                     deviceDisplayName = viewModel.deviceDisplayName,
                     is200Mp = deviceDp.has200Mp,
                     hasProImaging = deviceDp.isProImaging,
+                    colorOsVersion = deviceDp.colorOsVersion,
                     presets = recommended,
                     onPresetClick = onNavigateToDetail,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -395,53 +403,74 @@ fun HomeScreen(
 
 // ═══════════════════════════════════════════════════════════
 // FD-04 / MU-21 v1.6：机型感知精选 Banner（可横滑）
-// 标题动态组合：设备展示名 + 特色标签（哈苏/2亿像素/理光/徕卡）
-// 缩略图使用主色方块 + 预设名，避免加载网络图片
+// v1.6.10 改善（Find X10 / ColorOS 17 对齐）：
+// 1) 特色徽章多语言化，新增 "ColorOS 17 适配" 徽章（colorOsVersion ≥ 17 时显示）
+// 2) 专业影像机型（哈苏）显示主题色高亮徽章
+// 3) 预设缩略图改用 PresetImage 真实封面（本地缓存优先，替代纯色块）
+// 4) 卡片圆角对齐 ColorOS 大圆角语言（20dp）
 // ═══════════════════════════════════════════════════════════
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeviceRecommendedBanner(
     deviceDisplayName: String,
     is200Mp: Boolean,
     hasProImaging: Boolean,
+    colorOsVersion: Int,
     presets: List<MasterPreset>,
     onPresetClick: (MasterPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val chipTexts = buildList {
-        if (hasProImaging) add("专业影像")
-        if (is200Mp) add("2亿像素")
-        add("精选预设")
+        if (hasProImaging) add(stringResource(R.string.home_banner_chip_pro_imaging))
+        if (is200Mp) add(stringResource(R.string.home_banner_chip_200mp))
+        if (colorOsVersion >= 17) add(stringResource(R.string.home_banner_chip_coloros, colorOsVersion))
+        add(stringResource(R.string.home_banner_chip_curated))
     }
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
         )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            // 标题行
+        Column(modifier = Modifier.padding(14.dp)) {
+            // 标题行：设备名 + 哈苏高亮标识
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "为 $deviceDisplayName 精选",
+                    text = stringResource(R.string.home_banner_title_for_device, deviceDisplayName),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
+                if (hasProImaging) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Text(
+                            text = "H",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // 特色标签
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                chipTexts.take(3).forEach { chip ->
+                chipTexts.take(4).forEach { chip ->
                     Surface(
                         shape = RoundedCornerShape(50),
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
@@ -458,7 +487,7 @@ private fun DeviceRecommendedBanner(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 横滑预设列表
+            // 横滑预设列表（真实封面，本地缓存优先）
             androidx.compose.foundation.lazy.LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -479,7 +508,7 @@ private fun RecommendedPresetChip(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
         onClick = onClick
     ) {
@@ -488,24 +517,17 @@ private fun RecommendedPresetChip(
                 .width(96.dp)
                 .padding(8.dp)
         ) {
-            // 主色方块占位（避免加载远程图）
+            // 预设真实封面（与主页网格一致的加载策略）
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(
-                        preset.deviceProfile?.let {
-                            if (it.isProImaging) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.secondaryContainer
-                        } ?: MaterialTheme.colorScheme.secondaryContainer,
-                        RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(10.dp))
             ) {
-                Text(
-                    text = preset.name.take(1),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                PresetImage(
+                    preset = preset,
+                    modifier = Modifier.fillMaxSize(),
+                    showDownloadIndicator = false
                 )
             }
 
@@ -814,7 +836,28 @@ private fun EmptyState(tabIndex: Int) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        ) {
+            // 主题色圆底图标，对齐 ColorOS 空态视觉语言
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = message,
                 style = MaterialTheme.typography.titleMedium,

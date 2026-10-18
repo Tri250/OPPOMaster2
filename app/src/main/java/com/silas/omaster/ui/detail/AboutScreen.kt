@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Code
@@ -42,6 +43,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
+import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.CardBorderLight
@@ -75,6 +78,7 @@ import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.ui.theme.themedBorderLight
+import com.silas.omaster.util.DeviceDetector
 import com.silas.omaster.util.VersionInfo
 import com.silas.omaster.util.perform
 import com.silas.omaster.util.rememberScrollHaptics
@@ -170,8 +174,30 @@ fun ProfileScreen(
     }
 }
 
+// ═══════════════════════════════════════════════════════════
+// v1.6.10 改善（Find X10 / ColorOS 17 对齐）：
+// 1) 新增设备档案标识：已知机型显示"机型名 · ColorOS 版本"
+// 2) 版本标签旁新增"更新日志"入口，直达 GitHub Releases
+// 3) 功能介绍扩充：安全可靠 + 机型适配
+// 4) 硬编码中文文案迁移至多语言资源（中/英/日）
+// ═══════════════════════════════════════════════════════════
+
 @Composable
 private fun AppTitleSection(currentVersionName: String) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+
+    // 设备档案（v1.6.10 机型感知标识）
+    val deviceProfile = remember { DeviceDetector.getCurrentDevice(context) }
+    val isKnownDevice = deviceProfile.brandTag != "unknown" &&
+            deviceProfile.brandTag != DeviceProfile.ALL
+    val isZhLocale = context.resources.configuration.locales[0].language == "zh"
+    val deviceName = if (isZhLocale) {
+        deviceProfile.displayNameZh.ifBlank { deviceProfile.model }
+    } else {
+        deviceProfile.displayNameEn.ifBlank { deviceProfile.model }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -203,26 +229,73 @@ private fun AppTitleSection(currentVersionName: String) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 版本号标签
-        Box(
-            modifier = Modifier
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+        // 版本号标签 + 更新日志入口
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "v$currentVersionName",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
             Text(
-                text = "Version $currentVersionName",
+                text = stringResource(R.string.about_view_changelog),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable {
+                    haptic.perform(HapticFeedbackType.Confirm)
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://github.com/iCurrer/OMaster/releases")
+                    )
+                    context.startActivity(intent)
+                }
             )
+        }
+
+        // 设备档案标识（仅已知机型显示，如 Find X10 · 哈苏 2亿像素 · ColorOS 17）
+        if (isKnownDevice) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                )
+            ) {
+                Text(
+                    text = buildString {
+                        append(deviceName)
+                        if (deviceProfile.colorOsVersion > 0) {
+                            append(" · ")
+                            append(context.getString(R.string.about_device_coloros, deviceProfile.colorOsVersion))
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
@@ -244,6 +317,17 @@ private fun FeatureList() {
             icon = Icons.Default.DashboardCustomize,
             title = stringResource(R.string.feature_update_title),
             description = stringResource(R.string.feature_update_desc)
+        ),
+        // v1.6.10：补充安全可靠与机型适配（Find X10 / ColorOS 17）
+        FeatureItem(
+            icon = Icons.Default.Favorite,
+            title = stringResource(R.string.feature_safe_title),
+            description = stringResource(R.string.feature_safe_desc)
+        ),
+        FeatureItem(
+            icon = Icons.Default.CameraAlt,
+            title = stringResource(R.string.feature_device_title),
+            description = stringResource(R.string.feature_device_desc)
         )
     )
 
@@ -542,7 +626,7 @@ private fun ProjectCard(context: android.content.Context) {
                 }
                 Column {
                     Text(
-                        text = "项目地址",
+                        text = stringResource(R.string.about_project_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = themedTextPrimary()
@@ -619,7 +703,11 @@ private fun QQGroupCard(context: android.content.Context) {
                     context.startActivity(webIntent)
                 } catch (e: Exception) {
                     // 如果浏览器也打不开，提示用户
-                    android.widget.Toast.makeText(context, "无法打开QQ群，请检查是否安装QQ", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.about_qq_failed),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -653,14 +741,14 @@ private fun QQGroupCard(context: android.content.Context) {
                 }
                 Column {
                     Text(
-                        text = "加入QQ群",
+                        text = stringResource(R.string.about_qq_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = themedTextPrimary()
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "群号: 1083543279",
+                        text = stringResource(R.string.about_qq_number, "1083543279"),
                         style = MaterialTheme.typography.bodySmall,
                         color = themedTextSecondary().copy(alpha = 0.6f)
                     )
