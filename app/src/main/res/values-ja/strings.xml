@@ -670,4 +670,9 @@
     <string name="feature_device_desc">Find X10 シリーズ（ハッセルブラド2億ピクセル）向けの専用プリセット</string>
     <string name="about_check_update_hint">バージョンをタップして更新を確認</string>
     <string name="update_action_later">後で</string>
+    <!-- について · プロジェクトとコミュニティ -->
+    <string name="about_project_title">プロジェクト</string>
+    <string name="about_qq_title">QQグループに参加</string>
+    <string name="about_qq_group_number">グループ番号: %1$s</string>
+    <string name="about_qq_open_failed">QQグループを開けませんでした。QQがインストールされているか確認してください</string>
 </resources>

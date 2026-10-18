@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +78,7 @@ import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.UpdateChannel
 import com.silas.omaster.model.DeviceProfile
+import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.CardBorderLight
@@ -393,11 +395,17 @@ private fun AppTitleSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 【v1.6.13】版本号标签：点击检查更新（检查中展示加载态）
+        // 【v1.6.13】版本号标签：点击检查更新（检查中展示加载态，ColorOS 17 液态按压）
+        val versionInteraction = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
+                .fluidPressScale(versionInteraction, pressedScale = 0.94f)
                 .clip(RoundedCornerShape(20.dp))
-                .clickable(onClick = onCheckUpdate)
+                .clickable(
+                    interactionSource = versionInteraction,
+                    indication = null,
+                    onClick = onCheckUpdate
+                )
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
@@ -672,8 +680,12 @@ private fun ContributorChip(
     url: String,
     context: android.content.Context
 ) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
+            .fluidPressScale(interactionSource, pressedScale = 0.94f)
             .clip(RoundedCornerShape(12.dp))
             .background(themedTextPrimary().copy(alpha = 0.08f))
             .border(
@@ -681,10 +693,15 @@ private fun ContributorChip(
                 color = themedTextPrimary().copy(alpha = 0.15f),
                 shape = RoundedCornerShape(12.dp)
             )
-            .clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
-            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    context.startActivity(intent)
+                }
+            )
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(
@@ -697,8 +714,12 @@ private fun ContributorChip(
 
 @Composable
 private fun DeveloperChip(name: String, url: String, context: android.content.Context) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
+            .fluidPressScale(interactionSource, pressedScale = 0.94f)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
             .border(
@@ -706,10 +727,15 @@ private fun DeveloperChip(name: String, url: String, context: android.content.Co
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(16.dp)
             )
-            .clickable {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
-            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.perform(HapticFeedbackType.TextHandleMove)
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    context.startActivity(intent)
+                }
+            )
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Text(
@@ -723,9 +749,12 @@ private fun DeveloperChip(name: String, url: String, context: android.content.Co
 
 @Composable
 private fun ProjectCard(context: android.content.Context) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .fluidPressScale(interactionSource)
             .border(
                 width = 1.dp,
                 color = themedBorderLight(),
@@ -738,7 +767,8 @@ private fun ProjectCard(context: android.content.Context) {
         onClick = {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Tri250/OPPOMaster2"))
             context.startActivity(intent)
-        }
+        },
+        interactionSource = interactionSource
     ) {
         Row(
             modifier = Modifier
@@ -769,7 +799,7 @@ private fun ProjectCard(context: android.content.Context) {
                 }
                 Column {
                     Text(
-                        text = "项目地址",
+                        text = stringResource(R.string.about_project_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = themedTextPrimary()
@@ -794,9 +824,12 @@ private fun ProjectCard(context: android.content.Context) {
 
 @Composable
 private fun QQGroupCard(context: android.content.Context) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .fluidPressScale(interactionSource)
             .border(
                 width = 1.dp,
                 color = CardBorderLight,
@@ -809,7 +842,7 @@ private fun QQGroupCard(context: android.content.Context) {
         onClick = {
             // 群号
             val groupId = "1083543279"
-            
+
             // 尝试使用URL Scheme打开QQ群
             val schemes = listOf(
                 // 方式1：使用腾讯官方API（推荐）
@@ -846,10 +879,15 @@ private fun QQGroupCard(context: android.content.Context) {
                     context.startActivity(webIntent)
                 } catch (e: Exception) {
                     // 如果浏览器也打不开，提示用户
-                    android.widget.Toast.makeText(context, "无法打开QQ群，请检查是否安装QQ", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.about_qq_open_failed),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
-        }
+        },
+        interactionSource = interactionSource
     ) {
         Row(
             modifier = Modifier
@@ -880,14 +918,14 @@ private fun QQGroupCard(context: android.content.Context) {
                 }
                 Column {
                     Text(
-                        text = "加入QQ群",
+                        text = stringResource(R.string.about_qq_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = themedTextPrimary()
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "群号: 1083543279",
+                        text = stringResource(R.string.about_qq_group_number, "1083543279"),
                         style = MaterialTheme.typography.bodySmall,
                         color = themedTextSecondary().copy(alpha = 0.6f)
                     )
@@ -948,13 +986,18 @@ private fun ProfileMenuItem(
     title: String,
     onClick: () -> Unit
 ) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .fluidPressScale(interactionSource, pressedScale = 0.98f),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         ),
         shape = RoundedCornerShape(0.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = interactionSource
     ) {
         Row(
             modifier = Modifier

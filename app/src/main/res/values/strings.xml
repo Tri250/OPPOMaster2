@@ -920,4 +920,9 @@
     <string name="feature_device_desc">为 Find X10 系列（哈苏 2亿像素）提供专属预设与调校</string>
     <string name="about_check_update_hint">点击版本号检查更新</string>
     <string name="update_action_later">稍后</string>
+    <!-- 关于页 · 项目与社群 -->
+    <string name="about_project_title">项目地址</string>
+    <string name="about_qq_title">加入QQ群</string>
+    <string name="about_qq_group_number">群号: %1$s</string>
+    <string name="about_qq_open_failed">无法打开QQ群，请检查是否安装QQ</string>
 </resources>

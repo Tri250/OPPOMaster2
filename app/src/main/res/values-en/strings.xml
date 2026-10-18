@@ -871,4 +871,9 @@
     <string name="feature_device_desc">Exclusive Hasselblad 200MP presets tuned for the Find X10 series</string>
     <string name="about_check_update_hint">Tap the version to check for updates</string>
     <string name="update_action_later">Later</string>
+    <!-- About · Project & community -->
+    <string name="about_project_title">Project repository</string>
+    <string name="about_qq_title">Join QQ Group</string>
+    <string name="about_qq_group_number">Group: %1$s</string>
+    <string name="about_qq_open_failed">Couldn\'t open QQ group. Check that QQ is installed</string>
 </resources>
