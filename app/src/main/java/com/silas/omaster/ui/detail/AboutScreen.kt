@@ -2,6 +2,7 @@ package com.silas.omaster.ui.detail
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -22,7 +24,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,7 +37,10 @@ import androidx.compose.material.icons.filled.DashboardCustomize
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -56,16 +60,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
@@ -73,7 +80,6 @@ import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.CardBorderLight
-import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
@@ -96,7 +102,6 @@ fun ProfileScreen(
     val scrollState = rememberScrollState()
     var previousScrollValue by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
 
     val isScrollingUp by remember {
         derivedStateOf {
@@ -112,6 +117,17 @@ fun ProfileScreen(
 
     LaunchedEffect(isScrollingUp) {
         onScrollStateChanged(isScrollingUp)
+    }
+
+    // v1.6.10 设备档案（机型感知，供头部标识 / 档案磁贴 / 功能介绍共用）
+    val deviceProfile = remember { DeviceDetector.getCurrentDevice(context) }
+    val isKnownDevice = deviceProfile.brandTag != "unknown" &&
+            deviceProfile.brandTag != DeviceProfile.ALL
+    val isZhLocale = context.resources.configuration.locales[0].language == "zh"
+    val deviceName = if (isZhLocale) {
+        deviceProfile.displayNameZh.ifBlank { deviceProfile.model }
+    } else {
+        deviceProfile.displayNameEn.ifBlank { deviceProfile.model }
     }
 
     Column(
@@ -138,9 +154,15 @@ fun ProfileScreen(
                 .padding(AppDesign.ScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AppTitleSection(currentVersionName)
+            AppTitleSection(currentVersionName, deviceProfile, deviceName, isKnownDevice)
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // v1.6.10 机型档案 Bento 磁贴（Find X10 等 ColorOS 17 已知机型展示）
+            if (isKnownDevice) {
+                Spacer(modifier = Modifier.height(16.dp))
+                DeviceSpecsCard(deviceProfile, deviceName)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 功能入口列表
             ProfileMenuList(
@@ -150,7 +172,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            FeatureList()
+            FeatureList(deviceName, isKnownDevice)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -176,27 +198,23 @@ fun ProfileScreen(
 
 // ═══════════════════════════════════════════════════════════
 // v1.6.10 改善（Find X10 / ColorOS 17 对齐）：
-// 1) 新增设备档案标识：已知机型显示"机型名 · ColorOS 版本"
-// 2) 版本标签旁新增"更新日志"入口，直达 GitHub Releases
-// 3) 功能介绍扩充：安全可靠 + 机型适配
-// 4) 硬编码中文文案迁移至多语言资源（中/英/日）
+// 1) 头部新增应用图标块（ColorOS 桌面图标 20dp 大圆角语言）
+// 2) 设备档案标识加机型图标前缀
+// 3) 新增机型档案 Bento 磁贴：影像系统 / 屏幕 / ColorOS 版本
+// 4) 菜单项副标题 + 全卡片 O-Haptics 触感反馈
+// 5) 功能介绍图标块化，机型适配项动态显示实际机型名
+// 6) 卡片圆角统一 20dp
 // ═══════════════════════════════════════════════════════════
 
 @Composable
-private fun AppTitleSection(currentVersionName: String) {
+private fun AppTitleSection(
+    currentVersionName: String,
+    deviceProfile: DeviceProfile,
+    deviceName: String,
+    isKnownDevice: Boolean
+) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-
-    // 设备档案（v1.6.10 机型感知标识）
-    val deviceProfile = remember { DeviceDetector.getCurrentDevice(context) }
-    val isKnownDevice = deviceProfile.brandTag != "unknown" &&
-            deviceProfile.brandTag != DeviceProfile.ALL
-    val isZhLocale = context.resources.configuration.locales[0].language == "zh"
-    val deviceName = if (isZhLocale) {
-        deviceProfile.displayNameZh.ifBlank { deviceProfile.model }
-    } else {
-        deviceProfile.displayNameEn.ifBlank { deviceProfile.model }
-    }
 
     Column(
         modifier = Modifier
@@ -204,6 +222,17 @@ private fun AppTitleSection(currentVersionName: String) {
             .padding(vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // v1.6.10 应用图标（ColorOS 桌面图标大圆角视觉）
+        Image(
+            painter = painterResource(R.mipmap.ic_launcher),
+            contentDescription = null,
+            modifier = Modifier
+                .size(72.dp)
+                .clip(RoundedCornerShape(20.dp))
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         // 应用名称（O 使用主题色）
         Text(
             text = buildAnnotatedString {
@@ -282,18 +311,132 @@ private fun AppTitleSection(currentVersionName: String) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                 )
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Smartphone,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = buildString {
+                            append(deviceName)
+                            if (deviceProfile.colorOsVersion > 0) {
+                                append(" · ")
+                                append(context.getString(R.string.about_device_coloros, deviceProfile.colorOsVersion))
+                            }
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// v1.6.10：机型档案 Bento 磁贴（Find X10 / ColorOS 17 专属）
+// 影像系统（哈苏/像素/光圈）+ 屏幕（高刷）+ ColorOS 版本
+// ═══════════════════════════════════════════════════════════
+
+@Composable
+private fun DeviceSpecsCard(profile: DeviceProfile, deviceName: String) {
+    val context = LocalContext.current
+
+    // 影像系统数据行
+    val imagingValue = buildList {
+        if (profile.isProImaging) add(context.getString(R.string.about_specs_hasselblad))
+        if (profile.totalPixelsMp > 0) add("${profile.totalPixelsMp}MP")
+        if (profile.maxAperture.isNotBlank()) add(profile.maxAperture)
+    }.joinToString(" · ").ifBlank { profile.brand }
+
+    val displayValue = "${profile.maxRefreshRateHz}Hz"
+    val systemValue = if (profile.colorOsVersion > 0) {
+        context.getString(R.string.about_device_coloros, profile.colorOsVersion)
+    } else null
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = themedBorderLight(),
+                shape = RoundedCornerShape(20.dp)
+            ),
+        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // 标题行：机型图标 + 机型名
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Smartphone,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
                 Text(
-                    text = buildString {
-                        append(deviceName)
-                        if (deviceProfile.colorOsVersion > 0) {
-                            append(" · ")
-                            append(context.getString(R.string.about_device_coloros, deviceProfile.colorOsVersion))
-                        }
-                    },
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                    fontWeight = FontWeight.Medium
+                    text = stringResource(R.string.about_specs_section_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = themedTextPrimary()
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = deviceName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // 磁贴行：影像系统 + 屏幕
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SpecTile(
+                    icon = Icons.Default.CameraAlt,
+                    label = stringResource(R.string.about_specs_imaging),
+                    value = imagingValue,
+                    gradient = listOf(Color(0xFFFF7E5F), Color(0xFFFEB47B)),
+                    modifier = Modifier.weight(1f)
+                )
+                SpecTile(
+                    icon = Icons.Default.Speed,
+                    label = stringResource(R.string.about_specs_display),
+                    value = displayValue,
+                    gradient = listOf(Color(0xFF4FACFE), Color(0xFF00F2FE)),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // 系统磁贴（ColorOS / OxygenOS / RealmeUI 版本）
+            if (systemValue != null) {
+                SpecTile(
+                    icon = Icons.Default.PhoneAndroid,
+                    label = stringResource(R.string.about_specs_system),
+                    value = systemValue,
+                    gradient = listOf(Color(0xFF11998E), Color(0xFF38EF7D)),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -301,7 +444,48 @@ private fun AppTitleSection(currentVersionName: String) {
 }
 
 @Composable
-private fun FeatureList() {
+private fun SpecTile(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    gradient: List<Color>,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(themedTextPrimary().copy(alpha = 0.04f))
+            .padding(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Brush.linearGradient(gradient)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = Color.White, modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = themedTextSecondary().copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = themedTextPrimary(),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun FeatureList(deviceName: String, isKnownDevice: Boolean) {
     val features = listOf(
         FeatureItem(
             icon = Icons.Default.Palette,
@@ -318,7 +502,7 @@ private fun FeatureList() {
             title = stringResource(R.string.feature_update_title),
             description = stringResource(R.string.feature_update_desc)
         ),
-        // v1.6.10：补充安全可靠与机型适配（Find X10 / ColorOS 17）
+        // v1.6.10：安全可靠 + 机型适配（已知机型时动态显示实际机型名）
         FeatureItem(
             icon = Icons.Default.Favorite,
             title = stringResource(R.string.feature_safe_title),
@@ -327,7 +511,11 @@ private fun FeatureList() {
         FeatureItem(
             icon = Icons.Default.CameraAlt,
             title = stringResource(R.string.feature_device_title),
-            description = stringResource(R.string.feature_device_desc)
+            description = if (isKnownDevice) {
+                stringResource(R.string.about_feature_device_known, deviceName)
+            } else {
+                stringResource(R.string.feature_device_desc)
+            }
         )
     )
 
@@ -337,12 +525,12 @@ private fun FeatureList() {
             .border(
                 width = 1.dp,
                 color = themedBorderLight(),
-                shape = AppDesign.CardShape
+                shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = themedCardBackground()
         ),
-        shape = AppDesign.CardShape
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
@@ -375,20 +563,29 @@ private fun FeatureList() {
     }
 }
 
+// v1.6.10：功能项图标改 Bento 圆角块，视觉层次更清晰
 @Composable
 private fun FeatureListItem(feature: FeatureItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = AppDesign.ItemSpacing / 2),
-        horizontalArrangement = Arrangement.spacedBy(AppDesign.ItemSpacing)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(
-            imageVector = feature.icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = feature.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -422,6 +619,7 @@ private data class Contributor(
 
 @Composable
 private fun CreditsCard(context: android.content.Context) {
+    val haptic = LocalHapticFeedback.current
     val contributors = listOf(
         Contributor("@OPPO影像", "https://xhslink.com/m/8c2gJYGlCTR"),
         Contributor("@蘭州白鴿", "https://xhslink.com/m/4h5lx4Lg37n"),
@@ -440,12 +638,12 @@ private fun CreditsCard(context: android.content.Context) {
             .border(
                 width = 1.dp,
                 color = CardBorderLight,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = themedCardBackground()
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -489,7 +687,7 @@ private fun CreditsCard(context: android.content.Context) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     developers.forEach { (name, url) ->
-                        DeveloperChip(name = name, url = url, context = context)
+                        DeveloperChip(name = name, url = url, context = context, haptic = haptic)
                     }
                 }
             }
@@ -513,7 +711,8 @@ private fun CreditsCard(context: android.content.Context) {
                         ContributorChip(
                             name = contributor.name,
                             url = contributor.url,
-                            context = context
+                            context = context,
+                            haptic = haptic
                         )
                     }
                 }
@@ -527,7 +726,8 @@ private fun CreditsCard(context: android.content.Context) {
 private fun ContributorChip(
     name: String,
     url: String,
-    context: android.content.Context
+    context: android.content.Context,
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
 ) {
     Box(
         modifier = Modifier
@@ -539,6 +739,7 @@ private fun ContributorChip(
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable {
+                haptic.perform(HapticFeedbackType.Confirm)
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
             }
@@ -553,7 +754,12 @@ private fun ContributorChip(
 }
 
 @Composable
-private fun DeveloperChip(name: String, url: String, context: android.content.Context) {
+private fun DeveloperChip(
+    name: String,
+    url: String,
+    context: android.content.Context,
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
+) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
@@ -564,6 +770,7 @@ private fun DeveloperChip(name: String, url: String, context: android.content.Co
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable {
+                haptic.perform(HapticFeedbackType.Confirm)
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
             }
@@ -580,19 +787,21 @@ private fun DeveloperChip(name: String, url: String, context: android.content.Co
 
 @Composable
 private fun ProjectCard(context: android.content.Context) {
+    val haptic = LocalHapticFeedback.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,
                 color = themedBorderLight(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = themedCardBackground()
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         onClick = {
+            haptic.perform(HapticFeedbackType.Confirm)
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Tri250/OPPOMaster2"))
             context.startActivity(intent)
         }
@@ -651,22 +860,24 @@ private fun ProjectCard(context: android.content.Context) {
 
 @Composable
 private fun QQGroupCard(context: android.content.Context) {
+    val haptic = LocalHapticFeedback.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,
                 color = CardBorderLight,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = themedCardBackground()
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         onClick = {
+            haptic.perform(HapticFeedbackType.Confirm)
             // 群号
             val groupId = "1083543279"
-            
+
             // 尝试使用URL Scheme打开QQ群
             val schemes = listOf(
                 // 方式1：使用腾讯官方API（推荐）
@@ -764,6 +975,7 @@ private fun QQGroupCard(context: android.content.Context) {
     }
 }
 
+// v1.6.10：菜单项升级 — 副标题描述 + 触感反馈
 @Composable
 private fun ProfileMenuList(
     onNavigateToSubscription: () -> Unit,
@@ -775,12 +987,12 @@ private fun ProfileMenuList(
             .border(
                 width = 1.dp,
                 color = themedBorderLight(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             ),
         colors = CardDefaults.cardColors(
             containerColor = themedCardBackground()
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier.padding(vertical = 8.dp)
@@ -788,6 +1000,7 @@ private fun ProfileMenuList(
             ProfileMenuItem(
                 icon = Icons.Default.Cloud,
                 title = stringResource(R.string.sub_title),
+                subtitle = stringResource(R.string.about_sub_desc),
                 onClick = onNavigateToSubscription
             )
             HorizontalDivider(
@@ -797,6 +1010,7 @@ private fun ProfileMenuList(
             ProfileMenuItem(
                 icon = Icons.Default.CloudUpload,
                 title = stringResource(R.string.survey_title),
+                subtitle = stringResource(R.string.survey_desc),
                 onClick = onNavigateToSurvey
             )
         }
@@ -807,15 +1021,20 @@ private fun ProfileMenuList(
 private fun ProfileMenuItem(
     icon: ImageVector,
     title: String,
+    subtitle: String,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         ),
         shape = RoundedCornerShape(0.dp),
-        onClick = onClick
+        onClick = {
+            haptic.perform(HapticFeedbackType.Confirm)
+            onClick()
+        }
     ) {
         Row(
             modifier = Modifier
@@ -828,27 +1047,45 @@ private fun ProfileMenuItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = themedTextPrimary()
+                    )
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = themedTextSecondary().copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
             Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = themedTextPrimary()
-            )
-        }
-        Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = themedTextSecondary().copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp)
             )
         }
-        }
     }
+}
 
 @Composable
 private fun FooterSection(

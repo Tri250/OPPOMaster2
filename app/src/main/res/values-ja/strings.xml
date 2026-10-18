@@ -443,6 +443,14 @@
     <string name="checkin_days_unit">%1$d 日</string>
     <string name="about_device_coloros">ColorOS %1$d</string>
     <string name="about_view_changelog">更新履歴</string>
+    <!-- v1.6.10 についてページ デバイスプロファイルタイル -->
+    <string name="about_specs_section_title">デバイスプロファイル</string>
+    <string name="about_specs_imaging">撮影システム</string>
+    <string name="about_specs_display">ディスプレイ</string>
+    <string name="about_specs_system">システム</string>
+    <string name="about_specs_hasselblad">ハッセルブラッド</string>
+    <string name="about_feature_device_known">%1$s に向けた専用プリセットを提案</string>
+    <string name="about_sub_desc">ソース管理と毎日自動更新</string>
     <string name="about_project_title">プロジェクト</string>
     <string name="about_qq_title">QQグループに参加</string>
     <string name="about_qq_number">グループ番号: %1$s</string>

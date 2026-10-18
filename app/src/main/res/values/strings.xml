@@ -459,6 +459,14 @@
     <string name="checkin_done_today">今日已打卡</string>
     <string name="about_device_coloros">ColorOS %1$d</string>
     <string name="about_view_changelog">更新日志</string>
+    <!-- v1.6.10 关于页机型档案磁贴 -->
+    <string name="about_specs_section_title">机型档案</string>
+    <string name="about_specs_imaging">影像系统</string>
+    <string name="about_specs_display">屏幕</string>
+    <string name="about_specs_system">系统</string>
+    <string name="about_specs_hasselblad">哈苏影像</string>
+    <string name="about_feature_device_known">已为 %1$s 适配专属参数推荐</string>
+    <string name="about_sub_desc">管理订阅源与每日自动更新</string>
     <string name="about_project_title">项目地址</string>
     <string name="about_qq_title">加入QQ群</string>
     <string name="about_qq_number">群号: %1$s</string>
