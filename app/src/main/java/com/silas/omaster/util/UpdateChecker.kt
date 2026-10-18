@@ -180,6 +180,12 @@ object UpdateChecker {
      * @return 下载任务 ID，用于查询进度
      */
     fun downloadAndInstall(context: Context, downloadUrl: String, versionName: String): Long {
+        // 【v1.6.13 安全加固】仅允许 https 下载源，防止外部传入明文链接导致 APK 被中间人替换
+        if (!downloadUrl.startsWith("https://", ignoreCase = true)) {
+            Log.e(TAG, "拒绝非 https 下载地址: $downloadUrl")
+            return -1L
+        }
+
         val fileName = UPDATE_APK_NAME
 
         // 安装前置：Android 8.0+ 未授予"安装未知应用"权限时，系统安装器不会响应安装 Intent。
@@ -196,7 +202,13 @@ object UpdateChecker {
             setTitle("OMaster 更新")
             setDescription("正在下载 v$versionName...")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+            // 【v1.6.13 兼容性修复】setDestinationInExternalFilesDir 为 API 24+ API，
+            // minSdk 23 下直接调用会 NoSuchMethodError 崩溃；API 23 使用等价 setDestinationUri。
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+            } else {
+                setDestinationUri(Uri.fromFile(File(downloadDir, fileName)))
+            }
             setAllowedOverMetered(true)
             setAllowedOverRoaming(true)
         }

@@ -21,6 +21,11 @@
 #### 🌐 多语言
 - 中 / 英 / 日三语同步新增 v1.6.13 全部文案资源
 
+#### 🔒 安全与兼容
+- 兼容性修复：minSdk 23 设备更新下载崩溃（`setDestinationInExternalFilesDir` 为 API 24+ API，回退 `setDestinationUri`）
+- 安全加固：更新下载强制 https 源，拒绝明文链接防中间人替换
+- 隐私加固：云备份 / 换机迁移（含 ColorOS 互传）排除崩溃诊断与运行日志文件
+
 ---
 
 ## v1.6.7 (2026-10-16)

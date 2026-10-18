@@ -1,13 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Auto Backup rules (API < 31，API 31+ 使用 data_extraction_rules.xml)。
+   【v1.6.13 隐私加固】排除运行期诊断文件：
+   - files/logs/         —— Logger（app.log）与 CrashReporter（crash.log / boot.log），
+                            含设备信息与堆栈，属应用内部诊断数据，不应进用户云备份
+   - external/crash.log  —— CrashReporter 外部备份诊断文件
+   用户配置（订阅、预设、偏好）保持默认备份，确保换机恢复体验。
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="file" path="logs" />
+    <exclude domain="external" path="crash.log" />
 </full-backup-content>
