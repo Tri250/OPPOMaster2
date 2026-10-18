@@ -16,6 +16,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,6 +131,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.silas.omaster.util.CrashReporter.mark(this, "M4_ACTIVITY_ONCREATE")
 
         // FD-01c：接收系统分享的预设 JSON 文本
         if (intent?.action == android.content.Intent.ACTION_SEND) {
@@ -144,7 +147,17 @@ class MainActivity : ComponentActivity() {
                 val config = remember { ConfigCenter.getInstance(applicationContext) }
                 val currentTheme by config.themeFlow.collectAsState()
                 val darkMode by config.darkModeFlow.collectAsState()
-                
+
+                // 【v1.6.10】启动诊断：读取上次运行遗留的崩溃报告 / 死亡轨迹，
+                // 以弹窗形式在 App 内直接展示并支持一键复制/分享，无需文件管理器或 adb。
+                var pendingDiagnostics by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(Unit) {
+                    com.silas.omaster.util.CrashReporter.mark(applicationContext, "M5_COMPOSITION_START")
+                    runCatching {
+                        pendingDiagnostics = com.silas.omaster.util.CrashReporter.getPendingDiagnostics(applicationContext)
+                    }
+                }
+
                 // 根据深色模式设置计算实际主题
                 val isDarkTheme = when (darkMode) {
                     com.silas.omaster.data.local.DarkMode.SYSTEM -> {
@@ -195,8 +208,27 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                // 【v1.6.10】启动诊断弹窗（置于主题之外，任何界面状态下都可见）
+                pendingDiagnostics?.let { report ->
+                    StartupDiagnosticsDialog(
+                        report = report,
+                        onDismiss = {
+                            com.silas.omaster.util.CrashReporter.clearDiagnostics(applicationContext)
+                            pendingDiagnostics = null
+                        }
+                    )
+                }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 【v1.6.10】UI 已完全可见 → 本次启动成功，清除启动里程碑。
+        // 注意：不在此处清 crash.log——诊断弹窗确认后才清除，避免报告丢失。
+        com.silas.omaster.util.CrashReporter.mark(this, "M6_UI_RESUMED")
+        com.silas.omaster.util.CrashReporter.bootSucceeded(this)
     }
 
     override fun onDestroy() {
@@ -217,6 +249,67 @@ class MainActivity : ComponentActivity() {
         if (granted) return
         runCatching { notificationPermissionLauncher.launch(perm) }
     }
+}
+
+/**
+ * 【v1.6.10】启动诊断弹窗：展示上次运行崩溃堆栈 / 死亡轨迹。
+ * 提供复制与系统分享两个出口，用户无需文件管理器即可把日志发给开发者。
+ */
+@Composable
+fun StartupDiagnosticsDialog(report: String, onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("启动诊断报告") },
+        text = {
+            Column {
+                Text(
+                    "检测到上次启动异常。以下为诊断详情，请点击「分享日志」发给开发者，以便精确定位问题。",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(
+                        text = report,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .heightIn(max = 300.dp)
+                            .verticalScroll(rememberScrollState())
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.Button(
+                onClick = {
+                    runCatching {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "OMaster 启动诊断报告")
+                            putExtra(Intent.EXTRA_TEXT, report)
+                        }
+                        context.startActivity(Intent.createChooser(send, "分享诊断日志"))
+                    }
+                }
+            ) { Text("分享日志") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(
+                    onClick = {
+                        runCatching {
+                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                    as android.content.ClipboardManager
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("OMaster 诊断", report))
+                            android.widget.Toast.makeText(context, "已复制", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) { Text("复制") }
+                TextButton(onClick = onDismiss) { Text("知道了") }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    )
 }
 
 @Composable

@@ -22,15 +22,21 @@ class OMasterApplication : Application() {
         fun getPrefs(): SharedPreferences = prefs
     }
 
+    override fun attachBaseContext(base: Context?) {
+        super.attachBaseContext(base)
+        // 【v1.6.10】崩溃捕获器前移至 attachBaseContext：
+        // 此处早于所有 ContentProvider 安装与 onCreate，覆盖面最大。
+        // 同时读取上次运行的启动里程碑——若上次进程中途死亡（含 native 崩溃 /
+        // ANR 等 Java 处理器捕不到的场景），本次启动会生成诊断供 App 内弹窗展示。
+        CrashReporter.install(this)
+        CrashReporter.mark(this, "M1_APP_ATTACHED")
+    }
+
     override fun onCreate() {
         super.onCreate()
 
-        // 【v1.6 启动闪退诊断】最先安装全局崩溃捕获器：
-        // 其后任意初始化抛出的未捕获异常都会落盘到 files/logs/crash.log 与
-        // Android/data/<pkg>/files/crash.log，解决 release 包真机闪退无日志、根因无法定位的问题。
-        CrashReporter.install(this)
-
         instance = this
+        CrashReporter.mark(this, "M2_APP_ONCREATE_BEGIN")
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         // 初始化日志系统（非关键，失败不阻断冷启动）
@@ -68,6 +74,8 @@ class OMasterApplication : Application() {
         } catch (e: Throwable) {
             Logger.w("OMaster", "Analytics init check failed (non-fatal): ${e.message}")
         }
+
+        CrashReporter.mark(this, "M3_APP_ONCREATE_DONE")
     }
 
     /**
